@@ -5,11 +5,11 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
-  configureFramedSyncPayloadBudget: vi.fn(async () => undefined),
-  closeFramedSyncPayloadBudget: vi.fn(async () => undefined),
-  maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))
-} }));
+vi.mock('../../companionWorkspaceRuntimeRepository', async () => {
+  const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
+  return { FolioleCompanionSync: { ...createCompanionNativeSyncStub(),
+    maintainAttachmentFiles: vi.fn(async () => ({ files: [] })) } };
+});
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../lib/core/database/framedSyncStagingSchema';

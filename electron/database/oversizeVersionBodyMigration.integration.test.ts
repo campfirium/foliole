@@ -2,13 +2,13 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { canonicalContentId, type CanonicalBlob, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { streamRetainedNodeVersions } from '../../lib/core/sync/syncNodeVersionSelection.js';
 
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
@@ -33,7 +33,7 @@ async function fixture(held: boolean) {
 async function upgrade(host: ReturnType<typeof textDevice>, companion: boolean) {
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else migrateNumberedFixtureTo(host.sqlite, 150);
 }
 
 it.each([false, true])('retires only replaceable oversize historical text and preserves facts companion=%s', async (companion) => {
@@ -78,7 +78,10 @@ it.each([false, true])('retires an oversize owned alternative with its replaceab
 
 it.each([false, true])('retires oversize history while preserving publication fact references companion=%s', async (companion) => {
   const host = await fixture(false);
-  host.sqlite.exec(`INSERT INTO framed_sync_outbound_publications VALUES
+  host.sqlite.exec(`INSERT INTO framed_sync_outbound_publications
+    (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
+      group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
+      fact_count, blob_count, total_blob_bytes, state) VALUES
     (zeroblob(16), zeroblob(32), zeroblob(32), X'', '{"facts":[{"factId":"base","body":[]}]}',
       1, 'group', 'sender', 'epoch', 'receiver', 'epoch', 1, 0, 0, 'published');
     INSERT INTO framed_sync_outbound_fact_refs VALUES (zeroblob(16), 2, 'node', 'topic', 'base');

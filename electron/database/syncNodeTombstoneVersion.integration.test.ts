@@ -2,7 +2,6 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
@@ -14,6 +13,7 @@ import { hasCompleteTombstoneVersion } from '../../lib/core/sync/syncNodeTombsto
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
@@ -72,7 +72,7 @@ it.each(['desktop', 'companion'])('initializes the %s original deletion body sum
     .run(JSON.stringify([empty]));
   if (host === 'desktop') {
     source.db.pragma('user_version = 144');
-    initializeDatabaseSchema(source.db);
+    migrateNumberedFixtureTo(source.db, 145);
   } else await source.port.transaction((tx) => migrateCompanionDatabase(tx, 73, 74));
   const read = async () => (await readFramedSyncInventory(source.port))
     .find((item) => item.objectType === 'node' && item.globalId === 'topic')?.resourceHashes

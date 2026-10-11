@@ -20,9 +20,10 @@ vi.mock('../../../electron/ipc/paths.js', () => ({
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../../../electron/database/connection.js';
+import { receiveMemberPositionFixture } from '../../../electron/database/nodeVersionMemberPosition.testSupport.js';
 import { buildDesktopSyncPack } from '../../../electron/database/syncPackBuilder.js';
 import { initializeDatabaseConnection } from '../../../lib/core/database/index.js';
-import { retainLocalEditBase } from '../../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor.js';
@@ -62,8 +63,10 @@ it.each(['desktop', 'companion'] as const)(
     ['D', 'C', 'left almost\nright one'],
     ['E', 'D', 'left edited\nright one']
   ] as const) insertVersion(id, parent, content);
-  installOfflineBaseProof();
+  await installOfflinePosition();
   const online = openDatabaseConnection();
+  const sourceEpoch = online.sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get();
+  if (typeof sourceEpoch !== 'string') throw new Error('source_epoch_missing');
   expect(await collectNodeVersionPayloads(createBetterSqliteDbPort(online.sqlite), nodeId))
     .toEqual({ released: 3, skipped: null });
   expect(versionBodies()).toEqual([['A', 'left one\nright one'],
@@ -84,13 +87,19 @@ it.each(['desktop', 'companion'] as const)(
   await retainLocalEditBase(port, { holdId: 'offline-editor', nodeId, versionId: 'F' });
   await expect(applyIncoming(mode, port, incomingPath, 'offline-device',
     onlineIdentity.identity_key, offlineIdentity.identity_key))
-    .resolves.toMatchObject({ applied: true, toStateSeq: 1 });
+    .resolves.toMatchObject({ applied: true, toStateSeq: 2 });
   const current = offline.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId) as { content: string; current_version_id: string };
   const chosen = await loadCurrentSyncNodeRecord(port, nodeId);
   expect(new Set([chosen?.body_text, ...chosen?.alternative_bodies?.map(body => body.text) ?? []]))
     .toEqual(new Set(['left edited\nright one', 'left one\nright edited']));
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
+  await receiveMemberPositionFixture(port, { group_id: 'group', device_identity_key: onlineIdentity.identity_key,
+    object_id: nodeId, library_epoch: sourceEpoch, proof_revision: 1, adopted_version_id: 'E',
+    pending_version_ids_json: '[]', updated_at: createdAt });
+  expect((await loadCurrentSyncNodeRecord(port, nodeId))?.version_id).toBe(current.current_version_id);
+  expect(versionBodies()).toContainEqual(['F', 'left one\nright edited']);
+  await releaseLocalEditBase(port, 'offline-editor', nodeId);
   expect(versionBodies()).toEqual([['A', null],
     ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
     ['F', null], [current.current_version_id, current.content]]);
@@ -173,18 +182,19 @@ function insertVersion(id: string, parent: string | null, content: string) {
   if (parent) db.prepare(`INSERT INTO node_sync_version_parents VALUES (?, ?, 0)`).run(id, parent);
 }
 
-function installOfflineBaseProof() {
+async function installOfflinePosition() {
   installGroup(onlineIdentity.identity_key);
-  openDatabaseConnection().sqlite.prepare(`
-    INSERT INTO node_version_device_revisions VALUES
-      ('group', ?, 'epoch', 1, 'pack-A', NULL, 'now')`).run(offlineIdentity.identity_key);
-  openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_bases VALUES
-    ('group', ?, 'offline-topic', 'A', 'epoch', 1, 'pack-A', 'now')`)
-    .run(offlineIdentity.identity_key);
+  await receiveMemberPositionFixture(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+    group_id: 'group', device_identity_key: offlineIdentity.identity_key, library_epoch: 'epoch',
+    object_id: nodeId, adopted_version_id: 'A', pending_version_ids_json: '[]', proof_revision: 1, updated_at: createdAt
+  });
 }
 
 function installGroup(localDeviceId: string) {
   const db = openDatabaseConnection().sqlite;
+  if (localDeviceId === offlineIdentity.identity_key) {
+    db.prepare("UPDATE node_version_local_proof_state SET library_epoch = 'epoch', proof_revision = 1").run();
+  }
   db.prepare(`
     INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
       VALUES ('group', 'Group', 'key', 'now', 'now')`).run();

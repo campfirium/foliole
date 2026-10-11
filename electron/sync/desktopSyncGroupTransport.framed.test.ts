@@ -5,6 +5,7 @@ const runtime = vi.hoisted(() => ({
   pendingConflicts: vi.fn()
 }));
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   openDatabaseConnection: () => ({ driver: {} }),
   runWithDatabaseConnectionOwner: async (task: () => unknown) => task()
 }));
@@ -14,8 +15,11 @@ vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: vi.fn() 
 vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
   loadPendingWatchedFolderConflicts: runtime.pendingConflicts
 }));
-vi.mock('./desktopFramedSyncInventoryRound.js', () => ({
-  runDesktopFramedSyncInventoryRound: runtime.framedRound
+vi.mock('./desktopRequestSyncDatabaseRound.js', () => ({
+  runDesktopRequestSyncDatabaseRound: runtime.framedRound
+}));
+vi.mock('./desktopRequestSyncResources.js', () => ({
+  continueDesktopRequestSyncResources: vi.fn(async () => ({ pending: 0 }))
 }));
 vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncActivity: vi.fn() }));
 vi.mock('./desktopSyncGroupMemberState.js', () => ({
@@ -46,21 +50,21 @@ beforeEach(() => {
   runtime.framedRound.mockResolvedValue({ complete: true, pending: 0, transferred: 1 });
 });
 
-it('routes a normal compatible peer through the framed inventory round', async () => {
+it('routes a normal compatible peer through the request database round', async () => {
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true });
   expect(runtime.framedRound).toHaveBeenCalledWith({
-    localLibraryEpoch: 'epoch-a', peer, remoteLibraryEpoch: 'epoch-b'
+    localLibraryEpoch: 'epoch-a', peer, peerState: undefined, remoteLibraryEpoch: 'epoch-b'
   });
   expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(2);
 });
 
-it('does not start the framed round while a watched conflict is pending', async () => {
+it('does not start the request round while a watched conflict is pending', async () => {
   runtime.pendingConflicts.mockReturnValue([{ conflict_key: 'same-path' }]);
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: false });
   expect(runtime.framedRound).not.toHaveBeenCalled();
 });
 
-it('rechecks restore readiness and still uses the framed inventory round', async () => {
+it('rechecks restore readiness and still uses the request database round', async () => {
   runtime.exchangeMemberState.mockResolvedValueOnce({
     localExited: false, localLibraryEpoch: 'epoch-a', normalSyncReady: false,
     peerBlocked: false, remoteLibraryEpoch: 'epoch-b', restoreFromPeer: 'restore'

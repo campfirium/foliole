@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { receiveMemberPositionFixture } from '../../../../../electron/database/nodeVersionMemberPosition.testSupport';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { NODE_TEXT_MAX_BYTES } from '../../../../../lib/core/nodes/nodeTextBudget';
@@ -92,11 +93,14 @@ it('replays an uncertain acknowledgement without creating another input version'
   const request = edit('Apples tea\nBread\nMilk\n');
   const first = await saveCompanionContentEdit(request);
   expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id = 'base'")
-    .get()).toEqual({ body_text: null, deleted: 1 });
+    .get()).toEqual({ body_text: baseline, deleted: null });
   const replay = await saveCompanionContentEdit(request);
   expect(replay).toEqual(first);
   expect(database.prepare('SELECT COUNT(*) AS n FROM node_sync_versions WHERE object_id = ?').get('topic')).toEqual({ n: 2 });
   await expect(saveCompanionContentEdit({ ...request, content: 'Different input' })).rejects.toThrow('content_edit_version_mismatch');
+  await releaseCompanionContentBase('topic', 'unacknowledged-input');
+  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id = 'base'")
+    .get()).toEqual({ body_text: null, deleted: 1 });
 });
 
 it('retains the opened base through remote advancement and atomically advances it on save', async () => {
@@ -124,11 +128,11 @@ it('reclaims middle bodies during continued editing against an offline device ba
        platform, state, joined_at, updated_at)
       VALUES ('group', 'mobile', 'mobile-anchor', '/mobile', 'Mobile', 'ios', 'active', 'now', 'now'),
         ('group', 'offline', 'offline-anchor', '/offline', 'Offline', 'mac', 'active', 'now', 'now');
-    INSERT INTO node_version_device_revisions VALUES
-      ('group', 'offline', 'epoch', 1, 'pack-a', NULL, 'now');
-    INSERT INTO node_version_device_bases VALUES
-      ('group', 'offline', 'topic', 'base', 'epoch', 1, 'pack-a', 'now');
   `);
+  await state.owner!.runWriter(db => receiveMemberPositionFixture(db, {
+    group_id: 'group', device_identity_key: 'offline', object_id: 'topic', library_epoch: 'epoch',
+    adopted_version_id: 'base', pending_version_ids_json: '[]', proof_revision: 1, updated_at: now
+  }));
   await readCompanionContentSource('topic', 'editor-session');
   let baseVersionId = 'base';
   for (const [index, versionId] of ['B', 'C', 'D', 'E'].entries()) {

@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { parentChildOrderSyncAdapter } from '../../src/shared/platform/companionSyncPushProtocol.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
@@ -28,10 +28,12 @@ const parentId = 'parent';
 const originalId = 'highlight';
 const copyId = 'highlight~copy';
 
+function orderSources(childIds: string[]) {
+  return [{ authorId: 'android', counter: childIds.length, childIds }];
+}
+
 function orderHash(childIds: string[]) {
-  return computeSyncContentHash('parent_child_order', {
-    parent_id: parentId, child_ids_json: JSON.stringify(childIds)
-  });
+  return currentParentOrderHash(parentId, orderSources(childIds));
 }
 
 beforeEach(async () => {
@@ -39,6 +41,12 @@ beforeEach(async () => {
   appDataDir = path.join(root, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   const driver = openDatabaseConnection().driver;
+  for (const id of [parentId, originalId, copyId]) driver.execute(`INSERT INTO nodes
+    (id, parent_id, kind, title, content, created_at, updated_at)
+    VALUES (?, ?, 'topic', ?, '', '2026-09-28', '2026-09-28')`,
+  [id, id === parentId ? null : parentId, id]);
+  driver.execute(`INSERT INTO parent_order_sources (parent_id, author_id, counter, child_ids_json)
+    VALUES (?, 'android', 1, ?)`, [parentId, JSON.stringify([originalId])]);
   driver.execute(`INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at)
     VALUES (?, ?, ?)`, [parentId, JSON.stringify([originalId]), '2026-09-28T00:00:00.000Z']);
   driver.execute(`INSERT INTO sync_object_state (object_type, object_id, state_seq,
@@ -58,7 +66,7 @@ it('pushes the conflict copy order while retaining the original branch and confi
     base_content_hash: orderHash([originalId]), content_hash: orderHash(childIds),
     deleted_at: null, last_modified_by_host_name: 'android', object_id: parentId,
     object_type: 'parent_child_order',
-    payload_json: JSON.stringify({ parent_id: parentId, child_ids_json: JSON.stringify(childIds) }),
+    payload_json: JSON.stringify(currentParentOrderPayload(parentId, orderSources(childIds))),
     state_seq: 2, updated_at: '2026-09-28T00:01:00.000Z'
   });
 

@@ -1,4 +1,12 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/requestSyncReadonlySnapshot.integration.test.ts',
+  'electron/database/requestSyncBatchReceiver.integration.test.ts',
+  'electron/database/requestSyncBatchSnapshot.integration.test.ts',
+  'electron/sync/desktopFramedSyncFileRound.integration.test.ts',
+  'electron/sync/desktopRequestSyncObjectHttp.integration.test.ts',
+  'electron/sync/desktopRequestSyncOverwrite.integration.test.ts',
+  'electron/sync/desktopRequestSyncScale.integration.test.ts',
+  'src/shared/platform/companion/runtime/companionRequestSyncSnapshot.sqlite.test.ts',
   'src/companion/requestSnapshotProbe.test.ts',
   'lib/core/sync/syncGroupRestoreEvents.test.ts',
   'lib/core/sync/syncIdentityRestorePageStorage.test.ts',

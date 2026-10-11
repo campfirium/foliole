@@ -14,3 +14,12 @@ export function migrateNumberedFixtureTo(sqlite: SqliteDatabase, targetVersion: 
     });
   })();
 }
+
+export function restorePreCurrentParentOrderFixture(sqlite: SqliteDatabase) {
+  sqlite.exec(`DROP TRIGGER trg_parent_order_node_insert;
+    DROP TRIGGER trg_parent_order_node_update;
+    DROP TRIGGER trg_parent_order_node_delete;
+    DROP TABLE parent_order_sources;
+    DROP TABLE parent_order_writer;
+    DROP TABLE parent_order_projection_pending;`);
+}

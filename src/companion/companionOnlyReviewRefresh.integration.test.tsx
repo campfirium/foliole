@@ -21,13 +21,13 @@ import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
 import { useCompanionFlowSession } from './useCompanionFlowSession';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => {},
-    closeFramedSyncPayloadBudget: async () => {}
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub
+  };
+});
 
 const past = '2020-01-01T00:00:00.000Z';
 const future = '2099-01-01T00:00:00.000Z';

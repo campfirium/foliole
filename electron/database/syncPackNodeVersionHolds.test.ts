@@ -13,6 +13,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { receiveMemberPositionFixture } from './nodeVersionMemberPosition.testSupport.js';
 import { buildDesktopSyncPackFromDriver } from './syncPackBuilderFromDriver.js';
 
 it('holds the exact sent head and full payloads before publishing a desktop pack', async () => {
@@ -55,7 +56,7 @@ it('holds the exact sent head and full payloads before publishing a desktop pack
   }
 });
 
-it('keeps unconfirmed pack payloads across a database restart and releases them after exact receipt', async () => {
+it('keeps legacy pack bookkeeping across restart while body collection requires a member position', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-version-restart-'));
   const databasePath = path.join(root, 'library.db');
   let sqlite = new Database(databasePath);
@@ -80,14 +81,21 @@ it('keeps unconfirmed pack payloads across a database restart and releases them 
     expect(sqlite.prepare(`SELECT version_id FROM node_version_outbound_payload_holds
       WHERE pack_id = 'pack' ORDER BY version_id`).all())
       .toEqual([{ version_id: 'A' }, { version_id: 'B' }, { version_id: 'C' }]);
-    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
     await confirmOutboundNodeVersionPack(port, {
       confirmedAt: 'later', deviceId: 'target', groupId: 'group', libraryEpoch: 'epoch',
       packId: 'pack', proofRevision: 2,
       results: [{ baseVersionId: 'C', objectId: 'node', result: 'applied', sentVersionId: 'C' }]
     });
-    // Confirmation already collects the chain; repeating collection is idempotent.
-    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+    // A legacy delivery receipt cannot substitute for the peer's business position.
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
+    await receiveMemberPositionFixture(port, { group_id: 'group', device_identity_key: 'target',
+      object_id: 'node', library_epoch: 'epoch', proof_revision: 2, adopted_version_id: 'C',
+      pending_version_ids_json: '[]', updated_at: 'later' });
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+    expect(sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
+      .toEqual([{ version_id: 'A', body_text: null }, { version_id: 'B', body_text: null },
+        { version_id: 'C', body_text: 'body-c' }, { version_id: 'D', body_text: 'body-d' }]);
     expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions ORDER BY version_id`).all())
       .toEqual(['A', 'B', 'C', 'D'].map((version_id) => ({ version_id })));
   } finally {

@@ -4,6 +4,8 @@ import { expect, it } from 'vitest';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
@@ -11,10 +13,11 @@ import { textDevice } from './topicTextState.testSupport.js';
 
 const now = '2026-10-07T00:00:00.000Z';
 
-it('creates roots and preserves complete edited text and original version relations without shared body storage', () => {
+it('creates roots and preserves complete edited text and original version relations without shared body storage', async () => {
   const host = textDevice();
   try {
     const driver = createBetterSqlite3Driver(host.sqlite);
+    bindParentOrderWriter(driver, { deviceAnchor: 'body-test', libraryPath: host.sqlite.name });
     host.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)').run('host_name', JSON.stringify('host'), now);
     const original = '---\r\nsource: Original\r\n---\r\n\ufeffBody😀\0';
     upsertNodeSnapshot(driver, { anchorLink: null, content: original, createdAt: now,
@@ -33,6 +36,8 @@ it('creates roots and preserves complete edited text and original version relati
     expect(loadNodeBodyResolution(driver, 'article')?.status).toBe('resolved');
     expect(host.sqlite.prepare("SELECT content = ? AS exact FROM nodes WHERE id='article'").get(content)).toEqual({ exact: 1 });
     expect(flushNodeSyncVersionWithDriver(driver, 'article', 'host', '2026-10-07T01:00:00.000Z', 'second')).toBe('second');
+    expect(host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='first'").pluck().get()).toBe(original);
+    await releaseLocalEditBase(host.db, 'editor', 'article');
     expect(host.sqlite.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id='first'").get())
       .toEqual({ body_text: null, deleted: 1 });
     expect(host.sqlite.prepare("SELECT body_text = ? AS exact FROM node_sync_versions WHERE version_id='second'").get(content)).toEqual({ exact: 1 });

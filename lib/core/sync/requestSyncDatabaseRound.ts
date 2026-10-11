@@ -1,7 +1,7 @@
 import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
-import { deliverFramedSyncDifferencesInDependencyOrder } from './framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 
 export type RequestSyncInventories = {
@@ -50,17 +50,21 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     for (const [index, difference] of batch.entries()) outcomes.set(key(difference), results[index]!);
   }
   const delivered: FramedSyncInventoryDifference[] = [];
+  const completed = new Set<string>();
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async difference => {
     signal?.throwIfAborted();
     try {
       const cached = outcomes.get(key(difference));
       outcomes.delete(key(difference));
-      const result = cached ?? (await port.transferObjects([difference]))[0];
+      const dependency = cached?.error ? readFramedSyncMissingDependency(cached.error) : null;
+      const stale = dependency && completed.has(key({ ...difference, ...dependency }));
+      const result = cached && !stale ? cached : (await port.transferObjects([difference]))[0];
       if (!result || result.globalId !== difference.globalId || result.objectType !== difference.objectType) {
         throw new Error('request_sync_batch_identity_mismatch');
       }
       if (result.error) throw new Error(result.error);
       delivered.push(difference);
+      completed.add(key(difference));
       return 'delivered';
     } catch (error) {
       signal?.throwIfAborted();

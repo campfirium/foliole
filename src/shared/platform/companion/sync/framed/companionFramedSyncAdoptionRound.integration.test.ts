@@ -7,11 +7,14 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
+import { createDesktopLibrarySyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
 import { readFixtureInventory, reconnectFixturePeer } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { listFramedSyncFileResourceDemands } from '../../../../../../lib/core/sync/framedSyncFileResourceDemands.js';
 import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
@@ -23,7 +26,7 @@ import { sendCompanionFramedSyncInventoryDifferences }
   from './companionFramedSyncInventoryRound.js';
 
 
-const native = vi.hoisted(() => ({ db: null as DbPort | null, inventory: vi.fn(), pull: vi.fn(), resolve: vi.fn(), send: vi.fn() }));
+const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null, inventory: vi.fn(), pull: vi.fn(), resolve: vi.fn(), send: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
   resolveAttachmentResource: native.resolve, readFramedSyncInventory: native.inventory, pullFramedSyncObject: native.pull, sendFramedSyncTransfer: native.send,
   pullFramedSyncObjects: async (input: { requests: NativeCompanionFramedSyncPullRequest[] }) => {
@@ -47,6 +50,7 @@ vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanio
     return { outcomes };
   }
 } }));
+vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => native.files! }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({
     read: (task: (db: DbPort) => unknown) => { if (!native.db) throw new Error('fixture_closed'); return task(native.db); },
@@ -68,9 +72,10 @@ afterEach(async () => {
 });
 
 async function setup() {
-  fixture = await createDesktopFramedSyncTwoProcessFixture();
+  fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   bridge = companionContinuationBridge(fixture.leftSnapshot, fixture.rightSnapshot);
   native.db = bridge.db;
+  native.files = bridge.files;
   native.inventory.mockImplementation(bridge.readInventory);
   native.pull.mockImplementation(bridge.pull);
   native.send.mockImplementation(bridge.send);
@@ -206,8 +211,10 @@ it('keeps missing attachments pending without retransmitting converged database 
   expect(result.resources).toMatchObject({ transferred: 0, pending: 1 });
   await expect(fs.stat(file)).rejects.toMatchObject({ code: 'ENOENT' });
   expect(bridge.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
-  const reopened = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
-  try {
-    expect(reopened.prepare("SELECT count(*) FROM framed_sync_resource_demands WHERE state = 'pending'").pluck().get()).toBeGreaterThan(0);
-  } finally { reopened.close(); }
+  const [receiver] = await bridge.db.query<{ device_id: string; library_epoch: string }>(
+    `SELECT state.local_device_identity_key AS device_id, proof.library_epoch FROM sync_group_local_state state
+      JOIN node_version_local_proof_state proof ON proof.singleton_id = 1 WHERE state.singleton_id = 1`);
+  const demands = await listFramedSyncFileResourceDemands(createDesktopLibrarySyncFiles(fixture.leftSnapshot.databasePath), {
+    groupId: bridge.request.sync_group_id, globalId: id, receiverDeviceId: receiver!.device_id, receiverLibraryEpoch: receiver!.library_epoch });
+  expect(demands).toContainEqual(expect.objectContaining({ state: 'pending', requestStarted: true }));
 }, 20_000);

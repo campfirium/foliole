@@ -8,13 +8,13 @@ import Database from 'better-sqlite3';
 import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => {},
-    closeFramedSyncPayloadBudget: async () => {}
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub
+  };
+});
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';

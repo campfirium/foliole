@@ -1,12 +1,15 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
-import { hashTextBody } from '../../lib/core/database/textBodyHash';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
-import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../shared/platform/companion/runtime/capacitorCompanionDatabaseOwner';
-import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from '../shared/platform/companion/runtime/companionFramedPayloadBudget';
+import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
+import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
+import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
 
-import { requireValue } from './capacityAcceptanceSafety';
+import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from './capacitorCompanionDatabaseOwner';
+import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
+
+function requireValue(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
 
 export function snapshotProbeRecord(index: number): NativeSyncNodeRecord {
   const time = '2026-10-11T00:00:00.000Z';

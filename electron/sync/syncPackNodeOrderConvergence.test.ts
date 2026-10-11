@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -39,16 +40,16 @@ beforeEach(async () => {
   incoming.prepare("UPDATE pack_manifest SET value = ? WHERE key = 'manifest_json'")
     .run(JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 3,
       from_state_seq: 0, to_state_seq: 3 }));
+  const sources = [{ authorId: 'desktop-host', counter: 1, childIds: ['node-1'] }];
+  const orderHash = currentParentOrderHash(ROOT_CHILD_ORDER_ID, sources);
   incoming.prepare(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
-  ) VALUES ('parent_child_order', ?, 3, 'order-hash', 'desktop-host', '2026-05-04T01:02:00.000Z', NULL)`)
-    .run(ROOT_CHILD_ORDER_ID);
+  ) VALUES ('parent_child_order', ?, 3, ?, 'desktop-host', '2026-05-04T01:02:00.000Z', NULL)`)
+    .run(ROOT_CHILD_ORDER_ID, orderHash);
   incoming.prepare(`INSERT INTO sync_objects (
     object_type, object_id, content_hash, payload_json, updated_at, deleted_at
-  ) VALUES ('parent_child_order', ?, 'order-hash', ?, '2026-05-04T01:02:00.000Z', NULL)`)
-    .run(ROOT_CHILD_ORDER_ID, JSON.stringify({
-      parent_id: ROOT_CHILD_ORDER_ID, child_ids_json: '["node-1"]'
-    }));
+  ) VALUES ('parent_child_order', ?, ?, ?, '2026-05-04T01:02:00.000Z', NULL)`)
+    .run(ROOT_CHILD_ORDER_ID, orderHash, JSON.stringify(currentParentOrderPayload(ROOT_CHILD_ORDER_ID, sources)));
   incoming.close();
 });
 

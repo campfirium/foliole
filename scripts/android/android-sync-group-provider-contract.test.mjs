@@ -39,8 +39,9 @@ it('routes inventory and transfers through the framed session boundary', async (
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
   const route = await readJava('FolioleCompanionFramedSyncRoute.java');
   const apply = await readJava('FolioleCompanionFramedSyncApply.java');
-  expect(server).toContain('new FramedSyncSessionNonceSQLite(this.context)');
-  expect(server).toContain('new FramedSyncTransferSQLite(this.context)');
+  expect(server).toContain('new FramedSyncSessionNonceFiles(this.context)');
+  expect(server).toContain('new FramedSyncTransferFiles(this.context)');
+  expect(server).not.toMatch(/FramedSyncSessionNonceSQLite|FramedSyncTransferSQLite/u);
   expect(route).toContain('FramedSyncSessionRequest.read(');
   const session = await readJava('framed/FramedSyncSessionRequest.java');
   expect(session).toContain('FramedSyncSessionReader.readEachEncoded(');

@@ -103,7 +103,7 @@ it('replaces the workspace from the chosen backup while retaining local settings
     expect(target.prepare(`SELECT library_epoch, proof_revision FROM node_version_local_proof_state
       WHERE singleton_id = 1`).get()).toEqual({ library_epoch: restoreId, proof_revision: 0 });
     expect(await collectNodeVersionPayloads(port, 'backup-node'))
-      .toEqual({ released: 0, skipped: null });
+      .toEqual({ released: 0, skipped: 'active_member_position_unknown' });
     await verifyOrdinarySyncAfterRestore(source, target, root);
   } finally {
     source.close();

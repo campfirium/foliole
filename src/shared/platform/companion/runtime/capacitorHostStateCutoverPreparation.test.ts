@@ -47,7 +47,7 @@ function harness(version: number) {
     open: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string, values: unknown[] = []) => {
       if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
-      if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'delete' }] };
+      if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'wal' }] };
       if (sql === 'PRAGMA user_version') return { values: [{ user_version: version }] };
       if (sql.includes("name = 'companion_meta'")) return { values: [{ present: 1 }] };
       if (sql.includes('FROM companion_meta WHERE key = ?') && values[0] === 'device_id') {

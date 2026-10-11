@@ -5,12 +5,12 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { readNativeAppActiveState, subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { companionFramedFileOwner } from '../shared/platform/companion/runtime/companionFramedPayloadBudget';
+import { openRequestSnapshotFixture, snapshotProbeRecord } from '../shared/platform/companion/runtime/requestSnapshotFixture';
 import { createCompanionFramedSyncFiles } from '../shared/platform/companion/sync/framed/companionFramedSyncFiles';
 import { withCompanionRequestSyncLifecycle } from '../shared/platform/companion/sync/framed/companionRequestSyncLifecycle';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { requireValue } from './capacityAcceptanceSafety';
-import { openRequestSnapshotFixture, snapshotProbeRecord } from './requestSnapshotFixture';
 
 export async function runRequestSnapshotProbe(platform: 'android' | 'ios', phase: (value: string) => void) {
   const fixture = await openRequestSnapshotFixture(platform);

@@ -58,7 +58,7 @@ it.each([
   ['manifest', 'framed_sync_ready_manifest_mismatch'],
   ['content', 'framed_sync_ready_manifest_mismatch'],
   ['context', 'framed_sync_transfer_context_mismatch'],
-  ['protocol', 'framed_sync_transfer_context_mismatch'],
+  ['protocol', 'framed_sync_protocol_version_unsupported'],
   ['fact_body', 'outbound_manifest_identity_mismatch'],
   ['header_descriptor', 'inbound_manifest_header_mismatch']
 ] as const)(

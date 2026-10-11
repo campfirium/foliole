@@ -9,6 +9,7 @@ import { expect, it } from 'vitest';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { updateNodeAnchorLinks, upsertNodeSnapshot, type UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutations.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { NODE_TEXT_MAX_BYTES } from '../../lib/core/nodes/nodeTextBudget.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -17,6 +18,7 @@ import { textDevice } from './topicTextState.testSupport.js';
 const timestamp = '2026-10-09T00:00:00.000Z';
 
 function initializeHost(sqlite: Database.Database) {
+  bindParentOrderWriter(createBetterSqlite3Driver(sqlite), { deviceAnchor: 'budget-test', libraryPath: sqlite.name });
   sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
     .run('host_name', JSON.stringify('budget-test'), timestamp);
 }

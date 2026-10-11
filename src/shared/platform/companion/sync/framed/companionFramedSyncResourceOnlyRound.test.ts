@@ -1,4 +1,20 @@
-import { expect, it, vi } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+
+const storage = vi.hoisted(() => ({ files: null as FramedSyncFilePort | null }));
+vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => storage.files! }));
+let root = '';
+beforeEach(async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), 'companion-resource-only-'));
+  storage.files = createDesktopFramedSyncFiles(root);
+});
+afterEach(async () => { storage.files = null; await rm(root, { recursive: true, force: true }); });
 
 const mocks = vi.hoisted(() => ({ send: vi.fn(), pull: vi.fn(), resources: vi.fn(), resume: vi.fn() }));
 const entry = (id: string) => ({ object_type: 'node', global_id: id, shared_state_hash: '1'.repeat(64),

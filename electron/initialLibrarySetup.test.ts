@@ -36,6 +36,7 @@ import {
 } from './initialLibrarySetup.js';
 
 beforeEach(() => {
+  vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', undefined);
   vi.clearAllMocks();
   resetInitialLibrarySetupForTests();
   originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
@@ -44,6 +45,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   resetInitialLibrarySetupForTests();
   Object.defineProperty(process, 'mas', { configurable: true, value: false });
   if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);

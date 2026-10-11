@@ -7,12 +7,13 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const native = vi.hoisted(() => ({ loadPendingShares: vi.fn(), acknowledgeShare: vi.fn() }));
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => true },
-  registerPlugin: () => ({ ...native,
-    configureFramedSyncPayloadBudget: async () => {}, closeFramedSyncPayloadBudget: async () => {}
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => true },
+    registerPlugin: () => ({ ...createCompanionNativeSyncStub(), ...native })
+  };
+});
 
 import { readShareOriginalFacts } from '../../electron/database/companionShareRecoveryTestSupport';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector';

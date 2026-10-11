@@ -10,6 +10,8 @@ import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryE
   from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createDesktopFramedSyncFaultProxy } from '../../../../../../electron/sync/desktopFramedSyncTwoProcessFaultProxy.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { loadFramedSyncFileTask } from '../../../../../../lib/core/sync/framedSyncFilePublication.js';
 import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import type { NativeCompanionFramedSyncPullRequest, NativeCompanionFramedSyncTransferRequest }
   from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
@@ -22,7 +24,7 @@ import { resumeCompanionFramedSyncPendingPublications }
   from './companionFramedSyncPendingPublications.js';
 
 
-const native = vi.hoisted(() => ({ db: null as DbPort | null, inventory: vi.fn(), pull: vi.fn(), send: vi.fn() }));
+const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null, inventory: vi.fn(), pull: vi.fn(), send: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
   readFramedSyncInventory: native.inventory, pullFramedSyncObject: native.pull, sendFramedSyncTransfer: native.send,
   pullFramedSyncObjects: async (input: { requests: NativeCompanionFramedSyncPullRequest[] }) => {
@@ -46,6 +48,7 @@ vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanio
     return { outcomes };
   }
 } }));
+vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => native.files! }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({
     read: (task: (db: DbPort) => unknown) => { if (!native.db) throw new Error('fixture_closed'); return task(native.db); },
@@ -67,9 +70,10 @@ afterEach(async () => {
 });
 
 async function setup() {
-  fixture = await createDesktopFramedSyncTwoProcessFixture();
+  fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   bridge = companionContinuationBridge(fixture.leftSnapshot, fixture.rightSnapshot);
   native.db = bridge.db;
+  native.files = bridge.files;
   native.inventory.mockImplementation(bridge.readInventory);
   native.pull.mockImplementation(bridge.pull);
   native.send.mockImplementation(bridge.send);
@@ -154,14 +158,13 @@ it('retains a blocked frozen review, delivers independent work and reconciles it
   const prepared = await prepareCompanionFramedSyncOutbound(original.db, { ...original.request, group_id: original.request.sync_group_id,
     sender_device_id: fixture.leftSnapshot.deviceId, sender_library_epoch: 'desktop-a-epoch',
     object_id: 't326-relation-review', object_type: 'node', include_current_node: false,
-    required_relation_ids: [], state_fact_ids: [], review_fact_ids: ['t326-review-op'] });
-  const before = original.sqlite.prepare('SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?')
-    .get(Buffer.from(prepared.transfer_id, 'hex'));
+    required_relation_ids: [], state_fact_ids: [], review_fact_ids: ['t326-review-op'] }, original.files);
+  const transferId = Buffer.from(prepared.transfer_id, 'hex');
+  const before = await loadFramedSyncFileTask(original.files, transferId);
+  expect(before).toMatchObject({ state: 'published', manifest: expect.any(String) });
   await expect(resumeCompanionFramedSyncPendingPublications(original.request, [])).resolves.toBe(1);
-  expect(original.sqlite.prepare('SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?')
-    .get(Buffer.from(prepared.transfer_id, 'hex'))).toEqual(before);
-  expect(original.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds WHERE transfer_id = ?')
-    .pluck().get(Buffer.from(prepared.transfer_id, 'hex'))).toBe(1);
+  expect(await loadFramedSyncFileTask(original.files, transferId)).toEqual(before);
+  expect(await original.files.list(`outbound/${prepared.transfer_id}/facts`)).not.toEqual([]);
   await fixture.left.seed({ content: 'Independent', nodeId: 't326-independent', title: 'Independent' });
   const result = await sendCompanionFramedSyncInventoryDifferences(original.request);
   expect(result.deferredObjects).toEqual([]);
@@ -170,12 +173,14 @@ it('retains a blocked frozen review, delivers independent work and reconciles it
   original.sqlite.close();
   bridge = companionContinuationBridge(fixture.leftSnapshot, fixture.rightSnapshot);
   native.db = bridge.db;
+  native.files = bridge.files;
   native.inventory.mockImplementation(bridge.readInventory);
   native.send.mockImplementation(bridge.send);
   const inventory = await readFixtureInventory(fixture.right);
   await resumeCompanionFramedSyncPendingPublications(bridge.request, inventory);
-  expect(bridge.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds WHERE transfer_id = ?')
-    .pluck().get(Buffer.from(prepared.transfer_id, 'hex'))).toBe(0);
+  expect(await loadFramedSyncFileTask(bridge.files, transferId)).toMatchObject({ state: 'retired' });
+  expect((await loadFramedSyncFileTask(bridge.files, transferId))?.manifest).toBeUndefined();
+  expect(await bridge.files.list(`outbound/${prepared.transfer_id}/facts`)).toEqual([]);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).reviews)
     .toEqual([expect.objectContaining({ op_id: 't326-review-op', grade: 3 })]);
 }, 15_000);
@@ -218,13 +223,15 @@ it('keeps later saved text after a lost acknowledgment and source restart', asyn
   } finally { await proxy.close(); }
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Fixed original' })]);
-  expect(original.sqlite.prepare("SELECT count(*) FROM framed_sync_outbound_publications WHERE state = 'published'")
-    .pluck().get()).toBeGreaterThan(0);
+  const publications = await original.files.list('outbound');
+  const pending = await Promise.all(publications.map(id => loadFramedSyncFileTask(original.files, Buffer.from(id, 'hex'))));
+  expect(pending).toContainEqual(expect.objectContaining({ state: 'published', manifest: expect.any(String) }));
   await fixture.left.seed({ content: 'Later saved after lost acknowledgment', nodeId, title: 'Later' });
   original.sqlite.close();
   const restarted = await fixture.restartLeft();
   bridge = companionContinuationBridge(restarted.snapshot, fixture.rightSnapshot);
   native.db = bridge.db;
+  native.files = bridge.files;
   native.inventory.mockImplementation(bridge.readInventory);
   native.pull.mockImplementation(bridge.pull);
   native.send.mockImplementation(bridge.send);
@@ -233,6 +240,10 @@ it('keeps later saved text after a lost acknowledgment and source restart', asyn
     expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes)
       .toEqual([expect.objectContaining({ content: 'Later saved after lost acknowledgment' })]);
   }
-  expect(bridge.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
+  for (const id of await bridge.files.list('outbound')) {
+    expect(await loadFramedSyncFileTask(bridge.files, Buffer.from(id, 'hex'))).toMatchObject({ state: 'retired' });
+    expect(await bridge.files.list(`outbound/${id}/facts`)).toEqual([]);
+  }
+  for (const hash of await bridge.files.list('body-holds')) expect(await bridge.files.list(`body-holds/${hash}`)).toEqual([]);
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 }, 15_000);

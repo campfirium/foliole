@@ -1,7 +1,8 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import { runReadonlySnapshotProbe } from '../shared/platform/companion/runtime/readonlySnapshotProbe';
+
 import { assertIdentity } from './capacityAcceptanceSafety';
-import { runReadonlySnapshotProbe } from './readonlySnapshotProbe';
 
 export async function runReadonlySnapshotAcceptance(onPhase: (phase: string) => void = () => {}) {
   const app = registerPlugin<{ getInfo(): Promise<{ id: string }> }>('App');

@@ -25,7 +25,7 @@ function readBodies(databasePath: string) {
 }
 
 it('releases replaced bytes across real processes, preserves another node holder and survives restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: SHARED, nodeId: 'article', title: 'Article' });
     await fixture.left.seed({ content: SHARED, nodeId: 'holder', title: 'Holder' });

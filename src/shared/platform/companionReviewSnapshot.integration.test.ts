@@ -6,13 +6,11 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => undefined,
-    closeFramedSyncPayloadBudget: async () => undefined
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('./companion/runtime/companionNativeSync.testSupport');
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub };
+});
 
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/desktopResourceSchemaStatements';

@@ -9,13 +9,13 @@ import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const lifecycle = vi.hoisted(() => ({ listeners: new Map<string, Set<(state: { isActive: boolean }) => void>>() }));
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => {},
-    closeFramedSyncPayloadBudget: async () => {}
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub
+  };
+});
 vi.mock('@capacitor/app', () => ({ App: {
   addListener: async (name: string, listener: (state: { isActive: boolean }) => void) => {
     const listeners = lifecycle.listeners.get(name) ?? new Set();

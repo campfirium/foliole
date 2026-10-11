@@ -17,11 +17,13 @@ import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({ configureFramedSyncPayloadBudget: async () => {},
-    closeFramedSyncPayloadBudget: async () => {} })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub
+  };
+});
 vi.mock('../shared/platform/appLifecycle', () => ({
   subscribeNativeAppForeground: async () => () => {},
   subscribeNativeAppBackground: async () => () => {}

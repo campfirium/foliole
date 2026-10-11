@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
 import { buildPack, closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
@@ -45,11 +45,15 @@ it('keeps an actual frozen outbound parent complete through permanent node delet
   expectDeletion(peer, version, true);
 });
 
-it('preserves editor base identity and retires its body through permanent node deletion', async () => {
+it('retains the editor baseline through permanent deletion until the editor releases it', async () => {
   const peer = createPeer('local');
   const version = edit(peer, 'body');
   await retainLocalEditBase(peer.port, { holdId: 'draft', nodeId: 'topic', versionId: version });
-  expectDeletion(peer, version, false);
+  expectDeletion(peer, version, true);
+  const before = history(peer).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }));
+  await releaseLocalEditBase(peer.port, 'draft', 'topic');
+  expect(history(peer).find(row => row.version_id === version)?.body_text).toBeNull();
+  expect(history(peer).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }))).toEqual(before);
 });
 
 it('keeps an unresolved conflict parent complete through permanent node deletion', () => {

@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
 
+import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
-import { runRequestSyncDatabaseRound } from './requestSyncDatabaseRound.js';
+import { deliverRequestSyncDatabaseDifferences, runRequestSyncDatabaseRound } from './requestSyncDatabaseRound.js';
 
 const entry = (globalId: string): FramedSyncInventoryEntry => ({ globalId, objectType: 'node',
   frontierFactIds: [`${globalId}-v1`], requiredRelationIds: [], reviewFactIds: [], resourceHashes: [],
@@ -70,6 +71,31 @@ it('yields to the next scheduled round when edits keep changing the inventory', 
 function outcome(difference: FramedSyncInventoryDifference, error = '') {
   return { requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error };
 }
+
+it.each([false, true])('rechecks cached position failure after child recovery, persistent failure=%s', async persistent => {
+  const inventories = { local: [entry('a-child'), entry('z-parent'),
+    { ...entry('position'), objectType: 'node_position' as const }], remote: [] };
+  const accepted = new Set<string>();
+  let positionAttempts = 0;
+  const result = await deliverRequestSyncDatabaseDifferences({
+    exchangeInventory: async () => inventories,
+    transferObjects: async differences => differences.map(difference => {
+      if (difference.globalId === 'a-child' && !accepted.has('z-parent')) {
+        return outcome(difference, 'framed_sync_node_parent_missing:z-parent');
+      }
+      if (difference.objectType === 'node_position') {
+        positionAttempts++;
+        if (persistent || !accepted.has('a-child')) return outcome(difference, 'node_position_lineage_unproven:a-child');
+      }
+      accepted.add(difference.globalId);
+      return outcome(difference);
+    }),
+    reportObjectError: () => { throw new Error('unexpected_object_error'); }
+  }, inventories, compareFramedSyncDatabaseInventories(inventories));
+  expect(positionAttempts).toBe(2);
+  expect(result.deferred.map(difference => difference.globalId)).toEqual(persistent ? ['position'] : []);
+  expect(accepted.has('position')).toBe(!persistent);
+});
 
 it('retries a missing dependency after its batched parent succeeds and isolates a broken graph', async () => {
   const local = ['a-child', 'b-parent', 'c-broken', 'd-healthy'].map(entry);

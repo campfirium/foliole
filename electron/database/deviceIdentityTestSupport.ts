@@ -1,6 +1,9 @@
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+
 import { openDatabaseConnection } from './connection.js';
 
 export function initializeDesktopDeviceProfileFixture(deviceId = 'desktop-fixture') {
+  bindParentOrderWriter(openDatabaseConnection().driver, { deviceAnchor: deviceId, libraryPath: openDatabaseConnection().sqlite.name });
   openDatabaseConnection().driver.execute(
     `INSERT INTO settings (key, value, updated_at) VALUES
        ('device_id', ?, ?),

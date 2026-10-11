@@ -113,12 +113,15 @@ function requestSnapshotNativeFixture(root: string) {
       databases.add(input.database);
     },
     async closeConnection(input: Input) {
-      connection(input).close();
+      const db = connection(input);
+      if (db.open) db.close();
       connections.delete(key(input));
     },
     async deleteDatabase(input: Input) {
       // Native plugins require a registered RW connection, even after the owner closes.
-      connection(input);
+      const db = connection(input);
+      expect([...connections.keys()]).toEqual([key(input)]);
+      if (db.open) db.close();
       rmSync(path.join(root, `${input.database}.db`));
       databases.delete(input.database);
     },

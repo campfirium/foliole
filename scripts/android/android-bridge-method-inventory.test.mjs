@@ -11,6 +11,8 @@ const TYPES_FILES = [
   '../../../lib/platform/attachmentMaintenanceHostContract.ts',
   '../../../lib/platform/remoteImageResourceContract.ts',
   '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract.ts',
+  '../../../lib/platform/nativeCompanionFramedFilesContract.ts',
+  '../../../lib/platform/nativeRequestSyncHttpContract.ts',
   'companionWorkspaceSyncPluginTypes.ts',
   'companionAttachmentResourceSyncPluginTypes.ts',
   'companionContentBlobSyncPluginTypes.ts'

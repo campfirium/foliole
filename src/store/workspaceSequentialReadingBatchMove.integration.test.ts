@@ -8,6 +8,9 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 
 let tempRoot = '';
+vi.mock('../../electron/deviceAnchorStore.js', () => ({
+  loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'reading-move-test', libraryPath })
+}));
 vi.mock('../../electron/ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: tempRoot, app_cache_dir: path.join(tempRoot, 'cache'),

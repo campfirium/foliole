@@ -1,14 +1,15 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import Database from 'better-sqlite3';
 
+import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
+import { createFramedSyncFileStaging } from '../../lib/core/sync/framedSyncFileStaging.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncPullRequest, NativeCompanionFramedSyncTransferRequest }
   from '../../lib/platform/nativeCompanionSyncContract.js';
 import { prepareCompanionFramedSyncOutbound } from '../../src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
-import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
+import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { receiveDesktopFramedSyncRoundStream } from './desktopFramedSyncInboundRound.js';
 import { exchangeDesktopFramedSyncInventoryHttp, requestDesktopFramedSyncDifferenceHttp }
   from './desktopFramedSyncInventoryHttp.js';
@@ -26,14 +27,15 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
   sqlite.prepare('UPDATE node_version_local_proof_state SET library_epoch = ? WHERE singleton_id = 1')
     .run(`${local.deviceId}-epoch`);
   const db = createBetterSqliteDbPort(sqlite);
-  const staging = createDesktopFramedSyncStaging(db);
+  const files = createDesktopLibrarySyncFiles(local.databasePath);
+  const staging = createFramedSyncFileStaging(files);
   const groupKey = new Uint8Array(32).fill(7);
   const groupSecret = Buffer.from(groupKey).toString('base64url');
   const context = { groupId: 't326-group', protocolVersion: 24 as const,
     initiatorDeviceId: local.deviceId, initiatorLibraryEpoch: `${local.deviceId}-epoch`,
     responderDeviceId: remote.deviceId, responderLibraryEpoch: `${remote.deviceId}-epoch` };
-  const exchange = { context, db, endpointUrl: remote.origin, groupKey, groupSecret,
-    noncePort: createDesktopFramedSyncSessionNoncePort(db) };
+  const exchange = { context, db, files, endpointUrl: remote.origin, groupKey, groupSecret,
+    noncePort: createFramedSyncFileSessionNoncePort(files) };
   let remoteEntries: InventoryEntries = [];
   const request = { endpoint_url: remote.origin, receiver_device_id: remote.deviceId,
     receiver_library_epoch: `${remote.deviceId}-epoch`, sync_group_id: 't326-group' };
@@ -61,11 +63,11 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
   async function send(input: NativeCompanionFramedSyncTransferRequest) {
     context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
     const prepared = await prepareCompanionFramedSyncOutbound(db, { ...input, group_id: input.sync_group_id,
-      sender_device_id: local.deviceId, sender_library_epoch: context.initiatorLibraryEpoch });
+      sender_device_id: local.deviceId, sender_library_epoch: context.initiatorLibraryEpoch }, files);
     const publication = await staging.loadOutboundPublication(hexToBytes(prepared.transfer_id));
     if (!publication) throw new Error('fixture_publication_missing');
-    const delivery = await prepareDesktopFramedSyncPublishedDelivery({ db, staging, groupSecret, publication });
-    await sendDesktopFramedSyncPublishedTransfer({ db, staging, groupSecret, publication,
+    const delivery = await prepareDesktopFramedSyncPublishedDelivery({ db, files, staging, groupSecret, publication });
+    await sendDesktopFramedSyncPublishedTransfer({ db, files, staging, groupSecret, publication,
       peerOrigin: input.endpoint_url, ...delivery });
     return nativeReceipt(publication.transferId);
   }
@@ -76,7 +78,7 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
       applied_state_hash: bytesToHex(receipt.appliedStateHash), receiver_device_id: receipt.receiverDeviceId,
       receiver_library_epoch: receipt.receiverLibraryEpoch };
   }
-  return { db, sqlite, request, readInventory, pull, send };
+  return { db, files, sqlite, request, readInventory, pull, send };
 }
 
 function mergeInventoryDetails(previous: InventoryEntries, incoming: InventoryEntries, detailIds?: readonly string[]) {

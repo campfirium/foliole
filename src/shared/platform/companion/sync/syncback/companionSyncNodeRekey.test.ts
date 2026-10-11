@@ -54,7 +54,7 @@ it('rekeys direct-child membership and publishes the changed parent sequence', a
   ]);
   expect(port.runs.some(([sql, params]) => sql.includes('INSERT INTO sync_object_state')
     && sql.includes('ON CONFLICT(object_type, object_id)')
-    && params[0] === 'parent_child_order' && params[1] === 'parent')).toBe(true);
+    && sql.includes("VALUES ('parent_child_order'") && params[0] === 'parent')).toBe(true);
 });
 
 class RecordingPort implements DbPort {
@@ -63,6 +63,17 @@ class RecordingPort implements DbPort {
   constructor(private readonly orders: Array<{ parent_id: string; child_ids_json: string }> = []) {}
 
   async query<T extends DbRow = DbRow>(sql: string) {
+    if (sql.includes('FROM parent_order_writer writer')) return [{
+      binding_id: 'fixture-binding', source_epoch: 'fixture-epoch',
+      current_epoch: 'fixture-epoch', author_id: 'fixture-author'
+    }] as unknown as T[];
+    if (sql.includes('FROM parent_order_sources')) {
+      const write = this.runs.findLast(([statement]) => statement.startsWith('INSERT INTO parent_order_sources'));
+      return (write ? [{ authorId: write[1][1], counter: write[1][2], child_ids_json: write[1][3] }] : []) as unknown as T[];
+    }
+    if (sql.includes("COALESCE(parent_id, 'parent-child-order:root')")) {
+      return ['highlight-1', 'highlight-1~canonical', 'other'].map(id => ({ id, title: id, createdAt: 'now' })) as unknown as T[];
+    }
     if (sql === 'PRAGMA table_info(nodes)') {
       return [{ name: 'id' }, { name: 'title' }] as unknown as T[];
     }

@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { restoreNodes, softDeleteNodes } from '../../lib/core/database/nodeMutations.js';
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
@@ -14,6 +13,7 @@ import { projectDesktopFramedSyncParentRelation, projectDesktopFramedSyncReview 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from './desktopFramedSyncRelationReviewApply.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
@@ -132,7 +132,7 @@ it('initializes a pre-index library only through the numbered migration and pres
     peer.db.exec(`DROP TABLE ${table}`);
   }
   peer.db.pragma('user_version = 140');
-  initializeDatabaseSchema(peer.db);
+  migrateNumberedFixtureTo(peer.db, 141);
   expect(peer.db.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(facts);
   const reopened = new Database(peer.file, { readonly: true });
   try { expect(await readFramedSyncInventory(createBetterSqliteDbPort(reopened))).toEqual(expected); }

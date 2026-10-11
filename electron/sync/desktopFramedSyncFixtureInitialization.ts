@@ -22,6 +22,10 @@ function initializeSyncGroup(deviceId: string) {
       ('t326-group', ?, ?, ?, ?, 'desktop', 'active', ?, NULL, ?, ?)`,
     [memberId, identity?.device_anchor ?? `${memberId}-anchor`, identity?.canonical_library_path ?? `/t326/${memberId}`, name, now, now, now]);
   }
+  if (!driver.queryOne('SELECT 1 FROM sync_group_local_state WHERE singleton_id = 1')) {
+    driver.execute('UPDATE node_version_local_proof_state SET library_epoch = ? WHERE singleton_id = 1',
+      [`${deviceId}-epoch`]);
+  }
   driver.execute(`INSERT OR IGNORE INTO sync_group_local_state VALUES (1, 't326-group', ?, 'active', ?)`,
     [deviceId, now]);
   for (const peer of ['desktop-a', 'desktop-b']) if (peer !== deviceId) markDesktopSyncGroupMemberStateReady(peer);

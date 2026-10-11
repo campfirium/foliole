@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 let root = '';
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
@@ -59,6 +59,8 @@ it.each([false, true])('writes, versions and remaps an opened article without sh
   const sqlite = openDatabaseConnection().sqlite;
   expect(sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(sqlite.prepare("SELECT content FROM nodes WHERE id = 'parent'").get()).toEqual({ content: next });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBe(original);
+  await releaseLocalEditBase(createBetterSqliteDbPort(sqlite), 'editor', 'parent');
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBeNull();
   expect(sqlite.prepare("SELECT json_extract(snapshot_json, '$.body_deleted') FROM node_sync_versions WHERE version_id = ?")
     .pluck().get(first)).toBe(1);

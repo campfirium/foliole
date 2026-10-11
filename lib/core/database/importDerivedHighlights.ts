@@ -68,10 +68,10 @@ export function insertImportedHighlightNodes(input: {
         [serializeImageSources(sources), nodeId]
       );
       insertedNodeIds.push(nodeId);
+      ensureNodeParentMembership(input.driver, nodeId);
     }
   });
 
-  for (const nodeId of insertedNodeIds) ensureNodeParentMembership(input.driver, nodeId);
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);
 
   return insertedNodeIds.length;

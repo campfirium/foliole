@@ -43,7 +43,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
       fixed_partition: ['lib/core/sync/syncIdentityNodeFactIndex.ts']
     },
     framed: [{ root: 'src/shared/platform/companionDesktopSyncObjects.ts',
-      file: 'src/shared/platform/companion/sync/framed/companionFramedSyncInventoryRound.ts' }]
+      file: 'src/shared/platform/companion/sync/framed/companionRequestSyncDatabaseRound.ts' }]
   },
   android: {
     kind: 'symbols', extension: '.java', scopes: ['android/app/src/main/java/com/foliole/android',

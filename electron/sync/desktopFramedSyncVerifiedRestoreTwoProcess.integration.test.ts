@@ -4,10 +4,12 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.testSupport.js';
+import { FRAMED_SYNC_NODE_VERSION_FACT } from '../../lib/core/sync/framedSyncNodeFactContract.js';
+
+import { fileInboundEvidence } from './desktopFramedSyncFileEvidence.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 import { assertReceiverRestoreSourcesCleared, seedReceiverRestoreSources } from './desktopFramedSyncVerifiedRestoreSources.testSupport.js';
-import { assertOverwriteGlobalSettings, assertOverwriteSettingsPreserved, continueAfterReceiptFailure, installReceiptFailure, overwriteProgressRow, preservedRestoreArticle, receiptCountForStateHash, restoreIdentityState, seedOverwriteGlobalSettings, seedOverwriteSettings } from './desktopFramedSyncVerifiedRestoreTwoProcess.testSupport.js';
+import { assertOverwriteGlobalSettings, assertOverwriteSettingsPreserved, continueAfterObjectCommitFailure, installObjectCommitFailure, overwriteProgressRow, preservedRestoreArticle, restoreIdentityState, seedOverwriteGlobalSettings, seedOverwriteSettings } from './desktopFramedSyncVerifiedRestoreTwoProcess.testSupport.js';
 import { sourceArticleIdentity, verifiedReceiverArticle, verifiedReceiverEvidence } from './desktopFramedSyncVerifiedTwoProcess.testSupport.js';
 
 const nodeId = 't326-verified-identity-restore-a';
@@ -18,7 +20,7 @@ const content = '\ufeff恢复中😀\0文'.repeat(40_000);
 const oldContent = '\ufeffOld independent library 中😀\0';
 
 it.each(['restore', 'adoption'] as const)(
-  'retains completed authenticated %s units across a later receipt failure and process restart', async (mode) => {
+  'retains completed authenticated %s units across a later object commit failure and process restart', async (mode) => {
     const fixture = await createDesktopFramedSyncTwoProcessFixture();
     let succeeded = false;
     try {
@@ -26,22 +28,20 @@ it.each(['restore', 'adoption'] as const)(
       const sources = seedReceiverRestoreSources(fixture.rightSnapshot.databasePath, oldId, fixture.rightSnapshot.stateRoot);
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       const secondExpected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, secondId);
-      const [firstHash, secondHash] = await sourceStateHashes(fixture.left, nodeId, secondId);
       const previous = sourceArticleIdentity(fixture.rightSnapshot.databasePath, oldId);
       const args = { mode, peerOrigin: fixture.leftSnapshot.origin, peerDeviceId: 'desktop-a', restoreId: 't326-restore-round' };
       const directory = path.join(fixture.rightSnapshot.stateRoot, 'identity-restore-backups');
       expect(await fixture.right.invoke('begin_identity_restore', args)).toEqual({ directory });
-      installReceiptFailure(fixture.rightSnapshot.databasePath, 1);
-      await expect(fixture.right.invoke('identity_restore_round', args)).rejects.toThrow('identity_restore_receipt_rejected');
+      installObjectCommitFailure(fixture.rightSnapshot.databasePath, 1);
+      await expect(fixture.right.invoke('identity_restore_round', args)).rejects.toThrow('identity_restore_object_rejected');
       assertReceiverConfiguration(fixture.rightSnapshot.databasePath, settings, sources);
       expect(await verifiedReceiverArticle(fixture.rightSnapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
       const failed = verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, secondId);
       const completedFirst = verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, nodeId);
       expect(failed.node).toBeUndefined();
       expect(failed.versions).toEqual([]);
-      expect(failed.receipts).toHaveLength(1);
-      expect(failed.transfers).toEqual(expect.arrayContaining([expect.objectContaining({ state: 'ready_to_apply' })]));
-      expect(failed.pins.length).toBeGreaterThan(0);
+      const staged = await fileInboundEvidence(fixture.rightSnapshot.databasePath);
+      const completedUnit = assertInterruptedFileUnits(staged);
       expect(verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, oldId).node).toBeUndefined();
       const { progress, pending } = pendingOverwrite(fixture.rightSnapshot.databasePath, mode, args.restoreId);
       if (mode === 'restore') expect(await preservedRestoreArticle(directory, fixture.root, oldId))
@@ -50,10 +50,11 @@ it.each(['restore', 'adoption'] as const)(
       expect(restarted.snapshot.pid).not.toBe(fixture.rightSnapshot.pid);
       assertReceiverConfiguration(restarted.snapshot.databasePath, settings, sources);
       expect(verifiedReceiverEvidence(restarted.snapshot.databasePath, nodeId)).toEqual(completedFirst);
+      expect(await fileInboundEvidence(restarted.snapshot.databasePath)).toEqual(staged);
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toEqual(progress);
       expect(restoreIdentityState(restarted.snapshot.databasePath)).toEqual(pending);
       expect(await verifiedReceiverArticle(restarted.snapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
-      continueAfterReceiptFailure(restarted.snapshot.databasePath, nodeId);
+      continueAfterObjectCommitFailure(restarted.snapshot.databasePath, nodeId);
       expect(await fixture.right.invoke('identity_restore_round', args)).toMatchObject({ complete: true, pending: 0 });
       assertReceiverConfiguration(restarted.snapshot.databasePath, settings, sources);
       expect(await verifiedReceiverArticle(restarted.snapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
@@ -61,13 +62,8 @@ it.each(['restore', 'adoption'] as const)(
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toBeUndefined();
       const committed = verifiedReceiverEvidence(restarted.snapshot.databasePath, nodeId);
       expect(committed.node).toMatchObject({ content });
-      expect(committed.receipts.length).toBeGreaterThanOrEqual(2);
-      expect(receiptCountForStateHash(restarted.snapshot.databasePath, firstHash)).toBe(1);
-      expect(receiptCountForStateHash(restarted.snapshot.databasePath, secondHash)).toBe(1);
-      expect(committed.receipts[0]).toEqual(failed.receipts[0]);
-      expect(committed.pins).toEqual([]);
-      expect(committed.frames).toEqual([]);
-      expect(committed.chunks).toEqual([]);
+      const finished = await fileInboundEvidence(restarted.snapshot.databasePath);
+      assertFinishedFileUnits(finished, completedUnit);
       expect(verifiedReceiverEvidence(restarted.snapshot.databasePath, oldId).node).toBeUndefined();
       assertOverwriteFinished(restarted.snapshot.databasePath, mode, args.restoreId);
       await assertGlobalSettingsAfterRestart(fixture, settings, sources);
@@ -133,8 +129,34 @@ function assertOverwriteFinished(databasePath: string, mode: 'restore' | 'adopti
   }
 }
 
-async function sourceStateHashes(process: Parameters<typeof readFixtureInventory>[0], firstId: string, secondId: string) {
-  const entries = await readFixtureInventory(process);
-  const hash = (id: string) => Buffer.from(entries.find(entry => entry.globalId === id)!.sharedStateHash).toString('hex');
-  return [hash(firstId), hash(secondId)] as const;
+type InboundEvidence = Awaited<ReturnType<typeof fileInboundEvidence>>;
+
+function assertInterruptedFileUnits(staged: InboundEvidence) {
+  const completedUnit = staged.filter(unit => unit.facts.some(fact =>
+    fact.kind === FRAMED_SYNC_NODE_VERSION_FACT.factKind && fact.objectType === 'node' && fact.globalId === nodeId));
+  expect(completedUnit).toHaveLength(1);
+  expect(completedUnit[0]).toMatchObject({
+    state: 'applied', receipt: { receiverDeviceId: 'desktop-b' }, pins: [], attemptEntries: [] });
+  const rejectedUnit = staged.filter(unit => unit.facts.some(fact =>
+    fact.kind === FRAMED_SYNC_NODE_VERSION_FACT.factKind && fact.objectType === 'node' && fact.globalId === secondId));
+  expect(rejectedUnit).toHaveLength(1);
+  expect(rejectedUnit[0]).toMatchObject({ state: 'ready_to_apply', receipt: undefined });
+  expect(rejectedUnit[0]?.verifiedManifest).toBeDefined();
+  expect(rejectedUnit[0]?.pins.length).toBeGreaterThan(0);
+  expect(rejectedUnit[0]?.bodies.length).toBeGreaterThan(0);
+  return completedUnit;
+}
+
+function assertFinishedFileUnits(finished: InboundEvidence, completedUnit: InboundEvidence) {
+  for (const globalId of [nodeId, secondId]) {
+    const units = finished.filter(unit => unit.facts.some(fact =>
+      fact.kind === FRAMED_SYNC_NODE_VERSION_FACT.factKind && fact.objectType === 'node' && fact.globalId === globalId));
+    expect(units).toHaveLength(1);
+    expect(units[0]?.receipt).toBeDefined();
+  }
+  for (const unit of finished) {
+    expect(unit).toMatchObject({
+      state: 'applied', receipt: { receiverDeviceId: 'desktop-b' }, pins: [], attemptEntries: [], bodies: [] });
+  }
+  expect(finished).toEqual(expect.arrayContaining(completedUnit));
 }

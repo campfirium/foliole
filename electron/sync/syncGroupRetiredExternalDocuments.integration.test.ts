@@ -10,6 +10,7 @@ import { expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { parseSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { restorePreCurrentParentOrderFixture } from '../database/numberedMigrationTestSupport.js';
 import { seedRetiredExternalDocuments } from '../database/retiredExternalDocuments.testSupport.js';
 
 import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
@@ -47,6 +48,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     const before = readAdoption(peers[0]!.database);
     expect(before).not.toBeNull();
     const identity = localIdentity(peers[0]!.database);
+    withDatabase(peers[1]!.database, restorePreCurrentParentOrderFixture);
     await provider!.send('reopen');
     await provider!.send('joinProviderEnable', { anchor: true });
     await applicant!.send('joinComplete');

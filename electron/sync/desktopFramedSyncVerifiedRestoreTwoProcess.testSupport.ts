@@ -130,29 +130,21 @@ export function overwriteProgressRow(databasePath: string) {
   } finally { sqlite.close(); }
 }
 
-export function receiptCountForStateHash(databasePath: string, hash: string) {
-  const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
+export function installObjectCommitFailure(databasePath: string, rejectAfterObjects = 0) {
+  if (!Number.isSafeInteger(rejectAfterObjects) || rejectAfterObjects < 0) throw new Error('fixture_object_threshold_invalid');
+  const sqlite = new Database(databasePath);
   try {
-    return sqlite.prepare<[Buffer], { count: number }>(
-      'SELECT count(*) AS count FROM framed_sync_receipts WHERE applied_state_hash = ?')
-      .get(Buffer.from(hash, 'hex'))?.count;
+    sqlite.exec(`CREATE TRIGGER reject_identity_restore_object BEFORE INSERT ON nodes
+      WHEN NOT EXISTS (SELECT 1 FROM nodes WHERE id = NEW.id)
+        AND (SELECT count(*) FROM nodes WHERE current_version_id IS NOT NULL) >= ${rejectAfterObjects}
+      BEGIN SELECT RAISE(ABORT, 'identity_restore_object_rejected'); END`);
   } finally { sqlite.close(); }
 }
 
-export function installReceiptFailure(databasePath: string, rejectAfterReceipts = 0) {
-  if (!Number.isSafeInteger(rejectAfterReceipts) || rejectAfterReceipts < 0) throw new Error('fixture_receipt_threshold_invalid');
+export function continueAfterObjectCommitFailure(databasePath: string, completedNodeId: string) {
   const sqlite = new Database(databasePath);
   try {
-    sqlite.exec(`CREATE TRIGGER reject_identity_restore_receipt BEFORE INSERT ON framed_sync_receipts
-      WHEN (SELECT count(*) FROM framed_sync_receipts) >= ${rejectAfterReceipts}
-      BEGIN SELECT RAISE(ABORT, 'identity_restore_receipt_rejected'); END`);
-  } finally { sqlite.close(); }
-}
-
-export function continueAfterReceiptFailure(databasePath: string, completedNodeId: string) {
-  const sqlite = new Database(databasePath);
-  try {
-    sqlite.exec('DROP TRIGGER reject_identity_restore_receipt');
+    sqlite.exec('DROP TRIGGER reject_identity_restore_object');
     sqlite.exec(`CREATE TRIGGER protect_completed_restore_unit BEFORE DELETE ON nodes
       WHEN OLD.id = '${completedNodeId.replaceAll("'", "''")}'
       BEGIN SELECT RAISE(ABORT, 'completed_restore_unit_cleared_again'); END`);

@@ -1,6 +1,8 @@
 import { CapacitorSQLite as sqlite, SQLiteDBConnection } from '@capacitor-community/sqlite';
 
-import { requireValue } from './capacityAcceptanceSafety';
+function requireValue(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
 
 const tables = ['snapshot_inventory', 'snapshot_versions', 'snapshot_bodies'] as const;
 

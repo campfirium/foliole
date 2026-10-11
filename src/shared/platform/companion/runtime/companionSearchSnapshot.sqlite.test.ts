@@ -3,12 +3,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => undefined,
-    closeFramedSyncPayloadBudget: async () => undefined
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub };
+});
 
 import { searchCompanionFullTextSnapshot } from '../../companionFullTextSearch';
 

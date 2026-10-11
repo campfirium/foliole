@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { LIBRARY_ASSETS_DIRNAME } from '../../lib/platform/libraryPaths.js';
 
-import { publicationEvidence, publishFixtureDelivery, readFixtureInventory, reconnectFixturePeer }
+import { filePublicationEvidence } from './desktopFramedSyncFileEvidence.testSupport.js';
+import { publishFixtureDelivery, readFixtureInventory, reconnectFixturePeer }
   from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence,
   type DesktopFramedSyncFixtureProcess } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -22,7 +23,7 @@ afterEach(async ({ task }) => {
 });
 
 it('recovers an unacknowledged publication on normal peer reconnect with no inventory difference', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   const nodeId = 't326-reconnect';
@@ -38,11 +39,11 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
   try { await expect(reconnectFixturePeer(fixture.left, { ...fixture.rightSnapshot, origin: proxy.origin }))
     .rejects.toThrow(); }
   finally { await proxy.close(); }
-  const pending = publicationEvidence(fixture.leftSnapshot.databasePath).publications
+  const pending = (await filePublicationEvidence(fixture.leftSnapshot.databasePath)).publications
     .map((value) => z.object({ id: z.string(), state: z.string() }).parse(value))
     .filter((value) => value.state === 'published');
   expect(pending.length).toBeGreaterThan(0);
-  for (const { id } of pending) expect(publicationEvidence(fixture.rightSnapshot.databasePath).receipts)
+  for (const { id } of pending) expect((await filePublicationEvidence(fixture.rightSnapshot.databasePath)).receipts)
     .toContainEqual({ id, receiver_device_id: 'desktop-b' });
   await alignFixturePositions(fixture);
   expect(compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
@@ -60,13 +61,12 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
     expect(observation.wireBytes().transferBytes).toBe(0);
     expect(observation.wireBytes().sessionBytes).toBeGreaterThan(0);
   } finally { await observation.close(); }
-  const sender = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
-  expect(sender.framedSync.outboundHolds).toBe(0);
-  const recovered = publicationEvidence(restarted.snapshot.databasePath);
+  expect((await filePublicationEvidence(restarted.snapshot.databasePath)).holds).toEqual([]);
+  const recovered = (await filePublicationEvidence(restarted.snapshot.databasePath));
   for (const { id } of pending) {
     expect(recovered.receipts).not.toContainEqual({ id, receiver_device_id: 'desktop-b' });
-    expect(recovered.publications).toContainEqual(expect.objectContaining({ id, state: 'receipt_committed' }));
-    expect(publicationEvidence(fixture.rightSnapshot.databasePath).receipts
+    expect(recovered.publications).toContainEqual(expect.objectContaining({ id, state: 'retired' }));
+    expect((await filePublicationEvidence(fixture.rightSnapshot.databasePath)).receipts
       .filter(receipt => receipt.id === id)).toHaveLength(1);
   }
 });
@@ -90,7 +90,7 @@ async function alignFixturePositions(fixture: Awaited<ReturnType<typeof createDe
 
 it.each(['publication', 'partial', 'finalised'] as const)(
   'recovers %s after edits, normal collection and sender restart without reselecting facts', async (mode) => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
     root = fixture.root;
     processes.push(fixture.left, fixture.right);
     const nodeId = 't326-frozen-recovery';
@@ -100,15 +100,16 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     await fixture.left.seed({ content: 'Latest body', nodeId, title: 'Latest' });
     await fixture.left.invoke('collect_content');
     const retained = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
-    expect(retained.versions).not.toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
-    expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null }));
+    expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
     const restarted = await fixture.restartLeft();
     processes.push(restarted.process);
     await reconnectFixturePeer(restarted.process, fixture.rightSnapshot);
-    const after = publicationEvidence(restarted.snapshot.databasePath);
-    expect(after.publications[0]).toEqual(expect.objectContaining({
-      id, manifest_json: '{"blobs":[],"facts":[]}', state: 'receipt_committed'
-    }));
+    await restarted.process.invoke('collect_content');
+    await fixture.right.invoke('collect_content');
+    const after = (await filePublicationEvidence(restarted.snapshot.databasePath));
+    const retired = after.publications.find(value => value.id === id);
+    expect(retired).toMatchObject({ id, state: 'retired' });
+    expect(retired?.manifest).toBeUndefined();
     expect(after.receipts).toContainEqual({ id, receiver_device_id: 'desktop-b' });
     expect(after.frames).toEqual([]);
     expect(after.attempts).toEqual([]);
@@ -121,7 +122,7 @@ it.each(['publication', 'partial', 'finalised'] as const)(
 );
 
 it('keeps C content protected after B receipt and releases only C after its delivery', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   root = fixture.root;
   const third = await fixture.startThird();
   processes.push(fixture.left, fixture.right, third.process);
@@ -138,7 +139,7 @@ it('keeps C content protected after B receipt and releases only C after its deli
   await fixture.left.seedResource({ bytes: Buffer.concat([originalBytes, Buffer.alloc(128, 2)]), nodeId });
   await fixture.left.invoke('collect_content');
   await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-  expect(publicationEvidence(fixture.leftSnapshot.databasePath).holds)
+  expect((await filePublicationEvidence(fixture.leftSnapshot.databasePath)).holds)
     .toEqual([{ member_id: 'desktop-c' }]);
   await fixture.left.invoke('collect_content');
   expect(await fs.readFile(path.join(path.dirname(path.dirname(fixture.leftSnapshot.databasePath)),
@@ -147,7 +148,7 @@ it('keeps C content protected after B receipt and releases only C after its deli
   const restarted = await fixture.restartLeft();
   processes.push(restarted.process);
   await reconnectFixturePeer(restarted.process, third.snapshot);
-  const evidence = publicationEvidence(restarted.snapshot.databasePath);
+  const evidence = (await filePublicationEvidence(restarted.snapshot.databasePath));
   expect(evidence.holds).toEqual([]);
   expect(evidence.receipts).toEqual(expect.arrayContaining([
     { id: b, receiver_device_id: 'desktop-b' }, { id: c, receiver_device_id: 'desktop-c' }
@@ -155,29 +156,30 @@ it('keeps C content protected after B receipt and releases only C after its deli
 });
 
 it('replays ready staging after receiver restart before apply and persists the original content', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   await fixture.left.seed({ content: 'Ready body', nodeId: 't326-ready', title: 'Ready' });
   await fixture.right.invoke('round', { input: { kind: 'pause_before_apply' } });
   await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).rejects.toThrow('fixture_paused_before_apply');
   const ready = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(ready.framedSync.inboundStates).toEqual([{ state: 'ready_to_apply' }]);
+  expect((await filePublicationEvidence(fixture.rightSnapshot.databasePath)).inboundStates)
+    .toEqual([{ state: 'ready_to_apply' }]);
   expect(ready.nodes).toEqual([]);
-  expect(ready.framedSync.receipts).toBe(0);
+  expect((await filePublicationEvidence(fixture.rightSnapshot.databasePath)).receipts).toEqual([]);
   const id = z.object({ id: z.string() }).parse(
-    publicationEvidence(fixture.leftSnapshot.databasePath).publications[0]).id;
+    (await filePublicationEvidence(fixture.leftSnapshot.databasePath)).publications[0]).id;
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
   await reconnectFixturePeer(fixture.left, restarted.snapshot);
   const applied = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
-  expect(publicationEvidence(restarted.snapshot.databasePath).receipts)
+  expect((await filePublicationEvidence(restarted.snapshot.databasePath)).receipts)
     .toContainEqual({ id, receiver_device_id: 'desktop-b' });
   expect(applied.versions).toContainEqual(expect.objectContaining({ body_text: 'Ready body' }));
 });
 
 it('keeps the receiver edit made before apply and records both branches durably', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   const nodeId = 't326-before-apply-edit';
@@ -193,12 +195,12 @@ it('keeps the receiver edit made before apply and records both branches durably'
     expect.objectContaining({ body_text: 'Sender branch' })
   ]));
   expect(receiver.nodes).toContainEqual(expect.objectContaining({ title: 'Receiver branch' }));
-  expect(publicationEvidence(fixture.leftSnapshot.databasePath).receipts)
+  expect((await filePublicationEvidence(fixture.leftSnapshot.databasePath)).receipts)
     .toContainEqual({ id, receiver_device_id: 'desktop-b' });
 });
 
 it('drains the responder publication when its peer initiates an unchanged inventory round', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   await fixture.left.seed({ content: 'Responder body', nodeId: 't326-responder', title: 'Responder' });
@@ -211,7 +213,7 @@ it('drains the responder publication when its peer initiates an unchanged invent
   await fixture.left.invoke('round', { input: { kind: 'remember_peer', peerOrigin: fixture.rightSnapshot.origin,
     peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' } } });
   await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
-  expect(publicationEvidence(fixture.leftSnapshot.databasePath).holds).toEqual([]);
-  expect(publicationEvidence(fixture.leftSnapshot.databasePath).receipts)
+  expect((await filePublicationEvidence(fixture.leftSnapshot.databasePath)).holds).toEqual([]);
+  expect((await filePublicationEvidence(fixture.leftSnapshot.databasePath)).receipts)
     .toContainEqual(expect.objectContaining({ receiver_device_id: 'desktop-b' }));
 });

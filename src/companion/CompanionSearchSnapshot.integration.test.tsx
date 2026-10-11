@@ -9,12 +9,13 @@ import { isCompanionSearchTopicAvailable } from '../shared/platform/companionFul
 import { useCompanionSearch } from './useCompanionSearch';
 import { useCompanionSearchTopicOpen } from './useCompanionSearchTopicOpen';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
-    configureFramedSyncPayloadBudget: async () => {},
-    closeFramedSyncPayloadBudget: async () => {}
-  })
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return {
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    registerPlugin: createCompanionNativeSyncStub
+  };
+});
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
 afterEach(async () => { await library?.close(); library = null; });
 

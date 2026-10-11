@@ -100,7 +100,7 @@ it('converts older virtual folders and their sorting before retiring historical 
   migrateNumberedFixtureTo(db, 105);
   const orders = db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
   db.pragma('user_version = 127');
-  initializeDatabaseSchema(db);
+  migrateNumberedFixtureTo(db, 128);
   expect(legacyTables(db)).toEqual([]);
   expect(db.prepare("SELECT * FROM nodes WHERE id='legacy'").get()).toEqual(folder);
   expect(db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(orders);

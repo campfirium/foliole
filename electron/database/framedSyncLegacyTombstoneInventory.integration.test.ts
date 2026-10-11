@@ -5,7 +5,6 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { framedSyncResourceVersionSql } from '../../lib/core/database/framedSyncInventoryProjectionSql.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
@@ -14,6 +13,7 @@ import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { publishDesktopFramedSyncNodeOutbound } from './desktopFramedSyncOutboundSelection.js';
+import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { closeLibraries, createPeer, edit, startLibraries, type Peer } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
@@ -65,7 +65,7 @@ it.each(['desktop', 'companion'])('repairs the %s derived inventory through a nu
   expect(await resources(peer)).toEqual([]);
   if (host === 'desktop') {
     peer.db.pragma('user_version = 143');
-    initializeDatabaseSchema(peer.db);
+    migrateNumberedFixtureTo(peer.db, 144);
   } else await peer.port.transaction((tx) => migrateCompanionDatabase(tx, 72, 73));
   expect(await resources(peer)).toEqual([EMPTY_BODY_HASH]);
   expect(protectedFacts(peer)).toEqual(before);

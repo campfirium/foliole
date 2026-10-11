@@ -72,7 +72,7 @@ function queryResult(
 ) {
   if (sql.includes('SELECT source_epoch FROM sync_state_sequence')) return { values: [{ source_epoch: 'test-epoch' }] };
   if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
-  if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'delete' }] };
+  if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'wal' }] };
   if (sql === 'PRAGMA user_version') return { values: [{ user_version: args.version ?? 0 }] };
   if (sql.includes("name = 'companion_meta'")) return { values: args.existed ? [{ present: 1 }] : [] };
   if (sql.includes('FROM companion_meta WHERE key = ?')) {

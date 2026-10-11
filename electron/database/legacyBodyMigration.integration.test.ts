@@ -9,6 +9,7 @@ import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { migrateLegacyBodyConsistency } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
+import { restorePreCurrentParentOrderFixture } from './numberedMigrationTestSupport.js';
 import { assertPersisted, closeLibraries, createPeer, edit as editNode, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
@@ -42,6 +43,7 @@ it('upgrades in the schema transaction and publishes repaired facts through prod
   source.db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id = 'topic'").run();
   const old = history(source);
   const garbage = upsertTextBodyBlob(source.driver, 'Unused', NOW);
+  restorePreCurrentParentOrderFixture(source.db);
   source.db.pragma('user_version = 123');
   upgrade(source);
   expect(readDataMigrationState(source.db, BODY_REPAIR_ID)?.status).toBe('completed');
@@ -91,6 +93,7 @@ it('rolls back the entire upgrade and its marker when version publication fails'
   const peer = createPeer('source');
   const version = edit(peer, 'Canonical');
   peer.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?').run('', version);
+  restorePreCurrentParentOrderFixture(peer.db);
   peer.db.pragma('user_version = 123');
   peer.db.exec("CREATE TRIGGER reject_repair BEFORE UPDATE ON sync_object_state BEGIN SELECT RAISE(ABORT, 'failed'); END");
   const before = history(peer);

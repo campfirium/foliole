@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
@@ -83,9 +84,7 @@ describe('companion order migration', () => {
     insertOrder.run('child-b', 2);
     fixture.sqlite.pragma('user_version = 39');
 
-    await bootstrapCompanionDatabase(fixture.port, {
-      allowCreate: false, expectedHostName: 'A5', now: '2026-09-02T00:00:00.000Z'
-    });
+    await fixture.port.transaction((tx) => migrateCompanionDatabase(tx, 39, 40));
 
     const row = fixture.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
       .get('parent') as { child_ids_json: string };

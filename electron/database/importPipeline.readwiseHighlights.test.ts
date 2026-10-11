@@ -219,9 +219,10 @@ function expectImportedChildrenInSnapshot(nodeId: string, sourceFingerprint: str
 }
 
 it('creates imported child nodes for matched sidecar highlights during the first import', () => {
-  const imported = runPreparedImport(
-    createReadwisePreparedImport()
-  );
+  const prepared = createReadwisePreparedImport();
+  [...prepared.matchedHighlights ?? [], ...prepared.unmatchedHighlights ?? []]
+    .forEach((highlight, index) => { highlight.nodeId = `node-${3 - index}`; });
+  const imported = runPreparedImport(prepared);
 
   expectReadwiseImportedState({
     ...(readPersistedImportState(imported.sourceFingerprint, imported.nodeId) as ReturnType<typeof readPersistedImportState>),

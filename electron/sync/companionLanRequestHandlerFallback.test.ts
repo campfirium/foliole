@@ -18,6 +18,7 @@ vi.mock('../database/workspaceSnapshot.js', () => ({
   }))
 }));
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   runWithDatabaseConnectionOwner: vi.fn(async (execute: () => unknown) => execute())
 }));
 vi.mock('./companionLanAuthenticatedPost.js', () => ({
