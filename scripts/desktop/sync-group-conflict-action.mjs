@@ -93,19 +93,24 @@ export async function loadConvergedDesktopSyncForks({ desktopLabel = 'macos', no
     silentOverwrite: false, visible: true };
 }
 
-export async function loadVisibleDesktopSyncConflictCopy({ nodeId, session }) {
-  const snapshot = await session.invoke('load_workspace_list_snapshot', {
-    includePdfOpenings: false
-  });
-  const copyIds = Object.keys(snapshot?.nodesById ?? {}).filter((id) => (
-    id.startsWith(`${nodeId}~`)
-  ));
-  const documents = await Promise.all(copyIds.map((copyId) => (
-    session.invoke('load_node_document', { nodeId: copyId })
-  )));
-  const copies = documents.filter((document) => String(document?.content).includes('A5 note'));
-  if (copies.length === 0) {
-    throw new Error('The product did not expose the concurrent A5 conflict copy.');
+export async function loadVisibleDesktopSyncConflictBodies({ nodeId, session }) {
+  const preview = await session.invoke('load_node_text_alternative_preview', { node_id: nodeId });
+  if (preview?.source_node_id !== nodeId || !preview.alternatives?.length) {
+    throw new Error('The product did not expose the concurrent body alternative on its original node.');
   }
-  return { conflictCount: copies.length, nodeId, silentOverwrite: false, visible: true };
+  const bodies = [preview.current_content, preview.updated_content];
+  for (const alternative of preview.alternatives) {
+    if (alternative.id === preview.alternative_id) continue;
+    const other = await session.invoke('load_node_text_alternative_preview', {
+      node_id: nodeId, alternative_id: alternative.id
+    });
+    if (other?.source_node_id !== nodeId) throw new Error('Conflict alternative identity changed.');
+    bodies.push(other.updated_content);
+  }
+  if (!['A5 note', 'Desktop fork macos'].every((fragment) =>
+    bodies.some((body) => typeof body === 'string' && body.includes(fragment)))) {
+    throw new Error('The product did not retain both concurrent fork bodies.');
+  }
+  return { conflictCount: preview.alternatives.length, nodeId,
+    resolution: 'body-alternatives', silentOverwrite: false, visible: true };
 }

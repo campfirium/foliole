@@ -19,7 +19,7 @@ import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-mainte
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
-  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflictCopy
+  createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadVisibleDesktopSyncConflictBodies
 } from '../desktop/sync-group-conflict-action.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { runMacosA5WindowsTwoDeviceEntry } from './macos-a5-windows-two-device-entry.mjs';
@@ -151,7 +151,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') },
     a5ManualBeforeRestartAction.manifestPath);
     const macosManualBeforeRestart = await session.invoke('sync_companion_now');
-    const conflict = await loadVisibleDesktopSyncConflictCopy({
+    const conflict = await loadVisibleDesktopSyncConflictBodies({
       nodeId: conflictSeed.nodeId, session
     });
     args.checked(args.paths.adb, [

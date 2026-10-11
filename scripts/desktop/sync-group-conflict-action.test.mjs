@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import {
   createDesktopSyncConflictSeed, forkDesktopSyncConflict, loadConvergedDesktopSyncForks,
-  loadVisibleDesktopSyncConflict, loadVisibleDesktopSyncConflictCopy
+  loadVisibleDesktopSyncConflict, loadVisibleDesktopSyncConflictBodies
 } from './sync-group-conflict-action.mjs';
 
 it('creates and forks one business object only through product commands', async () => {
@@ -79,12 +79,22 @@ it('accepts the actual Windows peer label when requested', async () => {
   }) }));
 });
 
-it('loads and accepts an A5 conflict copy exposed by the product snapshot', async () => {
-  const invoke = vi.fn(async (command) => command === 'load_workspace_list_snapshot'
-    ? { nodesById: { 'node~a5': { content: '' } } }
-    : { content: 'Note target beta\n※ A5 note token' });
-  const session = { invoke };
-  await expect(loadVisibleDesktopSyncConflictCopy({ nodeId: 'node', session }))
+it('accepts both fork bodies on the original node without a renamed copy', async () => {
+  const invoke = vi.fn(async () => ({ source_node_id: 'node', alternative_id: 'other',
+    alternatives: [{ id: 'other' }], current_content: 'Note target beta\nDesktop fork macos',
+    updated_content: 'Note target beta\nA5 note token' }));
+  await expect(loadVisibleDesktopSyncConflictBodies({ nodeId: 'node', session: { invoke } }))
     .resolves.toMatchObject({ conflictCount: 1, silentOverwrite: false, visible: true });
-  expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node~a5' });
+  expect(invoke).toHaveBeenCalledWith('load_node_text_alternative_preview', { node_id: 'node' });
+});
+
+it('rejects loss of either fork or an alternative from another node', async () => {
+  for (const preview of [null,
+    { source_node_id: 'node', current_content: 'A5 note', updated_content: 'unrelated' },
+    { source_node_id: 'node', current_content: 'Desktop fork macos', updated_content: 'unrelated' },
+    { source_node_id: 'other', current_content: 'Desktop fork macos', updated_content: 'A5 note' }]) {
+    await expect(loadVisibleDesktopSyncConflictBodies({ nodeId: 'node', session: {
+      invoke: async () => preview && { alternative_id: 'other', alternatives: [{ id: 'other' }], ...preview }
+    } })).rejects.toThrow();
+  }
 });

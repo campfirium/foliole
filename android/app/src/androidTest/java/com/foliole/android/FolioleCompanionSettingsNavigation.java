@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.app.Instrumentation;
 import android.webkit.WebView;
+import android.view.KeyEvent;
 
 import org.json.JSONObject;
 
@@ -27,6 +28,9 @@ final class FolioleCompanionSettingsNavigation {
                 ? TOP_BAR_LEFT_ACTION
                 : isVisible(snapshot, TOP_BAR_BACK) ? TOP_BAR_BACK : null;
             if (exit != null) clickObserved(instrumentation, webView, exit);
+            else if (isVisible(snapshot, "companion-review-action-read")) {
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            }
             Thread.sleep(500);
         }
         throw new IllegalStateException(
