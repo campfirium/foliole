@@ -6,6 +6,8 @@ import {
   removeA5AcceptanceTestApplication, removeT250TestApplication
 } from './macos-a5-acceptance-package-cleanup.mjs';
 
+import { saveA5InstrumentationFailure } from './macos-a5-instrumentation-failure.mjs';
+
 const APP_ID = 'com.campfirium.foliole.android';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
 
@@ -204,6 +206,10 @@ export async function runMacosA5InstrumentationMechanics({
     observation ??= concurrentObservationTask
       ? await concurrentObservationTask : await observeWhileTransportOpen?.();
     completed = { evidencePath, observation, stdout: instrumentation.stdout };
+  } catch (error) {
+    await saveA5InstrumentationFailure({ appId, error, evidenceRoot, execute, options, paths, serial })
+      .catch(() => { /* Preserve the original failure if evidence cannot be written. */ });
+    throw error;
   } finally {
     observationAbort?.abort();
     if (reverseCreated) output.push((await checked(execute, paths.adb,

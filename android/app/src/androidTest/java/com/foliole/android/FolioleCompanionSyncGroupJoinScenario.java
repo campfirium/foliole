@@ -107,6 +107,10 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 receipt.put("prejoinFactText", prejoinFact.getString("factText"));
             }
             return receipt;
+        } catch (Exception | AssertionError error) {
+            try { FolioleCompanionJoinFailureEvidence.save(instrumentation, activity); }
+            catch (Exception captureError) { error.addSuppressed(captureError); }
+            throw error;
         } finally {
             Activity finalActivity = activity;
             instrumentation.runOnMainSync(finalActivity::finish);
