@@ -23,6 +23,8 @@ public final class FramedSyncPayload {
         TRANSFER_TERMINATION,
         REQUEST_OBJECT_HEADER,
         REQUEST_OBJECT_END,
+        REQUEST_OBJECT_RESULT,
+        REQUEST_BATCH_END,
         ERROR
     }
 

@@ -57,8 +57,8 @@ final class FolioleCompanionSyncGroupJoinScenario {
             Log.i(LOG_TAG, "stage=device-visible");
             FolioleCompanionWebViewSemanticAdapter.clickUniqueVisibleMatchingAttribute(
                 instrumentation, webView, "app-choice", "data-choice-value",
-                "merge", stageDeadline());
-            Log.i(LOG_TAG, "stage=merge-selected");
+                "use-group", stageDeadline());
+            Log.i(LOG_TAG, "stage=use-group-selected");
             Log.i(LOG_TAG, "stage=device-requested");
             String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
                 instrumentation, webView, stageDeadline(),

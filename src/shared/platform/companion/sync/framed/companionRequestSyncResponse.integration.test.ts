@@ -13,7 +13,9 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/fr
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { readRequestSyncInventorySnapshot } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { sendRequestSyncObject } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
+import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/requestSyncBatchExchange.js';
+import type { RequestSyncExchange } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 
 const runtime = vi.hoisted(() => ({ db: undefined as DbPort | undefined, files: undefined as FramedSyncFilePort | undefined }));
@@ -102,4 +104,103 @@ function seed(device: ReturnType<typeof textDevice>, id: string, groupKey: Uint8
       device_name, platform, state, joined_at, updated_at) VALUES
     ('group', 'peer', 'peer', '/peer', 'Peer', 'mac', 'active', 'now', 'now'),
     ('group', 'local', 'local', '/local', 'Local', 'ios', 'active', 'now', 'now')`);
+}
+
+it.each(['push', 'pull', 'cancel-pull', 'lost-push'])('isolates objects through the native batch handoff: %s', async mode => {
+  await mkdir('.tmp/artifacts', { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-batch-'));
+  const initiator = textDevice(); const responder = textDevice();
+  const pushing = mode.endsWith('push');
+  const source = pushing ? initiator : responder;
+  const target = pushing ? responder : initiator;
+  const groupKey = new Uint8Array(32).fill(7);
+  const cancellation = new AbortController();
+  try {
+    seed(initiator, 'peer', groupKey); seed(responder, 'local', groupKey);
+    responder.sqlite.exec('DROP TABLE settings');
+    runtime.db = responder.db;
+    runtime.files = createDesktopFramedSyncFiles(path.join(root, 'responder'));
+    const files = createDesktopFramedSyncFiles(path.join(root, 'initiator'));
+    const objects = [{ id: 'parent', parent: null }, { id: 'a-good', parent: null },
+      { id: 'b-child', parent: 'parent' }, { id: 'c-good', parent: null }];
+    for (const { id, parent } of objects) {
+      if (mode === 'lost-push' && !id.endsWith('-good')) continue;
+      const record = textBranch(`${id}-head`, `Body ${id}`);
+      await source.receive([{ ...record, object_id: id, snapshot: { ...record.snapshot, id, parent_id: parent } }]);
+    }
+    const differences = compareFramedSyncDatabaseInventories({
+      local: await readRequestSyncInventorySnapshot(initiator.db), remote: await readRequestSyncInventorySnapshot(responder.db)
+    }).filter(difference => difference.globalId !== 'parent');
+    const peerState = { contract_version: 3 as const, group_id: 'group', sender_device_identity_key: 'peer',
+      library_epoch: 'peer-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null };
+    rememberCompanionRequestSyncPeerState(peerState, true);
+    const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, initiatorDeviceId: 'peer',
+      initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } as const;
+    const modes: string[] = [];
+    const exchange: RequestSyncExchange = { context, groupKey, signal: cancellation.signal,
+      request: nativeBatchExchange(modes, mode === 'lost-push') };
+    const host: RequestSyncDatabaseHost = { files, enqueueSearchInvalidations: false,
+      readSnapshot: read => read(initiator.db), write: write => write(initiator.db),
+      objectApplied: () => { if (mode === 'cancel-pull') cancellation.abort(new Error('test_background_cancel')); }
+    };
+    const options = { peerState: { ...peerState, sender_device_identity_key: 'local', library_epoch: 'local-epoch' } };
+    const transfer = transferRequestSyncBatch(host, exchange, differences, options);
+    if (mode === 'lost-push') {
+      await assertLostBatchResponse(transfer, () => transferRequestSyncBatch(host,
+        { ...exchange, request: nativeBatchExchange(modes) }, differences, options), source.db, target.db);
+    } else if (mode === 'cancel-pull') {
+      await expect(transfer).rejects.toThrow('test_background_cancel');
+      expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'a-good' }]);
+    } else {
+      const results = await transfer;
+      expect(results.map(result => [result.globalId, result.error === ''])).toEqual([
+        ['a-good', true], ['b-child', false], ['c-good', true]
+      ]);
+      expect(results[1]!.error).toContain('parent');
+      expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'a-good' }, { id: 'c-good' }]);
+      expect(await target.db.query('SELECT object_id FROM node_version_member_positions ORDER BY object_id'))
+        .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
+    }
+    expect(modes).toEqual(mode === 'lost-push' ? ['objects', 'objects'] : [pushing ? 'objects' : 'pulls']);
+  } finally { initiator.sqlite.close(); responder.sqlite.close(); await rm(root, { force: true, recursive: true }); }
+});
+
+async function assertLostBatchResponse(transfer: Promise<unknown>, retry: () => Promise<unknown>, source: DbPort, target: DbPort) {
+  await expect(transfer).rejects.toThrow('test_response_lost');
+  const expected = [{ id: 'a-good' }, { id: 'c-good' }];
+  expect(await target.query('SELECT id FROM nodes ORDER BY id')).toEqual(expected);
+  const remaining = compareFramedSyncDatabaseInventories({ local: await readRequestSyncInventorySnapshot(source),
+    remote: await readRequestSyncInventorySnapshot(target) });
+  expect(remaining.filter(difference => difference.direction === 'local_to_remote')).toEqual([]);
+  await retry();
+  expect(await target.query('SELECT id FROM nodes ORDER BY id')).toEqual(expected);
+  expect(await target.query('SELECT version_id FROM node_sync_versions ORDER BY version_id'))
+    .toEqual([{ version_id: 'a-good-head' }, { version_id: 'c-good-head' }]);
+  expect(await target.query('SELECT object_id FROM node_version_member_positions ORDER BY object_id'))
+    .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
+  expect(await target.query('SELECT count(*) AS count FROM framed_sync_inbound_transfers')).toEqual([{ count: 0 }]);
+}
+
+function nativeBatchExchange(modes: string[], loseResponse = false): RequestSyncExchange['request'] {
+  return async (requestPath, body, consume) => {
+    const directory = `requests/${crypto.randomUUID()}`;
+    const mode = new URL(requestPath, 'http://test').searchParams.get('request')!;
+    modes.push(mode);
+    const chunks = [];
+    for await (const chunk of encodeFramedSyncStream(body)) chunks.push(chunk);
+    const bytes = Buffer.concat(chunks);
+    await runtime.files!.write(`${directory}/http-in-0`, bytes);
+    const response = await respondCompanionRequestSync({ directory, mode,
+      library_key: '/test-library', generation_id: 'generation', group_id: 'group',
+      initiator_device_id: 'peer', initiator_library_epoch: 'peer-epoch', responder_device_id: 'local',
+      responder_library_epoch: 'local-epoch', request_chunk_count: 1, request_byte_length: bytes.length });
+    const stream = await readFramedSyncStream((async function* () {
+      for (let index = 0; index < response.response_chunk_count; index++) yield (await runtime.files!.read(`${directory}/http-out-${index}`))!;
+    })());
+    try {
+      if (loseResponse) throw new Error('test_response_lost');
+      return await consume(stream);
+    }
+    finally { await stream.frames[Symbol.asyncIterator]().return?.(); await runtime.files!.remove(directory); }
+  };
 }

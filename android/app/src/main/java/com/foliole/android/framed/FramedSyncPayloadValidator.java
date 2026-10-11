@@ -83,6 +83,17 @@ final class FramedSyncPayloadValidator {
             case ERROR:
                 protocolError(message.getError());
                 return payload(FramedSyncPayload.Case.ERROR, message.getError());
+            case REQUEST_OBJECT_RESULT:
+                var result = message.getRequestObjectResult();
+                FramedSyncValueValidator.fixed(result.getRequestId(), FramedSyncContract.IDENTIFIER_BYTES, "request_id");
+                FramedSyncValueValidator.text(result.getObjectType(), "object_type");
+                FramedSyncValueValidator.text(result.getGlobalId(), "global_id");
+                if (!result.getError().isEmpty()) FramedSyncValueValidator.text(result.getError(), "error");
+                return payload(FramedSyncPayload.Case.REQUEST_OBJECT_RESULT, result);
+            case REQUEST_BATCH_END:
+                var batch = message.getRequestBatchEnd();
+                FramedSyncValueValidator.fixed(batch.getRequestId(), FramedSyncContract.IDENTIFIER_BYTES, "request_id");
+                return payload(FramedSyncPayload.Case.REQUEST_BATCH_END, batch);
             case PAYLOAD_NOT_SET:
             default:
                 throw invalid("protocol_payload_case_invalid");

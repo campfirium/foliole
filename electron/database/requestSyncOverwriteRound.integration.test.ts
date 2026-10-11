@@ -45,9 +45,10 @@ it.each(['adoption', 'restore'] as const)('resumes %s without clearing accepted 
     const round = roundPort(target, source, local, remote);
     let interrupted = false;
     await expect(runRequestSyncOverwriteRound(local, progress, { ...round,
-      transferObject: async difference => {
-        await round.transferObject(difference);
+      transferObjects: async differences => {
+        const results = await round.transferObjects(differences.slice(0, 1));
         if (!interrupted) { interrupted = true; throw new Error('connection_lost_after_commit'); }
+        return results;
       }
     })).rejects.toThrow('connection_lost_after_commit');
     expect(await loadSyncGroupOverwriteProgress(target.db)).toEqual(progress);
@@ -85,13 +86,18 @@ function roundPort(target: ReturnType<typeof textDevice>, source: ReturnType<typ
   return {
     exchangeInventory: async () => ({ local: await readFramedSyncOverwriteInventory(target.db, inbound),
       remote: await readRequestSyncInventorySnapshot(source.db) }),
-    transferObject: async (difference: import('../../lib/core/sync/framedSyncInventory.js').FramedSyncInventoryDifference) => {
-      expect(difference.direction).toBe('remote_to_local');
-      const groupKey = new Uint8Array(32).fill(7);
-      return sendRequestSyncObject(remote, { context, groupKey, difference: { ...difference, direction: 'local_to_remote' } },
-        stream => receiveRequestSyncObject(local, { context, groupKey, ...stream, author: 'responder',
-          expectedObject: difference, peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: 'peer',
-            library_epoch: 'peer-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null } }));
+    transferObjects: async (differences: readonly import('../../lib/core/sync/framedSyncInventory.js').FramedSyncInventoryDifference[]) => {
+      const results = [];
+      for (const difference of differences) {
+        expect(difference.direction).toBe('remote_to_local');
+        const groupKey = new Uint8Array(32).fill(7);
+        const result = await sendRequestSyncObject(remote, { context, groupKey, difference: { ...difference, direction: 'local_to_remote' } },
+          stream => receiveRequestSyncObject(local, { context, groupKey, ...stream, author: 'responder',
+            expectedObject: difference, peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: 'peer',
+              library_epoch: 'peer-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null } }));
+        results.push({ requestId: result.requestId, objectType: difference.objectType, globalId: difference.globalId, error: '' });
+      }
+      return results;
     },
     reportObjectError: (_difference: unknown, error: unknown) => { throw error; }
   };

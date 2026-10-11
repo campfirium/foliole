@@ -4,8 +4,9 @@ import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 import { encodeValidatedProtocolMessage, type ValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 
-export async function* requestSyncDifferenceMessages(difference: FramedSyncInventoryDifference): AsyncGenerator<RequestSyncMessage> {
-  const payload = projectFramedSyncDifferenceRequestPayload({ difference, roundId: crypto.getRandomValues(new Uint8Array(16)) });
+export async function* requestSyncDifferenceMessages(difference: FramedSyncInventoryDifference,
+  roundId: Uint8Array = crypto.getRandomValues(new Uint8Array(16))): AsyncGenerator<RequestSyncMessage> {
+  const payload = projectFramedSyncDifferenceRequestPayload({ difference, roundId });
   for (let offset = 0; offset < payload.facts.length;) {
     let count = Math.min(512, payload.facts.length - offset);
     for (;;) {

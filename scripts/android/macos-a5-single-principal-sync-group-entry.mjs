@@ -28,7 +28,8 @@ import {
 } from './macos-a5-acceptance-package-cleanup.mjs';
 import { verifyMacosA5Restart } from './macos-a5-single-principal-macos-restart.mjs';
 import { runMacosA5IosResourceFailover } from './macos-a5-ios-resource-failover.mjs';
-import { waitForMacFact } from './macos-a5-single-principal-sync-group-facts.mjs';
+import { assertA5UseGroupReplacement, waitForMacFact
+} from './macos-a5-single-principal-sync-group-facts.mjs';
 import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
 
 const PRODUCT_APP_ID = 'com.campfirium.foliole.android';
@@ -92,8 +93,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
-    await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    const initialFacts = await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'initial-replacement'), { A: 1, B: 0 });
+    assertA5UseGroupReplacement(initialFacts);
     const initialReceipt = readA5JoinReceipt(result.stdout);
     const a5Initial = projectA5InitialRun(initialReceipt, result.evidencePath);
     if (iosResourceFailover) {
@@ -121,7 +123,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
     await waitForMacFact(session);
     await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'automatic-union'), { A: 2, B: 2 });
+      path.join(evidenceRoot, 'automatic-union'), { A: 2, B: 1 });
     const a5AutomaticBeforeRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-run') }, 'automatic', [a5Initial.run]);
     await session.invoke('pause_companion_sync');
@@ -172,10 +174,12 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       repoRoot: args.paths.buildRoot, session, sharedRoot });
     session = macosRestart.session;
     const journeyFacts = await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'final-union'), { A: 2, B: 2 });
+      path.join(evidenceRoot, 'final-union'), { A: 2, B: 1 });
     fs.writeFileSync(path.join(evidenceRoot, 'result.json'), `${JSON.stringify({
       buildIdentity, completedAt: new Date().toISOString(),
       androidFactText: factReceipt.factText, journeyFacts: journeyFacts.facts,
+      join: { mode: 'use-group', replacedFactText: initialReceipt.prejoinFactText,
+        initialJourneyFacts: initialFacts.facts },
       idempotent: true, journeyOrigins: Object.keys(journeyFacts.counts), macosRestarted: true,
       observation: result.observation,
       conflict,

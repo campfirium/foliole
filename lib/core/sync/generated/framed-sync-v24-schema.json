@@ -812,7 +812,9 @@
                         "error",
                         "factFragment",
                         "requestObjectHeader",
-                        "requestObjectEnd"
+                        "requestObjectEnd",
+                        "requestObjectResult",
+                        "requestBatchEnd"
                       ]
                     }
                   },
@@ -913,6 +915,16 @@
                       "type": "RequestObjectEnd",
                       "id": 20,
                       "protoName": "request_object_end"
+                    },
+                    "requestObjectResult": {
+                      "type": "RequestObjectResult",
+                      "id": 21,
+                      "protoName": "request_object_result"
+                    },
+                    "requestBatchEnd": {
+                      "type": "RequestBatchEnd",
+                      "id": 22,
+                      "protoName": "request_batch_end"
                     }
                   }
                 },
@@ -961,6 +973,43 @@
                       "type": "uint64",
                       "id": 4,
                       "protoName": "body_count"
+                    }
+                  }
+                },
+                "RequestObjectResult": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "objectType": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "global_id"
+                    },
+                    "error": {
+                      "type": "string",
+                      "id": 4
+                    }
+                  }
+                },
+                "RequestBatchEnd": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "objectCount": {
+                      "type": "uint32",
+                      "id": 2,
+                      "protoName": "object_count"
                     }
                   }
                 }

@@ -1,6 +1,7 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { exchangeRequestSyncInventory, pullRequestSyncObject, pushRequestSyncObject } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/requestSyncBatchExchange.js';
+import { exchangeRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { runRequestSyncDatabaseRound, type RequestSyncDatabaseRoundPort } from '../../../../../../lib/core/sync/requestSyncDatabaseRound.js';
 import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/requestSyncOverwriteRound.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -54,12 +55,12 @@ async function runRound(input: RoundInput) {
         protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
         receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined),
-    transferObject: async difference => {
-      const result = await (difference.direction === 'local_to_remote'
-        ? pushRequestSyncObject(host, exchange, difference)
-        : pullRequestSyncObject(host, exchange, difference, { peerState: input.peerState }));
-      (difference.direction === 'local_to_remote' ? sent : received).add(difference.globalId);
-      return result;
+    transferObjects: async differences => {
+      const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
+      for (const [index, result] of results.entries()) if (!result.error) {
+        (differences[index]!.direction === 'local_to_remote' ? sent : received).add(result.globalId);
+      }
+      return results;
     },
     reportObjectError: input.reportObjectError
   };

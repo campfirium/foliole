@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
@@ -23,6 +24,8 @@ it('measures an empty receiver pulling a 3800-node and 24000-state library over 
       } } });
     const elapsedMs = performance.now() - started;
     const requests = { source: await fixture.left.invoke('request_counts'), target: await fixture.right.invoke('request_counts') };
+    const requestCount = Object.values(z.record(z.string(), z.number().int().nonnegative()).parse(requests.source)).reduce<number>((total, count) => total + Number(count), 0)
+      + Object.values(z.record(z.string(), z.number().int().nonnegative()).parse(requests.target)).reduce<number>((total, count) => total + Number(count), 0);
     await fixture.right.close();
     const db = new Database(target.databasePath, { readonly: true });
     try {
@@ -30,8 +33,9 @@ it('measures an empty receiver pulling a 3800-node and 24000-state library over 
         states: db.prepare('SELECT count(*) FROM topic_daily_count_entries').pluck().get(),
         bodyBytes: db.prepare("SELECT sum(length(CAST(content AS BLOB))) FROM nodes WHERE id LIKE 't326-complete-%'").pluck().get() };
       await fs.mkdir(path.dirname(output), { recursive: true });
-      await fs.writeFile(output, JSON.stringify({ workload, elapsedMs, requests, result, persisted, root: fixture.root }, null, 2));
+      await fs.writeFile(output, JSON.stringify({ workload, elapsedMs, requestCount, requests, result, persisted, root: fixture.root }, null, 2));
       expect(result).toMatchObject({ complete: true });
+      expect(requestCount).toBeLessThan(1000);
       expect(persisted).toEqual({ nodes: 3800, states: 24000, bodyBytes: 3800 * 8192 });
     } finally { db.close(); }
     passed = true;

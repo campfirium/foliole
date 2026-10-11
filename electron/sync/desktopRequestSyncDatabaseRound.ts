@@ -1,5 +1,6 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -10,10 +11,9 @@ import { withDesktopForegroundTimeMaintenance } from '../database/foregroundTime
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
+import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { exchangeDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
-import { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
 import { prepareDesktopRequestSyncOverwrite } from './desktopRequestSyncOverwrite.js';
-import { pullDesktopRequestSyncObject } from './desktopRequestSyncPullHttp.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -49,10 +49,8 @@ export async function runDesktopRequestSyncDatabaseRound(input: {
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
         receiverLibraryEpoch: context.initiatorLibraryEpoch
       }), input.signal) } : {}) }),
-    transferObject: difference => difference.direction === 'local_to_remote'
-      ? postDesktopRequestSyncObject(host, { ...exchange, difference })
-      : pullDesktopRequestSyncObject(host, { ...exchange, difference,
-        peerState: input.peerState }),
+    transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
+      differences, { peerState: input.peerState }),
     reportObjectError: (difference, error) => appendMainProcessDiagnosticLog('request_sync_object_rejected', {
       objectId: difference.globalId, objectType: difference.objectType,
       sourceDeviceId: difference.direction === 'local_to_remote' ? input.peer.local_device_id : input.peer.peer_device_id,

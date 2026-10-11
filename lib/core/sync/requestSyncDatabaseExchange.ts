@@ -18,7 +18,7 @@ export interface RequestSyncExchange {
     consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>): Promise<T>;
 }
 
-async function withControlRequest<T>(exchange: RequestSyncExchange,
+export async function withControlRequest<T>(exchange: RequestSyncExchange,
   path: string, messages: AsyncIterable<RequestSyncMessage> | Iterable<RequestSyncMessage>,
   consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>) {
   const body = await prepareRequestSyncWire({ ...exchange,

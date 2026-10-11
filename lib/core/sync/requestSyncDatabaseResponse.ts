@@ -3,20 +3,26 @@ import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import { resolveFramedSyncDifferenceRequest } from './framedSyncDifferenceRequest.js';
 import { readFramedSyncInventoryEntry, readRequestSyncInventorySnapshot } from './framedSyncInventoryRead.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
+import { respondRequestSyncBatch } from './requestSyncBatchResponse.js';
 import { readRequestSyncDifference } from './requestSyncDifferenceWire.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
 
-export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHost, input: {
+export type RequestSyncDatabaseResponseInput = {
   context: RequestSyncAuthenticatedContext;
   groupKey: Uint8Array;
   stream: FramedSyncStreamBody<RequestSyncWireFrame>;
-  mode: 'inventory' | 'pull' | 'object';
+  mode: 'inventory' | 'pull' | 'object' | 'pulls' | 'objects';
+  batch?: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState'>;
   signal?: AbortSignal;
   object?: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'expectedObject' | 'peerState'>;
-}, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
+};
+
+export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHost, input: RequestSyncDatabaseResponseInput,
+  consume: (stream: FramedSyncStreamBody) => Promise<T>): Promise<T> {
+  if (input.mode === 'pulls' || input.mode === 'objects') return respondRequestSyncBatch(host, input, consume);
   const messages = (async function* () {
     for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) yield decoded.message;
   })();

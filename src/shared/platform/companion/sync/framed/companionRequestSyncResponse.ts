@@ -25,7 +25,9 @@ async function respond(payload: Record<string, unknown>, signal: AbortSignal, ac
   const directory = text(payload, 'directory');
   if (!/^requests\/[a-f0-9-]{36}$/u.test(directory)) throw new Error('request_sync_http_request_invalid');
   const mode = payload.mode;
-  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object') throw new Error('request_sync_mode_invalid');
+  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object' && mode !== 'pulls' && mode !== 'objects') {
+    throw new Error('request_sync_mode_invalid');
+  }
   const context = { groupId: text(payload, 'group_id'), protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     initiatorDeviceId: text(payload, 'initiator_device_id'), initiatorLibraryEpoch: text(payload, 'initiator_library_epoch'),
     responderDeviceId: text(payload, 'responder_device_id'), responderLibraryEpoch: text(payload, 'responder_library_epoch') } as const;
@@ -39,6 +41,7 @@ async function respond(payload: Record<string, unknown>, signal: AbortSignal, ac
   }, signal));
   try {
     return await respondRequestSyncDatabase(host, { context, groupKey, mode, stream, signal,
+      ...(mode === 'objects' ? { batch: { peerState } } : {}),
       ...(mode === 'object' ? { object: { peerState, expectedObject: {
         globalId: text(payload, 'global_id'), objectType: text(payload, 'object_type') } } } : {}) },
     async response => {

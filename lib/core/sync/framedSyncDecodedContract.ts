@@ -33,17 +33,7 @@ import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js
 export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, value: unknown) {
   walk(value, 0, { fields: 0 });
   const payload = row(value);
-  if (payloadCase.startsWith('request_object_')) {
-    fixedBytes(payload.requestId, 16, 'request_id');
-    if (payloadCase === 'request_object_header') {
-      text(payload.objectType, 'object_type'); text(payload.globalId, 'global_id');
-      digest(payload.sourceStateHash, 'source_state_hash');
-    } else {
-      digest(payload.streamHash, 'stream_hash');
-      unsigned(payload.factCount, 'fact_count'); unsigned(payload.bodyCount, 'body_count');
-    }
-    return;
-  }
+  if (validateRequestPayload(payloadCase, payload)) return;
   if (payloadCase === 'fact') factRecord(payload);
   else if (payloadCase === 'fact_fragment') {
     factIdentity(payload.identity);
@@ -89,6 +79,29 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
       .map((hash) => hex(digest(hash, 'blob_hash')));
     unique(hashes, 'missing_blob_hash');
   } else validateRemainingPayload(payloadCase, payload);
+}
+
+function validateRequestPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {
+  if (payloadCase === 'request_batch_end') {
+    fixedBytes(payload.requestId, 16, 'request_id');
+    if (unsigned(payload.objectCount, 'object_count') > 0xffff_ffffn) {
+      throw new Error('request_sync_batch_count_invalid');
+    }
+    return true;
+  }
+  if (!payloadCase.startsWith('request_object_')) return false;
+  fixedBytes(payload.requestId, 16, 'request_id');
+  if (payloadCase === 'request_object_result') {
+    text(payload.objectType, 'object_type'); text(payload.globalId, 'global_id');
+    if (payload.error !== '') text(payload.error, 'error');
+  } else if (payloadCase === 'request_object_header') {
+    text(payload.objectType, 'object_type'); text(payload.globalId, 'global_id');
+    digest(payload.sourceStateHash, 'source_state_hash');
+  } else {
+    digest(payload.streamHash, 'stream_hash');
+    unsigned(payload.factCount, 'fact_count'); unsigned(payload.bodyCount, 'body_count');
+  }
+  return true;
 }
 
 function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 
 import { expect, it } from 'vitest';
 
-import { inspectExpectedJourneyFacts } from './macos-a5-single-principal-sync-group-facts.mjs';
+import { assertA5UseGroupReplacement, inspectExpectedJourneyFacts
+} from './macos-a5-single-principal-sync-group-facts.mjs';
 import {
   removeA5AcceptanceApplication
 } from './macos-a5-acceptance-package-cleanup.mjs';
@@ -101,7 +102,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(restartSource).not.toContain('waitForMacosAutomaticRun');
   expect(source).toContain('createDesktopSyncGroupJourneyFact');
   expect(source).toContain("'desktop-initial-fact'");
-  expect(source).toContain("'initial-union'");
+  expect(source).toContain("'initial-replacement'");
   expect(source).toContain("'desktop-manual-fact'");
   expect(source).toContain("action: 'sync-now'");
   expect(source).not.toMatch(/collectAndroidDeviceSnapshot|databaseInspector|tables: \['nodes'/u);
@@ -188,7 +189,7 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('"app-choice", "data-choice-value"');
-  expect(source).toContain('stage=merge-selected');
+  expect(source).toContain('stage=use-group-selected');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
   expect(source).toContain(
@@ -197,6 +198,13 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('stage=initial-sync-terminal');
   expect(source).toContain('FolioleCompanionInitialSyncProof.waitForTerminal');
   expect(source).toContain('FolioleCompanionSyncNowAction.waitUntilEnabled');
+});
+
+it('requires use-group to remove the local fact created before joining', () => {
+  expect(() => assertA5UseGroupReplacement({ counts: { A: 1 } })).not.toThrow();
+  expect(() => assertA5UseGroupReplacement({ counts: { A: 1, B: 0 } })).not.toThrow();
+  expect(() => assertA5UseGroupReplacement({ counts: { A: 1, B: 1 } }))
+    .toThrow('retained the A5 fact created before joining');
 });
 
 it('enters Browse through the visible bottom tab from Settings', () => {

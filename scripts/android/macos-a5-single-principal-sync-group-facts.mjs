@@ -5,6 +5,12 @@ export async function waitForMacFact(session) {
     }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
 }
 
+export function assertA5UseGroupReplacement(journeyFacts) {
+  if ((journeyFacts.counts.B ?? 0) !== 0) {
+    throw new Error('Use-group retained the A5 fact created before joining.');
+  }
+}
+
 export function inspectExpectedJourneyFacts(database, expectedFacts) {
   const ids = expectedFacts.map(({ factId }) => factId);
   const placeholders = ids.map(() => '?').join(', ');

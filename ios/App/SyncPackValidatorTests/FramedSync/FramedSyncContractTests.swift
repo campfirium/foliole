@@ -112,6 +112,10 @@ private extension Foliole_Sync_V22_ProtocolMessage.OneOf_Payload {
         case .transferReceipt: "transfer_receipt"
         case .roundReceipt: "round_receipt"
         case .transferTermination: "transfer_termination"
+        case .requestObjectHeader: "request_object_header"
+        case .requestObjectEnd: "request_object_end"
+        case .requestObjectResult: "request_object_result"
+        case .requestBatchEnd: "request_batch_end"
         case .error: "error"
         }
     }

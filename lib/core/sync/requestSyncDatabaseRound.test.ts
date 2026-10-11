@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
+import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { runRequestSyncDatabaseRound } from './requestSyncDatabaseRound.js';
 
 const entry = (globalId: string): FramedSyncInventoryEntry => ({ globalId, objectType: 'node',
@@ -18,10 +18,11 @@ it.each(['node_version_missing_parents:lost', 'node_version_graph_cycle',
       if (++requests > 3) throw new Error('unchanged_inventory_repeated');
       return { local, remote: [...remote], roundId: new Uint8Array(16).fill(requests) };
     },
-    transferObject: async difference => {
-      if (difference.globalId === 'bad') throw new Error(`framed_sync_http_400:${failure}`);
+    transferObjects: async differences => differences.map(difference => {
+      if (difference.globalId === 'bad') return outcome(difference, `framed_sync_http_400:${failure}`);
       remote.push(difference.sourceSnapshot);
-    },
+      return outcome(difference);
+    }),
     reportObjectError: difference => { errors.push(difference.globalId); }
   });
   expect(result).toEqual({ complete: false, pending: 1, transferred: 1 });
@@ -35,9 +36,13 @@ it('ends a cancelled round before transferring the next object', async () => {
   const transferred: string[] = [];
   await expect(runRequestSyncDatabaseRound({
     exchangeInventory: async () => ({ local: [entry('first'), entry('second')], remote: [] }),
-    transferObject: async difference => {
-      transferred.push(difference.globalId);
-      controller.abort(new Error('request_cancelled'));
+    transferObjects: async differences => {
+      return differences.map(difference => {
+        controller.signal.throwIfAborted();
+        transferred.push(difference.globalId);
+        controller.abort(new Error('request_cancelled'));
+        return outcome(difference);
+      });
     },
     reportObjectError: () => { throw new Error('unexpected_object_error'); }
   }, controller.signal)).rejects.toThrow('request_cancelled');
@@ -50,11 +55,46 @@ it('yields to the next scheduled round when edits keep changing the inventory', 
   let transferred = 0;
   const result = await runRequestSyncDatabaseRound({
     exchangeInventory: async () => ({ local: [entry(`edit-${revision++}`)], remote: [] }),
-    transferObject: async () => { transferred++; },
+    transferObjects: async differences => differences.map(difference => {
+      transferred++;
+      return outcome(difference);
+    }),
     reportObjectError: () => { throw new Error('unexpected_error'); }
   });
   expect(result.complete).toBe(false);
   expect(result.pending).toBe(1);
   expect(transferred).toBeGreaterThan(0);
   expect(transferred).toBeLessThanOrEqual(4);
+});
+
+function outcome(difference: FramedSyncInventoryDifference, error = '') {
+  return { requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error };
+}
+
+it('retries a missing dependency after its batched parent succeeds and isolates a broken graph', async () => {
+  const local = ['a-child', 'b-parent', 'c-broken', 'd-healthy'].map(entry);
+  const accepted = new Map<string, FramedSyncInventoryEntry>();
+  const calls: string[][] = [];
+  const errors: string[] = [];
+  const result = await runRequestSyncDatabaseRound({
+    exchangeInventory: async () => ({ local, remote: [...accepted.values()].sort((a, b) => a.globalId.localeCompare(b.globalId)) }),
+    transferObjects: async differences => {
+      calls.push(differences.map(difference => difference.globalId));
+      return differences.map(difference => {
+        if (difference.globalId === 'c-broken') return outcome(difference, 'node_version_graph_cycle');
+        if (difference.globalId === 'a-child' && !accepted.has('b-parent')) {
+          return outcome(difference, 'framed_sync_node_parent_missing:b-parent');
+        }
+        accepted.set(difference.globalId, difference.sourceSnapshot);
+        return outcome(difference);
+      });
+    },
+    reportObjectError: difference => { errors.push(difference.globalId); }
+  });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 3 });
+  expect([...accepted.keys()].sort()).toEqual(['a-child', 'b-parent', 'd-healthy']);
+  expect(calls[0]).toEqual(['a-child', 'b-parent', 'c-broken', 'd-healthy']);
+  expect(calls).toContainEqual(['a-child']);
+  expect(calls.filter(batch => batch.includes('b-parent'))).toHaveLength(1);
+  expect(new Set(errors)).toEqual(new Set(['c-broken']));
 });

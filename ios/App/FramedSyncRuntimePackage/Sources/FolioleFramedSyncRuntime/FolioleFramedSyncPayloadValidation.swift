@@ -35,6 +35,15 @@ enum FolioleFramedSyncPayloadValidator {
             try Value.fixed(value.requestID, count: FolioleFramedSyncLimits.identifierBytes, "request_id")
             try Value.digest(value.streamHash, "stream_hash")
             return .requestObjectEnd(value)
+        case .requestObjectResult(let value):
+            try Value.fixed(value.requestID, count: FolioleFramedSyncLimits.identifierBytes, "request_id")
+            try Value.text(value.objectType, "object_type")
+            try Value.text(value.globalID, "global_id")
+            if !value.error.isEmpty { try Value.text(value.error, "error") }
+            return .requestObjectResult(value)
+        case .requestBatchEnd(let value):
+            try Value.fixed(value.requestID, count: FolioleFramedSyncLimits.identifierBytes, "request_id")
+            return .requestBatchEnd(value)
         case .error(let value): try protocolError(value); return .protocolError(value)
         }
     }

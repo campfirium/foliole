@@ -14,3 +14,13 @@ message RequestObjectEnd {
   uint64 fact_count = 3;
   uint64 body_count = 4;
 }
+message RequestObjectResult {
+  bytes request_id = 1;
+  string object_type = 2;
+  string global_id = 3;
+  string error = 4;
+}
+message RequestBatchEnd {
+  bytes request_id = 1;
+  uint32 object_count = 2;
+}

@@ -19,6 +19,9 @@ export class RequestSyncFiles {
   private readonly facts: Array<{ first: number; end: number }> = [];
   private readonly memory = new Map<string, Uint8Array>();
   private memoryBytes = 0;
+  private writtenBytes = 0;
+
+  get byteLength() { return this.writtenBytes; }
   private nextFrame = 0;
   private closed = false;
 
@@ -31,6 +34,7 @@ export class RequestSyncFiles {
   }
 
   private async write(key: string, bytes: Uint8Array) {
+    this.writtenBytes += bytes.byteLength;
     const previous = this.memory.get(key);
     if (previous) { this.memoryBytes -= previous.byteLength; this.memory.delete(key); }
     if (this.memoryBytes + bytes.byteLength <= REQUEST_SYNC_MEMORY_BYTES) {

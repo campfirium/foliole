@@ -2,6 +2,7 @@ import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDiffer
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder } from './framedSyncInventoryRoundDelivery.js';
+import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
@@ -10,7 +11,7 @@ export type RequestSyncInventories = {
 
 export interface RequestSyncDatabaseRoundPort {
   exchangeInventory(): Promise<RequestSyncInventories>;
-  transferObject(difference: FramedSyncInventoryDifference): Promise<unknown>;
+  transferObjects(differences: readonly FramedSyncInventoryDifference[]): Promise<readonly RequestSyncObjectResult[]>;
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown): void;
 }
 
@@ -40,11 +41,25 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal) {
+  const outcomes = new Map<string, RequestSyncObjectResult>();
+  for (let offset = 0; offset < differences.length; offset += REQUEST_SYNC_BATCH_OBJECTS) {
+    signal?.throwIfAborted();
+    const batch = differences.slice(offset, offset + REQUEST_SYNC_BATCH_OBJECTS);
+    const results = await port.transferObjects(batch);
+    if (results.length !== batch.length) throw new Error('request_sync_batch_results_missing');
+    for (const [index, difference] of batch.entries()) outcomes.set(key(difference), results[index]!);
+  }
   const delivered: FramedSyncInventoryDifference[] = [];
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async difference => {
     signal?.throwIfAborted();
     try {
-      await port.transferObject(difference);
+      const cached = outcomes.get(key(difference));
+      outcomes.delete(key(difference));
+      const result = cached ?? (await port.transferObjects([difference]))[0];
+      if (!result || result.globalId !== difference.globalId || result.objectType !== difference.objectType) {
+        throw new Error('request_sync_batch_identity_mismatch');
+      }
+      if (result.error) throw new Error(result.error);
       delivered.push(difference);
       return 'delivered';
     } catch (error) {
@@ -59,4 +74,8 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     }
   }, createFramedSyncInventoryDependencyLookup(inventories));
   return { delivered, deferred };
+}
+
+function key(difference: FramedSyncInventoryDifference) {
+  return `${difference.direction}\0${difference.objectType}\0${difference.globalId}`;
 }

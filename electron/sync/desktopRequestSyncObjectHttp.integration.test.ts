@@ -18,6 +18,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
@@ -31,6 +32,7 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyncRoute.js';
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 import { createDesktopFramedSyncFiles } from './desktopFramedSyncFiles.js';
+import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { exchangeDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
 import { pullDesktopRequestSyncObject } from './desktopRequestSyncPullHttp.js';
@@ -184,9 +186,8 @@ async function completeRound(host: RequestSyncDatabaseHost, endpointUrl: string)
   const peerState = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupMemberState());
   const result = await runRequestSyncDatabaseRound({
     exchangeInventory: () => exchangeDesktopRequestSyncInventory(host, exchange),
-    transferObject: difference => difference.direction === 'local_to_remote'
-      ? postDesktopRequestSyncObject(host, { ...exchange, difference })
-      : pullDesktopRequestSyncObject(host, { ...exchange, difference, peerState }),
+    transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
+      differences, { peerState }),
     reportObjectError: (_difference, error) => { throw error; }
   });
   expect(result.complete).toBe(true);
@@ -209,9 +210,8 @@ async function isolateBrokenObject(host: RequestSyncDatabaseHost,
   const failures: string[] = [];
   const result = await runRequestSyncDatabaseRound({
     exchangeInventory: () => exchangeDesktopRequestSyncInventory(host, exchange),
-    transferObject: difference => difference.direction === 'local_to_remote'
-      ? postDesktopRequestSyncObject(host, { ...exchange, difference })
-      : pullDesktopRequestSyncObject(host, { ...exchange, difference, peerState }),
+    transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
+      differences, { peerState }),
     reportObjectError: (difference, error) => {
       expect(String(error)).toContain('missing-parent');
       failures.push(difference.globalId);

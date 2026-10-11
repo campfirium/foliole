@@ -6,7 +6,7 @@ extension FolioleCompanionSyncGroupJoinServer {
     func respondRequestSync(_ connection: NWConnection, _ request: FolioleCompanionHttpMessage,
         mode: String, context: [String: String], bridge: FolioleCompanionSyncGroupDataRequesting,
         owner: FolioleFramedSyncPayloadBudget) throws {
-        guard ["inventory", "pull", "object"].contains(mode) else { throw Self.invalid("request_sync_mode_invalid") }
+        guard ["inventory", "pull", "object", "pulls", "objects"].contains(mode) else { throw Self.invalid("request_sync_mode_invalid") }
         let files = try FolioleFramedSyncFiles(libraryKey: owner.libraryKey)
         let directory = "requests/\(UUID().uuidString.lowercased())"
         defer { try? files.remove(directory) }

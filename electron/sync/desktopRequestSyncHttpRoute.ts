@@ -1,7 +1,9 @@
+import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 import { respondDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { respondDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
 import { respondDesktopRequestSyncPull } from './desktopRequestSyncPullHttp.js';
@@ -18,6 +20,10 @@ export function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, inp
   switch (input.url.searchParams.get('request')) {
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
+    case 'pulls': return respondRequestSyncDatabase(host, { ...input, mode: 'pulls' }, prepareDesktopRequestSyncBody);
+    case 'objects': return respondRequestSyncDatabase(host, { ...input, mode: 'objects', batch: {
+      peerState: readDesktopVerifiedMemberState(input.context.initiatorDeviceId)
+    } }, prepareDesktopRequestSyncBody);
     case 'object': {
       const objectType = input.url.searchParams.get('object_type');
       const globalId = input.url.searchParams.get('global_id');
