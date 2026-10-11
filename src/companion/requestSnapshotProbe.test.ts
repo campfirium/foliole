@@ -31,7 +31,11 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
 
 import { runRequestSnapshotProbe } from './requestSnapshotProbe';
 
-it.each(['android', 'ios'] as const)('%s generates a stable production snapshot, cancels and releases scratch data', async platform => {
+it.each([
+  { platform: 'android', earlyResume: false },
+  { platform: 'ios', earlyResume: false },
+  { platform: 'ios', earlyResume: true }
+] as const)('$platform generates a stable snapshot and waits for active state (earlyResume=$earlyResume)', async ({ platform, earlyResume }) => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/request-snapshot-probe-'));
   const fixture = requestSnapshotNativeFixture(root);
   native.plugin = fixture.plugin;
@@ -45,8 +49,18 @@ it.each(['android', 'ios'] as const)('%s generates a stable production snapshot,
         for (const notify of native.background) notify();
       }
       if (phase === 'cancelled') {
-        native.active = true;
-        for (const notify of native.foreground) notify();
+        if (earlyResume) {
+          queueMicrotask(() => {
+            for (const notify of native.foreground) notify();
+            setTimeout(() => {
+              native.active = true;
+              for (const notify of native.foreground) notify();
+            }, 20);
+          });
+        } else {
+          native.active = true;
+          for (const notify of native.foreground) notify();
+        }
       }
     });
     expect(result).toMatchObject({ originalVersions: 48, recoveredVersions: 50, cancelled: true });

@@ -45,9 +45,11 @@ export async function runRequestSnapshotProbe(platform: 'android' | 'ios', phase
 
 async function waitForForeground() {
   let ready!: () => void;
-  const resumed = new Promise<void>(resolve => { ready = resolve; });
-  const unsubscribe = await subscribeNativeAppForeground(ready);
-  try { if (!await readNativeAppActiveState()) await resumed; }
+  let failed!: (error: unknown) => void;
+  const resumed = new Promise<void>((resolve, reject) => { ready = resolve; failed = reject; });
+  const check = () => { void readNativeAppActiveState().then(active => { if (active) ready(); }, failed); };
+  const unsubscribe = await subscribeNativeAppForeground(check);
+  try { check(); await resumed; }
   finally { unsubscribe(); }
 }
 
