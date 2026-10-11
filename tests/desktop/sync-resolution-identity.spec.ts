@@ -18,7 +18,8 @@ test('keeps a shared highlight branch on its original identity in the native run
   expect(outcome.ack.status).toBe('accepted');
   expect(outcome.ack.canonicalObjectId).toBeUndefined();
   expect(outcome.head.object_id).toBe('shared-highlight');
-  expect(outcome.head.body_text).toBe('023\nx=1\n');
+  expect(new Set([outcome.head.body_text, ...outcome.head.alternative_bodies?.map((body) => body.text) ?? []]))
+    .toEqual(new Set(['023\nx=0\n', '123\nx=1\n']));
   expect(outcome.head.ancestor_version_ids).toEqual(expect.arrayContaining(['base', 'desktop-edit', 'mobile-edit']));
   expect(outcome.nodes).toBe(1);
 });

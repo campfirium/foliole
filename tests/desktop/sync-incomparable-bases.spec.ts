@@ -9,7 +9,7 @@ test('settles incomparable body bases with a durable current body and alternativ
   expect(result.parents.sort()).toEqual(['left', 'right']);
   expect(result.replayedVersion).toBe(result.version);
   expect(result.reopened.version).toBe(result.version);
-  expect(new Set([result.reopened.body, ...result.reopened.alternatives.map((row) => row.body_text)]))
+  expect(new Set([result.reopened.body, ...result.reopened.alternatives.map((row) => row.text)]))
     .toEqual(new Set(['Left body is longer', 'Right body']));
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
@@ -78,8 +78,8 @@ async function mergeIncomparableBranches(_electron: unknown, fixture: Awaited<Re
     db.close();
     const reopened = new Database(fixture.file, { readonly: true });
     try {
-      const alternatives = reopened.prepare("SELECT body_text FROM node_text_alternatives WHERE status = 'available'")
-        .all() as Array<{ body_text: string }>;
+      const persisted = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(reopened), 'topic');
+      const alternatives = persisted.alternative_bodies ?? [];
       return { accepted: result.acks[0]?.status === 'accepted', parents: merged.parent_version_ids as string[],
         version: merged.version_id as string, replayedVersion: replayedVersion as string,
         reopened: { body: loadNodeBodyResolution(createBetterSqlite3Driver(reopened), 'topic').content as string,
