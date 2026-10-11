@@ -37,7 +37,7 @@ public final class FramedSyncFileStorageTest {
             try {
                 receive(files, resources, Arrays.copyOf(first, first.length - 1));
                 fail("truncated stream must fail");
-            } catch (FramedSyncValidationException expected) {
+            } catch (FramedSyncStreamReader.TransportInterruption expected) {
                 assertEquals("framed_sync_frame_body_truncated", expected.getMessage());
             }
             var preamble = new FramedSyncStreamReader(new ByteArrayInputStream(first)).readPreamble();
