@@ -73,6 +73,7 @@ export async function verifiedCompanionFixture(kind: Kind, body: string) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-companion-verified-'));
   const mainPath = path.join(root, 'main.sqlite'), stagingPath = path.join(root, 'native.sqlite');
   let main = new Database(mainPath), native = new Database(stagingPath);
+  main.pragma('journal_mode = WAL'); native.pragma('journal_mode = WAL');
   main.pragma('foreign_keys = ON'); native.pragma('foreign_keys = ON');
   const tables = STAGING_TABLES[kind], prefix = tables.prefix;
   const sizes: number[] = [];
