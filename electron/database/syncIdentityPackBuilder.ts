@@ -87,9 +87,9 @@ export async function buildSyncIdentityPackFromDriver(input: BuildSyncIdentityPa
     fs.rm(file, { force: true })));
   const db = new Database(databasePath);
   try {
-    for (const statement of PACK_SCHEMA) db.exec(statement);
-    db.exec('ALTER TABLE sync_object_state ADD COLUMN current_version_id TEXT');
     db.transaction(() => {
+      for (const statement of PACK_SCHEMA) db.exec(statement);
+      db.exec('ALTER TABLE sync_object_state ADD COLUMN current_version_id TEXT');
       db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)')
         .run('manifest_json', JSON.stringify(inner));
       writeIdentityRows(db, loaded);
