@@ -40,6 +40,8 @@ it.each([
   const fixture = requestSnapshotNativeFixture(root);
   native.plugin = fixture.plugin;
   native.active = true;
+  const anyDescriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any');
+  if (platform === 'android') Object.defineProperty(AbortSignal, 'any', { configurable: true, value: undefined });
   const phases: string[] = [];
   try {
     const result = await runRequestSnapshotProbe(platform, phase => {
@@ -71,6 +73,7 @@ it.each([
     expect(native.background.size).toBe(0);
     expect(native.foreground.size).toBe(0);
   } finally {
+    if (anyDescriptor) Object.defineProperty(AbortSignal, 'any', anyDescriptor);
     fixture.close();
     await rm(root, { recursive: true, force: true });
   }

@@ -16,8 +16,7 @@ export class CompanionRequestSyncSnapshots {
     private readonly platform: 'android' | 'ios') {}
 
   read<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    const combined = signal ? AbortSignal.any([signal, this.lifetime.signal]) : this.lifetime.signal;
-    const result = this.tail.then(() => this.snapshot(execute, combined));
+    const result = this.tail.then(() => this.snapshot(execute, signal));
     this.tail = result.then(() => undefined, () => undefined);
     return result;
   }
@@ -28,15 +27,20 @@ export class CompanionRequestSyncSnapshots {
     await this.releaseConnection();
   }
 
-  private async snapshot<T>(execute: (db: DbPort) => Promise<T>, signal: AbortSignal) {
-    signal.throwIfAborted();
+  private checkCancellation(signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    this.lifetime.signal.throwIfAborted();
+  }
+
+  private async snapshot<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal) {
+    this.checkCancellation(signal);
     await this.releaseConnection();
     const connection = await this.manager.createConnection(COMPANION_DATABASE_NAME,
       false, 'no-encryption', COMPANION_DATABASE_VERSION, true);
     this.hasConnection = true;
     try {
       await connection.open();
-      signal.throwIfAborted();
+      this.checkCancellation(signal);
       return await this.readTransaction(connection, execute, signal);
     } finally {
       await this.releaseConnection();
@@ -50,11 +54,11 @@ export class CompanionRequestSyncSnapshots {
   }
 
   private async readTransaction<T>(connection: SQLiteDBConnection,
-    execute: (db: DbPort) => Promise<T>, signal: AbortSignal) {
+    execute: (db: DbPort) => Promise<T>, signal?: AbortSignal) {
     const reader = createCapacitorSqliteDbPort(connection, this.platform);
     let active = true;
     const check = () => {
-      signal.throwIfAborted();
+      this.checkCancellation(signal);
       if (!active) throw new Error('request_sync_snapshot_closed');
     };
     const db: DbPort = {

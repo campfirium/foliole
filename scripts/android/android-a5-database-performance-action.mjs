@@ -84,6 +84,7 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       output.push(result.output);
     }
     if (requestSnapshot) {
+      fs.writeFileSync(path.join(evidenceRoot, 'request-snapshot-instrumentation.log'), result.output);
       assertSingleInstrumentationPassed(result.output, 'FolioleRequestSnapshotAcceptanceTest');
       const artifact = await checked(execute, paths.adb, ['-s', serial, 'exec-out', 'run-as', APP_ID,
         'cat', 'files/request-snapshot-result.json'], options);
@@ -92,7 +93,6 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
           parsed.originalVersions !== 48 || parsed.recoveredVersions !== 50) throw new Error('Request snapshot result invalid');
       const evidencePath = path.join(evidenceRoot, 'request-snapshot-result.json');
       fs.writeFileSync(evidencePath, artifact.output);
-      fs.writeFileSync(path.join(evidenceRoot, 'request-snapshot-instrumentation.log'), result.output);
       return { evidencePath, output: output.join('') };
     }
     if (capacity) return await saveCapacityEvidence({ evidenceRoot, identities, result, output,
