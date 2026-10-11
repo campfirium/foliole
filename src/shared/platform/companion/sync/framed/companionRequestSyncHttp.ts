@@ -2,9 +2,8 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { encodeFramedSyncStream, readFramedSyncStream, type FramedSyncStreamBody } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
-import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
-import { withRequestSyncFiles } from '../../../../../../lib/core/sync/requestSyncFiles.js';
+import { withRequestSyncFiles, type RequestSyncFilePort } from '../../../../../../lib/core/sync/requestSyncFiles.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
@@ -15,7 +14,7 @@ const CHUNK_BYTES = 512 * 1024;
 const chunkKey = (directory: string, direction: 'in' | 'out', index: number) =>
   `${directory}/http-${direction}-${index}`;
 
-export async function withCompanionRequestSyncHttp<T>(files: FramedSyncFilePort, input: {
+export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: {
   endpointUrl: string;
   pathWithQuery: string;
   context: RequestSyncAuthenticatedContext;
@@ -59,7 +58,7 @@ export async function withCompanionRequestSyncHttp<T>(files: FramedSyncFilePort,
   }, input.signal);
 }
 
-export async function spoolCompanionRequestSyncHttp(files: FramedSyncFilePort, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
+export async function spoolCompanionRequestSyncHttp(files: RequestSyncFilePort, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
   const digest = sha256.create();
   let count = 0;
   for await (const bytes of encodeFramedSyncStream(body)) {
@@ -73,7 +72,7 @@ export async function spoolCompanionRequestSyncHttp(files: FramedSyncFilePort, d
   return { count, hash: bytesToHex(digest.digest()) };
 }
 
-export async function* companionRequestSyncHttpChunks(files: FramedSyncFilePort, directory: string,
+export async function* companionRequestSyncHttpChunks(files: RequestSyncFilePort, directory: string,
   response: { response_chunk_count: number; response_byte_length: number }, signal?: AbortSignal) {
   const { response_chunk_count: count, response_byte_length: length } = response;
   if (!Number.isSafeInteger(count) || count < 1 || !Number.isSafeInteger(length) || length < 1 ||

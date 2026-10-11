@@ -15,6 +15,7 @@ import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixtu
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
+import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -35,7 +36,11 @@ const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
 
+const requestCounts: Record<string, number> = {};
 const server = createServer((request, response) => {
+  const route = new URL(request.url ?? '/', 'http://localhost');
+  const label = route.searchParams.get('request') ?? route.pathname;
+  requestCounts[label] = (requestCounts[label] ?? 0) + 1;
   if (request.url === '/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ deviceId, pid: process.pid }));
@@ -172,6 +177,8 @@ async function run(command: Command) {
     origin = `http://127.0.0.1:${address.port}`;
     return snapshot();
   }
+  if (command.action === 'seed_request_scale') return seedRequestSyncScaleFixture();
+  if (command.action === 'request_counts') return { ...requestCounts };
   if (command.action === 'seed') return seed(command.args);
   if (command.action === 'seed_parent_order_performance') return seedParentOrderPerformance(command.args);
   if (command.action === 'edit_parent_order_performance') return editParentOrderPerformance(command.args);

@@ -24,6 +24,16 @@ final class FolioleFramedSyncFiles {
     func write(_ key: String, data: Data) throws {
         let url = try resolve(key)
         let parent = url.deletingLastPathComponent()
+        if key.hasPrefix("requests/") {
+            try manager.createDirectory(at: parent, withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700])
+            var excluded = URLResourceValues()
+            excluded.isExcludedFromBackup = true
+            var syncRoot = root
+            try syncRoot.setResourceValues(excluded)
+            try data.write(to: url)
+            return
+        }
         try ensureDirectory(parent)
         var excluded = URLResourceValues()
         excluded.isExcludedFromBackup = true
@@ -49,7 +59,7 @@ final class FolioleFramedSyncFiles {
         let url = try resolve(key)
         if !manager.fileExists(atPath: url.path) { return }
         try manager.removeItem(at: url)
-        try syncDirectory(url.deletingLastPathComponent())
+        if key != "requests" && !key.hasPrefix("requests/") { try syncDirectory(url.deletingLastPathComponent()) }
     }
 
     private func resolve(_ key: String) throws -> URL {

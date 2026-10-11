@@ -57,7 +57,7 @@ export class CapacitorCompanionDatabaseOwner {
     const db = createCapacitorSqliteDbPort(connection, this.platform);
     try {
       await db.query('PRAGMA busy_timeout = 5000');
-      const result = await bootstrapCompanionDatabase(db, { ...request, allowCreate: !existed });
+      const result = await bootstrapCompanionDatabase(db, { expectedJournalMode: 'wal', ...request, allowCreate: !existed });
       // In-memory editor drafts cannot survive a fresh renderer/database owner session.
       await db.run("DELETE FROM node_version_local_holds WHERE hold_id LIKE 'companion:%'");
       if (this.platform === 'android') {

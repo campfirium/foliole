@@ -14,10 +14,12 @@ export interface RequestSyncDatabaseRoundPort {
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown): void;
 }
 
+export const REQUEST_SYNC_MAX_PASSES = 4;
+
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
   let inventories = await port.exchangeInventory();
   let transferred = 0;
-  for (;;) {
+  for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const differences = compareFramedSyncDatabaseInventories(inventories);
     if (!differences.length) return { complete: true, pending: 0, transferred };
@@ -32,6 +34,8 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     }
     inventories = next;
   }
+  const pending = compareFramedSyncDatabaseInventories(inventories).length;
+  return { complete: pending === 0, pending, transferred };
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,

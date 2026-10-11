@@ -31,6 +31,11 @@ public final class FramedSyncFiles {
     public void write(String key, byte[] bytes) throws Exception {
         File file = resolve(key);
         File parent = file.getParentFile();
+        if (key.startsWith("requests/")) {
+            Files.createDirectories(parent.toPath());
+            Files.write(file.toPath(), bytes);
+            return;
+        }
         ensureDirectory(parent);
         File temporary = new File(parent, "." + UUID.randomUUID() + ".tmp");
         try {
@@ -56,7 +61,7 @@ public final class FramedSyncFiles {
         File file = resolve(key);
         if (!file.exists()) return;
         removeTree(file);
-        syncDirectory(file.getParentFile());
+        if (!key.equals("requests") && !key.startsWith("requests/")) syncDirectory(file.getParentFile());
     }
 
     private File resolve(String key) throws Exception {

@@ -12,7 +12,6 @@ import { encodeFramedSyncStream, readFramedSyncStream } from '../../../../../../
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
-import { createFramedSyncFileSessionNoncePort } from '../../../../../../lib/core/sync/framedSyncFileSession.js';
 import { readRequestSyncInventorySnapshot } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { sendRequestSyncObject } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
@@ -41,6 +40,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
   const groupKey = new Uint8Array(32).fill(7);
   try {
     seed(source, 'peer', groupKey); seed(target, 'local', groupKey);
+    target.sqlite.exec('DROP TABLE settings');
     runtime.db = target.db;
     runtime.files = createDesktopFramedSyncFiles(path.join(root, 'target'));
     const files = createDesktopFramedSyncFiles(path.join(root, 'source'));
@@ -53,7 +53,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
     rememberCompanionRequestSyncPeerState(peerState, true);
     const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, initiatorDeviceId: 'peer',
       initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } as const;
-    await sendRequestSyncObject({ files, noncePort: createFramedSyncFileSessionNoncePort(files),
+    await sendRequestSyncObject({ files,
       readSnapshot: read => read(source.db), write: write => write(source.db) }, { context, groupKey, difference }, async stream => {
       const chunks = [];
       for await (const chunk of encodeFramedSyncStream(stream)) chunks.push(chunk);

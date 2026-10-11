@@ -1,8 +1,8 @@
 import type { RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
-import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
+import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 
 export function createDesktopRequestSyncExchange(input: {
   context: RequestSyncAuthenticatedContext;
@@ -12,7 +12,7 @@ export function createDesktopRequestSyncExchange(input: {
   signal?: AbortSignal;
 }): RequestSyncExchange {
   return { ...input, request: async (pathWithQuery, stream, consume) => {
-    const body = await spoolDesktopFramedSyncBody(stream);
+    const body = await prepareDesktopRequestSyncBody(stream);
     const { context } = input;
     const response = await postDesktopFramedSync({ body, endpointUrl: input.endpointUrl,
       groupId: context.groupId, localDeviceId: context.initiatorDeviceId,

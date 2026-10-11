@@ -11,13 +11,18 @@ import { framedSyncFileKey, type FramedSyncFilePort } from './framedSyncFilePort
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { canonicalFactFromValidatedMessage } from './framedSyncWireFact.js';
 
+export type RequestSyncFilePort = Pick<FramedSyncFilePort, 'read' | 'write' | 'remove'>;
+export const REQUEST_SYNC_MEMORY_BYTES = 4 * 1024 * 1024;
+
 /** Request-local plaintext facts and bodies. No publication, attempt, receipt or encrypted frame is stored. */
 export class RequestSyncFiles {
   private readonly facts: Array<{ first: number; end: number }> = [];
+  private readonly memory = new Map<string, Uint8Array>();
+  private memoryBytes = 0;
   private nextFrame = 0;
   private closed = false;
 
-  constructor(private readonly files: FramedSyncFilePort, readonly directory: string,
+  constructor(private readonly files: RequestSyncFilePort, readonly directory: string,
     private readonly signal?: AbortSignal) {}
 
   private check() {
@@ -25,12 +30,27 @@ export class RequestSyncFiles {
     if (this.closed) throw new Error('request_sync_files_closed');
   }
 
+  private async write(key: string, bytes: Uint8Array) {
+    const previous = this.memory.get(key);
+    if (previous) { this.memoryBytes -= previous.byteLength; this.memory.delete(key); }
+    if (this.memoryBytes + bytes.byteLength <= REQUEST_SYNC_MEMORY_BYTES) {
+      this.memory.set(key, Uint8Array.from(bytes));
+      this.memoryBytes += bytes.byteLength;
+    } else {
+      await this.files.write(key, bytes);
+    }
+  }
+
+  private read(key: string) {
+    return this.memory.get(key) ?? this.files.read(key);
+  }
+
   async writeFact(fact: CanonicalFact) {
     this.check();
     const first = this.nextFrame;
     for (const payload of iterateFramedSyncFactPayloads(fact)) {
       this.check();
-      await this.files.write(`${this.directory}/fact-${this.nextFrame++}`, encodeValidatedProtocolMessage(payload.payloadCase, payload.payload));
+      await this.write(`${this.directory}/fact-${this.nextFrame++}`, encodeValidatedProtocolMessage(payload.payloadCase, payload.payload));
     }
     this.facts.push({ first, end: this.nextFrame });
   }
@@ -42,7 +62,7 @@ export class RequestSyncFiles {
       let complete = false;
       for (let index = range.first; index < range.end; index++) {
         this.check();
-        const bytes = await this.files.read(`${this.directory}/fact-${index}`);
+        const bytes = await this.read(`${this.directory}/fact-${index}`);
         if (!bytes) throw new Error('request_sync_fact_missing');
         const message = decodeAndValidateProtocolMessage(bytes, FRAMED_SYNC_FRAME_TYPES.fact);
         if (complete) throw new Error('request_sync_fact_trailing_frame');
@@ -65,7 +85,7 @@ export class RequestSyncFiles {
     }
     for (let offset = 0; offset < bytes.length; offset += FRAMED_SYNC_LIMITS.blobChunkBytes) {
       this.check();
-      await this.files.write(this.bodyKey(blob, offset), bytes.subarray(offset, offset + FRAMED_SYNC_LIMITS.blobChunkBytes));
+      await this.write(this.bodyKey(blob, offset), bytes.subarray(offset, offset + FRAMED_SYNC_LIMITS.blobChunkBytes));
     }
   }
 
@@ -78,7 +98,7 @@ export class RequestSyncFiles {
     const result = new Uint8Array(length);
     for (let offset = 0; offset < length; offset += FRAMED_SYNC_LIMITS.blobChunkBytes) {
       this.check();
-      const bytes = await this.files.read(this.bodyKey(blob, offset));
+      const bytes = await this.read(this.bodyKey(blob, offset));
       if (!bytes || bytes.length !== Math.min(FRAMED_SYNC_LIMITS.blobChunkBytes, length - offset)) {
         throw new Error('request_sync_body_chunk_missing');
       }
@@ -95,11 +115,13 @@ export class RequestSyncFiles {
   async close() {
     this.closed = true;
     this.facts.length = 0;
+    this.memory.clear();
+    this.memoryBytes = 0;
     await this.files.remove(this.directory);
   }
 }
 
-export async function withRequestSyncFiles<T>(files: FramedSyncFilePort,
+export async function withRequestSyncFiles<T>(files: RequestSyncFilePort,
   execute: (request: RequestSyncFiles) => Promise<T>, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const request = new RequestSyncFiles(files, framedSyncFileKey('requests', crypto.randomUUID()), signal);

@@ -5,7 +5,6 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
@@ -77,7 +76,7 @@ it.each(['adoption', 'restore'] as const)('resumes %s without clearing accepted 
 
 function host(device: ReturnType<typeof textDevice>, root: string): RequestSyncDatabaseHost {
   const files = createDesktopFramedSyncFiles(root);
-  return { files, noncePort: createFramedSyncFileSessionNoncePort(files),
+  return { files,
     readSnapshot: read => device.db.transaction(read), write: write => write(device.db) };
 }
 

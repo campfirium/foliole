@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 
@@ -16,7 +16,6 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
@@ -47,7 +46,7 @@ it.each([false, true])('persists through signed HTTP without transfer bookkeepin
   seedMembership(source, 'peer');
   const sourceDb = createBetterSqliteDbPort(source);
   const files = createDesktopFramedSyncFiles(path.join(sandbox.root, 'source-files'));
-  const host: RequestSyncDatabaseHost = { files, noncePort: createFramedSyncFileSessionNoncePort(files),
+  const host: RequestSyncDatabaseHost = { files,
     readSnapshot: (read, signal) => withRequestSyncReadonlySnapshot(sourcePath, read, signal),
     write: write => write(sourceDb) };
   const server = http.createServer((request, response) => {
@@ -78,7 +77,8 @@ it.each([false, true])('persists through signed HTTP without transfer bookkeepin
     expect(compareFramedSyncInventories({ local: [entry], remote: remote ? [remote] : [] })).toEqual([]);
     await pullBack(host, `http://127.0.0.1:${address.port}`, sourcePath);
     await completeRound(host, `http://127.0.0.1:${address.port}`);
-    expect(await readdir(path.join(sandbox.root, 'source-files/requests'))).toEqual([]);
+    expect(await files.list('requests')).toEqual([]);
+    expect(await files.list('sessions')).toEqual([]);
   } finally {
     if (relay) await new Promise<void>(resolve => relay!.close(() => resolve()));
     await new Promise<void>(resolve => server.close(() => resolve()));

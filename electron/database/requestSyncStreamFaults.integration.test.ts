@@ -6,7 +6,6 @@ import { expect, it } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { applyFramedFactSources } from '../../lib/core/sync/framedSyncFactApply.js';
-import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { withRequestSyncFiles, type RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { requestSyncObjectMessages, type RequestSyncMessage } from '../../lib/core/sync/requestSyncObjectMessages.js';
@@ -38,7 +37,7 @@ it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', '
   try {
     await expect(withRequestSyncFiles(files, async outgoing => {
       const header = await seed(outgoing, fault);
-      const wire = await prepareRequestSyncWire({ context, groupKey, noncePort: createFramedSyncFileSessionNoncePort(files),
+      const wire = await prepareRequestSyncWire({ context, groupKey,
         messages: id => mutateMessages(requestSyncObjectMessages(header, id, outgoing), fault) });
       await withRequestSyncFiles(files, async incoming => {
         const messages = readRequestSyncWire({ context: fault === 'wrong-peer' ?
@@ -52,7 +51,8 @@ it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', '
     })).rejects.toThrow(errors[fault]);
     expect(await target.db.query('SELECT id FROM nodes')).toEqual([]);
     expect(await target.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
-    expect(await readdir(path.join(root, 'requests'))).toEqual([]);
+    expect((await readdir(root)).filter(name => name !== 'requests')).toEqual([]);
+  expect(await files.list('requests')).toEqual([]);
   } finally {
     target.sqlite.close();
     await rm(root, { recursive: true });

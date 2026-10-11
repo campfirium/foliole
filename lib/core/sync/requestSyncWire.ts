@@ -3,18 +3,17 @@ import { decodeFramedSyncPreamble, encodeFrameHeader, encodeFramedSyncPreamble, 
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { assertFramePayloadBudget, frameTypeForPayload, receiveFramedSyncRequestFrame } from './framedSyncReceiver.js';
 import { assertAuthenticatedSessionBootstrap, deriveSessionContextId,
-  type FramedSyncSessionContext, type FramedSyncSessionNoncePort } from './framedSyncSession.js';
+  type FramedSyncSessionContext } from './framedSyncSession.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import type { RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
 
 export type RequestSyncAuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 export type RequestSyncWireFrame = Readonly<{ headerBytes: Uint8Array; ciphertext: Uint8Array }>;
 
-/** Fresh session state is recorded before encryption; no delivery state or ciphertext is retained here. */
+/** Each one-shot stream uses fresh random key material; crashes abandon it instead of resuming a nonce sequence. */
 export async function prepareRequestSyncWire(input: {
   context: RequestSyncAuthenticatedContext;
   groupKey: Uint8Array;
-  noncePort: FramedSyncSessionNoncePort;
   messages(contextId: Uint8Array): AsyncIterable<RequestSyncMessage>;
   signal?: AbortSignal;
 }) {
@@ -24,27 +23,22 @@ export async function prepareRequestSyncWire(input: {
   const contextId = await deriveSessionContextId({ ...input.context, sessionId });
   const preamble = encodeFramedSyncPreamble({ compression: 'none', contextId, contextKind: 'session',
     noncePrefix, sessionId, startingSequence: 0n });
-  await input.noncePort.persistBeforeEncryption({ contextId, noncePrefix, sessionId, startingSequence: 0n });
   const key = await deriveSessionFrameKey({ groupKey: input.groupKey, sessionContextId: contextId, sessionId });
-  let abandoned: Promise<void> | undefined;
-  const dispose = () => abandoned ??= input.noncePort.abandon(sessionId);
   const frames = (async function* (): AsyncGenerator<RequestSyncWireFrame> {
     let sequence = 0n;
-    try {
-      for await (const message of input.messages(contextId)) {
-        input.signal?.throwIfAborted();
-        if (sequence === 0xffff_ffff_ffff_ffffn) throw new Error('frame_sequence_exhausted');
-        const plaintext = encodeValidatedProtocolMessage(message.payloadCase, message.payload);
-        const frameType = frameTypeForPayload(message.payloadCase);
-        assertFramePayloadBudget(frameType, plaintext.length);
-        const headerBytes = encodeFrameHeader({ frameType, flags: 0, sequence, ciphertextBytes: plaintext.length + 16 });
-        const ciphertext = await encryptFrame({ aad: frameAad(preamble, headerBytes), key,
-          nonce: frameNonce(noncePrefix, sequence++), plaintext });
-        yield { headerBytes, ciphertext };
-      }
-    } finally { await dispose(); }
+    for await (const message of input.messages(contextId)) {
+      input.signal?.throwIfAborted();
+      if (sequence === 0xffff_ffff_ffff_ffffn) throw new Error('frame_sequence_exhausted');
+      const plaintext = encodeValidatedProtocolMessage(message.payloadCase, message.payload);
+      const frameType = frameTypeForPayload(message.payloadCase);
+      assertFramePayloadBudget(frameType, plaintext.length);
+      const headerBytes = encodeFrameHeader({ frameType, flags: 0, sequence, ciphertextBytes: plaintext.length + 16 });
+      const ciphertext = await encryptFrame({ aad: frameAad(preamble, headerBytes), key,
+        nonce: frameNonce(noncePrefix, sequence++), plaintext });
+      yield { headerBytes, ciphertext };
+    }
   })();
-  return { preamble, frames, contextId, dispose };
+  return { preamble, frames, contextId };
 }
 
 export async function* readRequestSyncWire(input: {

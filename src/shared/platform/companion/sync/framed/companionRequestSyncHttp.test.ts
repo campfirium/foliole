@@ -5,7 +5,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
-import { createFramedSyncFileSessionNoncePort } from '../../../../../../lib/core/sync/framedSyncFileSession.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 
@@ -36,8 +35,8 @@ function storage() {
   return { files, values };
 }
 
-async function body(files: FramedSyncFilePort) {
-  return prepareRequestSyncWire({ context, groupKey, noncePort: createFramedSyncFileSessionNoncePort(files),
+async function body() {
+  return prepareRequestSyncWire({ context, groupKey,
     messages: async function* () { yield { payloadCase: 'round_receipt', payload: {
       roundId: new Uint8Array(16).fill(3), result: 1, deferredFacts: []
     } }; } });
@@ -60,7 +59,7 @@ it('signs the exact bounded file stream and authenticated endpoint identity, the
     return { response_chunk_count: 1, response_byte_length: bytes.length };
   });
   const received = await withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
-    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body(files) }, async stream => {
+    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body() }, async stream => {
     const decoded = [];
     for await (const item of readRequestSyncWire({ context, groupKey, ...stream })) decoded.push(item.message.payloadCase);
     return decoded;
@@ -84,7 +83,7 @@ it('waits for native cancellation before deleting files owned by the request', a
     reject(new Error('request_sync_http_cancelled'));
   });
   await expect(withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
-    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body(files), signal: controller.signal },
+    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body(), signal: controller.signal },
   async () => { throw new Error('unexpected_response'); })).rejects.toThrow('request_sync_http_cancelled');
   expect(native.cancel).toHaveBeenCalledOnce();
   expect([...values.keys()].filter(key => key.startsWith('requests/'))).toEqual([]);

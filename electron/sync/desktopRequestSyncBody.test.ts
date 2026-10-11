@@ -1,0 +1,40 @@
+// @vitest-environment node
+import { createHash } from 'node:crypto';
+
+import { expect, it, vi } from 'vitest';
+
+vi.mock('./desktopFramedSyncBodySpool.js', async importOriginal => {
+  const original = await importOriginal<typeof import('./desktopFramedSyncBodySpool.js')>();
+  return { ...original, spoolDesktopFramedSyncBody: vi.fn(original.spoolDesktopFramedSyncBody) };
+});
+
+import { encodeFramedSyncStream } from '../../lib/core/sync/framedSyncBinaryStream.js';
+import { encodeFrameHeader, encodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import { REQUEST_SYNC_MEMORY_BYTES } from '../../lib/core/sync/requestSyncFiles.js';
+
+import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
+import { encodeFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
+import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
+
+it.each([1, 10])('preserves signed bytes and bounded scratch use for %i frames', async count => {
+  vi.mocked(spoolDesktopFramedSyncBody).mockClear();
+  const preamble = encodeFramedSyncPreamble({ compression: 'none', contextKind: 'session',
+    contextId: new Uint8Array(32), noncePrefix: new Uint8Array(4), sessionId: new Uint8Array(16), startingSequence: 0n });
+  const frames = Array.from({ length: count }, (_, index) => ({
+    headerBytes: encodeFrameHeader({ frameType: 3, flags: 0, sequence: BigInt(index), ciphertextBytes: 512 * 1024 }),
+    ciphertext: new Uint8Array(512 * 1024).fill(index + 1)
+  }));
+  const expected: Uint8Array[] = [];
+  for await (const chunk of encodeFramedSyncStream({ preamble, frames: (async function* () { yield* frames; })() })) expected.push(chunk);
+  const exact = Buffer.concat(expected);
+  const body = await prepareDesktopRequestSyncBody({ preamble, frames: (async function* () { yield* frames; })() });
+  try {
+    frames.forEach(frame => frame.ciphertext.fill(0));
+    const actual: Uint8Array[] = [];
+    for await (const chunk of encodeFramedSyncHttpBody(body)) actual.push(Uint8Array.from(chunk));
+    expect(body.contentLength).toBe(exact.length);
+    expect(body.bodySha256).toBe(createHash('sha256').update(exact).digest('hex'));
+    expect(createHash('sha256').update(Buffer.concat(actual)).digest('hex')).toBe(body.bodySha256);
+    expect(spoolDesktopFramedSyncBody).toHaveBeenCalledTimes(exact.length > REQUEST_SYNC_MEMORY_BYTES ? 1 : 0);
+  } finally { await body.dispose?.(); }
+});

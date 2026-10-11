@@ -24,6 +24,9 @@ if (!rootElement) {
 if (isIosBridgeAcceptance) {
   const module = iosAcceptanceScenario === 'library-capacity'
     ? import('./capacityAcceptance').then(({ mountCapacityAcceptance }) => mountCapacityAcceptance(rootElement))
+    : iosAcceptanceScenario === 'request-snapshot'
+      ? import('./requestSnapshotAcceptance').then(({ mountRequestSnapshotAcceptance }) =>
+        mountRequestSnapshotAcceptance(rootElement))
     : iosAcceptanceScenario === 'readonly-snapshot'
       ? import('./readonlySnapshotAcceptance').then(({ mountReadonlySnapshotAcceptance }) =>
         mountReadonlySnapshotAcceptance(rootElement))

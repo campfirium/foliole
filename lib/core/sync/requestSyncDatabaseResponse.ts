@@ -44,11 +44,10 @@ export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHos
       request.detailGlobalIds!.includes(entry.globalId)) : request.summaryOnly ? framedSyncInventorySummary(entries) : entries;
     response = iterateRequestSyncInventory({ entries: selected, roundId: request.roundId });
   }
-  const body = await prepareRequestSyncWire({ ...input, noncePort: host.noncePort,
+  const body = await prepareRequestSyncWire({ ...input,
     messages: async function* () { yield* response; } });
   try { return await consume(body); }
   finally {
-    try { await body.frames.return(undefined); }
-    finally { await body.dispose(); }
+    await body.frames.return(undefined);
   }
 }

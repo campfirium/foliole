@@ -5,7 +5,7 @@ import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatab
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
-import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
+import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import type { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
 
@@ -22,5 +22,5 @@ export async function respondDesktopRequestSyncInventory(host: RequestSyncDataba
   signal?: AbortSignal;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
 }) {
-  return respondRequestSyncDatabase(host, { ...input, mode: 'inventory' }, spoolDesktopFramedSyncBody);
+  return respondRequestSyncDatabase(host, { ...input, mode: 'inventory' }, prepareDesktopRequestSyncBody);
 }

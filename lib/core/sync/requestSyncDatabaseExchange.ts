@@ -18,15 +18,14 @@ export interface RequestSyncExchange {
     consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>): Promise<T>;
 }
 
-async function withControlRequest<T>(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
+async function withControlRequest<T>(exchange: RequestSyncExchange,
   path: string, messages: AsyncIterable<RequestSyncMessage> | Iterable<RequestSyncMessage>,
   consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>) {
-  const body = await prepareRequestSyncWire({ ...exchange, noncePort: host.noncePort,
+  const body = await prepareRequestSyncWire({ ...exchange,
     messages: async function* () { yield* messages; } });
   try { return await exchange.request(path, body, consume); }
   finally {
-    try { await body.frames.return(undefined); }
-    finally { await body.dispose(); }
+    await body.frames.return(undefined);
   }
 }
 
@@ -70,7 +69,7 @@ async function inventoryRequest(host: RequestSyncDatabaseHost, exchange: Request
   const roundId = crypto.getRandomValues(new Uint8Array(16));
   const messages = iterateRequestSyncInventory({ entries: framedSyncInventorySummary(local), roundId,
     detailGlobalIds, summaryOnly: true });
-  return withControlRequest(host, exchange, '/companion/framed-sync?request=inventory', messages, async response => {
+  return withControlRequest(exchange, '/companion/framed-sync?request=inventory', messages, async response => {
     const decoded = await decodeRequestSyncInventory(decodedMessages(exchange, response));
     if (!sameBytes(decoded.roundId, roundId)) throw new Error('inventory_round_identity_mismatch');
     return decoded;
@@ -101,7 +100,7 @@ export async function pushRequestSyncObject(host: RequestSyncDatabaseHost, excha
 export async function pullRequestSyncObject(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
   difference: FramedSyncInventoryDifference,
   options: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState' | 'objectOptions'>) {
-  return withControlRequest(host, exchange, '/companion/framed-sync?request=pull', requestSyncDifferenceMessages(difference), response =>
+  return withControlRequest(exchange, '/companion/framed-sync?request=pull', requestSyncDifferenceMessages(difference), response =>
     receiveRequestSyncObject(host, { ...exchange, ...response, ...options, author: 'responder', expectedObject: difference }));
 }
 

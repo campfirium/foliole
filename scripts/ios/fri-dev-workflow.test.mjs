@@ -115,3 +115,13 @@ it('builds the normal workspace capacity resource and selects its physical UI te
   expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
   expect(commands[3].args).toContain(FRI_DEV_APP_ID);
 });
+
+it('runs the production request snapshot scenario in the fixed development app', () => {
+  const commands = buildFriDevWorkflowCommands({ evidenceRoot: '/evidence', repoRoot: '/repo',
+    scenario: 'request-snapshot' });
+  expect(commands[0].env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('request-snapshot');
+  for (const command of commands.slice(2)) {
+    expect(command.args).toContain('AppPhysicalUITests/FoliolePhysicalReadonlySnapshotUITests/testProductionRequestSnapshotCancellation');
+    expect(command.env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe('.dev');
+  }
+});

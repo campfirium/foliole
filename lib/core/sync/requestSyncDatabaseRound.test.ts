@@ -43,3 +43,18 @@ it('ends a cancelled round before transferring the next object', async () => {
   }, controller.signal)).rejects.toThrow('request_cancelled');
   expect(transferred).toEqual(['first']);
 });
+
+
+it('yields to the next scheduled round when edits keep changing the inventory', async () => {
+  let revision = 0;
+  let transferred = 0;
+  const result = await runRequestSyncDatabaseRound({
+    exchangeInventory: async () => ({ local: [entry(`edit-${revision++}`)], remote: [] }),
+    transferObject: async () => { transferred++; },
+    reportObjectError: () => { throw new Error('unexpected_error'); }
+  });
+  expect(result.complete).toBe(false);
+  expect(result.pending).toBe(1);
+  expect(transferred).toBeGreaterThan(0);
+  expect(transferred).toBeLessThanOrEqual(4);
+});

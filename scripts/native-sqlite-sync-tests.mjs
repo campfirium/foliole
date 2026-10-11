@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'src/companion/requestSnapshotProbe.test.ts',
   'lib/core/sync/syncGroupRestoreEvents.test.ts',
   'lib/core/sync/syncIdentityRestorePageStorage.test.ts',
   'lib/core/sync/nodeVersionMemberPosition.test.ts',

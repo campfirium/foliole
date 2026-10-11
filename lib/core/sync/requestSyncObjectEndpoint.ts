@@ -2,11 +2,9 @@ import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMember
 
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSyncContract.js';
-import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
 import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
-import type { FramedSyncSessionNoncePort } from './framedSyncSession.js';
-import { withRequestSyncFiles } from './requestSyncFiles.js';
+import { withRequestSyncFiles, type RequestSyncFilePort } from './requestSyncFiles.js';
 import { applyRequestSyncObject } from './requestSyncObjectApply.js';
 import { requestSyncObjectMessages } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages } from './requestSyncObjectReceiver.js';
@@ -16,10 +14,10 @@ import { prepareRequestSyncWire, readRequestSyncWire,
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export interface RequestSyncDatabaseHost {
-  files: FramedSyncFilePort;
+  files: RequestSyncFilePort;
+  enqueueSearchInvalidations?: boolean;
   objectOptions?(db: DbPort): Promise<ApplySyncObjectsWithDbPortOptions>;
   objectApplied?(object: { objectType: string; globalId: string }): void;
-  noncePort: FramedSyncSessionNoncePort;
   readSnapshot<T>(read: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T>;
   write<T>(write: (db: DbPort) => Promise<T>): Promise<T>;
 }
@@ -35,12 +33,11 @@ export async function sendRequestSyncObject<T>(host: RequestSyncDatabaseHost, in
     const header = { requestId: crypto.getRandomValues(new Uint8Array(16)),
       globalId: entry.globalId, objectType: entry.objectType, sourceStateHash: entry.sharedStateHash };
     const stream = await prepareRequestSyncWire({ context: input.context, groupKey: input.groupKey,
-      noncePort: host.noncePort, ...(input.signal ? { signal: input.signal } : {}),
+       ...(input.signal ? { signal: input.signal } : {}),
       messages: contextId => requestSyncObjectMessages(header, contextId, files) });
     try { return await send({ ...stream, requestId: header.requestId }); }
     finally {
-      try { await stream.frames.return(undefined); }
-      finally { await stream.dispose(); }
+      await stream.frames.return(undefined);
     }
   }, input.signal);
 }
@@ -67,6 +64,7 @@ export async function receiveRequestSyncObject(host: RequestSyncDatabaseHost, in
       context: objectContext(input.context, input.author), globalId: header.globalId, objectType: header.objectType,
       requestId: header.requestId, peerState: input.peerState,
       facts: async function* () { yield* files.readFacts(); }, loadBody: (_db, blob) => files.loadBody(blob),
+      enqueueSearchInvalidations: host.enqueueSearchInvalidations ?? true,
       ...(input.signal ? { signal: input.signal } : {}),
       objectOptions: { ...await host.objectOptions?.(db), ...input.objectOptions }
     }));

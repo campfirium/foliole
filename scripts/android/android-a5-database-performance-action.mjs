@@ -26,6 +26,7 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
   const scenario = performanceScenario(env);
   const capacity = scenario === 'library-capacity';
   const workspaceCapacity = scenario === 'library-capacity-workspace';
+  const requestSnapshot = scenario === 'request-snapshot';
   const factProbe = scenario === 'sync-fact-probe';
   const resetFixture = env.FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE;
   if (resetFixture !== undefined && (resetFixture !== '1' || (!capacity && !workspaceCapacity))) {
@@ -77,10 +78,22 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     } else {
       result = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-        '-e', 'class', factProbe ? FACT_PROBE_TEST_CLASS
+        '-e', 'class', requestSnapshot ? `${TEST_NAMESPACE}.FolioleRequestSnapshotAcceptanceTest` : factProbe ? FACT_PROBE_TEST_CLASS
           : capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
       ], options);
       output.push(result.output);
+    }
+    if (requestSnapshot) {
+      assertSingleInstrumentationPassed(result.output, 'FolioleRequestSnapshotAcceptanceTest');
+      const artifact = await checked(execute, paths.adb, ['-s', serial, 'exec-out', 'run-as', APP_ID,
+        'cat', 'files/request-snapshot-result.json'], options);
+      const parsed = JSON.parse(artifact.output);
+      if (parsed.status !== 'passed' || parsed.cancelled !== true || parsed.cleanup !== true ||
+          parsed.originalVersions !== 48 || parsed.recoveredVersions !== 50) throw new Error('Request snapshot result invalid');
+      const evidencePath = path.join(evidenceRoot, 'request-snapshot-result.json');
+      fs.writeFileSync(evidencePath, artifact.output);
+      fs.writeFileSync(path.join(evidenceRoot, 'request-snapshot-instrumentation.log'), result.output);
+      return { evidencePath, output: output.join('') };
     }
     if (capacity) return await saveCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options });

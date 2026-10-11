@@ -9,7 +9,6 @@ import { createDesktopFramedSyncFiles } from '../../../electron/sync/desktopFram
 
 import { encodeFramedSyncStream, readFramedSyncStream } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
-import { createFramedSyncFileSessionNoncePort } from './framedSyncFileSession.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
 import { exchangeRequestSyncInventory, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
@@ -19,7 +18,6 @@ import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.j
 it('retrieves every changed object when detail identifiers exceed a control frame', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'request-detail-'));
   const files = createDesktopFramedSyncFiles(root);
-  const noncePort = createFramedSyncFileSessionNoncePort(files);
   const entries: FramedSyncInventoryEntry[] = Array.from({ length: 2100 }, (_, index) => ({
     globalId: `${index}-${'n'.repeat(500)}`, objectType: 'node', sharedStateHash: new Uint8Array(32),
     frontierFactIds: [`v${index}`], requiredRelationIds: [], reviewFactIds: [], resourceHashes: [],
@@ -35,13 +33,13 @@ it('retrieves every changed object when detail identifiers exceed a control fram
     })());
     const ids = new Set(request.detailGlobalIds);
     const selected = ids.size ? entries.filter(entry => ids.has(entry.globalId)) : framedSyncInventorySummary(entries);
-    const response = await prepareRequestSyncWire({ context, groupKey, noncePort,
+    const response = await prepareRequestSyncWire({ context, groupKey,
       messages: async function* () { yield* iterateRequestSyncInventory({ entries: selected, roundId: request.roundId }); } });
     try { return await consume(await readFramedSyncStream(encodeFramedSyncStream(response))); }
-    finally { await response.dispose(); }
+    finally { await response.frames.return(undefined); }
   } };
   try {
-    const result = await exchangeRequestSyncInventory({ files, noncePort,
+    const result = await exchangeRequestSyncInventory({ files,
       readSnapshot: async () => { throw new Error('unexpected_snapshot'); },
       write: async () => { throw new Error('unexpected_write'); }
     }, exchange, []);

@@ -60,21 +60,23 @@ function execute(command, args, options = {}) {
 }
 
 export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER, scenario = 'browse' }) {
-  if (!['browse', 'library-capacity', 'library-capacity-workspace'].includes(scenario)) {
+  if (!['browse', 'library-capacity', 'library-capacity-workspace', 'request-snapshot'].includes(scenario)) {
     throw new Error('Unsupported Fri development scenario.');
   }
+  const requestSnapshot = scenario === 'request-snapshot';
   const capacity = scenario.startsWith('library-capacity');
   const method = scenario === 'library-capacity-workspace'
     ? 'testMeasuresLibraryWorkspaceCapacity' : 'testMeasuresLibraryCapacity';
   const appId = FRI_DEV_APP_ID;
   const bundleSuffix = FRI_DEV_BUNDLE_SUFFIX;
-  const buildEnv = { ...process.env, VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: capacity ? '1' : '0',
-    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity ? scenario : '' };
+  const buildEnv = { ...process.env, VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: capacity || requestSnapshot ? '1' : '0',
+    VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity || requestSnapshot ? scenario : '' };
   const runnerArgs = [runnerPath,
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
     '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
-    '--only-testing', capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', method) : FRI_DEV_TEST];
+    '--only-testing', requestSnapshot ? 'AppPhysicalUITests/FoliolePhysicalReadonlySnapshotUITests/testProductionRequestSnapshotCancellation'
+      : capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', method) : FRI_DEV_TEST];
   return [
     { command: 'npm', args: ['run', 'android:web:build'], env: buildEnv, stage: 'companion-build' },
     { command: 'npx', args: ['cap', 'sync', 'ios'], stage: 'capacitor-ios-sync' },

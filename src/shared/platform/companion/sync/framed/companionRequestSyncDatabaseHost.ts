@@ -1,4 +1,3 @@
-import { createFramedSyncFileSessionNoncePort } from '../../../../../../lib/core/sync/framedSyncFileSession.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
@@ -15,8 +14,9 @@ export async function currentCompanionRequestSyncDatabaseHost(): Promise<Request
     if (owner.databasePath !== databasePath) throw new Error('request_sync_library_changed');
   };
   return {
+    enqueueSearchInvalidations: false,
     objectOptions: async db => ({ hostName: await iosCompanionHostName(db) }),
-    files, noncePort: createFramedSyncFileSessionNoncePort(files),
+    files,
     readSnapshot: (read, signal) => owner.readSnapshot(db => {
       checkLibrary();
       return read(db);

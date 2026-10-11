@@ -23,6 +23,7 @@ export interface RequestSyncObjectInput {
   facts: FramedFactSource;
   loadBody: FramedBodyLoader;
   objectOptions?: ApplySyncObjectsWithDbPortOptions;
+  enqueueSearchInvalidations?: boolean;
   signal?: AbortSignal;
 }
 
@@ -63,7 +64,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     };
     const result = await applyFramedFactSources(tx, [source], { loadBody: input.loadBody,
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
-      requireCompleteVersionGraph: true, enqueueSearchInvalidations: true });
+      requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
     await recordFramedSyncPeerEpoch(tx, { groupId: input.context.groupId, libraryEpoch: input.context.senderLibraryEpoch,
       peerDeviceId: input.context.senderDeviceId, transferId: input.requestId });

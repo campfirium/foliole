@@ -18,6 +18,7 @@ function harness(journalMode = 'delete', platform: 'android' | 'ios' = 'ios') {
     query: vi.fn(async (sql: string, values: unknown[] = []) => {
       if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
       if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: journalMode }] };
+      if (sql === 'PRAGMA journal_mode = WAL') return { values: [{ journal_mode: 'wal' }] };
       if (sql === 'PRAGMA user_version') return { values: [{ user_version: COMPANION_DATABASE_VERSION }] };
       if (sql.includes("name = 'companion_meta'")) return { values: [{ present: 1 }] };
       if (sql.includes('SELECT value FROM companion_meta') && values[0] === 'device_id') {

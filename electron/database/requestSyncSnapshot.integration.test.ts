@@ -6,7 +6,6 @@ import { afterEach, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { applyFramedFactSources } from '../../lib/core/sync/framedSyncFactApply.js';
-import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
@@ -56,7 +55,7 @@ it('spools a complete history with retired middle bodies and applies it without 
         initiatorDeviceId: 'source', initiatorLibraryEpoch: 'source-epoch',
         responderDeviceId: 'target', responderLibraryEpoch: 'target-epoch' };
       const groupKey = new Uint8Array(32).fill(7);
-      const wire = await prepareRequestSyncWire({ context, groupKey, noncePort: createFramedSyncFileSessionNoncePort(files),
+      const wire = await prepareRequestSyncWire({ context, groupKey,
         messages: contextId => requestSyncObjectMessages(header, contextId, request) });
       const decoded = readRequestSyncWire({ context, groupKey, preamble: wire.preamble, frames: wire.frames });
       expect(await receiveRequestSyncObjectMessages(decoded, wire.contextId, received)).toEqual(header);
@@ -70,7 +69,8 @@ it('spools a complete history with retired middle bodies and applies it without 
     expect(await target.db.query("SELECT body_text FROM node_sync_versions WHERE version_id = 'middle'"))
       .toEqual([{ body_text: null }]);
   });
-  expect(await readdir(path.join(root, 'requests'))).toEqual([]);
+  expect((await readdir(root)).filter(name => name !== 'requests')).toEqual([]);
+  expect(await files.list('requests')).toEqual([]);
 });
 
 it('cleans request files when preparation is cancelled', async () => {
@@ -84,5 +84,6 @@ it('cleans request files when preparation is cancelled', async () => {
     await request.readFacts()[Symbol.asyncIterator]().next();
     controller.signal.throwIfAborted();
   }, controller.signal)).rejects.toThrow('request_cancelled');
-  expect(await readdir(path.join(root, 'requests'))).toEqual([]);
+  expect((await readdir(root)).filter(name => name !== 'requests')).toEqual([]);
+  expect(await files.list('requests')).toEqual([]);
 });

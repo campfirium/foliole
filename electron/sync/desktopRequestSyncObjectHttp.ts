@@ -5,7 +5,7 @@ import { receiveRequestSyncObject,
   type RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
-import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
+import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 
 export async function postDesktopRequestSyncObject(host: RequestSyncDatabaseHost, input: {
@@ -24,5 +24,5 @@ export async function respondDesktopRequestSyncObject(host: RequestSyncDatabaseH
   const { context, groupKey, peerState, expectedObject, signal } = input;
   return respondRequestSyncDatabase(host, { context, groupKey, mode: 'object',
     stream: { preamble: input.preamble, frames: input.frames }, object: { peerState, expectedObject },
-    ...(signal ? { signal } : {}) }, spoolDesktopFramedSyncBody);
+    ...(signal ? { signal } : {}) }, prepareDesktopRequestSyncBody);
 }
