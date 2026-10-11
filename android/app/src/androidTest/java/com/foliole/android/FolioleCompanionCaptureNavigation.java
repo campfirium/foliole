@@ -2,6 +2,7 @@ package com.foliole.android;
 
 import android.app.Instrumentation;
 import android.webkit.WebView;
+import android.view.KeyEvent;
 
 import org.json.JSONObject;
 
@@ -47,6 +48,9 @@ final class FolioleCompanionCaptureNavigation {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         while (System.nanoTime() < deadline) {
             if (hasTestId(instrumentation, webView, BROWSE_READY)) return BROWSE_READY;
+            if (hasTestId(instrumentation, webView, "companion-review-action-read")) {
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+            }
             if (hasTestId(instrumentation, webView, READING_EXIT)) return READING_EXIT;
             if (hasTestId(instrumentation, webView, BROWSE_TAB)) return BROWSE_TAB;
             if (hasTestId(instrumentation, webView, TOP_BAR_BACK)) return TOP_BAR_BACK;
