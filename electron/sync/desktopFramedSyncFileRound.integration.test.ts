@@ -59,3 +59,21 @@ it('converges independent processes through inventory, HTTP, resource transfer a
   expect(readDesktopFramedSyncLibraryEvidence(reopened.snapshot.databasePath).versions).toEqual(right.versions);
   assertNoTransportRows(reopened.snapshot.databasePath);
 }, 120_000);
+
+it('delivers the same requested content again after file retirement and process restart', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
+  root = fixture.root;
+  processes.push(fixture.left, fixture.right);
+  await fixture.left.seed({ content: 'Body requested again after acknowledgement',
+    nodeId: 'repeat-file-delivery', title: 'Repeated delivery' });
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, 'repeat-file-delivery');
+  const before = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  const restarted = await fixture.restartLeft();
+  processes.push(restarted.process);
+  await restarted.process.synchronize(fixture.rightSnapshot.origin, 'repeat-file-delivery');
+  const after = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(after.nodes).toEqual(before.nodes);
+  expect(after.versions).toEqual(before.versions);
+  assertNoTransportRows(restarted.snapshot.databasePath);
+  assertNoTransportRows(fixture.rightSnapshot.databasePath);
+}, 120_000);

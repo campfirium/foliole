@@ -2,7 +2,7 @@ import { sameCanonicalManifest } from './framedSyncCanonicalEquality.js';
 import type { CanonicalManifest, CanonicalBlob } from './framedSyncCanonicalManifest.js';
 import { releaseFramedSyncFileBodies, stageFramedSyncFileBody } from './framedSyncFileBodies.js';
 import { encodeFramedSyncFileJson, type FramedSyncFilePort } from './framedSyncFilePort.js';
-import { framedSyncPublicationDirectory, loadFramedSyncFilePublication, loadFramedSyncFileTask,
+import { framedSyncPublicationDirectory, loadFramedSyncFilePublication,
   publishFramedSyncFileOutbound } from './framedSyncFilePublication.js';
 import { encodePublicationInventory } from './framedSyncPublicationInventory.js';
 import type { OutboundPublishInput } from './framedSyncStagingContract.js';
@@ -18,7 +18,6 @@ export async function freezeFramedSyncFilePublication(input: {
   const owner = { purpose: 'outbound' as const, transferId: publication.transferId };
   const key = `${framedSyncPublicationDirectory(publication.transferId)}/preparing.json`;
   return files.exclusive(key, async () => {
-    if ((await loadFramedSyncFileTask(files, publication.transferId))?.state === 'retired') return 'identical' as const;
     const existing = await loadFramedSyncFilePublication(files, publication.transferId);
     if (existing) return publishFramedSyncFileOutbound(files, publication);
     await files.write(key, encodeFramedSyncFileJson({ ...publication,

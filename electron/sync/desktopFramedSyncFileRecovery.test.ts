@@ -81,6 +81,22 @@ it('accepts an updated valid receipt hash but never a different receiver', async
   await expect(staging.commitOutboundReceipt({ ...receipt, receiverDeviceId: 'another' })).rejects.toThrow('outbound_receipt_mismatch');
 });
 
+it.each(['receipt', 'inventory'])('rebuilds a requested publication after %s retirement and reopening', async (confirmation) => {
+  const { files, root, staging, publication } = await fixture();
+  const receipt = { transferId: publication.transferId, contentId: publication.contentId,
+    receiverDeviceId: 'receiver', receiverLibraryEpoch: 'b', appliedStateHash: hash };
+  if (confirmation === 'receipt') await staging.commitOutboundReceipt(receipt);
+  else await reconcileFramedSyncFilePublication(files, publication.transferId, [source]);
+  await staging.releaseOutboundHolds(publication.transferId);
+  const reopened = createFramedSyncFileOutboundStaging(createDesktopFramedSyncFiles(root));
+  await reopened.publishOutbound(publication);
+  expect(await reopened.loadOutboundPublication(publication.transferId)).toEqual(publication);
+  await expect(reopened.releaseOutboundHolds(publication.transferId)).rejects.toThrow('receipt_required');
+  await reopened.commitOutboundReceipt(receipt);
+  await reopened.releaseOutboundHolds(publication.transferId);
+  expect((await loadFramedSyncFileTask(files, publication.transferId))?.state).toBe('retired');
+});
+
 it('loads the frozen body after reopening and rejects changed source bytes under the old hash', async () => {
   const { files, root } = await fixture();
   const data = new TextEncoder().encode('Original body');

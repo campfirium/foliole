@@ -16,7 +16,7 @@ export async function discardFramedSyncFilePreparations(files: FramedSyncFilePor
       const bytes = await files.read(key);
       if (!bytes) return;
       const preparation = await decodeFramedSyncFileTask(bytes, transferId, false);
-      if (!await loadFramedSyncFileTask(files, transferId)) {
+      if (!(await loadFramedSyncFileTask(files, transferId))?.manifest) {
         const manifest = decodeFramedSyncManifest(preparation.manifest!);
         await releaseFramedSyncFileBodies(files, manifest.blobs, { purpose: 'outbound', transferId });
         await files.remove(`${framedSyncPublicationDirectory(transferId)}/facts`);

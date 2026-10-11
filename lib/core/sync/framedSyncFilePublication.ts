@@ -75,7 +75,6 @@ export async function loadFramedSyncFilePublication(files: FramedSyncFilePort, t
 export async function publishFramedSyncFileOutbound(files: FramedSyncFilePort, input: OutboundPublishInput) {
   await assertOutboundPublication(input);
   return files.exclusive(framedSyncPublicationDirectory(input.transferId), async () => {
-    if ((await loadFramedSyncFileTask(files, input.transferId))?.state === 'retired') return 'identical' as const;
     const existing = await loadFramedSyncFilePublication(files, input.transferId);
     if (existing) {
       if (!sameCanonicalManifest(existing.manifest, input.manifest)) throw new Error('outbound_publication_conflict');
