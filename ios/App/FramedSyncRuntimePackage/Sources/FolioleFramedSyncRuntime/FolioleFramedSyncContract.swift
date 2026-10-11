@@ -1,7 +1,7 @@
 import Foundation
 
 public enum FolioleFramedSyncLimits {
-    static let protocolVersion: UInt32 = 22
+    static let protocolVersion: UInt32 = 23
     static let digestBytes = 32
     static let identifierBytes = 16
     static let blobChunkBytes = 512 * 1024

@@ -8,15 +8,13 @@ export function adoptedPeerEpochKey(incoming: SyncGroupMemberStatePayload, epoch
 }
 
 export function retirePeerPositionStatements(incoming: SyncGroupMemberStatePayload): { sql: string; params: DbParams }[] {
-  return (['node', 'parent_child_order'] as const).flatMap((domain) => {
-    const storage = versionPositionStorage(domain);
-    return [{
+  const storage = versionPositionStorage();
+  return [{
     sql: `DELETE FROM sync_object_state WHERE object_type = '${storage.objectType}' AND object_id IN
       (SELECT fact_id FROM ${storage.table} WHERE group_id = ? AND device_identity_key = ?)`,
     params: [incoming.group_id, incoming.sender_device_identity_key]
   }, { sql: `DELETE FROM ${storage.table} WHERE group_id = ? AND device_identity_key = ?`,
     params: [incoming.group_id, incoming.sender_device_identity_key] }];
-  });
 }
 
 export function adoptedPeerEpochStatements(

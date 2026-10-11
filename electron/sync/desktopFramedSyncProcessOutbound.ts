@@ -9,7 +9,6 @@ import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInve
 import { FRAMED_SYNC_RESOURCE_FACT_KIND } from '../../lib/core/sync/framedSyncResourceFact.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
 import { loadDesktopFramedSyncBlobSources, loadDesktopFramedSyncPublishedBlobSources } from './desktopFramedSyncBlobSources.js';
@@ -200,7 +199,6 @@ async function transmitDesktopFramedSyncPublication(input: {
     }
     await input.staging.commitOutboundReceipt(receipt);
     await input.staging.releaseOutboundHolds(published.transferId);
-    await collectDeliveredParentOrderBodies(input.db, published.transferId);
     await retireFramedSyncCompletedPublication(input.db, published.transferId);
   } catch (error) {
     await input.staging.abandonOutboundAttempt(published.transferId, input.attempt.attemptId);

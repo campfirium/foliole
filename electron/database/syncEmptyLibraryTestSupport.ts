@@ -11,6 +11,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import type { NodeAnchorLinkPayload } from '../../lib/core/database/nodeMutationPayloads.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { applyCompanionContentPack } from '../../lib/core/sync/companionBatchDataPlane.js';
 import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
 import { loadPendingNodeVersionReceipts } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
@@ -55,6 +56,7 @@ export function createPeer(id: string): Peer {
   initializeDatabaseSchema(db);
   db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, 'now')").run(JSON.stringify(id));
   const peer = { id: identity.identity_key, name: id, anchor, file, db, driver: createBetterSqlite3Driver(db), port: createBetterSqliteDbPort(db) };
+  bindParentOrderWriter(peer.driver, { deviceAnchor: anchor, libraryPath: file });
   peers.push(peer);
   return peer;
 }

@@ -2,12 +2,12 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
+import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
 import { FRAMED_SYNC_LIMITS, type FramedSyncContext } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
-import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
@@ -74,9 +74,7 @@ export function readFramedSyncInventory(port: DbPort) {
   return port.transaction(async (tx) => {
     if (await syncGroupLocalPublicationBlockReason(tx)) return [];
     await expireFramedSyncCompletions(tx);
-    for (const row of await tx.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
-      await publishParentOrderPosition(tx, row.parent_id);
-    }
+    await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return read(tx, undefined);
   });
 }

@@ -6,9 +6,8 @@ import { bodyPartNodeId } from '../../lib/core/database/bodyPartitionIdentity.js
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { projectNodeInlineContent } from '../../lib/core/database/nodeInlineProjection.js';
-import { recordLocalParentOrderVersion } from '../../lib/core/database/parentOrderVersionMutations.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
@@ -33,6 +32,7 @@ async function fixture(companion: boolean, inline = false) {
   devices.push(host);
   await applyConvergentSyncNodesWithDbPort(host.db, [textBranch('original-head', 'Original version', undefined, NOW)]);
   const driver = createBetterSqlite3Driver(host.sqlite);
+  host.sqlite.exec('ALTER TABLE framed_sync_outbound_publications DROP COLUMN retirement_reason');
   const hash = upsertTextBodyBlob(driver, BODY, NOW);
   host.sqlite.prepare(`UPDATE nodes SET content = ?, body_blob_hash = ?, resource_references = ?,
     image_sources = ? WHERE id = 'topic'`).run(inline ? BODY : projectNodeInlineContent(BODY), hash,
@@ -55,22 +55,22 @@ async function fixture(companion: boolean, inline = false) {
     .run(Buffer.from(hash, 'hex'), Buffer.byteLength(BODY));
   host.sqlite.prepare('UPDATE framed_sync_outbound_publications SET blob_count = 1, total_blob_bytes = ?')
     .run(Buffer.byteLength(BODY));
-  recordLocalParentOrderVersion(driver, { parentId: 'topic', before: [], order: ['anchored'],
-    createdAt: NOW, kind: 'membership' });
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   const original = {
     versions: host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all(),
     publications: host.sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all(),
     holds: host.sqlite.prepare('SELECT * FROM node_version_local_holds').all(),
     outboundHolds: host.sqlite.prepare('SELECT * FROM framed_sync_outbound_holds').all(),
-    orders: host.sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all() as Array<{ version_id: string }>
+    orders: host.sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()
   };
   return { ...host, driver, original, hash };
 }
 
 async function upgrade(host: Awaited<ReturnType<typeof fixture>>, companion: boolean) {
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else host.sqlite.transaction(() => applyNumberedSchemaMigrations({ sqlite: host.sqlite,
+    currentVersion: host.sqlite.pragma('user_version', { simple: true }) as number, targetVersion: 150,
+    legacyMessage: 'unsupported', setUserVersion: (version) => host.sqlite.pragma(`user_version = ${version}`) }))();
 }
 
 function assertPreserved(host: Awaited<ReturnType<typeof fixture>>) {
@@ -78,9 +78,6 @@ function assertPreserved(host: Awaited<ReturnType<typeof fixture>>) {
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(host.original.publications);
   expect(host.sqlite.prepare('SELECT * FROM node_version_local_holds').all()).toEqual(host.original.holds);
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_outbound_holds').all()).toEqual(host.original.outboundHolds);
-  for (const order of host.original.orders) {
-    expect(host.sqlite.prepare('SELECT * FROM parent_order_versions WHERE version_id = ?').get(order.version_id)).toEqual(order);
-  }
   expect(host.sqlite.prepare("SELECT current_version_id, content, sync_dirty FROM nodes WHERE id='topic'").get())
     .toEqual({ current_version_id: 'original-head', content: '', sync_dirty: 1 });
   expect(readPartitionedNodeBody(host.driver, 'topic')).toBe(BODY);
@@ -104,8 +101,7 @@ function assertPreserved(host: Awaited<ReturnType<typeof fixture>>) {
   const start = parts.slice(0, parts.findIndex((part) => part.id === anchor.parent_id))
     .reduce((length, part) => length + part.content.length, 0);
   expect(JSON.parse(anchor.anchor_link).locator).toEqual({ from: 600010 - start, to: 600030 - start, originalText: 'preserved' });
-  const head = host.sqlite.prepare(`SELECT version.child_ids_json FROM parent_order_heads head
-    JOIN parent_order_versions version ON version.version_id=head.version_id WHERE head.parent_id='topic'`).get() as {
+  const head = host.sqlite.prepare(`SELECT child_ids_json FROM parent_child_order WHERE parent_id='topic'`).get() as {
       child_ids_json: string };
   expect(JSON.parse(head.child_ids_json)).toEqual(parts.map((part) => part.id));
 }
@@ -114,12 +110,12 @@ it.each([false, true])('migrates oversized legacy blob bodies atomically without
   const host = await fixture(companion);
   await upgrade(host, companion);
   assertPreserved(host);
-  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : DATABASE_SCHEMA_VERSION);
-  const orders = host.sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all();
+  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : 150);
+  const orders = host.sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
   const nodes = host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all();
   await upgrade(host, companion);
   expect(host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
-  expect(host.sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all()).toEqual(orders);
+  expect(host.sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(orders);
 });
 
 it.each([false, true])('also partitions an already inline oversized body companion=%s', async (companion) => {
@@ -136,7 +132,7 @@ it.each([false, true])('rolls back all parts and schema version on failure, then
   await expect(upgrade(host, companion)).rejects.toThrow('part_failed');
   expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 78 : 149);
   expect(host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(before);
-  expect(host.sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all()).toEqual(host.original.orders);
+  expect(host.sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(host.original.orders);
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all()).toEqual([]);
   host.sqlite.exec('DROP TRIGGER reject_part');
   await upgrade(host, companion);

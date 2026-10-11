@@ -1,5 +1,6 @@
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { readFramedSyncReceipt, sameFramedSyncBytes } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
+import { flushCurrentParentOrderProjectionsWithDbPort } from '../../../../../../lib/core/sync/currentParentOrderStore.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { markFramedSyncCompletion } from '../../../../../../lib/core/sync/framedSyncCompletionRetention.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
@@ -8,7 +9,6 @@ import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/fr
 import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import { applyFramedSyncObjectStateRecord } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
-import { replayRetiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyReplay.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeConvergence.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
@@ -30,9 +30,9 @@ export function applyPreparedCompanionFramedSyncTransfers(
       const [existing] = await tx.query<DbRow>('SELECT * FROM framed_sync_receipts WHERE transfer_id = ?',
         [transfer.input.transferId]);
       if (!existing) pending.push(transfer);
-      else await replayRetiredParentOrderBodies(tx, transfer.decoded.readingStates);
     }
     await applyFacts(tx, pending);
+    await flushCurrentParentOrderProjectionsWithDbPort(tx);
     const receipts = await Promise.all(transfers.map((transfer) => commitReceipt(tx, transfer)));
     return receipts;
   });

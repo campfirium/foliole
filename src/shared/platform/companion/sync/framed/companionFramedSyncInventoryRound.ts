@@ -7,7 +7,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
-import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { differingNodeIds } from '../../../../../../lib/core/sync/framedSyncInventorySummary.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadLatestSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
@@ -194,13 +194,10 @@ async function reconcileDatabaseRounds(args: NativeCompanionFramedSyncInventoryR
 
 async function transferDatabaseRound(args: NativeCompanionFramedSyncInventoryRequest, roundId: Uint8Array,
   inventory: ReturnType<typeof decodedInventory>, selection: ReturnType<typeof selectCompanionFramedSyncCurrentNodes>) {
-  const dependencies = framedSyncOrderBodyDependencies(inventory);
-  const pulled = await pullInventoryDifferences(args, selection.pullable, roundId,
-    dependencies.filter(difference => difference.direction === 'remote_to_local'));
+  const pulled = await pullInventoryDifferences(args, selection.pullable, roundId, []);
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
   const deliver = createCompanionFramedSyncDifferenceBatchDelivery(args, selection.sendable, sent);
-  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, deliver,
-    dependencies.filter(difference => difference.direction === 'local_to_remote'));
+  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, deliver);
   return { received: pulled.received, sent, deferredObjects: [...pulled.deferredObjects,
     ...sendDeferred.map(({ globalId, objectType }) => ({ globalId, objectType }))] };
 }

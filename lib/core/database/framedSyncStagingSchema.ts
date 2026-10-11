@@ -15,7 +15,7 @@ export const FRAMED_SYNC_STAGING_SCHEMA = [
     receiver_device_id TEXT NOT NULL, receiver_library_epoch TEXT NOT NULL,
     fact_count INTEGER NOT NULL CHECK (fact_count >= 0), blob_count INTEGER NOT NULL CHECK (blob_count >= 0),
     total_blob_bytes INTEGER NOT NULL CHECK (total_blob_bytes >= 0),
-    state TEXT NOT NULL CHECK (state IN ('published', 'receipt_committed', 'terminated')))`,
+    state TEXT NOT NULL CHECK (state IN ('published', 'receipt_committed', 'terminated')), retirement_reason TEXT)`,
   `CREATE TABLE IF NOT EXISTS framed_sync_outbound_fact_refs (
     transfer_id BLOB NOT NULL REFERENCES framed_sync_outbound_publications(transfer_id) ON DELETE CASCADE,
     fact_kind INTEGER NOT NULL, object_type TEXT NOT NULL, global_id TEXT NOT NULL, fact_id TEXT NOT NULL,

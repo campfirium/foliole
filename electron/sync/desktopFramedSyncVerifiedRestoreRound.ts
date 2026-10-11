@@ -2,7 +2,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { pendingFramedSyncOverwriteDifferences } from '../../lib/core/sync/framedSyncOverwriteCompletion.js';
 import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { finishSyncGroupOverwriteProgress, loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
@@ -89,7 +89,7 @@ async function receiveRestoreDifferences(input: RestoreRound) {
     if (result.sent) transferred += 1;
     if (result.state === 'delivered') deliveredDifferences.push(difference);
     return result.state;
-  }, framedSyncOrderBodyDependencies(inventories));
+  });
   const confirmed = await exchangePartialInventory(input);
   const pending = pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences }).length;
   return { confirmed, deliveredDifferences, pending, deferred, transferred };

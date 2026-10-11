@@ -82,7 +82,7 @@ it('receives an authenticated restore before ordinary companion synchronization'
     '2030-01-01T00:00:00.000Z', fixture.rightSnapshot.deviceId, '2030-01-01T00:00:00.000Z']);
   const options = {
     restoreId, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: bridge.request.receiver_library_epoch, protocolVersion: 22 }
+      libraryEpoch: bridge.request.receiver_library_epoch, protocolVersion: 23 }
   };
   await expect(syncCompanionIdentityObjects(fixture.rightSnapshot.origin, { ...options,
     framedPeer: { ...options.framedPeer, deviceId: 'different-source' } })).rejects.toThrow();

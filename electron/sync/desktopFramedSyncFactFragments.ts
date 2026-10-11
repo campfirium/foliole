@@ -4,7 +4,6 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 import { canonicalFactFromValidatedMessage } from '../../lib/core/sync/framedSyncWireFact.js';
 
 import type { AuthenticatedTransferFrame } from './desktopFramedSyncAuthenticatedTransferFrames.js';
-import { collectReplayedParentOrderFact } from './desktopFramedSyncOrderBodyReplay.js';
 import { stageDesktopFramedSyncFact } from './desktopFramedSyncProcessInbound.js';
 import type { DesktopFramedVerifiedReceiverState } from './desktopFramedSyncVerifiedReceiverState.js';
 
@@ -19,7 +18,6 @@ export async function stageDesktopFramedSyncFactFragment(input: {
     state.replayedFactFragment ??= new FramedSyncFactFragmentDecoder();
     const decoded = state.replayedFactFragment.accept(event.decoded, event.frame.sequence);
     if (decoded) {
-      collectReplayedParentOrderFact(state.facts, event.published, canonicalFactFromValidatedMessage(decoded.message));
       state.replayedFactFragment = null;
     }
     return;

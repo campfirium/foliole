@@ -26,7 +26,7 @@ type FixtureReply = Readonly<{ error?: string; id: number; result?: unknown }>;
 
 export type DesktopFramedSyncFixtureProcess = ReturnType<typeof startFixtureProcess>;
 
-export async function createDesktopFramedSyncTwoProcessFixture() {
+export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: string) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-framed-sync-two-process-'));
   await fs.symlink(
     path.resolve('node_modules'),
@@ -34,7 +34,8 @@ export async function createDesktopFramedSyncTwoProcessFixture() {
     process.platform === 'win32' ? 'junction' : 'dir'
   );
   const script = path.join(root, 'desktop-framed-sync-fixture.mjs');
-  await buildFixture(script);
+  if (compiledScript) await fs.copyFile(compiledScript, script);
+  else await buildDesktopFramedSyncFixture(script);
   let left = startFixtureProcess({ deviceId: 'desktop-a', root: path.join(root, 'a'), script });
   let right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script });
   try {
@@ -66,7 +67,7 @@ export async function createDesktopFramedSyncTwoProcessFixture() {
   }
 }
 
-async function buildFixture(outputPath: string) {
+export async function buildDesktopFramedSyncFixture(outputPath: string) {
   await build({
     build: {
       emptyOutDir: false,

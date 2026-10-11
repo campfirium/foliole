@@ -28,14 +28,34 @@ final class FolioleCompanionSyncPackPayloadWriter {
         for (int index = 0; index < plans.length(); index++) {
             JSONObject plan = plans.getJSONObject(index);
             String objectType = plan.getString("objectType");
+            Map<String, JSONArray> sources = plan.has("parentOrderSourcesSql")
+                ? parentOrderSources(pack, plan.getString("parentOrderSourcesSql")) : null;
             try (Cursor rows = pack.rawQuery(plan.getString("sql"), null)) {
                 int objectIdIndex = rows.getColumnIndexOrThrow("__object_id");
                 while (rows.moveToNext()) {
-                    payloads.put(key(objectType, rows.getString(objectIdIndex)), json(rows).toString());
+                    String objectId = rows.getString(objectIdIndex);
+                    JSONObject payload = json(rows);
+                    if (sources != null) payload.put("sources_json", sources.getOrDefault(objectId, new JSONArray()).toString());
+                    payloads.put(key(objectType, objectId), payload.toString());
                 }
             }
         }
         return payloads;
+    }
+
+    private static Map<String, JSONArray> parentOrderSources(SQLiteDatabase pack, String sql) throws Exception {
+        Map<String, JSONArray> sources = new HashMap<>();
+        try (Cursor rows = pack.rawQuery(sql, null)) {
+            while (rows.moveToNext()) {
+                String parentId = rows.getString(rows.getColumnIndexOrThrow("parent_id"));
+                JSONArray values = sources.computeIfAbsent(parentId, ignored -> new JSONArray());
+                values.put(new JSONObject()
+                    .put("authorId", rows.getString(rows.getColumnIndexOrThrow("author_id")))
+                    .put("counter", rows.getLong(rows.getColumnIndexOrThrow("counter")))
+                    .put("childIds", new JSONArray(rows.getString(rows.getColumnIndexOrThrow("child_ids_json")))));
+            }
+        }
+        return sources;
     }
 
     private static void copyState(SQLiteDatabase pack, Map<String, String> payloads, Cursor state) throws Exception {

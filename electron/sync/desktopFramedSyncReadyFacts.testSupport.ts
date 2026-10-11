@@ -25,7 +25,7 @@ async function readyFixture(factCount: number) {
   const facts = Array.from({ length: factCount }, (_, index) => ({ ...fact,
     factId: index === 0 ? fact.factId : `body-fact-${index}` }));
   const manifest = { blobs: [descriptor], facts };
-  const context = { groupId: 'group', protocolVersion: 22 as const, receiverDeviceId: 'receiver',
+  const context = { groupId: 'group', protocolVersion: 23 as const, receiverDeviceId: 'receiver',
     receiverLibraryEpoch: 'receiver-epoch', senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch' };
   const contentId = await canonicalContentId(manifest);
   const published = { contentId, context, manifestHash: contentId, transferId: await canonicalTransferId(context, contentId) };

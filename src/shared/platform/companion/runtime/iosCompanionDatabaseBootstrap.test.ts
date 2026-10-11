@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+  loadSyncGroupDeviceIdentity: vi.fn(async () => ({
+    device_anchor: 'test-ios-anchor', canonical_library_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db'
+  })),
   configureFramedSyncPayloadBudget: vi.fn(async () => undefined),
   closeFramedSyncPayloadBudget: vi.fn(async () => undefined),
   maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))
@@ -66,6 +69,7 @@ function queryResult(
   meta: Map<string, string>,
   values: unknown[]
 ) {
+  if (sql.includes('SELECT source_epoch FROM sync_state_sequence')) return { values: [{ source_epoch: 'test-epoch' }] };
   if (sql === 'PRAGMA quick_check') return { values: [{ quick_check: 'ok' }] };
   if (sql === 'PRAGMA journal_mode') return { values: [{ journal_mode: 'delete' }] };
   if (sql === 'PRAGMA user_version') return { values: [{ user_version: args.version ?? 0 }] };
@@ -96,8 +100,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Version 80 installs the shared node history state migration.
-      Math.max(80, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Version 81 replaces parent order history with current author snapshots.
+      Math.max(81, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });

@@ -132,7 +132,7 @@ final class FolioleFramedSyncFactFragmentTests: XCTestCase {
         let transferID = context.deriveTransferID(contentID: contentID)
         var header = Foliole_Sync_V22_TransferHeader()
         header.transferID = transferID; header.attemptID = attemptID
-        header.manifest.protocolVersion = 22; header.manifest.groupID = context.groupID
+        header.manifest.protocolVersion = 23; header.manifest.groupID = context.groupID
         header.manifest.contentID = contentID
         var declaration = Foliole_Sync_V22_FactDescriptor()
         declaration.identity = fact.identity; declaration.sharedStateHash = fact.sharedStateHash

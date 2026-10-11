@@ -1,4 +1,4 @@
-export const FRAMED_SYNC_PROTOCOL_VERSION = 22;
+export const FRAMED_SYNC_PROTOCOL_VERSION = 23;
 
 export const FRAMED_SYNC_ALGORITHMS = Object.freeze({
   aead: 'AES-256-GCM',
@@ -49,8 +49,8 @@ export const FRAMED_SYNC_PREAMBLE = Object.freeze({
 } as const);
 
 export const FRAMED_SYNC_KDF = Object.freeze({
-  sessionInfo: 'Foliole framed sync v22 session',
-  transferInfo: 'Foliole framed sync v22 transfer'
+  sessionInfo: 'Foliole framed sync v23 session',
+  transferInfo: 'Foliole framed sync v23 transfer'
 } as const);
 
 export const FRAMED_SYNC_FRAME_TYPES = Object.freeze({

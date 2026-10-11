@@ -114,7 +114,7 @@ final class FramedSyncMaliciousMessages {
             String name = count == 2 ? "same" : "cap-" + index;
             capabilities.add(Capability.newBuilder().setName(name).setVersion(index + 1).build());
         }
-        return Handshake.newBuilder().setProtocolVersion(22).setGroupId("group-a")
+        return Handshake.newBuilder().setProtocolVersion(FramedSyncContract.PROTOCOL_VERSION).setGroupId("group-a")
             .setDeviceId("device-a").setLibraryEpoch("epoch-a").setSessionId(bytes(3, 16))
             .addAllCapabilities(capabilities).build();
     }

@@ -10,6 +10,7 @@ import { canonicalizeLibraryPath } from '../lib/platform/syncGroupUnifiedContrac
 
 import {
   loadDesktopDeviceIdentity,
+  loadDesktopLibraryWriterBinding,
   loadOrCreateDesktopDeviceAnchor,
   resolveDesktopDeviceAnchorFilePath
 } from './deviceAnchorStore.js';
@@ -23,7 +24,7 @@ afterEach(async () => {
 
 it('uses the same macOS App Group location for DEV and signed package adapters', () => {
   const appGroupContainerPath = vi.fn(() => ({ ok: true as const, path: '/Users/me/Library/Group Containers/foliole' }));
-  const options = { loadAdapter: () => ({ adapter: { appGroupContainerPath }, status: 'ready' as const }),
+  const options = { env: {}, loadAdapter: () => ({ adapter: { appGroupContainerPath }, status: 'ready' as const }),
     platform: 'darwin' as const };
 
   expect(resolveDesktopDeviceAnchorFilePath(options))
@@ -113,3 +114,18 @@ async function temporaryRoot() {
   roots.push(root);
   return root;
 }
+
+it('binds offline writers to the same persistent anchor and real path used for pairing', async () => {
+  const root = await temporaryRoot();
+  const libraryPath = path.join(root, 'foliole.db');
+  await fs.writeFile(libraryPath, 'fixture');
+  const anchorOptions = { env: { FOLIOLE_ELECTRON_TEST_STATE_ROOT: root } };
+  const offline = loadDesktopLibraryWriterBinding(libraryPath, anchorOptions);
+  const paired = await loadDesktopDeviceIdentity({ anchorOptions, groupId: 'later-group', libraryPath });
+  expect(offline).toEqual({ deviceAnchor: paired.identity.device_anchor,
+    libraryPath: paired.identity.canonical_library_path });
+  expect(loadDesktopLibraryWriterBinding(libraryPath, anchorOptions)).toEqual(offline);
+  const clonePath = path.join(root, 'clone.db');
+  await fs.copyFile(libraryPath, clonePath);
+  expect(loadDesktopLibraryWriterBinding(clonePath, anchorOptions).libraryPath).not.toBe(offline.libraryPath);
+});

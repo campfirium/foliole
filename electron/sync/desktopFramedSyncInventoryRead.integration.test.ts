@@ -19,7 +19,7 @@ it('reads every mixed identity and its exact dependency lists, including later s
         [id, hash, JSON.stringify(entry.frontierFactIds), JSON.stringify(entry.reviewFactIds),
           JSON.stringify(entry.stateFactIds), JSON.stringify([hash])]);
       expected.push(entry);
-      for (const type of ['node_position', 'order_version', 'setting']) {
+      for (const type of ['node_position', 'parent_child_order', 'setting']) {
         const stateId = type === 'setting' ? `user_space:a:desktop:*:unknown-${id}` : `state-${id}`;
         await host.db.run(`INSERT INTO sync_object_state
           (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at)

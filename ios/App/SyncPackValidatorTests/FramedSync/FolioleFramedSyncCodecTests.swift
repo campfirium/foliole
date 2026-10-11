@@ -74,7 +74,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
     func testMaliciousCorpusFailsSemanticValidation() throws {
         let corpus = try FramedSyncFixture.loadMalicious()
         XCTAssertEqual(corpus.corpusVersion, 1)
-        XCTAssertEqual(corpus.protocolVersion, 22)
+        XCTAssertEqual(corpus.protocolVersion, 23)
         XCTAssertEqual(corpus.messages.count, 12)
         for malicious in corpus.messages {
             let data = try XCTUnwrap(Data(base64Encoded: malicious.base64), malicious.name)

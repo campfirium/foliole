@@ -5,6 +5,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
 import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInventory.fixture.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
@@ -171,6 +172,8 @@ async function run(command: Command) {
     return snapshot();
   }
   if (command.action === 'seed') return seed(command.args);
+  if (command.action === 'seed_parent_order_performance') return seedParentOrderPerformance(command.args);
+  if (command.action === 'edit_parent_order_performance') return editParentOrderPerformance(command.args);
   if (['retain_edit', 'release_edit', 'local_content_edit'].includes(command.action))
     return runDesktopFramedSyncEditCommand(command.action, command.args);
   if (['begin_identity_restore', 'identity_restore_round'].includes(command.action)) {
@@ -180,7 +183,7 @@ async function run(command: Command) {
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
   if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
-  if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {
+  if (['reorder', 'standalone_edit', 'rejoin', 'register_order_member', 'restore_local_order'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);
   }
   if (command.action === 'collect_content') return collectDesktopFramedSyncFixtureContent();

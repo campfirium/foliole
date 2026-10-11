@@ -20,7 +20,6 @@ import {
   decodeFramedSyncPreamble
 } from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import { PARENT_ORDER_VERSION_SCHEMA } from '../../lib/core/sync/syncParentOrderVersionStore.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
@@ -82,7 +81,7 @@ function peer(nodeId: string, body: string, hashByte: string) {
   for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
     value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(statement);
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
-  for (const statement of PARENT_ORDER_VERSION_SCHEMA) sqlite.exec(statement);
+  sqlite.exec('CREATE TABLE parent_order_projection_pending (parent_id TEXT PRIMARY KEY)');
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
   for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec(SYNC_SCHEMA_STATEMENTS[0]!);

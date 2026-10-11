@@ -69,8 +69,9 @@ export async function applySyncPackParentChildOrdersWithDbPort(
   port: DbPort,
   options: SyncPackSyncObjectsOptions
 ) {
-  const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
-    .filter((record) => record.object_type === 'parent_child_order');
+  const alias = options.incomingAlias ?? 'inc';
+  const records = await port.query<SyncPackSyncObjectRow>(`SELECT object_type, object_id, content_hash,
+    payload_json, updated_at, deleted_at FROM ${alias}.sync_objects WHERE object_type = 'parent_child_order'`);
   for (const record of records) await applySyncObjectPayloadWithDbPort(port, record);
   return records.length;
 }

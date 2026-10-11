@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { recordLocalParentOrderVersion } from '../../lib/core/database/parentOrderVersionMutations.js';
+import { saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { publishLocalNodePositionWithDriver } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
@@ -17,12 +17,11 @@ it('discovers an independent production order edit without a Node edit', async (
   const source = createPeer('order-source');
   edit(source, 'unchanged Node body');
   const before = (await readFramedSyncInventory(source.port)).filter((entry) => entry.objectType === 'node');
-  const versionId = source.driver.transaction((driver) => recordLocalParentOrderVersion(driver, {
-    before: [], createdAt: '2026-10-06T00:00:00.000Z', kind: 'user', order: ['topic'], parentId: 'root'
-  }));
+  saveLocalCurrentParentOrder(source.driver, { parentId: 'root', childIds: ['topic'],
+    now: '2026-10-06T00:00:00.000Z', hostName: source.name });
   const after = await readFramedSyncInventory(source.port);
   expect(after.filter((entry) => entry.objectType === 'node')).toEqual(before);
-  expect(after).toContainEqual(expect.objectContaining({ globalId: versionId, objectType: 'order_version' }));
+  expect(after).toContainEqual(expect.objectContaining({ globalId: 'root', objectType: 'parent_child_order' }));
 });
 
 it('discovers the original production member position declaration', async () => {
@@ -39,19 +38,18 @@ it('discovers the original production member position declaration', async () => 
 });
 
 
-it('selects and decodes immutable order facts through the production framed path', async () => {
+it('selects and decodes current source facts through the production framed path', async () => {
   const source = createPeer('order-transfer');
   const receiver = createPeer('order-target');
-  source.driver.transaction((driver) => recordLocalParentOrderVersion(driver, {
-    before: [], createdAt: '2026-10-06T00:00:00.000Z', kind: 'user', order: [], parentId: 'root'
-  }));
+  saveLocalCurrentParentOrder(source.driver, { parentId: 'root', childIds: ['late-node'],
+    now: '2026-10-06T00:00:00.000Z', hostName: source.name });
   const local = await readFramedSyncInventory(source.port);
   const differences = compareFramedSyncInventories({ local, remote: await readFramedSyncInventory(receiver.port) });
-  const difference = differences.find((item) => item.objectType === 'order_version');
+  const difference = differences.find((item) => item.objectType === 'parent_child_order');
   expect(difference).toBeDefined();
   const manifest = await selectDesktopFramedSyncNodeManifest(source.port, difference!);
   const decoded = prepareInboundApply(manifest.facts, []);
   expect(decoded.stateRecords).toContainEqual(expect.objectContaining({
-    object_type: 'order_version', object_id: difference!.globalId
+    object_type: 'parent_child_order', object_id: difference!.globalId
   }));
 });

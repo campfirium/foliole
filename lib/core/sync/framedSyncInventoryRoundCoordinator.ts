@@ -9,7 +9,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from './framedSyncInventory.js';
-import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from './framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from './framedSyncInventoryRoundDelivery.js';
 import { deferUnresolvedBidirectionalObjects } from './framedSyncInventoryRoundResolution.js';
 import { decodeFramedSyncInventory, iterateFramedSyncInventory } from './framedSyncInventoryWire.js';
 import {
@@ -163,7 +163,7 @@ export async function coordinateFramedSyncInventoryRound(args: {
     transfers.push({ direction: difference.direction, globalId: difference.globalId,
       objectType: difference.objectType, publication: selection.publication, state });
     return 'delivered';
-  }, framedSyncOrderBodyDependencies({ local: localWire, remote: remoteWire }));
+  });
   addDeferred(deferred, dependencyDeferred);
   if (!outstandingDifferences.length) {
     await deferUnresolvedBidirectionalObjects(args.local, args.remote, differences, deferred);

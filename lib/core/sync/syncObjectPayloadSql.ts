@@ -1,25 +1,16 @@
+import { PARENT_ORDER_PAYLOAD_SQL } from '../database/currentParentOrderSchema.js';
+
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
-  parent_order_position: `SELECT json_object('adopted_version_id', adopted_version_id,
-    'device_identity_key', device_identity_key, 'group_id', group_id,
-    'library_epoch', library_epoch, 'object_id', object_id,
-    'pending_version_ids_json', pending_version_ids_json, 'proof_revision', proof_revision,
-    'updated_at', updated_at) AS payload_json FROM parent_order_member_positions WHERE fact_id = ?`,
   node_position: `SELECT json_object('adopted_version_id', adopted_version_id,
     'device_identity_key', device_identity_key, 'group_id', group_id,
     'library_epoch', library_epoch, 'object_id', object_id,
     'pending_version_ids_json', pending_version_ids_json, 'proof_revision', proof_revision,
     'updated_at', updated_at) AS payload_json FROM node_version_member_positions WHERE fact_id = ?`,
-  order_version: `SELECT json_object('child_ids_json', child_ids_json,
-    'created_at', created_at, 'kind', kind, 'parent_id', parent_id,
-    'parent_version_ids_json', parent_version_ids_json, 'version_id', version_id)
-    AS payload_json FROM parent_order_versions WHERE version_id = ?`,
   foreground_daily_time: `SELECT json_object('source_id', source_id, 'day_key', day_key, 'duration_ms', duration_ms)
     AS payload_json FROM foreground_daily_time WHERE id = ?`,
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
     AS payload_json FROM topic_daily_count_entries WHERE id = ?`,
-  parent_child_order: `SELECT json_object(
-    'parent_id', parent_id, 'child_ids_json', child_ids_json
-  ) AS payload_json FROM parent_child_order WHERE parent_id = ?`,
+  parent_child_order: PARENT_ORDER_PAYLOAD_SQL,
   external_folder: `SELECT json_object(
     'id', f.id, 'attachment_mode', f.attachment_mode, 'excluded_dirs_json', f.excluded_dirs_json,
     'host_name', s.host_name, 'host_platform', s.host_platform, 'source_ref', f.source_ref

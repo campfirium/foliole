@@ -168,10 +168,6 @@ export function canonicalManifestBytes(manifest: CanonicalManifest) {
   return writer.result();
 }
 
-async function sha256(value: Uint8Array) {
-  return new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new Uint8Array(value)));
-}
-
 export async function canonicalContentId(manifest: CanonicalManifest) {
   const hash = hashSha256.create();
   try {
@@ -223,10 +219,17 @@ function sameBlobDescriptors(left: readonly CanonicalBlob[], right: readonly Can
 }
 
 export async function canonicalTransferId(context: FramedSyncContext, contentId: Uint8Array) {
+  return canonicalTransferIdSync(context, contentId);
+}
+
+/** Numbered SQLite upgrades need the same identity without leaving their synchronous transaction. */
+export function canonicalTransferIdSync(
+  context: Omit<FramedSyncContext, 'protocolVersion'> & { protocolVersion: number }, contentId: Uint8Array
+) {
   const writer = new Writer();
   writer.string(TRANSFER_DOMAIN); writer.u32(context.protocolVersion); writer.string(context.groupId);
   writer.string(context.senderDeviceId); writer.string(context.senderLibraryEpoch);
   writer.string(context.receiverDeviceId); writer.string(context.receiverLibraryEpoch);
   writer.data(assertFramedSyncDigest(contentId, 'content_id'));
-  return sha256(writer.result());
+  return hashSha256(writer.result());
 }

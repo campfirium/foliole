@@ -8,13 +8,9 @@ import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifes
 import { assertFramedExternalDocumentBody, selectFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { framedSyncObjectStateFactId, FRAMED_SYNC_STATE_OBJECT_TYPES, isFramedSyncSharedStateObject } from './framedSyncObjectStateInventory.js';
 import { readFramedSyncObjectPayload } from './framedSyncObjectStatePayload.js';
-import { applyNodeMemberPosition, applyVersionMemberPosition } from './nodeVersionMemberPositionApply.js';
-import { collectParentOrderBodies } from './parentOrderBodyRetention.js';
-import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
+import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { loadSyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
-import { persistSyncIdentityParentOrderMerges, stageSyncIdentityParentOrderRecordMerge } from './syncIdentityParentOrderApply.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
-import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
 
 interface StateRow extends DbRow {
   content_hash: string;
@@ -31,7 +27,7 @@ export async function selectFramedSyncObjectStateFact(
   assertType(key.objectType, key.globalId);
   const [state] = await db.query<StateRow>(`SELECT content_hash, current_version_id, deleted_at, updated_at
     FROM sync_object_state WHERE object_type = ? AND object_id = ?`, [key.objectType, key.globalId]);
-  if (!state || factId !== framedSyncObjectStateFactId(key.objectType, state.content_hash, state.current_version_id)) throw new Error('framed_sync_source_changed');
+  if (!state || factId !== framedSyncObjectStateFactId(key.objectType, state.content_hash)) throw new Error('framed_sync_source_changed');
   const payload = state.deleted_at ? null : await readFramedSyncObjectPayload(db, key);
   if (!state.deleted_at && !payload) throw new Error('framed_sync_source_changed');
   const blobs = key.objectType === 'external_document'
@@ -65,7 +61,7 @@ export function restoreFramedSyncObjectStateFact(fact: CanonicalFact): NativeSyn
   const deletedAt = string('deleted_at');
   const payload = string('payload_json');
   assertFramedExternalDocumentBody(fact, payload);
-  if (fact.factId !== framedSyncObjectStateFactId(objectType, contentHash, currentVersionId) || bytesToHex(fact.sharedStateHash) !== contentHash ||
+  if (fact.factId !== framedSyncObjectStateFactId(objectType, contentHash) || bytesToHex(fact.sharedStateHash) !== contentHash ||
       (!deletedAt && payload === null)) throw new Error('framed_sync_object_state_fact_invalid');
   return { object_type: objectType, object_id: fact.globalId, content_hash: contentHash,
     current_version_id: currentVersionId, deleted_at: deletedAt, payload_json: payload, updated_at: string('updated_at', true)! };
@@ -78,25 +74,7 @@ export async function applyFramedSyncObjectStateRecord(db: DbPort,
       await loadSyncGroupOverwriteProgress(db)) {
     throw new Error('sync_group_overwrite_settings_excluded');
   }
-  if (record.object_type === 'order_version') return applyParentOrderFactObject(db, record);
   if (record.object_type === 'node_position') return applyNodeMemberPosition(db, record);
-  if (record.object_type === 'parent_order_position') {
-    await applyVersionMemberPosition(db, record, 'parent_child_order');
-    const payload = JSON.parse(record.payload_json!) as { object_id: string };
-    await collectParentOrderBodies(db, payload.object_id);
-    return;
-  }
-  if (record.object_type === 'parent_child_order') {
-    const merged = await stageSyncIdentityParentOrderRecordMerge(db, { ...record,
-      parent_id: record.object_id, current_version_id: record.current_version_id ?? null });
-    await applySyncObjectInTransaction(db, record);
-    if (merged) {
-      await persistSyncIdentityParentOrderMerges(db, [merged], 'sync-remote');
-      await publishParentOrderPosition(db, record.object_id);
-    }
-    await collectParentOrderBodies(db, record.object_id);
-    return;
-  }
   return applySyncObjectInTransaction(db, record, options);
 }
 

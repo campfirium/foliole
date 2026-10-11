@@ -1,13 +1,17 @@
-import { replaceNodeOrder, restoreSavedParentOrder } from '../../lib/core/database/nodeOrderMutations.js';
-import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { collectAllParentOrderBodiesWithDriver } from '../../lib/core/sync/parentOrderBodyRetention.js';
+import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { finishLocalOnlyBackupRestore } from '../database/backupRestoreSyncSelection.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { captureBackupRestoreHostSettings } from '../database/syncGroupBackupRestore.js';
 import { joinDesktopSyncGroup, leaveDesktopSyncGroupDevice, loadDesktopSyncGroupInfo, registerSyncGroupDevice } from '../database/syncGroupStore.js';
 
 import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
 export function runDesktopFramedSyncOrderCommand(action: string, args: Readonly<Record<string, unknown>>) {
   const driver = openDatabaseConnection().driver;
+  if (action === 'restore_local_order') {
+    finishLocalOnlyBackupRestore(driver, captureBackupRestoreHostSettings(driver));
+    return;
+  }
   if (action === 'register_order_member') {
     const id = String(args.deviceId);
     markDesktopSyncGroupMemberStateReady(id);
@@ -27,7 +31,6 @@ export function runDesktopFramedSyncOrderCommand(action: string, args: Readonly<
   }
   if (action === 'rejoin') {
     const device = args.device as Parameters<typeof joinDesktopSyncGroup>[0]['device'];
-    collectAllParentOrderBodiesWithDriver(driver);
     return joinDesktopSyncGroup({ device, deviceName: device.identity_key, platform: 'desktop',
       displayName: String(args.display_name), workgroupKey: String(args.workgroup_key) });
   }
@@ -38,9 +41,5 @@ export function runDesktopFramedSyncOrderCommand(action: string, args: Readonly<
     replaceNodeOrder(driver, args.nodeIds as string[]);
     return;
   }
-  if (typeof args.parentId !== 'string' || typeof args.versionId !== 'string') {
-    throw new Error('fixture_restore_order_invalid');
-  }
-  return restoreSavedParentOrder(driver, { parentId: args.parentId, versionId: args.versionId,
-    hostName: requireDatabaseHostName(driver), updatedAt: new Date().toISOString() });
+  throw new Error('fixture_order_action_unknown');
 }

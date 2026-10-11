@@ -80,7 +80,7 @@ enum FolioleFramedSyncReceiptWriter {
         var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
         bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8))
         bytes[8] = 0; bytes[9] = UInt8(FolioleFramedSyncPreamble.byteCount)
-        bytes[10] = 0; bytes[11] = 22; bytes[12] = 2
+        bytes[10] = 0; bytes[11] = 23; bytes[12] = 2
         bytes.replaceSubrange(16..<48, with: transferID)
         bytes.replaceSubrange(48..<64, with: attemptID)
         bytes.replaceSubrange(64..<68, with: noncePrefix)

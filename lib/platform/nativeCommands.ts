@@ -233,8 +233,6 @@ export const NATIVE_COMMANDS = {
   relearnNode: 'relearn_node',
   moveNodes: 'move_nodes',
   replaceNodeOrder: 'replace_node_order',
-  readParentOrderHistory: 'read_parent_order_history',
-  restoreParentOrderSnapshot: 'restore_parent_order_snapshot',
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',
   deleteNodesPermanently: 'delete_nodes_permanently',

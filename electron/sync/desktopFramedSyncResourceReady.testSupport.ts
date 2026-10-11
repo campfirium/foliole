@@ -26,7 +26,7 @@ export async function desktopResourceReadyFixture() {
   const fact = projectFramedSyncResourceFact({ demandId: 'demand-1', globalId: 'article', versionId: 'version',
     bodyHash: 'a'.repeat(64), sharedStateHash: new Uint8Array(32).fill(4) }, resource, BigInt(bytes.length));
   const manifest = { facts: [fact], blobs: fact.blobs };
-  const context = { groupId: 'group', protocolVersion: 22 as const, senderDeviceId: 'sender',
+  const context = { groupId: 'group', protocolVersion: 23 as const, senderDeviceId: 'sender',
     senderLibraryEpoch: 's', receiverDeviceId: 'receiver', receiverLibraryEpoch: 'r' };
   await ensureFramedSyncMissingResourceDemand(host.db, { ...context, globalId: 'article',
     versionId: 'version', bodyHash: 'a'.repeat(64), storageKey: resource.storageKey }, () => 'demand-1');

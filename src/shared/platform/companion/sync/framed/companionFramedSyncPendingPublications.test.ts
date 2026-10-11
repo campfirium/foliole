@@ -11,7 +11,6 @@ import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../../lib/core
 import { SYNC_GROUP_METADATA_SCHEMA, SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
-import { PARENT_ORDER_VERSION_SCHEMA } from '../../../../../../lib/core/sync/syncParentOrderVersionStore.js';
 
 const mocks = vi.hoisted(() => ({ db: undefined as unknown, send: vi.fn(), inventory: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
@@ -44,7 +43,7 @@ const request = { endpoint_url: 'http://desktop', receiver_device_id: 'B',
 async function publish(receiver = 'B', senderEpoch = 'A-epoch', receiverEpoch = `${receiver}-epoch`) {
   const manifest = { blobs: [], facts: [{ blobs: [], body: [], factId: 'version-1',
     globalId: 'node', kind: 2, objectType: 'node', sharedStateHash: new Uint8Array(32).fill(1) }] };
-  const context = { groupId: 'group', protocolVersion: 22 as const,
+  const context = { groupId: 'group', protocolVersion: 23 as const,
     receiverDeviceId: receiver, receiverLibraryEpoch: receiverEpoch,
     senderDeviceId: 'A', senderLibraryEpoch: senderEpoch };
   const contentId = await canonicalContentId(manifest);
@@ -65,7 +64,7 @@ function database(persistent = false) {
   sqlite.exec(SYNC_GROUP_SCHEMA_STATEMENTS[1]!);
   sqlite.exec("INSERT INTO sync_groups VALUES ('group', 'Group', 'key', '2026-10-07', '2026-10-07')");
   for (const sql of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(sql);
-  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...PARENT_ORDER_VERSION_SCHEMA]) sqlite.exec(sql);
+  for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT,
     group_id TEXT, local_device_identity_key TEXT);
     INSERT INTO sync_group_local_state VALUES (1, 'active', 'group', 'A');

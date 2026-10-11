@@ -1,3 +1,4 @@
+import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
 import { applyPackNodeVersionDependencies } from './nodeVersionDependencies.js';
 import {
@@ -5,8 +6,6 @@ import {
   recordInboundNodeVersionReceipt
 } from './nodeVersionInboundReceipt.js';
 import { applySyncPackNodeMemberPositions } from './nodeVersionMemberPositionApply.js';
-import { persistSyncIdentityParentOrderMerges,
-  stageSyncIdentityParentOrderMerges } from './syncIdentityParentOrderApply.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   type SyncPackNodeApplyOptions
@@ -45,7 +44,6 @@ import {
 } from './syncPackSyncObjectsExecutor.js';
 import { applyVersionedNodeStage } from './syncPackVersionedNodeStage.js';
 import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObjectsExecutor.js';
-import { applySyncPackParentOrderFacts } from './syncParentOrderFactApply.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
@@ -155,10 +153,7 @@ export async function applySyncPackSurfaceInTransaction(
   };
   await applySyncPackNodeRowsWithDbPort(port, remainingNodeOptions);
   const appliedPositions = await applySyncPackNodeMemberPositions(port, options.incomingAlias);
-  await applySyncPackParentOrderFacts(port, options.incomingAlias);
-  const parentOrderMerges = options.identityOrderMerge
-    ? await stageSyncIdentityParentOrderMerges(port, options.incomingAlias) : [];
-  await applySyncPackParentChildOrdersWithDbPort(port, options);
+  const appliedOrders = await applySyncPackParentChildOrdersWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applyRemainingSurfaceObjects(port, options);
   const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
@@ -166,7 +161,7 @@ export async function applySyncPackSurfaceInTransaction(
     ...remainingNodeOptions,
     objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
   });
-  await persistSyncIdentityParentOrderMerges(port, parentOrderMerges, options.hostName);
+  await flushCurrentParentOrderProjectionsWithDbPort(port);
   if (toStateSeq !== null) await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   await applyPackNodeVersionDependencies(port, options.incomingAlias ?? 'inc', options.sourcePeerId);
   if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
@@ -177,7 +172,7 @@ export async function applySyncPackSurfaceInTransaction(
   return {
     appliedBlobCount,
     appliedGroupFactCount: groupFacts.appliedFactCount,
-    appliedObjectCount: appliedObjectCount + nodeConvergence.appliedNodeCount + appliedPositions,
+    appliedObjectCount: appliedObjectCount + nodeConvergence.appliedNodeCount + appliedPositions + appliedOrders,
     appliedReviewOpIds,
     handledConflictCount: nodeConvergence.handledConflictCount,
     appliedTombstoneNodeIds
@@ -223,9 +218,6 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'foreground_daily_time',
   'node_open_state',
   'node_text_alternative',
-  'parent_child_order',
-  'order_version',
-  'parent_order_position',
   'pdf_page_text',
   'view_state'
 ] as const;

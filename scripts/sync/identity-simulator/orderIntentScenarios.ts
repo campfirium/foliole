@@ -8,7 +8,7 @@ import { ROOT_CHILD_ORDER_ID } from '../../../lib/core/database/parentChildOrder
 
 import { edit, resetOperations } from './operations.js';
 import { openPeer, pairPeers, reopenPeer } from './peers.js';
-import { originalSnapshot, savedOrder } from './reorderedParents.js';
+import { savedOrder } from './reorderedParents.js';
 import { inPeer, type SimulatorPeer } from './scope.js';
 import { route, serve } from './transport.js';
 
@@ -19,9 +19,7 @@ function writeOrder(peer: SimulatorPeer, parentId: string, ids: string[]) {
     parentId === ROOT_CHILD_ORDER_ID ? ids : ['folder', ...ids]));
   const saved = savedOrder(peer, parentId);
   expect(saved.order).toEqual(ids);
-  const original = originalSnapshot(peer, saved.versionId);
-  expect(original).toMatchObject({ kind: 'user', child_ids_json: JSON.stringify(ids) });
-  return { versionId: saved.versionId, original };
+  return saved.sources.find(source => JSON.stringify(source.childIds) === JSON.stringify(ids))!;
 }
 
 function assertConverged(peers: SimulatorPeer[], parentId: string, expected: string[],
@@ -30,7 +28,7 @@ function assertConverged(peers: SimulatorPeer[], parentId: string, expected: str
   expect(head.order).toEqual(expected);
   for (const peer of peers) {
     expect(savedOrder(peer, parentId)).toEqual(head);
-    for (const fact of originals) expect(originalSnapshot(peer, fact.versionId)).toEqual(fact.original);
+    for (const fact of originals) expect(savedOrder(peer, parentId).sources).toContainEqual(fact);
   }
 }
 
@@ -53,10 +51,10 @@ async function runParentIntent(root: string, parentId: string, intent: Intent) {
     const left = intent === 'same-reorder' ? ['C', 'A', 'B'] : ['A', 'new', 'B', 'C'];
     const right = intent === 'same-reorder' ? ['C', 'A', 'B'] : ['B', 'A', 'C'];
     const originals = [writeOrder(b, parentId, left), writeOrder(c, parentId, right)];
-    expect(originals[0]!.versionId).not.toBe(originals[1]!.versionId);
+    expect(originals[0]!.authorId).not.toBe(originals[1]!.authorId);
     await inPeer(c, () => runDesktopSyncIdentityRound(route(sb!, c)));
     await inPeer(b, () => runDesktopSyncIdentityRound(route(sc!, b)));
-    const expected = intent === 'same-reorder' ? ['C', 'A', 'B'] : ['B', 'A', 'new', 'C'];
+    const expected = intent === 'same-reorder' ? ['C', 'A', 'B'] : ['A', 'new', 'B', 'C'];
     assertConverged(peers, parentId, expected, originals);
     peers.forEach(reopenPeer);
     assertConverged(peers, parentId, expected, originals);

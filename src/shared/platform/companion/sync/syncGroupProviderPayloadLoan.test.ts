@@ -112,7 +112,7 @@ it('allows receipt-only control while outbound payload validation is waiting', a
   mocks.listener?.({ operation: 'read_framed_outbound_fact', request_id: 'occupied', payload: { payload_loan: loan } });
   const contentId = 'ab'.repeat(32);
   const context = { groupId: 'group', senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch',
-    receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch', protocolVersion: 22 as const };
+    receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch', protocolVersion: 23 as const };
   const transferId = [...await canonicalTransferId(context, new Uint8Array(32).fill(0xab))]
     .map((value) => value.toString(16).padStart(2, '0')).join('');
   const actual = await vi.importActual<typeof import('./framed/companionFramedSyncOutbound')>('./framed/companionFramedSyncOutbound');

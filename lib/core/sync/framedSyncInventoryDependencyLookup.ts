@@ -15,8 +15,7 @@ export function createFramedSyncInventoryDependencyLookup(inventories: {
     const differences = (remote: readonly FramedSyncInventoryEntry[]) => compareFramedSyncDatabaseInventories(
       outbound ? { local: [source], remote } : { local: remote, remote: [source] });
     const missing = differences(destination ? [destination] : []).find(item => item.direction === key.direction);
-    // Equal arrangement identities may still lack a body required by another branch.
-    return missing ?? (key.objectType === 'order_version' ? differences([])[0] : undefined);
+    return missing;
   };
 }
 

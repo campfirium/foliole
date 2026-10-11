@@ -7,17 +7,13 @@ import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import { reconcileFramedSyncPublication } from '../../../../../../lib/core/sync/framedSyncPublicationReconciliation.js';
 import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../../../../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
-import { sendWithRequiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyDelivery.js';
-import { collectDeliveredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyRetention.js';
 import { isSyncGroupPeerAdopting, syncGroupLocalPublicationBlockReason } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
-import { readCompanionFramedSyncInventoryEntry } from './companionFramedSyncInventory.js';
 import { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
-import { sendCompanionFramedSyncObject } from './companionFramedSyncTransfer.js';
 
 export function readCompanionFramedSyncPendingPublications(
   db: DbPort, args: NativeCompanionFramedSyncInventoryRequest
@@ -57,15 +53,12 @@ export async function resumeCompanionFramedSyncPendingPublications(
       await runCompanionSyncWriterTask(() => owner.runWriter(async (db) => {
         const transferId = hexToBytes(publication.transfer_id);
         await createFramedSyncOutboundReceiptStaging(db).releaseOutboundHolds(transferId);
-        await collectDeliveredParentOrderBodies(db, transferId);
         await retireFramedSyncCompletedPublication(db, transferId);
       }));
     } else {
       const state = await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
         reconcileFramedSyncPublication(db, hexToBytes(publication.transfer_id), remote)));
       if (state === 'satisfied') {
-        await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-          collectDeliveredParentOrderBodies(db, hexToBytes(publication.transfer_id))));
         await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
           retireFramedSyncCompletedPublication(db, hexToBytes(publication.transfer_id))));
         continue;
@@ -83,8 +76,6 @@ export async function resumeCompanionFramedSyncPendingPublications(
       await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
         completeFramedSyncRecoveredPublication(db, hexToBytes(publication.transfer_id), recovery.transferId)));
       await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-        collectDeliveredParentOrderBodies(db, hexToBytes(publication.transfer_id))));
-      await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
         retireFramedSyncCompletedPublication(db, hexToBytes(publication.transfer_id))));
     }
   }
@@ -94,22 +85,11 @@ export async function resumeCompanionFramedSyncPendingPublications(
 async function sendRecovery(args: NativeCompanionFramedSyncInventoryRequest,
   publication: { object_id: string; object_type: string }, transferId: string) {
   try {
-    return await sendWithRequiredParentOrderBodies(() => FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
+    return await FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
       include_current_node: false, object_id: publication.object_id, object_type: publication.object_type,
-      required_relation_ids: [], review_fact_ids: [], state_fact_ids: [], transfer_id: transferId }),
-    versionId => supplyOrderBody(args, versionId));
+      required_relation_ids: [], review_fact_ids: [], state_fact_ids: [], transfer_id: transferId });
   } catch (error) {
     if (readFramedSyncMissingDependency(error)) return null;
     throw error;
   }
-}
-
-async function supplyOrderBody(args: NativeCompanionFramedSyncInventoryRequest, versionId: string) {
-  const entry = await getIosCompanionDatabaseOwner().read((db) => readCompanionFramedSyncInventoryEntry(db,
-    { globalId: versionId, objectType: 'order_version' }));
-  if (!entry) throw new Error(`sync_parent_order_body_unavailable:${versionId}`);
-  await sendCompanionFramedSyncObject({ endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
-    includeCurrentNode: true, objectId: versionId, objectType: 'order_version',
-    receiverDeviceId: args.receiver_device_id, receiverLibraryEpoch: args.receiver_library_epoch,
-    requiredRelationIds: [], reviewFactIds: [], stateFactIds: entry.state_fact_ids });
 }

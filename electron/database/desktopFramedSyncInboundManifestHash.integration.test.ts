@@ -31,7 +31,7 @@ async function fixture() {
     sharedStateHash: digest(`${id}-${kind}`), body: [{ name: 'text', value: { kind: 'string', value: '正文🙂\u0000'.repeat(1000) } }]
   })));
   const contentId = await canonicalContentId({ facts, blobs });
-  const context = { protocolVersion: 22 as const, groupId: 'group', senderDeviceId: 'sender', senderLibraryEpoch: 's',
+  const context = { protocolVersion: 23 as const, groupId: 'group', senderDeviceId: 'sender', senderLibraryEpoch: 's',
     receiverDeviceId: 'receiver', receiverLibraryEpoch: 'r' };
   const transferId = await canonicalTransferId(context, contentId);
   const attemptId = new Uint8Array(16).fill(9);

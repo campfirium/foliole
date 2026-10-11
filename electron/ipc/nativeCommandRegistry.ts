@@ -234,8 +234,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.flushDirtyNodeSyncVersions, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.relearnNode, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.moveNodes, route: 'storage', capability: 'dataMutation' },
-  { command: NATIVE_COMMANDS.readParentOrderHistory, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.restoreParentOrderSnapshot, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.replaceNodeOrder, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.softDeleteNodes, route: 'storage', capability: 'destructiveMutation' },
   { command: NATIVE_COMMANDS.restoreNodes, route: 'storage', capability: 'dataMutation' },

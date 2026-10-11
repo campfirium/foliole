@@ -5,7 +5,6 @@ import type {
   PublishedTransfer
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 
 import { buildReceiptStream, readReceipt } from './desktopFramedSyncProcessReceipt.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
@@ -37,7 +36,6 @@ export async function receiveDesktopFramedSyncReceipt(input: {
   });
   await input.staging.commitOutboundReceipt(receipt);
   await input.staging.releaseOutboundHolds(input.transferId);
-  await collectDeliveredParentOrderBodies(input.db, input.transferId);
   await retireFramedSyncCompletedPublication(input.db, input.transferId);
   return buildReceiptStream({
     db: input.db, groupKey: input.groupKey, receipt, staging: input.staging

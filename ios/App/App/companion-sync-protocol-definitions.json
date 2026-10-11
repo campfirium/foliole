@@ -6,12 +6,13 @@
       "bounded-sync-pack-pages-v1",
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
+      "current-parent-order-sources-v1",
       "desktop-soft-anchor-v1",
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
       "framed-sync-transfer-sequences-v1",
-      "framed-sync-v22",
+      "framed-sync-v23",
       "global-object-identity-v2",
       "group-key-routing-v1",
       "independent-node-fact-pages-v1",
@@ -19,7 +20,6 @@
       "node-owned-resource-references-v1",
       "node-tombstone-pack-v1",
       "opaque-sync-refs-v1",
-      "original-parent-order-versions-v1",
       "parent-child-order-v1",
       "readwise-library-source-mode-v1",
       "relayed-node-member-positions-v1",
@@ -35,9 +35,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 22,
-    "min_supported_version": 22,
-    "version": 22
+    "max_supported_version": 23,
+    "min_supported_version": 23,
+    "version": 23
   },
   "pushAck": {
     "clientOpIdKeys": [

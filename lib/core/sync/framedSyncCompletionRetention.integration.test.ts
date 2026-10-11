@@ -23,7 +23,7 @@ async function setup() {
   sqlite.pragma('foreign_keys = ON');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   const db = createBetterSqliteDbPort(sqlite);
-  const context = { groupId: 'g', protocolVersion: 22 as const, senderDeviceId: 'A',
+  const context = { groupId: 'g', protocolVersion: 23 as const, senderDeviceId: 'A',
     senderLibraryEpoch: 'a', receiverDeviceId: 'B', receiverLibraryEpoch: 'b' };
   const manifest = { blobs: [], facts: [{ blobs: [], body: [
     { name: 'payload_json', value: { kind: 'string' as const, value: 'Only surviving original setting' } }

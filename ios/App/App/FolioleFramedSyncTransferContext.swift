@@ -22,7 +22,7 @@ struct FolioleFramedSyncTransferContext {
     func deriveTransferID(contentID: Data) -> Data {
         var bytes = Data()
         bytes.appendLengthPrefixed("foliole-framed-sync-transfer-v1")
-        bytes.appendUInt32BE(22)
+        bytes.appendUInt32BE(23)
         [groupID, senderDeviceID, senderLibraryEpoch,
          receiverDeviceID, receiverLibraryEpoch].forEach { bytes.appendLengthPrefixed($0) }
         bytes.appendLengthPrefixed(contentID)

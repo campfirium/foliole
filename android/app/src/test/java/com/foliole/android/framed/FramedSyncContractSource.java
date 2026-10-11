@@ -75,11 +75,11 @@ final class FramedSyncContractSource {
     }
 
     static String corpus() throws IOException {
-        return read("lib/core/sync/fixtures/framed-sync-v22-golden.json");
+        return read("lib/core/sync/fixtures/framed-sync-v23-golden.json");
     }
 
     static String maliciousCorpus() throws IOException {
-        return read("lib/core/sync/fixtures/framed-sync-v22-malicious.json");
+        return read("lib/core/sync/fixtures/framed-sync-v23-malicious.json");
     }
 
     static List<MessageVector> messages() throws IOException {

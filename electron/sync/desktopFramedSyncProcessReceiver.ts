@@ -10,7 +10,6 @@ import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js
 
 import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
 import { authenticatedDesktopFramedSyncTransferFrames } from './desktopFramedSyncAuthenticatedTransferFrames.js';
-import { collectReplayedParentOrderFact, replayDesktopFramedSyncOrderBody } from './desktopFramedSyncOrderBodyReplay.js';
 import {
   prepareDesktopFramedSyncInbound,
   type PreparedDesktopFramedSyncInbound
@@ -127,11 +126,8 @@ async function handleFrame(input: {
     return applyReadyTransfer(input, state.ready);
   } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     if (input.stageOnly) throw new Error('framed_sync_restore_transfer_already_applied');
-    await replayDesktopFramedSyncOrderBody({ db: input.db, facts: state.facts, published,
-      receipt: state.existingReceipt, trailer: decoded.payload });
     return receiptStream(input, state.existingReceipt);
-  } else if (state.existingReceipt && decoded.payloadCase === 'fact') {
-    collectReplayedParentOrderFact(state.facts, published, wireToFact(decoded.payload));
+
   } else if (!state.existingReceipt && decoded.payloadCase === 'fact') {
     const fact = wireToFact(decoded.payload);
     state.facts.push(fact);

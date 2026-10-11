@@ -1,9 +1,9 @@
-import { PARENT_ORDER_VERSION_SCHEMA } from '../sync/syncParentOrderVersionStore.js';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from './androidCompanionCoreSchemaStatements.js';
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from './androidCompanionHostSchemaStatements.js';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanionResourceSchemaStatements.js';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
+import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from './framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
@@ -43,7 +43,7 @@ export const ANDROID_COMPANION_SCHEMA_STATEMENTS = [
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...NODE_VERSION_MEMBER_POSITION_SCHEMA,
-  ...PARENT_ORDER_VERSION_SCHEMA,
+  ...CURRENT_PARENT_ORDER_SCHEMA,
   ...SYNC_DELIVERY_TRIGGER_STATEMENTS,
   ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS,
   ...FRAMED_SYNC_INVENTORY_TABLES

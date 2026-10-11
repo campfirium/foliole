@@ -2,10 +2,11 @@
 import { expect, it } from 'vitest';
 
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
+import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
+import { applyCurrentParentOrderRecord } from '../../lib/core/sync/currentParentOrderStore.js';
 import { canonicalContentId, canonicalTransferId, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
-import { insertParentOrderVersion } from '../../lib/core/sync/syncParentOrderVersionStore.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
@@ -70,10 +71,12 @@ it('sends two actual node producers with reading, relation and review facts in o
 it('packs actual order state units by size and retains their separate durable receipts', async () => {
   const a = await verifiedReceiverFixture('Unrelated', 'unrelated');
   try {
-    await insertParentOrderVersion(a.sender.db, 'folder', { versionId: 'order-a', kind: 'baseline',
-      order: ['aaa'], parentVersionIds: [] }, 'now');
-    await insertParentOrderVersion(a.sender.db, 'folder', { versionId: 'order-c', kind: 'membership',
-      order: ['aaa', 'ccc'], parentVersionIds: ['order-a'] }, 'now');
+    for (const [parentId, childIds] of [['order-a', ['aaa']], ['order-c', ['ccc']]] as const) {
+      const sources = [{ authorId: 'sender', counter: 1, childIds: [...childIds] }];
+      await applyCurrentParentOrderRecord(a.sender.db, { object_type: 'parent_child_order', object_id: parentId,
+        content_hash: currentParentOrderHash(parentId, sources),
+        payload_json: JSON.stringify(currentParentOrderPayload(parentId, sources)), updated_at: 'now', deleted_at: null });
+    }
     const http = await parentBatchHttp(a);
     try {
       const { transfers, deferred } = await http.deliver(['order-a', 'order-c']);
@@ -84,8 +87,8 @@ it('packs actual order state units by size and retains their separate durable re
         expect(await a.receiver.staging.loadReceipt(transfers.get(id)!)).toEqual(await a.staging.loadReceipt(transfers.get(id)!));
       }
       a.reopen();
-      expect(a.receiver.sqlite.prepare('SELECT version_id,child_ids_json FROM parent_order_versions ORDER BY version_id').all())
-        .toEqual([{ version_id: 'order-a', child_ids_json: '["aaa"]' }, { version_id: 'order-c', child_ids_json: '["aaa","ccc"]' }]);
+      expect(a.receiver.sqlite.prepare('SELECT parent_id,child_ids_json FROM parent_order_sources ORDER BY parent_id').all())
+        .toEqual([{ parent_id: 'order-a', child_ids_json: '["aaa"]' }, { parent_id: 'order-c', child_ids_json: '["ccc"]' }]);
       expect(a.receiver.sqlite.prepare('SELECT count(*) FROM framed_sync_receipts').pluck().get()).toBe(2);
     } finally { await http.close(); }
   } finally { a.close(); }

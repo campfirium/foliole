@@ -2,7 +2,6 @@ import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { pendingFramedSyncOverwriteDifferences } from '../../../../../../lib/core/sync/framedSyncOverwriteCompletion.js';
 import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite, loadSyncGroupOverwriteProgress,
   type SyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
@@ -37,9 +36,7 @@ async function receiveOverwrite(args: NativeCompanionFramedSyncInventoryRequest,
   const remote = inventory.entries;
   const differences = compareFramedSyncDatabaseInventories({ local, remote })
     .filter((difference) => difference.direction === 'remote_to_local');
-  const dependencies = framedSyncOrderBodyDependencies({ local, remote })
-    .filter((difference) => difference.direction === 'remote_to_local');
-  const pulled = await pullInventoryDifferences(args, differences, inventory.roundId, dependencies);
+  const pulled = await pullInventoryDifferences(args, differences, inventory.roundId, []);
   const confirmed = await readCompanionRemoteFramedSyncInventory(args);
   const pending = await runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
     const current = await localInventory(tx, progress);

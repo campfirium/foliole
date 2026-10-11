@@ -27,6 +27,7 @@ import { migrateCompanionParentChildOrder } from './companionParentChildOrderMig
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
+import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { FRAMED_SYNC_COMPLETION_BACKFILL } from './framedSyncCompletionSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
@@ -37,7 +38,6 @@ import { migrateCompanionIndependentNodeVersions } from './independentNodeVersio
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
-import { migrateCompanionParentOrderVersions } from './parentOrderVersionMigration.js';
 import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
@@ -96,7 +96,6 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 59 && targetVersion >= 59) await migrateCompanionIndependentNodeVersions(db);
   if (currentVersion < 61 && targetVersion >= 61) await migrateCompanionNodeVersionConfirmations(db);
   if (currentVersion < 62 && targetVersion >= 62) await retireCompanionLegacyStorage(db);
-  if (currentVersion < 64 && targetVersion >= 64) await migrateCompanionParentOrderVersions(db);
   if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
   if (currentVersion < 71 && targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   if (currentVersion < 73 && targetVersion >= 73) await migrateCompanionFramedSyncTombstoneInventory(db);
@@ -110,6 +109,7 @@ export async function migrateCompanionDatabase(
     await migrateCompanionTextBodyOwnership(db);
   }
   if (currentVersion < 80 && targetVersion >= 80) await migrateCompanionNodeHistoryState(db);
+  if (currentVersion < 81 && targetVersion >= 81) await migrateCompanionCurrentParentOrders(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

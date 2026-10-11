@@ -2,6 +2,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
+import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
@@ -54,6 +55,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     for (const source of sources) for await (const fact of source(tx)) {
       if (fact.kind === 1) await applyFramedStateFact(tx, fact, options.objectOptions, options.loadBody);
     }
+    await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return { generatedChanges };
   });
 }

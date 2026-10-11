@@ -10,7 +10,7 @@ import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 /** Existing write-maintained object identities, matching the native identity copy surface. */
 export const FRAMED_SYNC_STATE_OBJECT_TYPES = [
   'external_document', 'external_folder', 'import_source', 'node_open_state', 'node_review',
-  'node_text_alternative', 'parent_child_order', 'order_version', 'node_position', 'parent_order_position',
+  'node_text_alternative', 'parent_child_order', 'node_position',
   'pdf_page_text', 'setting', 'view_state', 'watched_folder', 'topic_daily_count',
   'foreground_daily_time'
 ] as const;
@@ -74,9 +74,9 @@ function stateEntry(row: StateRow): FramedSyncInventoryEntry {
   return { frontierFactIds: [], globalId: row.object_id, objectType: row.object_type,
     requiredRelationIds: [], resourceHashes: row.body_blob_hash ? [hexToBytes(row.body_blob_hash)] : [], reviewFactIds: [],
     sharedStateHash: hexToBytes(row.content_hash),
-    stateFactIds: [framedSyncObjectStateFactId(row.object_type, row.content_hash, row.current_version_id)] };
+    stateFactIds: [framedSyncObjectStateFactId(row.object_type, row.content_hash)] };
 }
 
-export function framedSyncObjectStateFactId(type: string, hash: string, head: string | null) {
-  return type === 'parent_child_order' ? `${type}:${hash}:${head ?? ''}` : `${type}:${hash}`;
+export function framedSyncObjectStateFactId(type: string, hash: string) {
+  return `${type}:${hash}`;
 }

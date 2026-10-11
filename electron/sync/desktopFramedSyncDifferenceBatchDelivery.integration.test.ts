@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 import { isFramedSyncPublicationBatchReady } from '../../lib/core/sync/framedSyncBatchReadiness.js';
 import { loadFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
@@ -43,7 +43,7 @@ it.each([false, true])('schedules real frozen uploads lazily and retries deferre
       expect(result).toEqual({ sent: true, state: 'delivered' });
       delivered.push(difference.globalId);
       return result.state;
-    }, framedSyncOrderBodyDependencies(inventories));
+    });
     expect(deferred).toEqual([]);
     expect(delivered).toEqual(['first', 'second']);
     expect(state.requests).toBe(deferSecond ? 2 : 1);

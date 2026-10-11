@@ -8,7 +8,6 @@ import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js
 
 import type { CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
 import { assertCompanionFramedSyncInboundAllowed } from './companionFramedSyncInboundGate.js';
-import { replayCompanionReadyOrderBodies } from './companionFramedSyncReadySummary.js';
 import { applyCompanionFramedResourceAvailability, finishCompanionFramedResourceDemand } from './companionFramedSyncResourceApply.js';
 import { STAGING_TABLES } from './companionFramedSyncStagingTables.js';
 import { loadVerifiedCompanionReady } from './companionFramedSyncVerifiedReady.js';
@@ -24,7 +23,6 @@ async function loadTransfers(db: DbPort, inputs: readonly CompanionFramedSyncApp
     const existing = await existingVerifiedCompanionReceipt(db, input, ready);
     if (existing) {
       for (const descriptor of ready.descriptors) await readyBodyLoader(input)(db, descriptor);
-      await replayCompanionReadyOrderBodies(db, ready.source);
     }
     transfers.push({ input, ready, existing });
   }

@@ -8,9 +8,11 @@ import {
   isLegacyDatabaseRebuildRequiredError
 } from '../../lib/core/database/migrations.js';
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { attachmentTrashDirectory, inventoryAttachmentDirectory } from '../attachments/attachmentTrashFiles.js';
+import { loadDesktopLibraryWriterBinding } from '../deviceAnchorStore.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
 import {
@@ -113,6 +115,7 @@ function initializeSchemaWorkspaceAndSearch(
   const attachmentTargets = captureLegacyAttachmentTargets(connection);
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => {
+      bindParentOrderWriter(connection.driver, loadDesktopLibraryWriterBinding(connection.dbPath));
       migrateDesktopHostProfile(connection, currentHostName);
       migrateLegacyBodyConsistency(connection, currentHostName, fresh);
       migrateOrphanedInactiveReadingState(connection);

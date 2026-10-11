@@ -82,7 +82,7 @@ it.each(['android', 'ios'] as const)('clears once and commits %s objects indepen
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(true);
   await applyPreparedCompanionFramedSyncTransfers(port, [first]);
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
-  expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 22,
+  expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 23,
     senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
     receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch })).toHaveLength(1);
   await applyPreparedCompanionFramedSyncTransfers(port, [second]);

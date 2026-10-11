@@ -20,7 +20,7 @@ final class FramedSyncSourceWriterFixture implements FramedSyncOutboundFactSourc
     FramedSyncSourceWriterFixture(List<FactRecord> facts) throws Exception {
         List<FactRecord> ordered = FramedSyncCanonicalManifest.sortedFacts(facts);
         byte[] content = FramedSyncCanonicalManifest.contentId(ordered, Collections.emptyList());
-        TransferManifest.Builder manifest = TransferManifest.newBuilder().setProtocolVersion(22)
+        TransferManifest.Builder manifest = TransferManifest.newBuilder().setProtocolVersion(FramedSyncContract.PROTOCOL_VERSION)
             .setGroupId("group").setContentId(ByteString.copyFrom(content));
         for (FactRecord fact : ordered) {
             manifest.addFacts(FactDescriptor.newBuilder().setIdentity(fact.getIdentity())

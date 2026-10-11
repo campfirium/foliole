@@ -26,7 +26,7 @@ it.each(['', '\ufeff中文😀\0', '中😀'.repeat(149796) + 'abcd'])('publishe
       payload_json: JSON.stringify(payload), deleted_at: null, updated_at: timestamp };
     await applySyncObjectInTransaction(source.db, { ...record, payload_json: JSON.stringify({ ...payload, content: body }) });
     source.sqlite.exec('DROP TABLE content_blob_data');
-    const fact = await selectFramedSyncObjectStateFact(source.db, key, framedSyncObjectStateFactId(key.objectType, contentHash, null));
+    const fact = await selectFramedSyncObjectStateFact(source.db, key, framedSyncObjectStateFactId(key.objectType, contentHash));
     const descriptors = await selectFramedExternalDocumentBody(source.db, record.payload_json);
     expect(fact.blobs).toEqual(descriptors);
     expect(Buffer.from(await loadFramedExternalDocumentBody(source.db, key.globalId, descriptors[0]!)).toString('utf8')).toBe(body);

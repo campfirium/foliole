@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import {
   createSyncGroupDeviceIdentity,
+  canonicalizeLibraryPath,
   parseDeviceAnchor
 } from '../lib/platform/syncGroupUnifiedContract.js';
 
@@ -99,10 +101,35 @@ export async function loadDesktopDeviceIdentity(args: {
 
 async function readAnchor(filePath: string) {
   const value = await fs.readFile(filePath, 'utf8');
+  return parseAnchorFile(value);
+}
+
+function parseAnchorFile(value: string) {
   if (!value.endsWith('\n') || value.indexOf('\n') !== value.length - 1) {
     throw new Error('device_anchor_file_invalid');
   }
   return parseDeviceAnchor(value.slice(0, -1));
+}
+
+/** Startup binds permanent writers before synchronous workspace initialization can edit lists. */
+export function loadDesktopLibraryWriterBinding(libraryPath: string, options: DesktopDeviceAnchorOptions = {}) {
+  const filePath = resolveDesktopDeviceAnchorFilePath(options);
+  let deviceAnchor: string;
+  try {
+    deviceAnchor = parseAnchorFile(readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    if (!hasCode(error, 'ENOENT')) throw error;
+    mkdirSync(path.dirname(filePath), { mode: 0o700, recursive: true });
+    try {
+      writeFileSync(filePath, `${randomUUID()}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    } catch (writeError) {
+      if (!hasCode(writeError, 'EEXIST')) throw writeError;
+    }
+    deviceAnchor = parseAnchorFile(readFileSync(filePath, 'utf8'));
+  }
+  const platform = options.platform ?? process.platform;
+  return { deviceAnchor, libraryPath: canonicalizeLibraryPath(realpathSync(libraryPath),
+    platform === 'win32' ? 'windows' : 'posix') };
 }
 
 function hasCode(error: unknown, code: string) {

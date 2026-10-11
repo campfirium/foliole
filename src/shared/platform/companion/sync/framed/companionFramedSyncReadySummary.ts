@@ -7,7 +7,6 @@ import { restoreFramedSyncNodeMetadata } from '../../../../../../lib/core/sync/f
 import { restoreFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { streamFramedSyncReadyFactFrames } from '../../../../../../lib/core/sync/framedSyncReadyFactFrames.js';
 import { FRAMED_SYNC_RESOURCE_FACT_KIND } from '../../../../../../lib/core/sync/framedSyncResourceFact.js';
-import { replayRetiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyReplay.js';
 
 import type { CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
 import type { CompanionResourceEntry } from './companionFramedSyncDescriptorValidation.js';
@@ -50,11 +49,4 @@ export async function summarizeCompanionReadyFacts(db: DbPort, source: FramedFac
   }
   if (!first) throw new Error('framed_sync_android_fact_set_unsupported');
   return { ...first, nodes, resourceFacts, descriptors: nodes.length ? nodeBodies : bodyDescriptors };
-}
-
-export async function replayCompanionReadyOrderBodies(db: DbPort, source: FramedFactSource) {
-  for await (const fact of source(db)) if (fact.kind === 1) {
-    const record = fact.objectType === 'node' ? restoreFramedSyncNodeReadingFact(fact) : restoreFramedSyncObjectStateFact(fact);
-    await replayRetiredParentOrderBodies(db, [record]);
-  }
 }

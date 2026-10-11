@@ -10,19 +10,14 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             responderDeviceID: "device-b", responderLibraryEpoch: "epoch-b"
         )
         let sessionID = try Data(hex: "00112233445566778899aabbccddeeff")
-        XCTAssertEqual(
-            context.deriveContextID(sessionID: sessionID).hex,
-            "b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf"
-        )
-        let preamble = try FolioleFramedSyncPreamble(decoding: Data(hex: """
-            464f4c53594e43320060001601000000b91385f313c79240f0d205a2c74a2e23
-            c18773b07a39c6e016c57aef8d000baf00112233445566778899aabbccddeeff
-            0506070800000000000000000000000000000000000000000000000000000000
-            """))
+        XCTAssertEqual(context.deriveContextID(sessionID: sessionID).hex,
+                       "e008efb9a007453c39eaea9bdcdba82e396ae5f1560ce5ef4b8aa74eecf5e3a3")
+        let preamble = try FolioleFramedSyncPreamble(decoding: Data(hex:
+            "464f4c53594e43320060001701000000e008efb9a007453c39eaea9bdcdba82e396ae5f1560ce5ef4b8aa74eecf5e3a300112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000"))
         let headerBytes = try Data(hex: "0000001e000000000000000000010000")
         let frame = FolioleFramedSyncWireFrame(
             header: try .init(decoding: headerBytes), headerBytes: headerBytes,
-            ciphertext: try Data(hex: "88f392bc50b6f68cdfff1040146ef627cbdf6c05ca8b1be83a40fa1309f1")
+            ciphertext: try Data(hex: "fba60820e2e07c3e009486a6fda5a5452cec924d2996369e76fa9937d53f")
         )
         let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
             groupKey: Data(0...31), preamble: preamble, frame: frame, expectedSequence: 0

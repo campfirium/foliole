@@ -5,7 +5,6 @@ import { retireFramedSyncCompletedPublication } from '../../lib/core/sync/framed
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { sameFramedSyncContext } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
 import { postDesktopFramedSyncBytes } from './desktopFramedSyncHttp.js';
@@ -85,7 +84,6 @@ async function commitBatchReceipts(input: Parameters<typeof sendDesktopFramedSyn
         !sameFramedSyncBytes(receipt.appliedStateHash, published.contentId)) throw new Error('framed_sync_resource_receipt_mismatch');
     await input.staging.commitOutboundReceipt(receipt);
     await input.staging.releaseOutboundHolds(published.transferId);
-    await collectDeliveredParentOrderBodies(input.db, published.transferId);
     await retireFramedSyncCompletedPublication(input.db, published.transferId);
     pending.delete(id);
   }

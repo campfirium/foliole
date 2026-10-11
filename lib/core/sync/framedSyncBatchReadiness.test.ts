@@ -52,7 +52,7 @@ it('packs identity-only, reading, relation, review and state units while keeping
   for (const extra of [
     { ...base, kind: 1, factId: 'node_reading:hash' }, { ...base, kind: 3 }, { ...base, kind: 4 }
   ]) expect(ready(base, extra)).toBe(true);
-  for (const objectType of ['node_position', 'parent_order_position', 'order_version', 'parent_child_order']) {
+  for (const objectType of ['node_position', 'parent_child_order']) {
     expect(ready({ ...base, kind: 1, objectType })).toBe(true);
   }
 });

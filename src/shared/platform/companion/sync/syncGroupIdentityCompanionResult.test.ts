@@ -24,7 +24,7 @@ beforeEach(() => {
 it('routes a negotiated v22 peer through the only companion data plane', async () => {
   const refreshed = vi.fn();
   const result = await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 22 },
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 23 },
     onStructureSynced: refreshed
   });
   expect(runtime.framed).toHaveBeenCalledWith({
@@ -49,7 +49,7 @@ it('rejects a peer without an exact framed v22 negotiation', async () => {
 
 it('keeps an authenticated restore request ahead of a resource-only continuation', async () => {
   await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 22 },
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 23 },
     restoreId: 'restore-1', resourcesOnly: true
   });
   expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
@@ -60,7 +60,7 @@ it('continues attachment demands through framed transport without replaying data
   runtime.framed.mockResolvedValueOnce({ deferredObjects: [], received: [], sent: [],
     resources: { pending: 1, scanned: 4, transferred: 1, unavailable: 0 } });
   const result = await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 22 }, resourcesOnly: true
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 23 }, resourcesOnly: true
   });
   expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
     receiver_library_epoch: 'epoch', sync_group_id: 'group' }, true);

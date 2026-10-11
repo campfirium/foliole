@@ -41,7 +41,10 @@ export async function publishFramedSyncOutboundWithDbPort(db: DbPort, input: Out
       WHERE transfer_id = ?`, [encodePublicationInventory(input.manifest, input.inventoryDifference), input.transferId]);
   }
   const context = input.context;
-  if (!prior) await db.run(`INSERT INTO framed_sync_outbound_publications VALUES
+  if (!prior) await db.run(`INSERT INTO framed_sync_outbound_publications
+    (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
+      group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
+      fact_count, blob_count, total_blob_bytes, state) VALUES
     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`, [input.transferId, input.contentId,
     input.manifestHash, new Uint8Array(), encodePublicationInventory(input.manifest, input.inventoryDifference),
     context.protocolVersion, context.groupId, context.senderDeviceId, context.senderLibraryEpoch,

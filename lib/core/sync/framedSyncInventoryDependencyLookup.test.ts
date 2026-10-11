@@ -28,10 +28,10 @@ it.each(['local_to_remote', 'remote_to_local'] as const)('finds fixed %s depende
   expect(lookup({ direction, globalId: 'absent', objectType: 'node' })).toBeUndefined();
 });
 
-it('offers equal arrangement identities for missing bodies without resending equal node state', () => {
-  const shared = [entry('node'), entry('order', 'order_version')];
+it('does not resend equal current order or node identities', () => {
+  const shared = [entry('node'), entry('order', 'parent_child_order')];
   const lookup = createFramedSyncInventoryDependencyLookup({ local: shared, remote: shared });
   expect(lookup({ direction: 'local_to_remote', globalId: 'node', objectType: 'node' })).toBeUndefined();
-  expect(lookup({ direction: 'local_to_remote', globalId: 'order', objectType: 'order_version' }))
-    .toMatchObject({ need: { sharedState: true, stateFactIds: ['fact'] }, sourceSnapshot: shared[1] });
+  expect(lookup({ direction: 'local_to_remote', globalId: 'order', objectType: 'parent_child_order' }))
+    .toBeUndefined();
 });

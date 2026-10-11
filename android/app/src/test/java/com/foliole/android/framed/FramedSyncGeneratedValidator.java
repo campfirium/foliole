@@ -114,7 +114,7 @@ final class FramedSyncGeneratedValidator {
     }
 
     private static void validateHandshake(Handshake handshake) throws InvalidProtocolBufferException {
-        if (handshake.getProtocolVersion() != 22) throw invalid("protocol_version_invalid");
+        if (handshake.getProtocolVersion() != FramedSyncContract.PROTOCOL_VERSION) throw invalid("protocol_version_invalid");
         validateCapabilities(handshake.getCapabilitiesList());
     }
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
@@ -34,6 +35,7 @@ setupSyncPackBuilderTestLifecycle();
 
 it('packs a changed direct-child sequence without node rows or article versions', async () => {
   const driver = openDatabaseConnection().driver;
+  bindParentOrderWriter(driver, { deviceAnchor: 'pack-test', libraryPath: openDatabaseConnection().dbPath });
   const now = '2026-09-27T00:00:00.000Z';
   for (const id of ['node-a', 'node-b']) {
     driver.execute(
@@ -59,15 +61,13 @@ it('packs a changed direct-child sequence without node rows or article versions'
     packId: 'pack-parent-order-1', fromStateSeq
   });
 
-  expect(result.objectCount).toBe(2);
+  expect(result.objectCount).toBe(1);
   const rows = readPackRows(packPath);
   expect(rows.nodes).toEqual([]);
-  expect(rows.stateRows.map((row) => (row as { object_type: string }).object_type)).toEqual(['order_version', 'parent_child_order']);
+  expect(rows.stateRows.map((row) => (row as { object_type: string }).object_type)).toEqual(['parent_child_order']);
   expect(rows.syncObjects).toEqual(expect.arrayContaining([
     expect.objectContaining({ object_type: 'parent_child_order',
-      payload_json: expect.stringContaining('node-b') }),
-    expect.objectContaining({ object_type: 'order_version',
-      payload_json: expect.stringContaining('"kind":"user"') })
+      payload_json: expect.stringContaining('node-b') })
   ]));
 });
 

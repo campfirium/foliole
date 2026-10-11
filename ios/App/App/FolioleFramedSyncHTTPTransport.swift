@@ -88,7 +88,6 @@ enum FolioleFramedSyncHTTPTransport {
               let detail = object["error"] else { return fallback }
         if detail == "framed_sync_source_changed" || detail == "framed_sync_resource_source_unavailable" { return "\(fallback):\(detail)" }
         let prefixes = ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
-                        "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
             "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"]
         guard let prefix = prefixes.first(where: detail.hasPrefix) else { return fallback }
         let parentID = String(detail.dropFirst(prefix.count))

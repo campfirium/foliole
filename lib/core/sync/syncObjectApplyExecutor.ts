@@ -3,6 +3,7 @@ import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStat
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
+import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { shouldApplyForegroundTime } from './syncForegroundDailyTime.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
@@ -124,6 +125,10 @@ async function applySingleSyncObjectInTransaction(
   record: SyncPackSyncObjectRecord,
   options: ApplySyncObjectsWithDbPortOptions
 ) {
+  if (record.object_type === 'parent_child_order') {
+    const changed = await applyCurrentParentOrderRecord(port, record);
+    return changed || options.includeAlreadyApplied ? `parent_child_order:${record.object_id}` : null;
+  }
   const status = await getSyncObjectApplyStatus(port, record);
   if (status === 'already_applied') {
     await restoreMissingExternalBody(port, record);

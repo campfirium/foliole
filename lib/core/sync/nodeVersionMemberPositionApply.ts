@@ -1,20 +1,15 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import { nodePositionFactId, nodePositionPayloadSchema, nodePositionWriteStatements,
-  parseNodePositionPayload, versionPositionStorage, type VersionPositionDomain } from './nodeVersionMemberPositionFact.js';
+  parseNodePositionPayload, versionPositionStorage } from './nodeVersionMemberPositionFact.js';
 import { hashText } from './syncNodeResolution.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 /** An authenticated relay carries the owner's original, comparable declaration. */
 export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSyncObjectRecord) {
-  return applyVersionMemberPosition(port, record, 'node');
-}
-
-export async function applyVersionMemberPosition(port: DbPort, record: SyncPackSyncObjectRecord,
-  domain: VersionPositionDomain) {
-  const storage = versionPositionStorage(domain);
+  const storage = versionPositionStorage();
   if (record.deleted_at || !record.payload_json) throw new Error('node_position_fact_invalid');
   const { payload, pending } = parseNodePositionPayload(JSON.parse(record.payload_json));
-  if (record.object_id !== nodePositionFactId(payload, domain) ||
+  if (record.object_id !== nodePositionFactId(payload) ||
       record.content_hash !== hashText(JSON.stringify(payload))) throw new Error('node_position_fact_hash_mismatch');
   const [member] = await port.query<{ state: string; local_device_identity_key: string }>(
     `SELECT member.state, local.local_device_identity_key FROM sync_group_devices member
@@ -38,11 +33,9 @@ export async function applyVersionMemberPosition(port: DbPort, record: SyncPackS
   for (const versionId of [payload.adopted_version_id, ...pending]) {
     const [version] = await port.query<{ object_id: string }>(
       `SELECT ${storage.ownerColumn} AS object_id FROM ${storage.versionTable} WHERE version_id = ?`, [versionId]);
-    if (version?.object_id !== payload.object_id) throw new Error(domain === 'node'
-      ? `node_position_lineage_unproven:${payload.object_id}`
-      : `parent_order_position_lineage_unproven:${versionId}`);
+    if (version?.object_id !== payload.object_id) throw new Error(`node_position_lineage_unproven:${payload.object_id}`);
   }
-  for (const statement of nodePositionWriteStatements(payload, domain)) await port.run(statement.sql, statement.params);
+  for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
   return true;
 }
 

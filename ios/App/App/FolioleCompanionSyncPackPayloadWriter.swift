@@ -5,10 +5,15 @@ enum FolioleCompanionSyncPackPayloadWriter {
         var payloads: [String: String] = [:]
         for plan in plans {
             guard let objectType = plan["objectType"] as? String, let sql = plan["sql"] as? String else { continue }
+            let sources = try (plan["parentOrderSourcesSql"] as? String).map { try parentOrderSources(database, $0) }
             for row in try database.namedRows(sql) {
                 guard let objectId = row["__object_id"] as? String else { continue }
                 var payload: [String: Any] = [:]
                 for (name, value) in row where name != "__object_id" { assign(&payload, name, value) }
+                if let sources {
+                    let data = try JSONSerialization.data(withJSONObject: sources[objectId] ?? [], options: [.sortedKeys])
+                    payload["sources_json"] = String(decoding: data, as: UTF8.self)
+                }
                 let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
                 payloads[key(objectType, objectId)] = String(decoding: data, as: UTF8.self)
             }
@@ -24,6 +29,19 @@ enum FolioleCompanionSyncPackPayloadWriter {
             if deleted == nil && payload == nil { continue }
             try database.insertSyncObject([type, objectId, state[2], payload, state[3], deleted])
         }
+    }
+
+    private static func parentOrderSources(_ database: FolioleCompanionSyncPackSQLite, _ sql: String) throws -> [String: [[String: Any]]] {
+        var sources: [String: [[String: Any]]] = [:]
+        for row in try database.namedRows(sql) {
+            guard let parentId = row["parent_id"] as? String, let author = row["author_id"] as? String,
+                  let counter = row["counter"], let children = row["child_ids_json"] as? String else {
+                throw NSError(domain: "parent_order_payload_invalid", code: 1)
+            }
+            let ids = try JSONSerialization.jsonObject(with: Data(children.utf8))
+            sources[parentId, default: []].append(["authorId": author, "counter": counter, "childIds": ids])
+        }
+        return sources
     }
 
     private static func assign(_ result: inout [String: Any], _ name: String, _ value: Any) {

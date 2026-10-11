@@ -74,7 +74,7 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
 async function alignFixturePositions(fixture: Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>>) {
   const differences = compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
     remote: await readFixtureInventory(fixture.right) });
-  expect(differences.every(value => value.objectType === 'parent_order_position')).toBe(true);
+  expect(differences.every(value => value.objectType === 'node_position')).toBe(true);
   for (const difference of differences) {
     const localSource = difference.direction === 'local_to_remote';
     const source = localSource ? fixture.left : fixture.right;

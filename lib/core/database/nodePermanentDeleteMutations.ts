@@ -2,10 +2,7 @@ import type { DatabaseDriver } from './driver.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
-import { readParentChildOrders } from './parentChildOrder.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL } from './searchPendingState.js';
-import { requireDatabaseHostName } from './syncHostIdentity.js';
-import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 import {
   advanceWorkspaceSearchSourceRevision,
   markWorkspaceSearchSourceIndexedIfSettled,
@@ -31,7 +28,6 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
-    const ownedOrders = readParentChildOrders(driver);
     advanceWorkspaceSearchSourceRevision(driver);
     writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
     deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
@@ -48,19 +44,6 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     for (const nodeId of [...input.nodeIds].reverse()) {
       deleteNodeStatement.run([nodeId]);
       driver.execute(DELETE_NODE_SEARCH_PENDING_SQL, [nodeId]);
-    }
-    for (const nodeId of input.nodeIds) {
-      const childIds = ownedOrders.get(nodeId);
-      if (!childIds) continue;
-      driver.execute('DELETE FROM parent_child_order WHERE parent_id = ?', [nodeId]);
-      upsertSyncObjectState(driver, {
-        objectType: 'parent_child_order', objectId: nodeId,
-        contentHash: computeSyncContentHash('parent_child_order', {
-          parent_id: nodeId, child_ids_json: JSON.stringify(childIds)
-        }),
-        lastModifiedByHostName: requireDatabaseHostName(driver), updatedAt: now,
-        deletedAt: now, syncDirty: true
-      });
     }
     rewriteExistingNodeOrder(driver, input.nodeOrder);
     markWorkspaceSearchSourceRevisionQueued(driver);

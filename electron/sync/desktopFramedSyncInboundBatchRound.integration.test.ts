@@ -20,7 +20,7 @@ import type { FramedSyncWritableBody } from './desktopFramedSyncStream.js';
 import { receiverBusinessRows, verifiedReceiverFixture } from './desktopFramedSyncVerifiedReceiver.testSupport.js';
 
 type Fixture = Awaited<ReturnType<typeof verifiedReceiverFixture>>;
-const context = { groupId: 'group', protocolVersion: 22 as const,
+const context = { groupId: 'group', protocolVersion: 23 as const,
   initiatorDeviceId: 'receiver', initiatorLibraryEpoch: 'receiver-epoch',
   responderDeviceId: 'sender', responderLibraryEpoch: 'sender-epoch' };
 

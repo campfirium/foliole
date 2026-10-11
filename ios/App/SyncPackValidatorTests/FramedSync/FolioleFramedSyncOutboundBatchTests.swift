@@ -37,7 +37,6 @@ final class FolioleFramedSyncOutboundBatchTests: XCTestCase {
 
     func testKnownDependencyDefersOnlyUnsafeItemAndContinuesIndependentNeighbor() async throws {
         for prefix in ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
-                       "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
             "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"] {
             let fixture = try FramedSyncBatchSenderFixture(); defer { fixture.cleanup() }
             fixture.flags = ["one": true, "child": false, "last": true]
@@ -55,7 +54,6 @@ final class FolioleFramedSyncOutboundBatchTests: XCTestCase {
 
     func testBatchDependencyReplaysOriginalCommittedPrefixAndDefersOnlyChild() async throws {
         for prefix in ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
-                       "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
             "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"] {
             let fixture = try FramedSyncBatchSenderFixture(); defer { fixture.cleanup() }
             fixture.flags = ["one": true, "child": true, "parent": true]

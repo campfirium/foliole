@@ -17,7 +17,7 @@ it('converges original order facts and current order through a normal production
       const db = new Database(file, { readonly: true });
       try {
         return { orders: db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all(),
-          facts: db.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all(),
+          facts: db.prepare('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id').all(),
           states: db.prepare("SELECT object_id, content_hash, current_version_id FROM sync_object_state WHERE object_type = 'parent_child_order' ORDER BY object_id").all() };
       } finally { db.close(); }
     };

@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
 import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import type { NativeBackupSearchCommandMap } from './nativeBackupSearchContract.js';
@@ -19,7 +17,6 @@ import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpe
 import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './nativeNodeOpenStateContract.js';
 import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
 import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
-import type { NativeParentOrderHistory, parentOrderHistoryArgsSchema, restoreParentOrderArgsSchema } from './nativeParentOrderContract.js';
 import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
@@ -203,14 +200,6 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.relearnNode]: {
     args: NativeRelearnNodeArgs;
     result: null;
-  };
-  [NATIVE_COMMANDS.readParentOrderHistory]: {
-    args: z.input<typeof parentOrderHistoryArgsSchema>;
-    result: NativeParentOrderHistory;
-  };
-  [NATIVE_COMMANDS.restoreParentOrderSnapshot]: {
-    args: z.input<typeof restoreParentOrderArgsSchema>;
-    result: { changed: boolean };
   };
   [NATIVE_COMMANDS.replaceNodeOrder]: {
     args: { nodeIds: string[] };

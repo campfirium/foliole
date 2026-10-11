@@ -1,8 +1,4 @@
-import { useState } from 'react';
-
-import { ROOT_CHILD_ORDER_ID } from '../../../../lib/core/database/parentChildOrder';
 import { resolveSystemEntryId } from '../../../shared/localization/systemEntryNames';
-import { canReadSavedArrangements } from '../../../shared/platform/desktop/parentOrderHistory';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
@@ -18,12 +14,10 @@ import { createCreateNodeHandler, resolveCreateCommands, type NodeListCreateMenu
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
 import { requestNodeRename } from './NodeTreeRowRename';
-import { ParentOrderHistoryDialog } from './ParentOrderHistoryDialog';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
   createMenuSurface?: NodeListCreateMenuSurface;
-  orderHistoryRootParentId?: string;
   createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createVirtualNode: () => Promise<string | null>;
@@ -221,21 +215,7 @@ function buildNodeListContextMenuProps(
 }
 
 export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
-  const [historyParentId, setHistoryParentId] = useState<string | null>(null);
-  const state = buildMenuState(props);
-  const orderParentId = state.isRootMenu ? props.orderHistoryRootParentId ?? ROOT_CHILD_ORDER_ID :
-    state.isHomeTarget ? ROOT_CHILD_ORDER_ID :
-    state.contextTargets.length === 1 && state.primaryTarget && !isVirtualNode(state.primaryTarget)
-      && !isVirtualRootNode(state.primaryTarget) && state.primaryTarget.kind !== 'item'
-      ? state.primaryTargetId : null;
-  const openHistory = orderParentId && canReadSavedArrangements() && !props.isVirtualViewOpen && props.createMenuSurface !== 'virtual-topics'
-    ? () => { setHistoryParentId(orderParentId); props.contextMenu.closeContextMenu(); }
-    : undefined;
-  return <>
-    {props.contextMenu.menuPosition ? <NodeListContextMenu
-      {...buildNodeListContextMenuProps(props, props.contextMenu.menuPosition, state)}
-      {...(openHistory ? { onOpenOrderHistory: openHistory } : {})} /> : null}
-    {historyParentId ? <ParentOrderHistoryDialog key={historyParentId} parentId={historyParentId}
-      nodesById={props.nodesById} onClose={() => setHistoryParentId(null)} /> : null}
-  </>;
+  const position = props.contextMenu.menuPosition;
+  if (!position) return null;
+  return <NodeListContextMenu {...buildNodeListContextMenuProps(props, position, buildMenuState(props))} />;
 }

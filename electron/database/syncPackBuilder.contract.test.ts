@@ -21,6 +21,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { currentParentOrderHash } from '../../lib/core/sync/currentParentOrder.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -83,13 +84,15 @@ function insertNodeSyncState() {
     'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
     [ROOT_CHILD_ORDER_ID, '["node-1"]', '2026-04-27T00:00:00.000Z']
   );
+  driver.execute('INSERT INTO parent_order_sources VALUES (?, ?, ?, ?)',
+    [ROOT_CHILD_ORDER_ID, 'contract-writer', 1, '["node-1"]']);
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('parent_child_order', ?, 5, ?, 'desktop', '2026-04-27T00:00:00.000Z', 1)`,
-    [ROOT_CHILD_ORDER_ID, computeSyncContentHash('parent_child_order', {
-      parent_id: ROOT_CHILD_ORDER_ID, child_ids_json: '["node-1"]'
-    })]
+    [ROOT_CHILD_ORDER_ID, currentParentOrderHash(ROOT_CHILD_ORDER_ID, [
+      { authorId: 'contract-writer', counter: 1, childIds: ['node-1'] }
+    ])]
   );
   driver.execute(
     `INSERT INTO setting_records (

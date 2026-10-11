@@ -10,7 +10,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS as definitions } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 
-import { copyPayloads } from './androidSyncPackProviderDefinitions.testSupport.js';
+import { buildProviderPack } from './androidSyncPackProviderDefinitions.testSupport.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 
 let root = '';
@@ -228,18 +228,5 @@ it('shares active and left Devices without exposing the group key', () => {
   pack.close();
 });
 
-function buildPack(fromStateSeq: number, toStateSeq = 3) {
-  const pack = new Database(':memory:');
-  for (const statement of definitions.packSchema) pack.exec(statement);
-  pack.prepare('ATTACH DATABASE ? AS source').run(sourcePath);
-  definitions.copyStatements.forEach((statement, index) => {
-    if (index === definitions.stateCopyIndex) pack.prepare(statement).run(fromStateSeq, toStateSeq);
-    else if (index === definitions.payloadCopyIndex) {
-      copyPayloads(pack);
-      pack.exec(statement);
-    }
-    else pack.exec(statement);
-  });
-  pack.exec('DETACH DATABASE source');
-  return pack;
-}
+const buildPack = (fromStateSeq: number, toStateSeq = 3) =>
+  buildProviderPack(sourcePath, fromStateSeq, toStateSeq);

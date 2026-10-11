@@ -19,8 +19,7 @@ export function pendingFramedSyncOverwriteDifferences(args: {
     const need = difference.need;
     if (!delivered.has(key(difference)) || !present.has(key(difference))) return true;
     if (difference.objectType !== 'node') {
-      return difference.objectType === 'order_version' ||
-        !isFramedSyncSharedStateObject(difference.objectType, difference.globalId);
+      return !isFramedSyncSharedStateObject(difference.objectType, difference.globalId);
     }
     return Boolean(difference.sourceSnapshot.unready || args.local.find(entry => key(entry) === key(difference))?.unready) ||
       need.frontierFactIds.length > 0 || need.requiredRelationIds.length > 0 ||

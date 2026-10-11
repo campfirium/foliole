@@ -1,3 +1,6 @@
+import { compareUtf8Text } from '../sync/syncIdentityKeyOrder.js';
+
+import { flushCurrentParentOrderProjections } from './currentParentOrderStore.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
 export const ROOT_CHILD_ORDER_ID = 'parent-child-order:root';
@@ -28,11 +31,12 @@ export function readOrderMembers(driver: DatabaseDriver) {
 }
 
 export function loadDerivedNodeOrder(driver: DatabaseDriver) {
+  flushCurrentParentOrderProjections(driver);
   return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver));
 }
 
 function compareMembers(left: NodeOrderMember, right: NodeOrderMember) {
-  return left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id);
+  return compareUtf8Text(left.created_at, right.created_at) || compareUtf8Text(left.id, right.id);
 }
 
 export function projectParentChildOrder(

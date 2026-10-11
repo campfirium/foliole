@@ -151,14 +151,23 @@ function main() {
   }
   const electronPath = ensureElectronBinary(repoRoot);
   assertElectronAbi(electronPath, repoRoot);
-  const result = runElectronNode(electronPath, invocation.args, repoRoot);
-  if (result.error) {
-    console.error(result.error.message);
+  const inheritedStateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+  const stateRoot = !inheritedStateRoot && shouldUseRepoLocalTemp(invocation.args)
+    ? mkdtempSync(path.join(repoRoot, '.tmp', 'sqlite-test-state-')) : null;
+  if (stateRoot) process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT = stateRoot;
+  try {
+    const result = runElectronNode(electronPath, invocation.args, repoRoot);
+    if (result.error) console.error(result.error.message);
+    if (result.status !== 0) {
+      console.error(`[electron-sqlite-runner] child exited status=${result.status ?? 'null'} signal=${result.signal ?? 'null'}`);
+    }
+    process.exitCode = result.status ?? 1;
+  } finally {
+    if (stateRoot) {
+      delete process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+      rmSync(stateRoot, { force: true, recursive: true });
+    }
   }
-  if (result.status !== 0) {
-    console.error(`[electron-sqlite-runner] child exited status=${result.status ?? 'null'} signal=${result.signal ?? 'null'}`);
-  }
-  process.exitCode = result.status ?? 1;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/electron-sqlite-runner.mjs')) {

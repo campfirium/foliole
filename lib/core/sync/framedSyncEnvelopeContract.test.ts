@@ -40,7 +40,7 @@ function header(transferId = published.transferId, attemptId = transferAttemptId
   }));
   return message('transfer_header', {
     attemptId, manifest: {
-      blobs, contentId: published.contentId, facts, groupId: 'group-a', protocolVersion: 22
+      blobs, contentId: published.contentId, facts, groupId: 'group-a', protocolVersion: 23
     }, transferId
   });
 }
@@ -98,7 +98,7 @@ describe('framed sync validated session envelope binding', () => {
     const wire = sessionPreamble(sessionId, await deriveSessionContextId({ ...http, sessionId }));
     const handshake = message('handshake', {
       capabilities: [], deviceId: 'device-a', groupId: 'group-a',
-      libraryEpoch: 'epoch-a', protocolVersion: 22, sessionId
+      libraryEpoch: 'epoch-a', protocolVersion: 23, sessionId
     });
     await expect(assertSessionEnvelopeBinding(http, wire, handshake, 'device-a'))
       .resolves.toMatchObject(http);

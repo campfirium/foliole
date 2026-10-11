@@ -1,6 +1,5 @@
 import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { collectAllParentOrderBodies } from '../../../../../lib/core/sync/parentOrderBodyRetention';
 import { beginSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
@@ -106,7 +105,6 @@ export function leaveCompanionSyncGroupDevice() {
     await tx.run('DELETE FROM node_version_outbound_holds');
     await tx.run('DELETE FROM node_version_outbound_payload_holds');
     await collectAllNodeVersionChains(tx);
-    await collectAllParentOrderBodies(tx);
   }));
 }
 

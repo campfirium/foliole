@@ -51,7 +51,7 @@ const DESKTOP_SCHEMA_FILES = {
   NODE_VERSION_RETENTION_SCHEMA_STATEMENTS: 'lib/core/database/nodeVersionRetentionSchemaStatements.ts',
   NODE_VERSION_RETENTION_INDEX_SCHEMA: 'lib/core/database/nodeVersionRetentionIndexSchema.ts',
   NODE_VERSION_MEMBER_POSITION_SCHEMA: 'lib/core/database/nodeVersionMemberPositionSchema.ts',
-  PARENT_ORDER_VERSION_SCHEMA: 'lib/core/sync/syncParentOrderVersionStore.ts'
+  CURRENT_PARENT_ORDER_SCHEMA: 'lib/core/database/currentParentOrderSchema.ts'
 };
 
 export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {
@@ -82,11 +82,6 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   for (const [name, relativePath] of Object.entries(DESKTOP_SCHEMA_FILES)) {
     arrays[name] = extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name, arrays);
   }
-  arrays.PARENT_ORDER_BODY_RETENTION_SCHEMA = arrays.NODE_VERSION_MEMBER_POSITION_SCHEMA.map((sql) =>
-    sql.replaceAll('node_version_member_positions', 'parent_order_member_positions'));
-  arrays.PARENT_ORDER_VERSION_SCHEMA = extractStatementsFromArray(
-    readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.PARENT_ORDER_VERSION_SCHEMA),
-    'PARENT_ORDER_VERSION_SCHEMA', arrays);
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
   const statements = extractStatementsFromBody(body, arrays);

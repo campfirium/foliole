@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import Database from 'better-sqlite3';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
@@ -63,6 +65,8 @@ async function bindBackupGroupToCurrentHost(snapshot: GroupSnapshot, current: Gr
 export function finishLocalOnlyBackupRestore(driver: DatabaseDriver, host: ReturnType<typeof captureBackupRestoreHostSettings>) {
   driver.transaction((tx) => {
     tx.execute('DELETE FROM sync_group_local_state');
+    tx.execute('UPDATE sync_state_sequence SET source_epoch = ? WHERE singleton_id = 1',
+      [`restore-${randomUUID()}`]);
     applyBackupRestoreHostSettings(tx, host);
     saveBackupRestorePendingSync(tx, null);
     writeRestoreSyncParticipation(tx, true, false);

@@ -1,5 +1,6 @@
 import { retireAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
+import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
@@ -46,8 +47,6 @@ import {
 } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
-import { PARENT_ORDER_BODY_RETENTION_SCHEMA } from './parentOrderBodyRetentionSchema.js';
-import { migrateParentOrderVersions } from './parentOrderVersionMigration.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -209,7 +208,7 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
         "TEXT NOT NULL DEFAULT ''");
     }
   } },
-  { version: 131, migrate: migrateParentOrderVersions },
+  { version: 131, migrate: () => {} },
   { version: 132, migrate: (sqlite) => {
     for (const statement of NODE_VERSION_MEMBER_POSITION_SCHEMA) sqlite.exec(statement);
   } },
@@ -239,9 +238,7 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 143, migrate: migrateRetiredExternalDocuments },
   { version: 144, migrate: migrateFramedSyncTombstoneInventory },
   { version: 145, migrate: migrateFramedSyncPermanentDeleteHistory },
-  { version: 146, migrate: (sqlite) => {
-    for (const statement of PARENT_ORDER_BODY_RETENTION_SCHEMA) sqlite.exec(statement);
-  } },
+  { version: 146, migrate: () => {} },
   { version: 147, migrate: migrateTopicTextState },
   { version: 148, migrate: (sqlite) => {
     sqlite.exec(`${FRAMED_SYNC_COMPLETION_SCHEMA}; ${FRAMED_SYNC_COMPLETION_BACKFILL}`);
@@ -249,5 +246,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 149, migrate: (sqlite) => sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA) },
   { version: 150, migrate: migrateTextBodyOwnership },
-  { version: 151, migrate: migrateNodeHistoryState }
+  { version: 151, migrate: migrateNodeHistoryState },
+  { version: 152, migrate: migrateCurrentParentOrders }
 ];

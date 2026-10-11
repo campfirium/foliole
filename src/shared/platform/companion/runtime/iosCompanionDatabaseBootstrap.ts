@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
+import { bindParentOrderWriterWithDbPort } from '../../../../../lib/core/sync/parentOrderWriter';
 import type {
   NativeCompanionBootstrapPayload,
   NativeCompanionBootstrapState
@@ -72,6 +73,10 @@ async function initializeDatabase(
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
   });
   try {
+    const identity = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: result.databasePath });
+    await owner.runWriter((db) => bindParentOrderWriterWithDbPort(db, {
+      deviceAnchor: identity.device_anchor, libraryPath: identity.canonical_library_path
+    }));
     await configureCompanionFramedPayloadBudget(owner);
   } catch (error) {
     await owner.close();

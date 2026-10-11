@@ -38,9 +38,6 @@ const payloadPlans = [
   { objectType: 'node_position', sql: `SELECT fact_id __object_id,
     adopted_version_id, device_identity_key, group_id, library_epoch, object_id,
     pending_version_ids_json, proof_revision, updated_at FROM source.node_version_member_positions` },
-  { objectType: 'order_version', sql: `SELECT version_id __object_id, child_ids_json,
-    created_at, kind, parent_id, parent_version_ids_json, version_id
-    FROM source.parent_order_versions` },
   { objectType: 'foreground_daily_time', sql: `SELECT id __object_id, source_id, day_key, duration_ms
     FROM source.foreground_daily_time` },
   { objectType: 'topic_daily_count', sql: `SELECT id __object_id, day_key, node_id
@@ -58,8 +55,9 @@ const payloadPlans = [
     remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json
     FROM source.import_sources` },
   { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
-  { objectType: 'parent_child_order', sql: `SELECT parent_id __object_id, parent_id, child_ids_json, updated_at
-    FROM source.parent_child_order` },
+  { objectType: 'parent_child_order', sql: `SELECT parent_id __object_id, parent_id FROM source.parent_child_order`,
+    parentOrderSourcesSql: `SELECT parent_id, author_id, counter, child_ids_json
+      FROM source.parent_order_sources ORDER BY parent_id, author_id` },
   { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,
     last_handled_at, next_at, priority, repetition_count, state FROM source.node_reading` },
   { objectType: 'node_review', sql: `SELECT node_id __object_id, node_id, due, last_review_at, state, stability, difficulty,
@@ -110,7 +108,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','parent_child_order','order_version','node_position','pdf_page_text','setting','view_state','watched_folder','topic_daily_count','foreground_daily_time')
+        'node_review','node_text_alternative','parent_child_order','node_position','pdf_page_text','setting','view_state','watched_folder','topic_daily_count','foreground_daily_time')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS

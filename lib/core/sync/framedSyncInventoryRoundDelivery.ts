@@ -1,14 +1,11 @@
-import { compareFramedSyncInventories, type FramedSyncInventoryEntry, type FramedSyncInventoryDifference } from './framedSyncInventory.js';
+import { type FramedSyncInventoryDifference } from './framedSyncInventory.js';
 
 const MISSING_DEPENDENCIES = {
   'framed_sync_node_parent_missing:': 'node',
   'node_position_lineage_unproven:': 'node',
   'framed_sync_review_node_missing:': 'node',
   'sync_node_open_state_node_missing:': 'node',
-  'sync_parent_order_member_missing:': 'node',
   'framed_sync_parent_relation_version_missing:': 'node_version',
-  'parent_order_position_lineage_unproven:': 'order_version',
-  'sync_parent_order_body_unavailable:': 'order_version'
 } as const;
 export type FramedSyncDifferenceDelivery = 'delivered' | 'deferred';
 export type FramedSyncDependencyResolver = (key: Pick<FramedSyncInventoryDifference,
@@ -93,13 +90,4 @@ function dependencyResolver(differences: Iterable<FramedSyncInventoryDifference>
   for (const difference of dependencies) available.set(key(difference), difference);
   for (const difference of differences) available.set(key(difference), difference);
   return identity => available.get(key(identity));
-}
-
-/** Equal identities can still be missing a body needed by a newly discovered branch. */
-export function framedSyncOrderBodyDependencies(inventories: { local: readonly FramedSyncInventoryEntry[];
-  remote: readonly FramedSyncInventoryEntry[] }) {
-  return [
-    ...compareFramedSyncInventories({ local: inventories.local.filter((row) => row.objectType === 'order_version'), remote: [] }),
-    ...compareFramedSyncInventories({ local: [], remote: inventories.remote.filter((row) => row.objectType === 'order_version') })
-  ];
 }

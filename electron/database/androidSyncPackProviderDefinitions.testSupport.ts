@@ -1,13 +1,21 @@
-import type Database from 'better-sqlite3';
+import Database from 'better-sqlite3';
 
 import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS as definitions } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 
 export function copyPayloads(pack: Database.Database) {
   const payloads = new Map<string, Record<string, unknown>>();
   for (const plan of definitions.payloadPlans) {
+    const sources = new Map<string, unknown[]>();
+    if ('parentOrderSourcesSql' in plan) for (const value of pack.prepare(plan.parentOrderSourcesSql).all() as
+      { parent_id: string; author_id: string; counter: number; child_ids_json: string }[]) {
+      const values = sources.get(value.parent_id) ?? [];
+      values.push({ authorId: value.author_id, counter: value.counter, childIds: JSON.parse(value.child_ids_json) });
+      sources.set(value.parent_id, values);
+    }
     for (const row of pack.prepare(plan.sql).all() as Array<Record<string, unknown>>) {
       const objectId = String(row.__object_id);
       delete row.__object_id;
+      if ('parentOrderSourcesSql' in plan) row.sources_json = JSON.stringify(sources.get(objectId) ?? []);
       payloads.set(`${plan.objectType}\u0000${objectId}`, nestedPayload(row));
     }
   }
@@ -34,4 +42,20 @@ function nestedPayload(row: Record<string, unknown>) {
     }
   }
   return payload;
+}
+
+export function buildProviderPack(sourcePath: string, fromStateSeq: number, toStateSeq = 3) {
+  const pack = new Database(':memory:');
+  for (const statement of definitions.packSchema) pack.exec(statement);
+  pack.prepare('ATTACH DATABASE ? AS source').run(sourcePath);
+  definitions.copyStatements.forEach((statement, index) => {
+    if (index === definitions.stateCopyIndex) pack.prepare(statement).run(fromStateSeq, toStateSeq);
+    else if (index === definitions.payloadCopyIndex) {
+      copyPayloads(pack);
+      pack.exec(statement);
+    }
+    else pack.exec(statement);
+  });
+  pack.exec('DETACH DATABASE source');
+  return pack;
 }

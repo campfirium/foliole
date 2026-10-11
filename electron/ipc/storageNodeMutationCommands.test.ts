@@ -25,6 +25,10 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn().mockResolvedValue(undefined) }
 }));
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
+vi.mock('./boot.js', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./boot.js')>(),
+  appendBootEvent: vi.fn(async () => undefined)
+}));
 vi.mock('./paths.js', () => ({
   resolveAppPaths: vi.fn().mockReturnValue({
     app_data_dir: '/data',

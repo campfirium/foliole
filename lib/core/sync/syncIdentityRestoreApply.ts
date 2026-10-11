@@ -17,7 +17,6 @@ import { assertSyncIdentityPackInnerMatchesDatabase,
   type parseSyncIdentityPackContainerManifest } from './syncIdentityPackManifest.js';
 import { prepareSyncIdentityPackReceipt,
   recordSyncIdentityPackReceipt } from './syncIdentityPackReceipts.js';
-import { restoreSyncIdentityParentOrderHeads } from './syncIdentityRestoreOrderHeads.js';
 import { parseSyncIdentityRestoreSet,
   type SyncIdentityRestoreSet } from './syncIdentityRestoreSet.js';
 import { applySyncPackSurfaceInTransaction } from './syncPackNodeApplyExecutor.js';
@@ -109,7 +108,6 @@ export async function applySyncIdentityRestoreWithDbPort(port: DbPort, args: {
           { enqueueSearchInvalidations: false } : {}),
         ...(args.onSettingApplied ? { onSettingApplied: args.onSettingApplied } : {})
       }, true, null);
-      await restoreSyncIdentityParentOrderHeads(tx);
       await enqueueSyncPackResourceArticles(tx, { groupId: set.group_id,
         incomingAlias: 'inc', peerId: set.source_peer_id });
       await clearSyncIdentityStagedFacts(tx, manifest.identity_page);

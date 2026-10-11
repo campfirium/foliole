@@ -2,16 +2,13 @@ import { promises as fs } from 'node:fs';
 
 import { expect } from 'vitest';
 
-import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { runDesktopSyncIdentityRound } from '../../../electron/sync/desktopSyncIdentityRound.js';
-import { replaceNodeOrder, restoreSavedParentOrder } from '../../../lib/core/database/nodeOrderMutations.js';
+import { replaceNodeOrder } from '../../../lib/core/database/nodeOrderMutations.js';
 import { ROOT_CHILD_ORDER_ID } from '../../../lib/core/database/parentChildOrder.js';
-import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { readParentOrderVersionPage } from '../../../lib/core/sync/syncParentOrderVersionStore.js';
 
 import { edit, remove, resetOperations } from './operations.js';
 import { openPeer, pairPeers, reopenPeer } from './peers.js';
-import { originalSnapshot, savedOrder } from './reorderedParents.js';
+import { latestOriginal, savedOrder } from './reorderedParents.js';
 import { inPeer, type SimulatorPeer } from './scope.js';
 import { route, serve, type Endpoint } from './transport.js';
 
@@ -52,15 +49,10 @@ async function settle(fixture: Fixture) {
 
 function assertOrders(fixture: Fixture) {
   return parents.map((parentId) => {
-    const originals = fixture.originals.map((facts) => facts.get(parentId)!)
-      .sort((a, b) => a.versionId < b.versionId ? -1 : 1);
+    const originals = fixture.originals.map(facts => facts.get(parentId)!);
     const result = savedOrder(fixture.peers[0]!, parentId);
-    expect(result.order).toEqual(originals[0]!.order);
-    for (const peer of fixture.peers) {
-      expect(savedOrder(peer, parentId)).toEqual(result);
-      for (const fact of originals) expect(originalSnapshot(peer, fact.versionId))
-        .toEqual(originalSnapshot(fixture.peers[0]!, fact.versionId));
-    }
+    expect(result.order).toEqual(latestOriginal(originals).childIds);
+    for (const peer of fixture.peers) expect(savedOrder(peer, parentId)).toEqual(result);
     return result;
   });
 }
@@ -100,7 +92,7 @@ export async function runIdentityReorderSchedules(root: string) {
       expected = actual;
     }
     await interleaveMembership(fixture);
-    await collectAndRestore(fixture);
+
   } finally {
     await Promise.all(fixture.servers.map((server) => server.close()));
     peers.forEach((peer) => peer.sqlite.close());
@@ -127,56 +119,4 @@ async function interleaveMembership(fixture: Fixture) {
     expect(peer.sqlite.prepare("SELECT deleted_at FROM nodes WHERE id = 'nested-2'").pluck().get())
       .toBeTruthy();
   }
-}
-
-async function collectAndRestore(fixture: Fixture) {
-  const b = fixture.peers[1]!;
-  const port = createBetterSqliteDbPort(b.sqlite);
-  const ids = b.sqlite.prepare('SELECT id FROM nodes').pluck().all() as string[];
-  const results = await inPeer(b, async () => {
-    const collected = [];
-    for (const id of ids) collected.push(await collectNodeVersionPayloads(port, id));
-    return collected;
-  });
-  expect(results.some((result) => result.skipped === null)).toBe(true);
-  reopenPeer(b);
-  for (const parentId of parents) {
-    const loser = selectDurableLoser(fixture, b, parentId);
-    const page = await readParentOrderVersionPage(createBetterSqliteDbPort(b.sqlite), parentId);
-    expect(page.versions.find((fact) => fact.versionId === loser.versionId))
-      .toMatchObject({ order: loser.order });
-    const before = savedOrder(b, parentId);
-    expect(inPeer(b, () => restoreSavedParentOrder(b.driver, { parentId,
-      versionId: loser.versionId, hostName: b.name, updatedAt: new Date().toISOString() }))).toBe(true);
-    const restored = savedOrder(b, parentId);
-    expect(restored.versionId).not.toBe(before.versionId);
-    expect(restored.versionId).not.toBe(loser.versionId);
-    expect(restored.order.filter((id) => loser.order.includes(id)))
-      .toEqual(loser.order.filter((id) => before.order.includes(id)));
-    expect(originalSnapshot(b, restored.versionId)).toMatchObject({ kind: 'user',
-      parent_version_ids_json: JSON.stringify([before.versionId]) });
-  }
-  await exchange(fixture, 1, 2);
-  await settle(fixture);
-  fixture.peers.forEach(reopenPeer);
-  for (const peer of fixture.peers) {
-    expect(savedOrder(peer, 'folder')).toEqual(savedOrder(b, 'folder'));
-    expect(new Set(savedOrder(peer, 'folder').order)).toEqual(new Set(['nested-3', 'nested-4', 'nested-5', 'later-nested']));
-    expect(savedOrder(peer, ROOT_CHILD_ORDER_ID)).toEqual(savedOrder(b, ROOT_CHILD_ORDER_ID));
-    expect(savedOrder(peer, ROOT_CHILD_ORDER_ID).order).toContain('later-root');
-    expect(peer.sqlite.prepare("SELECT parent_id FROM nodes WHERE id = 'nested-1'").pluck().get())
-      .toBe('other-folder');
-    expect(peer.sqlite.prepare("SELECT deleted_at FROM nodes WHERE id = 'nested-2'").pluck().get())
-      .toBeTruthy();
-  }
-}
-
-function selectDurableLoser(fixture: Fixture, peer: SimulatorPeer, parentId: string) {
-  const candidates = fixture.originals.map((facts) => facts.get(parentId)!)
-    .sort((a, b) => a.versionId < b.versionId ? -1 : 1).slice(1);
-  const current = savedOrder(peer, parentId).order;
-  const loser = candidates.find((fact) => JSON.stringify(fact.order.filter((id) => current.includes(id)))
-    !== JSON.stringify(current.filter((id) => fact.order.includes(id))));
-  expect(loser, 'a saved losing user edit must still change the surviving members').toBeDefined();
-  return loser!;
 }

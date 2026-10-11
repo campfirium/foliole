@@ -10,7 +10,6 @@ import { retireDesktopFramedSyncResourceFrame } from '../database/desktopFramedS
 
 import { authenticatedDesktopFramedSyncTransferFrames, type AuthenticatedTransferFrame } from './desktopFramedSyncAuthenticatedTransferFrames.js';
 import { assertDesktopFramedSyncFactFragmentsComplete, stageDesktopFramedSyncFactFragment } from './desktopFramedSyncFactFragments.js';
-import { collectReplayedParentOrderFact, replayDesktopFramedSyncOrderBody } from './desktopFramedSyncOrderBodyReplay.js';
 import { headerFromWire } from './desktopFramedSyncProcessHeader.js';
 import { stageDesktopFramedSyncBlob, stageDesktopFramedSyncFact } from './desktopFramedSyncProcessInbound.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
@@ -72,8 +71,6 @@ async function handleVerifiedTrailer(input: FrameInput) {
     else if (!input.state.ready) await finishVerifiedTransfer(input);
   });
   if (input.state.existingReceipt) {
-    await replayDesktopFramedSyncOrderBody({ ...input, facts: input.state.facts,
-      published: input.event.published, receipt: input.state.existingReceipt, trailer: input.event.decoded.payload });
     return { ...await buildReceiptStream({ ...input, receipt: input.state.existingReceipt }), generatedChanges: false };
   }
   return applyReady(input);
@@ -92,8 +89,7 @@ async function handleVerifiedFrameOwned(input: FrameInput) {
     await stageDesktopFramedSyncFactFragment({ db: input.db, event: input.event, staging: input.staging, state });
   } else if (decoded.payloadCase === 'fact') {
     const fact = wireToFact(decoded.payload);
-    if (state.existingReceipt) collectReplayedParentOrderFact(state.facts, published, fact);
-    else {
+    if (!state.existingReceipt) {
       await stageDesktopFramedSyncFact({ fact, frame, staging: input.staging });
     }
   } else if (!state.existingReceipt && decoded.payloadCase === 'blob_chunk') {

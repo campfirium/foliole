@@ -3,14 +3,12 @@ import { afterEach, expect, it } from 'vitest';
 
 import { closeApplyHarnesses, harness, input, nodeRecord, stage } from '../../../../../../electron/database/companionFramedSyncApplyHarness.testSupport.js';
 import { ROOT_CHILD_ORDER_ID } from '../../../../../../lib/core/database/parentChildOrder.js';
-import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
+import { currentParentOrderHash, currentParentOrderPayload } from '../../../../../../lib/core/sync/currentParentOrder.js';
 import { compareFramedSyncInventories } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { deliverFramedSyncDifferencesInDependencyOrder } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact, selectFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
-import { parentOrderFactPayload } from '../../../../../../lib/core/sync/syncParentOrderFact.js';
-import { parentOrderBaselineVersionId, PARENT_ORDER_BASELINE_TIME } from '../../../../../../lib/core/sync/syncParentOrderVersionStore.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
 
@@ -28,30 +26,18 @@ async function prepared(kind: 'android' | 'ios') {
   stage(receiver.staging, receiver.prefix, nodeStage);
   await applyCompanionFramedSyncTransfer(source.port, input(kind, source.stagingPath, nodeTransfer));
   const ids = [record.object_id];
-  const version = { versionId: parentOrderBaselineVersionId(ROOT_CHILD_ORDER_ID, ids),
-    kind: 'baseline' as const, order: ids, parentVersionIds: [] };
-  const payloads = [
-    { type: 'order_version', id: version.versionId,
-      payload: parentOrderFactPayload(ROOT_CHILD_ORDER_ID, version, PARENT_ORDER_BASELINE_TIME) },
-    { type: 'parent_child_order', id: ROOT_CHILD_ORDER_ID,
-      payload: { child_ids_json: JSON.stringify(ids), parent_id: ROOT_CHILD_ORDER_ID } }
-  ] as const;
-  const facts = [];
-  for (const { type, id, payload } of payloads) {
-    const hash = computeSyncContentHash(type, payload);
-    await source.port.transaction(tx => applyFramedSyncObjectStateRecord(tx, {
-      object_type: type, object_id: id, payload_json: JSON.stringify(payload), content_hash: hash,
-      current_version_id: type === 'parent_child_order' ? version.versionId : null,
-      updated_at: PARENT_ORDER_BASELINE_TIME, deleted_at: null
-    }));
-    facts.push(await selectFramedSyncObjectStateFact(source.port, { objectType: type, globalId: id },
-      `${type}:${hash}${type === 'parent_child_order' ? `:${version.versionId}` : ''}`));
-  }
+  const sources = [{ authorId: 'source', counter: 1, childIds: ids }];
+  const hash = currentParentOrderHash(ROOT_CHILD_ORDER_ID, sources);
+  await source.port.transaction(tx => applyFramedSyncObjectStateRecord(tx, {
+    object_type: 'parent_child_order', object_id: ROOT_CHILD_ORDER_ID,
+    payload_json: JSON.stringify(currentParentOrderPayload(ROOT_CHILD_ORDER_ID, sources)),
+    content_hash: hash, current_version_id: null, updated_at: '2026-10-11', deleted_at: null
+  }));
+  const fact = await selectFramedSyncObjectStateFact(source.port,
+    { objectType: 'parent_child_order', globalId: ROOT_CHILD_ORDER_ID }, `parent_child_order:${hash}`);
+  const facts = [fact];
   const orderTransfer = new Uint8Array(32).fill(2);
-  const versionTransfer = new Uint8Array(32).fill(3);
-  stage(receiver.staging, receiver.prefix, { facts: [facts[0]!], transferId: versionTransfer });
-  await applyCompanionFramedSyncTransfer(receiver.port, input(kind, receiver.stagingPath, versionTransfer));
-  stage(receiver.staging, receiver.prefix, { facts: [facts[1]!], transferId: orderTransfer });
+  stage(receiver.staging, receiver.prefix, { facts, transferId: orderTransfer });
   const differences = compareFramedSyncInventories({ local: [], remote: await readFramedSyncInventory(source.port) });
   const order = differences.find(item => item.objectType === 'parent_child_order');
   const node = differences.find(item => item.objectType === 'node');
@@ -68,15 +54,15 @@ it.each(['android', 'ios'] as const)('recovers %s order arriving before its ordi
       input(kind, receiver.stagingPath, item.objectType === 'node' ? nodeTransfer : orderTransfer));
     return 'delivered' as const;
   };
-  expect(await deliverFramedSyncDifferencesInDependencyOrder([order], deliver)).toEqual([order]);
+  expect(await deliverFramedSyncDifferencesInDependencyOrder([order], deliver)).toEqual([]);
   expect(receiver.main.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(1);
-  expect(receiver.main.prepare('SELECT COUNT(*) FROM parent_child_order').pluck().get()).toBe(0);
+  expect(receiver.main.prepare('SELECT child_ids_json FROM parent_child_order').pluck().get()).toBe('[]');
   expect(await deliverFramedSyncDifferencesInDependencyOrder([order, node], deliver)).toEqual([]);
-  expect(calls).toEqual(['parent_child_order', 'parent_child_order', 'node', 'parent_child_order']);
+  expect(calls).toEqual(['parent_child_order', 'parent_child_order', 'node']);
   expect(receiver.main.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
     .pluck().get(ROOT_CHILD_ORDER_ID)).toBe(JSON.stringify(ids));
-  expect(receiver.main.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(3);
-  const fact = facts[1]!;
+  expect(receiver.main.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(2);
+  const fact = facts[0]!;
   const saved = await selectFramedSyncObjectStateFact(receiver.port,
     { objectType: 'parent_child_order', globalId: ROOT_CHILD_ORDER_ID }, fact.factId);
   const original = restoreFramedSyncObjectStateFact(fact);
