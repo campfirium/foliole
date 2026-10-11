@@ -34,8 +34,11 @@ import { runRequestSnapshotProbe } from './requestSnapshotProbe';
 it.each([
   { platform: 'android', earlyResume: false },
   { platform: 'ios', earlyResume: false },
-  { platform: 'ios', earlyResume: true }
-] as const)('$platform generates a stable snapshot and waits for active state (earlyResume=$earlyResume)', async ({ platform, earlyResume }) => {
+  { platform: 'ios', earlyResume: true },
+  { platform: 'android', earlyResume: false, pausedStillActive: true }
+] as const)('$platform generates a stable snapshot and waits for active state (earlyResume=$earlyResume)', async scenario => {
+  const { platform, earlyResume } = scenario;
+  const pausedStillActive = 'pausedStillActive' in scenario;
   const root = await mkdtemp(path.resolve('.tmp/artifacts/request-snapshot-probe-'));
   const fixture = requestSnapshotNativeFixture(root);
   native.plugin = fixture.plugin;
@@ -43,15 +46,22 @@ it.each([
   const anyDescriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any');
   if (platform === 'android') Object.defineProperty(AbortSignal, 'any', { configurable: true, value: undefined });
   const phases: string[] = [];
+  let resumed = false;
+  let resumeTimer: ReturnType<typeof setTimeout> | undefined;
   try {
     const result = await runRequestSnapshotProbe(platform, phase => {
       phases.push(phase);
       if (phase === 'await-background') {
-        native.active = false;
+        native.active = pausedStillActive;
         for (const notify of native.background) notify();
       }
       if (phase === 'cancelled') {
-        if (earlyResume) {
+        if (pausedStillActive) {
+          resumeTimer = setTimeout(() => {
+            resumed = true;
+            for (const notify of native.foreground) notify();
+          }, 20);
+        } else if (earlyResume) {
           queueMicrotask(() => {
             for (const notify of native.foreground) notify();
             setTimeout(() => {
@@ -64,6 +74,7 @@ it.each([
           for (const notify of native.foreground) notify();
         }
       }
+      if (phase === 'recover' && pausedStillActive) expect(resumed).toBe(true);
     });
     expect(result).toMatchObject({ originalVersions: 48, recoveredVersions: 50, cancelled: true });
     expect(result.writeTimes).toHaveLength(2);
@@ -73,6 +84,7 @@ it.each([
     expect(native.background.size).toBe(0);
     expect(native.foreground.size).toBe(0);
   } finally {
+    clearTimeout(resumeTimer);
     if (anyDescriptor) Object.defineProperty(AbortSignal, 'any', anyDescriptor);
     fixture.close();
     await rm(root, { recursive: true, force: true });

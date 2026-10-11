@@ -18,11 +18,14 @@ export async function runRequestSnapshotProbe(platform: 'android' | 'ios', phase
   const files = createCompanionFramedSyncFiles(FolioleCompanionSync, companionFramedFileOwner(owner));
   const writeTimes: number[] = [];
   const generate = createSnapshotGenerator(owner, files, phase, writeTimes);
+  let stopForeground: (() => void) | undefined;
   try {
     phase('concurrent-write');
     const original = await generate(48, false);
     requireValue(original.length === 48 && !original.includes('snapshot-v48'), 'Snapshot mixed revisions');
     phase('prepare-cancellation');
+    const foreground = await observeNextForeground();
+    stopForeground = foreground.close;
     let cancelled = false;
     try { await generate(49, true); }
     catch (error) {
@@ -34,23 +37,22 @@ export async function runRequestSnapshotProbe(platform: 'android' | 'ios', phase
     const checkpoint = await owner.runWriter(db => db.query('PRAGMA wal_checkpoint(TRUNCATE)'));
     requireValue(checkpoint[0]?.busy === 0 && checkpoint[0]?.log === 0, 'Readonly snapshot retained after cancellation');
     phase('cancelled');
-    await waitForForeground();
+    await foreground.active;
     phase('recover');
     const recovered = await generate(null, false);
     requireValue(recovered.length === 50 && recovered.includes('snapshot-v49'), 'Foreground recovery missed committed versions');
     requireValue((await files.list('requests')).length === 0, 'Request files retained after recovery');
     return { originalVersions: original.length, recoveredVersions: recovered.length, cancelled, checkpoint, writeTimes };
-  } finally { await fixture.close(); }
+  } finally { stopForeground?.(); await fixture.close(); }
 }
 
-async function waitForForeground() {
+async function observeNextForeground() {
   let ready!: () => void;
   let failed!: (error: unknown) => void;
   const resumed = new Promise<void>((resolve, reject) => { ready = resolve; failed = reject; });
   const check = () => { void readNativeAppActiveState().then(active => { if (active) ready(); }, failed); };
   const unsubscribe = await subscribeNativeAppForeground(check);
-  try { check(); await resumed; }
-  finally { unsubscribe(); }
+  return { active: resumed, close: unsubscribe };
 }
 
 function createSnapshotGenerator(owner: Awaited<ReturnType<typeof openRequestSnapshotFixture>>['owner'],

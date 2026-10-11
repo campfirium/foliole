@@ -23,13 +23,17 @@ export function mountRequestSnapshotAcceptance(root: HTMLElement) {
   publish({ status: 'ready' });
   button.onclick = async () => {
     button.disabled = true;
+    const phases: string[] = [];
     try {
       const platform = Capacitor.getPlatform();
       const identity = await registerPlugin<{ getInfo(): Promise<{ id: string }> }>('App').getInfo();
       assertIdentity(platform, identity.id);
       requireValue(platform === 'android' || platform === 'ios', 'Native acceptance required');
-      const outcome = await runRequestSnapshotProbe(platform, phase => publish({ status: 'running', phase }));
+      const outcome = await runRequestSnapshotProbe(platform, phase => {
+        phases.push(phase);
+        publish({ status: 'running', phase });
+      });
       publish({ status: 'passed', scenario: 'request-snapshot', appId: identity.id, platform, cleanup: true, ...outcome });
-    } catch (error) { publish({ status: 'failed', error: String(error) }); }
+    } catch (error) { publish({ status: 'failed', phases, error: String(error) }); }
   };
 }
