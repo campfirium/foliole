@@ -28,7 +28,7 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
   const preload = path.join(repoRoot, 'scripts/windows/sync-sqlite-diagnostic-preload.cjs');
   return {
     directory,
-    args: ['scripts/electron-sqlite-runner.mjs', ...(scenario.name === 'snapshot' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
+    args: ['scripts/electron-sqlite-runner.mjs', ...(scenario.name === 'snapshot' && mode === 'DEFAULT' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
       path.join(directory, 'tests.json'), '--', '--pool=forks', '--maxWorkers=2', '--no-file-parallelism',
       '--reporter=./scripts/windows/sync-sqlite-diagnostic-reporter.mjs',
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
@@ -45,7 +45,7 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('diagnostic evidence root must be temporary');
   fs.mkdirSync(root, { recursive: true });
   const results = [];
-  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
+  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
     fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();
