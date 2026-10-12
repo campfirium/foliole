@@ -31,6 +31,7 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
     env: { ...process.env, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
       FOLIOLE_SQLITE_DIAGNOSTIC_MODE: mode, FOLIOLE_REQUEST_SYNC_DIAGNOSTICS: '1',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: path.join(directory, 'state'),
       TEMP: path.join(repoRoot, '.tmp'), TMP: path.join(repoRoot, '.tmp'), TMPDIR: path.join(repoRoot, '.tmp') }
   };
 }
@@ -43,7 +44,7 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
   const results = [];
   for (const scenario of diagnosticCases()) for (const mode of ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
-    fs.mkdirSync(invocation.directory, { recursive: true });
+    fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();
     const result = await execute(process.execPath, invocation.args, {
       cwd: repoRoot, env: invocation.env, timeoutMs: scenario.timeoutMs, lineLimit: 20,
