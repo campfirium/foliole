@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import process from 'node:process';
 import path from 'node:path';
 
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
+import { runWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 import { diagnosticCases, diagnosticInvocation } from './windows-sync-sqlite-diagnostic.mjs';
 import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
 import { windowsDevRequiredTools } from './windows-dev-build-preflight.mjs';
@@ -43,4 +44,15 @@ it.each(['DEFAULT', 'NORMAL'])('counts native and explicit commits in temporary 
   expect(records.some(row => row.event === 'sqlite_summary' && row.explicitCommits.count === 2)).toBe(true);
   expect(fs.existsSync('diagnostic-must-not-create.db')).toBe(false);
   fs.rmSync(root, { recursive: true });
+});
+
+it('preserves preparation output when the bounded command times out', async () => {
+  const writes = [];
+  const failure = Object.assign(new Error('preflight timeout'), { output: 'native failure detail' });
+  await expect(runWindowsSyncSqliteDiagnostic({ action: 'sync-sqlite-diagnostic',
+    execute: vi.fn().mockRejectedValue(failure), paths: { systemNode: 'node', repoRoot: '.' },
+    evidenceRoot: '.tmp', fsApi: { writeFileSync: (_file, text) => writes.push(text) }
+  })).rejects.toBe(failure);
+  expect(writes.at(-1)).toContain('native failure detail');
+  expect(writes.at(-1)).toContain('--preflight');
 });

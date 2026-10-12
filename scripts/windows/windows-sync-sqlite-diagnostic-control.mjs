@@ -1,21 +1,29 @@
 import path from 'node:path';
+import fs from 'node:fs';
 
 import { parseWindowsDevFailureEvidence, parseWindowsDevSuccessEvidence } from './windows-dev-control-evidence.mjs';
 
 export const SQLITE_DIAGNOSTIC_ACTION = 'sync-sqlite-diagnostic';
 
-export async function runWindowsSyncSqliteDiagnostic({ action, execute, paths, evidenceRoot }) {
+export async function runWindowsSyncSqliteDiagnostic({ action, execute, paths, evidenceRoot, fsApi = fs }) {
   if (action !== SQLITE_DIAGNOSTIC_ACTION) return null;
   let output = '';
   const run = async (command, args, timeoutMs) => {
-    const result = await execute(command, args, { cwd: paths.repoRoot, timeoutMs,
-      timeoutCode: 'sqlite_diagnostic_action_timeout', windowsHide: true });
-    output += result.output;
-    if (result.code !== 0) throw Object.assign(new Error('SQLite diagnostic preparation failed'), { result });
+    output += `[diagnostic command] ${JSON.stringify(args)}\n`;
+    fsApi.writeFileSync(path.join(evidenceRoot, 'action.log'), output);
+    try {
+      const result = await execute(command, args, { cwd: paths.repoRoot, timeoutMs,
+        timeoutCode: 'sqlite_diagnostic_action_timeout', windowsHide: true });
+      output += result.output;
+      fsApi.writeFileSync(path.join(evidenceRoot, 'action.log'), output);
+      if (result.code !== 0) throw Object.assign(new Error('SQLite diagnostic preparation failed'), { result });
+    } catch (error) {
+      output += error.output ?? error.message;
+      fsApi.writeFileSync(path.join(evidenceRoot, 'action.log'), output);
+      throw error;
+    }
   };
-  await run(paths.systemNode, [paths.systemNpmCli, 'ci'], 45 * 60_000);
-  await run(paths.systemNode, [path.win32.join(paths.repoRoot, 'node_modules', 'electron', 'install.js')], 20 * 60_000);
-  await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:rebuild:native'], 20 * 60_000);
+  await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);
   await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
   const root = path.join(evidenceRoot, 'sqlite-diagnostic');
   await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root], 85 * 60_000);
