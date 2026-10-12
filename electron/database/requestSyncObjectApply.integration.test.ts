@@ -128,9 +128,14 @@ it('accepts the approved overwrite source after a peer proof changes during rece
     .rejects.toThrow('sync_group_overwrite_source_changed');
 });
 
-it('rejects a stale source proof outside an approved overwrite', async () => {
+it('applies an authorized request when another exchange advances the same peer proof', async () => {
   const host = receiver();
+  const authorized = request();
   host.sqlite.exec("INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'peer-epoch', 9, 'acknowledged', NULL, 'now')");
-  await expect(applyRequestSyncObject(host.db, request())).rejects.toThrow('node_version_peer_restore_requires_rejoin');
-  expect(await host.db.query('SELECT id FROM nodes')).toEqual([]);
+  await applyRequestSyncObject(host.db, authorized);
+  expect((await host.current()).body_text).toBe('Current');
+  expect(await host.db.query('SELECT proof_revision FROM node_version_device_revisions'))
+    .toEqual([{ proof_revision: 9 }]);
+  expect(await host.db.query('SELECT adopted_version_id FROM node_version_member_positions'))
+    .toEqual([{ adopted_version_id: 'head' }]);
 });

@@ -8,7 +8,7 @@ import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { recordFramedSyncPeerEpoch } from './framedSyncPeerEpoch.js';
 import { advanceLocalSourceRevision } from './nodeVersionInboundReceipt.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
-import { assertNodeVersionPeerProofFresh } from './nodeVersionPeerProof.js';
+import { assertNodeVersionPeerEpoch } from './nodeVersionPeerProof.js';
 import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
@@ -40,10 +40,11 @@ async function assertPeer(tx: DbPort, input: RequestSyncObjectInput, overwriting
   if (!active) throw new Error('request_sync_peer_inactive');
   if (overwriting) return;
   await reconcileAdoptedPeerEpoch(tx, peerState);
-  const [known] = await tx.query<{ library_epoch: string; proof_revision: number }>(
-    'SELECT library_epoch, proof_revision FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
+  const [known] = await tx.query<{ library_epoch: string }>(
+    'SELECT library_epoch FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
     [context.groupId, context.senderDeviceId]);
-  assertNodeVersionPeerProofFresh(known, peerState, context.receiverDeviceId);
+  // Member exchange already checked this request's proof; concurrent exchanges may advance it.
+  assertNodeVersionPeerEpoch(known?.library_epoch, peerState.library_epoch);
 }
 
 /** The response is transient. Only business facts and progress commit, together, for one object. */
