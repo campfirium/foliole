@@ -814,7 +814,8 @@
                         "requestObjectHeader",
                         "requestObjectEnd",
                         "requestObjectResult",
-                        "requestBatchEnd"
+                        "requestBatchEnd",
+                        "requestAttachment"
                       ]
                     }
                   },
@@ -925,6 +926,11 @@
                       "type": "RequestBatchEnd",
                       "id": 22,
                       "protoName": "request_batch_end"
+                    },
+                    "requestAttachment": {
+                      "type": "RequestAttachment",
+                      "id": 23,
+                      "protoName": "request_attachment"
                     }
                   }
                 },
@@ -1010,6 +1016,47 @@
                       "type": "uint32",
                       "id": 2,
                       "protoName": "object_count"
+                    }
+                  }
+                },
+                "RequestAttachment": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "operation": {
+                      "type": "string",
+                      "id": 2
+                    },
+                    "storageKey": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "storage_key"
+                    },
+                    "byteLength": {
+                      "type": "uint64",
+                      "id": 4,
+                      "protoName": "byte_length"
+                    },
+                    "offset": {
+                      "type": "uint64",
+                      "id": 5
+                    },
+                    "data": {
+                      "type": "bytes",
+                      "id": 6
+                    },
+                    "storageKeys": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 7,
+                      "protoName": "storage_keys"
+                    },
+                    "state": {
+                      "type": "string",
+                      "id": 8
                     }
                   }
                 }

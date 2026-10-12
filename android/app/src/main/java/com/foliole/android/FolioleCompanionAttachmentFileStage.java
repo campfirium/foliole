@@ -1,6 +1,9 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -52,15 +55,17 @@ final class FolioleCompanionAttachmentFileStage {
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IllegalStateException("Failed to create attachment directory.");
         }
-        if (target.exists()) {
+        boolean created = true;
+        try { Os.link(source.getPath(), target.getPath()); }
+        catch (ErrnoException error) {
+            if (error.errno != OsConstants.EEXIST) throw error;
             if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, target))) {
                 throw new IllegalStateException("Existing attachment resource hash mismatch.");
             }
-            source.delete();
-            return false;
+            created = false;
         }
-        if (!source.renameTo(target)) throw new IllegalStateException("Failed to stage attachment resource file.");
-        return true;
+        java.nio.file.Files.delete(source.toPath());
+        return created;
     }
 
     private static File target(Context context, String storageKey) {

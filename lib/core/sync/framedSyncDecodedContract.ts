@@ -29,6 +29,7 @@ import {
 import { FRAMED_SYNC_FACT_FRAGMENT_BYTES, FRAMED_SYNC_MAX_ENCODED_FACT_BYTES } from './framedSyncFactFragmentContract.js';
 import type { ProtocolPayloadCase } from './framedSyncReceiver.js';
 import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js';
+import { attachmentRequestSchema } from './requestSyncAttachmentContract.js';
 
 export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, value: unknown) {
   walk(value, 0, { fields: 0 });
@@ -82,6 +83,7 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
 }
 
 function validateRequestPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {
+  if (payloadCase === 'request_attachment') { attachmentRequestSchema.parse(payload); return true; }
   if (payloadCase === 'request_batch_end') {
     fixedBytes(payload.requestId, 16, 'request_id');
     if (unsigned(payload.objectCount, 'object_count') > 0xffff_ffffn) {

@@ -58,7 +58,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
 
     func testGoldenCorpusDecodesToValidatedCasesAndReencodesExactly() throws {
         let corpus = try FramedSyncFixture.load().corpus
-        XCTAssertEqual(corpus.messages.count, 18)
+        XCTAssertEqual(corpus.messages.count, 23)
         for golden in corpus.messages {
             let data = try XCTUnwrap(Data(base64Encoded: golden.base64), golden.name)
             let frameType = try frameType(for: golden.payloadCase)
@@ -184,7 +184,9 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
         case "transfer_receipt": .transferReceipt
         case "handshake", "handshake_acceptance", "inventory_begin", "inventory_chunk",
              "inventory_end", "difference_request", "transfer_proposal", "blob_offer",
-             "missing_blob_set", "round_receipt", "transfer_termination", "error":
+             "missing_blob_set", "round_receipt", "transfer_termination", "error",
+             "request_object_header", "request_object_end", "request_object_result",
+             "request_batch_end", "request_attachment":
             .sessionControl
         default: throw FolioleFramedSyncValidationError("protocol_payload_case_invalid")
         }

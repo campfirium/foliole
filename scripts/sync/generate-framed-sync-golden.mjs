@@ -160,8 +160,18 @@ function messageCases() {
     encodeCase('request-object-header', { requestObjectHeader: {
       requestId: roundId, objectType: 'node', globalId: 'node-a', sourceStateHash: contentId
     } }),
+    encodeCase('request-attachment', { requestAttachment: {
+      requestId: roundId, operation: 'push', storageKey: 'a'.repeat(64) + '.pdf',
+      byteLength: 524289, offset: 524288, data: Uint8Array.of(1), state: ''
+    } }),
     encodeCase('request-object-end', { requestObjectEnd: {
       requestId: roundId, streamHash: contentId, factCount: 1, bodyCount: 1
+    } }),
+    encodeCase('request-object-result', { requestObjectResult: {
+      requestId: roundId, objectType: 'node', globalId: 'node-a', error: ''
+    } }),
+    encodeCase('request-batch-end', { requestBatchEnd: {
+      requestId: roundId, objectCount: 1
     } }),
     encodeCase('round-receipt', { roundReceipt: {
       deferredFacts: [identity], result: 2, roundId

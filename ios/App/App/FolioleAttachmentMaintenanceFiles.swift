@@ -38,9 +38,11 @@ enum FolioleAttachmentMaintenanceFiles {
         guard FolioleCompanionCanonicalAttachmentKey.valid(key) else { throw invalid() }
         if operation == "move" { try move(key, toTrash: call.getBool("trash") ?? false) }
         else if operation == "remove-trash" {
+            try FolioleAttachmentBlockFiles.withRemoval(key) {
             let file = try directory(true).appendingPathComponent(key)
             try requireFile(file)
             try manager.removeItem(at: file)
+            }
         } else { throw invalid() }
         return ["available": try available(key)]
     }
@@ -54,6 +56,10 @@ enum FolioleAttachmentMaintenanceFiles {
     }
 
     static func move(_ key: String, toTrash: Bool) throws {
+        try FolioleAttachmentBlockFiles.withRemoval(key) { try moveUnlocked(key, toTrash: toTrash) }
+    }
+
+    private static func moveUnlocked(_ key: String, toTrash: Bool) throws {
         guard FolioleCompanionCanonicalAttachmentKey.valid(key) else { throw invalid() }
         let source = try directory(!toTrash).appendingPathComponent(key)
         let destination = try directory(toTrash).appendingPathComponent(key)

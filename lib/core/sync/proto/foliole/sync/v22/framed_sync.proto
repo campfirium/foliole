@@ -248,5 +248,6 @@ message ProtocolMessage {
     RequestObjectEnd request_object_end = 20;
     RequestObjectResult request_object_result = 21;
     RequestBatchEnd request_batch_end = 22;
+    RequestAttachment request_attachment = 23;
   }
 }

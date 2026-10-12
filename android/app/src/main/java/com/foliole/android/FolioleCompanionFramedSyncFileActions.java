@@ -22,6 +22,7 @@ final class FolioleCompanionFramedSyncFileActions {
         FramedSyncFiles files = new FramedSyncFiles(context, owner.libraryKey());
         String key = call.getString("key");
         String operation = call.getString("operation", "");
+        if (operation.equals("attachment")) return FolioleAttachmentBlockFiles.access(context, owner, call);
         JSObject result = new JSObject();
         switch (operation) {
             case "read":

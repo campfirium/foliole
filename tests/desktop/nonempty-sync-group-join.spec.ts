@@ -3,6 +3,7 @@ import process from 'node:process';
 
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
+import { addSyncImage, expectSyncedImage } from './harness/attachmentSyncAcceptance';
 import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -84,6 +85,7 @@ async function hasPersistedNode(session: DesktopSession, nodeId: string) {
 async function createProvider(session: DesktopSession, windowPage: WindowPage) {
   const topicId = await createTopic(windowPage);
   await expect.poll(() => hasPersistedNode(session, topicId)).toBe(true);
+  const imageKey = await addSyncImage(session, topicId);
   const overview = await invoke<{ sync_group: { group_id: string } }>(
     windowPage, 'create_sync_group'
   );
@@ -110,7 +112,7 @@ async function createProvider(session: DesktopSession, windowPage: WindowPage) {
     provider_device_id: discovery.provider_device_id,
     provider_device_name: discovery.provider_device_name,
     provider_platform: discovery.provider_platform
-  } satisfies Candidate, topicId };
+  } satisfies Candidate, topicId, imageKey };
 }
 
 async function restartAndVerify(env: NodeJS.ProcessEnv, groupId: string, nodeIds: string[]) {
@@ -161,6 +163,7 @@ async function joinAndConverge(args: {
   await expect.poll(() => hasNode(joiningWindow, args.provider.topicId), { timeout: 20_000 }).toBe(true);
   expect(await hasPersistedNode(args.joiningSession, joiningTopicId)).toBe(false);
   expect(await hasPersistedNode(args.providerSession, joiningTopicId)).toBe(false);
+  await expectSyncedImage(args.joiningSession, args.provider.imageKey);
   await args.joiningSession.close();
   return restartAndVerify(args.joiningEnv, args.provider.candidate.group_id,
     [args.provider.topicId]);
@@ -192,6 +195,7 @@ test('a nonempty desktop Library joins using group data and retains that data af
     joiningSession = await joinAndConverge({
       joiningEnv, joiningSession, provider, providerSession
     });
+    await expectSyncedImage(joiningSession, provider.imageKey);
   } catch (error) {
     if (providerSession) {
       await testInfo.attach('provider-desktop-diagnostics', {

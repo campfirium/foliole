@@ -8,6 +8,17 @@ import java.util.concurrent.*;
 import org.junit.Test;
 
 public final class FramedSyncPayloadBudgetTest {
+    @Test public void retirementReleasesAttachmentFilesAndRejectsLateOwnership() {
+        var owner = new FramedSyncPayloadBudget("business.sqlite", "old");
+        var released = new java.util.concurrent.atomic.AtomicInteger();
+        owner.onAttachmentClose(released::incrementAndGet);
+        owner.cancel();
+        assertEquals(1, released.get());
+        assertTrue(owner.isClosed());
+        owner.onAttachmentClose(released::incrementAndGet);
+        assertEquals(2, released.get());
+    }
+
     @Test public void twoSendersAndProviderSharePayloadWhileIncomingAndReceiptsCanProgress() throws Exception {
         var owner = new FramedSyncPayloadBudget("business.sqlite", "generation-1");
         var workers = Executors.newFixedThreadPool(2);

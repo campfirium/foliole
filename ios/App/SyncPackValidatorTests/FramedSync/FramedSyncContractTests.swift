@@ -22,7 +22,12 @@ final class FramedSyncContractTests: XCTestCase {
         "transfer_receipt": "transfer-receipt",
         "round_receipt": "round-receipt",
         "transfer_termination": "transfer-termination",
-        "error": "protocol-error"
+        "error": "protocol-error",
+        "request_object_header": "request-object-header",
+        "request_object_end": "request-object-end",
+        "request_object_result": "request-object-result",
+        "request_batch_end": "request-batch-end",
+        "request_attachment": "request-attachment"
     ]
 
     func testCorpusIsBoundToTheOnlyFramedSyncProto() throws {
@@ -47,7 +52,7 @@ final class FramedSyncContractTests: XCTestCase {
         let fixture = try FramedSyncFixture.load()
         let fields = try FramedSyncProtoContract.payloadFields(in: fixture.proto)
         let declaredMessages = try FramedSyncProtoContract.declaredMessages(in: fixture.proto)
-        XCTAssertEqual(fields.map(\.fieldNumber), Array(1...18))
+        XCTAssertEqual(fields.map(\.fieldNumber), Array(1...23))
         XCTAssertTrue(fields.allSatisfy { declaredMessages.contains($0.messageType) })
 
         let fieldsByName = Dictionary(uniqueKeysWithValues: fields.map { ($0.fieldName, $0) })
@@ -116,6 +121,7 @@ private extension Foliole_Sync_V22_ProtocolMessage.OneOf_Payload {
         case .requestObjectEnd: "request_object_end"
         case .requestObjectResult: "request_object_result"
         case .requestBatchEnd: "request_batch_end"
+        case .requestAttachment: "request_attachment"
         case .error: "error"
         }
     }

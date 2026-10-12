@@ -69,6 +69,7 @@ public enum FolioleFramedSyncPayload: Sendable {
     case requestObjectEnd(Foliole_Sync_V22_RequestObjectEnd)
     case requestObjectResult(Foliole_Sync_V22_RequestObjectResult)
     case requestBatchEnd(Foliole_Sync_V22_RequestBatchEnd)
+    case requestAttachment(Foliole_Sync_V22_RequestAttachment)
     case protocolError(Foliole_Sync_V22_ProtocolError)
 
     public var corpusName: String {
@@ -94,6 +95,7 @@ public enum FolioleFramedSyncPayload: Sendable {
         case .requestObjectEnd: "request_object_end"
         case .requestObjectResult: "request_object_result"
         case .requestBatchEnd: "request_batch_end"
+        case .requestAttachment: "request_attachment"
         case .protocolError: "error"
         }
     }

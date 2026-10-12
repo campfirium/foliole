@@ -37,6 +37,7 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
     private var active = [String: Borrow]()
     private var waiting = [Waiting]()
     private var drained = [() -> Void]()
+    private var attachmentCleanup: (() -> Void)?
 
     init(libraryKey: String, generationID: String) { self.libraryKey = libraryKey; self.generationID = generationID }
 
@@ -67,10 +68,21 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
         lock.lock(); accepting = false
         let abandoned = waiting; waiting.removeAll()
         let ready = active.isEmpty
+        let cleanup = attachmentCleanup
+        attachmentCleanup = nil
         if !ready { drained.append(complete) }
         lock.unlock()
         for request in abandoned { callbacks.async { request.complete(.failure(Self.closed())) } }
+        cleanup?()
         if ready { callbacks.async(execute: complete) }
+    }
+
+    func onAttachmentClose(_ cleanup: @escaping () -> Void) {
+        lock.lock()
+        let closed = !accepting
+        if !closed { attachmentCleanup = cleanup }
+        lock.unlock()
+        if closed { cleanup() }
     }
 
     func invalidateProducerContext(_ complete: @escaping () -> Void) {

@@ -51,6 +51,7 @@ enum FramedSyncFixture {
     static func load() throws -> (corpus: FramedSyncCorpus, proto: Data, root: URL) {
         let root = try repositoryRoot()
         let proto = try Data(contentsOf: root.appendingPathComponent(protoRelativePath))
+            + Data(contentsOf: root.appendingPathComponent("lib/core/sync/proto/foliole/sync/v22/request_sync.proto"))
         let corpusData = try Data(contentsOf: root.appendingPathComponent(corpusRelativePath))
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase

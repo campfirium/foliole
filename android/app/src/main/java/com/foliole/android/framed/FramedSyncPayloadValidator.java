@@ -94,6 +94,10 @@ final class FramedSyncPayloadValidator {
                 var batch = message.getRequestBatchEnd();
                 FramedSyncValueValidator.fixed(batch.getRequestId(), FramedSyncContract.IDENTIFIER_BYTES, "request_id");
                 return payload(FramedSyncPayload.Case.REQUEST_BATCH_END, batch);
+            case REQUEST_ATTACHMENT:
+                var attachment = message.getRequestAttachment();
+                AttachmentRequestValidation.validate(attachment);
+                return payload(FramedSyncPayload.Case.REQUEST_ATTACHMENT, attachment);
             case PAYLOAD_NOT_SET:
             default:
                 throw invalid("protocol_payload_case_invalid");

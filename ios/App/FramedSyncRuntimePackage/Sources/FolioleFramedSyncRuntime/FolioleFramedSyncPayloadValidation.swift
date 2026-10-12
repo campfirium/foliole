@@ -8,6 +8,9 @@ enum FolioleFramedSyncPayloadValidator {
             throw FolioleFramedSyncValidationError("protocol_payload_case_invalid")
         }
         switch payload {
+        case .requestAttachment(let value):
+            try FolioleAttachmentRequestValidation.validate(value)
+            return .requestAttachment(value)
         case .handshake(let value): try handshake(value); return .handshake(value)
         case .handshakeAcceptance(let value): try acceptance(value); return .handshakeAcceptance(value)
         case .inventoryBegin(let value): try inventoryBegin(value); return .inventoryBegin(value)

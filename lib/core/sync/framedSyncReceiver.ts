@@ -16,13 +16,13 @@ export type ProtocolPayloadCase =
   | 'handshake' | 'handshake_acceptance' | 'inventory_begin' | 'inventory_chunk'
   | 'inventory_end' | 'missing_blob_set' | 'round_receipt' | 'transfer_header'
   | 'transfer_proposal' | 'transfer_receipt' | 'transfer_termination' | 'transfer_trailer'
-  | 'request_object_header' | 'request_object_end' | 'request_object_result' | 'request_batch_end';
+  | 'request_object_header' | 'request_object_end' | 'request_object_result' | 'request_batch_end' | 'request_attachment';
 
 const SESSION_PAYLOADS = new Set<ProtocolPayloadCase>([
   'blob_offer', 'difference_request', 'error', 'handshake', 'handshake_acceptance',
   'inventory_begin', 'inventory_chunk', 'inventory_end', 'missing_blob_set',
   'round_receipt', 'transfer_proposal', 'transfer_termination',
-  'request_object_header', 'request_object_end', 'request_object_result', 'request_batch_end'
+  'request_object_header', 'request_object_end', 'request_object_result', 'request_batch_end', 'request_attachment'
 ]);
 
 export function frameTypeForPayload(payload: ProtocolPayloadCase) {

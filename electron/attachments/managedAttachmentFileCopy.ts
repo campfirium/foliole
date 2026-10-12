@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { createReadStream, constants } from 'node:fs';
-import { copyFile, mkdir, open, stat } from 'node:fs/promises';
+import { copyFile, open, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 
 import type { StagedManagedAttachment } from './managedAttachmentFileStage.js';
+import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
@@ -39,15 +40,8 @@ export async function stageManagedAttachmentFileCopy(input: {
   now?: string;
 }): Promise<StagedManagedAttachment> {
   const storagePath = resolveAttachmentStoragePath(input.contentHash, undefined, input.mimeType);
-  await mkdir(path.dirname(storagePath), { recursive: true });
-  let createdFile = false;
-  try {
-    await copyFile(input.sourcePath, storagePath, constants.COPYFILE_EXCL);
-    createdFile = true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-    if (await hashAttachmentFile(storagePath) !== input.contentHash) throw new Error('managed_attachment_hash_mismatch');
-  }
+  const createdFile = await publishImmutableAttachment(storagePath, input.contentHash,
+    temporary => copyFile(input.sourcePath, temporary, constants.COPYFILE_EXCL));
   return {
     contentHash: input.contentHash, createdAt: input.now ?? new Date().toISOString(), createdFile,
     mimeType: input.mimeType, originalName: path.basename(input.originalName),

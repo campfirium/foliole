@@ -19,6 +19,12 @@ public final class FramedSyncPayloadBudget {
     private final Condition changed = lock.newCondition();
     private final Map<Integer, Loan> loans = new HashMap<>();
     private volatile boolean closed;
+    private volatile Runnable attachmentCleanup = () -> {};
+
+    public void onAttachmentClose(Runnable cleanup) {
+        attachmentCleanup = cleanup;
+        if (closed) cleanup.run();
+    }
 
     public FramedSyncPayloadBudget(String libraryKey, String generationId) {
         if (libraryKey == null || libraryKey.isEmpty() || generationId == null || generationId.isEmpty()) {
@@ -53,6 +59,7 @@ public final class FramedSyncPayloadBudget {
         lock.lock();
         try { closed = true; changed.signalAll(); }
         finally { lock.unlock(); }
+        attachmentCleanup.run();
     }
 
     /** The old document can no longer deliver through its product bridge; native consumers still drain. */
@@ -68,6 +75,7 @@ public final class FramedSyncPayloadBudget {
             }
             changed.signalAll();
         } finally { lock.unlock(); }
+        attachmentCleanup.run();
     }
 
     public void drain() throws InterruptedException {

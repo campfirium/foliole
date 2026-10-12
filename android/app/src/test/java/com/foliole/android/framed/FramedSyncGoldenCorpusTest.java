@@ -21,8 +21,8 @@ public class FramedSyncGoldenCorpusTest {
 
         Map<Integer, String> schemaPayloads = FramedSyncContractSource.protocolPayloads();
         List<FramedSyncContractSource.MessageVector> messages = FramedSyncContractSource.messages();
-        assertEquals(18, schemaPayloads.size());
-        assertEquals(18, messages.size());
+        assertEquals(23, schemaPayloads.size());
+        assertEquals(schemaPayloads.size(), messages.size());
 
         Set<Integer> consumedTags = new HashSet<>();
         Set<String> consumedNames = new HashSet<>();

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 
 export interface StagedManagedAttachment {
@@ -18,11 +19,6 @@ function hashBytes(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-async function verifyStoredFile(storagePath: string, contentHash: string) {
-  const existing = await fs.readFile(storagePath);
-  if (hashBytes(existing) !== contentHash) throw new Error('managed_attachment_hash_mismatch');
-}
-
 export async function stageManagedAttachmentFile(input: {
   bytes: Uint8Array;
   mimeType: string;
@@ -31,20 +27,8 @@ export async function stageManagedAttachmentFile(input: {
 }): Promise<StagedManagedAttachment> {
   const contentHash = hashBytes(input.bytes);
   const storagePath = resolveAttachmentStoragePath(contentHash, undefined, input.mimeType);
-  let createdFile = false;
-  try {
-    await verifyStoredFile(storagePath, contentHash);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    await fs.mkdir(path.dirname(storagePath), { recursive: true });
-    try {
-      await fs.writeFile(storagePath, input.bytes, { flag: 'wx' });
-      createdFile = true;
-    } catch (writeError) {
-      if ((writeError as NodeJS.ErrnoException).code !== 'EEXIST') throw writeError;
-      await verifyStoredFile(storagePath, contentHash);
-    }
-  }
+  const createdFile = await publishImmutableAttachment(storagePath, contentHash,
+    temporary => fs.writeFile(temporary, input.bytes, { flag: 'wx' }));
   return {
     contentHash,
     createdAt: input.now ?? new Date().toISOString(),

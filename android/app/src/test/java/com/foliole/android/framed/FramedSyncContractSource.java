@@ -71,7 +71,8 @@ final class FramedSyncContractSource {
     private FramedSyncContractSource() {}
 
     static String proto() throws IOException {
-        return read("lib/core/sync/proto/foliole/sync/v22/framed_sync.proto");
+        return read("lib/core/sync/proto/foliole/sync/v22/framed_sync.proto")
+            + read("lib/core/sync/proto/foliole/sync/v22/request_sync.proto");
     }
 
     static String corpus() throws IOException {

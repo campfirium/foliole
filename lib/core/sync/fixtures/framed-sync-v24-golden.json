@@ -168,10 +168,28 @@
       "payload_case": "request_object_header"
     },
     {
+      "base64": "ugFpChAAESIzRFVmd4iZqrvM3e7/EgRwdXNoGkRhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhLnBkZiCBgCAogIAgMgEB",
+      "byte_length": 108,
+      "name": "request-attachment",
+      "payload_case": "request_attachment"
+    },
+    {
       "base64": "ogE4ChAAESIzRFVmd4iZqrvM3e7/EiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIhgBIAE=",
       "byte_length": 59,
       "name": "request-object-end",
       "payload_case": "request_object_end"
+    },
+    {
+      "base64": "qgEgChAAESIzRFVmd4iZqrvM3e7/EgRub2RlGgZub2RlLWE=",
+      "byte_length": 35,
+      "name": "request-object-result",
+      "payload_case": "request_object_result"
+    },
+    {
+      "base64": "sgEUChAAESIzRFVmd4iZqrvM3e7/EAE=",
+      "byte_length": 23,
+      "name": "request-batch-end",
+      "payload_case": "request_batch_end"
     },
     {
       "base64": "ejEKEAARIjNEVWZ3iJmqu8zd7v8QAhobCAISBG5vZGUaBm5vZGUtMSIJdmVyc2lvbi03",
@@ -193,5 +211,5 @@
     }
   ],
   "protocol_version": 24,
-  "schema_sha256": "6cc48f9da56d5faddf5ce1cf5e2d205265912e347e28c32af9ddc28e2258fbfe"
+  "schema_sha256": "eee9668955f9e25b2f31964dfdbb3c62089548ed8c4d752f4890b6d7ae5efaa8"
 }

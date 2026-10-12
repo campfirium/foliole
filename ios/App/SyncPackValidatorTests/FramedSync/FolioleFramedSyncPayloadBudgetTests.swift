@@ -4,6 +4,18 @@ import FolioleFramedSyncRuntime
 @testable import FolioleSyncPackValidator
 
 final class FolioleFramedSyncPayloadBudgetTests: XCTestCase {
+    func testRetirementReleasesAttachmentFilesAndRejectsLateOwnership() {
+        let owner = FolioleFramedSyncPayloadBudget(libraryKey: "/temporary/library.sqlite", generationID: "old")
+        var released = 0
+        owner.onAttachmentClose { released += 1 }
+        owner.retire {}
+        owner.retire {}
+        XCTAssertEqual(released, 1)
+        XCTAssertThrowsError(try owner.requireActive())
+        owner.onAttachmentClose { released += 1 }
+        XCTAssertEqual(released, 2)
+    }
+
     func testFourIndependentSlotsAndFIFOReleaseAreBounded() async throws {
         let owner = FolioleFramedSyncPayloadBudget(libraryKey: "/temporary/library.sqlite", generationID: "first")
         let outbound = try await acquire(owner, .outbound)

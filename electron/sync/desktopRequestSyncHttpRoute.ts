@@ -1,8 +1,10 @@
+import { respondRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
 import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 import { respondDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { respondDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
@@ -18,6 +20,7 @@ export function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, inp
 }) {
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {
+    case 'attachments': return respondRequestSyncAttachments(createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
     case 'pulls': return respondRequestSyncDatabase(host, { ...input, mode: 'pulls' }, prepareDesktopRequestSyncBody);

@@ -29,6 +29,7 @@ const PAYLOAD_PROPERTIES = Object.freeze({
   request_object_end: 'requestObjectEnd',
   request_object_result: 'requestObjectResult',
   request_batch_end: 'requestBatchEnd',
+  request_attachment: 'requestAttachment',
   transfer_header: 'transferHeader',
   transfer_proposal: 'transferProposal',
   transfer_receipt: 'transferReceipt',

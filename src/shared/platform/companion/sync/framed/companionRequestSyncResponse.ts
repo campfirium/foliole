@@ -1,10 +1,13 @@
 import { readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
+import type { FramedSyncStreamBody } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import { respondRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../../../../../lib/core/sync/requestSyncDatabaseResponse.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
+import { currentCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { companionRequestSyncHttpChunks, spoolCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
 import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
@@ -25,7 +28,7 @@ async function respond(payload: Record<string, unknown>, signal: AbortSignal, ac
   const directory = text(payload, 'directory');
   if (!/^requests\/[a-f0-9-]{36}$/u.test(directory)) throw new Error('request_sync_http_request_invalid');
   const mode = payload.mode;
-  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object' && mode !== 'pulls' && mode !== 'objects') {
+  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object' && mode !== 'pulls' && mode !== 'objects' && mode !== 'attachments') {
     throw new Error('request_sync_mode_invalid');
   }
   const context = { groupId: text(payload, 'group_id'), protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
@@ -39,17 +42,20 @@ async function respond(payload: Record<string, unknown>, signal: AbortSignal, ac
   const stream = await readFramedSyncStream(companionRequestSyncHttpChunks(host.files, directory, {
     response_chunk_count: Number(payload.request_chunk_count), response_byte_length: Number(payload.request_byte_length)
   }, signal));
+  const consume = async (response: FramedSyncStreamBody) => {
+    const result = await spoolCompanionRequestSyncHttp(host.files, directory, response, signal);
+    const receipt = { response_chunk_count: result.count };
+    await acknowledge?.(receipt);
+    return receipt;
+  };
   try {
+    if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(host),
+      { context, groupKey, stream, signal }, consume);
     return await respondRequestSyncDatabase(host, { context, groupKey, mode, stream, signal,
       ...(mode === 'objects' ? { batch: { peerState } } : {}),
       ...(mode === 'object' ? { object: { peerState, expectedObject: {
         globalId: text(payload, 'global_id'), objectType: text(payload, 'object_type') } } } : {}) },
-    async response => {
-      const result = await spoolCompanionRequestSyncHttp(host.files, directory, response, signal);
-      const receipt = { response_chunk_count: result.count };
-      await acknowledge?.(receipt);
-      return receipt;
-    });
+    consume);
   } catch (error) {
     await host.files.remove(directory);
     throw error;

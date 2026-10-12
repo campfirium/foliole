@@ -5,6 +5,8 @@ import path from 'node:path';
 import type { AttachmentFileEntry } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
+import { assertAttachmentFileNotLeased } from './attachmentFileLease.js';
+
 export function attachmentTrashDirectory(assetsDir: string) { return `${assetsDir}.trash`; }
 
 export function inventoryAttachmentDirectory(directory: string): AttachmentFileEntry[] {
@@ -31,6 +33,7 @@ function moveAttachment(assetsDir: string, storageKey: string, toTrash: boolean)
   const source = path.join(toTrash ? assetsDir : trash, storageKey);
   const destination = path.join(toTrash ? trash : assetsDir, storageKey);
   if (!fs.existsSync(source)) return;
+  assertAttachmentFileNotLeased(path.join(assetsDir, storageKey));
   assertRegularFile(source);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   if (fs.existsSync(destination)) {
@@ -48,6 +51,7 @@ function moveAttachment(assetsDir: string, storageKey: string, toTrash: boolean)
 export function removeTrashedAttachment(assetsDir: string, storageKey: string) {
   if (!parseCanonicalAttachmentStorageKey(storageKey)) throw new Error('attachment_storage_key_invalid');
   const file = path.join(attachmentTrashDirectory(assetsDir), storageKey);
+  assertAttachmentFileNotLeased(path.join(assetsDir, storageKey));
   assertRegularFile(file);
   fs.unlinkSync(file);
 }

@@ -1,28 +1,18 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 
 import { openDatabaseConnection } from '../database/connection.js';
 import { persistNodeResourceReference } from '../database/nodeResources.js';
 
+import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { validateSupportedImageBytes } from './supportedImageFormats.js';
 
 const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 
 async function writeCanonicalFile(filePath: string, bytes: Uint8Array) {
-  try {
-    const existing = await fs.readFile(filePath);
-    if (createHash('sha256').update(existing).digest('hex') !== createHash('sha256').update(bytes).digest('hex')) {
-      throw new Error('canonical_attachment_hash_mismatch');
-    }
-    return false;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, bytes, { flag: 'wx' });
-  return true;
+  return publishImmutableAttachment(filePath, createHash('sha256').update(bytes).digest('hex'),
+    temporary => fs.writeFile(temporary, bytes, { flag: 'wx' }));
 }
 
 export async function persistCreatedNodeImageAttachment(args: {

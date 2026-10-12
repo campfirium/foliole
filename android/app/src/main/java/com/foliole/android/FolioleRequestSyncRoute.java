@@ -18,7 +18,7 @@ final class FolioleRequestSyncRoute {
         OutputStream output, Map<String, String> query, String groupId, File temporary,
         FramedSyncPayloadBudget owner) throws Exception {
         String mode = query.get("request");
-        if (!java.util.Set.of("inventory", "pull", "object", "pulls", "objects").contains(mode)) {
+        if (!java.util.Set.of("inventory", "pull", "object", "pulls", "objects", "attachments").contains(mode)) {
             throw new IllegalArgumentException("request_sync_mode_invalid");
         }
         FramedSyncFiles files = new FramedSyncFiles(context, owner.libraryKey());

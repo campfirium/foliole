@@ -9,6 +9,7 @@ import { persistNodeResourceReference } from '../database/nodeResources.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { runWithImageAttachmentHashOwner } from './imageAttachmentHashOwner.js';
+import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
@@ -96,21 +97,9 @@ function toImportedResult(input: {
 }
 
 async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
-  try {
-    const existingBytes = await fs.readFile(storagePath);
-    if (createContentHash(existingBytes) !== createContentHash(bytes)) {
-      throw new Error('canonical attachment path contains different bytes');
-    }
-    return 'reused' as const;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
-  }
-
-  await fs.mkdir(path.dirname(storagePath), { recursive: true });
-  await fs.writeFile(storagePath, bytes, { flag: 'wx' });
-  return 'created' as const;
+  const created = await publishImmutableAttachment(storagePath, createContentHash(bytes),
+    temporary => fs.writeFile(temporary, bytes, { flag: 'wx' }));
+  return created ? 'created' as const : 'reused' as const;
 }
 
 export function normalizeImageFileName(originalName: string | null | undefined, mimeType: string) {

@@ -14,7 +14,7 @@ const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protoco
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'] });
-  runtime.resources.mockResolvedValue({ pending: 2, scanned: 4, transferred: 1, unavailable: 1 });
+  runtime.resources.mockResolvedValue({ pending: 3, transferred: 1 });
 });
 
 it('reports request-scoped database changes and keeps attachment progress separate', async () => {
@@ -56,7 +56,7 @@ it.each([
 ])('reports the completed request round without a phantom body stage: %j', async ({ databasePending, resourcePending, outcome }) => {
   const { describeCompanionSyncPassResult } = await import('../../../../companion/companionSyncPassResult');
   runtime.database.mockResolvedValue({ pending: databasePending, received: [], sent: [] });
-  runtime.resources.mockResolvedValue({ pending: resourcePending, scanned: 1, transferred: 0, unavailable: 0 });
+  runtime.resources.mockResolvedValue({ pending: resourcePending, transferred: 0 });
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
   expect(describeCompanionSyncPassResult(result).outcome).toBe(outcome);
 });

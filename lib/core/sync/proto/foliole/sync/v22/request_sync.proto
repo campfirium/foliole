@@ -24,3 +24,13 @@ message RequestBatchEnd {
   bytes request_id = 1;
   uint32 object_count = 2;
 }
+message RequestAttachment {
+  bytes request_id = 1;
+  string operation = 2;
+  string storage_key = 3;
+  uint64 byte_length = 4;
+  uint64 offset = 5;
+  bytes data = 6;
+  repeated string storage_keys = 7;
+  string state = 8;
+}
