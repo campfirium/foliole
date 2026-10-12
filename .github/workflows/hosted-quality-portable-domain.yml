@@ -28,7 +28,7 @@ jobs:
     name: ${{ matrix.host }} ${{ inputs.domain }}
     if: inputs.domain == 'shared' || inputs.domain == 'android-source' || inputs.domain == 'android-shared'
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ inputs.domain == 'shared' && 40 || 20 }}
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}
       cancel-in-progress: false

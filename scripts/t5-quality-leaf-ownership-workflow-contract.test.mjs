@@ -107,7 +107,8 @@ describe('T5 canonical leaf ownership', () => {
       { host: 'Windows', runner: 'windows-latest' }
     ]);
     expect(portable.jobs['portable-domain-tests'].strategy['fail-fast']).toBe(false);
-    expect(portable.jobs['portable-domain-tests']['timeout-minutes']).toBe(20);
+    expect(portable.jobs['portable-domain-tests']['timeout-minutes'])
+      .toBe("${{ inputs.domain == 'shared' && 40 || 20 }}");
     expect(portable.jobs['portable-domain-tests'].if)
       .toBe("inputs.domain == 'shared' || inputs.domain == 'android-source' || inputs.domain == 'android-shared'");
     const steps = portable.jobs['portable-domain-tests'].steps;
