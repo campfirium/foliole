@@ -36,6 +36,7 @@ export async function runWindowsSyncSqliteDiagnostic({ action, diagnosticMode, e
     await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
     await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root], 85 * 60_000);
   }
+  fsApi.writeFileSync(path.join(root, 'preparation.log'), output);
   await run(paths.tarPath, ['-a', '-cf', path.join(evidenceRoot, 'sqlite-diagnostic.zip'), '-C', root, '.'], 60_000);
   return { output };
 }
