@@ -22,6 +22,7 @@ import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
+import * as resourceHash from './resourceFileHash.js';
 
 it.each([0, 5])('transfers both directions through signed HTTP with lost response at request %s', async dropAt => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
@@ -45,9 +46,12 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
     expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)))
       .toEqual({ pending: 0, transferred: 2 });
     expect(failures).toEqual([]);
+    const hashFile = vi.spyOn(resourceHash, 'hashResourceFile').mockRejectedValue(new Error('Unexpected content read during needs'));
     expect(await local.host.needs()).toEqual([]);
     expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)))
       .toEqual({ pending: 0, transferred: 0 });
+    expect(hashFile).not.toHaveBeenCalled();
+    hashFile.mockRestore();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     const reopened = new Database(target.databasePath, { readonly: true });
     try {
@@ -65,6 +69,6 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
     await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
-    vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
+    vi.restoreAllMocks(); vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
 });

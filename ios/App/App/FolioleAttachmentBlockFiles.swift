@@ -63,10 +63,7 @@ final class FolioleAttachmentBlockFiles {
             if manager.fileExists(atPath: file.path) { try manager.removeItem(at: file) }
         } else if action == "publish" {
             let target = try resolve(key, partial: false)
-            if Darwin.link(file.path, target.path) != 0 {
-                guard errno == EEXIST, try digest(target) == String(key.prefix(64)) else { throw posixError() }
-            }
-            try manager.removeItem(at: file)
+            if Darwin.rename(file.path, target.path) != 0 { throw posixError() }
         } else {
             let fd = Darwin.open(file.path, O_RDWR | O_CREAT | O_NOFOLLOW, 0o600)
             guard fd >= 0 else { throw posixError() }
@@ -83,12 +80,13 @@ final class FolioleAttachmentBlockFiles {
         return [:]
     }
     private func source(_ call: CAPPluginCall, action: String, key: String) throws -> JSObject {
-        if action == "source-open" {
-            guard sources[key] == nil else { throw invalid("attachment_send_busy") }
+        if action == "source-open" || action == "source-stat" {
+            guard action == "source-stat" || sources[key] == nil else { throw invalid("attachment_send_busy") }
             var file = try resolve(key, partial: false)
             if !FileManager.default.fileExists(atPath: file.path) {
                 file = try FolioleAttachmentMaintenanceFiles.directory(true).appendingPathComponent(key)
             }
+            if action == "source-stat" { return try info(file, hash: false) }
             let result = try info(file, hash: true)
             if FileManager.default.fileExists(atPath: file.path) { sources[key] = try FileHandle(forReadingFrom: file) }
             return result

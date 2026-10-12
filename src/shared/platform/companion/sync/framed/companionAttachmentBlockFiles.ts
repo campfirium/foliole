@@ -69,13 +69,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
         } });
       } finally { await call({ key, action: 'source-close' }); }
     }),
-    needs: () => readRequestSyncAttachmentNeeds(db, async key => {
-      try { await host.withFile(key, async () => {}); return true; }
-      catch (error) {
-        if (error instanceof Error && error.message === 'attachment_source_missing') return false;
-        throw error;
-      }
-    })
+    needs: () => readRequestSyncAttachmentNeeds(db, async key =>
+      statSchema.parse(await call({ key, action: 'source-stat' })).present)
   };
   return host;
 }

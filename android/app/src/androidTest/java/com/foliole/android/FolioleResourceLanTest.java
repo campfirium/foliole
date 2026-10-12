@@ -29,6 +29,7 @@ public final class FolioleResourceLanTest {
         assertTrue("Resource test must use an isolated acceptance package",
             "com.campfirium.foliole.android.acceptance".equals(context.getPackageName())
                 || "com.campfirium.foliole.android.s220acceptance".equals(context.getPackageName()));
+        FolioleAttachmentImportProof.verify(context);
         Bundle args = InstrumentationRegistry.getArguments();
         String phase = args.getString("resourcePhase", "");
         assertTrue(phase.matches("missing|restored|restarted|offline"));
@@ -58,7 +59,7 @@ public final class FolioleResourceLanTest {
             } finally { screenshot.recycle(); }
             Bundle evidence = new Bundle();
             evidence.putString("folioleResourceLanReceipt", observation.put("passed", true)
-                .put("phase", phase).put("nodeId", nodeId)
+                .put("phase", phase).put("nodeId", nodeId).put("localImageImportVerified", true)
                 .put("lanEndpoint", "offline".equals(phase)
                     ? JSONObject.NULL : discoverLanProvider(context, groupId)).toString());
             instrumentation.sendStatus(2, evidence);

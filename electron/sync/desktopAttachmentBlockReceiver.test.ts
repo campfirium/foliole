@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES as BLOCK } from '../../lib/core/sync/attachmentBlockReceiver.js';
 
@@ -14,6 +14,7 @@ async function setup(bytes: Uint8Array) {
   return fixture;
 }
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const fixture of fixtures.splice(0)) await fixture.close();
 });
 
@@ -102,4 +103,29 @@ it('rejects incomplete blocks and disallows operations after owner close', async
   expect((await fs.stat(f.partial)).size).toBe(0);
   await receiver.close();
   await expect(receiver.status(f.resource)).rejects.toThrow('attachment_receiver_closed');
+});
+
+it('receives without hard-link support', async () => {
+  vi.spyOn(fs, 'link').mockRejectedValue(Object.assign(new Error('Unsupported'), { code: 'ENOTSUP' }));
+  const bytes = Buffer.alloc(5 * BLOCK + 19, 0x48);
+  const f = await setup(bytes);
+  const receiver = await f.open();
+  await receiver.status(f.resource);
+  await deliverBlocks(receiver, f.resource, bytes);
+  await receiver.status(f.resource);
+  expect(await fs.readFile(f.final)).toEqual(bytes);
+
+});
+
+it('writes availability only at transitions, including deletion after completion', async () => {
+  const bytes = Buffer.alloc(3 * BLOCK + 19, 0x49);
+  const f = await setup(bytes);
+  const receiver = await f.open();
+  await receiver.status(f.resource);
+  await deliverBlocks(receiver, f.resource, bytes);
+  await receiver.status(f.resource);
+  expect(f.writes).toEqual([false, true]);
+  await fs.unlink(f.final);
+  await receiver.status(f.resource);
+  expect(f.writes).toEqual([false, true, false]);
 });

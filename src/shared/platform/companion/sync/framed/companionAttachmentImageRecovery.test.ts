@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { appendFile, mkdtemp, readFile, rename, rm, stat, truncate } from 'node:fs/promises';
+import { writeFile, appendFile, mkdtemp, readFile, rename, rm, stat, truncate } from 'node:fs/promises';
 import path from 'node:path';
 
 import { waitFor } from '@testing-library/react';
@@ -9,6 +9,8 @@ import { expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort';
 import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles';
+import { seedAttachmentReferences } from '../../../../../../electron/sync/desktopRequestSyncAttachments.testSupport';
+import { initializeDatabaseSchema } from '../../../../../../lib/core/database/migrations';
 import { ATTACHMENT_BLOCK_BYTES as BLOCK } from '../../../../../../lib/core/sync/attachmentBlockReceiver';
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from '../../../../../features/editor/adapters/liveMarkdownImages';
@@ -90,3 +92,27 @@ function fileOperations(root: string) {
     }
   };
 }
+
+it('recomputes needs using metadata without opening or hashing present attachments', async () => {
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-needs-'));
+  const sqlite = new Database(path.join(root, 'library.db'));
+  initializeDatabaseSchema(sqlite);
+  const port = createBetterSqliteDbPort(sqlite);
+  const key = `${'b'.repeat(64)}.png`;
+  await seedAttachmentReferences(sqlite, [key]);
+  native.access.mockImplementation(async (input: NativeCompanionFramedFileRequest) => {
+    if (input.operation !== 'attachment' || input.action !== 'source-stat') throw new Error('Unexpected content read during needs');
+    try { return { present: true, length: (await stat(path.join(root, input.key))).size, hash: '' }; }
+    catch { return { present: false, length: 0, hash: '' }; }
+  });
+  try {
+    const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
+      readSnapshot: read => read(port), write: write => write(port)
+    }, { library_key: root, generation_id: 'generation' });
+    expect(await host.needs()).toEqual([key]);
+    await writeFile(path.join(root, key), 'presence does not validate content');
+    expect(await host.needs()).toEqual([]);
+    await rm(path.join(root, key));
+    expect(await host.needs()).toEqual([key]);
+  } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
+});

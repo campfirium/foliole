@@ -92,10 +92,11 @@ public final class FolioleAttachmentBlockFiles {
     }
 
     private JSObject source(PluginCall call, String action, String key) throws Exception {
-        if (action.equals("source-open")) {
-            if (sources.containsKey(key)) throw new IllegalStateException("attachment_send_busy");
+        if (action.equals("source-open") || action.equals("source-stat")) {
+            if (action.equals("source-open") && sources.containsKey(key)) throw new IllegalStateException("attachment_send_busy");
             File file = resolve(key, false);
             if (!file.exists()) file = new File(FolioleAttachmentMaintenanceFiles.directory(context, true), key);
+            if (action.equals("source-stat")) return info(file, false);
             JSObject result = info(file, true);
             if (file.exists()) sources.put(key, new RandomAccessFile(file, "r"));
             return result;

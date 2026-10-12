@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { createAttachmentBlockReceiver, type AttachmentBlockFiles,
   type AttachmentBlockResource } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { renameVerifiedAttachment } from '../attachments/publishImmutableAttachment.js';
 
 import { tryAcquireAttachmentReceiveOwner } from './attachmentReceiveOwner.js';
 import { hashResourceFile } from './resourceFileHash.js';
@@ -66,12 +67,7 @@ function createFiles(assetsDir: string,
     async publish(resource) {
       const source = partial(resource.storageKey.slice(0, 64));
       const destination = path.join(assetsDir, resource.storageKey);
-      try { await fs.link(source, destination); }
-      catch (error) {
-        if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error;
-        if (!await verifyComplete(destination, resource)) throw new Error('attachment_publish_destination_missing');
-      }
-      await fs.unlink(source);
+      await renameVerifiedAttachment(source, destination, resource.storageKey.slice(0, 64));
     }
   };
 }

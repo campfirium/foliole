@@ -20,10 +20,12 @@ export async function createBlockReceiverFixture(bytes: Uint8Array) {
   db.exec('CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER NOT NULL)');
   const owners: Array<{ close(): Promise<void> }> = [];
   let failIndex = false;
+  const writes: boolean[] = [];
   async function open() {
     const owner = await openDesktopAttachmentBlockReceiver({ libraryRoot: root, assetsDir,
       availability: async (key, available) => {
         if (available && failIndex) { failIndex = false; throw new Error('injected_index_failure'); }
+        writes.push(available);
         db.prepare(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL).run(key, Number(available));
       } });
     if (owner.kind !== 'acquired') throw new Error('attachment_receiver_busy');
@@ -31,7 +33,7 @@ export async function createBlockReceiverFixture(bytes: Uint8Array) {
     return owner;
   }
   return {
-    root, assetsDir, resource, open,
+    root, assetsDir, resource, open, writes,
     partial: path.join(assetsDir, `.attachment-${hash}.partial`),
     final: path.join(assetsDir, resource.storageKey),
     failNextIndex() { failIndex = true; },

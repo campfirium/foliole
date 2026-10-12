@@ -16,7 +16,7 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyncRoute.js';
 import { openDesktopAttachmentBlockReceiver } from './desktopAttachmentBlockFiles.js';
-import { createDesktopAttachmentBlockSource } from './desktopAttachmentBlockSource.js';
+import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
 import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
 import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
@@ -55,10 +55,8 @@ export async function attachmentHttpSource(keys: string[], root: string) {
     availability: (hash, available) => recordFramedSyncResourceAvailability(db, [hash], available) });
   if (receiver.kind !== 'acquired') throw new Error('test_owner_busy');
   const source = createDesktopAttachmentBlockSource(assetsDir);
-  const host: RequestSyncAttachmentHost = { ...receiver, ...source, needs: () => readRequestSyncAttachmentNeeds(database, async key => {
-    try { await source.withFile(key, async () => {}); return true; }
-    catch (error) { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false; throw error; }
-  }) };
+  const host: RequestSyncAttachmentHost = { ...receiver, ...source,
+    needs: () => readRequestSyncAttachmentNeeds(database, key => isDesktopAttachmentPresent(assetsDir, key)) };
   return { host, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
 }
 

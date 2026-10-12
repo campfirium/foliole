@@ -24,6 +24,7 @@ export interface AttachmentBlockFiles {
 
 export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
   const recovered = new Set<string>();
+  const availability = availabilityRecorder(files);
 
   async function finish(resource: AttachmentBlockResource): Promise<AttachmentBlockStatus> {
     const hash = resource.storageKey.slice(0, 64);
@@ -32,17 +33,17 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
       throw new Error('attachment_checksum_mismatch');
     }
     await files.publish(resource);
-    await files.availability(hash, true);
+    await availability(hash, true);
     return { kind: 'complete', offset: resource.byteLength };
   }
 
   async function status(resource: AttachmentBlockResource): Promise<AttachmentBlockStatus> {
     const hash = resource.storageKey.slice(0, 64);
     if (await files.complete(resource)) {
-      await files.availability(hash, true);
+      await availability(hash, true);
       return { kind: 'complete', offset: resource.byteLength };
     }
-    await files.availability(hash, false);
+    await availability(hash, false);
     let offset = await files.partialLength(hash);
     if (!recovered.has(hash)) {
       offset = Math.max(0, Math.floor(Math.min(offset, resource.byteLength) / ATTACHMENT_BLOCK_BYTES)
@@ -81,5 +82,14 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
     status: (resource: AttachmentBlockResource) => run(resource, status),
     receive: (resource: AttachmentBlockResource, offset: number, bytes: Uint8Array) =>
       run(resource, parsed => receive(parsed, offset, bytes))
+  };
+}
+
+function availabilityRecorder(files: AttachmentBlockFiles) {
+  const recorded = new Map<string, boolean>();
+  return async (hash: string, available: boolean) => {
+    if (recorded.get(hash) === available) return;
+    await files.availability(hash, available);
+    recorded.set(hash, available);
   };
 }

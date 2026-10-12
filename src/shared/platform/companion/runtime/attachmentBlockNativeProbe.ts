@@ -28,6 +28,7 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
     return createCompanionAttachmentHost(db, identity);
   };
   try {
+    await verifyLocalImageImport(companionFramedFileOwner(owner));
     const existing = await FolioleCompanionSync.accessFramedSyncFile({ ...companionFramedFileOwner(owner),
       operation: 'attachment', action: 'stat', key: resource.storageKey });
     if (existing.present) {
@@ -50,6 +51,9 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
       await recovered.receive(resource, offset, bytes.subarray(offset, offset + BLOCK));
     }
     await recovered.withFile(resource.storageKey, async source => {
+      const presence = await FolioleCompanionSync.accessFramedSyncFile({ ...companionFramedFileOwner(owner),
+        operation: 'attachment', action: 'source-stat', key: resource.storageKey });
+      requireValue(presence.present && presence.length === bytes.length && presence.hash === '', 'Presence probe read content');
       let protectedByLease = false;
       try { await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'move', storageKey: resource.storageKey, trash: true }); }
       catch (error) { protectedByLease = String(error).includes('attachment_send_busy'); }
@@ -64,4 +68,19 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
 async function remove(storageKey: string) {
   await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'move', storageKey, trash: true });
   await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'remove-trash', storageKey });
+}
+
+async function verifyLocalImageImport(owner: ReturnType<typeof companionFramedFileOwner>) {
+  const bytesBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aB9sAAAAASUVORK5CYII=';
+  const bytes = Uint8Array.from(atob(bytesBase64), value => value.charCodeAt(0));
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const contentHash = [...digest].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const storageKey = `${contentHash}.png`;
+  const request = { bytesBase64, contentHash, storageKey, mimeType: 'image/png' };
+  await FolioleCompanionSync.writeImageAttachment(request);
+  requireValue((await FolioleCompanionSync.writeImageAttachment(request)).storedFile === 'reused', 'Imported image was not reused');
+  const info = await FolioleCompanionSync.accessFramedSyncFile({ ...owner,
+    operation: 'attachment', action: 'stat', key: storageKey });
+  requireValue(info.present && info.hash === contentHash && info.length === bytes.length, 'Imported image differs');
+  await remove(storageKey);
 }

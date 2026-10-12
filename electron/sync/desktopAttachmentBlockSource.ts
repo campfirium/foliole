@@ -15,13 +15,7 @@ export function createDesktopAttachmentBlockSource(assetsDir: string): Attachmen
     if (!identity) throw new Error('attachment_storage_key_invalid');
     const canonicalPath = path.join(assetsDir, storageKey);
     return withAttachmentFileLease(canonicalPath, async () => {
-      let filePath = canonicalPath;
-      try { await fs.access(filePath); }
-      catch (error) {
-        if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
-        filePath = path.join(attachmentTrashDirectory(assetsDir), storageKey);
-      }
-      if (!(await fs.lstat(filePath)).isFile()) throw new Error('attachment_source_invalid');
+      const filePath = await sourcePath(assetsDir, storageKey);
       const handle = await fs.open(filePath, 'r');
       try {
         const stat = await handle.stat();
@@ -45,4 +39,26 @@ export function createDesktopAttachmentBlockSource(assetsDir: string): Attachmen
       } finally { await handle.close(); }
     });
   } };
+}
+
+async function sourcePath(assetsDir: string, storageKey: string) {
+  if (!parseCanonicalAttachmentStorageKey(storageKey)) throw new Error('attachment_storage_key_invalid');
+  for (const directory of [assetsDir, attachmentTrashDirectory(assetsDir)]) {
+    const file = path.join(directory, storageKey);
+    try {
+      if (!(await fs.lstat(file)).isFile()) throw new Error('attachment_source_invalid');
+      return file;
+    } catch (error) {
+      if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+    }
+  }
+  throw Object.assign(new Error('attachment_source_missing'), { code: 'ENOENT' });
+}
+
+export async function isDesktopAttachmentPresent(assetsDir: string, storageKey: string) {
+  try { await sourcePath(assetsDir, storageKey); return true; }
+  catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
+    throw error;
+  }
 }

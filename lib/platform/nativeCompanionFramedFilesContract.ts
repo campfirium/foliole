@@ -4,7 +4,7 @@ export type NativeCompanionFramedFileRequest = NativeCompanionFramedPayloadBudge
   key: string;
 } & ({ operation: 'read' | 'remove' | 'list' } | { operation: 'write'; base64: string }
   | { operation: 'attachment'; action: 'acquire' | 'stat' | 'truncate' | 'append' | 'hash' | 'publish' | 'discard'
-      | 'source-open' | 'source-read' | 'source-close'; partial?: boolean; offset?: number; length?: number; base64?: string });
+      | 'source-stat' | 'source-open' | 'source-read' | 'source-close'; partial?: boolean; offset?: number; length?: number; base64?: string });
 
 /** Keys are relative to the native-owned sync directory of the current library. */
 export interface NativeCompanionFramedFilesPlugin {

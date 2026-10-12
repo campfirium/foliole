@@ -8,7 +8,7 @@ import { registerDatabaseConnectionCleanup } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { openDesktopAttachmentBlockReceiver } from './desktopAttachmentBlockFiles.js';
-import { createDesktopAttachmentBlockSource } from './desktopAttachmentBlockSource.js';
+import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
 
 type Receiver = Extract<Awaited<ReturnType<typeof openDesktopAttachmentBlockReceiver>>, { kind: 'acquired' }>;
 const receivers = new Map<string, Promise<Receiver>>();
@@ -49,13 +49,7 @@ export function createDesktopRequestSyncAttachmentHost(host: RequestSyncDatabase
     async receive(resource, offset, bytes) { return (await receiver()).receive(resource, offset, bytes); },
     async needs() {
       checkLibrary();
-      return readRequestSyncAttachmentNeeds(host, async key => {
-        try { await source.withFile(key, async () => {}); return true; }
-        catch (error) {
-          if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
-          throw error;
-        }
-      });
+      return readRequestSyncAttachmentNeeds(host, key => isDesktopAttachmentPresent(assetsDir, key));
     }
   };
 }
