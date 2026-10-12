@@ -1,9 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.system.ErrnoException;
-import android.system.Os;
-import android.system.OsConstants;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -32,7 +29,7 @@ final class FolioleCompanionAttachmentFileStage {
                 throw new IllegalStateException("Attachment batch resource description is invalid.");
             }
             File target = target(context, storageKey);
-            boolean created = publish(entry.getValue(), target, hash, context);
+            boolean created = FolioleAttachmentBlockFiles.publish(context, entry.getValue(), target, hash);
             if (created) createdFiles.put(id, target);
             JSObject item = new JSObject();
             item.put("attachment_id", id);
@@ -50,22 +47,20 @@ final class FolioleCompanionAttachmentFileStage {
         FolioleCompanionAttachmentResourceBatchSessions.finish(token, committed);
     }
 
-    private static boolean publish(File source, File target, String hash, Context context) throws Exception {
-        File parent = target.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IllegalStateException("Failed to create attachment directory.");
+    // The caller holds the library receiver lock across the existence check and atomic move.
+    static boolean publishVerified(File source, File target, String hash) throws Exception {
+        if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(source))) {
+            throw new IllegalStateException("Attachment resource hash mismatch.");
         }
-        boolean created = true;
-        try { Os.link(source.getPath(), target.getPath()); }
-        catch (ErrnoException error) {
-            if (error.errno != OsConstants.EEXIST) throw error;
-            if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, target))) {
+        if (target.exists()) {
+            if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(target))) {
                 throw new IllegalStateException("Existing attachment resource hash mismatch.");
             }
-            created = false;
+            java.nio.file.Files.delete(source.toPath());
+            return false;
         }
-        java.nio.file.Files.delete(source.toPath());
-        return created;
+        java.nio.file.Files.move(source.toPath(), target.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        return true;
     }
 
     private static File target(Context context, String storageKey) {

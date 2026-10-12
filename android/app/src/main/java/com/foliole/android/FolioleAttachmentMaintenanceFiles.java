@@ -70,18 +70,8 @@ final class FolioleAttachmentMaintenanceFiles {
         if (!destination.getParentFile().isDirectory() && !destination.getParentFile().mkdirs()) {
             throw new IllegalStateException("attachment_directory_failed");
         }
-        if (destination.exists()) {
-            requireFile(destination);
-            String hash = key.substring(0, 64);
-            if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, source))
-                || !hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, destination))) {
-                throw new IllegalStateException("attachment_destination_conflict");
-            }
-            if (!source.delete()) throw new IllegalStateException("attachment_remove_failed");
-        } else {
-            Os.link(source.getPath(), destination.getPath());
-            if (!source.delete()) throw new IllegalStateException("attachment_move_failed");
-        }
+        if (destination.exists()) requireFile(destination);
+        FolioleAttachmentBlockFiles.publish(context, source, destination, key.substring(0, 64));
     }
 
     private static JSArray inventory(File root) throws Exception {

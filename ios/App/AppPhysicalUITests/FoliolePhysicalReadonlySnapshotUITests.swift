@@ -45,6 +45,22 @@ final class FoliolePhysicalReadonlySnapshotUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments += ["--foliole-physical-acceptance"]
+        let first = try runRequestProbe(app)
+        let initial = try XCTUnwrap(first["attachment"] as? [String: Any])
+        XCTAssertEqual(initial["restoredAfterRelaunch"] as? Bool, false)
+        XCTAssertEqual(initial["recoveredOffset"] as? Int, 524288)
+        XCTAssertEqual(initial["leaseProtected"] as? Bool, true)
+        XCTAssertEqual(initial["cleanup"] as? Bool, false)
+        app.terminate()
+        let second = try runRequestProbe(app)
+        let restored = try XCTUnwrap(second["attachment"] as? [String: Any])
+        XCTAssertEqual(restored["restoredAfterRelaunch"] as? Bool, true)
+        XCTAssertEqual(restored["hash"] as? String, initial["hash"] as? String)
+        XCTAssertEqual(restored["byteLength"] as? Int, 1572883)
+        XCTAssertEqual(restored["cleanup"] as? Bool, true)
+    }
+
+    private func runRequestProbe(_ app: XCUIApplication) throws -> [String: Any] {
         app.launch()
         let button = app.buttons["Run request snapshot"]
         XCTAssertTrue(button.waitForExistence(timeout: 45))
@@ -71,6 +87,7 @@ final class FoliolePhysicalReadonlySnapshotUITests: XCTestCase {
         XCTAssertEqual(result["cancelled"] as? Bool, true)
         XCTAssertEqual(result["originalVersions"] as? Int, 48)
         XCTAssertEqual(result["recoveredVersions"] as? Int, 50)
+        return result
     }
 
     private func waitForRequestResult(_ output: XCUIElement, key: String, values: [String]) {

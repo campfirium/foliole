@@ -10,7 +10,7 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
-import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
+import { createCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 
 const hosts = new WeakMap<object, { generation: string; host: Promise<RequestSyncAttachmentHost> }>();
 const statSchema = z.object({ present: z.boolean(), length: z.number().int().nonnegative(), hash: z.string() });
@@ -27,9 +27,9 @@ export function currentCompanionAttachmentHost(db: RequestSyncDatabaseHost): Pro
   return host;
 }
 
-async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
+export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   owner: ReturnType<typeof companionFramedFileOwner>): Promise<RequestSyncAttachmentHost> {
-  const files = await currentCompanionFramedSyncFiles();
+  const files = createCompanionFramedSyncFiles(FolioleCompanionSync, owner);
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
   const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
   let acquired: Promise<unknown> | undefined;

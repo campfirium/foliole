@@ -50,6 +50,30 @@ public final class FolioleCompanionAttachmentCommitRecoveryTest {
         } finally { temporary.delete(); root.delete(); }
     }
 
+    @Test public void publicationPreservesExistingFilesAndRejectsCorruptBytes() throws Exception {
+        File root = Files.createTempDirectory("foliole-publish-").toFile();
+        File source = new File(root, "partial"), target = new File(root, "published");
+        byte[] bytes = "verified content".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        try {
+            Files.write(source.toPath(), bytes);
+            String hash = FolioleCompanionAttachmentResourceHash.digestHex(source);
+            assertTrue(FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+            assertFalse(source.exists());
+            Object identity = Files.getAttribute(target.toPath(), "unix:ino");
+            Files.write(source.toPath(), bytes);
+            assertFalse(FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+            assertEquals(identity, Files.getAttribute(target.toPath(), "unix:ino"));
+            Files.write(source.toPath(), new byte[] {1});
+            assertThrows(Exception.class, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+            assertArrayEquals(bytes, Files.readAllBytes(target.toPath()));
+            Files.write(source.toPath(), bytes);
+            Files.write(target.toPath(), new byte[] {2});
+            assertThrows(Exception.class, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+            assertArrayEquals(bytes, Files.readAllBytes(source.toPath()));
+            assertArrayEquals(new byte[] {2}, Files.readAllBytes(target.toPath()));
+        } finally { source.delete(); target.delete(); root.delete(); }
+    }
+
     private static String session(File temporary, String hash) {
         return FolioleCompanionAttachmentResourceBatchSessions.create(Collections.singletonMap(hash, temporary),
             Collections.singletonMap(hash, hash), Collections.singletonMap(hash, "image/png"),

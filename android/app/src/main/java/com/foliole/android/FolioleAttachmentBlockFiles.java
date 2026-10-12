@@ -1,9 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.system.Os;
-import android.system.ErrnoException;
-import android.system.OsConstants;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
 import com.getcapacitor.JSObject;
@@ -81,12 +78,7 @@ public final class FolioleAttachmentBlockFiles {
         File file = resolve(key, true);
         if (action.equals("discard")) Files.deleteIfExists(file.toPath());
         else if (action.equals("publish")) {
-            File target = resolve(key, false);
-            try { Os.link(file.getPath(), target.getPath()); }
-            catch (ErrnoException error) {
-                if (error.errno != OsConstants.EEXIST || !digest(target).equals(key.substring(0, 64))) throw error;
-            }
-            Files.delete(file.toPath());
+            publish(context, file, resolve(key, false), key.substring(0, 64));
         } else try (RandomAccessFile output = new RandomAccessFile(file, "rw")) {
             if (action.equals("truncate")) output.setLength(number(call, "length"));
             else if (action.equals("append")) {
@@ -118,6 +110,20 @@ public final class FolioleAttachmentBlockFiles {
         if (length > 524288 || offset + length > source.length()) throw new IllegalArgumentException("attachment_source_range_invalid");
         byte[] bytes = new byte[(int) length]; source.seek(offset); source.readFully(bytes);
         return new JSObject().put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
+    }
+
+    static synchronized boolean publish(Context context, File source, File target, String hash) throws Exception {
+        File directory = FolioleAttachmentMaintenanceFiles.directory(context, false).getCanonicalFile();
+        for (FolioleAttachmentBlockFiles owner : OWNERS.values()) {
+            if (owner.root.equals(directory) && owner.lock != null && owner.lock.isValid()) {
+                return FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash);
+            }
+        }
+        FolioleAttachmentBlockFiles temporary = new FolioleAttachmentBlockFiles(context);
+        try {
+            temporary.acquire();
+            return FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash);
+        } finally { if (temporary.carrier != null) temporary.carrier.close(); }
     }
 
     static synchronized void requireNotSending(String key) {

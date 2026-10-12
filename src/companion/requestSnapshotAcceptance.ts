@@ -1,5 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import { runAttachmentBlockNativeProbe } from '../shared/platform/companion/runtime/attachmentBlockNativeProbe';
+
 import { assertIdentity, requireValue } from './capacityAcceptanceSafety';
 import { runRequestSnapshotProbe } from './requestSnapshotProbe';
 
@@ -33,7 +35,8 @@ export function mountRequestSnapshotAcceptance(root: HTMLElement) {
         phases.push(phase);
         publish({ status: 'running', phase });
       });
-      publish({ status: 'passed', scenario: 'request-snapshot', appId: identity.id, platform, cleanup: true, ...outcome });
+      const attachment = await runAttachmentBlockNativeProbe(platform);
+      publish({ status: 'passed', scenario: 'request-snapshot', appId: identity.id, platform, cleanup: true, ...outcome, attachment });
     } catch (error) { publish({ status: 'failed', phases, error: String(error) }); }
   };
 }
