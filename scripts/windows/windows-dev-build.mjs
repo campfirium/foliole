@@ -123,7 +123,8 @@ export async function runWindowsDevBuild({
       });
     }
     let actionResult = await runRouteControl({
-      action, buildIdentity: context.runId, checked, deviceAction, evidenceRoot: context.root,
+      action, diagnosticMode: requestedAction === 'sync-sqlite-diagnostic-micro' ? 'micro' : undefined,
+      buildIdentity: context.runId, checked, deviceAction, evidenceRoot: context.root,
       execute, fsApi, paths, snapshotRuntime: () => snapshotProcesses(execute, paths)
     });
     if (action === 'frozen-revision-preflight') {

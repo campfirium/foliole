@@ -5,7 +5,7 @@ import { parseWindowsDevFailureEvidence, parseWindowsDevSuccessEvidence } from '
 
 export const SQLITE_DIAGNOSTIC_ACTION = 'sync-sqlite-diagnostic';
 
-export async function runWindowsSyncSqliteDiagnostic({ action, execute, paths, evidenceRoot, fsApi = fs }) {
+export async function runWindowsSyncSqliteDiagnostic({ action, diagnosticMode, execute, paths, evidenceRoot, fsApi = fs }) {
   if (action !== SQLITE_DIAGNOSTIC_ACTION) return null;
   let output = '';
   const run = async (command, args, timeoutMs) => {
@@ -23,10 +23,14 @@ export async function runWindowsSyncSqliteDiagnostic({ action, execute, paths, e
       throw error;
     }
   };
-  await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);
-  await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
   const root = path.join(evidenceRoot, 'sqlite-diagnostic');
-  await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root], 85 * 60_000);
+  if (diagnosticMode === 'micro') {
+    await run(paths.systemNode, ['--experimental-sqlite', 'scripts/windows/windows-sqlite-commit-micro.mjs', root], 5 * 60_000);
+  } else {
+    await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);
+    await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
+    await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root], 85 * 60_000);
+  }
   await run(paths.tarPath, ['-a', '-cf', path.join(evidenceRoot, 'sqlite-diagnostic.zip'), '-C', root, '.'], 60_000);
   return { output };
 }

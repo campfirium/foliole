@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import { extractSqliteDiagnosticMode } from './windows-dev-action-contract.mjs';
 import { copyWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 
 import { spawn } from 'node:child_process';
@@ -66,7 +67,8 @@ function execute(command, args, options = {}) {
 }
 
 export function parseWindowsDevControlArgs(argv, env = process.env) {
-  const parsedSource = extractCandidateSourceRef(argv);
+  const { args: modeArgs, diagnosticMode } = extractSqliteDiagnosticMode(argv);
+  const parsedSource = extractCandidateSourceRef(modeArgs);
   const parsedRevision = extractCandidateRevision(parsedSource.args);
   const args = parsedRevision.args;
   const hostIndex = args.indexOf('--host');
@@ -87,7 +89,7 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
   if (parsedRevision.revision && !['internal-install', 'internal-open'].includes(args[0])) {
     throw new Error('Pinned Windows revision is only accepted for Internal installation and opening');
   }
-  return { action: args[0], host,
+  return { action: args[0], host, ...(diagnosticMode ? { diagnosticMode } : {}),
     ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}),
     ...(parsedRevision.revision ? { revision: parsedRevision.revision } : {}) };
 }
@@ -124,11 +126,11 @@ export async function runWindowsDevControl({
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
-  const { action, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
+  const { action, diagnosticMode, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
   const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
     targetHost, remote, local, env, os.homedir(), fsApi);
   const buildSshSpec = (targetHost, targetAction) => windowsDevSshSpec(
-    targetHost, targetAction, env, os.homedir(), fsApi);
+    targetHost, diagnosticMode && targetAction === action ? `${targetAction}-${diagnosticMode}` : targetAction, env, os.homedir(), fsApi);
   if (isWindowsSyncGroupProviderReleaseAction(action)) {
     const output = await executeSsh(buildSshSpec(host, action), { env });
     if (output) stdout.write(output);
