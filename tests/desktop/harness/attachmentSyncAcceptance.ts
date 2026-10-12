@@ -12,8 +12,9 @@ export async function addSyncImage(session: DesktopSession, nodeId: string) {
     }), { nodeId, bytesBase64 }) as { status: string; storage_key: string; attachment_id: string };
   expect(imported.status).toBe('imported');
   const key = `${imported.attachment_id}.png`;
-  await session.firstWindow.locator('.prompt-editor-host .cm-content')
-    .fill(`Attachment survives synchronization and restart.\n\n![Image](asset://${key})`);
+  await session.firstWindow.locator('.prompt-editor-host .cm-content').click();
+  await session.firstWindow.keyboard.insertText(`Attachment survives synchronization and restart.\n\n![Image](asset://${key})`);
+  expect(await session.firstWindow.evaluate(() => window.__folioleFlushPendingEditorDraftBeforeClose?.())).toBe(true);
   await expect.poll(() => session.electronApp.evaluate(({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
     const connection = require(`${app.getAppPath()}/database/connection.js`);
