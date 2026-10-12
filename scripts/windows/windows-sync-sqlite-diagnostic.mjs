@@ -6,7 +6,10 @@ import { pathToFileURL } from 'node:url';
 import { buildDesktopElectronBuckets } from '../run-desktop-electron-test-bucket.mjs';
 import { executeBounded } from './windows-bounded-process.mjs';
 
-export function diagnosticCases() {
+export function diagnosticCases(selection) {
+  if (selection === 'snapshot') return [{ name: 'snapshot',
+    files: ['electron/database/requestSyncSnapshot.integration.test.ts'],
+    filter: 'spools a complete history', timeoutMs: 120_000 }];
   const bucket = buildDesktopElectronBuckets().find(item => item.label === 'database-15');
   if (!bucket) throw new Error('database-15 not found');
   return [
@@ -25,24 +28,24 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
   const preload = path.join(repoRoot, 'scripts/windows/sync-sqlite-diagnostic-preload.cjs');
   return {
     directory,
-    args: ['scripts/electron-sqlite-runner.mjs', '--require', preload, 'scripts/run-vitest-with-summary.mjs',
+    args: ['scripts/electron-sqlite-runner.mjs', ...(scenario.name === 'snapshot' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
       path.join(directory, 'tests.json'), '--', '--pool=forks', '--maxWorkers=2', '--no-file-parallelism',
       '--reporter=./scripts/windows/sync-sqlite-diagnostic-reporter.mjs',
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
-    env: { ...process.env, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
+    env: { ...process.env, FOLIOLE_REQUEST_SYNC_TRACE_ROOT: directory, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
       FOLIOLE_SQLITE_DIAGNOSTIC_MODE: mode, FOLIOLE_REQUEST_SYNC_DIAGNOSTICS: '1',
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: path.join(directory, 'state'),
       TEMP: path.join(repoRoot, '.tmp'), TMP: path.join(repoRoot, '.tmp'), TMPDIR: path.join(repoRoot, '.tmp') }
   };
 }
 
-export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = executeBounded } = {}) {
+export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = executeBounded, selection } = {}) {
   const expected = path.join(repoRoot, '.tmp', 'artifacts');
   const relative = path.relative(expected, root);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('diagnostic evidence root must be temporary');
   fs.mkdirSync(root, { recursive: true });
   const results = [];
-  for (const scenario of diagnosticCases()) for (const mode of ['DEFAULT', 'NORMAL']) {
+  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
     fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();
@@ -62,5 +65,5 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  await runDiagnostic(path.resolve(process.argv[2] ?? ''));
+  await runDiagnostic(path.resolve(process.argv[2] ?? ''), { selection: process.argv[3] });
 }

@@ -56,3 +56,16 @@ it('preserves preparation output when the bounded command times out', async () =
   expect(writes.at(-1)).toContain('native failure detail');
   expect(writes.at(-1)).toContain('--preflight');
 });
+
+
+it('runs only the named snapshot test without SQLite interception or durability overrides', () => {
+  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'snapshot']))
+    .toMatchObject({ action: 'sync-sqlite-diagnostic', diagnosticMode: 'snapshot' });
+  const cases = diagnosticCases('snapshot');
+  expect(cases).toHaveLength(1);
+  const invocation = diagnosticInvocation({ root: '.tmp/artifacts/probe', mode: 'DEFAULT',
+    scenario: cases[0], repoRoot: process.cwd() });
+  expect(invocation.args).not.toContain('--require');
+  expect(invocation.args).toContain('spools a complete history');
+  expect(invocation.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT).toBe(invocation.directory);
+});
