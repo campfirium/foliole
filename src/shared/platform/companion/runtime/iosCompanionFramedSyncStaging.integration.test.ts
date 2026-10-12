@@ -24,42 +24,71 @@ import {
 
 const roots: string[] = [];
 const databases: Database.Database[] = [];
+let previousStage = performance.now();
+
+function traceStage(stage: string) {
+  const now = performance.now();
+  if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) {
+    process.stderr.write(`${JSON.stringify({ at: new Date().toISOString(), pid: process.pid,
+      stage: `ios_staging.${stage}`, elapsedMs: now - previousStage })}\n`);
+  }
+  previousStage = now;
+}
 
 afterEach(async () => {
+  traceStage('close.start');
   await closeIosCompanionDatabase();
+  traceStage('close.end');
   for (const database of databases.splice(0)) database.close();
+  traceStage('connections.closed');
   for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
+  traceStage('directories.removed');
 });
 
 describe('iOS active companion framed sync staging', () => {
   it('installs the shared staging schema in a fresh active database', async () => {
     const fixture = databaseFixture(false);
-    await initializeIosCompanionDatabase(nativeState(), fixture.manager);
+    traceStage('initialize.start');
+    await initializeIosCompanionDatabase(nativeState(), fixture.manager, {
+      afterRepair: () => { traceStage('repair.complete'); }
+    });
+    traceStage('initialize.end');
 
     expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
       FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
     ));
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
+    traceStage('assertions.complete');
   });
 
   it('upgrades a version 70 active database without losing business rows', async () => {
+    traceStage('upgrade.start');
     const fixture = databaseFixture(true);
+    traceStage('fixture.created');
     fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.filter((sql) => !sql.includes('framed_sync_')).join(';\n'));
+    traceStage('old_schema.created');
     fixture.sqlite.prepare('INSERT INTO companion_meta VALUES (?, ?, ?)')
       .run('device_id', 'ios-device', '2026-10-05T00:00:00Z');
     fixture.sqlite.prepare(`INSERT INTO nodes
       (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
        created_at, updated_at, deleted_at) VALUES (?, NULL, 'topic', 'Kept', 1, 0, '', 0, ?, ?, NULL)`)
       .run('kept-node', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
+    traceStage('business_rows.inserted');
     fixture.sqlite.pragma('user_version = 70');
+    traceStage('version.set');
 
-    await initializeIosCompanionDatabase(nativeState(), fixture.manager);
+    traceStage('initialize.start');
+    await initializeIosCompanionDatabase(nativeState(), fixture.manager, {
+      afterRepair: () => { traceStage('repair.complete'); }
+    });
+    traceStage('initialize.end');
 
     expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
       FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
     ));
     expect(fixture.sqlite.prepare("SELECT title FROM nodes WHERE id = 'kept-node'").pluck().get()).toBe('Kept');
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
+    traceStage('assertions.complete');
   });
 });
 

@@ -16,7 +16,7 @@ import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecov
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
-import { finishRequestSyncSeedProbe, seedWithRequestSyncProbe } from './desktopRequestSyncSeedProbe.js';
+import { finishRequestSyncSeedProbe, recordRequestSyncConnection, seedWithRequestSyncProbe } from './desktopRequestSyncSeedProbe.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -68,6 +68,8 @@ const server = createServer((request, response) => {
     (error: unknown) => writeHttpError(response, error)
   );
 });
+
+server.on('connection', recordRequestSyncConnection);
 
 function requiredEnvironment(name: string) {
   const value = process.env[name];

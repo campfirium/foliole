@@ -187,7 +187,7 @@ function fixtureEnvironment(input: FixtureProcessInput) {
 }
 
 function recordFixtureStdout(data: Buffer) {
-  if (process.env.FOLIOLE_SQLITE_DIAGNOSTIC_ROOT) process.stderr.write(data);
+  if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) process.stderr.write(data);
   return String(data);
 }
 
