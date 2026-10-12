@@ -28,14 +28,17 @@ vi.mock('../import/keepImportMonitor.js', () => ({
   refreshKeepImportMonitorFromSettings: vi.fn()
 }));
 vi.mock('./desktopSyncGroupHttp.js', () => ({ postDesktopWorkgroupJson: mocks.post }));
-vi.mock('./desktopSyncGroupMemberStateReadiness.js', () => ({
-  clearDesktopSyncGroupMemberStateReadiness: vi.fn(),
-  markDesktopSyncGroupMemberStateReady: mocks.markReady,
-  revokeDesktopSyncGroupMemberStateReadiness: mocks.revokeReady
-}));
+vi.mock('./desktopSyncGroupMemberStateReadiness.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('./desktopSyncGroupMemberStateReadiness.js')>();
+  return { ...actual,
+    markDesktopSyncGroupMemberStateReady: mocks.markReady.mockImplementation(actual.markDesktopSyncGroupMemberStateReady),
+    revokeDesktopSyncGroupMemberStateReadiness: mocks.revokeReady.mockImplementation(actual.revokeDesktopSyncGroupMemberStateReadiness) };
+});
 vi.mock('./workgroupKeyStore.js', () => ({ loadDesktopWorkgroupKey: mocks.key }));
 
 import { acceptDesktopSyncGroupMemberState, exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
+import { clearDesktopSyncGroupMemberStateReadiness, desktopSyncGroupMemberStateReadiness,
+  readDesktopVerifiedMemberState } from './desktopSyncGroupMemberStateReadiness.js';
 
 const groupId = 'group-test';
 const sourceDeviceId = 'mac-source';
@@ -67,6 +70,7 @@ function memberState(): SyncGroupMemberStatePayload {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clearDesktopSyncGroupMemberStateReadiness();
   mocks.key.mockReturnValue({ group_key: 'secret' });
   mocks.loadState.mockReturnValue(memberState());
   mocks.apply.mockReturnValue({
@@ -108,3 +112,33 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before applying or 
   expect(mocks.markReady).not.toHaveBeenCalled();
   expect(mocks.revokeReady).toHaveBeenCalledWith(receiverDeviceId);
 });
+
+it.each([false, true])('keeps restore reception authorized after a reciprocal exchange (pending=%s)', async pending => {
+  const incoming = memberState();
+  if (pending) incoming.restore = { ...restore, applied: false };
+  acceptDesktopSyncGroupMemberState(JSON.stringify(incoming), receiverDeviceId);
+  expect(desktopSyncGroupMemberStateReadiness(receiverDeviceId)).toBe('restore');
+  mocks.post.mockResolvedValueOnce(incoming);
+  await exchangeDesktopSyncGroupMemberState({
+    endpoint_url: 'http://peer', group_id: groupId, local_device_id: sourceDeviceId,
+    peer_device_id: receiverDeviceId, peer_device_name: 'Peer', peer_platform: 'android-capacitor'
+  });
+  expect(desktopSyncGroupMemberStateReadiness(receiverDeviceId)).toBe('restore');
+  expect(readDesktopVerifiedMemberState(receiverDeviceId)).toEqual(incoming);
+});
+
+it.each(['different-restore', 'already-applied', 'different-source'] as const)(
+  'revokes restore reception after a reciprocal exchange with %s', async kind => {
+    acceptDesktopSyncGroupMemberState(JSON.stringify(memberState()), receiverDeviceId);
+    const incoming = { ...memberState(), restore: { ...restore, applied: kind === 'already-applied',
+      event: { ...restore.event, restore_id: kind === 'different-restore' ? 'other-restore' : restore.event.restore_id } } };
+    if (kind === 'different-source') mocks.apply.mockReturnValue({ localExited: false, normalSyncReady: false,
+      state: { ...memberState(), restore, sender_device_identity_key: 'other-source' } });
+    mocks.post.mockResolvedValueOnce(incoming);
+    await exchangeDesktopSyncGroupMemberState({
+      endpoint_url: 'http://peer', group_id: groupId, local_device_id: sourceDeviceId,
+      peer_device_id: receiverDeviceId, peer_device_name: 'Peer', peer_platform: 'android-capacitor'
+    });
+    expect(desktopSyncGroupMemberStateReadiness(receiverDeviceId)).toBeNull();
+    expect(() => readDesktopVerifiedMemberState(receiverDeviceId)).toThrow('sync_group_member_state_required');
+  });

@@ -24,6 +24,16 @@ export const SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticatedDeviceId: string) {
   const incoming = readCompatibleMemberState(JSON.parse(bodyText), authenticatedDeviceId);
   const applied = applyMemberStateWithDecisionChange(incoming, authenticatedDeviceId);
+  updateMemberStateReadiness(incoming, applied, authenticatedDeviceId);
+  if (applied.watchedDecisionReceived && !applied.localExited) scheduleWatchedDecisionSync();
+  if (!applied.normalSyncReady && applied.state.restore && !applied.state.restore.applied) {
+    scheduleRestoreSync();
+  }
+  return applied;
+}
+
+function updateMemberStateReadiness(incoming: SyncGroupMemberStatePayload,
+  applied: ReturnType<typeof applyMemberStateWithDecisionChange>, authenticatedDeviceId: string) {
   const restore = applied.state.restore;
   const canSupplyRestore = Boolean(restore?.applied &&
     restore.event.source_device_identity_key === applied.state.sender_device_identity_key &&
@@ -32,11 +42,6 @@ export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticate
   if (applied.normalSyncReady) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId, 'normal', incoming);
   else if (canSupplyRestore) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId, 'restore', incoming);
   else revokeDesktopSyncGroupMemberStateReadiness(authenticatedDeviceId);
-  if (applied.watchedDecisionReceived && !applied.localExited) scheduleWatchedDecisionSync();
-  if (!applied.normalSyncReady && applied.state.restore && !applied.state.restore.applied) {
-    scheduleRestoreSync();
-  }
-  return applied;
 }
 
 function scheduleRestoreSync() {
@@ -91,8 +96,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     );
     const localRestore = applied.state.restore;
     if (localRestore && !localRestore.applied) clearDesktopSyncGroupMemberStateReadiness();
-    else if (applied.normalSyncReady) markDesktopSyncGroupMemberStateReady(peer.peer_device_id, 'normal', incoming);
-    else revokeDesktopSyncGroupMemberStateReadiness(peer.peer_device_id);
+    else updateMemberStateReadiness(incoming, applied, peer.peer_device_id);
     return {
       localLibraryEpoch: request.localLibraryEpoch,
       peerState: incoming,
