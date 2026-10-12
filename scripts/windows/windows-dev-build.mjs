@@ -93,7 +93,7 @@ export async function runWindowsDevBuild({
         && residualBefore.length > 0 && !allowsSyncGroupNativeClient(action, residualBefore, paths)) {
       throw failure('Repository-owned action process is already running', 73, 'residual');
     }
-    const signing = ['default-sync-journey', 'frozen-revision-preflight'].includes(action)
+    const signing = ['default-sync-journey', 'frozen-revision-preflight', 'sync-sqlite-diagnostic'].includes(action)
       ? { sha256: null } : verifyWindowsDevSigningIdentity(paths, fsApi);
     const candidate = preparesWindowsSyncGroupCandidate(action)
       ? inspectCandidate(paths.repoRoot, 'diagnostic') : null;

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import { copyWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
+
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -193,6 +195,9 @@ export async function runWindowsDevControl({
       buildScpSpec(host, remote, local), { env }
     ) });
   if (deviceProfile) Object.assign(result, deviceProfile);
+  const sqliteDiagnostic = await copyWindowsSyncSqliteDiagnostic({ action, fsApi, remoteError, remoteOutput, repoRoot,
+    copyFile: (remote, local) => executeScp(buildScpSpec(host, remote, local), { env }) });
+  if (sqliteDiagnostic) Object.assign(result, sqliteDiagnostic);
   const hostFacts = await copyWindowsDesktopDnsSdHostFacts({ action, fsApi, remoteError,
     remoteOutput, repoRoot, copyFile: (remote, local) => executeScp(
       buildScpSpec(host, remote, local), { env }

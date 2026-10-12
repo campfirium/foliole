@@ -7,7 +7,7 @@ export const WINDOWS_DEV_ACTIONS = [
   'internal-install', 'internal-open', 'live', 'secondary', 'default-sync-journey',
   'frozen-revision-preflight', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
   'readwise-api-scheduler',
-  'desktop-dnssd-host-facts', 'desktop-dnssd-advertise-acceptance',
+  'desktop-dnssd-host-facts', 'sync-sqlite-diagnostic', 'desktop-dnssd-advertise-acceptance',
   'desktop-dnssd-find-acceptance', 'desktop-dnssd-find-diagnostic',
   'desktop-dnssd-route-prepare', 'desktop-dnssd-route-provider',
   'desktop-dnssd-route-selfcheck', 'sync-group-join-prepare',

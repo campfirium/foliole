@@ -1,3 +1,4 @@
+import { runWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 import { runWindowsDesktopDnsSdRouteControl } from './windows-desktop-dnssd-route-control.mjs';
 import {
   WINDOWS_DEFAULT_SYNC_JOURNEY_ACTION,
@@ -9,6 +10,7 @@ import { runWindowsReadwiseApiImportAcceptance } from './windows-readwise-api-im
 import { runWindowsReadwiseApiSchedulerAcceptance } from './windows-readwise-api-scheduler-action.mjs';
 
 export function runWindowsDevDesktopAction(options) {
+  if (options.action === 'sync-sqlite-diagnostic') return runWindowsSyncSqliteDiagnostic(options);
   if (options.action === WINDOWS_DEFAULT_SYNC_JOURNEY_ACTION) {
     return runWindowsDefaultSyncJourney({ checked: options.checked,
       evidenceRoot: options.evidenceRoot, execute: options.execute,

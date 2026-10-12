@@ -3,7 +3,7 @@ import { WINDOWS_SYNC_GROUP_ACTIONS } from './windows-sync-group-build-routing.m
 export const WINDOWS_DEV_BUILD_ACTIONS = [
   'appearance', 'build', 'capture-annotation', 'deploy', 'device-profile',
   'default-sync-journey',
-  'desktop-dnssd-host-facts',
+  'desktop-dnssd-host-facts', 'sync-sqlite-diagnostic',
   'frozen-revision-preflight', 'live', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
   'readwise-api-scheduler', 'secondary',
   'sync-group-join-prepare',

@@ -19,12 +19,12 @@ export function windowsDevRequiredTools(action, paths) {
   const npmRequired = ['build', 'capture-annotation', 'deploy'].includes(action)
     || requiresWindowsDevDesktopBuild(action)
     || action === 'desktop-dnssd-route-prepare'
-    || action === 'frozen-revision-preflight';
-  const gitRequired = ['default-sync-journey', 'frozen-revision-preflight'].includes(action)
+    || ['frozen-revision-preflight', 'sync-sqlite-diagnostic'].includes(action);
+  const gitRequired = ['default-sync-journey', 'frozen-revision-preflight', 'sync-sqlite-diagnostic'].includes(action)
     || WINDOWS_DESKTOP_DNSSD_ROUTE_ACTIONS.has(action);
-  const tarRequired = action === 'frozen-revision-preflight';
+  const tarRequired = ['frozen-revision-preflight', 'sync-sqlite-diagnostic'].includes(action);
   const adbRequired = !['build', 'default-sync-journey', 'desktop-dnssd-host-facts',
-    'device-profile', 'frozen-revision-preflight', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
+    'device-profile', 'frozen-revision-preflight', 'sync-sqlite-diagnostic', 'readwise-api-connection', 'readwise-api-external', 'readwise-api-import',
     'readwise-api-scheduler',
     'sync-group-join-prepare'].includes(action)
     && !isWindowsSyncGroupAction(action);
