@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const { channel } = require('node:diagnostics_channel');
 const { setInterval, clearInterval } = require('node:timers');
 
@@ -7,6 +8,19 @@ exports.install = function (emit) {
   const connections = new WeakMap();
   const pending = new Map();
   const subscriptions = [];
+  for (const method of ['mkdir', 'rename', 'rm', 'readdir']) {
+    const original = fs.promises[method];
+    fs.promises[method] = async function (...args) {
+      const id = ++sequence;
+      emit({ event: 'file_start', id, method, path: String(args[0]) });
+      try {
+        const result = await Reflect.apply(original, this, args);
+        emit({ event: 'file_end', id, method, ...(method === 'mkdir' ? { firstCreated: result ?? null } : {}) });
+        return result;
+      } catch (error) { emit({ event: 'file_error', id, method, code: error.code }); throw error; }
+    };
+    subscriptions.push(() => { fs.promises[method] = original; });
+  }
   const subscribe = (name, listener) => {
     const source = channel(name);
     source.subscribe(listener);
