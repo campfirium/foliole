@@ -70,9 +70,9 @@ final class FolioleRemoteImageFiles {
         File temporary = File.createTempFile("image-", ".part", root);
         try {
             try (FileOutputStream stream = new FileOutputStream(temporary)) { stream.write(bytes); stream.getFD().sync(); }
-            Os.link(temporary.getPath(), target.getPath());
+            boolean created = FolioleAttachmentBlockFiles.publish(context, temporary, target, hash);
+            return new JSObject().put("storedFile", created ? "created" : "reused");
         } finally { temporary.delete(); }
-        return new JSObject().put("storedFile", "created");
     }
 
     private static byte[] readBounded(InputStream stream) throws Exception {
