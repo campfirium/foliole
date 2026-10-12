@@ -13,6 +13,9 @@ export async function runWindowsSyncSqliteDiagnostic({ action, execute, paths, e
     output += result.output;
     if (result.code !== 0) throw Object.assign(new Error('SQLite diagnostic preparation failed'), { result });
   };
+  await run(paths.systemNode, [paths.systemNpmCli, 'ci'], 45 * 60_000);
+  await run(paths.systemNode, [path.win32.join(paths.repoRoot, 'node_modules', 'electron', 'install.js')], 20 * 60_000);
+  await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:rebuild:native'], 20 * 60_000);
   await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
   const root = path.join(evidenceRoot, 'sqlite-diagnostic');
   await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root], 85 * 60_000);
