@@ -42,7 +42,9 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
   return {
     directory,
     args: ['scripts/electron-sqlite-runner.mjs', ...(['snapshot', 'companion-continuation', 'overwrite-join', 'preview-status'].includes(scenario.name) && mode === 'DEFAULT' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
-      path.join(directory, 'tests.json'), '--', '--pool=forks', '--maxWorkers=2', '--no-file-parallelism',
+      path.join(directory, 'tests.json'), '--',
+      `--pool=${['companion-continuation', 'preview-status'].includes(scenario.name) ? 'threads' : 'forks'}`,
+      '--maxWorkers=2', '--no-file-parallelism',
       '--reporter=./scripts/windows/sync-sqlite-diagnostic-reporter.mjs',
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
     env: { ...process.env, FOLIOLE_REQUEST_SYNC_TRACE_ROOT: directory, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
