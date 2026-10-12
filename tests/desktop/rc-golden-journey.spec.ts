@@ -20,6 +20,7 @@ const B_CONTENT = `# RC Golden Topic B\n\n${TOKEN_PREFIX}-B`;
 
 async function waitForWorkspaceDebug(windowPage: WindowPage) {
   await windowPage.waitForFunction(() => Boolean(globalThis.window?.__folioleWorkspaceDebug));
+  await windowPage.waitForFunction(() => globalThis.window?.__folioleWorkspaceDebug?.isHydrated?.());
 }
 
 async function createTopicFromUi(windowPage: WindowPage) {
@@ -33,6 +34,7 @@ async function createTopicFromUi(windowPage: WindowPage) {
       return nodeId && nodeId !== previousNodeId ? nodeId : null;
     }, beforeNodeId))
     .not.toBeNull();
+  await expect.poll(() => collectEditorContent(windowPage)).toBe('');
   return windowPage.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
 }
 
@@ -44,6 +46,7 @@ async function insertEditorContent(windowPage: WindowPage, content: string) {
     .toBe(true);
   await windowPage.locator('.prompt-editor-host .cm-content').click();
   await windowPage.keyboard.insertText(content);
+  await expect.poll(() => collectEditorContent(windowPage)).toBe(content);
 }
 
 async function openNode(windowPage: WindowPage, nodeId: string) {
@@ -117,6 +120,8 @@ test('keeps A and B topic edits isolated across switches and relaunch', async ({
 
   try {
     await expectWorkspaceShell(desktopWindow);
+    // A fresh library opens its guided session after hydration completes.
+    await expect(desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ })).toBeVisible();
     const nodeA = await createTopicFromUi(desktopWindow);
     expect(nodeA).toBeTruthy();
     await insertEditorContent(desktopWindow, A_CONTENT);

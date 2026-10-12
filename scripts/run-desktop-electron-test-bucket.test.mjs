@@ -56,8 +56,7 @@ it('runs isolated sync fixtures in bounded native fork workers', () => {
   const large = parallel.find(({ label }) => label === 'sync-large');
   expect(large.targets).toEqual([
     'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
-    'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
-    'electron/sync/desktopFramedSyncLargeOverwrite.integration.test.ts'
+    'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts'
   ]);
   expect(large.workers).toBe(2);
   expect(parallel.every(({ label }) => label.startsWith('sync'))).toBe(true);

@@ -22,8 +22,7 @@ const MISSING_REPORT_RETRY_LIMIT = 3;
 export const DESKTOP_ELECTRON_SHARDS = ['database', 'import', 'ipc', 'services'];
 const LARGE_SYNC_TESTS = [
   'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
-  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
-  'electron/sync/desktopFramedSyncLargeOverwrite.integration.test.ts'
+  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts'
 ];
 const SINGLE_FILE_IMPORT_BUCKETS = new Set([
   'electron/import/importManagerSettings.test.ts',
