@@ -18,7 +18,8 @@ async function syncDirectory(directory: string) {
 
 async function ensureDirectory(directory: string) {
   const first = await fs.mkdir(directory, { recursive: true, mode: 0o700 });
-  if (!first) return;
+  // Directory syncing is skipped on Windows; mkdir may return a namespaced path.
+  if (!first || process.platform === 'win32') return;
   let current = directory;
   for (;;) {
     await syncDirectory(current);

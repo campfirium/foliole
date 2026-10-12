@@ -21,6 +21,9 @@ export function diagnosticCases(selection) {
     { name: 'large-adoption', files: ['electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts'],
       filter: 'production request adoption', timeoutMs: 11 * 60_000 }
   ];
+  if (selection === 'verify') return [{ name: 'snapshot',
+    files: ['electron/database/requestSyncSnapshot.integration.test.ts'], timeoutMs: 120_000 },
+    ...cases.filter(item => item.name !== 'database-15')];
   return selection === 'group' ? cases.slice(0, 1) : cases;
 }
 
@@ -46,7 +49,7 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('diagnostic evidence root must be temporary');
   fs.mkdirSync(root, { recursive: true });
   const results = [];
-  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : selection === 'group' ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
+  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : ['group', 'verify'].includes(selection) ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
     fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();
