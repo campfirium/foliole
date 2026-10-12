@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
+import { snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
@@ -41,13 +42,21 @@ const server = createServer((request, response) => {
   const route = new URL(request.url ?? '/', 'http://localhost');
   const label = route.searchParams.get('request') ?? route.pathname;
   requestCounts[label] = (requestCounts[label] ?? 0) + 1;
+  const discovery = route.pathname === '/companion/discovery';
+  if (discovery) {
+    snapshotTrace('fixture.discovery', 'received');
+    response.once('finish', () => snapshotTrace('fixture.discovery', 'finished'));
+  }
   if (request.url === '/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ deviceId, pid: process.pid }));
     return;
   }
   void loadProcessPort().then(
-    (port) => port.handleHttpRequest(request, response),
+    (port) => {
+      if (discovery) snapshotTrace('fixture.discovery', 'handler_ready');
+      return port.handleHttpRequest(request, response);
+    },
     (error: unknown) => writeHttpError(response, error)
   );
 });

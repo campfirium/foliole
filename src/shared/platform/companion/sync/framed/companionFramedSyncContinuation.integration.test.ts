@@ -82,12 +82,12 @@ async function setup() {
 }
 
 it('recaptures inventory after a pull supersedes its stale outbound side and returns converged facts', async () => {
-  const { fixture, bridge } = await setup();
+  const { fixture, bridge } = await snapshotStage('continuation.setup', setup);
   const nodeId = 't326-companion-continuation';
   await fixture.left.seed({ content: 'Original', nodeId, title: 'Original' });
   await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
   await fixture.right.seed({ content: 'Remote saved edit😀', nodeId, title: 'Remote edit' });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('continuation.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(result.deferredObjects).toEqual([]);
   expect(result.received).toContainEqual(expect.objectContaining({ objectId: nodeId }));
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
@@ -104,7 +104,7 @@ it('recaptures inventory after a pull supersedes its stale outbound side and ret
 }, 15_000);
 
 it('converges a companion fork after its shared ancestor body was deleted', async () => {
-  const { fixture, bridge } = await setup();
+  const { fixture, bridge } = await snapshotStage('continuation.setup', setup);
   const nodeId = 't339-deleted-ancestor-fork';
   await fixture.left.seed({ content: 'Shared original', nodeId, title: 'Shared' });
   await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
@@ -123,7 +123,7 @@ it('converges a companion fork after its shared ancestor body was deleted', asyn
       throw new Error(`Failed to send framed Sync transfer. Cause: IllegalStateException: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('continuation.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(result.deferredObjects).toEqual([]);
   const left = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
   const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
@@ -138,7 +138,7 @@ it('converges a companion fork after its shared ancestor body was deleted', asyn
 }, 15_000);
 
 it('completes another finite round for an edit made after the selected input was fixed', async () => {
-  const { fixture, bridge } = await setup();
+  const { fixture, bridge } = await snapshotStage('continuation.setup', setup);
   const nodeId = 't326-companion-frozen-edit';
   await fixture.right.seed({ content: 'Fixed body', nodeId, title: 'Fixed' });
   native.pull.mockImplementationOnce(async (input: NativeCompanionFramedSyncPullRequest) => {
@@ -146,7 +146,7 @@ it('completes another finite round for an edit made after the selected input was
     await fixture.right.seed({ content: 'Later saved body', nodeId, title: 'Later' });
     return receipt;
   });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('continuation.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(result.deferredObjects).toEqual([]);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Later saved body' })]);

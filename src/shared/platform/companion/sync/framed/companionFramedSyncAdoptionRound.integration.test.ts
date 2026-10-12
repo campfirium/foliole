@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
+import { snapshotStage } from '../../../../../../electron/database/requestSyncSnapshot.trace.js';
 import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
 import { createDesktopLibrarySyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
 import { readFixtureInventory, reconnectFixturePeer } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
@@ -83,7 +84,7 @@ async function setup() {
 }
 
 async function adopt() {
-  const ready = await setup();
+  const ready = await snapshotStage('adoption.setup', setup);
   const { fixture, bridge } = ready;
   await beginSyncGroupLocalAdoption(bridge.db, { endpointUrl: fixture.rightSnapshot.origin,
     groupId: bridge.request.sync_group_id, libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
@@ -101,8 +102,8 @@ async function adopt() {
 }
 
 it('finishes source adoption and sends an edit in the same production companion round', async () => {
-  const { fixture, bridge } = await adopt();
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const { fixture, bridge } = await snapshotStage('adoption.prepare', adopt);
+  const result = await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(await loadSyncGroupLocalAdoption(bridge.db)).toBeNull();
   expect(await loadSyncGroupOverwriteProgress(bridge.db)).toBeNull();
   expect(result.deferredObjects).toEqual([]);
@@ -115,13 +116,13 @@ it('finishes source adoption and sends an edit in the same production companion 
 }, 15_000);
 
 it('keeps adoption protected when the source changes after its acknowledged delivery', async () => {
-  const { fixture, bridge } = await adopt();
+  const { fixture, bridge } = await snapshotStage('adoption.prepare', adopt);
   native.pull.mockImplementationOnce(async (input: NativeCompanionFramedSyncPullRequest) => {
     const receipt = await bridge.pull(input);
     await fixture.right.seed({ content: 'Source changed', nodeId: 't326-adoption-article', title: 'Source changed' });
     return receipt;
   });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(await loadSyncGroupLocalAdoption(bridge.db)).not.toBeNull();
   expect(await loadSyncGroupOverwriteProgress(bridge.db)).not.toBeNull();
   expect(result.deferredObjects).toContainEqual({ globalId: 't326-adoption-article', objectType: 'node' });
@@ -134,7 +135,7 @@ it('keeps adoption protected when the source changes after its acknowledged deli
 
 
 it('finishes verified state reception while retaining a newer local open state', async () => {
-  const { fixture, bridge } = await adopt();
+  const { fixture, bridge } = await snapshotStage('adoption.prepare', adopt);
   async function opened(db: DbPort, time: string) {
     const payload = { node_id: 't326-adoption-article', last_opened_at: time };
     await db.transaction(tx => applySyncObjectInTransaction(tx, {
@@ -147,7 +148,7 @@ it('finishes verified state reception while retaining a newer local open state',
   try { await opened(createBetterSqliteDbPort(source), '2030-01-01T00:00:00.000Z'); }
   finally { source.close(); }
   await opened(bridge.db, '2031-01-01T00:00:00.000Z');
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(await loadSyncGroupLocalAdoption(bridge.db)).toBeNull();
   expect(await loadSyncGroupOverwriteProgress(bridge.db)).toBeNull();
   expect(result.deferredObjects).toEqual([]);
@@ -158,9 +159,9 @@ it('finishes verified state reception while retaining a newer local open state',
 
 
 it('finishes reception after parent ordering merges with a local addition', async () => {
-  const { fixture, bridge } = await adopt();
+  const { fixture, bridge } = await snapshotStage('adoption.prepare', adopt);
   await fixture.left.seed({ content: 'Local addition', nodeId: 't326-second-article', title: 'Local addition' });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(await loadSyncGroupLocalAdoption(bridge.db)).toBeNull();
   expect(await loadSyncGroupOverwriteProgress(bridge.db)).toBeNull();
   expect(result.deferredObjects).toEqual([]);
@@ -177,8 +178,8 @@ it('finishes reception after parent ordering merges with a local addition', asyn
 
 
 it('keeps missing attachments pending without retransmitting converged database bodies', async () => {
-  const { fixture, bridge } = await adopt();
-  await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const { fixture, bridge } = await snapshotStage('adoption.prepare', adopt);
+  await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   const id = 'resource-only-article';
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
   const seeded = await fixture.right.seedResource({ bytes, nodeId: id, includeImageInBody: true });
@@ -203,7 +204,7 @@ it('keeps missing attachments pending without retransmitting converged database 
     expect(result).toMatchObject({ databaseComplete: true, resources: { transferred: 0, pending: 1 } });
     throw new Error('framed_sync_resource_source_unavailable');
   });
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('adoption.exchange', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(result.received).toEqual([]);
   expect(result.sent).toEqual([]);
   expect(native.send).not.toHaveBeenCalled();

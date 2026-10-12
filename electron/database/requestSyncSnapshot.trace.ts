@@ -5,10 +5,12 @@ import type { RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 
 export function snapshotTrace(stage: string, event: string) {
   const root = process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT;
-  if (!root) return;
-  appendFileSync(path.join(root, 'snapshot-stages.jsonl'), `${JSON.stringify({
+  if (!root && !process.env.CI) return;
+  const line = `${JSON.stringify({
     at: new Date().toISOString(), pid: process.pid, stage, event
-  })}\n`);
+  })}\n`;
+  if (root) appendFileSync(path.join(root, 'snapshot-stages.jsonl'), line);
+  else process.stderr.write(line);
 }
 
 export async function snapshotStage<T>(stage: string, run: () => Promise<T>): Promise<T> {
