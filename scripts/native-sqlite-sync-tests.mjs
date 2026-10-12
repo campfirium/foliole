@@ -1,4 +1,6 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
+  'electron/database/requestSyncReadonlyConnection.integration.test.ts',
   'electron/database/requestSyncReadonlySnapshot.integration.test.ts',
   'electron/database/requestSyncBatchReceiver.integration.test.ts',
   'electron/database/requestSyncBatchSnapshot.integration.test.ts',

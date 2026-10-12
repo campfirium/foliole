@@ -122,7 +122,10 @@ function startFixtureProcess(input: FixtureProcessInput) {
   let sequence = 0;
   const pending = new Map<number, PendingReply>();
   child.stdout?.on('data', (data) => { diagnostics += String(data); });
-  child.stderr?.on('data', (data) => { diagnostics += String(data); });
+  child.stderr?.on('data', (data) => {
+    diagnostics += String(data);
+    if (fixtureEnvironment(input).FOLIOLE_REQUEST_SYNC_DIAGNOSTICS === '1') process.stderr.write(data);
+  });
   child.on('message', (value: FixtureReply) => {
     const reply = pending.get(value.id);
     if (!reply) return;
@@ -172,6 +175,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
 function fixtureEnvironment(input: FixtureProcessInput) {
   return {
     ...process.env,
+    FOLIOLE_REQUEST_SYNC_DIAGNOSTICS: process.env.FOLIOLE_REQUEST_SYNC_DIAGNOSTICS ?? (process.env.CI ? '1' : '0'),
     ELECTRON_RUN_AS_NODE: '1',
     FOLIOLE_TEST_FRAMED_FILE_STORAGE: input.fileStorage ? '1' : '0',
     FOLIOLE_ELECTRON_TEST_STATE_ROOT: input.root,

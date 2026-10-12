@@ -55,6 +55,7 @@ it('runs isolated sync fixtures in bounded native fork workers', () => {
   const parallel = buckets.filter((bucket) => bucket.fileParallelism);
   const large = parallel.find(({ label }) => label === 'sync-large');
   expect(large.targets).toEqual([
+    'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
     'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
     'electron/sync/desktopFramedSyncLargeOverwrite.integration.test.ts'
   ]);

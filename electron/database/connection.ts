@@ -13,6 +13,7 @@ import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from '
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
 import { bindFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
+import { closeRequestSyncReadonlyConnections } from './requestSyncReadonlySnapshot.js';
 import { SqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
 const require = createRequire(import.meta.url);
@@ -131,6 +132,7 @@ export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
 
 export function closeDatabaseConnection() {
   mainDatabaseCoordinator.assertCanClose();
+  closeRequestSyncReadonlyConnections();
   cachedConnection?.framedSyncPayloadBudget.close();
   clearAttachmentLibraryPathSnapshot();
   for (const callback of connectionCleanupCallbacks) {

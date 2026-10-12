@@ -42,7 +42,8 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   return {
     handleHttpRequest: async (request: IncomingMessage, response: ServerResponse) => {
       const url = new URL(request.url ?? '/', input.localOrigin);
-      if (url.pathname === '/companion/discovery' || url.pathname === '/sync-group/member-state' || url.searchParams.has('request')) {
+      if (input.deviceId.startsWith('[') || url.pathname === '/companion/discovery' ||
+          url.pathname === '/sync-group/member-state' || url.searchParams.has('request')) {
         return productionHttp(request, response);
       }
       return receiveLegacyFixtureRequest(request, response, connection, identity, receiver);

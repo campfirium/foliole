@@ -1,6 +1,6 @@
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
 
@@ -18,7 +18,10 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string): Requ
       appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
       appliedObjectIds: [object.globalId], appliedReviewOpIds: [] }),
     files,
-    readSnapshot: (read, signal) => withRequestSyncReadonlySnapshot(databasePath, read, signal),
+    readSnapshot: (read, signal) => {
+      if (resolveDatabasePath() !== databasePath) throw new Error('request_sync_library_changed');
+      return withRequestSyncReadonlySnapshot(databasePath, read, signal);
+    },
     write: write => runWithDatabaseConnectionOwner(() => {
       const connection = openDatabaseConnection();
       if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');

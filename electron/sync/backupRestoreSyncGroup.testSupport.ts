@@ -29,11 +29,15 @@ export async function buildRestoreFixture(outputPath: string) {
 export function startRestoreFixture(script: string, root: string, port: number) {
   const child = fork(script, [], { execPath: process.execPath,
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', FOLIOLE_ELECTRON_TEST_STATE_ROOT: root,
+      FOLIOLE_REQUEST_SYNC_DIAGNOSTICS: process.env.FOLIOLE_REQUEST_SYNC_DIAGNOSTICS ?? (process.env.CI ? '1' : '0'),
       FOLIOLE_COMPANION_SYNC_PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
   let sequence = 0;
   let diagnostics = '';
   child.stdout?.on('data', (data) => { diagnostics += String(data); });
-  child.stderr?.on('data', (data) => { diagnostics += String(data); });
+  child.stderr?.on('data', (data) => {
+    diagnostics += String(data);
+    if ((process.env.FOLIOLE_REQUEST_SYNC_DIAGNOSTICS ?? (process.env.CI ? '1' : '0')) === '1') process.stderr.write(data);
+  });
   const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   child.on('message', (message: { id: number; result: unknown; error?: string }) => {
     const request = pending.get(message.id);

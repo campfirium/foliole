@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
@@ -12,12 +12,18 @@ import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNode
 import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { withRequestSyncReadonlySnapshot } from './requestSyncReadonlySnapshot.js';
+import { closeRequestSyncReadonlyConnections, withRequestSyncReadonlySnapshot } from './requestSyncReadonlySnapshot.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 let root = '';
 let sqlite: Database.Database | undefined;
-afterEach(async () => { sqlite?.close(); sqlite = undefined; if (root) await rm(root, { recursive: true }); });
+beforeEach(() => vi.stubEnv('FOLIOLE_REQUEST_SYNC_DIAGNOSTICS',
+  process.env.FOLIOLE_REQUEST_SYNC_DIAGNOSTICS ?? (process.env.CI ? '1' : '0')));
+afterEach(async () => {
+  closeRequestSyncReadonlyConnections();
+  sqlite?.close(); sqlite = undefined; if (root) await rm(root, { recursive: true });
+  vi.unstubAllEnvs();
+});
 
 it.each([false, true])('keeps inventory and body consistent during a concurrent write and releases on cancellation=%s', async cancel => {
   await mkdir('.tmp/artifacts', { recursive: true });
