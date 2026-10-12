@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
-import { createAttachmentBlockReceiver } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
+import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
 import { readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
+import { notifyAttachmentResourceAvailable } from '../../../runtime/attachmentResourceAvailability.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
@@ -53,7 +54,9 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     publish: async resource => { await call({ key: resource.storageKey, action: 'publish' }); },
     availability: (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))
   });
-  const host: RequestSyncAttachmentHost = { ...receiver,
+  const host: RequestSyncAttachmentHost = {
+    status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
+    receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),
     withFile: (key, consume) => files.exclusive(`send-${key}`, async () => {
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
       if (!info.present) throw new Error('attachment_source_missing');
@@ -81,4 +84,10 @@ function encode(bytes: Uint8Array) {
   const parts: string[] = [];
   for (let offset = 0; offset < bytes.length; offset += 8192) parts.push(String.fromCharCode(...bytes.subarray(offset, offset + 8192)));
   return btoa(parts.join(''));
+}
+
+async function notifyComplete<T extends AttachmentBlockResult>(storageKey: string, pending: Promise<T>) {
+  const result = await pending;
+  if (result.kind === 'complete') notifyAttachmentResourceAvailable(storageKey);
+  return result;
 }
