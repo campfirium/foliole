@@ -37,7 +37,7 @@ await step('node-official-range', async () => {
   const destination = new URL(response.url);
   let bytes = 0;
   for await (const chunk of response.body) { bytes += chunk.length; if (bytes >= 65536) break; }
-  return { status: response.status, finalHost: destination.hostname, bytes };
+  return { ok: response.ok, status: response.status, finalHost: destination.hostname, bytes };
 });
 await step('curl-official-range', async () => {
   const result = await executeBounded('curl.exe', ['--location', '--range', '0-65535',
@@ -45,7 +45,7 @@ await step('curl-official-range', async () => {
     '--output', path.join(root, 'curl-range.bin'), '--write-out',
     'http=%{http_code} remote=%{remote_ip} bytes=%{size_download} total=%{time_total}', url],
   { timeoutMs: 25_000, windowsHide: true });
-  return { exitCode: result.code, output: result.output };
+  return { ok: result.code === 0, exitCode: result.code, output: result.output };
 });
 await step('electron-downloader-single-attempt', async () => {
   const { downloadArtifact } = await import('@electron/get');
