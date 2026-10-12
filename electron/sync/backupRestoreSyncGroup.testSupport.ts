@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { build } from 'vite';
 
+import { snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
+
 import type { FixtureReply } from './backupRestoreSyncGroup.fixture.js';
 
 export async function buildRestoreFixture(outputPath: string) {
@@ -15,6 +17,13 @@ export async function buildRestoreFixture(outputPath: string) {
         if (existsSync(source)) return source;
       }
       return null;
+    }, transform(code, id) {
+      if (!process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT || !id.endsWith('/lib/core/sync/nodeVersionPeerProof.ts')) return null;
+      return code.replace("throw new Error('node_version_peer_restore_requires_rejoin');",
+        `console.error(JSON.stringify({ event: 'fixture_peer_proof_rejected', known,
+          incomingEpoch: incoming.library_epoch, incomingProof: incoming.source_proof_revisions[localDeviceId],
+          localDeviceId, peerDeviceId: incoming.sender_device_identity_key, stack: new Error().stack }));
+        throw new Error('node_version_peer_restore_requires_rejoin');`);
     } }],
     build: { ssr: true, outDir: path.dirname(outputPath), emptyOutDir: false, minify: false,
       rolldownOptions: { input: 'electron/sync/backupRestoreSyncGroup.fixture.ts', platform: 'node',
@@ -52,7 +61,12 @@ export function startRestoreFixture(script: string, root: string, port: number) 
   const send = (action: string, args: Record<string, unknown> = {}) => new Promise<unknown>((resolve, reject) => {
     if (!child.connected) { reject(new Error(`fixture unavailable: ${diagnostics}`)); return; }
     const id = ++sequence;
-    pending.set(id, { resolve, reject });
+    const stage = `fixture:${path.basename(root)}:${id}:${action}`;
+    snapshotTrace(stage, 'start');
+    pending.set(id, {
+      resolve(value) { snapshotTrace(stage, 'end'); resolve(value); },
+      reject(error) { snapshotTrace(stage, 'error'); reject(error); }
+    });
     child.send({ id, action, args }, (error) => {
       if (error) { pending.delete(id); reject(error); }
     });
