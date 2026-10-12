@@ -18,8 +18,11 @@ export async function buildRestoreFixture(outputPath: string) {
       }
       return null;
     }, transform(code, id) {
-      if (!process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT || !id.endsWith('/lib/core/sync/nodeVersionPeerProof.ts')) return null;
-      return code.replace("throw new Error('node_version_peer_restore_requires_rejoin');",
+      if (!process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT || !id.replaceAll('\\', '/').endsWith('/lib/core/sync/nodeVersionPeerProof.ts')) return null;
+      const rejected = /throw new Error\(["']node_version_peer_restore_requires_rejoin["']\);?/u;
+      if (!rejected.test(code)) throw new Error('fixture proof diagnostic hook missing');
+      snapshotTrace('fixture.proof-hook', 'installed');
+      return code.replace(rejected,
         `console.error(JSON.stringify({ event: 'fixture_peer_proof_rejected', known,
           incomingEpoch: incoming.library_epoch, incomingProof: incoming.source_proof_revisions[localDeviceId],
           localDeviceId, peerDeviceId: incoming.sender_device_identity_key, stack: new Error().stack }));
