@@ -21,6 +21,17 @@ it('routes the fixed micro submode without invoking Electron preparation', async
   expect(execute.mock.calls.map(call => call[1][0])).toEqual(['--experimental-sqlite', '-a']);
 });
 
+it('runs the download probe without invoking sync tests or dependency installation', async () => {
+  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'download']))
+    .toMatchObject({ diagnosticMode: 'download' });
+  expect(normalizeWindowsDevAction('sync-sqlite-diagnostic-download')).toBe('sync-sqlite-diagnostic');
+  const execute = vi.fn().mockResolvedValue({ code: 0, output: '' });
+  await runWindowsSyncSqliteDiagnostic({ action: 'sync-sqlite-diagnostic', diagnosticMode: 'download',
+    execute, fsApi: { writeFileSync: vi.fn() }, evidenceRoot: '.tmp',
+    paths: { repoRoot: '.', systemNode: 'node', tarPath: 'tar' } });
+  expect(execute.mock.calls.map(call => call[1][0])).toEqual(['scripts/windows/windows-electron-download-diagnostic.mjs', '-a']);
+});
+
 it('measures and verifies 2000 committed rows per mode using built-in SQLite', () => {
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/commit-micro-test-'));
   try {

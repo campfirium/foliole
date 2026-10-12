@@ -26,6 +26,8 @@ export async function runWindowsSyncSqliteDiagnostic({ action, diagnosticMode, e
   const root = path.join(evidenceRoot, 'sqlite-diagnostic');
   if (diagnosticMode === 'micro') {
     await run(paths.systemNode, ['--experimental-sqlite', 'scripts/windows/windows-sqlite-commit-micro.mjs', root], 5 * 60_000);
+  } else if (diagnosticMode === 'download') {
+    await run(paths.systemNode, ['scripts/windows/windows-electron-download-diagnostic.mjs', root], 95_000);
   } else {
     await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);
     await run(paths.systemNode, [paths.systemNpmCli, 'run', 'electron:compile'], 5 * 60_000);
