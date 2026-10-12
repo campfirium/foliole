@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { channel } from 'node:diagnostics_channel';
 
 import type BetterSqlite3 from 'better-sqlite3';
 
@@ -13,6 +14,8 @@ interface WaitingOwner {
   resume: () => void;
 }
 
+const diagnosticChannel = channel('foliole.sqlite.coordinator');
+
 const coordinators = new WeakMap<SqliteDatabase, SqliteConnectionCoordinator>();
 
 export class SqliteConnectionOwnerError extends Error {
@@ -26,6 +29,14 @@ export class SqliteConnectionCoordinator {
   private readonly ownerContext = new AsyncLocalStorage<SqliteConnectionOwner>();
   private readonly waitingOwners: WaitingOwner[] = [];
   private activeOwner: SqliteConnectionOwner | null = null;
+
+  constructor(private readonly database = { name: 'unbound', readonly: false }) {}
+
+  private trace(event: string, owner: SqliteConnectionOwner) {
+    if (!diagnosticChannel.hasSubscribers) return;
+    diagnosticChannel.publish({ event, coordinator: this, database: this.database, owner,
+      active: this.activeOwner, waiting: this.waitingOwners.map(item => item.owner) });
+  }
 
   assertAccess() {
     if (this.activeOwner && this.ownerContext.getStore() !== this.activeOwner) {
@@ -84,10 +95,12 @@ export class SqliteConnectionCoordinator {
   private acquire(owner: SqliteConnectionOwner): Promise<void> | null {
     if (!this.activeOwner) {
       this.activeOwner = owner;
+      this.trace('acquired', owner);
       return null;
     }
     return new Promise((resume) => {
       this.waitingOwners.push({ owner, resume });
+      this.trace('queued', owner);
     });
   }
 
@@ -97,6 +110,7 @@ export class SqliteConnectionCoordinator {
     }
     const next = this.waitingOwners.shift();
     this.activeOwner = next?.owner ?? null;
+    this.trace('released', owner);
     next?.resume();
   }
 }
@@ -104,7 +118,7 @@ export class SqliteConnectionCoordinator {
 export function getSqliteConnectionCoordinator(sqlite: SqliteDatabase) {
   const existing = coordinators.get(sqlite);
   if (existing) return existing;
-  const coordinator = new SqliteConnectionCoordinator();
+  const coordinator = new SqliteConnectionCoordinator({ name: sqlite.name, readonly: sqlite.readonly });
   coordinators.set(sqlite, coordinator);
   return coordinator;
 }

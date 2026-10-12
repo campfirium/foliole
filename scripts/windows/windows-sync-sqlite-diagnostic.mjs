@@ -12,7 +12,7 @@ export function diagnosticCases(selection) {
     filter: 'spools a complete history', timeoutMs: 120_000 }];
   const bucket = buildDesktopElectronBuckets().find(item => item.label === 'database-15');
   if (!bucket) throw new Error('database-15 not found');
-  return [
+  const cases = [
     { name: 'group-restore', files: ['electron/sync/backupRestoreSyncGroup.integration.test.ts'],
       filter: 'covers a whole group', timeoutMs: 5 * 60_000 },
     { name: 'database-15', files: bucket.targets, timeoutMs: 15 * 60_000 },
@@ -21,6 +21,7 @@ export function diagnosticCases(selection) {
     { name: 'large-adoption', files: ['electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts'],
       filter: 'production request adoption', timeoutMs: 11 * 60_000 }
   ];
+  return selection === 'group' ? cases.slice(0, 1) : cases;
 }
 
 export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
@@ -45,7 +46,7 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('diagnostic evidence root must be temporary');
   fs.mkdirSync(root, { recursive: true });
   const results = [];
-  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : ['DEFAULT', 'NORMAL']) {
+  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : selection === 'group' ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
     fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();

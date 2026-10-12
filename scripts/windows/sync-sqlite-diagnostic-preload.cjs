@@ -17,6 +17,7 @@ function install() {
   const file = path.join(root, `sqlite-${process.pid}.jsonl`);
   const emit = value => fs.appendFileSync(file, `${JSON.stringify({ at: new Date().toISOString(),
     pid: process.pid, ...value })}\n`);
+  require('./sync-sqlite-wait-diagnostics.cjs').install(emit);
   emit({ event: 'diagnostic_installed', argv: process.argv });
   const instrument = db => {
     if (states.has(db)) return;
