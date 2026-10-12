@@ -33,7 +33,7 @@ async function allocateFreePorts() {
 }
 
 async function createTopic(windowPage: WindowPage) {
-  await windowPage.waitForFunction(() => Boolean(globalThis.window?.__folioleWorkspaceDebug));
+  await windowPage.waitForFunction(() => globalThis.window?.__folioleWorkspaceDebug?.isHydrated());
   const previous = await windowPage.evaluate(() =>
     globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
   await windowPage.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();

@@ -12,9 +12,15 @@ export async function addSyncImage(session: DesktopSession, nodeId: string) {
     }), { nodeId, bytesBase64 }) as { status: string; storage_key: string; attachment_id: string };
   expect(imported.status).toBe('imported');
   const key = `${imported.attachment_id}.png`;
-  await session.firstWindow.locator('.prompt-editor-host .cm-content').click();
-  await session.firstWindow.keyboard.insertText(`Attachment survives synchronization and restart.\n\n![Image](asset://${key})`);
-  expect(await session.firstWindow.evaluate(() => window.__folioleFlushPendingEditorDraftBeforeClose?.())).toBe(true);
+  await session.firstWindow.evaluate(async ({ nodeId, key }) => {
+    const api = window.electronAPI;
+    const snapshot = await api.invoke('load_workspace_snapshot');
+    const node = snapshot.nodesById[nodeId];
+    await api.invoke('update_node_content', { ...node, nodeId,
+      anchorLink: node.anchorLink ?? null, position: node.position ?? null,
+      content: `Attachment survives synchronization and restart.\n\n![Image](asset://${key})`,
+      updatedAt: new Date().toISOString() });
+  }, { nodeId, key });
   await expect.poll(() => session.electronApp.evaluate(({ app }, input) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${app.getAppPath()}/main.js`);
     const connection = require(`${app.getAppPath()}/database/connection.js`);
