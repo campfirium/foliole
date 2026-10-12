@@ -123,7 +123,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
   let diagnostics = '';
   let sequence = 0;
   const pending = new Map<number, PendingReply>();
-  child.stdout?.on('data', (data) => { diagnostics += String(data); });
+  child.stdout?.on('data', (data) => { diagnostics += recordFixtureStdout(data); });
   child.stderr?.on('data', (data) => {
     diagnostics += String(data);
     if (fixtureEnvironment(input).FOLIOLE_REQUEST_SYNC_DIAGNOSTICS === '1') process.stderr.write(data);
@@ -184,6 +184,11 @@ function fixtureEnvironment(input: FixtureProcessInput) {
     FOLIOLE_FRAMED_SYNC_DEVICE_ID: input.deviceId,
     FOLIOLE_DESKTOP_FRAMED_SYNC_PROCESS_MODULE: pathToFileURL(input.script).href
   };
+}
+
+function recordFixtureStdout(data: Buffer) {
+  if (process.env.FOLIOLE_SQLITE_DIAGNOSTIC_ROOT) process.stderr.write(data);
+  return String(data);
 }
 
 async function seedResource(send: (action: string, args?: Readonly<Record<string, unknown>>) => Promise<unknown>,

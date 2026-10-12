@@ -55,6 +55,11 @@ function monitorStageLoop(stage: string) {
     const finished = performance.now();
     const loop = performance.eventLoopUtilization(utilization);
     const used = process.cpuUsage(cpu);
+    snapshotTrace(stage, `event_loop_at_return:${JSON.stringify({
+      elapsedMs: finished - started, synchronousMs, samples: histogram.count,
+      maxDelayMs: histogram.count ? histogram.max / 1e6 : null,
+      utilization: loop.utilization, cpuMs: (used.user + used.system) / 1000
+    })}`);
     // Sample after the current turn so a stalled timer can update the histogram.
     // This observer does not delay the operation or change its timeout signal.
     setTimeout(() => {

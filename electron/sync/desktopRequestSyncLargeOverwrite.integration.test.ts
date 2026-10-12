@@ -12,13 +12,19 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 import { continueAfterObjectCommitFailure, installObjectCommitFailure, overwriteProgressRow,
   preservedRestoreArticle, restoreIdentityState } from './desktopFramedSyncVerifiedRestoreTwoProcess.testSupport.js';
 
-it.each(['restore', 'adoption'] as const)(
+const modes = process.env.FOLIOLE_SQLITE_DIAGNOSTIC_ROOT
+  ? ['restore', 'adoption', 'adoption-command-barrier'] as const
+  : ['restore', 'adoption'] as const;
+
+it.each(modes)(
   'resumes production request %s of 1000 nodes after object 400 and a process restart', async mode => {
     const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     const started = performance.now();
     let passed = false;
     try {
-      const { workload, source, request } = await prepare(fixture, mode);
+      const actualMode = mode === 'restore' ? 'restore' : 'adoption';
+      const { workload, source, request } = await prepare(fixture, actualMode);
+      if (mode === 'adoption-command-barrier') await fixture.left.invoke('request_counts');
       const transferStarted = performance.now();
       installObjectCommitFailure(fixture.rightSnapshot.databasePath, 400);
       await expect(fixture.right.invoke('round', request)).rejects.toThrow('identity_restore_object_rejected');
@@ -47,7 +53,7 @@ it.each(['restore', 'adoption'] as const)(
       expect(completed.versions.slice(0, 1200)).toEqual(failed.versions);
       await verifyLargeOverwriteAttachments(restarted.snapshot.stateRoot);
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toBeUndefined();
-      assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, mode);
+      assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, actualMode);
       const requests = z.record(z.string(), z.number()).parse(await fixture.left.invoke('request_counts'));
       const requestCount = Object.values(requests).reduce((sum, count) => sum + count, 0);
       expect(requests.pulls).toBeGreaterThan(0);

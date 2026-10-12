@@ -11,12 +11,12 @@ import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInvento
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
-import { seedLargeOverwriteFixture } from './desktopFramedSyncLargeOverwrite.fixture.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
+import { finishRequestSyncSeedProbe, seedWithRequestSyncProbe } from './desktopRequestSyncSeedProbe.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -51,6 +51,7 @@ const server = createServer((request, response) => {
   requestCounts[label] = (requestCounts[label] ?? 0) + 1;
   const discovery = route.pathname === '/companion/discovery';
   if (discovery) {
+    finishRequestSyncSeedProbe();
     snapshotTrace('fixture.discovery', 'received');
     response.once('finish', () => snapshotTrace('fixture.discovery', 'finished'));
   }
@@ -206,7 +207,7 @@ async function run(command: Command) {
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
-  if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
+  if (command.action === 'seed_large_overwrite') return seedWithRequestSyncProbe();
   if (['reorder', 'standalone_edit', 'rejoin', 'register_order_member', 'restore_local_order'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);
   }
