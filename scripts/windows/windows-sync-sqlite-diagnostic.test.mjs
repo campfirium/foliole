@@ -69,3 +69,19 @@ it('runs only the named snapshot test without SQLite interception or durability 
   expect(invocation.args).toContain('spools a complete history');
   expect(invocation.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT).toBe(invocation.directory);
 });
+
+
+it('runs the remaining failures separately without SQLite interception', () => {
+  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'remaining']))
+    .toMatchObject({ diagnosticMode: 'remaining' });
+  const cases = diagnosticCases('remaining');
+  expect(cases.map(item => item.filter)).toEqual([
+    'returns pending without spinning', 'overwrites the whole group despite retained history',
+    'does not print a success status while a validation-window request is waiting'
+  ]);
+  for (const scenario of cases) {
+    const invocation = diagnosticInvocation({ root: '.tmp/artifacts/probe', mode: 'DEFAULT',
+      scenario, repoRoot: process.cwd() });
+    expect(invocation.args).not.toContain('--require');
+  }
+});

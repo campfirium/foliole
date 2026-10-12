@@ -31,7 +31,7 @@ export async function runWindowsSyncSqliteDiagnostic({ action, diagnosticMode, e
     await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);
   } else if (diagnosticMode === 'download') {
     await run(paths.systemNode, ['scripts/windows/windows-electron-download-diagnostic.mjs', root], 95_000);
-  } else if (['snapshot', 'group', 'verify'].includes(diagnosticMode)) {
+  } else if (['snapshot', 'group', 'verify', 'remaining'].includes(diagnosticMode)) {
     await run(paths.systemNode, ['scripts/windows/windows-sync-sqlite-diagnostic.mjs', root, diagnosticMode], diagnosticMode === 'verify' ? 29 * 60_000 : diagnosticMode === 'snapshot' ? 270_000 : 330_000);
   } else {
     await run(paths.systemNode, ['scripts/electron-sqlite-runner.mjs', '--preflight'], 60_000);

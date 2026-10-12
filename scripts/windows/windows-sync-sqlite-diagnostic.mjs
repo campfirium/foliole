@@ -7,6 +7,15 @@ import { buildDesktopElectronBuckets } from '../run-desktop-electron-test-bucket
 import { executeBounded } from './windows-bounded-process.mjs';
 
 export function diagnosticCases(selection) {
+  if (selection === 'remaining') return [
+    { name: 'companion-continuation',
+      files: ['src/shared/platform/companion/sync/framed/companionFramedSyncContinuation.integration.test.ts'],
+      filter: 'returns pending without spinning', timeoutMs: 120_000 },
+    { name: 'overwrite-join', files: ['electron/sync/syncGroupJoinOverwrite.integration.test.ts'],
+      filter: 'overwrites the whole group despite retained history', timeoutMs: 120_000 },
+    { name: 'preview-status', files: ['scripts/preview/preview-dedupe-status-contract.test.mjs'],
+      filter: 'does not print a success status while a validation-window request is waiting', timeoutMs: 60_000 }
+  ];
   if (selection === 'snapshot') return [{ name: 'snapshot',
     files: ['electron/database/requestSyncSnapshot.integration.test.ts'],
     filter: 'spools a complete history', timeoutMs: 120_000 }];
@@ -32,7 +41,7 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
   const preload = path.join(repoRoot, 'scripts/windows/sync-sqlite-diagnostic-preload.cjs');
   return {
     directory,
-    args: ['scripts/electron-sqlite-runner.mjs', ...(scenario.name === 'snapshot' && mode === 'DEFAULT' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
+    args: ['scripts/electron-sqlite-runner.mjs', ...(['snapshot', 'companion-continuation', 'overwrite-join', 'preview-status'].includes(scenario.name) && mode === 'DEFAULT' ? [] : ['--require', preload]), 'scripts/run-vitest-with-summary.mjs',
       path.join(directory, 'tests.json'), '--', '--pool=forks', '--maxWorkers=2', '--no-file-parallelism',
       '--reporter=./scripts/windows/sync-sqlite-diagnostic-reporter.mjs',
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
@@ -49,7 +58,7 @@ export async function runDiagnostic(root, { repoRoot = process.cwd(), execute = 
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('diagnostic evidence root must be temporary');
   fs.mkdirSync(root, { recursive: true });
   const results = [];
-  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : ['group', 'verify'].includes(selection) ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
+  for (const scenario of diagnosticCases(selection)) for (const mode of selection === 'snapshot' ? ['DEFAULT', 'INSTRUMENTED'] : ['group', 'verify', 'remaining'].includes(selection) ? ['DEFAULT'] : ['DEFAULT', 'NORMAL']) {
     const invocation = diagnosticInvocation({ root, mode, scenario, repoRoot });
     fs.mkdirSync(invocation.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT, { recursive: true });
     const startedAt = new Date().toISOString();

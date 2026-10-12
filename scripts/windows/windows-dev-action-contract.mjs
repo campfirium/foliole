@@ -12,7 +12,7 @@ export function toWindowsDevWireAction(action) {
 }
 
 export function normalizeWindowsDevAction(action) {
-  if (['sync-sqlite-diagnostic-micro', 'sync-sqlite-diagnostic-download', 'sync-sqlite-diagnostic-offline', 'sync-sqlite-diagnostic-snapshot', 'sync-sqlite-diagnostic-group', 'sync-sqlite-diagnostic-verify'].includes(action)) return 'sync-sqlite-diagnostic';
+  if (['sync-sqlite-diagnostic-micro', 'sync-sqlite-diagnostic-download', 'sync-sqlite-diagnostic-offline', 'sync-sqlite-diagnostic-snapshot', 'sync-sqlite-diagnostic-group', 'sync-sqlite-diagnostic-verify', 'sync-sqlite-diagnostic-remaining'].includes(action)) return 'sync-sqlite-diagnostic';
   if (action === WINDOWS_DEV_CAPTURE_ANNOTATION_WIRE_ACTION) return WINDOWS_DEV_CAPTURE_ANNOTATION_ACTION;
   if (action === WINDOWS_DEV_DEVICE_PROFILE_WIRE_ACTION) return WINDOWS_DEV_DEVICE_PROFILE_ACTION;
   return action;
@@ -23,8 +23,8 @@ export function extractSqliteDiagnosticMode(argv) {
   const index = args.indexOf('--mode');
   if (index < 0) return { args };
   const [, diagnosticMode] = args.splice(index, 2);
-  if (!args.includes('sync-sqlite-diagnostic') || !['micro', 'download', 'offline', 'snapshot', 'group', 'verify'].includes(diagnosticMode)) {
-    throw new Error('Only sync-sqlite-diagnostic --mode micro, download, offline, snapshot, group or verify is supported');
+  if (!args.includes('sync-sqlite-diagnostic') || !['micro', 'download', 'offline', 'snapshot', 'group', 'verify', 'remaining'].includes(diagnosticMode)) {
+    throw new Error('Only sync-sqlite-diagnostic --mode micro, download, offline, snapshot, group, verify or remaining is supported');
   }
   return { args, diagnosticMode };
 }

@@ -8,6 +8,7 @@ import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { recordFramedSyncPeerEpoch } from './framedSyncPeerEpoch.js';
 import { advanceLocalSourceRevision } from './nodeVersionInboundReceipt.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
+import { assertNodeVersionPeerProofFresh } from './nodeVersionPeerProof.js';
 import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
@@ -27,7 +28,7 @@ export interface RequestSyncObjectInput {
   signal?: AbortSignal;
 }
 
-async function assertPeer(tx: DbPort, input: RequestSyncObjectInput) {
+async function assertPeer(tx: DbPort, input: RequestSyncObjectInput, overwriting: boolean) {
   const { context, peerState } = input;
   if (peerState.group_id !== context.groupId || peerState.sender_device_identity_key !== context.senderDeviceId ||
       peerState.library_epoch !== context.senderLibraryEpoch) throw new Error('request_sync_peer_context_mismatch');
@@ -37,22 +38,20 @@ async function assertPeer(tx: DbPort, input: RequestSyncObjectInput) {
     AND EXISTS (SELECT 1 FROM node_version_local_proof_state WHERE singleton_id = 1 AND library_epoch = ?)`,
   [context.groupId, context.senderDeviceId, context.receiverDeviceId, context.receiverLibraryEpoch]);
   if (!active) throw new Error('request_sync_peer_inactive');
+  if (overwriting) return;
   await reconcileAdoptedPeerEpoch(tx, peerState);
   const [known] = await tx.query<{ library_epoch: string; proof_revision: number }>(
     'SELECT library_epoch, proof_revision FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
     [context.groupId, context.senderDeviceId]);
-  if (known && (known.library_epoch !== context.senderLibraryEpoch ||
-      known.proof_revision > (peerState.source_proof_revisions[context.receiverDeviceId] ?? 0))) {
-    throw new Error('node_version_peer_restore_requires_rejoin');
-  }
+  assertNodeVersionPeerProofFresh(known, peerState, context.receiverDeviceId);
 }
 
 /** The response is transient. Only business facts and progress commit, together, for one object. */
 export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput) {
   return db.transaction(async tx => {
     input.signal?.throwIfAborted();
-    await assertPeer(tx, input);
     const overwriting = await assertSyncGroupOverwriteInbound(tx, input.context);
+    await assertPeer(tx, input, overwriting);
     if (!overwriting) await assertSyncGroupLocalPublicationAllowed(tx);
     const source: FramedFactSource = async function* (port) {
       for await (const fact of input.facts(port)) {

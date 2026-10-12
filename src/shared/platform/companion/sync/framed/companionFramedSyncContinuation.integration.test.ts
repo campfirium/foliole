@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { snapshotStage } from '../../../../../../electron/database/requestSyncSnapshot.trace.js';
 import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
 import { readFixtureInventory, reconnectFixturePeer } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
@@ -186,15 +187,15 @@ it('retains a blocked frozen review, delivers independent work and reconciles it
 }, 15_000);
 
 it('returns pending without spinning when a local body is unavailable while committing a neighbor', async () => {
-  const { fixture, bridge } = await setup();
+  const { fixture, bridge } = await snapshotStage('continuation.setup', setup);
   for (const nodeId of ['t326-unavailable', 't326-neighbor']) {
-    await fixture.left.seed({ content: 'Initial body', nodeId, title: nodeId });
+    await snapshotStage(`continuation.seed.${nodeId}`, () => fixture.left.seed({ content: 'Initial body', nodeId, title: nodeId }));
   }
-  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-  await fixture.left.seed({ content: 'Unavailable edit', nodeId: 't326-unavailable', title: 'Unavailable' });
-  await fixture.left.seed({ content: 'Independent edit', nodeId: 't326-neighbor', title: 'Independent' });
+  await snapshotStage('continuation.reconnect', () => reconnectFixturePeer(fixture.left, fixture.rightSnapshot));
+  await snapshotStage('continuation.edit.unavailable', () => fixture.left.seed({ content: 'Unavailable edit', nodeId: 't326-unavailable', title: 'Unavailable' }));
+  await snapshotStage('continuation.edit.neighbor', () => fixture.left.seed({ content: 'Independent edit', nodeId: 't326-neighbor', title: 'Independent' }));
   bridge.sqlite.prepare("UPDATE node_sync_versions SET body_text = NULL WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 't326-unavailable')").run();
-  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const result = await snapshotStage('continuation.send', () => sendCompanionFramedSyncInventoryDifferences(bridge.request));
   expect(result.deferredObjects).toContainEqual({ globalId: 't326-unavailable', objectType: 'node' });
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes).toEqual([
     expect.objectContaining({ id: 't326-neighbor', content: 'Independent edit' }),
@@ -205,7 +206,7 @@ it('returns pending without spinning when a local body is unavailable while comm
   try {
     source.prepare("UPDATE node_sync_versions SET body_text = ? WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 't326-unavailable')").run('Unavailable edit');
   } finally { source.close(); }
-  expect((await sendCompanionFramedSyncInventoryDifferences(bridge.request)).deferredObjects).toEqual([]);
+  expect((await snapshotStage('continuation.send', () => sendCompanionFramedSyncInventoryDifferences(bridge.request))).deferredObjects).toEqual([]);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toContainEqual(expect.objectContaining({ id: 't326-unavailable', content: 'Unavailable edit' }));
 }, 15_000);

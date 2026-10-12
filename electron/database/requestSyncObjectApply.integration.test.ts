@@ -4,6 +4,8 @@ import { afterEach, expect, it } from 'vitest';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { applyRequestSyncObject, type RequestSyncObjectInput } from '../../lib/core/sync/requestSyncObjectApply.js';
+import { prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
@@ -103,4 +105,32 @@ it('rolls back facts and progress when cancellation arrives during the object tr
   host.sqlite.exec('DROP TRIGGER cancel_test_position');
   await applyRequestSyncObject(host.db, request());
   expect((await host.current()).version_id).toBe('head');
+});
+
+
+it('accepts the approved overwrite source after a peer proof changes during reception', async () => {
+  const host = receiver();
+  const input = request();
+  await receiveSyncGroupRestoreEvent(host.db, { group_id: 'group', restore_id: 'local-epoch',
+    source_device_identity_key: 'peer', restored_at: '2026-10-12T00:00:00.000Z' });
+  await prepareSyncGroupOverwrite(host.db, { groupId: 'group', overwriteId: 'local-epoch',
+    providerDeviceId: 'peer', providerLibraryEpoch: 'peer-epoch',
+    receiverDeviceId: 'local', receiverLibraryEpoch: 'local-epoch' });
+  host.sqlite.exec("INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'peer-epoch', 9, 'acknowledged', NULL, 'now')");
+  await applyRequestSyncObject(host.db, input);
+  expect((await host.current()).body_text).toBe('Current');
+  expect(await host.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toEqual([]);
+  expect(await host.db.query('SELECT proof_revision FROM node_version_device_revisions'))
+    .toEqual([{ proof_revision: 9 }]);
+  await expect(applyRequestSyncObject(host.db, { ...input,
+    context: { ...input.context, senderLibraryEpoch: 'unapproved-epoch' },
+    peerState: { ...input.peerState, library_epoch: 'unapproved-epoch' } }))
+    .rejects.toThrow('sync_group_overwrite_source_changed');
+});
+
+it('rejects a stale source proof outside an approved overwrite', async () => {
+  const host = receiver();
+  host.sqlite.exec("INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'peer-epoch', 9, 'acknowledged', NULL, 'now')");
+  await expect(applyRequestSyncObject(host.db, request())).rejects.toThrow('node_version_peer_restore_requires_rejoin');
+  expect(await host.db.query('SELECT id FROM nodes')).toEqual([]);
 });

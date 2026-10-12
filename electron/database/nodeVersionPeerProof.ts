@@ -1,3 +1,4 @@
+import { assertNodeVersionPeerProofFresh } from '../../lib/core/sync/nodeVersionPeerProof.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -24,10 +25,7 @@ export function assertDesktopPeerProofFresh(incoming: SyncGroupMemberStatePayloa
     `SELECT local_device_identity_key FROM sync_group_local_state WHERE singleton_id = 1`
   );
   if (!local) throw new Error('node_version_local_device_missing');
-  if (known && (known.library_epoch !== incoming.library_epoch ||
-      known.proof_revision > (incoming.source_proof_revisions[local.local_device_identity_key] ?? 0))) {
-    throw new Error('node_version_peer_restore_requires_rejoin');
-  }
+  assertNodeVersionPeerProofFresh(known, incoming, local.local_device_identity_key);
 }
 
 export function recordDesktopAcknowledgedPeerProof(
