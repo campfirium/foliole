@@ -8,6 +8,7 @@ import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSy
   from '../../lib/platform/nativeCompanionSyncContract.js';
 import { prepareCompanionFramedSyncOutbound } from '../../src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { snapshotStage } from '../database/requestSyncSnapshot.trace.js';
 
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { receiveDesktopFramedSyncRoundStream } from './desktopFramedSyncInboundRound.js';
@@ -41,8 +42,8 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
     receiver_library_epoch: `${remote.deviceId}-epoch`, sync_group_id: 't326-group' };
   async function readInventory(input?: NativeCompanionFramedSyncInventoryRequest) {
     context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
-    const inventory = await exchangeDesktopFramedSyncInventoryHttp({ ...exchange,
-      ...(input?.detail_global_ids ? { detailGlobalIds: input.detail_global_ids } : {}) });
+    const inventory = await snapshotStage('bridge.inventory.http', () => exchangeDesktopFramedSyncInventoryHttp({ ...exchange,
+      ...(input?.detail_global_ids ? { detailGlobalIds: input.detail_global_ids } : {}) }));
     remoteEntries = mergeInventoryDetails(remoteEntries, inventory.remote, input?.detail_global_ids);
     return { round_id: bytesToHex(inventory.roundId), entries: inventory.remote.map(serialize) };
   }
@@ -56,23 +57,23 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
         reviewFactIds: input.review_fact_ids, resourceHashes: input.resource_hashes.map(hexToBytes),
         stateFactIds: input.state_fact_ids } };
     const inbound = { ...exchange, roundId: hexToBytes(input.round_id), staging };
-    const stream = await requestDesktopFramedSyncDifferenceHttp({ ...inbound, difference });
-    await receiveDesktopFramedSyncRoundStream(inbound, stream, difference);
+    const stream = await snapshotStage('bridge.pull.http', () => requestDesktopFramedSyncDifferenceHttp({ ...inbound, difference }));
+    await snapshotStage('bridge.pull.receive', () => receiveDesktopFramedSyncRoundStream(inbound, stream, difference));
     return nativeReceipt(decodeFramedSyncPreamble(stream.preamble).contextId);
   }
   async function send(input: NativeCompanionFramedSyncTransferRequest) {
     context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
-    const prepared = await prepareCompanionFramedSyncOutbound(db, { ...input, group_id: input.sync_group_id,
-      sender_device_id: local.deviceId, sender_library_epoch: context.initiatorLibraryEpoch }, files);
-    const publication = await staging.loadOutboundPublication(hexToBytes(prepared.transfer_id));
+    const prepared = await snapshotStage('bridge.send.prepare', () => prepareCompanionFramedSyncOutbound(db, { ...input, group_id: input.sync_group_id,
+      sender_device_id: local.deviceId, sender_library_epoch: context.initiatorLibraryEpoch }, files));
+    const publication = await snapshotStage('bridge.send.publication', () => staging.loadOutboundPublication(hexToBytes(prepared.transfer_id)));
     if (!publication) throw new Error('fixture_publication_missing');
-    const delivery = await prepareDesktopFramedSyncPublishedDelivery({ db, files, staging, groupSecret, publication });
-    await sendDesktopFramedSyncPublishedTransfer({ db, files, staging, groupSecret, publication,
-      peerOrigin: input.endpoint_url, ...delivery });
+    const delivery = await snapshotStage('bridge.send.delivery', () => prepareDesktopFramedSyncPublishedDelivery({ db, files, staging, groupSecret, publication }));
+    await snapshotStage('bridge.send.http', () => sendDesktopFramedSyncPublishedTransfer({ db, files, staging, groupSecret, publication,
+      peerOrigin: input.endpoint_url, ...delivery }));
     return nativeReceipt(publication.transferId);
   }
   async function nativeReceipt(id: Uint8Array) {
-    const receipt = await staging.loadReceipt(id);
+    const receipt = await snapshotStage('bridge.receipt', () => staging.loadReceipt(id));
     if (!receipt) throw new Error('fixture_receipt_missing');
     return { transfer_id: bytesToHex(id), content_id: bytesToHex(receipt.contentId),
       applied_state_hash: bytesToHex(receipt.appliedStateHash), receiver_device_id: receipt.receiverDeviceId,

@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 import { build } from 'vite';
 
+import { snapshotStage } from '../database/requestSyncSnapshot.trace.js';
+
 export { readDesktopFramedSyncLibraryEvidence } from './desktopFramedSyncTwoProcessEvidence.js';
 
 export type DesktopFramedSyncFixtureSnapshot = Readonly<{
@@ -140,7 +142,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
     pending.clear();
   });
   const send = (action: string, args: Readonly<Record<string, unknown>> = {}) =>
-    new Promise<unknown>((resolve, reject) => {
+    snapshotStage(`fixture.${input.deviceId}.${action}`, () => new Promise<unknown>((resolve, reject) => {
       if (!child.connected) { reject(new Error(`fixture_unavailable\n${diagnostics}`)); return; }
       const id = ++sequence;
       pending.set(id, { reject, resolve });
@@ -149,7 +151,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
         pending.delete(id);
         reject(error);
       });
-    });
+    }));
   return {
     child,
     diagnostics: () => diagnostics, invoke: send,
