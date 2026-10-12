@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
-import { snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
+import { snapshotStage, snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
@@ -36,6 +36,13 @@ const stateRoot = requiredEnvironment('FOLIOLE_ELECTRON_TEST_STATE_ROOT');
 const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
+
+if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) {
+  const fetchDiscovery = globalThis.fetch;
+  globalThis.fetch = (input, init) => typeof input === 'string' && input.endsWith('/companion/discovery')
+    ? snapshotStage('fixture.discovery.client', () => fetchDiscovery(input, init))
+    : fetchDiscovery(input, init);
+}
 
 const requestCounts: Record<string, number> = {};
 const server = createServer((request, response) => {
