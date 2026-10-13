@@ -57,6 +57,7 @@ it.each([['earlier', 2], ['later', 2], ['later', 3]] as const)(
   const stale = fixture.peer('observer');
   try {
     await seed(target, 2, '2026-10-01T02:00:00Z');
+    target.sqlite.prepare("UPDATE sync_object_state SET sync_dirty = 1 WHERE object_type = 'setting' AND object_id = ?").run(objectId);
     const hash = await seed(source, 3, timestamp === 'earlier' ? '2026-10-01T01:00:00Z' : '2026-10-01T03:00:00Z');
     await seed(stale, staleEpoch, '2026-10-01T04:00:00Z', 'stale-owner');
     await transfer(source, target);

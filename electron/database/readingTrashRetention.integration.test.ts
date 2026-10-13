@@ -10,7 +10,8 @@ import { loadWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot
 import { pruneLearningRowsWithoutVisibleNodes } from '../../lib/core/sync/syncNodeVisibilityPruning.js';
 
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
-import { closeLibraries, createPeer, edit, joinPeers, startLibraries, sync, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

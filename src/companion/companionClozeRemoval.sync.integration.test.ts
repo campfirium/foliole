@@ -16,7 +16,8 @@ vi.mock('@capacitor/core', async () => {
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver';
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
-import { closeLibraries, createPeer, joinPeers, startLibraries, sync, type Peer } from '../../electron/database/syncEmptyLibraryTestSupport';
+import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
+import { syncRequestLibrary as sync } from '../../electron/database/syncRequestLibrary.testSupport';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations';

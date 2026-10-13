@@ -11,8 +11,9 @@ import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js'
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import {
-  assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, sync
-} from './syncEmptyLibraryTestSupport.js';
+  assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries
+} from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

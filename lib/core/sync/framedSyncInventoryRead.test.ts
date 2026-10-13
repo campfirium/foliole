@@ -1,8 +1,16 @@
+// @vitest-environment node
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { expect, it, vi } from 'vitest';
 
+import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
+import { computeSyncContentHash } from '../database/syncState.js';
+import { hashTextBody } from '../database/textBodyHash.js';
+
+import { buildCanonicalExternalDocumentPayload } from './canonicalExternalResourcePayload.js';
 import type { DbPort, DbRow } from './dbPort.js';
-import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
+import { readFramedSyncInventory, readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
+import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
+import { applySyncObjectInTransaction } from './syncObjectApplyExecutor.js';
 
 function port(bodyText: string | null, resourceReferences = '[]', isTombstone = 0) {
   const db = {
@@ -67,4 +75,27 @@ it('keeps a body-missing Node discoverable without claiming unavailable blob byt
   })).resolves.toMatchObject({
     frontierFactIds: ['version-1'], globalId: 'node-1', resourceHashes: []
   });
+});
+
+it.each(['', '\ufeff中文😀\0Original'])('preserves inventory with owned bodies and no legacy body cache', async (body) => {
+  const host = textDevice();
+  const timestamp = '2026-10-07T00:00:00.000Z';
+  try {
+    await applySyncNodesWithDbPort(host.db, [textBranch('current', body, undefined, timestamp)]);
+    const payload = { content: body, body_blob_hash: hashTextBody(body), content_hash: 'source-hash', document_id: 'document',
+      extension: 'md', file_name: 'document.md', folder_id: 'folder', reference_json: null,
+      reference_kind: 'local_path', relative_path: 'document.md', title: 'Document' };
+    await applySyncObjectInTransaction(host.db, { object_type: 'external_document', object_id: 'document',
+      content_hash: computeSyncContentHash('external_document', buildCanonicalExternalDocumentPayload(payload)), deleted_at: null,
+      payload_json: JSON.stringify(payload), updated_at: timestamp });
+    const before = await readFramedSyncInventory(host.db);
+    const keys = before.map((entry) => ({ globalId: entry.globalId, objectType: entry.objectType }));
+    const entries = await Promise.all(keys.map((key) => readFramedSyncInventoryEntry(host.db, key)));
+    expect(before.find((entry) => entry.globalId === 'document')!.resourceHashes.map(bytesToHex)).toEqual([hashTextBody(body)]);
+    host.sqlite.exec('DROP TABLE content_blob_data; DROP TABLE content_blobs');
+    expect(await readFramedSyncInventory(host.db)).toEqual(before);
+    expect(await Promise.all(keys.map((key) => readFramedSyncInventoryEntry(host.db, key)))).toEqual(entries);
+    expect(await readFramedSyncInventoryEntry(host.db,
+      { globalId: 'missing', objectType: 'external_document' })).toBeNull();
+  } finally { host.sqlite.close(); }
 });

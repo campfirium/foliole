@@ -47,14 +47,12 @@ function createReviewProfile() {
 async function expectWebCursorFallback(api: typeof import('./companionSyncObjects')) {
   const cursor = { change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' };
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncPackCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
   await expect(api.saveCompanionSyncStateCursor(7)).resolves.toBe(7);
-  await expect(api.saveCompanionSyncPackCursor(9)).resolves.toBe(9);
   await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);

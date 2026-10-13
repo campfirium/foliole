@@ -8,8 +8,9 @@ import { loadWorkspaceNodeDocument } from '../../lib/core/database/workspaceNode
 
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import {
-  assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, sync, type Peer
-} from './syncEmptyLibraryTestSupport.js';
+  assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer
+} from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

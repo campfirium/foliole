@@ -3,10 +3,6 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
-const iosCursorStoreMock = vi.hoisted(() => ({
-  loadCursor: vi.fn(async () => 9),
-  saveCursor: vi.fn(async (cursor: number | null) => cursor)
-}));
 const sharedCursorMock = vi.hoisted(() => ({
   loadChange: vi.fn(async () => null),
   loadNumber: vi.fn(async (kind: string) => kind === 'state' ? 2 : null),
@@ -38,9 +34,6 @@ const syncGroupMock = vi.hoisted(() => ({
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
 }));
-vi.mock('./companion/sync/cursor/iosCompanionSyncPackCursorStore', () => ({
-  createIosCompanionSyncPackCursorStore: vi.fn(() => iosCursorStoreMock)
-}));
 vi.mock('./companion/runtime/iosCompanionSyncCursorStore', () => ({
   loadIosCompanionChangeCursor: sharedCursorMock.loadChange,
   loadIosCompanionNumberCursor: sharedCursorMock.loadNumber,
@@ -62,7 +55,6 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncNodeVersionCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersionPushCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncNodeVersions: vi.fn(async () => ({ nodes: [{ object_id: 'node-1' }] })),
-    loadSyncPackCursor: vi.fn(async () => ({ cursor: 4 })),
     loadSyncReviewLog: vi.fn(async () => ({ reviews: [{ op_id: 'op-1' }] })),
     loadSyncReviewLogCursor: vi.fn(async () => ({ cursor: null })),
     loadSyncReviewLogPushCursor: vi.fn(async () => ({ cursor: null })),
@@ -71,7 +63,6 @@ const capacitorMock = vi.hoisted(() => ({
     loadSyncStatePushCursor: vi.fn(async () => ({ cursor: null })),
     saveSyncNodeVersionCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncNodeVersionPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
-    saveSyncPackCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncReviewLogPushCursor: vi.fn(async ({ cursor }) => ({ cursor })),
     saveSyncStateCursor: vi.fn(async ({ cursor }) => ({ cursor })),
@@ -99,12 +90,10 @@ it('bridges native sync cursors and pending summary', async () => {
   const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
 
   await expect(api.loadCompanionSyncStateCursor()).resolves.toBe(2);
-  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(9);
   await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBe(6);
   await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
   await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
   await expect(api.saveCompanionSyncStateCursor(3)).resolves.toBe(3);
-  await expect(api.saveCompanionSyncPackCursor(5)).resolves.toBe(5);
   await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
   await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([
@@ -115,7 +104,7 @@ it('bridges native sync cursors and pending summary', async () => {
     { state: 6, node: null, review: null });
   expect(iosSyncbackStoreMock.loadNodeVersions).not.toHaveBeenCalled();
   expect(iosSyncbackStoreMock.loadReviewLog).not.toHaveBeenCalled();
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(2);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
 });
 
 it('routes iOS syncback cursors and rows through the SQLite store', async () => {
@@ -139,19 +128,4 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   expect(getItem).not.toHaveBeenCalled();
   expect(sharedCursorMock.loadNumber).toHaveBeenCalledWith('state');
-});
-
-it('persists the iOS sync-pack cursor through the SQLite store', async () => {
-  capacitorMock.platform.mockReturnValue('ios');
-  const getItem = vi.spyOn(Storage.prototype, 'getItem');
-  const api = await import('./companionSyncCursors');
-
-  await expect(api.loadCompanionSyncPackCursor()).resolves.toBe(9);
-  await expect(api.saveCompanionSyncPackCursor(12)).resolves.toBe(12);
-
-  expect(iosCursorStoreMock.loadCursor).toHaveBeenCalledTimes(1);
-  expect(iosCursorStoreMock.saveCursor).toHaveBeenCalledWith(12);
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
-  expect(getItem).not.toHaveBeenCalled();
-  expect(capacitorMock.plugin.loadSyncPackCursor).not.toHaveBeenCalled();
 });

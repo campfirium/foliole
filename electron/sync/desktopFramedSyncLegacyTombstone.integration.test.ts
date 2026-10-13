@@ -93,8 +93,8 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
     await expect(fixture.left.invoke('round', input)).resolves.toMatchObject({ complete: true });
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
-      expect(right.prepare("SELECT version_id, content_hash, deleted_at FROM node_sync_tombstones WHERE node_id = 'topic'")
-        .get()).toEqual({ version_id: versionId, content_hash: record.content_hash,
+      expect(right.prepare("SELECT version_id, parent_version_id, content_hash, deleted_at FROM node_sync_tombstones WHERE node_id = 'topic'")
+        .get()).toEqual({ version_id: versionId, parent_version_id: record.parent_version_id, content_hash: record.content_hash,
         deleted_at: record.snapshot.deleted_at });
       expect(right.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
       expect(right.prepare("SELECT * FROM node_version_member_positions WHERE object_id = 'topic'").all()).toEqual([]);

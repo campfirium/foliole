@@ -4,6 +4,7 @@ import path from 'node:path';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
@@ -25,20 +26,23 @@ export async function syncRequestLibrary(source: Peer, target: Peer) {
     local: await readFramedSyncInventory(source.port), remote: await readFramedSyncInventory(target.port)
   }).filter(value => value.direction === 'local_to_remote');
   const files = createDesktopFramedSyncFiles(path.join(root, `request-${randomUUID()}`));
-  for (const difference of differences) await withRequestSyncFiles(files, async request => {
-    await writeRequestSyncSnapshot(source.port, difference, request);
-    const sender = proof(source);
-    await applyRequestSyncObject(target.port, {
-      context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-        senderDeviceId: source.id, senderLibraryEpoch: sender.library_epoch,
-        receiverDeviceId: target.id, receiverLibraryEpoch: proof(target).library_epoch },
-      peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
-        ...sender, devices: [], removals: [], restore: null, source_proof_revisions: {} },
-      globalId: difference.globalId, objectType: difference.objectType,
-      requestId: new Uint8Array(16), facts: async function* () { yield* request.readFacts(); },
-      loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
-    });
-  });
+  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences,
+    difference => withRequestSyncFiles(files, async request => {
+      await writeRequestSyncSnapshot(source.port, difference, request);
+      const sender = proof(source);
+      await applyRequestSyncObject(target.port, {
+        context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+          senderDeviceId: source.id, senderLibraryEpoch: sender.library_epoch,
+          receiverDeviceId: target.id, receiverLibraryEpoch: proof(target).library_epoch },
+        peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
+          ...sender, devices: [], removals: [], restore: null, source_proof_revisions: {} },
+        globalId: difference.globalId, objectType: difference.objectType,
+        requestId: new Uint8Array(16), facts: async function* () { yield* request.readFacts(); },
+        loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
+      });
+      return 'delivered' as const;
+    }));
+  if (deferred.length) throw new Error(`test_request_sync_dependencies_unresolved:${deferred.map(value => value.globalId).join(',')}`);
   await receiveMemberPosition(target, source);
   await receiveMemberPosition(source, target);
   await collectNodeVersionPayloads(source.port, 'topic');

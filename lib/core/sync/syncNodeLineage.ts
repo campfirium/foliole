@@ -6,7 +6,9 @@ export async function loadSyncNodeVersionParents(port: DbPort, versionId: string
      WHERE version_id = ? ORDER BY ordinal ASC`, [versionId]);
   if (rows.length > 0) return rows.map((row) => row.parent_version_id);
   const [legacy] = await port.query<{ parent_version_id: string | null }>(
-    'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1', [versionId]);
+    `SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?
+     UNION ALL SELECT parent_version_id FROM node_sync_tombstones WHERE version_id = ? LIMIT 1`,
+    [versionId, versionId]);
   return legacy?.parent_version_id ? [legacy.parent_version_id] : [];
 }
 

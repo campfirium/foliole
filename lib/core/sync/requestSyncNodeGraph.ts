@@ -3,6 +3,7 @@ import { GraphNodeVersionAncestry } from './nodeVersionAncestry.js';
 import { CHAIN_EDGES_SQL } from './nodeVersionChainSql.js';
 import { NodeVersionGraph } from './nodeVersionGraph.js';
 import type { SyncNodeRecordMetadata, SyncNodeRecordSource } from './syncNodeRecordSource.js';
+import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 
 type VersionRow = { version_id: string; parent_version_id: string | null };
 type EdgeRow = { version_id: string; parent_version_id: string };
@@ -53,7 +54,13 @@ export async function requestSyncNodeSource(db: DbPort, source: SyncNodeRecordSo
   }
   const originals = new Map<SyncNodeRecordMetadata, SyncNodeRecordMetadata>();
   for (const [nodeId, records] of groups) {
-    const graph = await objectGraph(db, nodeId, records);
+    // A standalone deletion preserves metadata without claiming a complete original version.
+    const versions = [];
+    for (const record of records) {
+      if (!record.is_tombstone || source.isIdentityOnly(record) ||
+          hasCompleteTombstoneVersion(await source.load(db, record))) versions.push(record);
+    }
+    const graph = await objectGraph(db, nodeId, versions);
     for (const record of records) {
       if (!record.version_id) throw new Error('node_version_identity_missing');
       originals.set({ ...record,

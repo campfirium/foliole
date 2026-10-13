@@ -18,7 +18,7 @@ export const framedSyncSuites = [
   'electron/sync/desktopFramedSyncTwoProcessRecovery.integration.test.ts',
   'electron/sync/desktopFramedSyncVersionChainRegression.integration.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncInventory.test.ts',
+  'lib/core/sync/framedSyncInventoryRead.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts',
 ];
 

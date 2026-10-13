@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, sync } from '../../electron/database/syncEmptyLibraryTestSupport';
+import { assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries } from '../../electron/database/syncLibrary.testSupport';
+import { syncRequestLibrary as sync } from '../../electron/database/syncRequestLibrary.testSupport';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { isCompanionGradeDue } from '../companion/companionFlowMutation';

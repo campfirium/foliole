@@ -35,8 +35,7 @@ const snapshotRows = JSON.stringify([
   { key: 'device_id', value: 'ios-device' },
   { key: 'workspace_sync_endpoint_url', value: 'http://127.0.0.1:1' },
   { key: 'workspace_sync_last_synced_at', value: '2026-07-22T00:00:00.000Z' },
-  { key: 'workspace_sync_events', value: finishedEvent },
-  { key: 'sync_pack_cursor', value: '2' }
+  { key: 'workspace_sync_events', value: finishedEvent }
 ]);
 
 function recoveredObservation(status = null, overrides = {}) {
@@ -85,8 +84,6 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(runner).toContain("`stage=${value?.stage ?? 'none'}`");
     expect(runner).toContain("throw new Error(value.error || `${label} failed`)");
     expect(runner).toMatch(/terminate[^\n]+com\.apple\.Preferences[^\n]+\n[^\n]+launch[^\n]+com\.apple\.Preferences/);
-    expect(state).toContain("FROM sync_peer_cursors");
-    expect(state).toContain("stream_name = 'sync-pack-receive'");
   });
 
   it('sanitizes ordinary assets and enables only the reviewed lifecycle scenario', () => {
@@ -204,7 +201,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 }, observations
     })).toMatchObject({ after_restart: partialSnapshot });
     expect(() => verifyForegroundSyncLifecycleAcceptance({
-      afterRestart: { ...snapshot, cursor: null }, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      afterRestart: { ...snapshot, lastSyncedAt: null }, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 }, observations
     })).toThrow('evidence is incomplete');
     for (const backgroundDeltas of [[1, 0, 0], [0, 1, 0], [0, 0, 2]]) {

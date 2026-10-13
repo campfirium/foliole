@@ -56,6 +56,12 @@ it('syncs workspace settings while preserving each device private settings after
       updated_at: '2026-05-04T01:01:00.000Z', deleted_at: null
     }, { hostName: privatePayload.host_name }));
   }
+  const oldPayload = { ...payload, value_json: '{"aliases":["local old"]}' };
+  await target.port.transaction(tx => applySyncObjectInTransaction(tx, {
+    object_id: objectId, object_type: 'setting', content_hash: computeSyncContentHash('setting', oldPayload),
+    payload_json: JSON.stringify(oldPayload), updated_at: '2026-05-04T00:00:00.000Z', deleted_at: null
+  }));
+  target.db.prepare("UPDATE sync_object_state SET sync_dirty = 1 WHERE object_type = 'setting' AND object_id = ?").run(objectId);
   const contentHash = computeSyncContentHash('setting', payload);
   await source.port.transaction(tx => applySyncObjectInTransaction(tx, {
     object_id: objectId, object_type: 'setting', content_hash: contentHash,

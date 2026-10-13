@@ -7,8 +7,9 @@ import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from '../.
 
 import { repairCurrentVersionBodyWithDriver } from './currentVersionBodyRepair.js';
 import {
-  assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync
-} from './syncEmptyLibraryTestSupport.js';
+  assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries
+} from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

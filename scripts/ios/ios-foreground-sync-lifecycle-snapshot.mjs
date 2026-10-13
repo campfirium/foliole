@@ -9,7 +9,6 @@ export function parseForegroundSyncLifecycleSnapshot(output) {
   const events = parseJson(values.workspace_sync_events, []);
   const finishedRuns = events.filter((event) => event.kind === 'run_finished').map(parseFinishedRun);
   return {
-    cursor: integerOrNull(values.sync_pack_cursor),
     deviceId: stringOrNull(values.device_id),
     endpoint: stringOrNull(values.workspace_sync_endpoint_url),
     lastSyncedAt: stringOrNull(values.workspace_sync_last_synced_at),
@@ -39,7 +38,6 @@ export function verifyForegroundSyncLifecycleAcceptance(args) {
     isForegroundSyncLifecycleSnapshotSettled(args.afterRestart) &&
     args.afterRestart.deviceId === args.beforeRestart.deviceId &&
     args.afterRestart.endpoint === args.beforeRestart.endpoint &&
-    args.afterRestart.cursor === args.beforeRestart.cursor &&
     Date.parse(args.afterRestart.lastSyncedAt) >= Date.parse(args.beforeRestart.lastSyncedAt) &&
     args.afterRestart.finishedRuns.some((run) => run.runId === args.beforeRestart.latestFinished.runId);
   if (!requestPassed || !lifecyclePassed || !snapshotsPassed) {
@@ -73,7 +71,7 @@ export function isForegroundSyncLifecycleSnapshotSettled(snapshot) {
     !['failed', 'retrying', 'waiting'].includes(finished.result) &&
     ['completed', 'skipped'].includes(finished.status);
   return Boolean(snapshot.deviceId && snapshot.endpoint && snapshot.lastSyncedAt &&
-    snapshot.cursor !== null && snapshot.cursor >= 0 && finishedWithoutFailure);
+    finishedWithoutFailure);
 }
 
 export function assertForegroundSyncLifecycleRequestPhase(observations, phase, count) {
@@ -122,12 +120,6 @@ function recoveredRequests(value) { return lifecycle(value).requests.filter((ite
 function describeRecoveredResume(value) {
   const state = lifecycle(value);
   return `requests=${recoveredRequests(value).length}, active=${state.active_requests}, max=${state.max_concurrency}`;
-}
-
-function integerOrNull(value) {
-  if (value === undefined || value === null || value === '') return null;
-  const number = Number(value);
-  return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
 function parseJson(value, fallback) {

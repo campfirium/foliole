@@ -12,7 +12,6 @@ import {
   saveIosCompanionChangeCursor,
   saveIosCompanionNumberCursor
 } from './companion/runtime/iosCompanionSyncCursorStore';
-import { createIosCompanionSyncPackCursorStore } from './companion/sync/cursor/iosCompanionSyncPackCursorStore';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
 import { loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
@@ -26,20 +25,11 @@ import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { getNativeCompanionSyncbackPlatform } from './companionWorkspaceRuntimeRepository';
 
 const WEB_SYNC_STATE_CURSOR_KEY = 'foliole-companion-sync-state-cursor';
-const WEB_SYNC_PACK_CURSOR_KEY = 'foliole-companion-sync-pack-cursor';
 const WEB_SYNC_STATE_PUSH_CURSOR_KEY = 'foliole-companion-sync-state-push-cursor';
 const WEB_SYNC_NODE_VERSION_CURSOR_KEY = 'foliole-companion-sync-node-version-cursor';
 const WEB_SYNC_NODE_VERSION_PUSH_CURSOR_KEY = 'foliole-companion-sync-node-version-push-cursor';
 const WEB_SYNC_REVIEW_LOG_CURSOR_KEY = 'foliole-companion-sync-review-log-cursor';
 const WEB_SYNC_REVIEW_LOG_PUSH_CURSOR_KEY = 'foliole-companion-sync-review-log-push-cursor';
-async function getSyncPackPeerId() {
-  const group = await loadCompanionSyncGroup();
-  if (!group) throw new Error('sync_group_not_joined');
-  const devices = resolveRemoteSyncGroupDevices(group);
-  if (devices.length !== 1) throw new Error('sync_pack_source_device_ambiguous');
-  return devices[0]!.device_identity_key;
-}
-
 export async function loadCompanionSyncStateCursor() {
   if (usesSharedOwner()) return loadIosCompanionNumberCursor('state');
   return readWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY);
@@ -48,35 +38,6 @@ export async function loadCompanionSyncStateCursor() {
 export async function saveCompanionSyncStateCursor(cursor: number | null) {
   if (usesSharedOwner()) return saveIosCompanionNumberCursor('state', cursor);
   return writeWebNumberCursor(WEB_SYNC_STATE_CURSOR_KEY, cursor);
-}
-
-export async function loadCompanionSyncPackCursor(peerId?: string) {
-  if (usesSharedOwner()) {
-    return createIosCompanionSyncPackCursorStore(undefined, peerId ?? await getSyncPackPeerId()).loadCursor();
-  }
-  return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
-}
-
-export async function loadCompanionSyncPackPosition(peerId: string) {
-  if (!usesSharedOwner()) return { cursor: readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY) ?? 0 };
-  const store = createIosCompanionSyncPackCursorStore(undefined, peerId);
-  if (!store.loadPosition) throw new Error('sync_pack_position_unavailable');
-  return store.loadPosition();
-}
-
-export async function loadCompanionSyncPackRestorePosition(restoreId: string, peerId: string) {
-  if (!usesSharedOwner()) throw new Error('sync_group_restore_cursor_unavailable');
-  const store = createIosCompanionSyncPackCursorStore(undefined, peerId);
-  if (!store.loadRestorePosition) throw new Error('sync_group_restore_cursor_unavailable');
-  return store.loadRestorePosition(restoreId);
-}
-
-export async function saveCompanionSyncPackCursor(cursor: number | null, peerId?: string) {
-  if (usesSharedOwner()) {
-    const store = createIosCompanionSyncPackCursorStore(undefined, peerId ?? await getSyncPackPeerId());
-    return runCompanionSyncWriterTask(() => store.saveCursor(cursor));
-  }
-  return writeWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY, cursor);
 }
 
 export async function loadCompanionSyncStatePushCursor() {
