@@ -67,7 +67,6 @@ it('runs only the named snapshot test without SQLite interception or durability 
     scenario: cases[0], repoRoot: process.cwd() });
   expect(invocation.args).not.toContain('--require');
   expect(invocation.args).toContain('spools a complete history');
-  expect(invocation.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT).toBe(invocation.directory);
 });
 
 

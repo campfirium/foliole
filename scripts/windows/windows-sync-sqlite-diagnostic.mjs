@@ -47,7 +47,7 @@ export function diagnosticInvocation({ root, mode, scenario, repoRoot }) {
       '--maxWorkers=2', '--no-file-parallelism',
       '--reporter=./scripts/windows/sync-sqlite-diagnostic-reporter.mjs',
       ...(scenario.filter ? ['--testNamePattern', scenario.filter] : []), ...scenario.files],
-    env: { ...process.env, FOLIOLE_REQUEST_SYNC_TRACE_ROOT: directory, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
+    env: { ...process.env, FOLIOLE_SQLITE_DIAGNOSTIC_ROOT: directory,
       FOLIOLE_SQLITE_DIAGNOSTIC_MODE: mode, FOLIOLE_REQUEST_SYNC_DIAGNOSTICS: '1',
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: path.join(directory, 'state'),
       TEMP: path.join(repoRoot, '.tmp'), TMP: path.join(repoRoot, '.tmp'), TMPDIR: path.join(repoRoot, '.tmp') }
