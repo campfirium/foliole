@@ -3,12 +3,6 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { createManagedSafetySnapshotWithBackup } from '../database/managedSafetySnapshots.js';
 import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
 
-export async function preserveDesktopGroupRestore(groupId: string, restoreId: string | undefined,
-  manifest: { dependencyPage?: unknown; toStateSeq: number; frontierStateSeq: number }) {
-  if (!restoreId || manifest.dependencyPage || manifest.toStateSeq !== manifest.frontierStateSeq) return;
-  await preserveDesktopIdentityRestore(groupId, restoreId);
-}
-
 /** Preserve the receiver's current library before the complete identity replacement. */
 export async function preserveDesktopIdentityRestore(groupId: string, restoreId: string) {
   await runWithDatabaseConnectionOwner(async () => {

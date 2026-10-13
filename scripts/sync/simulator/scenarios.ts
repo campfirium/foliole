@@ -1,7 +1,6 @@
 import { expect } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
-import { flushDesktopSyncGroupVersionReceipts } from '../../../electron/sync/desktopSyncGroupVersionReceipts.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 import { validateTopicTextBodies } from '../../../lib/core/sync/topicTextBodies.js';
@@ -9,8 +8,8 @@ import { validateTopicTextBodies } from '../../../lib/core/sync/topicTextBodies.
 import { assertBody, assertHealthy, assertCompleted, assertSharedVersionIdentities, convergenceState, graph } from './assertions.js';
 import { edit, mobileEdit, remove } from './operations.js';
 import { reopenPeer } from './peers.js';
-import { inPeer, type SimulatorPeer } from './scope.js';
-import { mobileStore, pull, push, route, type Endpoint } from './transport.js';
+import { type SimulatorPeer } from './scope.js';
+import { pull, push, type Endpoint } from './transport.js';
 
 export interface ScenarioContext {
   a: SimulatorPeer; b: SimulatorPeer; sa: Endpoint; sb: Endpoint;
@@ -18,12 +17,12 @@ export interface ScenarioContext {
 }
 export async function converge({ a, b, sa, sb, existingGaps = [], missingKeys = new Set<string>() }: ScenarioContext) {
   for (let round = 0; round < 8; round++) {
-    await pull(sa, b, true, missingKeys);
-    await pull(sb, a, true, missingKeys);
+    await pull(sa, b, missingKeys);
+    await pull(sb, a, missingKeys);
     if (JSON.stringify(convergenceState(a)) === JSON.stringify(convergenceState(b))) {
       const before = convergenceState(a);
-      await pull(sa, b, true, missingKeys);
-      await pull(sb, a, true, missingKeys);
+      await pull(sa, b, missingKeys);
+      await pull(sb, a, missingKeys);
       expect(convergenceState(a)).toEqual(before);
       expect(convergenceState(b)).toEqual(before);
       assertSharedVersionIdentities(a, b);
@@ -91,26 +90,17 @@ async function kinds(ctx: ScenarioContext) {
   expect(JSON.parse(ctx.b.sqlite.prepare("SELECT anchor_link FROM nodes WHERE id='anchored'").pluck().get() as string)).toEqual({ id: 'anchor-1', kind: 'highlight' });
 }
 async function delayedPack(ctx: ScenarioContext) {
-  edit(ctx.a, '123');
-  if (process.env.FOLIOLE_SIM_PATH === 'companion') {
-    ctx.sa.interrupt = { path: '/companion/version-pack-receipt', remaining: 1 };
-    await expect(pull(ctx.sa, ctx.b, false)).rejects.toThrow();
-    expect(ctx.sa.interrupt).toBeNull();
-  } else await pull(ctx.sa, ctx.b, false);
-  const next = edit(ctx.a, '123456');
-  ctx.sa.interrupt = { path: '/companion/version-pack-receipt', remaining: 1 };
-  const deliver = () => inPeer(ctx.b, () => flushDesktopSyncGroupVersionReceipts(route(ctx.sa, ctx.b)));
-  await expect(deliver()).rejects.toThrow();
-  await deliver();
-  assertBody(ctx.a, '123456', 'topic', next);
-  ctx.sa.loseResponse = '/companion/version-pack-receipt';
-  await expect(pull(ctx.sa, ctx.b)).rejects.toThrow();
+  const original = edit(ctx.a, '123');
+  ctx.sa.loseResponse = '/companion/framed-sync?request=round_finish';
+  await Promise.allSettled([pull(ctx.sa, ctx.b)]);
   expect(ctx.sa.loseResponse).toBeNull();
-  expect(Number(ctx.b.sqlite.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts').pluck().get())).toBeGreaterThan(0);
-  expect(ctx.a.sqlite.prepare('SELECT COUNT(*) FROM node_version_pack_receipts').pluck().get()).toBe(0);
+  assertBody(ctx.b, '123', 'topic', original);
+  const next = edit(ctx.a, '123456');
   reopenPeer(ctx.a);
   reopenPeer(ctx.b);
   await pull(ctx.sa, ctx.b);
+  assertBody(ctx.a, '123456', 'topic', next);
+  assertBody(ctx.b, '123456', 'topic', next);
   await converge(ctx);
 }
 async function trimmed(ctx: ScenarioContext) {
@@ -137,15 +127,19 @@ async function interrupted(ctx: ScenarioContext) {
   const count = Number(process.env.FOLIOLE_SIM_SCALE ?? '1') * 150;
   for (let i = 0; i < count; i++) edit(ctx.a, `body-${i}`, `page-${i}`);
   for (let i = 0; i < 140; i++) edit(ctx.a, `history-${i}`, 'history');
-  ctx.sa.interrupt = { path: '/companion/sync-pack', remaining: 2 };
-  await expect(pull(ctx.sa, ctx.b)).rejects.toThrow();
+  ctx.sa.interrupt = { path: '/companion/framed-sync?request=pulls', remaining: 1 };
+  await Promise.allSettled([pull(ctx.sa, ctx.b)]);
   expect(ctx.sa.interrupt).toBeNull();
-  const staged = ctx.b.sqlite.prepare('SELECT COUNT(*) FROM sync_pack_dependency_rows').pluck().get();
-  expect(Number(staged)).toBeGreaterThan(0);
+  assertHealthy(ctx.b);
+  for (const row of ctx.b.sqlite.prepare('SELECT id FROM nodes WHERE id LIKE ?').all('page-%') as { id: string }[]) {
+    assertBody(ctx.b, `body-${row.id.slice(5)}`, row.id);
+  }
   reopenPeer(ctx.a);
   reopenPeer(ctx.b);
   await pull(ctx.sa, ctx.b);
-  expect(ctx.sa.requests.filter((url) => url.startsWith('/companion/sync-pack?')).length).toBeGreaterThan(2);
+  expect(ctx.sa.requests.filter(url => new URL(url, ctx.sa.origin).searchParams.get('request') === 'pulls').length).toBeGreaterThan(1);
+  for (let i = 0; i < count; i++) assertBody(ctx.b, `body-${i}`, `page-${i}`);
+  assertBody(ctx.b, 'history-139', 'history');
   await converge(ctx);
 }
 async function deletion(ctx: ScenarioContext) {
@@ -156,28 +150,34 @@ async function deletion(ctx: ScenarioContext) {
   expect(ctx.b.sqlite.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").pluck().get()).toBeTruthy();
 }
 async function collision(ctx: ScenarioContext) {
-  edit(ctx.a, 'desktop independent', 'topic', { kind: 'item' });
-  const first = edit(ctx.b, 'mobile independent', 'topic', { kind: 'item' });
-  const acks = await push(ctx.sa, ctx.b, false);
-  expect(acks[0]?.canonicalObjectId).toBeTruthy();
-  const next = edit(ctx.b, 'mobile later', 'topic', { kind: 'item' });
-  const canonical = acks[0]!.canonicalObjectId!;
-  const store = mobileStore(ctx.b);
-  await store.savePushAcks(ctx.a.id, acks);
-  await store.savePushAcks(ctx.a.id, acks);
-  assertBody(ctx.b, 'mobile later', canonical, next);
-  expect(ctx.b.sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE object_id=?').pluck().all(canonical))
-    .toEqual(expect.arrayContaining([first, next]));
-  expect((await store.loadNodeVersions(ctx.a.id, null)).map((row) => row.version_id)).toContain(next);
+  const left = edit(ctx.a, 'desktop independent', 'topic', { kind: 'item', title: 'Desktop item' });
+  const right = edit(ctx.b, 'mobile independent', 'topic', { kind: 'item', title: 'Mobile item' });
+  const roots = [ctx.a, ctx.b].map(peer => peer.sqlite.prepare(
+    'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions WHERE object_id=?'
+  ).get('topic'));
+  await push(ctx.sa, ctx.b);
+  for (const peer of [ctx.a, ctx.b]) {
+    expect(peer.sqlite.prepare('SELECT id, kind, title FROM nodes WHERE id=?').all('topic'))
+      .toEqual([{ id: 'topic', kind: 'item', title: 'Mobile item' }]);
+    assertBody(peer, 'mobile independent');
+    const head = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(peer.sqlite), 'topic');
+    expect(head!.snapshot.text_alternatives ?? []).toEqual([]);
+    for (const root of roots) expect(peer.sqlite.prepare(
+      'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions WHERE version_id=?'
+    ).get((root as { version_id: string }).version_id)).toEqual(root);
+    for (const version of [left, right]) expect(await isStoredAncestorVersion(
+      createBetterSqliteDbPort(peer.sqlite), version, head!.version_id!
+    )).toBe(true);
+  }
+  const next = edit(ctx.b, 'mobile later', 'topic', { kind: 'item', title: 'Continued item' });
   await push(ctx.sa, ctx.b);
   await converge(ctx);
-  assertBody(ctx.a, 'mobile later', canonical);
-  assertBody(ctx.a, 'desktop independent');
   const before = graph(ctx.b);
-  await store.savePushAcks(ctx.a.id, acks);
+  reopenPeer(ctx.a);
+  reopenPeer(ctx.b);
+  await converge(ctx);
   expect(graph(ctx.b)).toEqual(before);
-  assertBody(ctx.b, 'desktop independent');
-  assertBody(ctx.b, 'mobile later', canonical);
+  for (const peer of [ctx.a, ctx.b]) assertBody(peer, 'mobile later', 'topic', next);
 }
 export const scenarios: Record<string, (ctx: ScenarioContext) => Promise<void>> = {
   continuous, merge: (ctx) => branches(ctx, false), conflict: (ctx) => branches(ctx, true),

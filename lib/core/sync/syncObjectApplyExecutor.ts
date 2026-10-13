@@ -10,6 +10,7 @@ import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPrunin
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
 import type { SyncObjectRecord } from './syncObjectRecord.js';
+import { compareReadwiseOwnerEpoch } from './syncReadwiseOwnerOrder.js';
 
 
 const REMOTE_DEVICE_ID = 'sync-remote';
@@ -187,6 +188,8 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord):
   }
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';
+  const ownerOrder = await compareReadwiseOwnerEpoch(port, record);
+  if (ownerOrder) return ownerOrder;
   const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;
   const incomingKey = `${record.updated_at}\n${record.content_hash}\n${record.deleted_at ?? ''}`;
   return currentKey < incomingKey ? 'apply' : 'stale';

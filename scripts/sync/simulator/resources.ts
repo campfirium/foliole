@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect } from 'vitest';
 
 import { importImageAttachmentResource } from '../../../electron/attachments/importImageAttachmentResource.js';
+import { resolveAttachmentFile } from '../../../electron/attachments/resourceResolver.js';
 
 import { assertResources, assertBody, assertCompleted } from './assertions.js';
 import { snapshotInput } from './input.js';
@@ -20,14 +21,14 @@ export async function resources(ctx: ScenarioContext) {
   if (imported.status !== 'imported') throw new Error('simulator_attachment_import_failed');
   const body = `![pixel](asset://${imported.storage_key})`;
   edit(ctx.a, body);
-  ctx.sa.interrupt = { path: '/companion/attachment-resource', remaining: 1 };
-  await expect(pull(ctx.sa, ctx.b)).rejects.toThrow();
+  ctx.sa.interrupt = { path: '/companion/framed-sync?request=attachments', remaining: 1 };
+  await Promise.allSettled([pull(ctx.sa, ctx.b)]);
   expect(ctx.sa.interrupt).toBeNull();
   await pull(ctx.sa, ctx.b);
   assertBody(ctx.b, body);
   await assertResources(ctx.a, ctx.b);
   expect(ctx.sa.requests.some((url) => url.startsWith('/companion/content-blobs'))).toBe(false);
-  expect(ctx.sa.requests.some((url) => url.startsWith('/companion/attachment-resource'))).toBe(true);
+  expect(ctx.sa.requests.some((url) => new URL(url, ctx.sa.origin).searchParams.get('request') === 'attachments')).toBe(true);
   await converge(ctx);
 }
 
@@ -48,5 +49,5 @@ export async function mismatchedResourceType(ctx: ScenarioContext) {
   await assertResources(ctx.a, ctx.b, missingKeys);
   await assertCompleted(ctx.b, missingKeys);
   assertBody(ctx.b, 'unrelated body', 'resource-free');
-  expect(ctx.b.sqlite.prepare('SELECT article_id FROM sync_pack_resource_articles').pluck().all()).toContain('topic');
+  expect(inPeer(ctx.b, () => resolveAttachmentFile(key, ctx.b.assets))).toMatchObject({ status: 'missing_file' });
 }

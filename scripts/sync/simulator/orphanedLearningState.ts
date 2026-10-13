@@ -1,6 +1,7 @@
 import { expect } from 'vitest';
 
 import { upsertSyncObjectState } from '../../../lib/core/database/syncState.js';
+import { hashTextBody } from '../../../lib/core/database/textBodyHash.js';
 
 import { assertBody } from './assertions.js';
 import { assertLocalRootsPreserved, localRootRecords } from './localRootRecords.js';
@@ -39,7 +40,7 @@ export async function tombstonedLearningState(ctx: ScenarioContext) {
   // Retained history can predate the current learning-state window in an existing library.
   ctx.a.driver.execute("UPDATE sync_object_state SET state_seq = 0 WHERE object_type = 'node' AND object_id = 'retained'");
   upsertSyncObjectState(ctx.a.driver, { objectType: 'node_reading', objectId: 'retained',
-    contentHash: 'deleted-reading', lastModifiedByHostName: ctx.a.name, syncDirty: true,
+    contentHash: hashTextBody('deleted-reading'), lastModifiedByHostName: ctx.a.name, syncDirty: true,
     deletedAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' });
   edit(ctx.a, 'live body');
   await converge(ctx);

@@ -23,6 +23,8 @@ export async function loadNodeSyncTombstone(port: DbPort, nodeId: string) {
 }
 
 async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
+  const [child] = await port.query<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ? ORDER BY id LIMIT 1', [nodeId]);
+  if (child) throw new Error(`framed_sync_node_delete_child_pending:${child.id}`);
   await port.run('DELETE FROM review_log WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_reading WHERE node_id = ?', [nodeId]);

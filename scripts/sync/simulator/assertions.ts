@@ -91,7 +91,14 @@ export function graph(peer: SimulatorPeer) {
       json_extract(v.snapshot_json, '$.text_alternatives') AS alternatives
       FROM nodes n JOIN node_sync_versions v ON v.version_id=n.current_version_id
       WHERE n.id NOT IN (${LOCAL_ROOT_IDS_SQL}) AND json_array_length(v.snapshot_json, '$.text_alternatives')>0
-      ORDER BY n.id`).all()
+      ORDER BY n.id`).all().map(row => {
+      const value = row as { node_id: string; alternatives: string };
+      const alternatives = JSON.parse(value.alternatives) as Record<string, unknown>[];
+      return { node_id: value.node_id, alternatives: alternatives.map(entry => ({
+        id: entry.id, body_blob_hash: entry.body_blob_hash, source_host_name: entry.source_host_name,
+        created_at: entry.created_at, expires_at: entry.expires_at
+      })) };
+    })
   };
 }
 export function convergenceState(peer: SimulatorPeer) {

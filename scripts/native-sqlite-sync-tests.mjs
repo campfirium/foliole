@@ -1,4 +1,11 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/requestSyncDeletedFamilyBootstrap.integration.test.ts',
+  'electron/sync/desktopRequestSyncNotifications.integration.test.ts',
+  'electron/sync/desktopRequestSyncCancellation.test.ts',
+  'electron/database/requestSyncFamilyDeletion.integration.test.ts',
+  'electron/database/requestSyncStructuralParents.integration.test.ts',
+  'electron/database/requestSyncReviewHistory.integration.test.ts',
+  'electron/database/requestSyncReadwiseOwner.integration.test.ts',
   'electron/database/currentNodeBodyProjection.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncMissingBody.integration.test.ts',
   'electron/database/requestSyncLargeSettings.integration.test.ts',

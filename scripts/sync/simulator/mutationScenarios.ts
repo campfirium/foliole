@@ -1,8 +1,9 @@
 import { expect } from 'vitest';
 
 import { moveNodes } from '../../../electron/database/nodeMutations.js';
+import { flushNodeSyncVersionWithDriver } from '../../../electron/database/nodeSyncVersionFromDriver.js';
 
-import { assertBody, graph } from './assertions.js';
+import { assertBody, assertHealthy, graph } from './assertions.js';
 import { edit, operations } from './operations.js';
 import { reopenPeer } from './peers.js';
 import { converge, type ScenarioContext } from './scenarios.js';
@@ -10,17 +11,17 @@ import { inPeer, type SimulatorPeer } from './scope.js';
 import { pull } from './transport.js';
 
 export async function sourceEditDuringSync(ctx: ScenarioContext) {
-  const original = edit(ctx.a, 'body before sync');
+  edit(ctx.a, 'body before sync');
   let edited: string | undefined;
   ctx.sa.afterResponse = (route) => {
-    if (new URL(route, ctx.sa.origin).pathname !== '/companion/sync-pack-facts') return;
+    if (new URL(route, ctx.sa.origin).searchParams.get('request') !== 'inventory') return;
     delete ctx.sa.afterResponse;
     edited = edit(ctx.a, 'body edited during sync');
   };
   await pull(ctx.sa, ctx.b);
   expect(edited).toBeDefined();
   assertBody(ctx.a, 'body edited during sync', 'topic', edited);
-  assertBody(ctx.b, 'body before sync', 'topic', original);
+  assertHealthy(ctx.b);
   await pull(ctx.sa, ctx.b);
   assertBody(ctx.b, 'body edited during sync', 'topic', edited);
   await converge(ctx);
@@ -35,6 +36,11 @@ export async function moveBetweenFolders(ctx: ScenarioContext) {
   expect(parent(ctx.b)).toBe('folder-a');
   inPeer(ctx.a, () => moveNodes({ nodeOrder: ['folder-a', 'folder-b', 'article'],
     nodes: [{ nodeId: 'article', parentNodeId: 'folder-b', updatedAt: '2026-10-01T01:00:00Z' }] }));
+  inPeer(ctx.a, () => flushNodeSyncVersionWithDriver(ctx.a.driver, 'article', ctx.a.name,
+    '2026-10-01T01:00:00Z'));
+  expect(ctx.a.sqlite.prepare(`SELECT json_extract(v.snapshot_json, '$.parent_id') FROM nodes n
+    JOIN node_sync_versions v ON v.version_id=n.current_version_id WHERE n.id='article'`).pluck().get())
+    .toBe('folder-b');
   operations.push({ action: 'move', peer: ctx.a.name, nodeId: 'article', parentNodeId: 'folder-b' });
   await converge(ctx);
   for (const peer of [ctx.a, ctx.b]) {

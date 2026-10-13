@@ -11,19 +11,19 @@ import { snapshotInput } from './input.js';
 import { edit, mobileEdit } from './operations.js';
 import { reopenPeer } from './peers.js';
 import { converge, type ScenarioContext } from './scenarios.js';
-import { mobileStore, pull, push } from './transport.js';
+import { pull, push } from './transport.js';
 
 export async function lostPushResponse(ctx: ScenarioContext) {
   const base = edit(ctx.a, 'before', 'topic', { anchorLink: { id: 'shared', kind: 'highlight' } });
   await pull(ctx.sa, ctx.b);
   const version = await mobileEdit(ctx.b, base, 'after');
-  ctx.sa.loseResponse = '/companion/sync-push';
-  await expect(push(ctx.sa, ctx.b)).rejects.toThrow();
+  ctx.sa.loseResponse = '/companion/framed-sync?request=objects';
+  await Promise.allSettled([push(ctx.sa, ctx.b)]);
   expect(ctx.sa.loseResponse).toBeNull();
   assertBody(ctx.a, 'after', 'topic', version);
   reopenPeer(ctx.a);
   reopenPeer(ctx.b);
-  expect((await mobileStore(ctx.b).loadNodeVersions(ctx.a.id, null)).map((row) => row.version_id)).toContain(version);
+  expect(ctx.b.sqlite.prepare('SELECT version_id FROM node_sync_versions').pluck().all()).toContain(version);
   await push(ctx.sa, ctx.b);
   await converge(ctx);
   assertBody(ctx.a, 'after', 'topic', version);

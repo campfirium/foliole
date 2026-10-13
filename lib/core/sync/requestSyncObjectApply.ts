@@ -14,6 +14,7 @@ import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
+import { assertCurrentNodeParentChain } from './syncNodeParentChain.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export interface RequestSyncObjectInput {
@@ -67,6 +68,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (input.objectType === 'node') {
+      await assertCurrentNodeParentChain(tx, input.globalId);
       await reconcileCurrentNodeBody(tx, input.globalId, input.enqueueSearchInvalidations ?? true);
     }
     await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
