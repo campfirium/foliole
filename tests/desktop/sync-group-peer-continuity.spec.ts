@@ -10,10 +10,11 @@ test('Sync settings presents the local group roster and real local actions', asy
   const overview = await desktopWindow.evaluate(async () =>
     globalThis.window?.electronAPI?.invoke('create_sync_group', {}));
   expect(overview?.sync_group).toMatchObject({
-    local_member_state: 'active',
-    members: [expect.objectContaining({ state: 'active' })]
+    local_device_identity_key: expect.any(String),
+    devices: [expect.objectContaining({ state: 'active' })]
   });
 
+  expect(overview.server_status).toMatchObject({ state: 'running', last_error: null });
   const settingsDialog = await openSettingsCategory(desktopWindow, 'Sync');
   await expect(settingsDialog.getByText(new RegExp(`^${overview.sync_group.display_name}(?:'s| 的) Sync Group$|^${overview.sync_group.display_name} 的同步组$`))).toBeVisible();
   await expect(settingsDialog.getByRole('listitem')).toHaveCount(1);

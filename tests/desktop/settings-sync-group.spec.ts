@@ -14,6 +14,8 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
   await expect(section.getByRole('button', { name: /(primary device|主设备)/i })).toHaveCount(0);
   await expect(section.getByText(/(primary device|主设备)/i)).toHaveCount(0);
   await create.click();
+  const overview = await desktopWindow.evaluate(async () => window.electronAPI.invoke('load_sync_group_overview'));
+  expect(overview.server_status).toMatchObject({ state: 'running', last_error: null });
   const devices = section.getByRole('list', { name: /^(Devices|设备)$/ });
   await expect(devices).toBeVisible();
   await expect(devices.getByRole('listitem')).toHaveCount(1);
