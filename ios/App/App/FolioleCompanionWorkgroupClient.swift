@@ -60,6 +60,17 @@ enum FolioleCompanionSignedClientRequests {
         guard let endpoint = URL(string: endpointUrl),
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? ""),
               endpoint.host != nil else { throw invalid("sync_group_endpoint_invalid") }
+        if body == nil, method == "POST", path.split(separator: "?", maxSplits: 1).first == "/companion/framed-sync" {
+            guard bodyHash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
+                throw invalid("request_body_hash_invalid")
+            }
+            let canonical = [method, path, timestamp, nonce, bodyHash].joined(separator: "\n")
+            let signature = HMAC<SHA256>.authenticationCode(
+                for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
+            ).map { String(format: "%02x", $0) }.joined()
+            return ["headers": ["X-Device-Id": deviceId, "X-Nonce": nonce,
+                "X-Signature": signature, "X-Timestamp": timestamp, "X-Sync-Group-Id": groupId]]
+        }
         let plaintext = body.map { Data($0.utf8) }
         guard SHA256.hash(data: plaintext ?? Data()).hex == bodyHash else {
             throw invalid("request_body_hash_mismatch")

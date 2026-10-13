@@ -7,6 +7,38 @@ final class FolioleCompanionWorkgroupClientTests: XCTestCase {
     private let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     private let path = "/companion/sync-pack?after_state_seq=0"
 
+    func testSignsSpooledFramedBodyDigestWithoutTreatingItAsAnEmptyJsonBody() throws {
+        let path = "/companion/framed-sync?mode=inventory&peer_round_id=round-a"
+        let digest = sha256(Data([0, 255, 128, 1]))
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let nonce = UUID().uuidString.lowercased()
+        let prepared = try FolioleCompanionSignedClientRequests.prepare(
+            body: nil, bodyHash: digest, endpointUrl: "http://desktop.local",
+            groupId: "group-a", method: "POST", nonce: nonce, path: path,
+            timestamp: timestamp, deviceId: "device-a", workgroupKey: key
+        )
+        let headers = try XCTUnwrap(prepared["headers"] as? [String: String])
+        let canonical = ["POST", path, timestamp, nonce, digest].joined(separator: "\n")
+        let expected = HMAC<SHA256>.authenticationCode(
+            for: Data(canonical.utf8), using: SymmetricKey(data: Data(key.utf8))
+        ).map { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(headers["X-Signature"], expected)
+        XCTAssertEqual(headers["X-Device-Id"], "device-a")
+        XCTAssertNil(prepared["body"])
+        XCTAssertNil(headers["Content-Type"])
+    }
+
+    func testRejectsMissingJsonBodyAndMalformedFramedDigest() throws {
+        for (path, hash) in [("/sync-group/member-state", sha256(Data("body".utf8))),
+                             ("/companion/framed-sync", "invalid") ] {
+            XCTAssertThrowsError(try FolioleCompanionSignedClientRequests.prepare(
+                body: nil, bodyHash: hash, endpointUrl: "http://desktop.local",
+                groupId: "group-a", method: "POST", nonce: UUID().uuidString.lowercased(), path: path,
+                timestamp: ISO8601DateFormatter().string(from: Date()), deviceId: "device-a", workgroupKey: key
+            ))
+        }
+    }
+
     func testEncryptsSignsAndClaimsOneExactRequest() throws {
         let body = "{\"group_id\":\"group-a\"}"
         let nonce = UUID().uuidString.lowercased()
