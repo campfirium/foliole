@@ -114,6 +114,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupSigning.java',
       'FolioleCompanionSyncScreenAwake.java',
       'FolioleCompanionSyncGroupServer.java',
+      'FolioleCompanionSyncGroupHttpError.java',
       'FolioleCompanionSyncGroupSessionAuth.java',
       'FolioleCompanionSyncGroupSnapshot.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
