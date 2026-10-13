@@ -13,14 +13,15 @@ import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 export async function continueDesktopRequestSyncResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]) {
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(input.peer.group_id));
   if (!key) throw new Error('sync_group_workgroup_key_missing');
-  const host = createDesktopRequestSyncDatabaseHost(resolveRuntimeDataPaths().databasePath);
+  const { databasePath } = await runWithDatabaseConnectionOwner(resolveRuntimeDataPaths);
+  const host = createDesktopRequestSyncDatabaseHost(databasePath);
   const [proof] = await host.readSnapshot(db => db.query<{ library_epoch: string }>(
     'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1'));
   if (!proof) throw new Error('request_sync_local_epoch_missing');
   const context = { groupId: input.peer.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     initiatorDeviceId: input.peer.local_device_id, initiatorLibraryEpoch: proof.library_epoch,
     responderDeviceId: input.peer.peer_device_id, responderLibraryEpoch: input.remoteLibraryEpoch } as const;
-  return exchangeRequestSyncAttachments(createDesktopRequestSyncAttachmentHost(host), createDesktopRequestSyncExchange({
+  return exchangeRequestSyncAttachments(await createDesktopRequestSyncAttachmentHost(host), createDesktopRequestSyncExchange({
     context, endpointUrl: input.peer.endpoint_url, groupSecret: key.group_key,
     groupKey: new Uint8Array(Buffer.from(key.group_key, 'base64url')),
     ...(input.peerRound ? { peerRound: input.peerRound } : {}),

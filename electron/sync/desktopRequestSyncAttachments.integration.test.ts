@@ -16,15 +16,66 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
-import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
+import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
+import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
 import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';
+import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import * as resourceHash from './resourceFileHash.js';
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+it('waits for the database writer when opening and checking attachment paths', async () => {
+  const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
+  vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
+  try {
+    await seedAttachmentTarget([]);
+    const paths = resolveRuntimeDataPaths();
+    const database = createDesktopRequestSyncDatabaseHost(paths.databasePath);
+    const whileWriting = async <T>(read: () => T | Promise<T>) => {
+      const release = deferred();
+      const active = runWithDatabaseConnectionOwner(() => release.promise);
+      const reading = Promise.resolve().then(read);
+      try {
+        await Promise.resolve();
+        release.resolve();
+        return await reading;
+      } finally { release.resolve(); await active; }
+    };
+    const host = await whileWriting(() => createDesktopRequestSyncAttachmentHost(database));
+    expect(await whileWriting(() => host.needs())).toEqual([]);
+    const bytes = Buffer.from('attachment');
+    const key = `${createHash('sha256').update(bytes).digest('hex')}.pdf`;
+    await writeFile(path.join(paths.assetsDir, key), bytes);
+    const consuming = deferred();
+    const finish = deferred();
+    const transfer = host.withFile(key, async source => {
+      consuming.resolve();
+      await finish.promise;
+      return source.read(0, bytes.length);
+    });
+    await consuming.promise;
+    try {
+      await database.write(db => db.run('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)',
+        ['library_path_settings', JSON.stringify({ assets_dir: path.join(directory.root, 'other-assets') }), 'now']));
+    } finally { finish.resolve(); }
+    expect(Buffer.from(await transfer)).toEqual(bytes);
+    await expect(host.needs()).rejects.toThrow('attachment_library_changed');
+  } finally {
+    await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
+    clearDesktopSyncGroupMemberStateReadiness(); vi.unstubAllEnvs();
+    await directory.remove(); sandbox.root = '';
+  }
+});
 
 it.each([0, 5])('transfers both directions through signed HTTP with lost response at request %s', async dropAt => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;

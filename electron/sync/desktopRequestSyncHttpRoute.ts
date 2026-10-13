@@ -12,7 +12,7 @@ import { respondDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.
 import { respondDesktopRequestSyncPull } from './desktopRequestSyncPullHttp.js';
 import { readDesktopVerifiedMemberState } from './desktopSyncGroupMemberStateReadiness.js';
 
-export function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, input: {
+export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, input: {
   url: URL;
   context: RequestSyncAuthenticatedContext;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
@@ -24,7 +24,7 @@ export function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, inp
   switch (input.url.searchParams.get('request')) {
     case 'round_finish': return respondRequestSyncRoundControl({ ...input,
       roundId: input.url.searchParams.get('peer_round_id') ?? '' });
-    case 'attachments': return respondRequestSyncAttachments(createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
+    case 'attachments': return respondRequestSyncAttachments(await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
     case 'pulls': return respondRequestSyncDatabase(host, { ...input, mode: 'pulls' }, prepareDesktopRequestSyncBody);

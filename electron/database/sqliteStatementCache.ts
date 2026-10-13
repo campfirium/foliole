@@ -1,14 +1,11 @@
 import type BetterSqlite3 from 'better-sqlite3';
 
-import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
-
 type SqliteDatabase = BetterSqlite3.Database;
 const caches = new WeakMap<SqliteDatabase, Map<string, BetterSqlite3.Statement>>();
 const MAX_CACHED_STATEMENTS = 128;
 
 /** Reuse repeated SQL on one connection instead of deferring thousands of native finalizers. */
 export function prepareCachedSqliteStatement(sqlite: SqliteDatabase, sql: string) {
-  getSqliteConnectionCoordinator(sqlite).assertAccess();
   let cache = caches.get(sqlite);
   if (!cache) {
     cache = new Map();

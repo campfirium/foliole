@@ -6,6 +6,36 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+it('preserves unguarded driver reads while an asynchronous writer owns the connection', async () => {
+  const sqlite = new Database(':memory:');
+  const driver = createBetterSqlite3Driver(sqlite);
+  const port = createBetterSqliteDbPort(sqlite);
+  const entered = deferred();
+  const released = deferred();
+  sqlite.exec("CREATE TABLE items (value TEXT); INSERT INTO items VALUES ('saved')");
+  const writer = port.transaction(async tx => {
+    await tx.run("UPDATE items SET value = 'updated'");
+    entered.resolve();
+    await released.promise;
+  });
+  await entered.promise;
+  try {
+    expect(driver.queryOne('SELECT value FROM items')).toEqual({ value: 'updated' });
+    expect(driver.queryAll('SELECT value FROM items')).toEqual([{ value: 'updated' }]);
+    expect(driver.prepare('SELECT value FROM items').get()).toEqual({ value: 'updated' });
+  } finally {
+    released.resolve();
+    await writer;
+    sqlite.close();
+  }
+});
+
 it('avoids a native statement per repeated business operation without retaining parameters', async () => {
   const raw = new Database(':memory:');
   const sqlite = guardBetterSqliteDatabase(raw);
