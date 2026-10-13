@@ -12,7 +12,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.UUID;
 
-/** Byte storage only. Transfer identities and state transitions remain in the staging contract. */
+/** Byte storage only. The shared request owner controls identity and lifetime. */
 public final class FramedSyncFiles {
     private final File root;
 
@@ -20,7 +20,7 @@ public final class FramedSyncFiles {
         byte[] hash = MessageDigest.getInstance("SHA-256").digest(libraryKey.getBytes(StandardCharsets.UTF_8));
         StringBuilder id = new StringBuilder();
         for (byte value : hash) id.append(String.format(java.util.Locale.ROOT, "%02x", value & 255));
-        root = new File(new File(context.getNoBackupFilesDir(), "SyncTransport"), id.toString()).getCanonicalFile();
+        root = new File(new File(context.getNoBackupFilesDir(), "SyncRequests"), id.toString()).getCanonicalFile();
     }
 
     public byte[] read(String key) throws Exception {

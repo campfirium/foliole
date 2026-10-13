@@ -42,7 +42,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CapacitorSQLitePlugin.class);
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
         registerPlugin(FolioleCompanionAppDataPlugin.class);
-        registerPlugin(FolioleCompanionSyncPackTransferPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         registerPlugin(FolioleCompanionShareInboxPlugin.class);
         receiveSharedText(getIntent());

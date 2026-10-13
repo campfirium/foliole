@@ -162,31 +162,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionSyncGroupSigning.sign(getContext(), call));
     }
 
-    @PluginMethod public void sendFramedSyncTransfer(PluginCall call) {
-        FolioleCompanionSyncAsync.run(framedSendExecutor, call, "Failed to send framed Sync transfer.", () ->
-            FolioleCompanionFramedSyncOutbound.send(getContext(), call));
-    }
-
-    @PluginMethod public void sendFramedSyncTransfers(PluginCall call) {
-        FolioleCompanionSyncAsync.run(framedSendExecutor, call, "Failed to send framed Sync transfers.", () ->
-            FolioleCompanionFramedSyncBatchOutbound.send(getContext(), call));
-    }
-
-    @PluginMethod public void readFramedSyncInventory(PluginCall call) {
-        async(call, "Failed to read framed Sync inventory.", () ->
-            FolioleCompanionFramedSyncInventoryClient.read(getContext(), call));
-    }
-
-    @PluginMethod public void pullFramedSyncObject(PluginCall call) {
-        async(call, "Failed to pull framed Sync object.", () ->
-            FolioleCompanionFramedSyncPull.pull(getContext(), call));
-    }
-
-    @PluginMethod public void pullFramedSyncObjects(PluginCall call) {
-        async(call, "Failed to pull framed Sync objects.", () ->
-            FolioleCompanionFramedSyncPullBatch.pull(getContext(), call));
-    }
-
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
         async(call, "Failed to download companion attachment resources.", () ->
             FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));

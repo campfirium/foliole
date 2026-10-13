@@ -41,7 +41,7 @@ final class FolioleCompanionSyncGroupProvider {
             .put("device_id", deviceId)
             .put("device_name", value(context, call, "deviceName"))
             .put("platform", value(context, call, "platform"))
-            .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
+            .put("protocol", FolioleCompanionSyncProtocolDefinitions.currentProtocol(context))
             .put("sync_group", group)
             .put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));
         boolean same = sameProvider(activeConfig, next);

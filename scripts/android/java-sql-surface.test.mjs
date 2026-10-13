@@ -9,24 +9,10 @@ const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android
 const ISOLATED_SQLITE = new Set([
   'FolioleCompanionContentBlobPack.java',
   'FolioleCompanionIdentityFactChunkWriter.java',
-  'FolioleCompanionSyncIdentityPackBuilder.java',
   'FolioleCompanionResourceAvailability.java',
   'FolioleCompanionSyncGroupDatabase.java',
   'FolioleCompanionSyncGroupContentBlobBatch.java',
   'FolioleCompanionSyncGroupResources.java',
-  'FolioleCompanionSyncPackDatabaseValidator.java',
-  'FolioleCompanionSyncPackDependencyArchive.java',
-  'FolioleCompanionSyncPackDependencySource.java',
-  'FolioleCompanionSyncPackDependencyRows.java',
-  'FolioleCompanionSyncPackFactClaims.java',
-  'FolioleCompanionSyncPackFactIndex.java',
-  'FolioleCompanionSyncPackFactPages.java',
-  'FolioleCompanionSyncPackFactProvider.java',
-  'FolioleCompanionSyncPackPayloadWriter.java',
-  'FolioleCompanionSyncPackProvider.java',
-  'FolioleCompanionSyncPackProviderCandidate.java',
-  'FolioleCompanionSyncPackVersionBudget.java',
-  'FolioleCompanionSyncPackVersionHolds.java'
 ]);
 
 function javaFiles() {
@@ -62,11 +48,8 @@ describe('Android Java SQL surface', () => {
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
       'maintainAttachmentFiles',
-      'pullFramedSyncObject', 'pullFramedSyncObjects',
-      'readFramedSyncInventory',
       'readRemoteImageResponse', 'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
-      'sendFramedSyncTransfer', 'sendFramedSyncTransfers',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'

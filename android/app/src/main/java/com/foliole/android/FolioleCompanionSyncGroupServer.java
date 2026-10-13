@@ -10,9 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.foliole.android.framed.FramedSyncSessionNonceFiles;
-import com.foliole.android.framed.FramedSyncTransferFiles;
-
 final class FolioleCompanionSyncGroupServer {
     private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;
     private final Context context;
@@ -22,8 +19,6 @@ final class FolioleCompanionSyncGroupServer {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final FolioleCompanionJoinRequestProvider joins;
     private final ServerSocket server;
-    private final FramedSyncSessionNonceFiles framedSyncNonces;
-    private final FramedSyncTransferFiles framedSyncTransfers;
     private final Runnable stateChanged;
     private volatile boolean running = true;
 
@@ -35,8 +30,6 @@ final class FolioleCompanionSyncGroupServer {
         this.joins = joins; this.dataBridge = dataBridge; this.stateChanged = stateChanged;
         auth = new FolioleCompanionSyncGroupSessionAuth(this.context,
             config.getJSONObject("sync_group").getString("group_id"), dataBridge);
-        framedSyncNonces = new FramedSyncSessionNonceFiles(this.context);
-        framedSyncTransfers = new FramedSyncTransferFiles(this.context);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
 
@@ -45,7 +38,7 @@ final class FolioleCompanionSyncGroupServer {
     void stop() {
         running = false;
         try { server.close(); } catch (Exception ignored) {}
-        executor.shutdownNow(); framedSyncNonces.close(); framedSyncTransfers.close();
+        executor.shutdownNow();
     }
 
     private void acceptLoop() {
@@ -76,7 +69,7 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/framed-sync"))
             FolioleCompanionFramedSyncRoute.handle(context, config, dataBridge,
-                request, output, auth.authenticate(request), framedSyncNonces, framedSyncTransfers,
+                request, output, auth.authenticate(request),
                 new java.io.File(context.getCacheDir(), "framed-http-requests"));
         else FolioleCompanionHttpResponse.json(output, 404, error("not_found"));
     }

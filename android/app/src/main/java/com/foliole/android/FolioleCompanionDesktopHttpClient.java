@@ -27,10 +27,6 @@ final class FolioleCompanionDesktopHttpClient {
 
     private FolioleCompanionDesktopHttpClient() {}
 
-    static final class SyncPackSourceViewUnavailable extends Exception {
-        SyncPackSourceViewUnavailable() { super("sync_pack_source_view_unavailable"); }
-    }
-
     static final class BinaryResponse {
         final byte[] body;
         final String contentType;
@@ -99,9 +95,7 @@ final class FolioleCompanionDesktopHttpClient {
         try {
             String route = new URL(url).getPath();
             boolean attachmentRange = "/companion/attachment-resource".equals(route);
-            long responseLimit = "/companion/sync-identity-pack".equals(route)
-                ? 2L * FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES
-                : attachmentRange ? 1_500_000 : Long.MAX_VALUE;
+            long responseLimit = attachmentRange ? 1_500_000 : Long.MAX_VALUE;
             byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream(),
                 responseLimit);
             String contentType = connection.getContentType();
@@ -113,11 +107,6 @@ final class FolioleCompanionDesktopHttpClient {
                 contentType = connection.getHeaderField("X-Foliole-Original-Content-Type");
             }
             if (status < 200 || status >= 300) {
-                if (status == 409 && "/companion/sync-pack".equals(new URL(url).getPath())
-                    && "sync_pack_source_view_unavailable".equals(
-                        new JSONObject(new String(responseBody, StandardCharsets.UTF_8)).optString("error"))) {
-                    throw new SyncPackSourceViewUnavailable();
-                }
                 throw binaryResourceError(status, readSafeErrorCode(responseBody), method, prepared.path);
             }
             return new BinaryResponse(responseBody, contentType, totalBytes);
@@ -125,17 +114,6 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     static void downloadToFile(Context context, String url, JSONObject headers, File outputFile) throws Exception {
-        if ("/companion/sync-pack".equals(new URL(url).getPath())) {
-            byte[] body = requestBytes(context, url, headers);
-            if (body.length > FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES) {
-                throw new IllegalArgumentException("sync_pack_transfer_limit_exceeded");
-            }
-            try (OutputStream output = new BufferedOutputStream(
-                new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
-                output.write(body);
-            }
-            return;
-        }
         FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
             FolioleCompanionWorkgroupHttp.prepare(context, url, "GET", headers, null);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();

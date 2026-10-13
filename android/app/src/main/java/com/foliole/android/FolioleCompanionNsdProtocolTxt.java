@@ -12,7 +12,7 @@ import java.util.Map;
 final class FolioleCompanionNsdProtocolTxt {
     private static final List<String> CONTRACT_KEYS = Arrays.asList(
         "deviceId", "groupId", "groupTag", "maxSupportedVersion", "minSupportedVersion",
-        "providerPlatform", "topologyRole", "version"
+        "providerPlatform", "version"
     );
 
     private FolioleCompanionNsdProtocolTxt() {}

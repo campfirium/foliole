@@ -121,46 +121,6 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return networkResponseKey(context, "status");
     }
 
-    static String syncPackTransferDeletedResponseKey(Context context) throws Exception {
-        return syncPackTransferResponseKey(context, "deleted");
-    }
-
-    static String syncPackTransferExpectedPeerIdRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "expectedPeerId");
-    }
-
-    static String syncPackTransferExpectedSourcePeerIdRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "expectedSourcePeerId");
-    }
-
-    static String syncPackTransferHeadersRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "headers");
-    }
-
-    static String syncPackTransferPackPathRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "packPath");
-    }
-
-    static String syncPackTransferPackPathResponseKey(Context context) throws Exception {
-        return syncPackTransferResponseKey(context, "packPath");
-    }
-
-    static String syncPackTransferManifestResponseKey(Context context) throws Exception {
-        return syncPackTransferResponseKey(context, "manifest");
-    }
-
-    static String syncPackTransferMethodRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "method");
-    }
-
-    static String syncPackTransferBodyRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "body");
-    }
-
-    static String syncPackTransferUrlRequestKey(Context context) throws Exception {
-        return syncPackTransferRequestKey(context, "url");
-    }
-
     static String syncGroupProviderRequestKey(Context context, String key) throws Exception {
         return hostApiString(context, "syncGroupProvider", "requestKeys", key);
     }
@@ -231,14 +191,6 @@ final class FolioleCompanionHostBridgeContractDefinitions {
 
     private static String networkResponseKey(Context context, String key) throws Exception {
         return hostApiString(context, "network", "responseKeys", key);
-    }
-
-    private static String syncPackTransferRequestKey(Context context, String key) throws Exception {
-        return hostApiString(context, "syncPackTransfer", "requestKeys", key);
-    }
-
-    private static String syncPackTransferResponseKey(Context context, String key) throws Exception {
-        return hostApiString(context, "syncPackTransfer", "responseKeys", key);
     }
 
     private static String workspaceSyncRequestKey(Context context, String key) throws Exception {

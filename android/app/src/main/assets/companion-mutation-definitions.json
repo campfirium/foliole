@@ -25,14 +25,6 @@
       "statementName": "appDataClearSyncGroups"
     },
     {
-      "table": "sync_delivery_receipts",
-      "statementName": "appDataClearSyncDeliveryReceipts"
-    },
-    {
-      "table": "sync_peer_cursors",
-      "statementName": "appDataClearSyncPeerCursors"
-    },
-    {
       "table": "sync_change_log",
       "statementName": "appDataClearSyncChangeLog"
     },

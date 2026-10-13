@@ -1,24 +1,12 @@
 package com.foliole.android;
 
-import android.util.Base64;
 import android.content.Context;
-import com.foliole.android.framed.FramedSyncInventoryWire;
 import com.foliole.android.framed.FramedSyncPreamble;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
-import com.foliole.android.framed.FramedSyncReceiptBody;
 import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
-import com.foliole.android.framed.FramedSyncSessionContext;
-import com.foliole.android.framed.FramedSyncSessionNonceStore;
-import com.foliole.android.framed.FramedSyncSessionRequest;
-import com.foliole.android.framed.FramedSyncSessionFile;
-import com.foliole.android.framed.FramedSyncTransferContext;
-import com.foliole.android.framed.FramedSyncTransferReader;
-import com.foliole.android.framed.FramedSyncTransferFiles;
 import com.foliole.android.framed.FramedSyncValidationException;
-import com.foliole.sync.v22.TransferReceipt;
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
@@ -36,8 +24,6 @@ final class FolioleCompanionFramedSyncRoute {
         FolioleCompanionHttpRequest request,
         OutputStream output,
         String authenticatedPeer,
-        FramedSyncSessionNonceStore nonceStore,
-        FramedSyncTransferFiles transferStore,
         File requestDirectory
     ) throws Exception {
         if (!contentType(request)) {
@@ -60,103 +46,17 @@ final class FolioleCompanionFramedSyncRoute {
                 output, 409, new JSONObject().put("error", "framed_sync_responder_identity_mismatch"));
             return;
         }
-        String senderEpoch = identity.get("initiator_library_epoch");
-        byte[] groupKey = groupKey(groupId);
+        if (!identity.containsKey("request")) {
+            FolioleCompanionHttpResponse.json(output, 410, new JSONObject().put("error", "request_sync_required"));
+            return;
+        }
         try (FolioleCompanionFramedHttpBody body = FolioleCompanionFramedHttpBody.spool(
                 request.bodyStream(), requestDirectory, request.signatureBodySha256(), budget);
              BufferedInputStream input = new BufferedInputStream(body.open(), FramedSyncPreamble.BYTES)) {
-            if (identity.containsKey("request")) {
-                FolioleRequestSyncRoute.respond(hostContext, bridge, input, output, identity, groupId, requestDirectory, budget);
-                return;
-            }
-            FramedSyncPreamble preamble = peekPreamble(input);
-            if (preamble.contextKind() == 1) {
-                inventory(hostContext, input, groupKey, new FramedSyncSessionContext(groupId,
-                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore, new JSONObject()
-                    .put("group_id", groupId).put("peer_device_id", authenticatedPeer)
-                    .put("peer_library_epoch", senderEpoch), requestDirectory, output, localDeviceId, localEpoch, budget);
-                return;
-            }
-            FolioleCompanionFramedSyncSequenceRoute.respond(body.file, requestDirectory, output,
-                localDeviceId, localEpoch, budget, unit -> {
-                    if (unit.isReceipt()) {
-                        FolioleCompanionFramedSyncServerOutbound.receipt(hostContext, bridge, unit.input(), groupKey,
-                            unit.preamble().contextId(), new JSONObject().put("group_id", groupId)
-                                .put("sender_device_id", localDeviceId).put("sender_library_epoch", localEpoch)
-                                .put("receiver_device_id", authenticatedPeer).put("receiver_library_epoch", senderEpoch), budget);
-                        return null;
-                    }
-                    return transfer(unit.input(), groupKey, new FramedSyncTransferContext(groupId,
-                        authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
-                        transferStore, localDeviceId, localEpoch, budget);
-                });
+            FolioleRequestSyncRoute.respond(hostContext, bridge, input, output, identity, groupId, requestDirectory, budget);
         } catch (FramedSyncValidationException error) {
             throw new IllegalArgumentException(error.code());
         }
-    }
-
-    private static void inventory(
-        Context hostContext, InputStream input,
-        byte[] groupKey,
-        FramedSyncSessionContext context,
-        FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncSessionNonceStore nonceStore,
-        JSONObject peerContext, File directory, OutputStream output, String deviceId, String epoch,
-        FramedSyncPayloadBudget budget
-    ) throws Exception {
-        FramedSyncSessionRequest request = FramedSyncSessionRequest.read(input, groupKey, context, budget);
-        if (request.isDifference()) {
-            JSONObject selection = new JSONObject().put("group_id", peerContext.getString("group_id"))
-                .put("sender_device_id", deviceId).put("sender_library_epoch", epoch)
-                .put("receiver_device_id", peerContext.getString("peer_device_id"))
-                .put("receiver_library_epoch", peerContext.getString("peer_library_epoch"));
-            if (request.differenceCount() > 1) {
-                FolioleCompanionFramedSyncServerBatch.respond(hostContext, bridge, request, selection, groupKey, directory, output, budget);
-                return;
-            }
-            selection.put("difference_request_hex", FolioleCompanionFramedSyncOutbound.hex(request.differenceBytes()));
-            FolioleCompanionFramedSyncServerOutbound.respond(
-                hostContext, bridge, selection, groupKey, directory, output, budget);
-            return;
-        }
-        byte[] roundId = request.roundId();
-        var begin = request.inventoryBegin();
-        var all = FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget);
-        var inventory = begin.getDetailGlobalIdsCount() == 0 ? all : all.stream()
-            .filter(entry -> entry.getObjectType().equals("node") && begin.getDetailGlobalIdsList().contains(entry.getGlobalId())).toList();
-        try (FramedSyncSessionFile response = FramedSyncSessionFile.create(directory, groupKey, context,
-            consumer -> FramedSyncInventoryWire.emit(inventory,
-                roundId, java.util.List.of(), begin.getDetailGlobalIdsCount() == 0 && begin.getSummaryOnly(), consumer), nonceStore, budget)) {
-            FolioleCompanionHttpResponse.framed(output, response, deviceId, epoch);
-        }
-    }
-
-    private static FramedSyncReceiptBody transfer(
-        InputStream input,
-        byte[] groupKey,
-        FramedSyncTransferContext context,
-        FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncTransferFiles store,
-        String localDeviceId,
-        String localEpoch, FramedSyncPayloadBudget budget
-    ) throws Exception {
-        FramedSyncTransferReader.Result received = store.receive(input, groupKey, context, budget);
-        TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
-            bridge, store, received.transferId(), context, localDeviceId, localEpoch, budget);
-        return store.receiptBody(groupKey, receipt, budget);
-    }
-
-    private static FramedSyncPreamble peekPreamble(BufferedInputStream input) throws Exception {
-        byte[] encoded = new byte[FramedSyncPreamble.BYTES];
-        input.mark(encoded.length);
-        int offset = 0;
-        while (offset < encoded.length) {
-            int count = input.read(encoded, offset, encoded.length - offset);
-            if (count < 0) throw new IllegalArgumentException("framed_sync_preamble_truncated");
-            offset += count;
-        }
-        input.reset();
-        return FramedSyncPreamble.decode(encoded);
     }
 
     private static boolean contentType(FolioleCompanionHttpRequest request) {
@@ -179,11 +79,6 @@ final class FolioleCompanionFramedSyncRoute {
             }
         }
         return values;
-    }
-
-    private static byte[] groupKey(String groupId) throws Exception {
-        return Base64.decode(FolioleCompanionCurrentGroupCredential.load(groupId).workgroupKey,
-            Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
     private static String required(String value) {

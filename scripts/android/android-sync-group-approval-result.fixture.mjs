@@ -88,9 +88,8 @@ class FolioleCompanionCurrentGroupCredential {
   String deviceId; String workgroupKey;
   static FolioleCompanionCurrentGroupCredential load(String id) { return null; }
 }
-class FolioleCompanionSyncPackProviderDefinitions {
-  static FolioleCompanionSyncPackProviderDefinitions load(Context c) { return null; }
-  int protocol() { return 24; }
+class FolioleCompanionSyncProtocolDefinitions {
+  static JSONObject currentProtocol(Context c) { return new JSONObject(); }
 }
 class FolioleCompanionSyncGroupCrypto { static String groupTag(String key) { return key; } }
 class FolioleCompanionSyncScreenAwake { static void attach(Activity a) {} static void clear() {} }

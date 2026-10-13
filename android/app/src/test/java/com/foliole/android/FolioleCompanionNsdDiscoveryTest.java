@@ -75,12 +75,12 @@ public class FolioleCompanionNsdDiscoveryTest {
     }
 
     @Test
-    public void projectsThePreparedTopologyRoleFromTheSharedHostFixture() throws Exception {
-        String roleTxtKey = jsonStringField(readUtf8(sharedFixturePath()), "role_txt_key");
-        String bridgeRoleTxtKey = jsonStringField(readUtf8(bridgeContractPath()), "topologyRole");
+    public void projectsDeviceIdentityFromTheSharedHostFixture() throws Exception {
+        String deviceTxtKey = jsonStringField(readUtf8(sharedFixturePath()), "device_txt_key");
+        String bridgeDeviceTxtKey = jsonStringField(readUtf8(bridgeContractPath()), "deviceId");
 
-        assertEquals(roleTxtKey, bridgeRoleTxtKey);
-        assertTrue(FolioleCompanionNsdProtocolTxt.contractKeys().contains("topologyRole"));
+        assertEquals(deviceTxtKey, bridgeDeviceTxtKey);
+        assertTrue(FolioleCompanionNsdProtocolTxt.contractKeys().contains("deviceId"));
     }
 
     private static String jsonStringField(String json, String fieldName) {
@@ -94,9 +94,9 @@ public class FolioleCompanionNsdDiscoveryTest {
     private static Path sharedFixturePath() {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         return firstExistingPath(
-            root.resolve("lib/platform/fixtures/sync-anchor-topology-v7.json"),
-            root.resolve("../lib/platform/fixtures/sync-anchor-topology-v7.json").normalize(),
-            root.resolve("../../lib/platform/fixtures/sync-anchor-topology-v7.json").normalize()
+            root.resolve("lib/platform/fixtures/sync-group-discovery-v24.json"),
+            root.resolve("../lib/platform/fixtures/sync-group-discovery-v24.json").normalize(),
+            root.resolve("../../lib/platform/fixtures/sync-group-discovery-v24.json").normalize()
         );
     }
 
