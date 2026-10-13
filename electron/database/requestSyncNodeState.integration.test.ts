@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
-import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);

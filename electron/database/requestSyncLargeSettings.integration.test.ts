@@ -8,7 +8,7 @@ import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
-import { closeLibraries, createPeer, joinPeers, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary } from './syncRequestLibrary.testSupport.js';
 
 const keys = ['search_aliases_document', 'readwise_source_mode_conflict', 'review_scheduler_settings',

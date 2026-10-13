@@ -1,4 +1,6 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
@@ -7,14 +9,15 @@ import { framedSyncResourceVersionSql } from '../../lib/core/database/framedSync
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { publishDesktopFramedSyncNodeOutbound } from './desktopFramedSyncOutboundSelection.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
-import { closeLibraries, createPeer, edit, startLibraries, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, root, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -35,8 +38,7 @@ function legacyTombstone() {
 }
 
 function protectedFacts(peer: Peer) {
-  return ['node_sync_tombstones', 'node_sync_versions', 'sync_object_state', 'content_blob_data',
-    'framed_sync_outbound_holds'].map((table) => peer.db.prepare(`SELECT * FROM ${table}`).all());
+  return ['node_sync_tombstones', 'node_sync_versions', 'sync_object_state', 'content_blob_data'].map((table) => peer.db.prepare(`SELECT * FROM ${table}`).all());
 }
 
 async function resources(peer: Peer) {
@@ -86,19 +88,22 @@ it.each(['hash', 'deletion time'])('does not advertise tombstone resources when 
   expect(await resources(peer)).toEqual([]);
 });
 
-it('publishes the proven legacy deletion with its canonical empty body instead of deferring it', async () => {
+it('snapshots the proven legacy deletion with its canonical empty body instead of deferring it', async () => {
   const peer = legacyTombstone();
+  const before = protectedFacts(peer);
   const local = (await readFramedSyncInventory(peer.port)).filter((item) => item.objectType === 'node');
   const [difference] = compareFramedSyncInventories({ local, remote: [] });
   if (!difference) throw new Error('expected deletion difference');
-  const result = await publishDesktopFramedSyncNodeOutbound({ port: peer.port, difference,
-    readCurrentInventoryEntry: readFramedSyncInventoryEntry,
-    context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-      senderDeviceId: 'source', senderLibraryEpoch: 'source-epoch',
-      receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch' } });
-  expect(result.kind).toBe('published');
-  if (result.kind !== 'published') throw new Error('expected publication');
-  expect(result.publication.manifest.blobs).toContainEqual(expect.objectContaining({
-    byteLength: 0n, sha256: Uint8Array.from(Buffer.from(EMPTY_BODY_HASH, 'hex'))
-  }));
+  await withRequestSyncFiles(createDesktopFramedSyncFiles(path.join(root, 'requests')), async request => {
+    await writeRequestSyncSnapshot(peer.port, difference, request);
+    const blobs = [];
+    for await (const fact of request.readFacts()) blobs.push(...fact.blobs);
+    expect(blobs).toContainEqual(expect.objectContaining({
+      byteLength: 0n, sha256: Uint8Array.from(Buffer.from(EMPTY_BODY_HASH, 'hex'))
+    }));
+    const empty = blobs.find(blob => blob.byteLength === 0n);
+    if (!empty) throw new Error('expected canonical empty body');
+    expect(await request.loadBody(empty)).toEqual(new Uint8Array());
+  });
+  expect(protectedFacts(peer)).toEqual(before);
 });

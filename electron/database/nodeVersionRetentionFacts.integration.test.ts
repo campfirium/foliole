@@ -12,7 +12,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
 
 import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
-  type Peer } from './syncEmptyLibraryTestSupport.js';
+  type Peer } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);

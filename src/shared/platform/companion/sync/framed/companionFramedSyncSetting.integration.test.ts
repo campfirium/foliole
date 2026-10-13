@@ -5,7 +5,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { closeLibraries, createPeer, root, startLibraries } from '../../../../../../electron/database/syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, root, startLibraries } from '../../../../../../electron/database/syncLibrary.testSupport.js';
 import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/companionDatabaseLifecycle.js';
 import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
 import { buildCanonicalSettingSyncPayload } from '../../../../../../lib/core/sync/canonicalPrivateStatePayload.js';

@@ -14,7 +14,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from './desktopFramedSyncRelationReviewApply.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
-import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

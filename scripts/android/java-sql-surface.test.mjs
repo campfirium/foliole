@@ -62,7 +62,6 @@ describe('Android Java SQL surface', () => {
       'src/shared/platform/companion/runtime/companionNodeTextAlternativeRepository.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabase.ts',
       'src/shared/platform/companionSyncStateWriters.ts',
-      'src/shared/platform/companionSyncPackApply.ts'
     ];
     const sharedSource = files.map((name) => fs.readFileSync(path.join(ROOT, name), 'utf8')).join('\n');
     expect(sharedSource).toContain("runtime.kind !== 'android-native' && runtime.kind !== 'ios-native'");

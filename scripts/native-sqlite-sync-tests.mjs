@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/requestSyncStaleParent.integration.test.ts',
   'electron/database/requestSyncDeletedFamilyBootstrap.integration.test.ts',
   'electron/sync/desktopRequestSyncNotifications.integration.test.ts',
   'electron/sync/desktopRequestSyncCancellation.test.ts',

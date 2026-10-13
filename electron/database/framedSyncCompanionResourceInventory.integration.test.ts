@@ -15,7 +15,7 @@ import { inventoryAttachmentDirectory } from '../attachments/attachmentTrashFile
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
-import { closeLibraries, createPeer, edit, root, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, root, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

@@ -1,26 +1,26 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { collectTextBodyBlobCandidates } from '../../lib/core/database/textBodyBlobCollection.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { readFramedSyncPublishedBody } from '../../lib/core/sync/framedSyncPublishedBody.js';
-import { loadFramedSyncPublishedOutboundValue } from '../../lib/core/sync/framedSyncPublishedOutboundValue.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { withRequestSyncFiles, type RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { publishDesktopFramedSyncNodeOutbound } from './desktopFramedSyncOutboundSelection.js';
-import { createDesktopFramedSyncStaging } from './desktopFramedSyncStaging.js';
-import { closeLibraries, createPeer, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, root, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-it('protects retired external document text independently for each unfinished receiver', async () => {
+it('keeps each request snapshot readable after the external folder and source body are removed', async () => {
   const peer = createPeer('external-holder');
   const body = 'Original published external body';
   const hash = hashTextBody(body);
@@ -36,38 +36,28 @@ it('protects retired external document text independently for each unfinished re
   });
   const difference = compareFramedSyncInventories({ local: await readFramedSyncInventory(peer.port), remote: [] })
     .find((entry) => entry.objectType === 'external_document')!;
-  const publications = [];
-  for (const member of ['receiver-b', 'receiver-c']) {
-    const result = await publishDesktopFramedSyncNodeOutbound({ port: peer.port, difference,
-      readCurrentInventoryEntry: readFramedSyncInventoryEntry, context: {
-        groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, senderDeviceId: 'sender',
-        senderLibraryEpoch: 'sender-epoch', receiverDeviceId: member, receiverLibraryEpoch: `${member}-epoch`
-      } });
-    if (result.kind !== 'published') throw new Error('expected_publication');
-    publications.push(result.publication);
-  }
-  await applySyncObjectInTransaction(peer.port, { object_type: 'external_folder', object_id: 'folder',
-    content_hash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone('folder')),
-    deleted_at: '2026-10-07', payload_json: null, updated_at: '2026-10-07' });
-  expect(peer.db.prepare('SELECT * FROM external_documents').all()).toEqual([]);
-  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([]);
-  const staging = createDesktopFramedSyncStaging(peer.port);
-  const first = publications[0]!;
-  await staging.commitOutboundReceipt({ transferId: first.transferId, contentId: first.contentId,
-    appliedStateHash: difference.sourceSnapshot.sharedStateHash,
-    receiverDeviceId: first.context.receiverDeviceId, receiverLibraryEpoch: first.context.receiverLibraryEpoch });
-  await staging.releaseOutboundHolds(first.transferId);
-  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([]);
-  const remaining = publications[1]!;
-  const frozen = await loadFramedSyncPublishedOutboundValue(peer.port, remaining.context,
-    Buffer.from(remaining.transferId).toString('hex'));
-  const blob = frozen.blobs.find((value) => value.role === 5 && value.sha256 === hash)!;
-  expect(blob).toBeDefined();
-  const bytes = await readFramedSyncPublishedBody(peer.port, remaining.context, {
-    transferId: frozen.transfer_id, hash, byteLength: Number(blob.byte_length) });
-  expect(new TextDecoder().decode(bytes)).toBe(body);
-  await staging.persistTerminationRequest({ authorDeviceId: 'sender', memberId: remaining.context.receiverDeviceId,
-    transferId: remaining.transferId });
-  await staging.acknowledgeTermination(remaining.transferId, remaining.context.receiverDeviceId);
-  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([hash]);
+  const files = createDesktopFramedSyncFiles(path.join(root, 'requests'));
+  await withRequestSyncFiles(files, async second => {
+    await writeRequestSyncSnapshot(peer.port, difference, second);
+    await withRequestSyncFiles(files, async first => {
+      await writeRequestSyncSnapshot(peer.port, difference, first);
+      await applySyncObjectInTransaction(peer.port, { object_type: 'external_folder', object_id: 'folder',
+        content_hash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone('folder')),
+        deleted_at: '2026-10-07', payload_json: null, updated_at: '2026-10-07' });
+      expect(peer.db.prepare('SELECT * FROM external_documents').all()).toEqual([]);
+      expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([hash]);
+      await expectSnapshotBody(first, body, hash);
+    });
+    await expectSnapshotBody(second, body, hash);
+  });
+  expect(await files.list('requests')).toEqual([]);
 });
+
+async function expectSnapshotBody(request: RequestSyncFiles, body: string, hash: string) {
+  const facts = [];
+  for await (const fact of request.readFacts()) facts.push(fact);
+  const blob = facts.flatMap(fact => fact.blobs).find(value => value.role === 5);
+  if (!blob) throw new Error('expected external body');
+  expect(Buffer.from(blob.sha256).toString('hex')).toBe(hash);
+  expect(new TextDecoder().decode(await request.loadBody(blob))).toBe(body);
+}

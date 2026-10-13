@@ -6,22 +6,24 @@ import { expect, it } from 'vitest';
 
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
+import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
 import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { applyRemoteNodeTombstone } from '../../lib/core/sync/syncNodeTombstoneApply.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeLibraries, createPeer, edit, startLibraries } from '../database/syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries } from '../database/syncLibrary.testSupport.js';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it('converges a proven legacy permanent deletion through a normal two-process HTTP round and restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const nodeId = 'legacy-deleted-node';
     const deletedAt = '2026-07-24T02:12:44.137Z';
     await fixture.left.seed({ content: 'Protected original body', nodeId, title: 'Legacy deletion' });
-    const input = { input: { kind: 'reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: 'desktop-b-epoch' }, peerOrigin: fixture.rightSnapshot.origin } };
+    const input = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
     await fixture.left.invoke('round', input);
     await expect(fixture.left.invoke('round', input)).resolves.toMatchObject({ complete: true });
     const source = new Database(fixture.leftSnapshot.databasePath);
@@ -47,14 +49,19 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
       expect(right.prepare('SELECT id FROM nodes WHERE id = ?').get(nodeId)).toBeUndefined();
       expect(left.prepare('SELECT body_text FROM node_sync_versions WHERE object_id = ?').pluck().all(nodeId))
         .toContain('Protected original body');
-      expect(left.prepare('SELECT * FROM framed_sync_outbound_holds').all()).toEqual([]);
-      expect(right.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBeGreaterThan(0);
+      expect(left.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_outbound_holds'").get()).toBeUndefined();
+      expect(right.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").get()).toBeUndefined();
     } finally { left.close(); right.close(); }
+    const beforeRestart = [persistentFacts(fixture.leftSnapshot.databasePath), persistentFacts(fixture.rightSnapshot.databasePath)];
+    await assertInventoryConverged(fixture);
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();
-    await expect(fixture.left.invoke('round', { input: { kind: 'reconcile',
-      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: 'desktop-b-epoch' },
-      peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true, transferred: 0 });
+    await expect(fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
+      peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true });
+    await assertInventoryConverged(fixture);
+    expect([persistentFacts(fixture.leftSnapshot.databasePath), persistentFacts(fixture.rightSnapshot.databasePath)])
+      .toEqual(beforeRestart);
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
@@ -63,7 +70,7 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
 
 it.each([false, true])('synchronizes a standalone historical tombstone with missing parent=%s without inventing member positions', async (missingParent) => {
   await startLibraries();
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const donor = createPeer('historical-fact-donor');
     if (missingParent) edit(donor, 'Historical parent body');
@@ -80,8 +87,8 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
       source.prepare("UPDATE sync_object_state SET current_version_id = NULL WHERE object_type = 'node' AND object_id = 'topic'").run();
       expect(source.prepare("SELECT * FROM node_version_member_positions WHERE object_id = 'topic'").all()).toEqual([]);
     } finally { source.close(); }
-    const input = { input: { kind: 'reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: 'desktop-b-epoch' }, peerOrigin: fixture.rightSnapshot.origin } };
+    const input = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
     await fixture.left.invoke('round', input);
     await expect(fixture.left.invoke('round', input)).resolves.toMatchObject({ complete: true });
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
@@ -90,7 +97,8 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
         .get()).toEqual({ version_id: versionId, content_hash: record.content_hash,
         deleted_at: record.snapshot.deleted_at });
       expect(right.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
-      expect(right.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBeGreaterThan(0);
+      expect(right.prepare("SELECT * FROM node_version_member_positions WHERE object_id = 'topic'").all()).toEqual([]);
+      expect(right.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").get()).toBeUndefined();
     } finally { right.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
@@ -98,3 +106,18 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 60_000);
+
+function persistentFacts(databasePath: string) {
+  const db = new Database(databasePath, { readonly: true });
+  try {
+    return ['node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones', 'node_version_member_positions']
+      .map(table => db.prepare(`SELECT * FROM ${table} ORDER BY 1, 2`).all());
+  } finally { db.close(); }
+}
+
+async function assertInventoryConverged(fixture: Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>>) {
+  const input = { input: { kind: 'read_inventory' } };
+  const local = await fixture.left.invoke('round', input) as FramedSyncInventoryEntry[];
+  const remote = await fixture.right.invoke('round', input) as FramedSyncInventoryEntry[];
+  expect(compareFramedSyncDatabaseInventories({ local, remote })).toEqual([]);
+}

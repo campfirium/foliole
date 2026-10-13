@@ -11,7 +11,7 @@ import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectAppl
 
 import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
 import { confirmSourceManagement } from './sourceManagement.js';
-import { closeLibraries, createPeer, edit, startLibraries, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 
 let peer: Peer;
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => ({ driver: peer.driver, sqlite: peer.db }) }));

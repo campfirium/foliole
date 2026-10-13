@@ -10,7 +10,7 @@ import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApp
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { root, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { root, type Peer } from './syncLibrary.testSupport.js';
 import { receiveMemberPosition } from './syncMemberPosition.testSupport.js';
 
 function proof(peer: Peer) {

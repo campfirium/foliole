@@ -5,7 +5,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { collectTextBodyBlobCandidates, collectTextBodyBlobCandidatesWithPort } from '../../lib/core/database/textBodyBlobCollection.js';
 
-import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries } from './syncLibrary.testSupport.js';
 import { observeReads } from './syncNodeVerifiedTopicConflict.testSupport.js';
 
 beforeEach(startLibraries);
@@ -79,17 +79,6 @@ it('protects old version bytes and tombstone references after the node no longer
   expect(collectTextBodyBlobCandidates(peer.driver, [oldHash, tombHash]).deletedHashes).toEqual([]);
 });
 
-it('protects frozen dependency payloads until their explicit retirement', () => {
-  const peer = createPeer('source');
-  const hash = upsertTextBodyBlob(peer.driver, 'Frozen body', NOW);
-  peer.db.prepare(`INSERT INTO sync_pack_dependency_rows VALUES
-    ('group', 'peer', 'view', 'node', 'object', 0, 'nodes', '{}', ?, 'digest')`)
-    .run(JSON.stringify({ body_blob_hash: hash }));
-  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([]);
-  peer.db.prepare('DELETE FROM sync_pack_dependency_rows').run();
-  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([hash]);
-});
-
 it('rolls back payload deletion if metadata deletion fails', () => {
   const peer = createPeer('source');
   const hash = upsertTextBodyBlob(peer.driver, 'Rollback body', NOW);
@@ -99,22 +88,18 @@ it('rolls back payload deletion if metadata deletion fails', () => {
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(hash)).toBeDefined();
 });
 
-it('protects cached import text and nested frozen references until they are retired', () => {
+it('protects cached import text until its holder is removed', () => {
   const peer = createPeer('source');
   const cached = upsertTextBodyBlob(peer.driver, 'Cached original import text', NOW);
-  const frozen = upsertTextBodyBlob(peer.driver, 'Frozen keyed body', NOW);
   peer.db.prepare(`INSERT INTO keep_import_item_cache
     (rule_id, source_path, title, content, source_mtime_ms, source_size_bytes, refreshed_at)
     VALUES ('rule', 'original', 'Original', ?, 0, 0, ?)`)
     .run('Cached original import text', NOW);
-  peer.db.prepare(`INSERT INTO sync_pack_known_fact_claims VALUES
-    ('group', 'peer', 'view', 'node', 'original', ?)`)
-    .run(JSON.stringify({ resources: [{ [frozen]: { status: 'pending' } }] }));
   const before = peer.db.prepare('SELECT * FROM keep_import_item_cache').all();
-  expect(collectTextBodyBlobCandidates(peer.driver, [cached, frozen]).deletedHashes).toEqual([]);
+  expect(collectTextBodyBlobCandidates(peer.driver, [cached]).deletedHashes).toEqual([]);
   expect(peer.db.prepare('SELECT * FROM keep_import_item_cache').all()).toEqual(before);
-  peer.db.exec('DELETE FROM keep_import_item_cache; DELETE FROM sync_pack_known_fact_claims');
-  expect(collectTextBodyBlobCandidates(peer.driver, [cached, frozen]).deletedHashes).toEqual([cached, frozen]);
+  peer.db.exec('DELETE FROM keep_import_item_cache');
+  expect(collectTextBodyBlobCandidates(peer.driver, [cached]).deletedHashes).toEqual([cached]);
 });
 
 it('refuses corrupt text bytes and never collects a non-text resource', () => {

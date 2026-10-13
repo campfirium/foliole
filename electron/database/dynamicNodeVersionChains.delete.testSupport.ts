@@ -7,7 +7,7 @@ import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/worksp
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
-import type { Peer } from './syncEmptyLibraryTestSupport.js';
+import type { Peer } from './syncLibrary.testSupport.js';
 
 export function permanentlyDelete(peer: Peer) {
   const at = '2026-10-01T00:00:00.000Z';

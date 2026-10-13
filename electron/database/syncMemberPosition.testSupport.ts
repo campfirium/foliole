@@ -4,7 +4,7 @@ import { nodePositionFactId, nodePositionPayloadSchema } from '../../lib/core/sy
 import { publishLocalNodePosition } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
 
-import type { Peer } from './syncEmptyLibraryTestSupport.js';
+import type { Peer } from './syncLibrary.testSupport.js';
 
 /** Exchange the peer's actual declaration after the fixture has transferred its node facts. */
 export async function receiveMemberPosition(receiver: Peer, author: Peer) {

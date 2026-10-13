@@ -8,7 +8,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { describeVersionFact, probeSyncPackFactPresence } from '../../lib/core/sync/syncPackFactPresence.js';
 
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
-import { closeLibraries, createPeer, edit, history, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, history, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

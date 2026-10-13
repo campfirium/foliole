@@ -8,7 +8,7 @@ import { publishLocalNodePositionWithDriver } from '../../lib/core/sync/nodeVers
 import { prepareInboundApply } from '../sync/desktopFramedSyncPreparedInbound.js';
 
 import { selectDesktopFramedSyncNodeManifest } from './desktopFramedSyncOutboundSelection.js';
-import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

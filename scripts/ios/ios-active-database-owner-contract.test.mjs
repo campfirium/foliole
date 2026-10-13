@@ -29,14 +29,17 @@ describe('iOS active database ownership', () => {
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
     expect(methods).toEqual([
+      'accessFramedSyncFile', 'cancelRequestSyncHttp', 'postRequestSyncHttp',
+      'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
+      'releaseFramedSyncPayloadLoan', 'validateFramedSyncPayloadLoan',
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
       'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
-      'pullFramedSyncObject', 'readFramedSyncInventory', 'rejectSyncGroupJoinRequest',
+      'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
       'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'sendFramedSyncTransfer', 'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
+      'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());
   });
@@ -46,7 +49,6 @@ describe('iOS active database ownership', () => {
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabase.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseReads.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.ts',
-      'src/shared/platform/companion/sync/pack-apply/iosCompanionSyncPackApply.ts',
       'src/shared/platform/companionContentBlobSync.ts',
       'src/shared/platform/companionDesktopAttachmentResources.ts'
     ];

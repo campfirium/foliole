@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { buildResolutionRecord } from '../../lib/core/sync/syncNodeResolution.js';
 import { validateStoredVersionDependencies } from '../../lib/core/sync/syncNodeVersionDependencyValidation.js';
-import { closeLibraries, createPeer, edit, startLibraries } from '../database/syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries } from '../database/syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

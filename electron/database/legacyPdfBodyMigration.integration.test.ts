@@ -7,7 +7,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 
 import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
-import { closeLibraries, createPeer, edit, history, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, history, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

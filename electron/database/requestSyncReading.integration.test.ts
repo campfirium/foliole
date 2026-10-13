@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
 
-import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);

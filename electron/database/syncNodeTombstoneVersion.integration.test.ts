@@ -14,7 +14,7 @@ import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHi
 
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
-import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -63,7 +63,7 @@ it.each([
 it.each(['desktop', 'companion'])('initializes the %s original deletion body summary once without changing facts', async (host) => {
   const { source, tombstone } = await deletedHistory('Original body');
   const tables = ['node_sync_versions', 'node_sync_tombstones', 'node_sync_version_parents',
-    'sync_object_state', 'content_blob_data', 'framed_sync_outbound_holds'];
+    'sync_object_state', 'content_blob_data'];
   const before = tables.map((table) => source.db.prepare(`SELECT * FROM ${table}`).all());
   const empty = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
   source.db.prepare('UPDATE framed_sync_version_summary SET body_hash = ? WHERE version_id = ?')

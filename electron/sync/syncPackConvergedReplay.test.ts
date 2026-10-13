@@ -6,7 +6,7 @@ import { buildResolutionRecord } from '../../lib/core/sync/syncNodeResolution.js
 import { describeVersionFact, probeSyncPackFactPresence } from '../../lib/core/sync/syncPackFactPresence.js';
 import { applySyncPackNodeVersionsWithDbPort } from '../../lib/core/sync/syncPackNodeVersionApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
-import { closeLibraries, createPeer, edit, startLibraries, type Peer } from '../database/syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, startLibraries, type Peer } from '../database/syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

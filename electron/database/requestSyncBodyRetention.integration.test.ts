@@ -73,6 +73,39 @@ it('skips an active peer without a current epoch position and retains adopted an
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
 });
 
+it.each(['group-left', 'group-switched'] as const)(
+  'ignores obsolete group positions after %s while preserving current text and the version graph', async change => {
+    const host = await history();
+    host.sqlite.exec(`INSERT INTO sync_groups VALUES ('old-group', 'Old', 'key', 'now', 'now');
+      INSERT INTO sync_group_local_state VALUES (1, 'old-group', 'local', 'active', 'now');
+      INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
+        device_name, platform, state, joined_at, updated_at)
+      VALUES ('old-group', 'peer', 'anchor', '/peer', 'Peer', 'mac', 'active', 'now', 'now');
+      INSERT INTO node_version_device_revisions VALUES ('old-group', 'peer', 'epoch', 0, 'business', NULL, 'now');
+      INSERT INTO node_version_member_positions VALUES
+        ('position', 'old-group', 'peer', 'topic', 'epoch', 1, 'base', '["middle"]', 'now', NULL)`);
+    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
+    const identities = await host.db.query(
+      'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id');
+    const parents = await host.db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal');
+    if (change === 'group-left') await host.db.run('DELETE FROM sync_group_local_state');
+    else {
+      await host.db.run("INSERT INTO sync_groups VALUES ('new-group', 'New', 'new-key', 'now', 'now')");
+      await host.db.run("UPDATE sync_group_local_state SET group_id = 'new-group'");
+    }
+    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
+    expect(await host.db.query(
+      'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id')).toEqual(identities);
+    expect(await host.db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal')).toEqual(parents);
+    expect(await host.db.query(`SELECT n.current_version_id, v.body_text FROM nodes n
+      JOIN node_sync_versions v ON v.version_id = n.current_version_id WHERE n.id = 'topic'`))
+      .toEqual([{ current_version_id: 'head', body_text: 'Current' }]);
+    expect(await host.db.query('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL'))
+      .toEqual([{ version_id: 'head' }]);
+    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
+  }
+);
+
 it('never reclaims folder history', async () => {
   const host = await history();
   await host.db.run("UPDATE nodes SET kind = 'folder' WHERE id = 'topic'");
