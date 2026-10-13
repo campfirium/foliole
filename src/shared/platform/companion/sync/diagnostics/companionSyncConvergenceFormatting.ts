@@ -4,7 +4,6 @@ export function formatSyncConvergenceCount(count: number, singular: string, plur
 
 export function formatRemainingSyncSegments(args: {
   dirtyCount: number;
-  lag: number;
   missingAttachments: number;
   missingBodies: number;
   pendingAckCount: number;
@@ -15,7 +14,6 @@ export function formatRemainingSyncSegments(args: {
     formatSyncConvergenceCount(args.pendingAckCount, 'desktop confirmation', 'desktop confirmations'),
     formatSyncConvergenceCount(args.pushIssueCount, 'change issue', 'change issues'),
     formatSyncConvergenceCount(args.missingBodies, 'topic body file', 'topic body files'),
-    formatSyncConvergenceCount(args.missingAttachments, 'attachment file', 'attachment files'),
-    formatSyncConvergenceCount(args.lag, 'topic list change', 'topic list changes')
+    formatSyncConvergenceCount(args.missingAttachments, 'attachment file', 'attachment files')
   ].join(', ');
 }

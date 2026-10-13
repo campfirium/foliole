@@ -26,21 +26,6 @@ function formatEvent(event: SyncDiagnosticEvent | null, t: Translate) {
   return t('companion.sync.checked');
 }
 
-function formatLag(result: CombinedSyncDiagnosticResult, t: Translate) {
-  const cursor = result.android?.sync_state.pack_cursor;
-  const desktopSeq = result.desktop?.sync_state.max_state_seq;
-  if (typeof cursor !== 'number' || typeof desktopSeq !== 'number') return t('companion.sync.diagnostics.missingData');
-  const lag = Math.max(0, desktopSeq - cursor);
-  return lag === 0 ? t('companion.sync.none') : t('companion.sync.diagnostics.changes', { count: lag });
-}
-
-function formatStructureStatus(result: CombinedSyncDiagnosticResult, t: Translate) {
-  const cursor = result.android?.sync_state.pack_cursor;
-  const desktopSeq = result.desktop?.sync_state.max_state_seq;
-  if (typeof cursor !== 'number' || typeof desktopSeq !== 'number') return t('companion.sync.diagnostics.missingData');
-  return Math.max(0, desktopSeq - cursor) === 0 ? t('companion.sync.diagnostics.upToDate') : t('companion.sync.diagnostics.newChangesAvailable');
-}
-
 function formatBacklogStage(count: number | null | undefined, t: Translate) {
   if (typeof count !== 'number') return t('companion.sync.diagnostics.missingData');
   return count === 0 ? t('companion.sync.diagnostics.done') : t('companion.sync.diagnostics.remaining', { count });
@@ -102,12 +87,9 @@ export function CompanionSyncDiagnosticCheckpoint(props: { result: CombinedSyncD
     <section>
       <h3 className="text-sm font-semibold text-foreground">{t('companion.sync.diagnostics.status')}</h3>
       <div className="border-t border-companion-divider">
-        <MetricRow label={t('companion.sync.diagnostics.topicList')} value={formatStructureStatus(props.result, t)} />
-        <MetricRow label={t('companion.sync.diagnostics.stageLibrary')} value={formatStructureStatus(props.result, t)} />
         <MetricRow label={t('companion.sync.diagnostics.stageReview')} value={formatReviewQueueStatus(props.result, t)} />
         <MetricRow label={t('companion.sync.diagnostics.stageBodies')} value={formatBacklogStage(props.result.android?.content.missing_content_blob_count, t)} />
         <MetricRow label={t('companion.sync.diagnostics.stageAttachments')} value={formatBacklogStage(props.result.android?.content.missing_attachment_resource_count, t)} />
-        <MetricRow label={t('companion.sync.diagnostics.newDesktopChanges')} value={formatLag(props.result, t)} />
         <MetricRow
           label={t('companion.sync.diagnostics.topics')}
           value={t('companion.sync.diagnostics.onDeviceDesktop', {

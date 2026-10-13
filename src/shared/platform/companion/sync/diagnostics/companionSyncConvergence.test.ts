@@ -2,31 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import { buildSyncConvergenceReport } from './companionSyncConvergence';
 import { syncConvergenceResult } from './companionSyncConvergence.testHelpers';
+import { deriveSyncConvergenceStatus } from './companionSyncConvergenceStatus';
 
-function testReportsConverged() {
+function testDoesNotInferConvergence() {
   expect(buildSyncConvergenceReport(syncConvergenceResult())).toMatchObject({
-    status: 'converged',
-    checks: [{ code: 'sync_converged', severity: 'ok' }]
+    status: 'unknown',
+    checks: []
   });
 }
 
 function testUsesCrossPlatformDeviceCopy() {
   const missingDevice = buildSyncConvergenceReport(syncConvergenceResult({ android: null }));
-  const missingPosition = buildSyncConvergenceReport(syncConvergenceResult({
-    android: {
-      ...syncConvergenceResult().android!,
-      sync_state: { ...syncConvergenceResult().android!.sync_state, pack_cursor: null }
-    }
-  }));
 
   expect(missingDevice.checks).toContainEqual(expect.objectContaining({
     code: 'android_diagnostics_missing',
     detail: 'Run this check inside the companion app.',
     title: 'Device diagnostics unavailable'
-  }));
-  expect(missingPosition.checks).toContainEqual(expect.objectContaining({
-    code: 'structure_lag_unknown',
-    detail: 'Device or desktop sync position is missing.'
   }));
 }
 
@@ -43,7 +34,7 @@ function testBlocksFinishedPassWithDirtyWork() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync check was recorded while 1 device change, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files, 0 topic list changes were still present.',
+      detail: 'A finished sync check was recorded while 1 device change, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files were still present.',
       severity: 'warning'
     })
   ]));
@@ -125,7 +116,7 @@ function testDoesNotDoubleCountPendingAckAsReadyDirty() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync check was recorded while 0 device changes, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files, 0 topic list changes were still present.'
+      detail: 'A finished sync check was recorded while 0 device changes, 1 desktop confirmation, 0 change issues, 0 topic body files, 0 attachment files were still present.'
     }),
     expect.objectContaining({
       code: 'pending_ack_not_confirmed',
@@ -177,7 +168,7 @@ function testBlocksFinishedPassWithResourceBacklog() {
       ...syncConvergenceResult().android!,
       content: { missing_attachment_resource_count: 2, missing_content_blob_count: 3 },
       events: [{ endpoint_url: 'http://10.0.2.2:38641', message: 'Sync completed.', occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }],
-      sync_state: { ...syncConvergenceResult().android!.sync_state, pack_cursor: 9 }
+      sync_state: { ...syncConvergenceResult().android!.sync_state }
     }
   }));
 
@@ -185,14 +176,25 @@ function testBlocksFinishedPassWithResourceBacklog() {
   expect(report.checks).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'completed_event_with_local_work',
-      detail: 'A finished sync check was recorded while 0 device changes, 0 desktop confirmations, 0 change issues, 3 topic body files, 2 attachment files, 1 topic list change were still present.',
+      detail: 'A finished sync check was recorded while 0 device changes, 0 desktop confirmations, 0 change issues, 3 topic body files, 2 attachment files were still present.',
       severity: 'warning'
     })
   ]));
 }
 
 describe('buildSyncConvergenceReport', () => {
-  it('reports converged when local and desktop state are aligned', testReportsConverged);
+  it('keeps an empty set of observations unknown', () => {
+    expect(deriveSyncConvergenceStatus([])).toBe('unknown');
+  });
+  it('does not infer convergence from zero backlog and matching state sequence', testDoesNotInferConvergence);
+  it('does not treat a completed historical run as current convergence evidence', () => {
+    const current = syncConvergenceResult();
+    const report = buildSyncConvergenceReport(syncConvergenceResult({
+      android: { ...current.android!, events: [{ endpoint_url: null, message: 'Sync completed.',
+        occurred_at: '2026-05-01T00:01:00.000Z', status: 'completed' }] }
+    }));
+    expect(report).toEqual({ status: 'unknown', checks: [] });
+  });
   it('uses cross-platform device copy for missing local diagnostics', testUsesCrossPlatformDeviceCopy);
   it('blocks finished sync passes that still have dirty or pending local work', testBlocksFinishedPassWithDirtyWork);
   it('blocks error diagnostic verdicts', testBlocksErrorDiagnosticVerdicts);
@@ -201,5 +203,5 @@ describe('buildSyncConvergenceReport', () => {
   it('does not double count pending acks as ready dirty changes', testDoesNotDoubleCountPendingAckAsReadyDirty);
   it('blocks skipped passes that ended with push conflicts or rejections', testBlocksPushConflicts);
   it('blocks persisted push conflicts or rejections', testBlocksPersistedPushIssues);
-  it('blocks finished sync passes that still have structure or resource backlog', testBlocksFinishedPassWithResourceBacklog);
+  it('blocks finished sync passes that still have resource backlog', testBlocksFinishedPassWithResourceBacklog);
 });

@@ -4,12 +4,6 @@ import type { useTranslation } from '../shared/localization/LocalizationProvider
 type Translate = ReturnType<typeof useTranslation>;
 
 export function friendlySyncDiagnosticVerdict(verdict: SyncDiagnosticVerdict, t: Translate) {
-  if (verdict.code === 'sync_android_not_caught_up') {
-    return {
-      description: t('companion.sync.verdict.desktopChanges.description'),
-      title: t('companion.sync.verdict.desktopChanges.title')
-    };
-  }
   if (verdict.code === 'sync_android_content_cache_backlog' || verdict.code === 'android_missing_content_blobs') {
     return {
       description: t('companion.sync.verdict.bodyBacklog.description'),
@@ -50,12 +44,6 @@ export function friendlySyncDiagnosticVerdict(verdict: SyncDiagnosticVerdict, t:
     return {
       description: t('companion.sync.verdict.desktopReady.description'),
       title: t('companion.sync.verdict.desktopReady.title')
-    };
-  }
-  if (verdict.code === 'sync_structure_aligned') {
-    return {
-      description: t('companion.sync.verdict.structureAligned.description'),
-      title: t('companion.sync.verdict.structureAligned.title')
     };
   }
   return { description: null, title: verdict.message };

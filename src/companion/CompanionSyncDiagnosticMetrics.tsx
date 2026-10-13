@@ -40,7 +40,6 @@ export function SnapshotMetrics(props: { snapshot: SyncDiagnosticSnapshot }) {
       <MetricRow label={t('companion.sync.diagnostics.connection')} value={snapshot.connection.state} />
       <MetricRow label={t('companion.sync.diagnostics.topics')} value={formatNumber(snapshot.storage.active_node_count, t)} />
       <MetricRow label={isDevice ? t('companion.sync.diagnostics.deviceChanges') : t('companion.sync.diagnostics.desktopChanges')} value={formatNumber(snapshot.sync_state.max_state_seq, t)} />
-      {isDevice ? <MetricRow label={t('companion.sync.diagnostics.lastDesktopSync')} value={formatNumber(snapshot.sync_state.pack_cursor, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.readyToSend')} value={formatNumber(snapshot.sync_state.ready_dirty_count, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.waitingConfirmation')} value={formatNumber(snapshot.sync_state.pending_ack_count, t)} /> : null}
       {isDevice ? <MetricRow label={t('companion.sync.diagnostics.changesNotSent')} value={formatNumber(snapshot.sync_state.push_issue_count ?? 0, t)} /> : null}

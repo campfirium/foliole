@@ -42,7 +42,7 @@ export function expectCheckpointDetails() {
   expect(screen.getByText('Downloading: Current topic')).toBeInTheDocument();
   expect(screen.getByText('Earlier sync check finished')).toBeInTheDocument();
   expect(screen.queryByText('Completed')).not.toBeInTheDocument();
-  expect(screen.getByText('3 changes')).toBeInTheDocument();
+  expect(screen.queryByText('3 changes')).not.toBeInTheDocument();
   expect(screen.queryByText('Lagging object types')).not.toBeInTheDocument();
   expect(screen.getByText('2 on device / 2 on desktop')).toBeInTheDocument();
   expect(screen.queryByText('failed: Failed to apply companion desktop sync pack.')).not.toBeInTheDocument();

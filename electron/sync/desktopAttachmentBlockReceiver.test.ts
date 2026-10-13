@@ -128,4 +128,7 @@ it('writes availability only at transitions, including deletion after completion
   await fs.unlink(f.final);
   await receiver.status(f.resource);
   expect(f.writes).toEqual([false, true, false]);
+  await deliverBlocks(receiver, f.resource, bytes);
+  expect(await fs.readFile(f.final)).toEqual(bytes);
+  expect(f.writes).toEqual([false, true, false, true]);
 });

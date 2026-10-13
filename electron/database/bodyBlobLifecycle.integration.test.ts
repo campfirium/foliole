@@ -5,12 +5,9 @@ import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
-import { readSyncPackCursorWithDbPort } from '../../lib/core/sync/syncPackCursor.js';
-import { describeVersionFact, type SyncVersionFact } from '../../lib/core/sync/syncPackFactPresence.js';
-import { stageSyncPackKnownFactClaims } from '../../lib/core/sync/syncPackKnownFactClaims.js';
 
-
-import { assertPersisted, buildPack, closeLibraries, createPeer, edit, joinPeers, receivePack, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -91,29 +88,4 @@ it('rolls back an owned body replacement when retained holder facts are invalid'
   expect(peer.db.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: 'Original fact' });
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Original fact'))).toBeUndefined();
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Replacement fact'))).toBeUndefined();
-});
-
-it('keeps version identities after the sync page releases its temporary fact claims', async () => {
-  const source = createPeer('source');
-  const target = createPeer('target');
-  joinPeers(source, target);
-  const oldVersion = edit(source, 'Previous synced body');
-  await sync(source, target);
-  const old = target.db.prepare('SELECT * FROM node_sync_versions WHERE version_id=?').get(oldVersion);
-  const fact = describeVersionFact(old as Parameters<typeof describeVersionFact>[0]);
-  edit(source, 'Current synced body');
-  const pack = await buildPack(source, target);
-  target.db.prepare('ATTACH DATABASE ? AS inc').run(pack.incoming);
-  const cursor = await readSyncPackCursorWithDbPort(target.port, 'inc');
-  target.db.exec('DETACH DATABASE inc');
-  await stageSyncPackKnownFactClaims(target.port, { groupId: 'group', peerId: source.id,
-    sourceViewId: cursor.packId! }, { index_id: 'index', from_state_seq: cursor.fromStateSeq,
-    to_state_seq: cursor.toStateSeq, frontier_state_seq: cursor.frontierStateSeq,
-    source_epoch: cursor.sourceEpoch, versions: [fact as SyncVersionFact], parents: [], reviews: [] });
-  await receivePack(source, target, pack);
-  assertPersisted(source, 'Current synced body');
-  assertPersisted(target, 'Current synced body');
-  expect(target.db.prepare('SELECT * FROM sync_pack_known_fact_claims').all()).toEqual([]);
-  expect(target.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(oldVersion)).toBeDefined();
-  expect(target.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous synced body'))).toBeUndefined();
 });

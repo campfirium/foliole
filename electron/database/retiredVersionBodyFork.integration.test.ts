@@ -6,8 +6,9 @@ import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js'
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync,
-  type Peer } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
+  type Peer } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);

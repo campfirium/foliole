@@ -17,7 +17,6 @@ const SQLITE_TOUCH_ALLOWED = new Set([
   'src/shared/platform/companion/runtime/requestSnapshotFixture.ts',
   'src/shared/platform/companion/runtime/companionForegroundTimeOwner.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.ts',
-  'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.ts',
   'src/shared/platform/companion/sync/syncback/iosCompanionSyncbackStore.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore.ts'

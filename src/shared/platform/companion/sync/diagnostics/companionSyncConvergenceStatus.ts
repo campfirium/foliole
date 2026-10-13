@@ -5,6 +5,6 @@ export type SyncConvergenceStatus = 'converged' | 'pending' | 'system_fault' | '
 export function deriveSyncConvergenceStatus(checks: Array<{ severity: SyncDiagnosticSeverity }>): SyncConvergenceStatus {
   if (checks.some((item) => item.severity === 'error')) return 'system_fault';
   if (checks.some((item) => item.severity === 'warning' || item.severity === 'info')) return 'pending';
-  if (checks.every((item) => item.severity === 'ok')) return 'converged';
+  if (checks.length > 0 && checks.every((item) => item.severity === 'ok')) return 'converged';
   return 'unknown';
 }

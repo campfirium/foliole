@@ -73,6 +73,27 @@ it('keeps earlier object commits when a later object transaction fails', async (
     .toEqual([{ adopted_version_id: 'version-good' }, { adopted_version_id: 'version-last' }]);
 });
 
+it('keeps two siblings and their original versions when their parent already exists', async () => {
+  const fixture = await receiver();
+  const parent = batchRecord('parent', 'Parent original');
+  expect((await transfer(fixture, [parent])).results.map(result => result.error)).toEqual(['']);
+  const children = ['child-a', 'child-b'].map(id => {
+    const record = batchRecord(id, `Original ${id}`);
+    record.snapshot.parent_id = 'parent';
+    return record;
+  });
+  expect((await transfer(fixture, children)).results.map(result => result.error)).toEqual(['', '']);
+  const saved = await fixture.device.db.query('SELECT * FROM node_sync_versions ORDER BY version_id');
+  await transfer(fixture, children);
+  expect(await fixture.device.db.query('SELECT * FROM node_sync_versions ORDER BY version_id')).toEqual(saved);
+  expect(await fixture.device.db.query('SELECT id, parent_id, content FROM nodes ORDER BY id')).toEqual([
+    { id: 'child-a', parent_id: 'parent', content: 'Original child-a' },
+    { id: 'child-b', parent_id: 'parent', content: 'Original child-b' },
+    { id: 'parent', parent_id: null, content: 'Parent original' }
+  ]);
+  expect(saved.map(row => row.version_id)).toEqual(['version-child-a', 'version-child-b', 'version-parent']);
+});
+
 it.each([
   { options: { truncate: true }, error: 'request_sync_batch_end_missing' },
   { options: { wrongId: true }, error: 'request_sync_batch_end_invalid' },

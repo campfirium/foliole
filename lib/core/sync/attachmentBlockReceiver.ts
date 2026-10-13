@@ -33,6 +33,7 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
       throw new Error('attachment_checksum_mismatch');
     }
     await files.publish(resource);
+    recovered.delete(hash);
     await availability(hash, true);
     return { kind: 'complete', offset: resource.byteLength };
   }
@@ -40,6 +41,7 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
   async function status(resource: AttachmentBlockResource): Promise<AttachmentBlockStatus> {
     const hash = resource.storageKey.slice(0, 64);
     if (await files.complete(resource)) {
+      recovered.delete(hash);
       await availability(hash, true);
       return { kind: 'complete', offset: resource.byteLength };
     }

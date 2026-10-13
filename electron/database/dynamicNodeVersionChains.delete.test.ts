@@ -4,8 +4,8 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
-import { buildPack, closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
-  type Peer } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
+  type Peer } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -33,15 +33,6 @@ it('does not treat group membership alone as a concrete send', () => {
   joinPeers(peer, createPeer('remote'));
   peer.db.exec("UPDATE sync_group_devices SET joined_at = '2025-01-01T00:00:00.000Z'");
   const version = edit(peer, 'body');
-  expectDeletion(peer, version, true);
-});
-
-it('keeps an actual frozen outbound parent complete through permanent node deletion', async () => {
-  const peer = createPeer('local');
-  const remote = createPeer('remote');
-  joinPeers(peer, remote);
-  const version = edit(peer, 'body');
-  await buildPack(peer, remote);
   expectDeletion(peer, version, true);
 });
 

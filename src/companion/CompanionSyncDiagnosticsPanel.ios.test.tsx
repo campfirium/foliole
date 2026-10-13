@@ -38,7 +38,6 @@ const iosSnapshot: SyncDiagnosticSnapshot = {
     }],
     local_dirty_count: 1,
     max_state_seq: 8,
-    pack_cursor: 8,
     pending_ack_count: 1,
     pending_acks: [{
       acked_at: '2026-07-21T00:00:00.000Z',

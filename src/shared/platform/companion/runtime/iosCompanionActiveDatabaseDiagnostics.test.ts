@@ -1,7 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
-  loadCursor: vi.fn(async () => 42),
   query: vi.fn(async (name: string, args?: unknown[]) => {
     if (name !== 'companionMetaValue') return [];
     if (args?.[0] === 'workspace_sync_endpoint_url') {
@@ -9,13 +8,6 @@ const runtime = vi.hoisted(() => ({
     }
     if (args?.[0] === 'workspace_sync_events') return [{ value: '[]' }];
     throw new Error(`Unexpected legacy meta read: ${String(args?.[0])}`);
-  })
-}));
-
-vi.mock('../sync/cursor/iosCompanionSyncPackCursorStore', () => ({
-  createIosCompanionSyncPackCursorStore: vi.fn((_manager, peerId) => {
-    expect(peerId).toBe('device-desktop');
-    return { loadCursor: runtime.loadCursor };
   })
 }));
 
@@ -31,11 +23,10 @@ vi.mock('./iosCompanionDatabaseBootstrap', () => ({
 }));
 
 beforeEach(() => {
-  runtime.loadCursor.mockClear();
   runtime.query.mockClear();
 });
 
-it('projects the current remote Device sync-pack cursor into diagnostics', async () => {
+it('projects device identity and connection without retired cursor reads', async () => {
   const { diagnoseIosCompanionDatabase } = await import('./iosCompanionActiveDatabaseDiagnostics');
 
   const result = await diagnoseIosCompanionDatabase({
@@ -45,18 +36,19 @@ it('projects the current remote Device sync-pack cursor into diagnostics', async
     ]
   });
 
-  expect(result.sync_state.pack_cursor).toBe(42);
-  expect(runtime.loadCursor).toHaveBeenCalledOnce();
+  expect(result.identity.device_id).toBe('device-android');
+  expect(result.connection).toMatchObject({ state: 'ready', endpoint_url: 'http://desktop.test:38641' });
+  expect(result.sync_state).not.toHaveProperty('pack_cursor');
   expect(runtime.query).not.toHaveBeenCalledWith('companionMetaValue', ['sync_pack_cursor']);
 });
 
-it('reports no pack cursor when the Sync Group has no remote Device', async () => {
+it('reports a missing connection without a Sync Group', async () => {
   const { diagnoseIosCompanionDatabase } = await import('./iosCompanionActiveDatabaseDiagnostics');
 
   const result = await diagnoseIosCompanionDatabase(null);
 
-  expect(result.sync_state.pack_cursor).toBeNull();
-  expect(runtime.loadCursor).not.toHaveBeenCalled();
+  expect(result.identity.device_id).toBeNull();
+  expect(result.connection.state).toBe('missing');
 });
 
 function device(id: string, name: string) {

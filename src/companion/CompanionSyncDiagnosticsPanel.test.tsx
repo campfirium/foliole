@@ -78,7 +78,6 @@ const diagnosticResult = {
         updated_at: '2026-04-29T01:24:00.000Z'
       }],
       max_state_seq: 4,
-      pack_cursor: 4,
       local_dirty_count: 1,
       pending_ack_count: 1,
       pending_acks: [{
@@ -124,7 +123,6 @@ const diagnosticResult = {
     storage: { active_node_count: 2 },
     sync_state: {
       max_state_seq: 7,
-      pack_cursor: null,
       local_dirty_count: 2,
       state_counts: [
         { count: 2, dirty_count: 0, max_state_seq: 3, min_state_seq: 2, object_type: 'node' },
@@ -133,28 +131,21 @@ const diagnosticResult = {
     },
     verdicts: []
   },
-  verdicts: [{
-    code: 'sync_android_not_caught_up',
-    evidence: { android_pack_cursor: 4, cursor_lag: 3, desktop_max_state_seq: 7 },
-    message: 'New desktop changes are available for this device.',
-    severity: 'info'
-  }]
+  verdicts: []
 };
 
 function expectDiagnosticSummary() {
-  expect(screen.getByText('What this means')).toBeInTheDocument();
   expect(screen.queryByText('sync_android_not_caught_up')).not.toBeInTheDocument();
-  expect(screen.getByText('Foliole will bring them in on the next sync.')).toBeInTheDocument();
   expect(screen.getByText('Sync status')).toBeInTheDocument();
   expect(screen.getByText('Sync check')).toBeInTheDocument();
   expect(screen.getByText('Still syncing')).toBeInTheDocument();
   expect(screen.getByText('Latest sync check still has work left')).toBeInTheDocument();
-  expect(screen.getByText('A finished sync check was recorded while 1 device change, 1 desktop confirmation, 1 change issue, 5 topic body files, 2 attachment files, 3 topic list changes were still present.')).toBeInTheDocument();
+  expect(screen.getByText('A finished sync check was recorded while 1 device change, 1 desktop confirmation, 1 change issue, 5 topic body files, 2 attachment files were still present.')).toBeInTheDocument();
 }
 
 function expectStageCheckpoint() {
-  expect(screen.getByText('Topic list')).toBeInTheDocument();
-  expect(screen.getByText('Stage 1 · Library index')).toBeInTheDocument();
+  expect(screen.queryByText('Topic list')).not.toBeInTheDocument();
+  expect(screen.queryByText('Stage 1 · Library index')).not.toBeInTheDocument();
   expect(screen.getByText('Stage 2 · Review queue')).toBeInTheDocument();
   expect(screen.getByText('Stage 3 · Body downloads')).toBeInTheDocument();
   expect(screen.getByText('Stage 4 · Attachments')).toBeInTheDocument();
@@ -162,7 +153,7 @@ function expectStageCheckpoint() {
   expect(screen.queryByText('Not tracked yet')).not.toBeInTheDocument();
   expect(screen.getByText('5 remaining')).toBeInTheDocument();
   expect(screen.getByText('2 remaining')).toBeInTheDocument();
-  expect(screen.getByText('New desktop changes')).toBeInTheDocument();
+  expect(screen.queryByText('New desktop changes')).not.toBeInTheDocument();
 }
 
 describe('CompanionSyncDiagnosticsPanel', () => {
@@ -189,7 +180,7 @@ describe('CompanionSyncDiagnosticsPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Run sync diagnostic' }));
 
-    await waitFor(() => expect(screen.getByText('New desktop changes are available')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Sync status')).toBeInTheDocument());
     expectDiagnosticSummary();
     expectStageCheckpoint();
     expectCheckpointDetails();

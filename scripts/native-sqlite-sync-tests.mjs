@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/requestSyncDatabaseUnits.integration.test.ts',
   'electron/database/requestSyncLargeNodeMetadata.integration.test.ts',
   'electron/database/requestSyncTombstone.integration.test.ts',
   'lib/core/sync/framedSyncInventoryRead.test.ts',
@@ -101,7 +102,6 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/framedSyncExternalDocumentBody.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedApply.integration.test.ts',
   'electron/sync/desktopFramedSyncResourceApply.integration.test.ts',
-  'electron/sync/desktopFramedSyncResourceWire.integration.test.ts',
   'electron/sync/desktopFramedSyncResourceRequestHttp.integration.test.ts',
   'lib/core/database/nodeSyncTombstonesStable.integration.test.ts',
   'electron/import/incomingUpdates.test.ts',
@@ -170,7 +170,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncCanonicalText.integration.test.ts',
   'electron/sync/desktopFramedSyncContinuation.integration.test.ts',
   'electron/sync/desktopFramedSyncDuplex.integration.test.ts',
-  'electron/sync/desktopFramedSyncDurableHandoff.integration.test.ts',
   'electron/sync/desktopFramedSyncExternalDocument.integration.test.ts',
   'electron/sync/desktopFramedSyncFolderRemoval.integration.test.ts',
   'electron/sync/desktopFramedSyncHostSetting.integration.test.ts',

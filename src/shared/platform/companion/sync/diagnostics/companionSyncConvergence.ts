@@ -43,13 +43,6 @@ function check(
   return { code, detail, severity, title };
 }
 
-function structureLag(result: CombinedSyncDiagnosticResult) {
-  const cursor = result.android?.sync_state.pack_cursor;
-  const desktopSeq = result.desktop?.sync_state.max_state_seq;
-  if (typeof cursor !== 'number' || typeof desktopSeq !== 'number') return null;
-  return Math.max(0, desktopSeq - cursor);
-}
-
 export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult): SyncConvergenceReport {
   const checks: SyncConvergenceCheck[] = [];
   if (!result.android) {
@@ -64,12 +57,8 @@ export function buildSyncConvergenceReport(result: CombinedSyncDiagnosticResult)
   checks.push(...buildDiagnosticVerdictChecks(result));
   checks.push(...buildLocalStateChecks(result));
   checks.push(...buildEventStateChecks(result));
-  checks.push(...buildStructureChecks(result));
   checks.push(...buildResourceChecks(result));
   checks.push(...buildCompletedEventChecks(result));
-  if (checks.length === 0) {
-    checks.push(check('sync_converged', 'ok', 'Sync is up to date', 'No device changes, desktop confirmations, topic list changes, or body downloads are waiting.'));
-  }
   return { checks, status: deriveSyncConvergenceStatus(checks) };
 }
 
@@ -143,21 +132,6 @@ function buildPendingAckCheck(result: CombinedSyncDiagnosticResult) {
   );
 }
 
-function buildStructureChecks(result: CombinedSyncDiagnosticResult) {
-  const lag = structureLag(result);
-  if (lag == null) {
-    return [check('structure_lag_unknown', 'warning', 'Topic list sync is unknown', 'Device or desktop sync position is missing.')];
-  }
-  return lag > 0
-    ? [check(
-      'structure_lag_exists',
-      'info',
-      'Desktop topic list changes are still available',
-      `${formatSyncConvergenceCount(lag, 'desktop change has', 'desktop changes have')} not reached this device.`
-    )]
-    : [];
-}
-
 function buildEventStateChecks(result: CombinedSyncDiagnosticResult) {
   const latest = latestEvent(result.android?.events ?? []);
   if (latest?.status !== 'skipped') return [];
@@ -204,15 +178,13 @@ function buildCompletedEventChecks(result: CombinedSyncDiagnosticResult) {
   const pushIssueCount = result.android?.sync_state.push_issue_count ?? 0;
   const missingBodies = result.android?.content.missing_content_blob_count ?? 0;
   const missingAttachments = result.android?.content.missing_attachment_resource_count ?? 0;
-  const lag = structureLag(result) ?? 0;
-  if (totalDirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0 && lag === 0) return [];
+  if (totalDirtyCount === 0 && pendingAckCount === 0 && pushIssueCount === 0 && missingBodies === 0 && missingAttachments === 0) return [];
   return [check(
     'completed_event_with_local_work',
     'warning',
     'Latest sync check still has work left',
     `A finished sync check was recorded while ${formatRemainingSyncSegments({
       dirtyCount,
-      lag,
       missingAttachments,
       missingBodies,
       pendingAckCount,

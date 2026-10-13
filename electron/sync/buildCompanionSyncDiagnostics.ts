@@ -159,7 +159,6 @@ export function buildCompanionSyncDiagnostics(args: {
     sync_state: {
       local_dirty_count: count('SELECT COUNT(*) AS count FROM sync_object_state WHERE sync_dirty = 1'),
       max_state_seq: maxStateSeq > 0 ? maxStateSeq : null,
-      pack_cursor: null,
       state_counts: loadStateCounts()
     },
     verdicts: buildVerdicts({ connection, maxStateSeq, storage })

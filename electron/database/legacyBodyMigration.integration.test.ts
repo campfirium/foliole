@@ -5,12 +5,14 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { readDataMigrationState } from '../../lib/core/database/dataMigrationState.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { migrateLegacyBodyConsistency } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
 import { restorePreCurrentParentOrderFixture } from './numberedMigrationTestSupport.js';
-import { assertPersisted, closeLibraries, createPeer, edit as editNode, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit as editNode, history, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(() => { closeLibraries(); vi.useRealTimers(); });
@@ -19,6 +21,12 @@ function edit(peer: ReturnType<typeof createPeer>, body: string) {
   const version = editNode(peer, body);
   upsertTextBodyBlob(peer.driver, body, NOW);
   return version;
+}
+function restoreVersion123(peer: ReturnType<typeof createPeer>) {
+  restorePreCurrentParentOrderFixture(peer.db);
+  // Migrations 106/120 installed these tables before migration 126 read their receipts.
+  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) peer.db.exec(statement);
+  peer.db.pragma('user_version = 123');
 }
 function upgrade(peer: ReturnType<typeof createPeer>) {
   initializeDatabaseSchema(peer.db, { beforeVersionCommit: () => migrateLegacyBodyConsistency(
@@ -43,8 +51,7 @@ it('upgrades in the schema transaction and publishes repaired facts through prod
   source.db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id = 'topic'").run();
   const old = history(source);
   const garbage = upsertTextBodyBlob(source.driver, 'Unused', NOW);
-  restorePreCurrentParentOrderFixture(source.db);
-  source.db.pragma('user_version = 123');
+  restoreVersion123(source);
   upgrade(source);
   expect(readDataMigrationState(source.db, BODY_REPAIR_ID)?.status).toBe('completed');
   expect(history(source)).toHaveLength(old.length + 1);
@@ -93,8 +100,7 @@ it('rolls back the entire upgrade and its marker when version publication fails'
   const peer = createPeer('source');
   const version = edit(peer, 'Canonical');
   peer.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?').run('', version);
-  restorePreCurrentParentOrderFixture(peer.db);
-  peer.db.pragma('user_version = 123');
+  restoreVersion123(peer);
   peer.db.exec("CREATE TRIGGER reject_repair BEFORE UPDATE ON sync_object_state BEGIN SELECT RAISE(ABORT, 'failed'); END");
   const before = history(peer);
   expect(() => upgrade(peer)).toThrow('failed');

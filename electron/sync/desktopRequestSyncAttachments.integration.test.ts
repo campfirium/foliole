@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -44,6 +44,24 @@ function readBusinessState(file: string) {
   const db = new Database(file, { readonly: true });
   try { return businessState(db); }
   finally { db.close(); }
+}
+
+async function repairAttachmentLoss(sourceDir: string, targetDir: string, keys: string[],
+  transfer: () => Promise<unknown>, failures: unknown[]) {
+  await rm(path.join(targetDir, keys[0]!));
+  await rm(path.join(sourceDir, keys[1]!));
+  const repaired = await transfer();
+  expect(failures).toEqual([]);
+  expect(repaired).toEqual({ pending: 0, transferred: 2 });
+  expect(await transfer()).toEqual({ pending: 0, transferred: 0 });
+}
+
+function expectNoPersistentTransfers(...databases: Database.Database[]) {
+  for (const db of databases) {
+    for (const table of ['framed_sync_resource_demands', 'framed_sync_inbound_transfers', 'framed_sync_receipts']) {
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
+    }
+  }
 }
 
 it('waits for the database writer when opening and checking attachment paths', async () => {
@@ -125,6 +143,8 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
           .toEqual({ pending: 0, transferred: 0 });
         expect(hashFile).not.toHaveBeenCalled();
         hashFile.mockRestore();
+        await repairAttachmentLoss(local.assetsDir, target.assetsDir, keys,
+          () => exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)), failures);
       });
     } finally { lease.release(); }
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
@@ -137,10 +157,7 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
         expect(await readFile(path.join(local.assetsDir, keys[index]!))).toEqual(bytes);
       }
       expect(reopened.prepare('SELECT available FROM framed_sync_resource_availability').pluck().all()).toEqual([1, 1]);
-      for (const table of ['framed_sync_resource_demands', 'framed_sync_inbound_transfers', 'framed_sync_receipts']) {
-        expect(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
-        expect(local.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
-      }
+      expectNoPersistentTransfers(reopened, local.sqlite);
     } finally { reopened.close(); }
   } finally {
     await server.close(); await local.close();

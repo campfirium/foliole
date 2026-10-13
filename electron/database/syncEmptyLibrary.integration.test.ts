@@ -5,9 +5,10 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { loadCurrentSyncNodeRecord, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
 
 import {
-  assertPersisted, buildPack, closeLibraries, createPeer, edit, history, joinPeers,
-  receivePack, startLibraries, sync
-} from './syncEmptyLibraryTestSupport.js';
+  assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries
+} from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 import { wholeBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
@@ -35,27 +36,26 @@ it('keeps successive synchronization and duplicate replay idempotent', async () 
   joinPeers(source, target);
   for (const content of ['123', '123456', '123456789']) {
     const id = edit(source, content);
-    const pack = await sync(source, target);
-    await receivePack(source, target, pack);
+    await withLibraryRequestSnapshot(source, target, async replay => { await replay(); await replay(); });
     assertPersisted(target, content, id);
   }
   const rows = history(target);
   expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
 });
 
-it('ignores an older full pack after a newer pack without resurrecting retired identities', async () => {
+it('keeps the current head after a stale request snapshot is replayed', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   edit(source, '123');
-  const old = await buildPack(source, target);
-  edit(source, '123456');
-  const c = edit(source, '123456789');
-  const latest = await buildPack(source, target);
-  await receivePack(source, target, latest);
-  await receivePack(source, target, old);
-  await receivePack(source, target, latest);
-  assertPersisted(target, '123456789', c);
+  await withLibraryRequestSnapshot(source, target, async replayOld => {
+    edit(source, '123456');
+    const current = edit(source, '123456789');
+    await withLibraryRequestSnapshot(source, target, async replayLatest => {
+      await replayLatest(); await replayOld(); await replayLatest();
+    });
+    assertPersisted(target, '123456789', current);
+  });
   const rows = history(target);
   expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
 });

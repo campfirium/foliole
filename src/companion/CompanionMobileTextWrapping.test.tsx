@@ -32,7 +32,6 @@ function createSyncSnapshot(host: SyncDiagnosticHost): SyncDiagnosticSnapshot {
     sync_state: {
       local_dirty_count: 0,
       max_state_seq: null,
-      pack_cursor: null,
       state_counts: []
     },
     verdicts: []

@@ -16,7 +16,8 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { runLegacyBodyCollectionWorker } from './legacyBodyCollectionWorkerClient.js';
-import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(async () => { onWorkerOnline = null; await closeLibraries(); });

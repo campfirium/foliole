@@ -61,7 +61,6 @@ export interface SyncDiagnosticState {
   dirty_objects?: SyncDiagnosticDirtyObject[];
   local_dirty_count: number;
   max_state_seq: number | null;
-  pack_cursor: number | null;
   pending_ack_count?: number;
   pending_acks?: SyncDiagnosticPendingAck[];
   push_issue_count?: number;

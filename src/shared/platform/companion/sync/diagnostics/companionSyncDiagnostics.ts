@@ -16,16 +16,6 @@ export interface CombinedSyncDiagnosticResult {
   verdicts: SyncDiagnosticVerdict[];
 }
 
-export interface SyncDiagnosticLaggingObjectType {
-  object_type: string;
-  cursor_lag: number;
-  max_state_seq: number;
-}
-
-function okVerdict(code: string, message: string, evidence: Record<string, unknown>): SyncDiagnosticVerdict {
-  return { code, evidence, message, severity: 'ok' };
-}
-
 function warningVerdict(code: string, message: string, evidence: Record<string, unknown>): SyncDiagnosticVerdict {
   return { code, evidence, message, severity: 'warning' };
 }
@@ -43,29 +33,6 @@ export async function loadLocalSyncDiagnostics(): Promise<SyncDiagnosticSnapshot
 
 export async function loadDesktopSyncDiagnostics(endpointUrl: string): Promise<SyncDiagnosticSnapshot> {
   return await fetchDesktopJson<SyncDiagnosticSnapshot>(endpointUrl, SYNC_DIAGNOSTICS_PATH);
-}
-
-export function findLaggingDesktopObjectTypes(args: {
-  desktop: SyncDiagnosticSnapshot | null;
-  packCursor: number | null | undefined;
-}): SyncDiagnosticLaggingObjectType[] {
-  const packCursor = args.packCursor;
-  if (!args.desktop || typeof packCursor !== 'number') {
-    return [];
-  }
-  return args.desktop.sync_state.state_counts
-    .flatMap((row) => {
-      const maxStateSeq = row.max_state_seq;
-      if (typeof maxStateSeq !== 'number' || maxStateSeq <= packCursor) {
-        return [];
-      }
-      return [{
-        object_type: row.object_type,
-        cursor_lag: maxStateSeq - packCursor,
-        max_state_seq: maxStateSeq
-      }];
-    })
-    .sort((left, right) => right.max_state_seq - left.max_state_seq);
 }
 
 function findLatestFailedTerminalEvent(android: SyncDiagnosticSnapshot) {
@@ -89,24 +56,11 @@ function recentFailureEvidence(event: NonNullable<ReturnType<typeof findLatestFa
   };
 }
 
-function pushSyncLagVerdicts(args: {
+function pushStorageVerdicts(args: {
   android: SyncDiagnosticSnapshot;
-  cursorLag: number;
   desktop: SyncDiagnosticSnapshot;
-  desktopMaxSeq: number;
   verdicts: SyncDiagnosticVerdict[];
 }) {
-  if (args.cursorLag > 0) {
-    args.verdicts.push(infoVerdict('sync_android_not_caught_up', 'New desktop changes are available for this device.', {
-      android_pack_cursor: args.android.sync_state.pack_cursor ?? 0,
-      cursor_lag: args.cursorLag,
-      desktop_max_state_seq: args.desktopMaxSeq,
-      lagging_object_types: findLaggingDesktopObjectTypes({
-        desktop: args.desktop,
-        packCursor: args.android.sync_state.pack_cursor
-      })
-    }));
-  }
   if (args.desktop.storage.active_node_count > 0 && args.android.storage.active_node_count === 0) {
     args.verdicts.push(warningVerdict('sync_pack_download_or_apply_breakpoint', 'Desktop has topics but this device has none.', {
       android_node_count: args.android.storage.active_node_count,
@@ -148,24 +102,6 @@ function pushConflictVerdict(android: SyncDiagnosticSnapshot, verdicts: SyncDiag
   ));
 }
 
-function pushAlignedVerdict(args: {
-  android: SyncDiagnosticSnapshot;
-  androidCursor: number;
-  desktopMaxSeq: number;
-  verdicts: SyncDiagnosticVerdict[];
-}) {
-  if (args.desktopMaxSeq <= 0 || args.desktopMaxSeq !== args.androidCursor || args.android.storage.active_node_count <= 0) {
-    return;
-  }
-  args.verdicts.push(okVerdict('sync_structure_aligned', 'Structure sync is aligned.', {
-    missing_attachment_resource_count: args.android.content.missing_attachment_resource_count ?? 0,
-    missing_content_blob_count: args.android.content.missing_content_blob_count,
-    missing_external_document_body_count: args.android.content.missing_external_document_body_count ?? 0,
-    missing_topic_body_count: args.android.content.missing_topic_body_count ?? 0,
-    state_seq: args.desktopMaxSeq
-  }));
-}
-
 export function mergeSyncDiagnosticVerdicts(args: {
   android: SyncDiagnosticSnapshot | null;
   desktop: SyncDiagnosticSnapshot | null;
@@ -174,19 +110,15 @@ export function mergeSyncDiagnosticVerdicts(args: {
   if (!args.android || !args.desktop) {
     return verdicts;
   }
-  const androidCursor = args.android.sync_state.pack_cursor ?? 0;
-  const desktopMaxSeq = args.desktop.sync_state.max_state_seq ?? 0;
-  const cursorLag = Math.max(0, desktopMaxSeq - androidCursor);
   const latestFailed = findLatestFailedTerminalEvent(args.android);
   if (latestFailed) {
     verdicts.push(warningVerdict('sync_recent_android_failure', 'Recent device sync failed.', {
       ...recentFailureEvidence(latestFailed)
     }));
   }
-  pushSyncLagVerdicts({ android: args.android, cursorLag, desktop: args.desktop, desktopMaxSeq, verdicts });
+  pushStorageVerdicts({ android: args.android, desktop: args.desktop, verdicts });
   pushConflictVerdict(args.android, verdicts);
   pushContentBacklogVerdicts(args.android, verdicts);
-  pushAlignedVerdict({ android: args.android, androidCursor, desktopMaxSeq, verdicts });
   return verdicts;
 }
 

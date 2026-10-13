@@ -1,22 +1,21 @@
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { SyncDiagnosticSnapshot } from '../../../../../lib/platform/syncDiagnosticsContract';
 import type { SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
-import { resolveLocalSyncGroupDevice, resolveRemoteSyncGroupDevices } from '../../../../../lib/platform/syncGroupContract';
-import { createIosCompanionSyncPackCursorStore } from '../sync/cursor/iosCompanionSyncPackCursorStore';
+import { resolveLocalSyncGroupDevice } from '../../../../../lib/platform/syncGroupContract';
 
 import { queryIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 export async function diagnoseIosCompanionDatabase(group: SyncGroupPayload | null): Promise<SyncDiagnosticSnapshot> {
   const [storage, stateMetrics, bodyMetrics, blobRows, attachmentRows, activeTopics, recentTopics, dirty,
-    pending, issues, counts, conflicts, endpoint, cursor, events] = await Promise.all([
+    pending, issues, counts, conflicts, endpoint, events] = await Promise.all([
     metrics('diagnosticStorageMetrics'), metrics('diagnosticSyncStateMetrics'), metrics('diagnosticContentBodyMetrics'),
     queryIosCompanionDatabase<DbRow>('contentBlobMissingSummaryRows'),
     queryIosCompanionDatabase<DbRow>('attachmentResourceMissingSummaryRows'),
     queryIosCompanionDatabase<DbRow>('diagnosticActiveTopic'), queryIosCompanionDatabase<DbRow>('diagnosticRecentTopics'),
     queryIosCompanionDatabase<DbRow>('diagnosticDirtyObjects'), queryIosCompanionDatabase<DbRow>('diagnosticPendingAcks'),
     queryIosCompanionDatabase<DbRow>('diagnosticPushIssues'), queryIosCompanionDatabase<DbRow>('diagnosticSyncStateCounts'),
-    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'), packCursor(group),
+    queryIosCompanionDatabase<DbRow>('nodeConflicts'), meta('workspace_sync_endpoint_url'),
     meta('workspace_sync_events')
   ]);
   const attachment = attachmentSummary(attachmentRows);
@@ -33,7 +32,7 @@ export async function diagnoseIosCompanionDatabase(group: SyncGroupPayload | nul
       device_name: resolveLocalSyncGroupDevice(group ?? emptyGroup())?.device_name ?? null },
     storage: storage as unknown as SyncDiagnosticSnapshot['storage'],
     sync_state: { ...stateMetrics, dirty_objects: dirty, max_state_seq: maxStateSeq,
-      pack_cursor: cursor === null ? null : Number(cursor), pending_acks: pending, push_issues: issues,
+      pending_acks: pending, push_issues: issues,
       recent_conflicts: conflicts, state_counts: counts } as unknown as SyncDiagnosticSnapshot['sync_state'],
     verdicts: []
   };
@@ -47,12 +46,6 @@ async function metrics(name: 'diagnosticStorageMetrics' | 'diagnosticSyncStateMe
 async function meta(key: string) {
   const rows = await queryIosCompanionDatabase<{ value: string | null } & DbRow>('companionMetaValue', [key]);
   return rows[0]?.value ?? null;
-}
-
-async function packCursor(group: SyncGroupPayload | null) {
-  const peerId = group ? resolveRemoteSyncGroupDevices(group)[0]?.device_identity_key : null;
-  if (!peerId) return null;
-  return createIosCompanionSyncPackCursorStore(undefined, peerId).loadCursor();
 }
 
 function emptyGroup(): SyncGroupPayload {

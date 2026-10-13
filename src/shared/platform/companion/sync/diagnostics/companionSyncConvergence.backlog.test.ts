@@ -8,7 +8,7 @@ function testKeepsBodyBacklogPending() {
     android: {
       ...syncConvergenceResult().android!,
       content: { missing_content_blob_count: 3, missing_external_document_body_count: 1, missing_topic_body_count: 2 },
-      sync_state: { ...syncConvergenceResult().android!.sync_state, pack_cursor: 8 }
+      sync_state: { ...syncConvergenceResult().android!.sync_state }
     }
   }));
 
@@ -20,8 +20,7 @@ function testKeepsBodyBacklogPending() {
     })
   ]));
   expect(report.checks.map((item) => item.code)).toEqual(expect.arrayContaining([
-    'content_backlog_exists',
-    'structure_lag_exists'
+    'content_backlog_exists'
   ]));
 }
 
@@ -40,6 +39,6 @@ function testKeepsAttachmentBacklogPending() {
 }
 
 describe('buildSyncConvergenceReport backlog checks', () => {
-  it('keeps body backlog and structure lag as pending work', testKeepsBodyBacklogPending);
+  it('keeps body backlog as pending work', testKeepsBodyBacklogPending);
   it('keeps attachment backlog as pending work', testKeepsAttachmentBacklogPending);
 });

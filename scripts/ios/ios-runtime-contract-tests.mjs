@@ -91,7 +91,6 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/features/editor/adapters/liveMarkdownImages.nativeAttachment.test.ts',
   'src/shared/platform/companionBootstrap.ios.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.test.ts',
-  'src/shared/platform/companion/sync/cursor/iosCompanionSyncPackCursorStore.test.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotRows.test.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore.test.ts',
   'src/shared/platform/companionSyncPackNodes.test.ts',
