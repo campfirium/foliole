@@ -2,7 +2,6 @@ import Database from 'better-sqlite3';
 
 import {
   localPushBlockers,
-  pendingDesktopChanges,
   resourceBacklog,
   suspectLayer
 } from './android-sync-audit-breakdown.mjs';
@@ -31,25 +30,16 @@ function all(db, sql, fallback = []) {
   }
 }
 
-function scalar(db, sql, fallback = null) {
-  try {
-    return Object.values(db.prepare(sql).get() ?? {})[0] ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function metaValue(db, key) {
   if (!tableExists(db, 'companion_meta')) return null;
   return db.prepare('SELECT value FROM companion_meta WHERE key = ?').get(key)?.value ?? null;
 }
 
-function objectTypeStats(db, desktopCursor = null) {
+function objectTypeStats(db) {
   if (!tableExists(db, 'sync_object_state')) return [];
-  const where = typeof desktopCursor === 'number' ? 'WHERE state_seq <= ?' : '';
   return db.prepare(
-    `SELECT object_type, COUNT(*) AS count, MAX(state_seq) AS max_state_seq FROM sync_object_state ${where} GROUP BY object_type ORDER BY object_type`
-  ).all(...(typeof desktopCursor === 'number' ? [desktopCursor] : []));
+    `SELECT object_type, COUNT(*) AS count, MAX(state_seq) AS max_state_seq FROM sync_object_state GROUP BY object_type ORDER BY object_type`
+  ).all();
 }
 
 function keyRows(db, definition) {
@@ -102,8 +92,8 @@ function mergeObjectTypeStats(desktopRows, androidRows) {
   return desktopRows.map((row) => ({
     androidCount: android.get(row.object_type)?.count ?? 0,
     androidLocalMaxSeq: android.get(row.object_type)?.max_state_seq ?? null,
-    desktopCountToCursor: row.count,
-    desktopMaxSeqToCursor: row.max_state_seq,
+    desktopCount: row.count,
+    desktopLocalMaxSeq: row.max_state_seq,
     objectType: row.object_type
   }));
 }
@@ -112,28 +102,20 @@ function auditDatabases(desktopPath, androidPath, metadata = {}) {
   const desktop = new Database(desktopPath, { readonly: true, fileMustExist: true });
   const android = new Database(androidPath, { readonly: true, fileMustExist: true });
   try {
-    const androidCursor = Number(metaValue(android, 'sync_pack_cursor') ?? 0);
     const report = {
       capturedAt: new Date().toISOString(),
       content: compareContentMetadata(desktop, android),
-      cursors: {
-        androidCursor,
-        desktopMaxSeq: scalar(desktop, 'SELECT COALESCE(MAX(state_seq), 0) FROM sync_object_state', 0),
-        gap: null,
-        pending: pendingDesktopChanges(desktop, androidCursor)
-      },
       identity: {
         androidEndpoint: metaValue(android, 'workspace_sync_endpoint_url'),
         androidSerial: metadata.serial ?? null
       },
       localPush: localPushBlockers(android),
-      objectTypes: mergeObjectTypeStats(objectTypeStats(desktop, androidCursor), objectTypeStats(android)),
+      objectTypes: mergeObjectTypeStats(objectTypeStats(desktop), objectTypeStats(android)),
       statePolicy: policyBreakdown(android, metaValue(android, 'host_name')),
       resources: resourceBacklog(android),
       syncEvents: syncEventSummary(android),
       structural: compareStructures(desktop, android)
     };
-    report.cursors.gap = report.cursors.desktopMaxSeq - report.cursors.androidCursor;
     report.suspectedBrokenLayer = suspectLayer(report);
     return report;
   } finally {
@@ -148,24 +130,17 @@ function formatAuditReport(report) {
     `android_serial   : ${report.identity.androidSerial ?? 'local-db'}`,
     `android_endpoint : ${report.identity.androidEndpoint ?? 'missing'}`,
     '',
-    '=== Cursors ===',
-    `desktop_max_state_seq : ${report.cursors.desktopMaxSeq}`,
-    `android_sync_cursor   : ${report.cursors.androidCursor}`,
-    `desktop_minus_android : ${report.cursors.gap}`,
-    `pending_live_changes  : ${report.cursors.pending.liveCount}`,
-    `pending_tombstones    : ${report.cursors.pending.tombstoneCount}`,
-    `pending_types         : ${formatPendingTypes(report.cursors.pending.types)}`,
+    '=== Local State ===',
     `local_dirty_changes   : ${report.localPush.dirtyCount}`,
-    `local_push_issues     : ${report.localPush.issueCount}`,
     `local_push_types      : ${formatLocalPushTypes(report.localPush)}`,
     `sync_event_count      : ${report.syncEvents.count}`,
     `latest_run            : ${formatLatestRun(report.syncEvents.latestRun)}`,
     '',
     '=== Per object_type ===',
-    '| object_type | desktop_count_to_cursor | android_count | desktop_max_seq_to_cursor | android_local_max_seq |'
+    '| object_type | desktop_count | android_count | desktop_local_max_seq | android_local_max_seq |'
   ];
   for (const row of report.objectTypes) {
-    lines.push(`| ${row.objectType} | ${row.desktopCountToCursor} | ${row.androidCount} | ${row.desktopMaxSeqToCursor} | ${row.androidLocalMaxSeq ?? 'n/a'} |`);
+    lines.push(`| ${row.objectType} | ${row.desktopCount} | ${row.androidCount} | ${row.desktopLocalMaxSeq} | ${row.androidLocalMaxSeq ?? 'n/a'} |`);
   }
   lines.push('', '=== Structural Diffs ===');
   for (const item of report.structural) {
@@ -196,15 +171,9 @@ function formatAuditReport(report) {
   return lines.join('\n');
 }
 
-function formatPendingTypes(types) {
-  if (types.length === 0) return 'none';
-  return types.map((row) => `${row.objectType}(live=${row.liveCount}, tombstone=${row.tombstoneCount})`).join(', ');
-}
-
 function formatLocalPushTypes(localPush) {
   const dirty = localPush.dirtyTypes.map((row) => `${row.objectType}(dirty=${row.count})`);
-  const issues = localPush.issueTypes.map((row) => `${row.objectType}(${row.status}=${row.count})`);
-  return [...dirty, ...issues].join(', ') || 'none';
+  return dirty.join(', ') || 'none';
 }
 
 function formatLatestRun(run) {

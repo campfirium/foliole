@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
-import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -31,7 +32,7 @@ it('retains original metadata outside a group without accumulating intermediate 
   expect(history(a).map((row) => row.parent_version_id)).toEqual([null, ...versions.slice(0, -1)]);
 });
 
-it('forwards the complete retained old base and merges a third offline device without forwarding device proofs', async () => {
+it('forwards the complete retained old base and merges a third offline device', async () => {
   const a = createPeer('a');
   const b = createPeer('b');
   const c = createPeer('c');
@@ -41,7 +42,6 @@ it('forwards the complete retained old base and merges a third offline device wi
   const online = edit(a, 'left-online\nright\n');
   await sync(a, b);
   expect(history(b).map((row) => row.version_id)).toEqual([base, online]);
-  expect(b.db.prepare('SELECT device_identity_key FROM node_version_device_bases').pluck().all()).toEqual([a.id]);
   const offline = edit(c, 'left\nright-offline\n');
   await sync(b, c);
   const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
@@ -68,7 +68,7 @@ it('forwards the complete retained old base and merges a third offline device wi
   }
 });
 
-it('keeps distinct direct device bases until each lagging device advances', async () => {
+it('keeps distinct member positions until each lagging device advances', async () => {
   const a = createPeer('a');
   const b = createPeer('b');
   const c = createPeer('c');

@@ -50,16 +50,16 @@ describe('desktop departure evidence', () => {
     localHostName: 'Mac A', userNodeCount: 5 };
   const after = { ...before, activeMemberCount: 2,
     departedAtByHost: { 'Mac A': '2026-08-13T00:00:00Z' },
-    localGroupId: null, localMemberState: null, syncDeliveryReceiptCount: 0, syncPeerCursorCount: 0 };
+    localGroupId: null, localMemberState: null };
   const overview = { sync_enabled: false, sync_group: null };
 
   it('retains the surviving member facts after the local Device unbinds', () => {
     expect(() => assertDesktopDepartureData(before, after, overview, fail)).not.toThrow();
   });
 
-  it('requires the local departure and cleared progress', () => {
+  it('requires the local departure', () => {
     expect(() => assertDesktopDepartureData(before,
-      { ...after, departedAtByHost: {}, syncPeerCursorCount: 1 }, overview, fail
+      { ...after, departedAtByHost: {} }, overview, fail
     )).toThrow(/macOS departed state is incomplete/u);
   });
 });

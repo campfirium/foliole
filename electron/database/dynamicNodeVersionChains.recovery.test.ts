@@ -2,13 +2,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
-import { loadPendingNodeVersionReceipts } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
-
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { assertPersisted, buildPack, closeLibraries, createPeer, edit, history, joinPeers,
-  receivePack, startLibraries, sync, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -21,53 +19,30 @@ function restart(peer: Peer) {
   peer.port = createBetterSqliteDbPort(peer.db);
 }
 
-async function receipt(source: Peer, target: Peer, packId: string) {
-  return (await loadPendingNodeVersionReceipts(target.port, source.id)).find((item) => item.packId === packId)!;
-}
-
-it('preserves a frozen legacy payload across restart while collection depends on member positions', async () => {
+it('preserves a request snapshot through source database reopen while collection follows member positions', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   const base = edit(source, 'base');
   await sync(source, target);
   const sent = edit(source, 'sent');
-  const pack = await buildPack(source, target);
-  const unsent = edit(source, 'unsent-middle');
-  const head = edit(source, 'current');
-  restart(source);
-  const originals = [base, sent, unsent, head];
-  expect(history(source).map((row) => row.version_id)).toEqual(originals);
-  expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
-  await receivePack(source, target, pack);
-  const ack = await receipt(source, target, pack.packId);
-  await expect(confirmOutboundNodeVersionPack(source.port, { ...ack, confirmedAt: 'later' }))
-    .rejects.toThrow('node_version_proof_base_unavailable');
-  expect(history(source).map((row) => row.version_id)).toEqual(originals);
-  expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
-  await sync(source, target);
-  expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
-  await confirmOutboundNodeVersionPack(source.port, { ...ack, confirmedAt: 'retry' });
-  expect(history(source).map((row) => row.version_id)).toEqual(originals);
-  expect(history(source).map((row) => row.parent_version_id)).toEqual([null, base, sent, unsent]);
-  assertPersisted(source, 'current', head);
-  assertPersisted(target, 'current', head);
-});
-
-it('accepts a delayed exact acknowledgement without regressing the newer direct peer base', async () => {
-  const source = createPeer('source');
-  const target = createPeer('target');
-  joinPeers(source, target);
-  const firstVersion = edit(source, 'one');
-  const first = await buildPack(source, target);
-  await receivePack(source, target, first);
-  const oldAck = await receipt(source, target, first.packId);
-  const head = edit(source, 'two');
-  await sync(source, target);
-  await confirmOutboundNodeVersionPack(source.port, { ...oldAck, confirmedAt: 'delayed' });
-  expect(history(source).map((row) => row.version_id)).toEqual([firstVersion, head]);
-  expect(history(source).map((row) => row.body_text)).toEqual([null, 'two']);
-  expect(history(source).map((row) => row.parent_version_id)).toEqual([null, firstVersion]);
-  expect(source.db.prepare('SELECT version_id FROM node_version_device_bases').pluck().get()).toBe(head);
-  expect(source.db.prepare('SELECT COUNT(*) AS count FROM node_version_outbound_holds').get()).toEqual({ count: 0 });
+  await withLibraryRequestSnapshot(source, target, async replay => {
+    const unsent = edit(source, 'unsent-middle');
+    const head = edit(source, 'current');
+    restart(source);
+    const originals = [base, sent, unsent, head];
+    expect(history(source).map((row) => row.version_id)).toEqual(originals);
+    expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
+    await replay();
+    assertPersisted(target, 'sent', sent);
+    expect(history(source).map((row) => row.version_id)).toEqual(originals);
+    expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
+    await sync(source, target);
+    expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
+    await replay();
+    expect(history(source).map((row) => row.version_id)).toEqual(originals);
+    expect(history(source).map((row) => row.parent_version_id)).toEqual([null, base, sent, unsent]);
+    assertPersisted(source, 'current', head);
+    assertPersisted(target, 'current', head);
+  });
 });

@@ -29,8 +29,7 @@ import {
 function facts(overrides = {}) {
   return { activeMemberCount: 3, attachmentCount: 1, contentBlobCount: 2,
     integrity: 'ok', journeyFacts: {}, localGroupId: 'group-1', localMemberState: 'active',
-    missingAttachmentCount: 0, missingContentBlobCount: 0, syncDeliveryReceiptCount: 2,
-    syncPeerCursorCount: 2, userNodeCount: 3, ...overrides };
+    missingAttachmentCount: 0, missingContentBlobCount: 0, userNodeCount: 3, ...overrides };
 }
 
 function overview(enabled, paused, group = true) {
@@ -57,7 +56,7 @@ it('persists independent controls, catches up, and leaves as the last member', a
     .mockResolvedValueOnce(facts({ activeMemberCount: 1, userNodeCount: 4 }))
     .mockResolvedValueOnce(facts({ activeMemberCount: 1, userNodeCount: 4 }))
     .mockResolvedValueOnce(facts({ activeMemberCount: 0, localGroupId: null,
-      localMemberState: null, syncDeliveryReceiptCount: 0, syncPeerCursorCount: 0,
+      localMemberState: null,
       userNodeCount: 4 }));
   const loads = [overview(true, true), overview(false, false), overview(false, false, false)];
   mocks.invoke.mockImplementation(async (_page, command) => {

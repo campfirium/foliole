@@ -1,35 +1,29 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
-import { loadPendingNodeVersionReceipts } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { repairDirectChildAnchorsForAppliedParent } from '../../lib/core/sync/syncNodeAnchorRepair.js';
 import { loadCurrentSyncNodeRecord, loadMergeBaseCandidates } from '../../lib/core/sync/syncNodeGraph.js';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { applyNodePushBatchWithDbPort } from './companionSyncNodeConvergence.js';
-import type { CompanionSyncPushPayload } from './companionSyncPushTypes.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { root } from './syncLibrary.testSupport.js';
 import {
-  assertPersisted, buildPack, closeLibraries, createPeer, edit, joinPeers, receivePack, startLibraries, sync, type Peer
-} from './syncEmptyLibraryTestSupport.js';
+  assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer
+} from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
-
-function payload(record: NativeSyncNodeRecord): CompanionSyncPushPayload {
-  return {
-    authorHostName: record.host_name!,
-    base: { kind: 'node_version', ancestorVersionIds: [...record.ancestor_version_ids],
-      parentVersionId: record.parent_version_id,
-      parentVersionIds: record.parent_version_ids ?? (record.parent_version_id ? [record.parent_version_id] : []) },
-    clientOpId: `node:${record.version_id}`, contentHash: record.content_hash!,
-    identity: { objectId: record.object_id, objectType: 'node', scope: 'workspace' },
-    payloadJson: JSON.stringify(record), updatedAt: record.updated_at
-  };
-}
 
 async function current(peer: Peer) {
   return (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
@@ -60,10 +54,9 @@ async function diverge() {
   const r = edit(right, 'Right edit', 'Title B');
   await annotate(left, l, 'Left edit');
   await annotate(right, r, 'Right edit');
-  const [a, b] = await Promise.all([current(left), current(right)]);
-  // Topic envelopes may arrive before annotation envelopes, so each side resolves independently.
-  expect((await applyNodePushBatchWithDbPort(left.port, [payload(b)])).acks[0]?.status).toBe('accepted');
-  expect((await applyNodePushBatchWithDbPort(right.port, [payload(a)])).acks[0]?.status).toBe('accepted');
+  await withTopicSnapshot(left, right, async toRight => {
+    await withTopicSnapshot(right, left, async toLeft => { await toLeft(); await toRight(); });
+  });
   assertPersisted(left, 'Left edit');
   assertPersisted(right, 'Right edit');
   expect((await current(left)).version_id).not.toBe((await current(right)).version_id);
@@ -84,49 +77,40 @@ it.each([false, true])('converges matching production heads after independent ov
     }
   }
   const [a, b] = await Promise.all([current(left), current(right)]);
-  const toLeft = await buildPack(right, left);
-  const toRight = await buildPack(left, right);
-  await receivePack(right, left, toLeft);
-  const bases = await loadMergeBaseCandidates(left.port, a.version_id!, b.version_id!);
-  expect(bases.length).toBeGreaterThan(0);
-  for (const id of bases) expect(left.db.prepare(
-    'SELECT version_id FROM node_sync_versions WHERE version_id = ?').pluck().get(id)).toBe(id);
-  await receivePack(left, right, toRight);
-  for (const [source, target, pack] of [[right, left, toLeft], [left, right, toRight]] as const) {
-    const receipt = (await loadPendingNodeVersionReceipts(target.port, source.id))
-      .find((item) => item.packId === pack.packId)!;
-    expect(receipt.results.find((item) => item.objectId === 'topic'))
-      .toMatchObject({ baseVersionId: receipt.results.find((item) => item.objectId === 'topic')!.sentVersionId, result: 'applied' });
-    await confirmOutboundNodeVersionPack(source.port, { ...receipt, confirmedAt: '2026-09-30T01:00:00Z' });
-    expect(source.db.prepare(`SELECT version_id FROM node_version_outbound_holds
-      WHERE pack_id = ? AND object_id = 'topic'`).pluck().get(pack.packId)).toBeUndefined();
-  }
-  const final = await current(left);
-  expect((await current(right)).version_id).toBe(final.version_id);
-  expect((await current(right)).body_text).toBe(final.body_text);
-  for (const peer of [left, right]) {
-    assertPersisted(peer, 'Shared final body', final.version_id!);
-    const source = peer === left ? right : left;
-    const replay = peer === left ? toLeft : toRight;
-    expect(await receivePack(source, peer, replay))
-      .toMatchObject({ appliedObjectCount: 0, handledConflictCount: 0 });
-    assertPersisted(peer, 'Shared final body', final.version_id!);
-  }
-  await receivePack(right, left, toLeft);
-  await receivePack(left, right, toRight);
-  assertPersisted(left, 'Shared final body', final.version_id!);
-  assertPersisted(right, 'Shared final body', final.version_id!);
-  await sync(left, right);
-  await sync(right, left);
-  assertPersisted(left, 'Shared final body', final.version_id!);
-  assertPersisted(right, 'Shared final body', final.version_id!);
+  await withTopicSnapshot(right, left, async toLeft => {
+    await withTopicSnapshot(left, right, async toRight => {
+      await toLeft();
+      const bases = await loadMergeBaseCandidates(left.port, a.version_id!, b.version_id!);
+      expect(bases.length).toBeGreaterThan(0);
+      for (const id of bases) expect(left.db.prepare(
+        'SELECT version_id FROM node_sync_versions WHERE version_id = ?').pluck().get(id)).toBe(id);
+      await toRight();
+      const final = await current(left);
+      expect((await current(right)).version_id).toBe(final.version_id);
+      expect((await current(right)).body_text).toBe(final.body_text);
+      for (const peer of [left, right]) {
+        assertPersisted(peer, 'Shared final body', final.version_id!);
+        const replay = peer === left ? toLeft : toRight;
+        await replay();
+        assertPersisted(peer, 'Shared final body', final.version_id!);
+      }
+      await toLeft();
+      await toRight();
+      assertPersisted(left, 'Shared final body', final.version_id!);
+      assertPersisted(right, 'Shared final body', final.version_id!);
+      await sync(left, right);
+      await sync(right, left);
+      assertPersisted(left, 'Shared final body', final.version_id!);
+      assertPersisted(right, 'Shared final body', final.version_id!);
+    });
+  });
 });
 
 it('resolves different production heads while preserving both bodies when their common bases are incomparable', async () => {
   const { left, right } = await diverge();
-  const [a, b] = await Promise.all([current(left), current(right)]);
-  expect((await applyNodePushBatchWithDbPort(left.port, [payload(b)])).acks[0]?.status).toBe('accepted');
-  expect((await applyNodePushBatchWithDbPort(right.port, [payload(a)])).acks[0]?.status).toBe('accepted');
+  await withTopicSnapshot(left, right, async toRight => {
+    await withTopicSnapshot(right, left, async toLeft => { await toLeft(); await toRight(); });
+  });
   for (const peer of [left, right]) {
     const final = await current(peer);
     assertPersisted(peer, final.body_text!, final.version_id!);
@@ -134,3 +118,35 @@ it('resolves different production heads while preserving both bodies when their 
     expect(new Set([final.body_text, ...alternatives])).toEqual(new Set(['Left edit', 'Right edit']));
   }
 });
+
+async function withTopicSnapshot(source: Peer, target: Peer,
+  execute: (replay: () => Promise<void>) => Promise<void>) {
+  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
+    remote: await readFramedSyncInventory(target.port) }).filter(value => value.direction === 'local_to_remote'
+      && value.objectType === 'node' && value.globalId === 'topic');
+  expect(differences).toHaveLength(1);
+  const files = createDesktopFramedSyncFiles(path.join(root, `snapshot-${crypto.randomUUID()}`));
+  const requests = differences.map(() => new RequestSyncFiles(files, `requests/${crypto.randomUUID()}`));
+  const proof = source.db.prepare<[], { library_epoch: string; proof_revision: number }>(
+    'SELECT library_epoch, proof_revision FROM node_version_local_proof_state').get()!;
+  const targetEpoch = String(target.db.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get());
+  try {
+    for (const [index, difference] of differences.entries()) {
+      await writeRequestSyncSnapshot(source.port, difference, requests[index]!);
+    }
+    await execute(async () => {
+      for (const [index, difference] of differences.entries()) {
+        const request = requests[index]!;
+        await applyRequestSyncObject(target.port, {
+          context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+            senderDeviceId: source.id, senderLibraryEpoch: proof.library_epoch,
+            receiverDeviceId: target.id, receiverLibraryEpoch: targetEpoch },
+          peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
+            ...proof, devices: [], removals: [], restore: null, source_proof_revisions: {} },
+          globalId: difference.globalId, objectType: difference.objectType, requestId: new Uint8Array(16),
+          facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
+        });
+      }
+    });
+  } finally { await Promise.all(requests.map(request => request.close())); }
+}

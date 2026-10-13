@@ -9,7 +9,7 @@ import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 
 /** Existing write-maintained object identities, matching the native identity copy surface. */
 export const FRAMED_SYNC_STATE_OBJECT_TYPES = [
-  'external_document', 'external_folder', 'import_source', 'node_open_state', 'node_review',
+  'external_document', 'external_folder', 'import_source', 'node_open_state', 'node_reading', 'node_review',
   'node_text_alternative', 'parent_child_order', 'node_position',
   'pdf_page_text', 'setting', 'view_state', 'watched_folder', 'topic_daily_count',
   'foreground_daily_time'
@@ -45,6 +45,7 @@ export async function readFramedSyncObjectStateInventory(
       ELSE NULL END AS body_blob_hash
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
+      AND (object_type != 'node_reading' OR deleted_at IS NOT NULL)
       AND (object_type != 'node_review' OR deleted_at IS NOT NULL OR EXISTS
         (SELECT 1 FROM nodes JOIN node_review review ON review.node_id = nodes.id
           WHERE nodes.id = sync_object_state.object_id))

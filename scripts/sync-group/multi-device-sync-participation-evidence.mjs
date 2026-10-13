@@ -34,7 +34,6 @@ export function assertDesktopDepartureData(before, after, overview, fail) {
   if (overview.sync_group !== null || overview.sync_enabled !== false
       || after.localGroupId !== null || after.localMemberState !== null
       || after.activeMemberCount !== before.activeMemberCount - 1 || !localDeparture
-      || after.syncPeerCursorCount !== 0 || after.syncDeliveryReceiptCount !== 0
       || counts.some((key) => after[key] !== before[key])) {
     throw fail(`macOS departed state is incomplete: ${JSON.stringify({ after, overview })}`);
   }

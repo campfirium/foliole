@@ -93,7 +93,6 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.test.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotRows.test.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore.test.ts',
-  'src/shared/platform/companionSyncPackNodes.test.ts',
   'scripts/ios/ios-contract-assets.test.mjs',
   'scripts/ios/fri-app-retention.test.mjs',
   'scripts/ios/fri-dev-workflow.test.mjs',

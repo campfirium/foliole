@@ -9,19 +9,19 @@ import { expect, it, vi } from 'vitest';
 
 import {
   ADVERTISEMENT_REGISTERED_EVENT, captureWindowsSyncRuntimeProgress,
-  RECEIVE_CURSOR_COMMITTED_EVENT, waitForWindowsProviderDiscoverable
+  RECEIVE_OBJECT_COMMITTED_EVENT, waitForWindowsProviderDiscoverable
 } from './windows-sync-group-runtime-progress.mjs';
 
-it('observes a split committed-cursor event and preserves the runtime log', async () => {
+it('observes a split committed-object event and preserves the runtime log', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-runtime-progress-'));
   const logPath = path.join(root, 'runtime.log');
   const child = { stderr: new PassThrough(), stdout: new PassThrough() };
   const progress = captureWindowsSyncRuntimeProgress(child, logPath);
-  const midpoint = Math.floor(RECEIVE_CURSOR_COMMITTED_EVENT.length / 2);
-  child.stdout.write(RECEIVE_CURSOR_COMMITTED_EVENT.slice(0, midpoint));
-  child.stdout.write(`${RECEIVE_CURSOR_COMMITTED_EVENT.slice(midpoint)} cursor=12\n`);
-  await progress.cursorCommitted;
-  expect(fs.readFileSync(logPath, 'utf8')).toContain('receive cursor committed');
+  const midpoint = Math.floor(RECEIVE_OBJECT_COMMITTED_EVENT.length / 2);
+  child.stdout.write(RECEIVE_OBJECT_COMMITTED_EVENT.slice(0, midpoint));
+  child.stdout.write(`${RECEIVE_OBJECT_COMMITTED_EVENT.slice(midpoint)} globalId=sync-from-zero-a-1\n`);
+  await progress.objectCommitted;
+  expect(fs.readFileSync(logPath, 'utf8')).toContain('receive dataset object committed');
 });
 
 it('preserves multiline failure details after a sync runtime label', () => {
@@ -56,7 +56,7 @@ it('does not resolve for unrelated sync runtime output', async () => {
   const child = { stderr: new PassThrough(), stdout: new PassThrough() };
   const progress = captureWindowsSyncRuntimeProgress(child, path.join(root, 'runtime.log'));
   const resolved = vi.fn();
-  void progress.cursorCommitted.then(resolved);
+  void progress.objectCommitted.then(resolved);
   child.stdout.write('[sync-group] join completed\n');
   await Promise.resolve();
   expect(resolved).not.toHaveBeenCalled();

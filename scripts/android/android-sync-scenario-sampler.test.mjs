@@ -9,14 +9,8 @@ import {
 
 function createReport(overrides = {}) {
   return {
-    cursors: {
-      androidCursor: 12,
-      desktopMaxSeq: 15,
-      gap: 3,
-      pending: { liveCount: 2, tombstoneCount: 1, types: [] }
-    },
     identity: { androidEndpoint: 'http://10.0.2.2:38641', androidSerial: 'emulator-5554' },
-    localPush: { dirtyCount: 0, issueCount: 0 },
+    localPush: { dirtyCount: 0 },
     resources: {
       missingAttachmentResources: 1,
       missingExternalDocumentBodies: 2,
@@ -57,7 +51,7 @@ describe('android sync scenario sampler', () => {
     });
   });
 
-  it('formats structure, resource, cursor and latest run facts per sample', async () => {
+  it('formats structure, resource and latest run facts per sample', async () => {
     const result = await sampleSyncScenario(
       { androidDb: '/local/android.db', atSeconds: [0], platform: 'darwin' },
       async () => ({ report: createReport() }),
@@ -67,10 +61,10 @@ describe('android sync scenario sampler', () => {
     const output = formatScenarioReport(result);
 
     expect(output).toContain('=== t+0s');
-    expect(output).toContain('cursor android=12 desktop=15 gap=3');
+    expect(output).not.toContain('cursor android=');
     expect(output).toContain('parent_child_order=9/10 missing=1');
     expect(output).toContain('resources node_bodies=3 external_bodies=2 attachments=1');
-    expect(output).toContain('local_push dirty=0 issues=0');
+    expect(output).toContain('local_push dirty=0');
     expect(output).toContain('latest_run=success:Library index applied.');
   });
 

@@ -8,7 +8,6 @@ import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStag
 import { retireCompanionLegacySyncState } from '../../lib/core/database/legacySyncRetirement.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { stageFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { projectFramedSyncParentRelation, projectFramedSyncReview, restoreFramedSyncReview } from '../../lib/core/sync/framedSyncRelationReviewFact.js';
 
@@ -157,8 +156,9 @@ function businessRows(db: Database.Database) {
 async function publication(host: ReturnType<typeof textDevice>, record: ReturnType<typeof textBranch>) {
   const projection = projectFramedSyncNodeRecord(record);
   const manifest = projection.manifest;
-  const port = createBetterSqliteDbPort(host.sqlite);
-  await stageFramedSyncFrozenBody(port, manifest.blobs[0]!, projection.bodyBlob);
+  const blob = manifest.blobs[0]!;
+  host.sqlite.prepare('INSERT INTO framed_sync_available_blobs (sha256, byte_length, data) VALUES (?, ?, ?)')
+    .run(blob.sha256, blob.byteLength, projection.bodyBlob);
   await publishManifest(host, manifest, projection.bodyBlob.length);
 }
 

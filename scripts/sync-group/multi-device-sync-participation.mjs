@@ -44,11 +44,7 @@ function androidSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID,
     includeAttachments: false, includeEvents: false,
     serial: A5_SERIAL, tables: ['attachments', 'content_blobs', 'nodes'],
-    databaseInspector: (database) => ({ ...inspectPairSyncRecoveryWorkspace(database),
-      syncDeliveryReceiptCount: Number(database.prepare(
-        'SELECT COUNT(*) AS value FROM sync_delivery_receipts').get()?.value ?? 0),
-      syncPeerCursorCount: Number(database.prepare(
-        'SELECT COUNT(*) AS value FROM sync_peer_cursors').get()?.value ?? 0) }) });
+    databaseInspector: inspectPairSyncRecoveryWorkspace });
 }
 
 async function macosFacts(execute, repoRoot, databasePath, factIds = []) {
@@ -148,8 +144,7 @@ async function leaveAndroid(context, before) {
   await delay(1_000);
   const after = await androidSnapshot(context.paths);
   const inspection = after.database?.inspection;
-  if (inspection?.syncGroupId !== null || inspection?.syncPeerCursorCount !== 0
-      || inspection?.syncDeliveryReceiptCount !== 0
+  if (inspection?.syncGroupId !== null
       || after.database.counts.nodes !== before.database.counts.nodes
       || after.database.counts.content_blobs !== before.database.counts.content_blobs
       || after.database.counts.attachments !== before.database.counts.attachments) {

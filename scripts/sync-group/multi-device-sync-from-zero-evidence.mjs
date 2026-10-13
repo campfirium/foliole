@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from '../android/android-device-snapshot.mjs';
 import {
-  identityFingerprint, inspectPairSyncRecoveryWorkspace
+  inspectPairSyncRecoveryWorkspace
 } from '../android/android-pair-sync-recovery-readiness.mjs';
 import { A5_SERIAL } from '../android/macos-a5-dev.mjs';
 import {
@@ -15,19 +15,11 @@ import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile
 
 const APP_ID = MULTI_DEVICE_ANDROID_APP_ID;
 
-function peerProgress(database) {
-  return database.prepare(`SELECT peer_id, stream_name, cursor_value FROM sync_peer_cursors
-    ORDER BY stream_name, peer_id`).all().map(({ cursor_value, peer_id, stream_name }) => ({
-    cursorValue: cursor_value, peerFingerprint: identityFingerprint(peer_id), streamName: stream_name
-  }));
-}
-
 export function collectAndroidSyncFromZeroSnapshot(paths) {
   return collectAndroidDeviceSnapshot({ adb: paths.adb, appId: APP_ID, includeAttachmentFacts: true, includeAttachments: true,
     includeEvents: false, serial: A5_SERIAL,
     tables: ['attachments', 'content_blobs', 'nodes'], databaseInspector: (database, archive) => ({
-      ...inspectPairSyncRecoveryWorkspace(database), ...inspectSyncFromZeroDatasetFacts(database, archive?.files?.map(({ contentHash }) => contentHash)),
-      peerCursors: peerProgress(database)
+      ...inspectPairSyncRecoveryWorkspace(database), ...inspectSyncFromZeroDatasetFacts(database, archive?.files?.map(({ contentHash }) => contentHash))
     }) });
 }
 

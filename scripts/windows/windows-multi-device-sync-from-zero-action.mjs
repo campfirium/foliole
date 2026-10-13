@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { createSyncProgressWatchdog } from '../sync-group/sync-progress-watchdog.mjs';
 import {
-  assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts, SYNC_FROM_ZERO_DATASET
+  assertSyncFromZeroCommittedFacts, assertSyncFromZeroDatasetFacts, SYNC_FROM_ZERO_DATASET
 } from '../sync-group/sync-from-zero-contract.mjs';
 import {
   restoreWindowsNativeClient, suspendWindowsNativeClient
@@ -17,17 +17,16 @@ import {
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession, resetOwnedClient
 } from './windows-sync-group-recovery-action.mjs';
 
-function assertEmptyCursor(facts) {
-  if (facts.receiveCursor !== 0 || facts.syncPeerCursorCount !== 0
-      || facts.datasetNodeCount !== 0 || facts.datasetAttachmentCount !== 0) {
-    throw new Error(`Windows C did not start from cursor zero: ${JSON.stringify(facts)}`);
+function assertEmptyDataset(facts) {
+  if (facts.datasetNodeCount !== 0 || facts.datasetAttachmentCount !== 0) {
+    throw new Error(`Windows C did not start from an empty dataset: ${JSON.stringify(facts)}`);
   }
 }
 
 function assertCommittedPartial(facts) {
-  if (facts.receiveCursor <= 0 || facts.datasetNodeCount !== SYNC_FROM_ZERO_DATASET.nodeCount
-      || (facts.datasetCachedContentBlobCount === SYNC_FROM_ZERO_DATASET.nodeCount
-        && facts.datasetCachedAttachmentCount === SYNC_FROM_ZERO_DATASET.attachmentCount)) {
+  if (facts.datasetNodeCount <= 0 || facts.datasetNodeCount >= SYNC_FROM_ZERO_DATASET.nodeCount
+      || facts.datasetNodeIds?.length !== facts.datasetNodeCount
+      || facts.datasetContentHashes?.length !== facts.datasetNodeCount) {
     throw new Error(`Windows C did not expose a committed partial sync boundary: ${JSON.stringify(facts)}`);
   }
 }
@@ -49,7 +48,7 @@ async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeo
   let facts = null;
   while (Date.now() < deadline) {
     facts = await inspect();
-    const state = [facts.receiveCursor, facts.datasetNodeCount,
+    const state = [facts.datasetNodeCount,
       facts.datasetCachedContentBlobCount, facts.datasetCachedAttachmentCount];
     observe(JSON.stringify(state), facts);
     onObserved(facts);
@@ -59,10 +58,10 @@ async function waitForFacts(label, inspect, accept, onObserved = () => {}, timeo
   throw new Error(`${label} timed out: ${JSON.stringify(facts)}`);
 }
 
-function waitForCursorCommitSignal(signal, timeoutMs = 45_000) {
+function waitForObjectCommitSignal(signal, timeoutMs = 45_000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error('Windows C did not report its first committed cursor.'));
+      reject(new Error('Windows C did not report its first committed dataset object.'));
     }, timeoutMs);
     signal.then((value) => {
       clearTimeout(timer); resolve(value);
@@ -93,32 +92,30 @@ function waitForCompleteFacts(inspect, reportProgress) {
 export async function runWindowsSyncFromZeroJourney(actions) {
   const report = (milestone) => actions.reportProgress({ factId: 'sync-from-zero', milestone });
   const initialFacts = await actions.reset();
-  assertEmptyCursor(initialFacts); report('c-cursor-zero');
-  let session = await actions.openSession({ holdAfterCursorCommit: true });
+  assertEmptyDataset(initialFacts); report('c-dataset-empty');
+  let session = await actions.openSession({ holdAfterObjectCommit: true });
   try {
     await actions.enable(session.page);
     const candidate = await actions.discover(session.page); report('c-group-discovered');
     await actions.requestJoin(session.page, candidate.endpoint_url); report('c-join-requested');
-    await actions.waitForCursorCommitted(session.cursorCommitted);
+    await actions.waitForObjectCommitted(session.objectCommitted);
     await actions.closeSession(session, { force: true }); session = null;
     const interruptedFacts = await actions.inspect();
     assertCommittedPartial(interruptedFacts);
     assertJoinedGroup(interruptedFacts, candidate.group_id);
     const firstCommittedFacts = interruptedFacts;
     report('c-membership-active');
-    report('c-first-cursor-committed'); report('c-object-batches-received');
+    report('c-first-object-committed'); report('c-object-batches-received');
     report('c-controlled-interruption');
     session = await actions.openSession();
     const restartedFacts = await actions.inspect();
-    if (restartedFacts.receiveCursor < firstCommittedFacts.receiveCursor) {
-      throw new Error('Windows C restarted behind its committed cursor.');
-    }
-    report('c-restarted-from-cursor');
+    assertSyncFromZeroCommittedFacts({ initialFacts, firstCommittedFacts, interruptedFacts, restartedFacts });
+    report('c-restarted-with-committed-objects');
     const finalFacts = await actions.waitForComplete(report);
     const receipt = { candidate: { groupId: candidate.group_id,
       providerKind: candidate.provider_device_kind }, finalFacts, firstCommittedFacts,
     initialFacts, interruptedFacts, restartedFacts, resultStatus: 'success', schemaVersion: 1 };
-    assertSyncFromZeroCursorContinuity(receipt);
+    assertSyncFromZeroCommittedFacts(receipt);
     return receipt;
   } finally {
     if (session) await actions.closeSession(session).catch(() => undefined);
@@ -147,7 +144,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       ),
       reset: () => resetOwnedClient(paths, evidenceRoot, execute),
       waitForComplete: (report) => waitForCompleteFacts(inspect, report),
-      waitForCursorCommitted: waitForCursorCommitSignal
+      waitForObjectCommitted: waitForObjectCommitSignal
     });
   } catch (error) { primaryError = error; }
   try {

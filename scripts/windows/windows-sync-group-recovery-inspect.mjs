@@ -44,27 +44,15 @@ function journeyFactUpdates(database) {
   return Object.fromEntries(rows.map(({ id, updated_at }) => [id, updated_at]));
 }
 
-function peerProgress(database) {
-  const cursors = database.prepare(`SELECT peer_id, stream_name, cursor_value
-    FROM sync_peer_cursors ORDER BY stream_name, peer_id`).all();
-  const deliveryRows = database.prepare(`SELECT status, COUNT(*) AS count
-    FROM sync_delivery_receipts GROUP BY status ORDER BY status`).all();
-  const receiveCursor = cursors.filter(({ stream_name }) => stream_name === 'state')
-    .reduce((maximum, { cursor_value }) => Math.max(maximum, Number(cursor_value) || 0), 0);
-  return {
-    deliveryStatusCounts: Object.fromEntries(deliveryRows.map(({ count, status }) => [status, Number(count)])),
-    peerCursors: cursors.map(({ cursor_value, peer_id, stream_name }) => ({
-      cursorValue: cursor_value, peerFingerprint: identityFingerprint(peer_id), streamName: stream_name
-    })),
-    receiveCursor
-  };
-}
-
 export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
   const db = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const availableAttachmentIds = readVerifiedAttachmentIds(path.resolve(path.dirname(databasePath), '..', 'Assets'));
     const count = (sql) => Number(db.prepare(sql).pluck().get() ?? 0);
+    const attachmentIds = db.prepare(`SELECT DISTINCT
+      substr(json_extract(resource.value, '$.storage_key'), 1, 64) AS attachment_id
+      FROM nodes owner, json_each(owner.resource_references) resource
+      ORDER BY attachment_id`).pluck().all();
     const local = db.prepare(`SELECT local.group_id, local.local_device_identity_key,
       device.device_name AS local_host_name, local.state AS member_state, NULL AS timeline_id
       FROM sync_group_local_state local
@@ -77,11 +65,10 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
     const facts = Object.fromEntries(factIds.map((id) => [id, Number(factExists.get(id)) === 1]));
     return {
       ...inspectSyncFromZeroDatasetFacts(db, availableAttachmentIds),
-      ...peerProgress(db),
       activeHosts: activeHosts(db),
       activeMemberCount: count("SELECT COUNT(*) FROM sync_group_devices WHERE state = 'active'"),
-      attachmentCount: count('SELECT COUNT(*) FROM attachments'),
-      attachmentIds: db.prepare('SELECT id FROM attachments ORDER BY id').pluck().all(),
+      attachmentCount: attachmentIds.length,
+      attachmentIds,
       availableAttachmentIds,
       cachedAttachmentIds: availableAttachmentIds,
       contentBlobCount: count('SELECT COUNT(*) FROM content_blobs'),
@@ -96,14 +83,12 @@ export function inspectSyncGroupRecoveryDatabase(databasePath, factIds = []) {
       localHostName: local?.local_host_name ?? null,
       localMemberState: local?.member_state ?? null,
       localTimelineId: local?.timeline_id ?? null,
-      missingAttachmentCount: null,
+      missingAttachmentCount: attachmentIds.filter(id => !availableAttachmentIds.includes(id)).length,
       missingContentBlobCount: count(`SELECT COUNT(*) FROM content_blobs cb
         LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`),
       maxStateSeq: count('SELECT MAX(state_seq) FROM sync_object_state'),
       nodeCount: count('SELECT COUNT(*) FROM nodes'),
       reviewLogCount: count('SELECT COUNT(*) FROM review_log'),
-      syncDeliveryReceiptCount: count('SELECT COUNT(*) FROM sync_delivery_receipts'),
-      syncPeerCursorCount: count('SELECT COUNT(*) FROM sync_peer_cursors'),
       userNodeCount: count(`SELECT COUNT(*) FROM nodes
         WHERE deleted_at IS NULL AND id NOT IN ('special-inbox', 'special-virtual-root')`)
     };

@@ -45,7 +45,6 @@ export const LEGACY_FLAT_PLATFORM_BASENAMES = new Set([
   'companionSyncNodeVersions.ts',
   'companionSyncNodeVersionsTestSupport.ts',
   'companionSyncObjects.ts',
-  'companionSyncPackNodes.ts',
   'companionSyncPushProtocol.ts',
   'companionSyncReviewLogApply.ts',
   'companionSyncStateObjectIdentity.ts',

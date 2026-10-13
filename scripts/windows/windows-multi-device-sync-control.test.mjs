@@ -74,7 +74,7 @@ it('copies only the fixed participation receipt', async () => {
 
 it('streams progress and copies only the fixed sync-from-zero receipt', async () => {
   const progress = '[windows-dev-action] progress action=multi-device-sync-from-zero '
-    + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-first-cursor-committed '
+    + 'nonce=12345678-1234-1234-1234-123456789abc milestone=c-first-object-committed '
     + 'fact=sync-from-zero\n';
   const receipt = '[windows-dev-action] multi-device-sync-from-zero '
     + 'identity=run-5 manifest=D:\\C\\foliole\\.tmp\\artifacts\\'

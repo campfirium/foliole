@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 
 import { SYNC_OBJECT_APPLY_BATCH_SIZE } from '../../lib/core/sync/syncObjectApplyExecutor.ts';
 import {
-  assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
+  assertSyncFromZeroCommittedFacts, assertSyncFromZeroDatasetFacts,
   SYNC_FROM_ZERO_DATASET
 } from './sync-from-zero-contract.mjs';
 
@@ -22,26 +22,33 @@ it('requires exact dataset resources instead of accepting generic nonempty facts
     .toThrow('dataset is incomplete');
 });
 
-it('accepts only cursor zero followed by committed, restart-stable forward progress', () => {
-  const receipt = { finalFacts: { receiveCursor: 90 }, firstCommittedFacts: { receiveCursor: 80 },
-    initialFacts: { receiveCursor: 0 }, interruptedFacts: { receiveCursor: 80 },
-    restartedFacts: { receiveCursor: 80 } };
-  expect(assertSyncFromZeroCursorContinuity(receipt)).toBe(receipt);
-  expect(() => assertSyncFromZeroCursorContinuity({
-    ...receipt, restartedFacts: { receiveCursor: 0 }
-  })).toThrow('cursor continuity is invalid');
+it('retains committed IDs and hashes after interruption, restart and completion', () => {
+  const committed = { datasetNodeCount: 1, datasetNodeIds: ['one'], datasetContentHashes: ['hash'] };
+  const receipt = { finalFacts: { datasetNodeIds: ['one', 'two'], datasetContentHashes: ['hash', 'second'] },
+    firstCommittedFacts: committed, initialFacts: { datasetNodeCount: 0 },
+    interruptedFacts: committed, restartedFacts: committed };
+  expect(assertSyncFromZeroCommittedFacts(receipt)).toBe(receipt);
+  for (const restartedFacts of [{ datasetNodeIds: [], datasetContentHashes: [] },
+    { datasetNodeIds: ['one'], datasetContentHashes: ['changed'] }]) {
+    expect(() => assertSyncFromZeroCommittedFacts({ ...receipt, restartedFacts }))
+      .toThrow('committed dataset facts changed');
+  }
 });
 
-it('reads the desktop receive cursor from the stable state stream', () => {
-  const inspector = fs.readFileSync(
-    'scripts/windows/windows-sync-group-recovery-inspect.mjs', 'utf8'
-  );
-  const androidEvidence = fs.readFileSync(
-    'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs', 'utf8'
-  );
-  expect(inspector).toContain("stream_name === 'state'");
-  for (const source of [inspector, androidEvidence]) {
-    expect(source).toContain('SELECT peer_id, stream_name, cursor_value');
-    expect(source).not.toContain('SELECT authorization_id, stream_name, cursor_value');
+it('rejects empty or already complete data as the controlled partial commit', () => {
+  for (const count of [0, 40]) {
+    const committed = { datasetNodeCount: count,
+      datasetNodeIds: Array.from({ length: count }, (_, index) => `node-${index}`),
+      datasetContentHashes: Array.from({ length: count }, (_, index) => `hash-${index}`) };
+    expect(() => assertSyncFromZeroCommittedFacts({ firstCommittedFacts: committed,
+      initialFacts: { datasetNodeCount: 0 }, interruptedFacts: committed, restartedFacts: committed }))
+      .toThrow('committed dataset evidence is incomplete');
+  }
+});
+
+it('does not read retired cursor tables to inspect the dataset', () => {
+  for (const file of ['scripts/windows/windows-sync-group-recovery-inspect.mjs',
+    'scripts/sync-group/multi-device-sync-from-zero-evidence.mjs']) {
+    expect(fs.readFileSync(file, 'utf8')).not.toContain('FROM sync_peer_cursors');
   }
 });

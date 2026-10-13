@@ -41,7 +41,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).not.toContain("from 'better-sqlite3'");
   expect(inspector).toContain("from 'better-sqlite3'");
   expect(inspector).toContain('readonly: true');
-  expect(inspector).toContain('SELECT peer_id, stream_name, cursor_value');
+  expect(inspector).not.toContain('FROM sync_peer_cursors');
   expect(inspector).not.toContain('SELECT authorization_id, stream_name, cursor_value');
   expect(remote).toContain('suspendWindowsNativeClient');
   expect(remote).toContain('restoreWindowsNativeClient');
@@ -53,7 +53,7 @@ it('keeps stable desktop A and Windows C on a real LAN Sync Group path', () => {
   expect(remote).toContain("FOLIOLE_ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT: '1'");
   expect(cursorCommit).toContain("env[ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT] !== '1'");
   expect(runtimeProgress).toContain('captureSyncRuntimeLog(child, logPath');
-  expect(runtimeProgress).toContain('RECEIVE_CURSOR_COMMITTED_EVENT');
+  expect(runtimeProgress).toContain('RECEIVE_OBJECT_COMMITTED_EVENT');
   expect(remote).toContain("'sync-group-runtime.log'");
   expect(remote).toContain('Ordinary sync pack failed before apply');
   expect(ownedClient).toContain('facts.activeMemberCount < 2');

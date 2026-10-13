@@ -4,19 +4,19 @@ import { clearTimeout, setTimeout } from 'node:timers';
 
 import { captureSyncRuntimeLog } from '../sync-group/sync-runtime-log.mjs';
 
-export const RECEIVE_CURSOR_COMMITTED_EVENT = '[sync-group] receive cursor committed';
+export const RECEIVE_OBJECT_COMMITTED_EVENT = '[sync-group] receive dataset object committed';
 export const ADVERTISEMENT_REGISTERED_EVENT = '"event":"register_completed"';
 
 export function captureWindowsSyncRuntimeProgress(child, logPath) {
-  let cursorCommitted = false;
+  let objectCommitted = false;
   let resolveCursorCommitted;
   const committed = new Promise((resolve) => { resolveCursorCommitted = resolve; });
   let advertisementRegistered = false;
   let resolveAdvertisementRegistered;
   const registered = new Promise((resolve) => { resolveAdvertisementRegistered = resolve; });
   captureSyncRuntimeLog(child, logPath, (text) => {
-    if (!cursorCommitted && text.includes(RECEIVE_CURSOR_COMMITTED_EVENT)) {
-      cursorCommitted = true;
+    if (!objectCommitted && text.includes(RECEIVE_OBJECT_COMMITTED_EVENT)) {
+      objectCommitted = true;
       resolveCursorCommitted();
     }
     if (!advertisementRegistered && text.includes(ADVERTISEMENT_REGISTERED_EVENT)) {
@@ -24,7 +24,7 @@ export function captureWindowsSyncRuntimeProgress(child, logPath) {
       resolveAdvertisementRegistered();
     }
   });
-  return { advertisementRegistered: registered, cursorCommitted: committed };
+  return { advertisementRegistered: registered, objectCommitted: committed };
 }
 
 export function waitForWindowsProviderDiscoverable(progress, timeoutMs = 30_000) {

@@ -37,7 +37,7 @@ export async function waitForWindowsClientDatabase(paths, {
   return waitForWindowsDatabaseFile(databasePath, { exists, pause, timeoutMs });
 }
 
-function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
+function launchOptions(paths, { holdAfterObjectCommit = false } = {}) {
   const { libraryHome, userData } = windowsSyncGroupClientPaths(paths);
   return {
     args: [path.join(paths.repoRoot, 'dist/electron/main.js')], cwd: paths.repoRoot,
@@ -46,7 +46,7 @@ function launchOptions(paths, { holdAfterCursorCommit = false } = {}) {
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1', FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
       FOLIOLE_LIBRARY_HOME: libraryHome, FOLIOLE_SESSION_DATA_PATH: userData,
       FOLIOLE_USER_DATA_PATH: userData, FOLIOLE_WORKDIR: paths.repoRoot,
-      ...(holdAfterCursorCommit ? { FOLIOLE_ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT: '1' } : {}) },
+      ...(holdAfterObjectCommit ? { FOLIOLE_ACCEPTANCE_HOLD_AFTER_SYNC_CURSOR_COMMIT: '1' } : {}) },
     executablePath: path.join(paths.repoRoot, 'node_modules/electron/dist/electron.exe'), timeout: 90_000
   };
 }

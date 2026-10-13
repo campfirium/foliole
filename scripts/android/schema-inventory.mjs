@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.ts';
+
 import {
   extractArrayBody,
   extractStatementsFromBody,
@@ -96,7 +98,7 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   statements.push(extractStatementsFromBody(
     readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.SYNC_GROUP_SCHEMA_STATEMENTS), arrays)[0]);
   return statements.filter((statement) =>
-    !/CREATE (?:TABLE|INDEX) IF NOT EXISTS (?:attachments|node_attachments|idx_node_attachments_attachment_id|node_order)\b/.test(statement));
+    !isRetiredSyncSchema(statement) && !/CREATE (?:TABLE|INDEX) IF NOT EXISTS (?:attachments|node_attachments|idx_node_attachments_attachment_id|node_order)\b/.test(statement));
 }
 
 export function loadAndroidSchemaAssetStatements(repoRoot = REPO_ROOT) {

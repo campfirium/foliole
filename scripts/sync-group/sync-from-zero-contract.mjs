@@ -7,14 +7,14 @@ export const SYNC_FROM_ZERO_DATASET = Object.freeze({
 });
 
 export const WINDOWS_SYNC_FROM_ZERO_PROGRESS = Object.freeze([
-  'c-cursor-zero',
+  'c-dataset-empty',
   'c-group-discovered',
   'c-join-requested',
   'c-membership-active',
-  'c-first-cursor-committed',
+  'c-first-object-committed',
   'c-object-batches-received',
   'c-controlled-interruption',
-  'c-restarted-from-cursor',
+  'c-restarted-with-committed-objects',
   'c-content-batches-received',
   'c-attachment-batches-received'
 ]);
@@ -38,17 +38,24 @@ export function assertSyncFromZeroDatasetFacts(facts, dataset = SYNC_FROM_ZERO_D
   return facts;
 }
 
-export function assertSyncFromZeroCursorContinuity(receipt) {
-  const initial = receipt.initialFacts?.receiveCursor ?? 0;
-  const committed = receipt.firstCommittedFacts?.receiveCursor ?? 0;
-  const interrupted = receipt.interruptedFacts?.receiveCursor ?? 0;
-  const restarted = receipt.restartedFacts?.receiveCursor ?? 0;
-  const final = receipt.finalFacts?.receiveCursor ?? 0;
-  if (initial !== 0 || committed <= 0 || interrupted !== committed
-      || restarted < committed || final < restarted) {
-    throw new Error(`Sync-from-zero cursor continuity is invalid: ${JSON.stringify({
-      committed, final, initial, interrupted, restarted
-    })}`);
+export function assertSyncFromZeroCommittedFacts(receipt) {
+  const committed = receipt.firstCommittedFacts;
+  const ids = committed?.datasetNodeIds;
+  const hashes = committed?.datasetContentHashes;
+  if (receipt.initialFacts?.datasetNodeCount !== 0 || !Array.isArray(ids) || !Array.isArray(hashes)
+      || ids.length === 0 || ids.length >= SYNC_FROM_ZERO_DATASET.nodeCount
+      || ids.length !== committed.datasetNodeCount || hashes.length !== ids.length
+      || new Set(ids).size !== ids.length || [...ids, ...hashes].some(value => typeof value !== 'string' || !value)) {
+    throw new Error('Sync-from-zero committed dataset evidence is incomplete.');
+  }
+  for (const facts of [receipt.interruptedFacts, receipt.restartedFacts, receipt.finalFacts].filter(Boolean)) {
+    const retained = new Map((facts.datasetNodeIds ?? []).map((id, index) => [id, facts.datasetContentHashes?.[index]]));
+    if (ids.some((id, index) => !retained.has(id) || retained.get(id) !== hashes[index])) {
+      throw new Error('Sync-from-zero committed dataset facts changed after interruption.');
+    }
+  }
+  if (!receipt.interruptedFacts || !receipt.restartedFacts) {
+    throw new Error('Sync-from-zero restart evidence is incomplete.');
   }
   return receipt;
 }

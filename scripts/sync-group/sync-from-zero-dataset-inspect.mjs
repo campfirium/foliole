@@ -1,20 +1,20 @@
+import { createHash } from 'node:crypto';
+
 import {
   syncFromZeroDatasetDigest, SYNC_FROM_ZERO_DATASET
 } from './sync-from-zero-contract.mjs';
 
-function scalar(database, sql, prefix) {
-  const statement = database.prepare(sql);
-  return Number(typeof statement.pluck === 'function'
-    ? statement.pluck().get(prefix) ?? 0 : statement.get(prefix)?.count ?? 0);
-}
-
 export function inspectSyncFromZeroDatasetFacts(database, availableAttachmentIds = null) {
   const prefix = `${SYNC_FROM_ZERO_DATASET.nodePrefix}%`;
-  const nodes = database.prepare(`SELECT id, body_blob_hash FROM nodes
-    WHERE id LIKE ? AND deleted_at IS NULL ORDER BY id`).all(prefix);
-  const attachments = database.prepare(`SELECT na.node_id, a.id AS attachment_id, a.id AS content_hash
-    FROM node_attachments na JOIN attachments a ON a.id = na.attachment_id
-    WHERE na.node_id LIKE ? ORDER BY na.node_id, a.id`).all(prefix);
+  const nodes = database.prepare(`SELECT n.id, n.body_blob_hash, n.content, v.body_text
+    FROM nodes n LEFT JOIN node_sync_versions v ON v.version_id = n.current_version_id AND v.object_id = n.id
+    WHERE n.id LIKE ? AND n.deleted_at IS NULL ORDER BY n.id`).all(prefix);
+  const completeBodies = nodes.filter(node => typeof node.body_text === 'string' &&
+    createHash('sha256').update(node.body_text).digest('hex') === node.body_blob_hash);
+  const attachments = database.prepare(`SELECT owner.id AS node_id,
+    substr(json_extract(resource.value, '$.storage_key'), 1, 64) AS attachment_id
+    FROM nodes owner, json_each(owner.resource_references) resource
+    WHERE owner.id LIKE ? AND owner.deleted_at IS NULL ORDER BY owner.id, attachment_id`).all(prefix);
   const attachmentIds = attachments.map(({ attachment_id }) => attachment_id);
   const contentHashes = nodes.map(({ body_blob_hash }) => body_blob_hash);
   const nodeIds = nodes.map(({ id }) => id);
@@ -23,12 +23,8 @@ export function inspectSyncFromZeroDatasetFacts(database, availableAttachmentIds
     datasetAttachmentIds: attachmentIds,
     datasetCachedAttachmentCount: availableAttachmentIds == null ? null
       : attachments.filter(({ attachment_id }) => availableAttachmentIds.includes(attachment_id)).length,
-    datasetCachedContentBlobCount: scalar(database, `SELECT COUNT(DISTINCT n.body_blob_hash) AS count
-      FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`, prefix),
-    datasetContentBlobCount: scalar(database, `SELECT COUNT(DISTINCT n.body_blob_hash) AS count
-      FROM nodes n JOIN content_blobs cb ON cb.hash = n.body_blob_hash
-      WHERE n.id LIKE ? AND n.deleted_at IS NULL`, prefix),
+    datasetCachedContentBlobCount: completeBodies.filter(node => node.content === node.body_text).length,
+    datasetContentBlobCount: completeBodies.length,
     datasetContentHashes: contentHashes,
     datasetDigest: syncFromZeroDatasetDigest({ attachmentIds, contentHashes, nodeIds }),
     datasetNodeCount: nodes.length,

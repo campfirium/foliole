@@ -18,7 +18,7 @@ import { settleSiblingActions } from './multi-device-sync-stage-runtime.mjs';
 import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import {
-  assertSyncFromZeroCursorContinuity, assertSyncFromZeroDatasetFacts,
+  assertSyncFromZeroCommittedFacts, assertSyncFromZeroDatasetFacts,
   WINDOWS_SYNC_FROM_ZERO_PROGRESS
 } from './sync-from-zero-contract.mjs';
 import { windowsSyncGroupCommand } from './multi-device-sync-windows-command.mjs';
@@ -40,7 +40,7 @@ function windowsEvidence(output, repoRoot) {
   if (!fs.existsSync(evidenceRef)) throw productFailure('windows-c',
     'windows_sync_from_zero_receipt_missing', 'Windows C sync-from-zero receipt was not copied.');
   const receipt = JSON.parse(fs.readFileSync(evidenceRef, 'utf8'));
-  assertSyncFromZeroCursorContinuity(receipt);
+  assertSyncFromZeroCommittedFacts(receipt);
   assertSyncFromZeroDatasetFacts(receipt.finalFacts);
   return { evidenceRef, receipt };
 }
@@ -61,8 +61,8 @@ function windowsProgressCapture(reportActivity) {
       seen.add(milestone);
       const activity = milestone.includes('content') || milestone.includes('attachment')
         ? 'windows-resource-progress'
-        : milestone.includes('cursor') || milestone.includes('interruption')
-          ? 'windows-cursor-progress' : 'windows-join-progress';
+        : milestone.includes('object') || milestone.includes('interruption')
+          ? 'windows-object-progress' : 'windows-join-progress';
       reportActivity(activity);
     }
   };

@@ -1,4 +1,3 @@
-import { isReviewRequiredPushIssueObjectType } from '../../lib/core/sync/syncObjectPolicy.ts';
 
 function tableExists(db, table) {
   return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) !== undefined;
@@ -63,72 +62,31 @@ function unreferencedMissingSql() {
   WHERE b.availability = 'missing' AND r.hash IS NULL`;
 }
 
-function pendingDesktopChanges(db, cursor) {
-  if (!tableExists(db, 'sync_object_state')) return { liveCount: 0, tombstoneCount: 0, types: [] };
-  const rows = db.prepare(
-    `SELECT object_type,
-      SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS live_count,
-      SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS tombstone_count
-     FROM sync_object_state
-     WHERE state_seq > ?
-     GROUP BY object_type
-     ORDER BY object_type`
-  ).all(cursor);
-  return {
-    liveCount: rows.reduce((sum, row) => sum + row.live_count, 0),
-    tombstoneCount: rows.reduce((sum, row) => sum + row.tombstone_count, 0),
-    types: rows.map((row) => ({
-      liveCount: row.live_count,
-      objectType: row.object_type,
-      tombstoneCount: row.tombstone_count
-    }))
-  };
-}
-
 function localPushBlockers(db) {
   if (!tableExists(db, 'sync_object_state')) return emptyLocalPushBlockers();
   const dirtyRows = db.prepare(
     `SELECT object_type, COUNT(*) AS count FROM sync_object_state
      WHERE sync_dirty = 1 AND object_type <> 'view_state' GROUP BY object_type ORDER BY object_type`
   ).all();
-  const pushIssueRows = tableExists(db, 'sync_delivery_receipts')
-    ? db.prepare(
-        `SELECT status, object_type, COUNT(*) AS count FROM sync_delivery_receipts
-         WHERE status IN ('conflict', 'rejected')
-         GROUP BY status, object_type ORDER BY status, object_type`
-      ).all().filter((row) => isReviewRequiredPushIssueObjectType(row.object_type))
-    : [];
   return {
     dirtyCount: dirtyRows.reduce((sum, row) => sum + row.count, 0),
-    dirtyTypes: dirtyRows.map((row) => ({ count: row.count, objectType: row.object_type })),
-    issueCount: pushIssueRows.reduce((sum, row) => sum + row.count, 0),
-    issueTypes: pushIssueRows.map((row) => ({
-      count: row.count,
-      objectType: row.object_type,
-      status: row.status
-    }))
+    dirtyTypes: dirtyRows.map((row) => ({ count: row.count, objectType: row.object_type }))
   };
 }
 
 function emptyLocalPushBlockers() {
-  return { dirtyCount: 0, dirtyTypes: [], issueCount: 0, issueTypes: [] };
+  return { dirtyCount: 0, dirtyTypes: [] };
 }
 
 function suspectLayer(report) {
   if (!report.identity.androidEndpoint) return 'pairing/source mismatch: Android workspace endpoint is missing';
-  if (report.cursors.androidCursor > report.cursors.desktopMaxSeq) return 'cursor advancement: Android cursor is ahead of desktop';
-  if (report.localPush.issueCount > 0) return 'local push conflict or rejection left Android changes unsent';
   const nodeOrder = report.structural.find((item) => item.name === 'parent_child_order');
   if (nodeOrder?.missingOnAndroid.length || nodeOrder?.positionMismatches.length) return 'parent_child_order apply';
-  if (report.structural.some((item) => item.missingOnAndroid.length)) return 'pack apply or pack builder';
+  if (report.structural.some((item) => item.missingOnAndroid.length)) return 'structural differences observed';
   if (report.content.missingMetadata.length) return 'content_blobs metadata sync';
   if (report.resources.availableWithoutData.length) return 'resource pull wrote availability without bytes';
   if (report.resources.missingReferencedContentBlobs > 0 || report.resources.missingAttachmentResources > 0) return 'resource pull backlog';
-  if (report.cursors.pending.liveCount === 0 && report.cursors.pending.tombstoneCount > 0) {
-    return 'pending tombstone-only changes; visible structure is converged';
-  }
-  if (report.cursors.desktopMaxSeq > report.cursors.androidCursor) return 'structure pack not fully pulled';
   return 'no obvious structural break';
 }
 
-export { localPushBlockers, pendingDesktopChanges, resourceBacklog, suspectLayer };
+export { localPushBlockers, resourceBacklog, suspectLayer };

@@ -2,12 +2,9 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore.js';
-import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { publishLocalNodePositionWithDriver } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
-import { prepareInboundApply } from '../sync/desktopFramedSyncPreparedInbound.js';
 
-import { selectDesktopFramedSyncNodeManifest } from './desktopFramedSyncOutboundSelection.js';
 import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
@@ -35,21 +32,4 @@ it('discovers the original production member position declaration', async () => 
   const inventory = await readFramedSyncInventory(source.port);
   expect(inventory.filter((entry) => entry.objectType === 'node_position').map((entry) => entry.globalId))
     .toEqual(facts.map((fact) => (fact as { fact_id: string }).fact_id));
-});
-
-
-it('selects and decodes current source facts through the production framed path', async () => {
-  const source = createPeer('order-transfer');
-  const receiver = createPeer('order-target');
-  saveLocalCurrentParentOrder(source.driver, { parentId: 'root', childIds: ['late-node'],
-    now: '2026-10-06T00:00:00.000Z', hostName: source.name });
-  const local = await readFramedSyncInventory(source.port);
-  const differences = compareFramedSyncInventories({ local, remote: await readFramedSyncInventory(receiver.port) });
-  const difference = differences.find((item) => item.objectType === 'parent_child_order');
-  expect(difference).toBeDefined();
-  const manifest = await selectDesktopFramedSyncNodeManifest(source.port, difference!);
-  const decoded = prepareInboundApply(manifest.facts, []);
-  expect(decoded.stateRecords).toContainEqual(expect.objectContaining({
-    object_type: 'parent_child_order', object_id: difference!.globalId
-  }));
 });

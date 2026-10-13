@@ -61,7 +61,6 @@ async function sampleSyncScenario(options, runner = runAudit, sleeper = sleep) {
 function summarizeSample(report, elapsedSeconds, targetSecond) {
   const counts = structureCounts(report);
   return {
-    cursor: report.cursors,
     elapsedSeconds,
     endpoint: report.identity.androidEndpoint ?? 'missing',
     localPush: report.localPush,
@@ -104,11 +103,9 @@ function formatScenarioSample(sample) {
   return [
     `=== t+${sample.targetSecond}s sampled at +${sample.elapsedSeconds}s ===`,
     `serial=${sample.serial} endpoint=${sample.endpoint}`,
-    `cursor android=${sample.cursor.androidCursor} desktop=${sample.cursor.desktopMaxSeq} gap=${sample.cursor.gap}`,
     `structure nodes=${formatCount(sample.structural.nodes)} parent_child_order=${formatCount(sample.structural.parent_child_order)} external_documents=${formatCount(sample.structural.external_documents)}`,
-    `pending live=${sample.cursor.pending.liveCount} tombstones=${sample.cursor.pending.tombstoneCount}`,
     `resources node_bodies=${sample.resources.missingNodeBodies} external_bodies=${sample.resources.missingExternalDocumentBodies} attachments=${sample.resources.missingAttachmentResources}`,
-    `local_push dirty=${sample.localPush?.dirtyCount ?? 'n/a'} issues=${sample.localPush?.issueCount ?? 'n/a'} latest_run=${formatRun(sample.run)}`,
+    `local_push dirty=${sample.localPush?.dirtyCount ?? 'n/a'} latest_run=${formatRun(sample.run)}`,
     `suspected=${sample.suspectedLayer}`
   ].join('\n');
 }

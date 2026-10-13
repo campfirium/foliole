@@ -15,6 +15,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
+import { withAttachmentFileLease } from './attachmentFileLease.js';
 import { runDesktopAttachmentMaintenance } from './attachmentMaintenanceService.js';
 import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
 
@@ -90,4 +91,24 @@ it('keeps recoverable files available through trash and removes availability onl
   await runDesktopAttachmentMaintenance({ action: 'empty-trash' });
   expect(available()).toBe(0);
   expect(fs.existsSync(path.join(resolveRuntimeDataPaths().assetsDir, key))).toBe(false);
+});
+
+it('ignores retired transfer artifacts while retaining owned bodies and active attachment send leases', async () => {
+  const owned = file('owned');
+  const orphan = file('orphan');
+  node('topic', `![image](asset://${owned})`);
+  const { assetsDir } = resolveRuntimeDataPaths();
+  const obsolete = path.join(path.dirname(openDatabaseConnection().dbPath), '..', 'SyncRequests', 'inbound', 'obsolete');
+  fs.mkdirSync(obsolete, { recursive: true });
+  fs.writeFileSync(path.join(obsolete, 'record.json'), 'retired transport metadata');
+  const originals = openDatabaseConnection().sqlite.prepare('SELECT * FROM node_sync_versions').all();
+  await runDesktopAttachmentMaintenance({ action: 'configure', settings: { automatic: false, observationThreshold: 1 } });
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ eligibleBytes: 6 });
+  await withAttachmentFileLease(path.join(assetsDir, orphan), async () => {
+    await expect(runDesktopAttachmentMaintenance({ action: 'clean' })).rejects.toThrow('attachment_send_busy');
+    expect(fs.readFileSync(path.join(assetsDir, orphan), 'utf8')).toBe('orphan');
+  });
+  expect((await runDesktopAttachmentMaintenance({ action: 'clean' })).trash.map(entry => entry.storageKey)).toEqual([orphan]);
+  expect(fs.readFileSync(path.join(assetsDir, owned), 'utf8')).toBe('owned');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(originals);
 });

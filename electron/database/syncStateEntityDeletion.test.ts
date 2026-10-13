@@ -3,16 +3,17 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { replaceImportedHighlightNodes } from '../../lib/core/database/importPipelineHighlightNodes.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
-import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS as definitions } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 
-import { copyPayloads } from './androidSyncPackProviderDefinitions.testSupport.js';
 import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
-import { buildPack, closeLibraries, createPeer, edit, joinPeers, receivePack, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -21,7 +22,7 @@ function relatedStates(peer: ReturnType<typeof createPeer>) {
   peer.db.exec(`INSERT INTO node_reading (node_id, last_handled_at, next_at) VALUES ('topic', 'now', 'now');
     INSERT INTO node_review (node_id, due) VALUES ('topic', 'now');`);
   for (const type of ['node_reading', 'node_review'] as const) upsertSyncObjectState(peer.driver, {
-    objectType: type, objectId: 'topic', contentHash: 'old', lastModifiedByHostName: peer.name,
+    objectType: type, objectId: 'topic', contentHash: hashTextBody('old'), lastModifiedByHostName: peer.name,
     updatedAt: '2026-09-30T00:00:00.000Z', syncDirty: true
   });
 }
@@ -44,45 +45,39 @@ it('records reading and review deletion facts when permanently deleting their no
   expect(peer.db.prepare("SELECT node_id FROM node_sync_tombstones").pluck().get()).toBe('topic');
 });
 
-it('preserves production version delivery proofs and retained bodies while upgrading state metadata', async () => {
+it('preserves original versions, parents and member positions while upgrading state metadata', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   edit(source, 'protected body');
   await sync(source, target);
-  const proofTables = ['node_version_confirmation_state', 'node_version_device_bases', 'node_sync_versions'];
+  const proofTables = ['node_sync_versions', 'node_sync_version_parents', 'node_version_member_positions'];
   const before = proofTables.map((table) => source.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
   expect(before[0]!.length).toBeGreaterThan(0);
   upsertSyncObjectState(source.driver, { objectType: 'node_review', objectId: 'legacy-orphan',
-    contentHash: 'old', lastModifiedByHostName: 'source', updatedAt: 'now', syncDirty: false });
+    contentHash: hashTextBody('old'), lastModifiedByHostName: 'source', updatedAt: 'now', syncDirty: false });
   removeCurrentInventoryFixtureTriggers(source.db);
   source.db.pragma('user_version = 120');
-  initializeDatabaseSchema(source.db);
+  source.db.transaction(() => applyNumberedSchemaMigrations({ sqlite: source.db,
+    currentVersion: 120, targetVersion: 121, legacyMessage: 'fixture_legacy_schema',
+    setUserVersion: version => source.db.pragma(`user_version = ${version}`) }))();
   expect(proofTables.map((table) => source.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all())).toEqual(before);
   expect(source.db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id='legacy-orphan'").pluck().get()).toBe(0);
 });
 
-it('includes learning deletion facts without a node entity in the native companion provider', () => {
+it('transfers learning deletion facts without a live node entity', async () => {
   const source = createPeer('source');
+  const target = createPeer('target');
+  joinPeers(source, target);
   for (const type of ['node_reading', 'node_review'] as const) upsertSyncObjectState(source.driver, {
-    objectType: type, objectId: 'removed-node', contentHash: `${type}-deleted`,
+    objectType: type, objectId: 'removed-node', contentHash: hashTextBody(`${type}-deleted`),
     lastModifiedByHostName: 'source', updatedAt: 'now', deletedAt: 'now', syncDirty: true
   });
-  const pack = new Database(':memory:');
-  try {
-    for (const statement of definitions.packSchema) pack.exec(statement);
-    pack.prepare('ATTACH DATABASE ? AS source').run(source.file);
-    definitions.copyStatements.forEach((statement, index) => {
-      if (index === definitions.stateCopyIndex) pack.prepare(statement).run(0, 100);
-      else {
-        if (index === definitions.payloadCopyIndex) copyPayloads(pack);
-        pack.exec(statement);
-      }
-    });
-    expect(pack.prepare('SELECT object_type, deleted_at FROM sync_object_state ORDER BY object_type').all()).toEqual([
-      { object_type: 'node_reading', deleted_at: 'now' }, { object_type: 'node_review', deleted_at: 'now' }
-    ]);
-  } finally { pack.close(); }
+  await sync(source, target);
+  expect(target.db.prepare('SELECT object_type, deleted_at FROM sync_object_state ORDER BY object_type').all()).toEqual([
+    { object_type: 'node_reading', deleted_at: 'now' }, { object_type: 'node_review', deleted_at: 'now' }
+  ]);
+  expect(target.db.prepare("SELECT id FROM nodes WHERE id = 'removed-node'").get()).toBeUndefined();
 });
 
 it('keeps deletion facts for discarded imported highlights and does not tombstone replacement identities', () => {
@@ -120,16 +115,16 @@ it('does not create a node tombstone for a highlight identity rebuilt by the sam
   expect(peer.db.prepare("SELECT node_id FROM node_sync_tombstones WHERE node_id='topic'").get()).toBeUndefined();
 });
 
-it('does not persist live learning states after pack apply removes their deleted node learning rows', async () => {
+it('does not persist live learning states after request apply removes their deleted node learning rows', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   edit(source, 'body', 'Card', null, 'item');
   relatedStates(source);
-  await receivePack(source, target, await buildPack(source, target));
+  await sync(source, target);
   expect(target.db.prepare('SELECT node_id FROM node_review').pluck().get()).toBe('topic');
   prepareImportedNodeDeletionVersions(source.driver, ['topic'], '2026-10-01T00:00:00Z');
-  await receivePack(source, target, await buildPack(source, target));
+  await sync(source, target);
   expect(target.db.prepare('SELECT COUNT(*) FROM node_review').pluck().get()).toBe(0);
   expect(target.db.prepare(`SELECT COUNT(*) FROM sync_object_state state
     WHERE object_type IN ('node_reading', 'node_review') AND deleted_at IS NULL
@@ -140,9 +135,7 @@ it('does not persist live learning states after pack apply removes their deleted
   const deletedAt = '2026-10-01T00:00:01Z';
   prepareImportedNodeDeletionVersions(source.driver, ['topic'], deletedAt);
   deleteNodesPermanently(source.driver, { nodeIds: ['topic'], nodeOrder: [], deletedAt });
-  const deletionPack = await buildPack(source, target);
-  await receivePack(source, target, deletionPack);
-  await receivePack(source, target, deletionPack);
+  await withLibraryRequestSnapshot(source, target, async replay => { await replay(); await replay(); });
   const reopened = new Database(target.file, { readonly: true });
   try {
     expect(reopened.prepare(`SELECT object_type, deleted_at FROM sync_object_state

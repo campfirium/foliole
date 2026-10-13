@@ -25,10 +25,6 @@ function createDatabase(name) {
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, content_hash TEXT, availability TEXT);
-    CREATE TABLE sync_delivery_receipts (
-      peer_id TEXT, stream_name TEXT, operation_id TEXT, object_type TEXT, object_id TEXT,
-      payload_identity TEXT, local_position TEXT, status TEXT, remote_position TEXT,
-      issue_reason TEXT, created_at TEXT, updated_at TEXT);
     CREATE TABLE node_view_state (node_id TEXT, host_name TEXT, scroll_top INTEGER);
     CREATE TABLE node_reading_host_state (node_id TEXT, host_name TEXT, reading_position INTEGER, updated_at TEXT);
     CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT UNIQUE);
@@ -55,7 +51,6 @@ function seedDesktop(db) {
 
 function seedAndroid(db) {
   db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
-  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
   insertState(db, 'node', 'node-1', 1);
   insertState(db, 'external_document', 'doc-1', 2);
   db.prepare('INSERT INTO nodes VALUES (?, ?, ?, NULL)').run('node-1', 'One', 'blob-1');
@@ -97,7 +92,8 @@ describe('android sync audit core', () => {
     const report = auditDatabases(desktop.dbPath, android.dbPath, { serial: 'emulator-5554' });
     const output = formatAuditReport(report);
 
-    expect(report.cursors).toMatchObject({ androidCursor: 10, desktopMaxSeq: 9, gap: -1 });
+    expect(report).not.toHaveProperty('cursors');
+    expect(report.localPush).not.toHaveProperty('issueCount');
     expect(report.structural.find((item) => item.name === 'nodes')?.missingOnAndroid).toEqual(['node-2']);
     expect(report.structural.find((item) => item.name === 'parent_child_order')?.missingOnAndroid).toEqual(['node-2']);
     expect(report.structural.find((item) => item.name === 'nodes')?.missingOnAndroid).not.toContain('deleted-node');
@@ -106,9 +102,9 @@ describe('android sync audit core', () => {
     expect(report.resources.missingAttachmentResources).toBeNull();
     expect(output).toContain('referenced content blobs missing bytes: 2');
     expect(output).toContain('unreferenced content_blob availability=missing: 1');
-    expect(report.suspectedBrokenLayer).toBe('cursor advancement: Android cursor is ahead of desktop');
-    expect(output).toContain('pending_live_changes');
-    expect(output).toContain('pending_types');
+    expect(report.suspectedBrokenLayer).toBe('parent_child_order apply');
+    expect(output).not.toContain('pending_live_changes');
+    expect(output).not.toContain('pending_types');
     expect(output).toContain('local_dirty_changes');
     expect(output).toContain('=== State Policy ===');
     expect(output).toContain('node_view_state rows: 2 non_local=1');
@@ -121,7 +117,7 @@ describe('android sync audit core', () => {
     expect(output).toContain('=== Suspected Broken Layer ===');
   }, 120_000);
 
-  it('does not flag visible structure when only tombstones are pending', async () => {
+  it('does not infer pending transfers or convergence from desktop sequence numbers', async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
     const desktop = createDatabase('desktop.db');
     const android = createDatabase('android.db');
@@ -129,61 +125,15 @@ describe('android sync audit core', () => {
     seedDesktop(android.db);
     seedCachedContent(android.db);
     android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
-    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
     desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
     desktop.db.close();
     android.db.close();
 
     const report = auditDatabases(desktop.dbPath, android.dbPath);
 
-    expect(report.cursors.pending).toMatchObject({ liveCount: 0, tombstoneCount: 1 });
-    expect(report.suspectedBrokenLayer).toBe('pending tombstone-only changes; visible structure is converged');
+    expect(report).not.toHaveProperty('cursors');
+    expect(report.structural.every((item) => item.missingOnAndroid.length === 0)).toBe(true);
+    expect(report.suspectedBrokenLayer).toBe('no obvious structural break');
   });
 
-  it('does not treat view state conflicts as review blockers', async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
-    const desktop = createDatabase('desktop.db');
-    const android = createDatabase('android.db');
-    seedDesktop(desktop.db);
-    seedDesktop(android.db);
-    seedCachedContent(android.db);
-    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
-    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
-    android.db.prepare(
-      'INSERT INTO sync_delivery_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run('desktop-peer', 'state', 'view_state:session_resume:11', 'view_state',
-      'session_resume:android:phone:device-1:node:special-inbox', 'hash', '11', 'conflict',
-      null, 'conflict', 'now', 'now');
-    desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
-    desktop.db.close();
-    android.db.close();
-
-    const report = auditDatabases(desktop.dbPath, android.dbPath);
-
-    expect(report.localPush.issueTypes).toEqual([]);
-    expect(report.suspectedBrokenLayer).toBe('pending tombstone-only changes; visible structure is converged');
-  });
-
-  it('reports review-required local push blockers before treating tombstone gaps as clean convergence', async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
-    const desktop = createDatabase('desktop.db');
-    const android = createDatabase('android.db');
-    seedDesktop(desktop.db);
-    seedDesktop(android.db);
-    seedCachedContent(android.db);
-    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://10.0.2.2:38641');
-    android.db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('sync_pack_cursor', '10');
-    android.db.prepare(
-      'INSERT INTO sync_delivery_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run('desktop-peer', 'state', 'node_review:node-1:11', 'node_review', 'node-1',
-      'hash', '11', 'conflict', null, 'conflict', 'now', 'now');
-    desktop.db.prepare('INSERT INTO sync_object_state VALUES (?, ?, ?, ?, ?, 0)').run('external_document', 'deleted-doc', 11, 'deleted-doc-hash', '2026-05-07');
-    desktop.db.close();
-    android.db.close();
-
-    const report = auditDatabases(desktop.dbPath, android.dbPath);
-
-    expect(report.localPush.issueTypes).toEqual([{ count: 1, objectType: 'node_review', status: 'conflict' }]);
-    expect(report.suspectedBrokenLayer).toBe('local push conflict or rejection left Android changes unsent');
-  });
 });

@@ -1,57 +1,29 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
-import { applyNodePushBatchWithDbPort } from '../../../electron/database/companionSyncNodeConvergence.js';
 import { flushNodeSyncVersionWithDriver } from '../../../electron/database/nodeSyncVersionFromDriver.js';
-import { assertPersisted, buildPack, closeLibraries, createPeer, edit, joinPeers,
-  receivePack, startLibraries, sync, type Peer } from '../../../electron/database/syncEmptyLibraryTestSupport.js';
+import { root } from '../../../electron/database/syncLibrary.testSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, joinPeers,
+  startLibraries, type Peer } from '../../../electron/database/syncLibrary.testSupport.js';
+import { syncRequestLibrary as sync } from '../../../electron/database/syncRequestLibrary.testSupport.js';
+import { createDesktopFramedSyncFiles } from '../../../electron/sync/desktopFramedSyncFiles.js';
 import { upsertNodeSnapshot } from '../../../lib/core/database/nodeMutations.js';
-import type { DbParams, DbRow } from '../../../lib/core/sync/dbPort.js';
-import { confirmOutboundNodeVersionPack } from '../../../lib/core/sync/nodeVersionDeliveryProof.js';
-import { advanceInboundNodePeerBases } from '../../../lib/core/sync/nodeVersionInboundPeerBase.js';
-import { loadPendingNodeVersionReceipts } from '../../../lib/core/sync/nodeVersionInboundReceipt.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../lib/core/sync/framedSyncContract.js';
+import { compareFramedSyncInventories } from '../../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../../lib/core/sync/framedSyncInventoryRead.js';
+import { RequestSyncFiles } from '../../../lib/core/sync/requestSyncFiles.js';
+import { applyRequestSyncObject } from '../../../lib/core/sync/requestSyncObjectApply.js';
+import { writeRequestSyncSnapshot } from '../../../lib/core/sync/requestSyncSnapshot.js';
 import { repairDirectChildAnchorsForAppliedParent } from '../../../lib/core/sync/syncNodeAnchorRepair.js';
 import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 
-import { createCompanionSyncbackDbStore } from './companion/sync/syncback/companionSyncbackDbStore.js';
-import { nodeVersionSyncAdapter, type SyncPushAck } from './companionSyncPushProtocol.js';
-
 beforeEach(startLibraries);
 afterEach(closeLibraries);
-
-async function receivePush(target: Peer, source: Peer, items: Parameters<typeof applyNodePushBatchWithDbPort>[1]) {
-  return target.port.transaction(async tx => {
-    const result = await applyNodePushBatchWithDbPort(tx, items);
-    await advanceInboundNodePeerBases(tx, source.id, result.acks.filter(ack => ack.status === 'accepted' &&
-      typeof ack.versionId === 'string' && !ack.canonicalObjectId)
-      .map(ack => ({ objectId: ack.identity.objectId, versionId: ack.versionId! })));
-    return result;
-  });
-}
-
-function store(peer: Peer) {
-  return createCompanionSyncbackDbStore({ ...peer.port, query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
-    const values: (typeof params)[number][] = [];
-    const normalized = sql.replace(/\?(\d+)/g, (_, index: string) => {
-      values.push(params[Number(index) - 1]!);
-      return '?';
-    });
-    return peer.port.query<T>(normalized, values.length ? values : params);
-  } });
-}
-
-async function outgoing(source: Peer, target: Peer) {
-  const items = (await store(source).loadNodeVersions(target.id, null, 100))
-    .filter(record => record.object_id === 'topic')
-    .map(record => nodeVersionSyncAdapter.buildPushPayload(record));
-  expect(items.length).toBeGreaterThan(0);
-  expect(items.every(item => item.base.kind !== 'blocked')).toBe(true);
-  await store(source).stagePushItems(target.id, items);
-  return items;
-}
 
 async function annotate(peer: Peer, versionId: string, content: string) {
   const at = '2026-09-30T00:10:00.000Z';
@@ -80,13 +52,9 @@ async function diverge() {
   await sync(right, left);
   await annotate(left, edit(left, 'Left edit', 'Title A'), 'Left edit');
   await annotate(right, edit(right, 'Right edit', 'Title B'), 'Right edit');
-  const [fromLeft, fromRight] = await Promise.all([outgoing(left, right), outgoing(right, left)]);
-  const leftResult = await receivePush(left, right, fromRight);
-  const rightResult = await receivePush(right, left, fromLeft);
-  expect(leftResult.acks.every(ack => ack.status === 'accepted')).toBe(true);
-  expect(rightResult.acks.every(ack => ack.status === 'accepted')).toBe(true);
-  await store(right).savePushAcks(left.id, leftResult.acks as SyncPushAck[]);
-  await store(left).savePushAcks(right.id, rightResult.acks as SyncPushAck[]);
+  await withTopicSnapshot(left, right, async toRight => {
+    await withTopicSnapshot(right, left, async toLeft => { await toLeft(); await toRight(); });
+  });
   assertPersisted(left, 'Left edit');
   assertPersisted(right, 'Right edit');
   return { left, right };
@@ -100,42 +68,63 @@ function reopen(peer: Peer) {
   peer.port = createBetterSqliteDbPort(peer.db);
 }
 
-it.each([false, true])('keeps converged heads across staged sender reload, forwarding, and reopen (replyLost=%s)', async replyLost => {
+it.each([false, true])('keeps converged heads across response replay, forwarding, and reopen (replyLost=%s)', async replyLost => {
   const { left, right } = await diverge();
   edit(left, 'Intermediate body', 'Title A');
   edit(right, 'Intermediate body', 'Title B');
   edit(left, 'Shared final body', 'Title A');
   edit(right, 'Shared final body', 'Title B');
-  const [fromLeft, fromRight] = await Promise.all([outgoing(left, right), outgoing(right, left)]);
-  if (replyLost) {
-    await receivePush(left, right, fromRight);
-    await receivePush(right, left, fromLeft);
-  }
-  const toLeft = await buildPack(right, left);
-  const toRight = await buildPack(left, right);
-  await receivePack(right, left, toLeft);
-  await receivePack(left, right, toRight);
-  for (const [source, target, pack] of [[right, left, toLeft], [left, right, toRight]] as const) {
-    const receipt = (await loadPendingNodeVersionReceipts(target.port, source.id))
-      .find(item => item.packId === pack.packId)!;
-    await confirmOutboundNodeVersionPack(source.port, { ...receipt, confirmedAt: '2026-09-30T01:00:00Z' });
-  }
-  const final = (await loadCurrentSyncNodeRecord(left.port, 'topic'))!;
-  assertPersisted(left, 'Shared final body', final.version_id!);
-  assertPersisted(right, 'Shared final body', final.version_id!);
-  for (const peer of [left, right]) reopen(peer);
-  for (const [source, target] of [[left, right], [right, left]] as const) {
-    const items = await outgoing(source, target);
-    const alternatives = async () => (await loadCurrentSyncNodeRecord(target.port, 'topic'))?.alternative_bodies;
-    const beforeAlternatives = await alternatives();
-    const result = await receivePush(target, source, items);
-    expect(result.acks.every(ack => ack.status === 'accepted')).toBe(true);
-    assertPersisted(target, 'Shared final body', final.version_id!);
-    expect(await alternatives()).toEqual(beforeAlternatives);
-    await store(source).savePushAcks(target.id, result.acks as SyncPushAck[]);
-  }
-  await sync(left, right);
-  await sync(right, left);
-  assertPersisted(left, 'Shared final body', final.version_id!);
-  assertPersisted(right, 'Shared final body', final.version_id!);
+  await withTopicSnapshot(left, right, async toRight => {
+    await withTopicSnapshot(right, left, async toLeft => {
+      if (replyLost) { await toLeft(); await toRight(); }
+      await toLeft(); await toRight();
+      const final = (await loadCurrentSyncNodeRecord(left.port, 'topic'))!;
+      assertPersisted(left, 'Shared final body', final.version_id!);
+      assertPersisted(right, 'Shared final body', final.version_id!);
+      for (const peer of [left, right]) reopen(peer);
+      for (const [source, target] of [[left, right], [right, left]] as const) {
+        const alternatives = async () => (await loadCurrentSyncNodeRecord(target.port, 'topic'))?.alternative_bodies;
+        const beforeAlternatives = await alternatives();
+        await (source === left ? toRight : toLeft)();
+        assertPersisted(target, 'Shared final body', final.version_id!);
+        expect(await alternatives()).toEqual(beforeAlternatives);
+      }
+      await sync(left, right);
+      await sync(right, left);
+      assertPersisted(left, 'Shared final body', final.version_id!);
+      assertPersisted(right, 'Shared final body', final.version_id!);
+    });
+  });
 });
+
+async function withTopicSnapshot(source: Peer, target: Peer,
+  execute: (replay: () => Promise<void>) => Promise<void>) {
+  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
+    remote: await readFramedSyncInventory(target.port) }).filter(value => value.direction === 'local_to_remote'
+      && value.objectType === 'node' && value.globalId === 'topic');
+  expect(differences).toHaveLength(1);
+  const files = createDesktopFramedSyncFiles(path.join(root, `snapshot-${crypto.randomUUID()}`));
+  const requests = differences.map(() => new RequestSyncFiles(files, `requests/${crypto.randomUUID()}`));
+  const proof = source.db.prepare<[], { library_epoch: string; proof_revision: number }>(
+    'SELECT library_epoch, proof_revision FROM node_version_local_proof_state').get()!;
+  const targetEpoch = String(target.db.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get());
+  try {
+    for (const [index, difference] of differences.entries()) {
+      await writeRequestSyncSnapshot(source.port, difference, requests[index]!);
+    }
+    await execute(async () => {
+      for (const [index, difference] of differences.entries()) {
+        const request = requests[index]!;
+        await applyRequestSyncObject(target.port, {
+          context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+            senderDeviceId: source.id, senderLibraryEpoch: proof.library_epoch,
+            receiverDeviceId: target.id, receiverLibraryEpoch: targetEpoch },
+          peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
+            ...proof, devices: [], removals: [], restore: null, source_proof_revisions: {} },
+          globalId: difference.globalId, objectType: difference.objectType, requestId: new Uint8Array(16),
+          facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
+        });
+      }
+    });
+  } finally { await Promise.all(requests.map(request => request.close())); }
+}

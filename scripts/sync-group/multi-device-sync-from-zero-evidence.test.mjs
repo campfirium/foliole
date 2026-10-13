@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import { expect, it } from 'vitest';
@@ -19,30 +20,31 @@ const facts = { datasetAttachmentCount: 65, datasetCachedAttachmentCount: 65,
   datasetCachedContentBlobCount: 40, datasetContentBlobCount: 40, datasetDigest,
   datasetNodeCount: 40 };
 
-it('reads dataset content identity through the current nodes body blob schema', () => {
+it('reads exact current head bodies and node-owned resources without legacy caches', () => {
+  const body = 'Original body中文😀';
+  const hash = createHash('sha256').update(body).digest('hex');
   const database = new DatabaseSync(':memory:');
   database.exec(`
-    CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT, deleted_at TEXT);
-    CREATE TABLE content_blobs (hash TEXT PRIMARY KEY);
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-    CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT);
-    CREATE TABLE attachments (id TEXT PRIMARY KEY);
-    INSERT INTO nodes VALUES ('sync-from-zero-a-001', 'body-1', NULL);
-    INSERT INTO content_blobs VALUES ('body-1');
-    INSERT INTO content_blob_data VALUES ('body-1', X'01');
-    INSERT INTO node_attachments VALUES ('sync-from-zero-a-001', 'attachment-1');
-    INSERT INTO attachments VALUES ('attachment-1');
+    CREATE TABLE nodes (id TEXT PRIMARY KEY, body_blob_hash TEXT, deleted_at TEXT, resource_references TEXT NOT NULL DEFAULT '[]', content TEXT, current_version_id TEXT);
+    CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT, body_text TEXT);
+    INSERT INTO nodes VALUES ('sync-from-zero-a-001', '${hash}', NULL,
+      '[{"storage_key":"${'a'.repeat(64)}.png","role":"image","original_name":null}]', '${body}', 'version-1');
+    INSERT INTO node_sync_versions VALUES ('version-1', 'sync-from-zero-a-001', '${body}');
   `);
-  expect(inspectSyncFromZeroDatasetFacts(database, ['attachment-1'])).toMatchObject({
+  expect(inspectSyncFromZeroDatasetFacts(database, ['a'.repeat(64)])).toMatchObject({
     datasetAttachmentCount: 1,
-    datasetAttachmentIds: ['attachment-1'],
+    datasetAttachmentIds: ['a'.repeat(64)],
     datasetCachedAttachmentCount: 1,
     datasetCachedContentBlobCount: 1,
     datasetContentBlobCount: 1,
-    datasetContentHashes: ['body-1'],
+    datasetContentHashes: [hash],
     datasetNodeCount: 1,
     datasetNodeIds: ['sync-from-zero-a-001']
   });
+  database.exec("UPDATE nodes SET content = 'different projection'");
+  expect(inspectSyncFromZeroDatasetFacts(database).datasetCachedContentBlobCount).toBe(0);
+  database.exec("UPDATE node_sync_versions SET body_text = 'corrupt body'");
+  expect(inspectSyncFromZeroDatasetFacts(database).datasetContentBlobCount).toBe(0);
   database.close();
 });
 
@@ -67,9 +69,7 @@ it('accepts the exact dataset independently of provider cursor bookkeeping', () 
       localTimelineId: 'timeline-1', receiveCursor: 80 },
     firstCommittedFacts: { receiveCursor: 80 }, initialFacts: { receiveCursor: 0 },
     interruptedFacts: { receiveCursor: 80 }, restartedFacts: { receiveCursor: 80 } };
-  const inspection = { ...facts, activeSyncGroupMemberCount: 3, peerCursors: [{
-    cursorValue: '80:95', peerFingerprint: 'windows-1', streamName: 'sync-pack-supply'
-  }], syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
+  const inspection = { ...facts, activeSyncGroupMemberCount: 3, syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
   const proof = assertSyncFromZeroFinalProof({
     androidAfterC: { database: { inspection } },
     androidFinal: { attachments: { size: 1 }, database: { inspection } }, datasetReceipt,
@@ -85,9 +85,7 @@ it('rejects latest/cursor evidence when the exact dataset does not match', () =>
       localTimelineId: 'timeline-1', receiveCursor: 80 },
     firstCommittedFacts: { receiveCursor: 80 }, initialFacts: { receiveCursor: 0 },
     interruptedFacts: { receiveCursor: 80 }, restartedFacts: { receiveCursor: 80 } };
-  const inspection = { ...facts, activeSyncGroupMemberCount: 3, peerCursors: [{
-    cursorValue: '0:79', peerFingerprint: 'windows-1', streamName: 'sync-pack-supply'
-  }], syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
+  const inspection = { ...facts, activeSyncGroupMemberCount: 3, syncGroupId: 'group-1', syncGroupTimelineId: 'timeline-1' };
   expect(() => assertSyncFromZeroFinalProof({
     androidAfterC: { database: { inspection } },
     androidFinal: { attachments: { size: 1 }, database: { inspection } }, datasetReceipt,

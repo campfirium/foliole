@@ -90,9 +90,9 @@ it('accepts only registered actions and evidence inside the action-owned root', 
     factId: 'participation-control', milestone: 'macos-departure-observed'
   });
   expect(validateSyncGroupInteractiveProgress({
-    factId: 'sync-from-zero', milestone: 'c-first-cursor-committed'
+    factId: 'sync-from-zero', milestone: 'c-first-object-committed'
   }, 'multi-device-sync-from-zero')).toEqual({
-    factId: 'sync-from-zero', milestone: 'c-first-cursor-committed'
+    factId: 'sync-from-zero', milestone: 'c-first-object-committed'
   });
   expect(validateSyncGroupInteractiveProgress({
     factId: 'a-rejoin', milestone: 'c-session-restarted'

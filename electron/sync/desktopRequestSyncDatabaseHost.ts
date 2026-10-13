@@ -5,6 +5,7 @@ import { materializeDesktopSettingRecord, readDesktopHostName } from '../databas
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
 
 import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
+import { reportDesktopSyncGroupObjectCommitted } from './desktopSyncGroupCursorCommit.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export function createDesktopRequestSyncDatabaseHost(databasePath: string): RequestSyncDatabaseHost {
@@ -14,9 +15,12 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string): Requ
       const hostName = await readDesktopHostName(db);
       return { ...(hostName ? { hostName } : {}), onPayloadAppliedInTransaction: materializeDesktopSettingRecord };
     },
-    objectApplied: object => notifyWorkspaceSyncApplied({
-      appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
-      appliedObjectIds: [object.globalId], appliedReviewOpIds: [] }),
+    objectApplied: async object => {
+      notifyWorkspaceSyncApplied({
+        appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
+        appliedObjectIds: [object.globalId], appliedReviewOpIds: [] });
+      await reportDesktopSyncGroupObjectCommitted(object);
+    },
     files,
     readSnapshot: (read, signal) => {
       if (resolveDatabasePath() !== databasePath) throw new Error('request_sync_library_changed');

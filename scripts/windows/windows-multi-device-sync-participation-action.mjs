@@ -106,8 +106,7 @@ async function verifyRestartedDeparture(options, initial) {
     const after = await inspectWindowsSyncGroupDatabase(execute, paths);
     if (overview.sync_group !== null
         || after.localGroupId !== null || after.localMemberState !== null
-        || after.activeMemberCount !== 0 || after.syncDeliveryReceiptCount !== 0
-        || after.syncPeerCursorCount !== 0) {
+        || after.activeMemberCount !== 0) {
       throw new Error(`Windows departed state revived or retained progress: ${JSON.stringify({ after, overview })}`);
     }
     assertDataRetained(initial, after);

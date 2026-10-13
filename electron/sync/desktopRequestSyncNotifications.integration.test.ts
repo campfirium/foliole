@@ -62,11 +62,50 @@ it('notifies committed node and tombstone identities once across normal repeated
   } finally { osBoundary.send = () => {}; await fixture.close(); }
 });
 
+it('waits after a durable object commit and resumes remaining objects after reopening', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  let reached!: () => void;
+  const committed = new Promise<void>(resolve => { reached = resolve; });
+  let interrupt!: (reason: Error) => void;
+  const held = new Promise<void>((_resolve, reject) => { interrupt = reject; });
+  const controller = new AbortController();
+  const desktopHost = createDesktopRequestSyncDatabaseHost(target.file);
+  const host = { ...desktopHost, ...target.host,
+    objectApplied: async (object: { objectType: string; globalId: string }) => {
+      await desktopHost.objectApplied?.(object);
+      if (object.globalId === 'sync-from-zero-a-first') { reached(); await held; }
+    } };
+  try {
+    await source.seed('sync-from-zero-a-first'); await source.seed('sync-from-zero-a-second');
+    const running = round(source, target, host, controller.signal);
+    const interrupted = expect(running).rejects.toThrow('acceptance_process_interrupted');
+    await committed;
+    const read = () => {
+      const connection = new Database(target.file, { readonly: true });
+      try { return ['nodes', 'node_sync_versions', 'node_sync_version_parents'].map(table =>
+        connection.prepare(`SELECT * FROM ${table} ORDER BY 1`).all()); }
+      finally { connection.close(); }
+    };
+    const before = read();
+    expect(target.sqlite.prepare("SELECT id FROM nodes WHERE id LIKE 'sync-from-zero-a-%'").all())
+      .toEqual([{ id: 'sync-from-zero-a-first' }]);
+    controller.abort(new Error('acceptance_process_interrupted'));
+    interrupt(controller.signal.reason);
+    await interrupted;
+    target.reopen(); expect(read()).toEqual(before);
+    expect(await round(source, target, { ...desktopHost, ...target.host })).toMatchObject({ complete: true, pending: 0 });
+    expect(target.sqlite.prepare('SELECT version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id').all())
+      .toEqual(source.sqlite.prepare('SELECT version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id').all());
+    expect(await round(source, target, { ...desktopHost, ...target.host })).toMatchObject({ transferred: 0 });
+  } finally { interrupt(new Error('acceptance_process_interrupted')); await fixture.close(); }
+});
+
 function notification() {
   return { appliedNodeIds: ['topic'], appliedObjectIds: ['topic'], appliedReviewOpIds: [] };
 }
 
-function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSyncDatabaseHost) {
+function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSyncDatabaseHost, signal?: AbortSignal) {
   const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
     responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
@@ -77,6 +116,7 @@ function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSync
     transferObjects: async differences => {
       const results = [];
       for (const difference of differences) {
+        signal?.throwIfAborted();
         const from = difference.direction === 'local_to_remote' ? source : target;
         const to = difference.direction === 'local_to_remote' ? target : source;
         const boundContext = { ...context, initiatorDeviceId: from.id, initiatorLibraryEpoch: from.epoch,
@@ -90,11 +130,12 @@ function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSync
                 library_epoch: from.epoch, proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null } }));
           results.push({ requestId: result.requestId, globalId: difference.globalId, objectType: difference.objectType, error: '' });
         } catch (error) {
+          signal?.throwIfAborted();
           results.push({ requestId: new Uint8Array(16), globalId: difference.globalId, objectType: difference.objectType,
             error: error instanceof Error ? error.message : String(error) });
         }
       }
       return results;
     }, reportObjectError: (_difference, error) => { throw error; }
-  });
+  }, signal);
 }
