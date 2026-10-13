@@ -1,44 +1,7 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
 import { expect, it, vi } from 'vitest';
 
-import { applyCompanionAttachmentManifest, applyCompanionContentPack } from './companionBatchDataPlane.js';
+import { applyCompanionAttachmentManifest } from './companionBatchDataPlane.js';
 import type { DbPort } from './dbPort.js';
-
-it('attaches a validated content pack and copies blobs inside one shared transaction', async () => {
-  const port = fakePort();
-  const bytes = new TextEncoder().encode('Validated body');
-  const hash = bytesToHex(sha256(bytes));
-  port.query = vi.fn(async (sql: string) => {
-    if (sql.includes('quick_check')) return [{ quick_check: 'ok' }];
-    if (sql.includes('table_info')) return ['hash', 'size_bytes', 'data'].map((name) => ({ name }));
-    if (sql.includes('COUNT(*)')) return [{ count: 0 }];
-    if (sql.includes('INNER JOIN')) return [{ hash }];
-    if (sql.startsWith('SELECT size_bytes')) return [{ size_bytes: bytes.byteLength }];
-    if (sql.includes('hex(substr')) return [{ bytes: bytesToHex(bytes) }];
-    return [];
-  }) as DbPort['query'];
-
-  await expect(applyCompanionContentPack(port, {
-    failedHashes: ['b'.repeat(64)], now: '2026-08-06T00:00:00.000Z', packPath: "/tmp/body's.db"
-  })).resolves.toEqual({ failedHashes: ['b'.repeat(64)], syncedHashes: [hash] });
-
-  expect(port.run).toHaveBeenNthCalledWith(1, "ATTACH DATABASE '/tmp/body''s.db' AS content_batch");
-  expect(port.run).toHaveBeenLastCalledWith('DETACH DATABASE content_batch');
-  expect(port.transaction).toHaveBeenCalledTimes(1);
-  expect(port.run).toHaveBeenCalledWith(expect.stringContaining('SELECT pack.hash, pack.data'));
-  expect(port.run).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([expect.any(Uint8Array)]));
-});
-
-it('detaches a corrupt content pack without writing', async () => {
-  const port = fakePort();
-  port.query = vi.fn(async () => [{ quick_check: 'corrupt' }]) as DbPort['query'];
-  await expect(applyCompanionContentPack(port, {
-    failedHashes: [], now: '2026-08-06T00:00:00.000Z', packPath: '/tmp/corrupt.db'
-  })).rejects.toThrow('integrity');
-  expect(port.transaction).not.toHaveBeenCalled();
-  expect(port.run).toHaveBeenLastCalledWith('DETACH DATABASE content_batch');
-});
 
 it('validates staged files against retained metadata without persisting possession state', async () => {
   const port = fakePort();

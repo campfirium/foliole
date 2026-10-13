@@ -74,24 +74,6 @@ public final class FolioleResourceProviderTest {
         } finally { FolioleCompanionAttachmentResourceBatchSessions.finish(token, false); }
     }
 
-    @Test public void mixedContentBatchStagesOnlyVerifiedRequestedBodies() throws Exception {
-        fixture.installCredentials();
-        String good = hash(bytes("good")), bad = hash(bytes("bad")), missing = hash(bytes("missing"));
-        byte[] multipart = bytes(part(good, "good") + part(bad, "wrong") + "--fixture--\r\n");
-        String endpoint = fixture.start(request -> new FolioleResourceProviderFixture.Reply(
-            200, "multipart/mixed; boundary=fixture", multipart, true));
-        JSONObject result = FolioleCompanionContentBlobBatchStore.downloadBlobs(fixture.context,
-            endpoint + "/companion/content-blobs", fixture.headers(), new JSONObject()
-                .put("hashes", new JSONArray().put(good).put(bad).put(missing)).toString());
-        String token = result.getString("batch_token");
-        try {
-            assertEquals(good, result.getJSONArray("synced_hashes").getString(0));
-            assertEquals("checksum_mismatch", result.getJSONObject("failed_hash_errors").getString(bad));
-            assertEquals("missing_file", result.getJSONObject("failed_hash_errors").getString(missing));
-            var rows = FolioleCompanionContentBlobPack.read(FolioleCompanionContentBlobBatchSessions.get(token).pack);
-            assertEquals(1, rows.size()); assertArrayEquals(bytes("good"), rows.get(0).bytes);
-        } finally { FolioleCompanionContentBlobBatchSessions.finish(token); }
-    }
     private JSONObject reply(JSONArray needs) throws Exception {
         return FolioleCompanionResourceAvailability.reply(fixture.context, fixture.database.getPath(),
             new JSONObject().put("resources", needs).toString(), "provider");
@@ -102,7 +84,4 @@ public final class FolioleResourceProviderTest {
     }
     private static byte[] bytes(String value) { return value.getBytes(StandardCharsets.UTF_8); }
     private static String hash(byte[] value) throws Exception { return FolioleCompanionResourceAvailability.digest(value); }
-    private static String part(String hash, String body) {
-        return "--fixture\r\nContent-Type: text/plain\r\nContent-Length: " + body.length() + "\r\nX-Blob-Hash: " + hash + "\r\n\r\n" + body + "\r\n";
-    }
 }

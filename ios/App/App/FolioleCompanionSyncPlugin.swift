@@ -14,9 +14,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "beginSyncRun", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "finishContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncGroupDeviceIdentity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startDiscoverySession", returnType: CAPPluginReturnPromise),
@@ -43,48 +41,10 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()
     let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
-    private let contentBlobSessions = FolioleCompanionContentBlobSessions()
     lazy var groupData: FolioleCompanionSyncGroupDataBridge = FolioleCompanionSyncGroupDataBridge { [weak self] event in
         DispatchQueue.main.async {
             guard let self, self.groupData.shouldDispatch(event) else { return }
             self.notifyListeners("syncGroupDataRequest", data: event)
-        }
-    }
-
-    @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {
-        Task {
-            do {
-                let contract = try contentBlobContract()
-                let body = try requiredString(call, contract.requestKeys, "body")
-                let requested = try FolioleCompanionContentBlobBridgePayload.requestedHashes(body, contract: contract)
-                let started = Date()
-                let parts = try await FolioleCompanionDesktopHttpClient.requestContentBlobBatch(
-                    url: try requiredString(call, contract.requestKeys, "url"),
-                    headers: try stringHeaders(try requiredObject(call, contract.requestKeys, "headers")),
-                    body: body,
-                    contract: contract
-                )
-                let validated = FolioleCompanionResourceTransferValidation.contentParts(parts, requested: requested)
-                let failed = Array(validated.errors.keys)
-                let packURL = try FolioleCompanionContentBlobPack.create(parts: validated.accepted)
-                let token = await contentBlobSessions.create(packURL: packURL, failedHashes: failed)
-                var result = try FolioleCompanionContentBlobBridgePayload.downloadResponse(
-                    token, packURL: packURL, parts: validated.accepted, failed: failed, started: started, contract: contract
-                )
-                result[try key("failedHashErrors", contract.batchResponseKeys)] = validated.errors
-                call.resolve(result)
-            } catch { call.reject("Failed to download companion content blobs: \(error.localizedDescription)") }
-        }
-    }
-
-    @objc func finishContentBlobBatch(_ call: CAPPluginCall) {
-        Task {
-            do {
-                let contract = try contentBlobContract()
-                let token = try requiredString(call, contract.requestKeys, "batchToken")
-                await contentBlobSessions.finish(token)
-                call.resolve()
-            } catch { call.reject("Failed to finish companion content blobs: \(error.localizedDescription)") }
         }
     }
 
@@ -155,11 +115,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     func contract() throws -> FolioleCompanionNetworkContract {
         try FolioleCompanionContractStore().networkContract()
     }
-
-    private func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
-        try FolioleCompanionContractStore().contentBlobContract()
-    }
-
 
     func requiredString(_ call: CAPPluginCall, _ keys: [String: String], _ name: String) throws -> String {
         let value = call.getString(try key(name, keys))?.trimmingCharacters(in: .whitespacesAndNewlines)

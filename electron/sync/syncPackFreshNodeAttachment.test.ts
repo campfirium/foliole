@@ -1,70 +1,31 @@
 // @vitest-environment node
+import { expect, it } from 'vitest';
 
-import { promises as fs } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { sendCurrentObject } from './currentRequestLearning.testSupport.js';
 
-let mockedAppDataDir = '/tmp/foliole-sync-pack-fresh-node-attachment-tests';
-
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_data_dir: mockedAppDataDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
-
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
-
-import { createIncomingPack, installLocalNodeFixtures } from './syncPackNodeApplyTestSupport.js';
-
-let incomingPath = '';
-let tempRoot = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-fresh-node-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
-  incomingPath = path.join(tempRoot, 'incoming.db');
-  initializeDatabaseConnection(openDatabaseConnection());
-  installLocalNodeFixtures();
-  createIncomingPack(incomingPath);
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-it('materializes attachment links for a node first learned from the pack', async () => {
-  const connection = openDatabaseConnection();
-  connection.sqlite.prepare(
-    "DELETE FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'"
-  ).run();
-  const port = createBetterSqliteDbPort(connection.sqlite, {
-    name: 'sync-pack-new-node-attachment-test'
-  });
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+it('materializes original PDF attachment links for a node first learned through a current request', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
-    await applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0,
-      hostName: 'Android test host'
-    });
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
-  expect(connection.sqlite.prepare(`SELECT nodes.id AS node_id,
-    json_extract(resource.value, '$.storage_key') AS storage_key,
-    json_extract(resource.value, '$.original_name') AS original_name,
-    json_extract(resource.value, '$.role') AS role
-    FROM nodes, json_each(nodes.resource_references) resource WHERE nodes.id = ?`
-  ).all('node-1')).toEqual([{
-    node_id: 'node-1', storage_key: `${'a'.repeat(64)}.pdf`,
-    original_name: 'Original.pdf', role: 'reference'
-  }]);
+    const record = textBranch('original', 'Original body');
+    record.snapshot.resource_references = JSON.stringify([{ storage_key: `${'a'.repeat(64)}.pdf`,
+      original_name: 'Original.pdf', role: 'reference' }]);
+    await applySyncNodesWithDbPort(source.db, [record]);
+    expect(target.sqlite.prepare('SELECT * FROM nodes').all()).toEqual([]);
+    for (let replay = 0; replay < 2; replay++) {
+      await sendCurrentObject(source, target); target.reopen();
+      expect(target.sqlite.prepare(`SELECT nodes.id AS node_id,
+        json_extract(resource.value, '$.storage_key') AS storage_key,
+        json_extract(resource.value, '$.original_name') AS original_name,
+        json_extract(resource.value, '$.role') AS role
+        FROM nodes, json_each(nodes.resource_references) resource WHERE nodes.id = 'topic'`).all())
+        .toEqual([{ node_id: 'topic', storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }]);
+      expect(target.sqlite.prepare("SELECT content, current_version_id FROM nodes WHERE id = 'topic'").get())
+        .toEqual({ content: 'Original body', current_version_id: 'original' });
+    }
+  } finally { await fixture.close(); }
 });

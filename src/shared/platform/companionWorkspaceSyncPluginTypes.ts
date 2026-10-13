@@ -1,26 +1,13 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
 import type { NativeCompanionFramedFilesPlugin } from '../../../lib/platform/nativeCompanionFramedFilesContract';
 import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
-import type {
-  NativeCompanionFramedSyncInventoryRequest,
-  NativeCompanionFramedSyncInventoryResult,
-  NativeCompanionFramedSyncPullBatchRequest,
-  NativeCompanionFramedSyncPullBatchResult,
-  NativeCompanionFramedSyncPullRequest,
-  NativeCompanionFramedSyncTransferBatchRequest,
-  NativeCompanionFramedSyncTransferBatchResult,
-  NativeCompanionFramedSyncTransferReceipt,
-  NativeCompanionFramedSyncStagedTransfer,
-  NativeCompanionFramedSyncTransferRequest,
-  NativeCompanionSignedRequestHeaders
-} from '../../../lib/platform/nativeCompanionSyncContract';
+import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { NativeRequestSyncHttpPlugin } from '../../../lib/platform/nativeRequestSyncHttpContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
-import type { CompanionContentBlobSyncPlugin } from './companionContentBlobSyncPluginTypes';
 
 export interface CompanionDiscoveryCandidate {
   endpoint_url: string;
@@ -53,7 +40,7 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin,
-  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
+  NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -90,24 +77,6 @@ export interface CompanionWorkspaceSyncPlugin
     request_id: string;
     result?: Record<string, unknown>;
   }): Promise<void>;
-  sendFramedSyncTransfer(
-    args: NativeCompanionFramedSyncTransferRequest
-  ): Promise<NativeCompanionFramedSyncTransferReceipt>;
-  sendFramedSyncTransfers(
-    args: NativeCompanionFramedSyncTransferBatchRequest
-  ): Promise<NativeCompanionFramedSyncTransferBatchResult>;
-  readFramedSyncInventory(
-    args: NativeCompanionFramedSyncInventoryRequest
-  ): Promise<NativeCompanionFramedSyncInventoryResult>;
-  pullFramedSyncObject(
-    args: NativeCompanionFramedSyncPullRequest & { stage_only: true }
-  ): Promise<NativeCompanionFramedSyncStagedTransfer>;
-  pullFramedSyncObject(
-    args: NativeCompanionFramedSyncPullRequest
-  ): Promise<NativeCompanionFramedSyncTransferReceipt>;
-  pullFramedSyncObjects(
-    args: NativeCompanionFramedSyncPullBatchRequest
-  ): Promise<NativeCompanionFramedSyncPullBatchResult>;
   signCompanionSyncRequest(args: {
     body?: string;
     body_hash: string;

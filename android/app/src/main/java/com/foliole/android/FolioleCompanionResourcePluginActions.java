@@ -31,22 +31,6 @@ final class FolioleCompanionResourcePluginActions {
         return new JSObject();
     }
 
-    static JSObject downloadContentBlobBatch(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionContentBlobBatchStore.downloadBlobs(
-            context,
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceUrlRequestKey(context)),
-            call.getData().optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBodyRequestKey(context))
-        );
-    }
-
-    static JSObject finishContentBlobBatch(Context context, PluginCall call) throws Exception {
-        FolioleCompanionContentBlobBatchSessions.finish(
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(context))
-        );
-        return new JSObject();
-    }
-
     static JSObject resolveAttachmentResource(Context context, PluginCall call) throws Exception {
         return FolioleCompanionAttachmentFileResolver.resolve(
             context,

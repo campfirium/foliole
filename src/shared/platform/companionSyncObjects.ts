@@ -93,14 +93,6 @@ export async function loadCompanionSyncSettingValueJson(key: string, objectId?: 
 }
 
 export {
-  loadCompanionMissingContentBlobBatch,
-  loadCompanionMissingContentBlobHashes,
-  loadCompanionMissingContentBlobs,
-  syncCompanionContentBlob,
-  syncCompanionContentBlobs
-} from './companionContentBlobSync';
-
-export {
   loadCompanionMissingAttachmentResource,
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';

@@ -30,11 +30,6 @@ export function isNativeCompanionNetworkRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
-export function isNativeCompanionContentBlobRuntime() {
-  const runtime = requireAvailableCompanionRuntime('content-blob-sync');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
-}
-
 export function isNativeCompanionAttachmentResourceRuntime() {
   const runtime = requireAvailableCompanionRuntime('attachment-resource-sync');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';

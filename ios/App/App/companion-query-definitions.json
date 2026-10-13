@@ -3125,7 +3125,6 @@
     },
     "nodeVersions": {
       "ancestorDepthLimit": 1000,
-      "ancestorVersionIdsKey": "ancestor_version_ids",
       "cursorChangeIdKey": "change_id",
       "cursorCreatedAtKey": "created_at",
       "defaultLimit": 500,

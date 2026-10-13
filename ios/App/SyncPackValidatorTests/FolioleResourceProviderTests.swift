@@ -35,18 +35,6 @@ final class FolioleResourceProviderTests: XCTestCase {
         XCTAssertEqual((second["resources"] as? [[String: Any]])?.first?["status"] as? String, "missing")
     }
 
-    func testMixedContentTransferKeepsOnlyVerifiedRequestedBytes() {
-        let good = digest(Data("good".utf8)), corrupt = digest(Data("expected".utf8))
-        let missing = String(repeating: "d", count: 64)
-        let result = FolioleCompanionResourceTransferValidation.contentParts([
-            .init(data: Data("good".utf8), hash: good), .init(data: Data("wrong".utf8), hash: corrupt),
-            .init(data: Data("extra".utf8), hash: digest(Data("extra".utf8)))
-        ], requested: [good, corrupt, missing])
-        XCTAssertEqual(result.accepted.map(\.hash), [good])
-        XCTAssertEqual(result.errors[corrupt], "checksum_mismatch")
-        XCTAssertEqual(result.errors[missing], "missing_file")
-    }
-
     func testRejectsOversizedAndDuplicateAvailabilityBeforeReadingResources() throws {
         let fixture = try ResourceFixture()
         defer { fixture.close() }

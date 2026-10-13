@@ -1,43 +1,10 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
 import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 
 import {
-  commitStagedCompanionAttachmentBatch,
-  commitStagedCompanionContentBatch
+  commitStagedCompanionAttachmentBatch
 } from './companionBatchDataPlane';
-
-it('carries only a native pack path through the Web contract before shared content commit', async () => {
-  const { owner, port } = fakeOwner();
-  const bytes = new TextEncoder().encode('Validated body');
-  const hash = bytesToHex(sha256(bytes));
-  port.query = vi.fn(async (sql: string) => {
-    if (sql.includes('quick_check')) return [{ quick_check: 'ok' }];
-    if (sql.includes('table_info')) return ['hash', 'size_bytes', 'data'].map((name) => ({ name }));
-    if (sql.includes('COUNT(*)')) return [{ count: 0 }];
-    if (sql.includes('INNER JOIN')) return [{ hash }];
-    if (sql.startsWith('SELECT size_bytes')) return [{ size_bytes: bytes.byteLength }];
-    if (sql.includes('hex(substr')) return [{ bytes: bytesToHex(bytes) }];
-    return [];
-  }) as DbPort['query'];
-  const plugin = {
-    finishContentBlobBatch: vi.fn(async () => ({}))
-  };
-
-  const download = {
-    batch_token: 'native-token', failed_hashes: [], pack_path: '/native/cache/content.db',
-    synced_hashes: [hash]
-  };
-  await expect(commitStagedCompanionContentBatch(
-    owner, plugin as never, download, '2026-08-06T00:00:00.000Z'
-  )).resolves.toEqual({ failedHashes: [], syncedHashes: [hash] });
-
-  expect(port.run).toHaveBeenCalledWith("ATTACH DATABASE '/native/cache/content.db' AS content_batch");
-  expect(plugin.finishContentBlobBatch).toHaveBeenCalledWith({ batch_token: 'native-token', committed: true });
-  expect(download).not.toHaveProperty('data');
-});
 
 it('stages native attachment files and commits only their small manifest', async () => {
   const { owner, port } = fakeOwner();
@@ -64,21 +31,16 @@ it('stages native attachment files and commits only their small manifest', async
 });
 
 it('reports failed shared commits so native staging can roll back', async () => {
-  const contentPlugin = { finishContentBlobBatch: vi.fn(async () => ({})) };
   const attachmentPlugin = {
     finishAttachmentResourceBatch: vi.fn(async () => ({})),
     stageAttachmentResourceBatch: vi.fn(async () => ({ failed_attachment_ids: [], manifest: [] }))
   };
   const owner = { runWriter: vi.fn(async () => { throw new Error('shared commit failed'); }) } as never;
 
-  await expect(commitStagedCompanionContentBatch(owner, contentPlugin as never, {
-    batch_token: 'content-token', failed_hashes: [], pack_path: '/native/content.db', synced_hashes: []
-  }, '2026-08-06T00:00:00.000Z')).rejects.toThrow('shared commit failed');
   await expect(commitStagedCompanionAttachmentBatch(
     owner, attachmentPlugin as never, 'attachment-token', '2026-08-06T00:00:00.000Z'
   )).rejects.toThrow('shared commit failed');
 
-  expect(contentPlugin.finishContentBlobBatch).toHaveBeenCalledWith({ batch_token: 'content-token', committed: false });
   expect(attachmentPlugin.finishAttachmentResourceBatch).toHaveBeenCalledWith({
     batch_token: 'attachment-token', committed: false
   });

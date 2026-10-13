@@ -162,7 +162,6 @@ export const ANDROID_COMPANION_SYNC_STREAM_READ_RULES = {
   },
   nodeVersions: {
     ancestorDepthLimit: 1000,
-    ancestorVersionIdsKey: 'ancestor_version_ids',
     cursorChangeIdKey: 'change_id',
     cursorCreatedAtKey: 'created_at',
     defaultLimit: 500,

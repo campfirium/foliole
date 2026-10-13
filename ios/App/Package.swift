@@ -7,21 +7,18 @@ let package = Package(
     dependencies: [
         .package(path: "FramedSyncRuntimePackage"),
         .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.38.1"),
-        .package(url: "https://github.com/weichsel/ZIPFoundation.git", exact: "0.9.20")
     ],
     targets: [
         .target(
             name: "FolioleSyncPackValidator",
             dependencies: [
                 .product(name: "FolioleFramedSyncRuntime", package: "FramedSyncRuntimePackage"),
-                .product(name: "ZIPFoundation", package: "ZIPFoundation")
             ],
             path: "App",
             exclude: [
                 "AppDelegate.swift", "Assets.xcassets", "Base.lproj", "FolioleBridgeViewController.swift",
                 "FolioleCompanionBonjourDiscovery.swift", "FolioleCompanionBootstrapPlugin.swift",
                 "FolioleCompanionAttachmentSyncPlugin.swift",
-                "FolioleCompanionContentBlobPack.swift", "FolioleCompanionQueryDefinitions.swift",
                 "Info.plist", "PrivacyInfo.xcprivacy", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncGroupProviderPlugin.swift",
                 "FolioleCompanionFramedSyncPayloadBudget.swift",
@@ -35,7 +32,6 @@ let package = Package(
             sources: [
                 "FolioleCompanionCanonicalAttachmentKey.swift",
                 "FolioleCompanionResourceAvailability.swift",
-                "FolioleCompanionResourceTransferValidation.swift",
                 "FolioleCompanionAttachmentFileStage.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",
                 "FolioleCompanionAttachmentCheckpoint.swift",
@@ -74,7 +70,6 @@ let package = Package(
                 "FolioleCompanionSyncGroupResources.swift",
                 "FolioleCompanionSyncGroupWorkgroup.swift",
                 "FolioleCompanionWorkgroupClient.swift",
-                "FolioleCompanionZlib.swift",
                 "FolioleReadOnlySQLite.swift",
             ],
             resources: [
@@ -93,7 +88,6 @@ let package = Package(
                     package: "FramedSyncRuntimePackage"
                 ),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
-                .product(name: "ZIPFoundation", package: "ZIPFoundation")
             ],
             path: "SyncPackValidatorTests",
             exclude: [

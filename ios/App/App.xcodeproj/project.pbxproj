@@ -19,7 +19,6 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010031FED79650016851F /* FolioleBridgeViewController.swift */; };
 		50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */; };
-		50F020011FED79650016851F /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 50F020021FED79650016851F /* ZIPFoundation */; };
 		326B00000000000000000001 /* FolioleFramedSyncRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 326D00000000000000000001 /* FolioleFramedSyncRuntime */; };
 		326B00000000000000000002 /* FolioleFramedSyncHTTPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000002 /* FolioleFramedSyncHTTPTransport.swift */; };
 		326B00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift */; };
@@ -29,7 +28,6 @@
 		50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020061FED79650016851F /* companion-bridge-contract-definitions.json */; };
 		50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020071FED79650016851F /* companion-sync-protocol-definitions.json */; };
 		50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021011FED79650016851F /* FolioleCompanionContractStore.swift */; };
-		50F021121FED79650016851F /* FolioleCompanionZlib.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021021FED79650016851F /* FolioleCompanionZlib.swift */; };
 		50F021141FED79650016851F /* FolioleReadOnlySQLite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */; };
 		50F022131FED79650016851F /* FolioleCompanionDesktopHttpClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */; };
 		50F022141FED79650016851F /* FolioleCompanionBonjourDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */; };
@@ -44,7 +42,6 @@
 		50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */; };
 		F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */; };
 		F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */; };
-		50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */; };
 		50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */; };
 		50F023161FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */; };
 		50F025141FED79650016851F /* companion-query-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F025041FED79650016851F /* companion-query-definitions.json */; };
@@ -85,7 +82,6 @@
 		50F203111FED79650016851F /* FolioleArticleImageProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */; };
 		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
 		203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */; };
-		203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */; };
 		203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */; };
 		221B00000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A00000000000000000001 /* ShareViewController.swift */; };
 		221B00000000000000000002 /* FolioleShareInboxQueue.swift in Share Sources */ = {isa = PBXBuildFile; fileRef = 221A00000000000000000002 /* FolioleShareInboxQueue.swift */; };
@@ -163,7 +159,6 @@
 		50F020061FED79650016851F /* companion-bridge-contract-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-bridge-contract-definitions.json"; sourceTree = "<group>"; };
 		50F020071FED79650016851F /* companion-sync-protocol-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-sync-protocol-definitions.json"; sourceTree = "<group>"; };
 		50F021011FED79650016851F /* FolioleCompanionContractStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContractStore.swift; sourceTree = "<group>"; };
-		50F021021FED79650016851F /* FolioleCompanionZlib.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionZlib.swift; sourceTree = "<group>"; };
 		50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleReadOnlySQLite.swift; sourceTree = "<group>"; };
 		50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionDesktopHttpClient.swift; sourceTree = "<group>"; };
 		326A00000000000000000002 /* FolioleFramedSyncHTTPTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncHTTPTransport.swift; sourceTree = "<group>"; };
@@ -183,7 +178,6 @@
 		50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentSyncPlugin.swift; sourceTree = "<group>"; };
 		F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRemoteImageFiles.swift; sourceTree = "<group>"; };
 		F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentMaintenanceFiles.swift; sourceTree = "<group>"; };
-		50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContentBlobPack.swift; sourceTree = "<group>"; };
 		50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentFileStage.swift; sourceTree = "<group>"; };
 		50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionCanonicalAttachmentKey.swift; sourceTree = "<group>"; };
 		50F025041FED79650016851F /* companion-query-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-query-definitions.json"; sourceTree = "<group>"; };
@@ -227,7 +221,6 @@
 		50F110031FED79650016851F /* AppAcceptanceProjectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppAcceptanceProjectionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionResourceAvailability.swift; sourceTree = "<group>"; };
-		203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionResourceTransferValidation.swift; sourceTree = "<group>"; };
 		203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupRequestRoutes.swift; sourceTree = "<group>"; };
 		221A00000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		221A00000000000000000002 /* FolioleShareInboxQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleShareInboxQueue.swift; sourceTree = "<group>"; };
@@ -258,7 +251,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
-				50F020011FED79650016851F /* ZIPFoundation in Frameworks */,
 				326B00000000000000000001 /* FolioleFramedSyncRuntime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -323,7 +315,6 @@
 				50F020071FED79650016851F /* companion-sync-protocol-definitions.json */,
 				50F025041FED79650016851F /* companion-query-definitions.json */,
 				50F021011FED79650016851F /* FolioleCompanionContractStore.swift */,
-				50F021021FED79650016851F /* FolioleCompanionZlib.swift */,
 				50F021041FED79650016851F /* FolioleReadOnlySQLite.swift */,
 				50F022031FED79650016851F /* FolioleCompanionDesktopHttpClient.swift */,
 				333A00000000000000000004 /* FolioleFramedSyncFileResponse.swift */,
@@ -358,7 +349,6 @@
 				50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */,
 				F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */,
 				F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */,
-				50F023041FED79650016851F /* FolioleCompanionContentBlobPack.swift */,
 				50F023051FED79650016851F /* FolioleCompanionAttachmentFileStage.swift */,
 				50F023061FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift */,
 				50F027011FED79650016851F /* FolioleCompanionQueryDefinitions.swift */,
@@ -371,7 +361,6 @@
 				99E07FE14EB14B5AA44D5BF4 /* FolioleCompanionHttpRequestReader.swift */,
 				50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */,
 				203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */,
-				203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */,
 				203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */,
 				50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */,
 				50F195011FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift */,
@@ -456,7 +445,6 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
-				50F020021FED79650016851F /* ZIPFoundation */,
 				326D00000000000000000001 /* FolioleFramedSyncRuntime */,
 			);
 			productName = App;
@@ -558,7 +546,6 @@
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
 				326C00000000000000000001 /* XCLocalSwiftPackageReference "FramedSyncRuntimePackage" */,
-				50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -625,7 +612,6 @@
 				221B00000000000000000003 /* FolioleShareInboxQueue.swift in App Sources */,
 				221B00000000000000000004 /* FolioleCompanionShareInboxPlugin.swift in Sources */,
 				50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */,
-				50F021121FED79650016851F /* FolioleCompanionZlib.swift in Sources */,
 				50F021141FED79650016851F /* FolioleReadOnlySQLite.swift in Sources */,
 				50F022131FED79650016851F /* FolioleCompanionDesktopHttpClient.swift in Sources */,
 				333B00000000000000000004 /* FolioleFramedSyncFileResponse.swift in Sources */,
@@ -660,7 +646,6 @@
 				50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */,
 				F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */,
 				F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */,
-				50F023141FED79650016851F /* FolioleCompanionContentBlobPack.swift in Sources */,
 				50F023151FED79650016851F /* FolioleCompanionAttachmentFileStage.swift in Sources */,
 				50F023161FED79650016851F /* FolioleCompanionCanonicalAttachmentKey.swift in Sources */,
 				50F027111FED79650016851F /* FolioleCompanionQueryDefinitions.swift in Sources */,
@@ -672,7 +657,6 @@
 				3EA054724CF949E9B23137FB /* FolioleCompanionHttpRequestReader.swift in Sources */,
 				50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */,
 				203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */,
-				203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */,
 				203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */,
 				50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */,
 				50F195111FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift in Sources */,
@@ -1096,14 +1080,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
-			requirement = {
-				kind = exactVersion;
-				version = 0.9.20;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1116,11 +1092,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
 			productName = "CapApp-SPM";
-		};
-		50F020021FED79650016851F /* ZIPFoundation */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 50F020031FED79650016851F /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
-			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -152,25 +152,6 @@ export function searchIosExternalDocuments(query: string, limit = 20, offset = 0
   return search<ExternalSearchResult & DbRow>('externalDocumentSearch', query, limit, offset);
 }
 
-export async function loadIosMissingContentBlobs(limit = 50) {
-  const [rows, summary] = await Promise.all([
-    queryIosCompanionDatabase<{ hash: string; size_bytes: number } & DbRow>('contentBlobMissingHashes', [
-      Math.max(1, Math.min(500, limit))
-    ]),
-    queryIosCompanionDatabase<DbRow>('contentBlobMissingSummaryRows', [])
-  ]);
-  const blobs = rows.slice(0, Math.max(1, limit));
-  const failed = summary.filter((row) => row.availability === 'failed');
-  return {
-    blobs,
-    failed_content_blob_bytes: sumBytes(failed),
-    failed_content_blob_count: failed.length,
-    hashes: blobs.map((row) => row.hash),
-    missing_content_blob_bytes: sumBytes(summary),
-    missing_content_blob_count: summary.length
-  };
-}
-
 export async function loadIosMissingAttachments(limit = 50, attachmentId?: string) {
   if (!attachmentId) return [];
   const rows = await queryIosCompanionDatabase<DbRow>('attachmentResourceMissingById', [attachmentId]);
@@ -215,8 +196,4 @@ async function payloadParams(row: NativeSyncObjectRecord, mode: string) {
   if (offset < 0) throw new Error(`invalid_ios_view_state_object:${row.object_id}`);
   const deviceId = await readIosCompanionDatabase((db) => iosCompanionDeviceId(db));
   return [row.object_id.slice(offset + marker.length), deviceId];
-}
-
-function sumBytes(rows: DbRow[]) {
-  return rows.reduce((total, row) => total + Number(row.size_bytes ?? 0), 0);
 }

@@ -14,19 +14,6 @@ struct FolioleCompanionNetworkContract {
     let signatureResponseKeys: [String: String]
 }
 
-struct FolioleCompanionContentBlobContract {
-    let batchResponseKeys: [String: String]
-    let defaultLimit: Int
-    let hashPattern: String
-    let hashesReplacement: String
-    let missingResultKeys: [String: String]
-    let requestKeys: [String: String]
-    let responseHeaderKey: String
-    let sql: [String: String]
-    let statuses: [String: String]
-    let supportedCompression: String
-}
-
 struct FolioleCompanionAttachmentResourceContract {
     let batchResponseKeys: [String: String]
     let defaultLimit: Int
@@ -76,22 +63,6 @@ final class FolioleCompanionContractStore {
 
     func syncGroupProviderContract() throws -> [String: Any] {
         try object(path: ["hostApi", "syncGroupProvider"], root: bridge)
-    }
-
-    func contentBlobContract() throws -> FolioleCompanionContentBlobContract {
-        let root = try object(path: ["hostApi", "contentBlobSync"], root: bridge)
-        return FolioleCompanionContentBlobContract(
-            batchResponseKeys: try stringMap(path: ["batchResponseKeys"], root: root),
-            defaultLimit: try integer(path: ["defaultLimit"], root: root),
-            hashPattern: try string(path: ["cas", "hashPattern"], root: root),
-            hashesReplacement: try string(path: ["hashesReplacement"], root: root),
-            missingResultKeys: try stringMap(path: ["missingResultKeys"], root: root),
-            requestKeys: try stringMap(path: ["requestKeys"], root: root),
-            responseHeaderKey: try string(path: ["responseHeaderKey"], root: root),
-            sql: try stringMap(path: ["sql"], root: root),
-            statuses: try stringMap(path: ["statuses"], root: root),
-            supportedCompression: try string(path: ["cas", "supportedCompression"], root: root)
-        )
     }
 
     func attachmentResourceContract() throws -> FolioleCompanionAttachmentResourceContract {

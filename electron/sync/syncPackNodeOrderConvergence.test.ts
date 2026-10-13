@@ -1,91 +1,37 @@
 // @vitest-environment node
+import { expect, it } from 'vitest';
 
-import { promises as fs } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
-import Database from 'better-sqlite3';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-let appDataDir = '/tmp/foliole-sync-pack-order-tests';
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(appDataDir, 'cache'),
-    app_config_dir: path.join(appDataDir, 'config'),
-    app_data_dir: appDataDir,
-    app_log_dir: path.join(appDataDir, 'logs')
-  })
-}));
-
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
-import { createIncomingPack, installLocalNodeFixtures } from './syncPackNodeApplyTestSupport.js';
+import { sendCurrentObject } from './currentRequestLearning.testSupport.js';
 
-let incomingPath = '';
-let tempRoot = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-order-'));
-  appDataDir = path.join(tempRoot, 'app-data');
-  incomingPath = path.join(tempRoot, 'incoming.db');
-  initializeDatabaseConnection(openDatabaseConnection());
-  installLocalNodeFixtures();
-  createIncomingPack(incomingPath);
-  const incoming = new Database(incomingPath);
-  incoming.prepare("UPDATE pack_manifest SET value = ? WHERE key = 'manifest_json'")
-    .run(JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 3,
-      from_state_seq: 0, to_state_seq: 3 }));
-  const sources = [{ authorId: 'desktop-host', counter: 1, childIds: ['node-1'] }];
-  const orderHash = currentParentOrderHash(ROOT_CHILD_ORDER_ID, sources);
-  incoming.prepare(`INSERT INTO sync_object_state (
-    object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
-  ) VALUES ('parent_child_order', ?, 3, ?, 'desktop-host', '2026-05-04T01:02:00.000Z', NULL)`)
-    .run(ROOT_CHILD_ORDER_ID, orderHash);
-  incoming.prepare(`INSERT INTO sync_objects (
-    object_type, object_id, content_hash, payload_json, updated_at, deleted_at
-  ) VALUES ('parent_child_order', ?, ?, ?, '2026-05-04T01:02:00.000Z', NULL)`)
-    .run(ROOT_CHILD_ORDER_ID, orderHash, JSON.stringify(currentParentOrderPayload(ROOT_CHILD_ORDER_ID, sources)));
-  incoming.close();
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-it('applies a parent sequence independently of the article version', async () => {
-  const connection = openDatabaseConnection();
-  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'new-node-order' });
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+it('applies and replays a parent sequence independently of article versions and retired ranking', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
-    await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0, hostName: 'receiver' });
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
-  expect(connection.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-    .get(ROOT_CHILD_ORDER_ID)).toEqual({ child_ids_json: '["node-1"]' });
-});
-
-it('does not reconstruct retired ranking from article history during replay', async () => {
-  const connection = openDatabaseConnection();
-  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'replay-node-order' });
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
-  try {
-    await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0, hostName: 'receiver' });
-    connection.sqlite.prepare(
-      `UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.position', 5)
-       WHERE version_id = 'desktop#1'`
-    ).run();
-    await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 3, hostName: 'receiver' });
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
-  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").all()).toEqual([]);
-  expect(connection.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-    .get(ROOT_CHILD_ORDER_ID)).toEqual({ child_ids_json: '["node-1"]' });
+    const record = textBranch('original', 'Original body'); record.snapshot.position = 5;
+    await applySyncNodesWithDbPort(source.db, [record]);
+    await sendCurrentObject(source, target);
+    const versions = target.sqlite.prepare('SELECT * FROM node_sync_versions').all();
+    const sources = [{ authorId: 'desktop-host', counter: 1, childIds: ['topic'] }];
+    await source.db.transaction(db => applySyncObjectInTransaction(db, {
+      object_type: 'parent_child_order', object_id: ROOT_CHILD_ORDER_ID,
+      content_hash: currentParentOrderHash(ROOT_CHILD_ORDER_ID, sources),
+      payload_json: JSON.stringify(currentParentOrderPayload(ROOT_CHILD_ORDER_ID, sources)),
+      updated_at: '2026-05-04T01:02:00.000Z', deleted_at: null
+    }));
+    for (let replay = 0; replay < 2; replay++) {
+      await sendCurrentObject(source, target, 'parent_child_order', ROOT_CHILD_ORDER_ID);
+      await sendCurrentObject(source, target); target.reopen();
+      expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').get(ROOT_CHILD_ORDER_ID))
+        .toEqual({ child_ids_json: '["topic"]' });
+      expect(target.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").all()).toEqual([]);
+      expect(target.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(versions);
+    }
+  } finally { await fixture.close(); }
 });

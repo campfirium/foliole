@@ -1,9 +1,8 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { contentPackFixture, packTime } from '../../../electron/database/companionContentPack.testSupport.js';
+import { contentPackFixture } from '../../../electron/database/companionContentPack.testSupport.js';
 
-import { applyCompanionContentPack } from './companionBatchDataPlane.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { verifyStoredContentBlobBytes, type StoredContentBlobMeta } from './storedContentBlobIntegrity.js';
 
@@ -23,7 +22,9 @@ function observeReads(db: DbPort) {
 
 async function fixture(body: string) {
   const host = contentPackFixture([body]);
-  await applyCompanionContentPack(host.db, { failedHashes: [], now: packTime, packPath: host.path });
+  for (const entry of host.entries) {
+    host.sqlite.prepare('INSERT INTO content_blob_data (hash, data) VALUES (?, ?)').run(entry.hash, entry.bytes);
+  }
   const entry = host.entries[0]!;
   const meta: StoredContentBlobMeta = {
     hash: entry.hash, stored_sha256: entry.hash, stored_size_bytes: entry.bytes.byteLength

@@ -9,9 +9,6 @@ import {
   COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS
 } from './companionAttachmentResourceHostContractDefinitions.js';
 import {
-  COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS
-} from './companionContentBlobHostContractDefinitions.js';
-import {
   COMPANION_RESOURCE_PLUGIN_DEFAULTS,
   COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
 } from './companionResourcePluginContractDefinitions.js';
@@ -35,12 +32,6 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
       },
       runtimeKind: 'android-capacitor'
     },
-    contentBlobBatch: {
-      responseHeaderKeys: {
-        blobHash: COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS.responseHeaderKey
-      }
-    },
-    contentBlobSync: COMPANION_CONTENT_BLOB_HOST_CONTRACT_DEFINITIONS,
     topicSearch: COMPANION_TOPIC_SEARCH_HOST_CONTRACT,
     network: {
       discoveryDefaults: {

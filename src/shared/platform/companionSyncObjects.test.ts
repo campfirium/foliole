@@ -3,15 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
-const databaseOwnerMock = vi.hoisted(() => ({
-  runWriter: vi.fn(async (task: (db: unknown) => Promise<unknown>) => task({
-    query: async () => [], transaction: async (execute: (db: unknown) => Promise<unknown>) =>
-      execute({ query: async () => [] })
-  }))
-}));
-vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: () => databaseOwnerMock
-}));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
   loadNodeVersions: vi.fn(async () => [{ object_id: 'node-1' }]),
   loadReviewLog: vi.fn(async () => [{ op_id: 'op-1' }]),
@@ -25,9 +16,6 @@ const iosReadsMock = vi.hoisted(() => ({
   missingAttachments: vi.fn(async () => [
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]),
-  missingBlobs: vi.fn(async () => ({
-    blobs: [{ hash: 'a'.repeat(64), size_bytes: 1024 }], hashes: ['a'.repeat(64)]
-  })),
   objects: vi.fn(async () => [{ object_id: 'one', object_type: 'setting' }]),
   pdf: vi.fn(async () => [
     { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
@@ -53,7 +41,6 @@ vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
 }));
 vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
   loadIosMissingAttachments: iosReadsMock.missingAttachments,
-  loadIosMissingContentBlobs: iosReadsMock.missingBlobs,
   loadIosPdfPageText: iosReadsMock.pdf,
   loadIosSyncIndex: iosReadsMock.index,
   loadIosSyncNodeConflicts: iosReadsMock.conflicts,
@@ -119,10 +106,6 @@ async function testNativePluginBridge() {
     { conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }
   ]);
   await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([{ object_id: 'one', object_type: 'setting' }]);
-  await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
-  await expect(api.loadCompanionMissingContentBlobs(3)).resolves.toEqual([{ hash: 'a'.repeat(64), size_bytes: 1024 }]);
-  expect(iosReadsMock.missingBlobs).toHaveBeenCalledWith(3);
-  expect(databaseOwnerMock.runWriter).toHaveBeenCalled();
   await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);

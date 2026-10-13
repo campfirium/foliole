@@ -5,9 +5,10 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { describeVersionFact, probeSyncPackFactPresence } from '../../lib/core/sync/syncPackFactPresence.js';
+import { branch, business, identity, receive } from '../sync/syncPackStoredVersionDependencies.testSupport.js';
 
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
+import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 import { closeLibraries, createPeer, edit, history, startLibraries } from './syncLibrary.testSupport.js';
 
 beforeEach(startLibraries);
@@ -76,30 +77,39 @@ it('keeps an effective alternative and its source body intact during normal coll
   expect(peer.db.prepare('SELECT * FROM node_text_alternatives').all()).toEqual(before);
 });
 
-it('accepts complete and retired forms of one fact while rejecting identity and complete-body contradictions', async () => {
-  const peer = createPeer('source');
-  const original = edit(peer, ORIGINAL);
-  const load = () => {
-    const row = peer.driver.queryOne<Parameters<typeof describeVersionFact>[0]>(
-      `SELECT *, json_remove(snapshot_json, '$.content') AS snapshot_metadata
-        FROM node_sync_versions WHERE version_id = ?`, [original]);
-    if (!row) throw new Error('test_version_missing');
-    return describeVersionFact(row);
-  };
-  const complete = load();
-  expect(JSON.parse(complete.snapshot_metadata)).not.toHaveProperty('body_blob_hash');
-  const page = { versions: [complete], parents: [], reviews: [] };
-  expect((await probeSyncPackFactPresence(peer.port, page)).versions).toEqual([original]);
-  await expect(probeSyncPackFactPresence(peer.port, {
-    ...page, versions: [{ ...complete, body_hash: hashTextBody('Contradictory body') }]
-  })).rejects.toThrow('sync_pack_node_version_immutable_mismatch');
-  edit(peer, CURRENT);
-  expect(load()).toEqual({ ...complete, body_hash: null });
-  expect((await probeSyncPackFactPresence(peer.port, page)).versions).toEqual([]);
-  await expect(probeSyncPackFactPresence(peer.port, {
-    ...page, versions: [{ ...complete, content_hash: 'contradictory-identity' }]
-  })).rejects.toThrow('sync_pack_node_version_immutable_mismatch');
-  await expect(probeSyncPackFactPresence(peer.port, {
-    ...page, versions: [{ ...complete, snapshot_metadata: JSON.stringify({ title: 'Contradictory title' }) }]
-  })).rejects.toThrow('sync_pack_node_version_immutable_mismatch');
+it('accepts complete and retired forms through current requests while rejecting immutable contradictions', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target'); const retired = fixture.peer('observer');
+  try {
+    const original = branch('original', ORIGINAL);
+    const head = branch('head', CURRENT, original, '2026-05-05T00:00:00.000Z');
+    await receive(source, target, [original]);
+    const beforeBodyConflict = business(target);
+    await expect(receive(source, target, [{ ...original, body_text: 'Contradictory body',
+      snapshot: { ...original.snapshot, content: 'Contradictory body' } }]))
+      .rejects.toThrow(/^sync_pack_node_version_immutable_mismatch:original$/u);
+    expect(business(target)).toEqual(beforeBodyConflict);
+    await receive(source, target, [identity(original), head]); target.reopen();
+    expect(target.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'original'").get())
+      .toEqual({ body_text: ORIGINAL });
+    await receive(source, retired, [identity(original), head]); retired.reopen();
+    expect(retired.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'original'").get())
+      .toEqual({ body_text: null });
+    for (const contradictory of [
+      { ...identity(original), content_hash: 'f'.repeat(64) },
+      { ...identity(original), snapshot: { ...identity(original).snapshot, title: 'Contradictory title' } }
+    ]) {
+      const before = business(retired);
+      await expect(receive(source, retired, [contradictory]))
+        .rejects.toThrow(/^sync_pack_node_version_immutable_mismatch:original$/u);
+      retired.reopen(); expect(business(retired)).toEqual(before);
+    }
+    for (let replay = 0; replay < 2; replay++) {
+      await receive(source, retired, [original, head]); retired.reopen();
+      expect(retired.sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
+        .toEqual([{ version_id: 'head', body_text: CURRENT }, { version_id: 'original', body_text: ORIGINAL }]);
+      expect(retired.sqlite.prepare('SELECT version_id, parent_version_id FROM node_sync_version_parents').all())
+        .toEqual([{ version_id: 'head', parent_version_id: 'original' }]);
+    }
+  } finally { await fixture.close(); }
 });

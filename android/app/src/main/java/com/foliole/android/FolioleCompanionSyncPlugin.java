@@ -177,16 +177,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionResourcePluginActions.finishAttachmentResourceBatch(getContext(), call));
     }
 
-    @PluginMethod public void downloadContentBlobBatch(PluginCall call) {
-        async(call, "Failed to download companion content blobs.", () ->
-            FolioleCompanionResourcePluginActions.downloadContentBlobBatch(getContext(), call));
-    }
-
-    @PluginMethod public void finishContentBlobBatch(PluginCall call) {
-        async(call, "Failed to finish companion content blobs.", () ->
-            FolioleCompanionResourcePluginActions.finishContentBlobBatch(getContext(), call));
-    }
-
     @PluginMethod public void readRemoteImageResponse(PluginCall call) {
         async(call, "Failed to read image response.", () -> FolioleRemoteImageFiles.read(call));
     }

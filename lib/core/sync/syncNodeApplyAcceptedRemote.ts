@@ -14,6 +14,7 @@ import {
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
 import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalidationState } from './syncNodeSearchInvalidations.js';
+import { isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { applyStoredNodeVersionBodyState } from './syncNodeVersionBodyState.js';
@@ -34,7 +35,7 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) return;
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
-  const [existing] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at,
+  const [existing] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at, snapshot_json,
     body_text IS NOT NULL AS has_body,
     body_text IS NOT NULL AND ? IS NOT NULL AND body_text IS NOT ? AS body_mismatch
     FROM node_sync_versions WHERE version_id = ?`, [incomingBody, incomingBody, record.version_id]);
@@ -43,7 +44,8 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
       textAlternativesSchema.parse(record.snapshot.text_alternatives ?? []), record.alternative_bodies ?? []);
     if (existing.object_id !== record.object_id || existing.content_hash !== record.content_hash ||
         existing.host_name !== record.host_name || existing.created_at !== record.version_created_at ||
-        Number(existing.body_mismatch) !== 0) {
+        Number(existing.body_mismatch) !== 0 || typeof existing.snapshot_json !== 'string' ||
+        !isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot)) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
     await applyStoredNodeVersionBodyState(port, record);

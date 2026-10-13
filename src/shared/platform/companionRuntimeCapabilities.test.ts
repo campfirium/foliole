@@ -33,7 +33,6 @@ describe('companionRuntimeCapabilities', () => {
 
     expect(requireAvailableCompanionRuntime('attachment-resource-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('bootstrap')).toEqual({ kind: 'ios-native', platform: 'ios' });
-    expect(requireAvailableCompanionRuntime('content-blob-sync')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('external-document-directory')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('external-document-read')).toEqual({ kind: 'ios-native', platform: 'ios' });
     expect(requireAvailableCompanionRuntime('external-document-search')).toEqual({ kind: 'ios-native', platform: 'ios' });

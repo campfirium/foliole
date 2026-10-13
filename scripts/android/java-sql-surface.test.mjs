@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
 const ISOLATED_SQLITE = new Set([
-  'FolioleCompanionContentBlobPack.java',
   'FolioleCompanionIdentityFactChunkWriter.java',
   'FolioleCompanionResourceAvailability.java',
   'FolioleCompanionSyncGroupDatabase.java',
@@ -45,7 +44,7 @@ describe('Android Java SQL surface', () => {
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'downloadAttachmentResourceBatch',
-      'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
+      'finishAttachmentResourceBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
       'maintainAttachmentFiles',
       'readRemoteImageResponse', 'rejectSyncGroupJoinRequest',

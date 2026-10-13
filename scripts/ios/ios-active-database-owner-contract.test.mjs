@@ -33,7 +33,7 @@ describe('iOS active database ownership', () => {
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'releaseFramedSyncPayloadLoan', 'validateFramedSyncPayloadLoan',
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
-      'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
+      'finishAttachmentResourceBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
       'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
       'rejectSyncGroupJoinRequest',
@@ -49,7 +49,6 @@ describe('iOS active database ownership', () => {
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabase.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseReads.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.ts',
-      'src/shared/platform/companionContentBlobSync.ts',
       'src/shared/platform/companionDesktopAttachmentResources.ts'
     ];
     const source = (await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')))).join('\n');
@@ -57,7 +56,6 @@ describe('iOS active database ownership', () => {
     expect(source).toContain('getIosCompanionDatabaseOwner');
     expect(source).toContain('readIosCompanionDatabase');
     expect(source).toContain('writeIosCompanionDatabase');
-    expect(source).toContain('commitStagedCompanionContentBatch');
     expect(source).toContain('commitStagedCompanionAttachmentBatch');
   });
 });

@@ -6,7 +6,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -19,27 +18,10 @@ import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionBatchDataPlaneTest {
-    @Test
-    public void stagesContentBytesInPrivateSqlitePackAndCleansIt() throws Exception {
-        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        byte[] bytes = "native body bytes".getBytes(StandardCharsets.UTF_8);
-        String hash = FolioleCompanionContentBlobCasRules.digestHex(context, bytes);
-        List<FolioleCompanionContentBlobMultipartBatch.Blob> blobs = Collections.singletonList(
-            new FolioleCompanionContentBlobMultipartBatch.Blob(hash, bytes)
-        );
-
-        File pack = FolioleCompanionContentBlobPack.create(context, blobs);
-        assertTrue(pack.getAbsolutePath().startsWith(context.getCacheDir().getAbsolutePath()));
-        assertEquals(hash, FolioleCompanionContentBlobPack.read(pack).get(0).hash);
-        FolioleCompanionContentBlobPack.delete(pack);
-        assertFalse(pack.exists());
-    }
-
     @Test
     public void rollsBackNewlyStagedAttachmentWhenSharedCommitFails() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();

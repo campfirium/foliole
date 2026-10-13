@@ -19,7 +19,6 @@ import {
   isAvailableNativeCompanionRuntime,
   isNativeAndroidCompanionRuntime,
   isNativeCompanionAttachmentResourceRuntime,
-  isNativeCompanionContentBlobRuntime,
   isNativeCompanionExternalDirectoryRuntime,
   isNativeCompanionExternalDocumentReadRuntime,
   isNativeCompanionExternalDocumentSearchRuntime,
@@ -56,7 +55,6 @@ function expectIosRuntimeBoundary() {
   expect(isAvailableNativeCompanionRuntime()).toBe(true);
   expectNodeMutationSurfaces(true);
   expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
-  expect(isNativeCompanionContentBlobRuntime()).toBe(true);
   expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
   expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
   expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);
@@ -84,7 +82,6 @@ describe('companion workspace runtime boundary', () => {
   it('keeps browser preview on the explicit non-native path', () => {
     expect(isNativeAndroidCompanionRuntime()).toBe(false);
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(false);
-    expect(isNativeCompanionContentBlobRuntime()).toBe(false);
     expect(isNativeCompanionExternalDirectoryRuntime()).toBe(false);
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(false);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(false);
@@ -106,7 +103,6 @@ describe('companion workspace runtime boundary', () => {
 
     expect(isNativeAndroidCompanionRuntime()).toBe(true);
     expect(isNativeCompanionAttachmentResourceRuntime()).toBe(true);
-    expect(isNativeCompanionContentBlobRuntime()).toBe(true);
     expect(isNativeCompanionExternalDirectoryRuntime()).toBe(true);
     expect(isNativeCompanionExternalDocumentReadRuntime()).toBe(true);
     expect(isNativeCompanionExternalDocumentSearchRuntime()).toBe(true);

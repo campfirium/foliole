@@ -5,7 +5,6 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionAssetReader.java',
       'FolioleCompanionAttachmentResourceHash.java',
       'FolioleCompanionCanonicalAttachmentKey.java',
-      'FolioleCompanionContentBlobCasRules.java',
       'FolioleCompanionJsonAssetCache.java'
     ]
   },
@@ -48,10 +47,6 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionAttachmentResourceBatchSessions.java',
       'FolioleCompanionAttachmentResourceBatchStore.java',
       'FolioleCompanionBootstrapState.java',
-      'FolioleCompanionContentBlobBatchSessions.java',
-      'FolioleCompanionContentBlobBatchStore.java',
-      'FolioleCompanionContentBlobBatchText.java',
-      'FolioleCompanionContentBlobMultipartBatch.java',
       'FolioleCompanionCurrentGroupCredential.java',
       'FolioleCompanionDeviceAnchorStore.java',
       'FolioleCompanionDesktopHttpClient.java',
@@ -115,7 +110,6 @@ export const CLASSIFICATIONS = {
   isolated_pack_sqlite: {
     responsibility: 'Create or validate isolated temporary SQLite packs without opening the active library.',
     files: [
-      'FolioleCompanionContentBlobPack.java',
       'FolioleCompanionIdentityFactChunkWriter.java',
       'FolioleCompanionResourceAvailability.java',
       'FolioleCompanionSyncGroupContentBlobBatch.java',

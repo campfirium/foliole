@@ -43,10 +43,6 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return FolioleCompanionBridgeContractDefinitions.hostApiArray(context, "bootstrap", "hostNameDefaults", "emulatorModelTokens");
     }
 
-    static String contentBlobBatchBlobHashResponseHeaderKey(Context context) throws Exception {
-        return contentBlobBatchResponseHeaderKey(context, "blobHash");
-    }
-
     static String networkBodyRequestKey(Context context) throws Exception {
         return networkRequestKey(context, "body");
     }
@@ -163,10 +159,6 @@ final class FolioleCompanionHostBridgeContractDefinitions {
 
     private static String bootstrapHostNameDefault(Context context, String key) throws Exception {
         return hostApiString(context, "bootstrap", "hostNameDefaults", key);
-    }
-
-    private static String contentBlobBatchResponseHeaderKey(Context context, String key) throws Exception {
-        return hostApiString(context, "contentBlobBatch", "responseHeaderKeys", key);
     }
 
     private static String hostApiString(Context context, String groupName, String objectName, String key) throws Exception {
