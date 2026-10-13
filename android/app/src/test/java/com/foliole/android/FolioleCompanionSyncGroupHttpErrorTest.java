@@ -23,4 +23,11 @@ public final class FolioleCompanionSyncGroupHttpErrorTest {
         assertEquals(401, unauthorized.status);
         assertEquals("bad_signature", unauthorized.code);
     }
+
+    @Test public void preservesSharedMemberHandshakeRequirement() {
+        var response = new FolioleCompanionSyncGroupHttpError(
+            new IllegalStateException("sync_group_member_state_required"));
+        assertEquals(409, response.status);
+        assertEquals("sync_group_member_state_required", response.code);
+    }
 }

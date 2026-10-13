@@ -12,7 +12,8 @@ final class FolioleCompanionSyncGroupHttpError {
         } else if (error instanceof IllegalArgumentException) {
             status = "sync_group_join_capacity_exceeded".equals(message) ? 429 : 400;
             code = message;
-        } else if ("sync_round_busy".equals(message) || "sync_round_expired".equals(message)) {
+        } else if ("sync_round_busy".equals(message) || "sync_round_expired".equals(message)
+                || "sync_group_member_state_required".equals(message)) {
             status = 409;
             code = message;
         } else {
