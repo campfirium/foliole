@@ -51,16 +51,17 @@ it('repairs missing derived state before publishing the original node version', 
     .toEqual({ id: 'node-backfill', current_version_id: 'android#node-v1' });
 });
 
-it('transfers complete external document text with its original identity', async () => {
+it.each([0, 1024 * 1024])('transfers complete external document text with its original identity: bytes=%s', async bytes => {
   const folder: NativeExternalSearchFolder = {
     attachment_mode: 'document_relative', attachment_root_path: null, created_at: '2026-04-27T00:00:00.000Z',
     document_count: 0, excluded_dirs: [], folder_path: '/library', id: 'folder-1', indexed_at: null,
     last_error: null, status: 'ready', updated_at: '2026-04-27T00:00:00.000Z'
   };
-  const body = '# External Doc\n\nOwned external body';
+  const prefix = '# External Doc\n\nOwned external body';
+  const body = prefix.padEnd(Math.max(bytes, prefix.length), 'x');
   upsertExternalDocuments(folder, [{ absolutePath: '/library/doc.md', content: body, extension: 'md',
     fileName: 'doc.md', modifiedAt: '2026-04-27T00:00:00.000Z', modifiedMs: 1777,
-    relativePath: 'doc.md', sizeBytes: 48 }], '2026-04-27T00:00:00.000Z');
+    relativePath: 'doc.md', sizeBytes: body.length }], '2026-04-27T00:00:00.000Z');
   const target = projectionPeer('target');
   await transferProjection(ownerPort(), target.db);
   target.reopen();

@@ -15,7 +15,6 @@ import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyE
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
-import { loadPackRows, loadMaxStateSeq } from './syncPackRows.js';
 
 const databases: BetterSqlite3.Database[] = [];
 const roots: string[] = [];
@@ -75,8 +74,9 @@ it('merges overlapping daily counts through production sync payloads and retains
   const a = open(); const b = open(path.join(root, 'b.db'));
   topic(a); topic(a, 'topic-b'); topic(b);
   read(a, '2026-10-02'); read(a, '2026-10-02', 'topic-b'); read(b, '2026-10-02', 'topic-a', 'host-b');
-  const packed = loadPackRows(0, loadMaxStateSeq(a.driver), a.driver).syncObjects
-    .filter((record) => record.object_type === 'topic_daily_count');
+  const ids = a.driver.queryAll<{ object_id: string }>(
+    "SELECT object_id FROM sync_object_state WHERE object_type = 'topic_daily_count' ORDER BY object_id");
+  const packed = loadSyncObjectsFromDriver(a.driver, ids.map(row => row.object_id), ['topic_daily_count']);
   expect(packed).toHaveLength(2);
   await applySyncObjectsWithDbPort(b.port, packed);
   await applySyncObjectsWithDbPort(b.port, packed);

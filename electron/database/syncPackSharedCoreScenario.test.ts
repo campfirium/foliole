@@ -1,250 +1,57 @@
 // @vitest-environment node
+import { expect, it } from 'vitest';
 
-import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { inflateSync } from 'node:zlib';
+import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
+import { textBranch } from './topicTextState.testSupport.js';
 
-let mockedAppDataDir = '/tmp/foliole-sync-pack-shared-core-scenario-tests';
-
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_data_dir: mockedAppDataDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
-
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
-
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-
-let tempRoot = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-shared-core-'));
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-it('builds a desktop pack and applies it through the shared DbPort pack surface', async () => {
-  const packs = await buildSourceSyncPacks();
-  const initialIncomingPath = extractIncomingPack(packs.initial, path.join(tempRoot, 'incoming-initial.db'));
-  const modifiedIncomingPath = extractIncomingPack(packs.modified, path.join(tempRoot, 'incoming-modified.db'));
-  const connection = openTargetDatabase();
-
-  await applyIncomingPackToTarget(connection, initialIncomingPath, 0, {
-    appliedObjectCount: 1,
-    fromStateSeq: 0,
-    toStateSeq: 1
-  });
-  await applyIncomingPackToTarget(connection, initialIncomingPath, 1, {
-    applied: false,
-    appliedObjectCount: 0,
-    fromStateSeq: 0,
-    toStateSeq: 1
-  });
-  await applyIncomingPackToTarget(connection, modifiedIncomingPath, 1, {
-    appliedObjectCount: 1,
-    fromStateSeq: 1,
-    toStateSeq: 2
-  });
-
-  assertTargetRows(connection, {
-    contentHash: 'node-hash-2',
-    currentVersionId: 'desktop#2',
-    stateSeq: 2,
-    title: 'Packed Article Updated'
-  });
-});
-
-async function buildSourceSyncPacks() {
-  mockedAppDataDir = path.join(tempRoot, 'source-app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
-  insertSourceNode();
-  const initial = path.join(tempRoot, 'desktop-pack-initial.syncpack');
-  await buildDesktopSyncPack({
-    createdAt: '2026-05-04T06:00:00.000Z',
-    fromPeerId: 'authorization-desktop-source',
-    fromStateSeq: 0,
-    outputPath: initial,
-    packId: 'desktop-pack-1',
-    toPeerId: 'android-target'
-  });
-  updateSourceNode();
-  const modified = path.join(tempRoot, 'desktop-pack-modified.syncpack');
-  await buildDesktopSyncPack({
-    createdAt: '2026-05-04T06:05:00.000Z',
-    fromPeerId: 'authorization-desktop-source',
-    fromStateSeq: 1,
-    outputPath: modified,
-    packId: 'desktop-pack-2',
-    toPeerId: 'android-target'
-  });
-  closeDatabaseConnection();
-  return { initial, modified };
+function version(id: string, title: string, content: string, parent?: NativeSyncNodeRecord) {
+  const record = textBranch(id, content, parent);
+  record.object_id = 'node-1';
+  record.snapshot = { ...record.snapshot, id: 'node-1', title };
+  record.content_hash = computeNodeSyncHash({ ...nodeSyncSnapshotHashMetadata(record.snapshot), content });
+  return record;
 }
 
-function openTargetDatabase() {
-  mockedAppDataDir = path.join(tempRoot, 'target-app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
-  installSyncPushAckTable();
-  return openDatabaseConnection();
+async function send(source: RestorePeer, target: RestorePeer) {
+  const difference = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(source.db), remote: [] })
+    .find(value => value.objectType === 'node' && value.globalId === 'node-1');
+  if (!difference) throw new Error('test_node_request_missing');
+  await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);
 }
 
-async function applyIncomingPackToTarget(
-  connection: ReturnType<typeof openDatabaseConnection>,
-  incomingPath: string,
-  currentCursor: number,
-  expected: {
-    applied?: boolean;
-    appliedObjectCount: number;
-    fromStateSeq: number;
-    toStateSeq: number;
-  }
-) {
-  const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-shared-core-scenario' });
-
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+it('applies an initial node, repeated request and later version through the shared database surface', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor,
-      hostName: 'android-target'
-    })).resolves.toMatchObject({
-      applied: expected.applied ?? true,
-      appliedObjectCount: expected.appliedObjectCount,
-      fromStateSeq: expected.fromStateSeq,
-      toStateSeq: expected.toStateSeq
-    });
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
-}
-
-function assertTargetRows(
-  connection: ReturnType<typeof openDatabaseConnection>,
-  expected: {
-    contentHash: string;
-    currentVersionId: string;
-    stateSeq: number;
-    title: string;
-  }
-) {
-  expect(connection.sqlite.prepare(
-    `SELECT title, content, body_blob_hash, current_version_id, sync_dirty
-     FROM nodes WHERE id = 'node-1'`
-  ).get()).toEqual({
-    body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-    content: 'Updated article body stays in body pack metadata.',
-    current_version_id: expected.currentVersionId,
-    sync_dirty: 0,
-    title: expected.title
-  });
-  expect(connection.sqlite.prepare(
-    `SELECT sync_dirty, state_seq, content_hash
-     FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'`
-  ).get()).toEqual({
-    content_hash: expected.contentHash,
-    state_seq: expected.stateSeq,
-    sync_dirty: 0
-  });
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM content_blobs').get()).toEqual({ count: 2 });
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM content_blob_data').get()).toEqual({ count: 0 });
-}
-
-function insertSourceNode() {
-  const driver = openDatabaseConnection().driver;
-  const bodyHash = upsertTextBodyBlob(driver, 'Article body stays in body pack metadata.', '2026-05-04T05:00:00.000Z');
-  driver.execute(
-    `INSERT INTO nodes (
-       id, kind, title, is_title_manual, hide_title_heading, body_blob_hash, content,
-       current_version_id, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?)`,
-    ['node-1', 'Packed Article', bodyHash, 'Article body stays in body pack metadata.', 'desktop#1',
-      '2026-05-04T05:00:00.000Z', '2026-05-04T05:00:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('node', 'node-1', 1, 'desktop#1', 'node-hash-1',
-       'desktop-source', '2026-05-04T05:00:00.000Z', 1)`
-  );
-  driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
-     ) VALUES ('desktop#1', 'node-1', NULL, 'desktop-source',
-       '2026-05-04T05:00:00.000Z', 'node-hash-1', 'Article body stays in body pack metadata.', '{"id":"node-1","title":"Packed Article"}')`
-  );
-}
-
-function updateSourceNode() {
-  const driver = openDatabaseConnection().driver;
-  const bodyHash = upsertTextBodyBlob(driver, 'Updated article body stays in body pack metadata.', '2026-05-04T05:05:00.000Z');
-  driver.execute(
-    `UPDATE nodes
-     SET title = ?, content = ?, body_blob_hash = ?, current_version_id = ?, updated_at = ?
-     WHERE id = ?`,
-    ['Packed Article Updated', 'Updated article body stays in body pack metadata.', bodyHash,
-      'desktop#2', '2026-05-04T05:05:00.000Z', 'node-1']
-  );
-  driver.execute(
-    `UPDATE sync_object_state
-     SET state_seq = 2, current_version_id = 'desktop#2', content_hash = 'node-hash-2',
-       updated_at = '2026-05-04T05:05:00.000Z', sync_dirty = 1
-     WHERE object_type = 'node' AND object_id = 'node-1'`
-  );
-  driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
-     ) VALUES ('desktop#2', 'node-1', 'desktop#1', 'desktop-source',
-       '2026-05-04T05:05:00.000Z', 'node-hash-2', 'Updated article body stays in body pack metadata.', '{"id":"node-1","title":"Packed Article Updated"}')`
-  );
-}
-
-function installSyncPushAckTable() {
-  openDatabaseConnection().sqlite.exec(`
-    CREATE TABLE sync_push_ack (
-      client_op_id TEXT PRIMARY KEY NOT NULL,
-      object_type TEXT NOT NULL,
-      object_id TEXT NOT NULL,
-      state_seq INTEGER,
-      status TEXT NOT NULL,
-      acked_at TEXT NOT NULL
-    )
-  `);
-}
-
-function extractIncomingPack(syncPackPath: string, incomingPath: string) {
-  const entries = readStoredZipEntries(syncPackPath);
-  fsSync.writeFileSync(incomingPath, inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0)));
-  return incomingPath;
-}
-
-function readStoredZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  let offset = 0;
-  while (buffer.readUInt32LE(offset) === 0x04034b50) {
-    const compressedSize = buffer.readUInt32LE(offset + 18);
-    const fileNameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + fileNameLength + extraLength;
-    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
-    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
-    offset = contentStart + compressedSize;
-  }
-  return entries;
-}
+    const first = version('desktop#1', 'Packed Article', 'Article body stays in body pack metadata.');
+    const second = version('desktop#2', 'Packed Article Updated', 'Updated article body stays in body pack metadata.', first);
+    await applySyncNodesWithDbPort(source.db, [first]);
+    await send(source, target);
+    await send(source, target);
+    target.reopen();
+    expect(target.sqlite.prepare('SELECT current_version_id, content FROM nodes').all())
+      .toEqual([{ current_version_id: first.version_id, content: first.body_text }]);
+    await applySyncNodesWithDbPort(source.db, [second]);
+    for (let replay = 0; replay < 2; replay++) {
+      await send(source, target); target.reopen();
+      expect(target.sqlite.prepare('SELECT title, content, body_blob_hash, current_version_id, sync_dirty FROM nodes').all())
+        .toEqual([{ title: second.snapshot.title, content: second.body_text, body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/u),
+          current_version_id: second.version_id, sync_dirty: 0 }]);
+      expect(target.sqlite.prepare("SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'node'").all())
+        .toEqual([{ content_hash: second.content_hash, sync_dirty: 0 }]);
+      const columns = 'version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text';
+      expect(target.sqlite.prepare(`SELECT ${columns} FROM node_sync_versions ORDER BY version_id`).all())
+        .toEqual(source.sqlite.prepare(`SELECT ${columns} FROM node_sync_versions ORDER BY version_id`).all());
+      expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents').all())
+        .toEqual([{ version_id: 'desktop#2', parent_version_id: 'desktop#1', ordinal: 0 }]);
+    }
+  } finally { await fixture.close(); }
+});

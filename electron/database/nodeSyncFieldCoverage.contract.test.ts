@@ -8,21 +8,12 @@ import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopCoreSchemaStatements.js';
 import { buildCanonicalNodeSyncPayload, type NodeSyncHashInput } from '../../lib/core/database/nodeSyncHash.js';
 import { UPSERT_REMOTE_NODE_SQL } from '../../lib/core/sync/syncNodeApplyStatements.js';
-import { buildSyncPackNodeUpsertSql } from '../../lib/core/sync/syncPackApplyStatements.js';
-import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
-import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_host_name', 'sync_dirty'];
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
 const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
 const RETIRED_NODE_ORDER_COLUMNS = ['position'];
-const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
-  'last_modified_by_host_name',
-  'position',
-  'sync_dirty'
-];
-
 const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'anchor_link',
   'anchor_resolution_status',
@@ -68,9 +59,6 @@ it('keeps node sync field coverage explicit across schema, hash, snapshot, and a
   expectComparableFields(desktopSnapshotFields(), expectedSnapshotFields(desktopColumns));
   expectComparableFields(remoteNodeUpsertColumns(), withoutFields(desktopColumns, RETIRED_NODE_ORDER_COLUMNS));
   expectComparableFields(wireSnapshotFields(), expectedSnapshotFields(desktopColumns));
-  expect(loadNodeColumns(PACK_SCHEMA)).toEqual([...SYNC_PACK_NODE_COLUMNS].sort());
-  expect(SYNC_PACK_NODE_COLUMNS).not.toContain('position');
-  expect(syncPackNodeUpsertPendingColumns(desktopColumns)).toEqual(SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS);
   expectDerivedBodyResourceIdentityCoverage();
 });
 
@@ -154,14 +142,6 @@ function remoteNodeUpsertColumns() {
   return extractInsertColumns(UPSERT_REMOTE_NODE_SQL, 'nodes');
 }
 
-function syncPackNodeUpsertColumns() {
-  return extractInsertColumns(buildSyncPackNodeUpsertSql(), 'main.nodes');
-}
-
-function syncPackNodeUpsertPendingColumns(schemaColumns: string[]) {
-  return missingFields(schemaColumns, syncPackNodeUpsertColumns()).sort();
-}
-
 function expectedHashPayloadFields(schemaColumns: string[]) {
   return [
     ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS,
@@ -197,7 +177,6 @@ function expectDerivedBodyResourceIdentityCoverage() {
   expect(desktopSnapshotFields()).toContain(bodyHash);
   expect(wireSnapshotFields()).toContain(bodyHash);
   expect(remoteNodeUpsertColumns()).toContain(bodyHash);
-  expect(syncPackNodeUpsertColumns()).toContain(bodyHash);
 }
 
 function extractInsertColumns(sql: string, table: string) {

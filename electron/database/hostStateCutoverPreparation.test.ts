@@ -7,11 +7,6 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import {
-  SYNC_PACK_FORMAT_VERSION,
-  SYNC_PACK_MINIMUM_SCHEMA_VERSION,
-  SYNC_PACK_PAYLOAD_SCHEMA_VERSION
-} from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
@@ -22,18 +17,14 @@ import { migrateDesktopHostProfile } from './hostProfile.js';
 const BASELINE = {
   companionSchema: 39,
   desktopSchema: 104,
-  protocol: 10,
-  syncPack: 15,
-  syncPackPayloadSchema: 88
+  protocol: 10
 } as const;
 
 it('preserves the Host-state cutover milestones and generated protocol assets', () => {
   const current = {
     companionSchema: COMPANION_DATABASE_VERSION,
     desktopSchema: DATABASE_SCHEMA_VERSION,
-    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
-    syncPack: SYNC_PACK_FORMAT_VERSION,
-    syncPackPayloadSchema: SYNC_PACK_PAYLOAD_SCHEMA_VERSION
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
   };
   for (const key of Object.keys(BASELINE) as Array<keyof typeof BASELINE>) {
     expect(current[key]).toBeGreaterThanOrEqual(BASELINE[key]);
@@ -41,11 +32,8 @@ it('preserves the Host-state cutover milestones and generated protocol assets', 
 
   const android = readJson('android/app/src/main/assets/companion-sync-protocol-definitions.json');
   const ios = readJson('ios/App/App/companion-sync-protocol-definitions.json');
-  expect(android).toEqual(ios);
-  expect(readSchemaWindow(android)).toEqual({
-    maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
-    minimumSchemaVersion: SYNC_PACK_MINIMUM_SCHEMA_VERSION
-  });
+  expect(android.syncProtocol).toEqual(ios.syncProtocol);
+  expect(android.syncProtocol).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
 });
 
 it('creates only Host-scoped permanent state in a fresh desktop database', () => {
@@ -150,15 +138,7 @@ it('rolls back Host schema, version, and state when desktop cutover fails', () =
 });
 
 function readJson(relativePath: string) {
-  return JSON.parse(fs.readFileSync(path.resolve(relativePath), 'utf8')) as unknown;
-}
-
-function readSchemaWindow(value: unknown) {
-  const protocol = value as { syncPackEnvelope?: Record<string, unknown> };
-  return {
-    maximumSchemaVersion: protocol.syncPackEnvelope?.maximumSchemaVersion,
-    minimumSchemaVersion: protocol.syncPackEnvelope?.minimumSchemaVersion
-  };
+  return JSON.parse(fs.readFileSync(path.resolve(relativePath), 'utf8')) as { syncProtocol: unknown };
 }
 
 function columns(sqlite: Database.Database, table: string) {

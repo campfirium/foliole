@@ -6,7 +6,6 @@ import {
   PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR
 } from '../../platform/syncProtocolContract.js';
 
-import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS } from './androidSyncPackProviderDefinitions.js';
 import {
   COMPLETE_MEMBER_DATA_PLANE_CONTRACT,
   COMPLETE_MEMBER_PRIVATE_POLICY_KEYS,
@@ -56,10 +55,5 @@ describe('prepared complete member data plane contract', () => {
     });
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR.capabilities)
       .toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
-    expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.protocol).toBe(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
-    expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.preparedMemberDataPlane.protocol)
-      .toBe(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
-    expect(ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS.preparedMemberDataPlane)
-      .toBe(COMPLETE_MEMBER_DATA_PLANE_CONTRACT);
   });
 });

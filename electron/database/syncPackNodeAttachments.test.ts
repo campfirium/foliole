@@ -1,116 +1,66 @@
 // @vitest-environment node
 
-import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import { createRequire } from 'node:module';
-import os from 'node:os';
 import path from 'node:path';
-import { inflateSync } from 'node:zlib';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-
-let mockedAppDataDir = '/tmp/foliole-sync-pack-node-attachments-tests';
-
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_data_dir: mockedAppDataDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
+import { expect, it, vi } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { openDatabaseConnection } from './connection.js';
 import { persistNodeResourceReference } from './nodeResources.js';
-import { saveJsonSetting } from './settingsStore.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { mockedRequestProjectionAppDataDir, ownerPort, projectionPeer,
+  setupRequestProjection, transferProjection } from './requestProjection.testSupport.js';
 
-const require = createRequire(import.meta.url);
-const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-
-let tempRoot = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-node-attachments-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
-  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
-  saveJsonSetting('host_name', 'Desktop test host', '2026-08-12T00:00:00.000Z');
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
+vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
+  app_data_dir: mockedRequestProjectionAppDataDir,
+  app_cache_dir: path.join(mockedRequestProjectionAppDataDir, 'cache'),
+  app_config_dir: path.join(mockedRequestProjectionAppDataDir, 'config'),
+  app_log_dir: path.join(mockedRequestProjectionAppDataDir, 'logs')
+}) }));
+setupRequestProjection();
 
 function seedSyncedNode() {
   const driver = openDatabaseConnection().driver;
-  const bodyHash = upsertTextBodyBlob(driver, 'node body', '2026-04-27T00:00:00.000Z');
+  const now = '2026-04-27T00:00:00.000Z';
+  const bodyHash = upsertTextBodyBlob(driver, 'node body', now);
   driver.execute(
     `INSERT INTO nodes (
        id, kind, title, is_title_manual, hide_title_heading, opening_text,
        content, body_blob_hash, created_at, updated_at
      ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?, ?)`,
-    ['node-1', 'Node 1', 'Node opening preview', 'node body', bodyHash,
-      '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
+    ['node-1', 'Node 1', 'Node opening preview', 'node body', bodyHash, now, now]
   );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 0)`
-  );
+  expect(flushNodeSyncVersionWithDriver(driver, 'node-1', 'Desktop test host', now, 'original-version'))
+    .toBe('original-version');
 }
 
-function readPackRows(packPath: string) {
-  const entries = readStoredZipEntries(packPath);
-  const incomingPath = path.join(tempRoot, 'read-incoming.db');
-  fsSync.writeFileSync(incomingPath, inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0)));
-  const db = new BetterSqlite3(incomingPath, { readonly: true });
-  try {
-    return {
-      nodeResources: db.prepare('SELECT id, resource_references FROM nodes').all(),
-      stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all()
-    };
-  } finally {
-    db.close();
-  }
-}
-
-function readStoredZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  let offset = 0;
-  while (buffer.readUInt32LE(offset) === 0x04034b50) {
-    const compressedSize = buffer.readUInt32LE(offset + 18);
-    const fileNameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + fileNameLength + extraLength;
-    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
-    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
-    offset = contentStart + compressedSize;
-  }
-  return entries;
-}
-
-it('packs node attachment links through the changed node state', async () => {
+it('persists node attachment references through a current request, replay and receiver reopen', async () => {
   seedSyncedNode();
-  persistNodeResourceReference('node-1', { storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' });
+  const reference = { storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' as const };
+  expect(persistNodeResourceReference('node-1', reference)).toBe('created');
+  const source = openDatabaseConnection().sqlite;
+  const versionId = source.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get();
+  expect(versionId).not.toBe('original-version');
+  const columns = 'version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text';
+  const original = source.prepare(`SELECT ${columns} FROM node_sync_versions WHERE version_id = ?`).get(versionId);
+  expect(original).toMatchObject({ object_id: 'node-1', parent_version_id: 'original-version', body_text: 'node body' });
+  const parents = source.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all();
+  const target = projectionPeer('target');
 
-  const packPath = path.join(tempRoot, 'incoming-node-attachments.db');
-  const result = await buildDesktopSyncPack({
-    fromPeerId: 'authorization-desktop',
-    fromStateSeq: 1,
-    outputPath: packPath,
-    packId: 'pack-node-attachment-link'
-  });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-node-attachment-link' });
-  expect(readPackRows(packPath)).toEqual({
-    nodeResources: [{ id: 'node-1', resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, role: 'image', original_name: 'cover.png' }]) }],
-    stateRows: [expect.objectContaining({ object_id: 'node-1', object_type: 'node' })]
-  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await transferProjection(ownerPort(), target.db);
+    target.reopen();
+    const node = target.sqlite.prepare(`SELECT id, content, current_version_id, resource_references
+      FROM nodes WHERE id = 'node-1'`).get() as { id: string; content: string; current_version_id: string; resource_references: string };
+    expect({ id: node.id, content: node.content, current_version_id: node.current_version_id })
+      .toEqual({ id: 'node-1', content: 'node body', current_version_id: versionId });
+    expect(JSON.parse(node.resource_references)).toEqual([reference]);
+    expect(target.sqlite.prepare(`SELECT ${columns} FROM node_sync_versions WHERE version_id = ?`).get(versionId))
+      .toEqual(original);
+    expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()).toEqual(parents);
+    expect(target.sqlite.prepare(`SELECT object_id, object_type, current_version_id FROM sync_object_state
+      WHERE object_type = 'node' AND object_id = 'node-1'`).get())
+      .toEqual({ object_id: 'node-1', object_type: 'node', current_version_id: versionId });
+  }
 });
