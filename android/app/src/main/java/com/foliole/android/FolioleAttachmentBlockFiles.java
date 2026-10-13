@@ -146,8 +146,15 @@ public final class FolioleAttachmentBlockFiles {
     }
     private JSObject info(File file, boolean hash) throws Exception {
         if (!file.exists()) return new JSObject().put("present", false).put("length", 0).put("hash", "");
-        if (!file.isFile() || !file.getCanonicalPath().equals(file.getAbsolutePath())) throw new IllegalArgumentException("attachment_file_unsafe");
+        file = checkedSourceFile(file);
         return new JSObject().put("present", true).put("length", file.length()).put("hash", hash ? digest(file) : "");
+    }
+    static File checkedSourceFile(File file) throws Exception {
+        file = new File(file.getParentFile().getCanonicalFile(), file.getName());
+        if (!file.isFile() || !file.getCanonicalPath().equals(file.getAbsolutePath())) {
+            throw new IllegalArgumentException("attachment_file_unsafe");
+        }
+        return file;
     }
     private String digest(File file) throws Exception { return FolioleCompanionAttachmentResourceHash.digestHex(context, file); }
     private static long number(PluginCall call, String name) {

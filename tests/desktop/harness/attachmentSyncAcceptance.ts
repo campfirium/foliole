@@ -36,8 +36,11 @@ export async function expectSyncedImage(session: DesktopSession, key: string) {
     const fs = process.getBuiltinModule('fs')!;
     const path = process.getBuiltinModule('path')!;
     const crypto = process.getBuiltinModule('crypto')!;
-    const paths = require(`${app.getAppPath()}/database/runtimeDataPaths.js`).resolveRuntimeDataPaths();
-    const file = path.join(paths.assetsDir, storageKey);
-    return fs.existsSync(file) ? crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') : null;
+    const connection = require(`${app.getAppPath()}/database/connection.js`);
+    return connection.runWithDatabaseConnectionOwner(() => {
+      const paths = require(`${app.getAppPath()}/database/runtimeDataPaths.js`).resolveRuntimeDataPaths();
+      const file = path.join(paths.assetsDir, storageKey);
+      return fs.existsSync(file) ? crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') : null;
+    });
   }, key), { timeout: 30_000 }).toBe(key.slice(0, 64));
 }
