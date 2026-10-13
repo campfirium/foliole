@@ -5,6 +5,8 @@ import type { DbPort, DbRow } from '../sync/dbPort.js';
 import type { CanonicalFact } from '../sync/framedSyncCanonicalManifest.js';
 import { restoreFramedSyncParentRelation, restoreFramedSyncReview } from '../sync/framedSyncRelationReviewFact.js';
 
+import { framedSyncNodeInventorySql } from './framedSyncInventoryProjectionSql.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import { decodeFramedSyncManifest } from './framedSyncStagingSerialization.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { isRetiredSyncSchema, RETIRED_SYNC_TABLES } from './retiredSyncSchema.js';
@@ -94,6 +96,18 @@ export function retireLegacySyncState(sqlite: DatabaseMigrationTarget) {
   }
   sqlite.exec('PRAGMA defer_foreign_keys = ON');
   for (const sql of retirementStatements(schema)) sqlite.exec(sql);
+  refreshReadingInventory(sqlite);
+}
+
+function refreshReadingInventory(sqlite: DatabaseMigrationTarget) {
+  for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
+    const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)?.[1];
+    if (!name) throw new Error('framed_sync_inventory_trigger_name_invalid');
+    sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
+    sqlite.exec(sql);
+  }
+  sqlite.exec(framedSyncNodeInventorySql(`SELECT object_id FROM sync_object_state
+    WHERE object_type = 'node_reading'`));
 }
 
 export async function retireCompanionLegacySyncState(db: DbPort) {

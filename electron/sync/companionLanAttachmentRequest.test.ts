@@ -24,7 +24,6 @@ vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
   CONTENT_BLOB_RESOURCE_PATH: '/companion/content-blob'
 }));
-vi.mock('./companionLanSyncPack.js', () => ({ SYNC_PACK_PATH: '/companion/sync-pack' }));
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({ buildCompanionSyncDiagnostics: vi.fn() }));
 vi.mock('./workgroupHttpCrypto.js', () => ({
   createWorkgroupResponseStreamCipher: vi.fn(() => ({

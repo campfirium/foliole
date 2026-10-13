@@ -1,5 +1,4 @@
 import type http from 'node:http';
-import path from 'node:path';
 import { PassThrough, Writable } from 'node:stream';
 
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -20,15 +19,6 @@ const contentBlobResourceMock = vi.hoisted(() => ({
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
     status: 'ready'
-  }))
-}));
-const syncPackMock = vi.hoisted(() => ({
-  buildCompanionSyncPackResource: vi.fn(async (): Promise<unknown> => ({
-    cleanup: async () => {},
-    filePath: path.join(process.cwd(), 'package.json'),
-    fileName: 'pack-1.syncpack',
-    status: 'ready',
-    statusCode: 200
   }))
 }));
 const diagnosticsMock = vi.hoisted(() => ({
@@ -78,10 +68,6 @@ vi.mock('./companionLanContentBlobs.js', () => ({
   acknowledgeCompanionContentBlobs: contentBlobResourceMock.acknowledgeCompanionContentBlobs,
   loadCompanionContentBlobResource: contentBlobResourceMock.loadCompanionContentBlobResource
 }));
-vi.mock('./companionLanSyncPack.js', () => ({
-  SYNC_PACK_PATH: '/companion/sync-pack',
-  buildCompanionSyncPackResource: syncPackMock.buildCompanionSyncPackResource
-}));
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
@@ -116,13 +102,7 @@ beforeEach(() => {
     acked_hashes: ['a'.repeat(64)],
     status: 'ok'
   });
-  syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
-    cleanup: async () => {},
-    filePath: path.join(process.cwd(), 'package.json'),
-    fileName: 'pack-1.syncpack',
-    status: 'ready',
-    statusCode: 200
-  });
+
   diagnosticsMock.buildCompanionSyncDiagnostics.mockReturnValue({
     collected_at: '2026-04-29T00:00:00.000Z',
     content: { missing_content_blob_count: 0 },
@@ -155,7 +135,6 @@ it('rejects the retired SQLite sync-pack endpoint', async () => {
   } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(410, expect.any(Object));
-  expect(syncPackMock.buildCompanionSyncPackResource).not.toHaveBeenCalled();
 });
 
 

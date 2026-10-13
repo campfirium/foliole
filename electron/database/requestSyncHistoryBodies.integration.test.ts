@@ -22,7 +22,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const bodyBytes = 1_048_533;
-const versionCount = 15;
+const versionCount = 23;
 
 function history() {
   const records: NativeSyncNodeRecord[] = [];
@@ -73,7 +73,7 @@ function assertHistory(host: Awaited<ReturnType<typeof fixture>>) {
 }
 
 it.each(['ordered', 'child-first', 'corrupt-final'] as const)(
-  'preserves fifteen complete large bodies across reopening: %s', async order => {
+  'preserves twenty-three complete large bodies across reopening: %s', async order => {
   const corrupt = order === 'corrupt-final';
   const host = await fixture();
   try {

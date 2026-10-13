@@ -75,6 +75,7 @@ function nodeVersionTriggers() {
 export function createFramedSyncInventoryTriggers() {
   return [
     ...nodeVersionTriggers(),
+    ...triggers('node_reading', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
     ...triggers('node_sync_version_parents', (ref) => `
     DELETE FROM framed_sync_fact_summary WHERE kind = 3
       AND fact_id = json_array(${ref}.version_id, ${ref}.parent_version_id, ${ref}.ordinal);

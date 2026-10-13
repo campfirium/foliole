@@ -59,6 +59,27 @@ it('moves an existing child beneath a new parent through normal request dependen
   } finally { await fixture.close(); }
 });
 
+it('applies an independent child without overwriting an existing acyclic ancestor projection', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  try {
+    for (const peer of [source, target]) peer.sqlite.exec(`INSERT INTO nodes
+      (id, kind, title, created_at, updated_at) VALUES ('special-inbox', 'folder', 'Inbox', 'now', 'now')`);
+    target.sqlite.exec(`INSERT INTO nodes (id, kind, title, created_at, updated_at)
+      VALUES ('other-parent', 'folder', 'Other', 'now', 'now');
+      UPDATE nodes SET parent_id = 'other-parent' WHERE id = 'special-inbox'`);
+    const child = record('child', 'child-original', 'special-inbox');
+    await applySyncNodesWithDbPort(source.db, [child]);
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    target.reopen();
+    expect(target.sqlite.prepare("SELECT parent_id, content, current_version_id FROM nodes WHERE id = 'child'").get())
+      .toEqual({ parent_id: 'special-inbox', content: child.body_text, current_version_id: child.version_id });
+    expect(target.sqlite.prepare("SELECT parent_id FROM nodes WHERE id = 'special-inbox'").pluck().get()).toBe('other-parent');
+    expect(target.sqlite.prepare('SELECT version_id, content_hash, body_text FROM node_sync_versions').all())
+      .toEqual(source.sqlite.prepare('SELECT version_id, content_hash, body_text FROM node_sync_versions').all());
+  } finally { await fixture.close(); }
+});
+
 it.each([false, true])('rejects a structural parent cycle without receiver changes, existing path=%s', async existing => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');

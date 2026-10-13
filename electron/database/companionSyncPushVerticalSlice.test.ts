@@ -1,266 +1,103 @@
 // @vitest-environment node
 
-import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import { createRequire } from 'node:module';
-import os from 'node:os';
-import path from 'node:path';
-import { inflateSync } from 'node:zlib';
+import { expect, it } from 'vitest';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewLogApply.js';
 
-let mockedAppDataDir = '/tmp/foliole-companion-sync-push-vertical-tests';
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_data_dir: mockedAppDataDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
+const reviewedAt = '2026-04-30T01:00:00.000Z';
+const review = { node_id: 'node-1', difficulty: 2, due: '2026-05-01T00:00:00.000Z',
+  elapsed_days: 0, lapses: 0, last_review_at: reviewedAt, reps: 1, scheduled_days: 1, stability: 3, state: 1 };
+const reviewLog = { host_name: 'android-device', difficulty_after: 3, difficulty_before: 2,
+  due_after: '2026-05-01T00:00:00.000Z', due_before: '2026-04-30T00:00:00.000Z', grade: 3,
+  id: 'review-op-android-1', node_id: 'node-1', op_id: 'op-android-1', reviewed_at: reviewedAt,
+  scheduler_version: 'ts-fsrs@4', stability_after: 4, stability_before: 3 };
 
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-
-import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { saveJsonSetting } from './settingsStore.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-
-type SyncPushPayload = import('./companionSyncPushTypes.js').CompanionSyncPushPayload;
-
-const require = createRequire(import.meta.url);
-const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-
-let tempRoot = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-sync-push-vertical-'));
-  mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
-  saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
-  insertDesktopBaseReview();
-});
-
-afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-function insertDesktopBaseReview() {
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO nodes (
-       id, kind, title, content, current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at
-     ) VALUES ('node-1', 'topic', 'Review Topic', '', 'desktop#node-1', 'desktop', 0,
-       '2026-04-30T00:00:00.000Z', '2026-04-30T00:00:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('node', 'node-1', 1, 'desktop-node-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
-  );
-  driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
-     ) VALUES ('desktop#node-1', 'node-1', NULL, 'desktop',
-       '2026-04-30T00:00:00.000Z', 'desktop-node-base', '{"id":"node-1","title":"Review Topic","content":""}')`
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('node_review', 'node-1', 2, 'desktop-base', 'desktop', '2026-04-30T00:00:00.000Z', 0)`
-  );
+function seedNode(peer: RestorePeer, id: string, title: string, content: string, host: string, version: string) {
+  const driver = createBetterSqlite3Driver(peer.sqlite);
+  bindParentOrderWriter(driver, { deviceAnchor: peer.id, libraryPath: peer.file });
+  peer.sqlite.prepare("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('host_name', ?, 'now')")
+    .run(JSON.stringify(host));
+  const at = '2026-04-30T02:00:00.000Z';
+  upsertNodeSnapshot(driver, { nodeId: id, title, content, hostName: host, kind: 'topic',
+    anchorLink: null, parentNodeId: null, isTitleManual: true, position: null, reveal: null, createdAt: at, updatedAt: at });
+  expect(flushNodeSyncVersionWithDriver(driver, id, host, at, version)).toBe(version);
 }
 
-function nodeReviewPush(): SyncPushPayload {
-  return {
-    authorHostName: 'android-device',
-    base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
-    clientOpId: 'node_review:node-1:12',
-    contentHash: 'android-review-next',
-    deletedAt: null,
-    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
-    payloadJson: JSON.stringify({
-      difficulty: 2,
-      due: '2026-05-01T00:00:00.000Z',
-      elapsed_days: 0,
-      lapses: 0,
-      last_review_at: '2026-04-30T01:00:00.000Z',
-      reps: 1,
-      scheduled_days: 1,
-      stability: 3,
-      state: 1
-    }),
-    updatedAt: '2026-04-30T01:00:00.000Z'
-  };
+async function sendNode(source: RestorePeer, target: RestorePeer, id: string) {
+  const local = await readRequestSyncInventorySnapshot(source.db);
+  const differences = compareFramedSyncInventories({ local, remote: [] })
+    .filter(value => ['node', 'node_review'].includes(value.objectType) && value.globalId === id);
+  expect(differences.some(value => value.objectType === 'node')).toBe(true);
+  for (const difference of differences) await transfer(source, target, {
+    groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);
 }
 
-function reviewLogPush(): SyncPushPayload {
-  return {
-    authorHostName: 'android-device',
-    base: { kind: 'op_id', opId: 'op-android-1' },
-    clientOpId: 'review_log:op-android-1',
-    identity: { objectId: 'op-android-1', objectType: 'review_log', scope: 'workspace' },
-    payloadJson: JSON.stringify({
-      host_name: 'android-device',
-      difficulty_after: 3,
-      difficulty_before: 2,
-      due_after: '2026-05-01T00:00:00.000Z',
-      due_before: '2026-04-30T00:00:00.000Z',
-      grade: 3,
-      id: 'review-op-android-1',
-      node_id: 'node-1',
-      op_id: 'op-android-1',
-      reviewed_at: '2026-04-30T01:00:00.000Z',
-      scheduler_version: 'ts-fsrs@4',
-      stability_after: 4,
-      stability_before: 3
-    })
-  };
+function expectReview(peer: RestorePeer) {
+  expect(peer.sqlite.prepare(`SELECT node_id, difficulty, due, elapsed_days, lapses, last_review_at,
+    reps, scheduled_days, stability, state FROM node_review WHERE node_id = 'node-1'`).get()).toEqual(review);
+  expect(peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual([reviewLog]);
+  expect(peer.sqlite.prepare(`SELECT object_type, object_id, last_modified_by_host_name, content_hash
+    FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'`).get()).toEqual({
+    object_type: 'node_review', object_id: 'node-1', last_modified_by_host_name: 'sync-remote',
+    content_hash: computeSyncContentHash('node_review', review)
+  });
+  expect(peer.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get())
+    .toBe('desktop#node-1');
 }
 
-function nodeVersionPush(): SyncPushPayload {
-  const updatedAt = '2026-04-30T02:00:00.000Z';
-  return {
-    authorHostName: 'android-device',
-    base: { ancestorVersionIds: [], kind: 'node_version', parentVersionId: null },
-    clientOpId: 'node:android#1',
-    contentHash: 'android-node-hash',
-    identity: { objectId: 'node-android', objectType: 'node', scope: 'workspace' },
-    payloadJson: JSON.stringify({
-      ancestor_version_ids: [],
-      content_hash: 'android-node-hash',
-      host_name: 'android-device',
-      object_id: 'node-android',
-      object_type: 'node',
-      parent_version_id: null,
-      snapshot: {
-        anchor_link: null,
-        attachments: [],
-        content: 'Android body',
-        created_at: updatedAt,
-        deleted_at: null,
-        desired_retention: null,
-        hide_title_heading: false,
-        id: 'node-android',
-        image_regions: null,
-        is_title_manual: true,
-        kind: 'topic',
-        opening_text: null,
-        parent_id: null,
-        position: null,
-        priority: null,
-        reveal: null,
-        title: 'Android topic',
-        updated_at: updatedAt,
-        virtual_filter: null
-      },
-      updated_at: updatedAt,
-      version_created_at: updatedAt,
-      version_id: 'android-device#1'
-    }),
-    updatedAt
-  };
-}
-
-function readPackRows(packPath: string) {
-  const entries = readStoredZipEntries(packPath);
-  const incomingBytes = inflateSync(entries.get('incoming.db.deflate') ?? Buffer.alloc(0));
-  const incomingPath = path.join(tempRoot, 'read-incoming.db');
-  fsSync.writeFileSync(incomingPath, incomingBytes);
-  const db = new BetterSqlite3(incomingPath, { readonly: true });
+it('preserves Android review state and immutable events through bidirectional requests, replay and reopen', async () => {
+  const fixture = await restoreFixture();
+  const desktop = fixture.peer('source'); const android = fixture.peer('target');
   try {
-    return {
-      manifest: JSON.parse(entries.get('manifest.json')?.toString('utf8') ?? '{}'),
-      nodes: db.prepare('SELECT id, current_version_id, title FROM nodes').all(),
-      reviewLog: db.prepare('SELECT op_id, node_id, grade FROM review_log').all(),
-      stateRows: db.prepare(
-        'SELECT object_type, object_id, state_seq, last_modified_by_host_name FROM sync_object_state'
-      ).all(),
-      syncObjects: db.prepare('SELECT object_type, object_id, payload_json FROM sync_objects').all()
-    };
-  } finally {
-    db.close();
-  }
-}
+    seedNode(desktop, 'node-1', 'Review Topic', '', 'desktop', 'desktop#node-1');
+    await sendNode(desktop, android, 'node-1');
+    await android.db.transaction(tx => applySyncObjectInTransaction(tx, {
+      object_type: 'node_review', object_id: 'node-1', payload_json: JSON.stringify(review),
+      content_hash: computeSyncContentHash('node_review', review), updated_at: reviewedAt, deleted_at: null
+    }, { hostName: 'android-device' }));
+    await applyReviewLogRecordsWithDbPort(android.db, [reviewLog]);
+    expectReview(android);
+    await sendNode(android, desktop, 'node-1');
+    desktop.reopen();
+    expectReview(desktop);
+    await sendNode(desktop, android, 'node-1');
+    await sendNode(android, desktop, 'node-1');
+    for (const peer of [desktop, android]) { peer.reopen(); expectReview(peer); }
+  } finally { await fixture.close(); }
+});
 
-function readStoredZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  let offset = 0;
-  while (buffer.readUInt32LE(offset) === 0x04034b50) {
-    const compressedSize = buffer.readUInt32LE(offset + 18);
-    const fileNameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + fileNameLength + extraLength;
-    const name = buffer.subarray(nameStart, nameStart + fileNameLength).toString('utf8');
-    entries.set(name, buffer.subarray(contentStart, contentStart + compressedSize));
-    offset = contentStart + compressedSize;
-  }
-  return entries;
-}
-
-describe('companion sync push vertical slice', () => {
-  it('packs accepted node_review and review_log changes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync(
-      [nodeReviewPush(), reviewLogPush()],
-      'authenticated-member-id'
-    );
-    const packPath = path.join(tempRoot, 'vertical-pack.syncpack');
-
-    const pack = await buildDesktopSyncPack({
-      fromPeerId: 'authorization-desktop',
-      outputPath: packPath,
-      packId: 'pack-after-android-review-push',
-      fromStateSeq: 2
-    });
-
-    expect(push.acks).toMatchObject([
-      { identity: { objectType: 'node_review' }, stateSeq: 3, status: 'accepted' },
-      { identity: { objectType: 'review_log' }, status: 'accepted' }
-    ]);
-    expect(pack).toMatchObject({ objectCount: 2, toStateSeq: 3 });
-    expect(readPackRows(packPath)).toMatchObject({
-      manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
-      reviewLog: [{ grade: 3, node_id: 'node-1', op_id: 'op-android-1' }],
-      stateRows: [
-        expect.objectContaining({ object_id: 'node-1', object_type: 'node', state_seq: 1 }),
-        {
-          last_modified_by_host_name: 'android-device',
-          object_id: 'node-1',
-          object_type: 'node_review',
-          state_seq: 3
-        }
-      ],
-      syncObjects: [expect.objectContaining({
-        object_id: 'node-1',
-        object_type: 'node_review',
-        payload_json: expect.stringContaining('last_review_at')
-      })]
-    });
-  });
-
-  it('packs accepted node version pushes for Android pull confirmation', async () => {
-    const push = await applyCompanionSyncPushAsync([nodeVersionPush()], 'authenticated-member-id');
-    const packPath = path.join(tempRoot, 'node-version-pack.syncpack');
-
-    const pack = await buildDesktopSyncPack({
-      fromPeerId: 'authorization-desktop',
-      outputPath: packPath,
-      packId: 'pack-after-android-node-push',
-      fromStateSeq: 2
-    });
-
-    expect(push.acks).toMatchObject([
-      { identity: { objectType: 'node' }, status: 'accepted', versionId: 'android-device#1' }
-    ]);
-    expect(pack).toMatchObject({ objectCount: 1, toStateSeq: 3 });
-    expect(readPackRows(packPath)).toMatchObject({
-      manifest: expect.objectContaining({ from_state_seq: 2, to_state_seq: 3 }),
-      nodes: [{ current_version_id: 'android-device#1', id: 'node-android', title: 'Android topic' }],
-      stateRows: [expect.objectContaining({ object_id: 'node-android', object_type: 'node', state_seq: 3 })]
-    });
-  });
+it('preserves the original Android node version through bidirectional requests, replay and reopen', async () => {
+  const fixture = await restoreFixture();
+  const desktop = fixture.peer('source'); const android = fixture.peer('target');
+  try {
+    seedNode(android, 'node-android', 'Android topic', 'Android body', 'android-device', 'android-device#1');
+    const columns = 'version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text';
+    const original = android.sqlite.prepare(`SELECT ${columns} FROM node_sync_versions`).all();
+    await sendNode(android, desktop, 'node-android');
+    await sendNode(desktop, android, 'node-android');
+    await sendNode(android, desktop, 'node-android');
+    for (const peer of [desktop, android]) {
+      peer.reopen();
+      expect(peer.sqlite.prepare('SELECT id, current_version_id, title, content FROM nodes').all()).toEqual([
+        { id: 'node-android', current_version_id: 'android-device#1', title: 'Android topic', content: 'Android body' }
+      ]);
+      expect(peer.sqlite.prepare(`SELECT ${columns} FROM node_sync_versions`).all()).toEqual(original);
+      expect(peer.sqlite.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
+      expect(peer.sqlite.prepare(`SELECT object_type, object_id, current_version_id FROM sync_object_state
+        WHERE object_type = 'node'`).all()).toEqual([
+        { object_type: 'node', object_id: 'node-android', current_version_id: 'android-device#1' }
+      ]);
+    }
+  } finally { await fixture.close(); }
 });

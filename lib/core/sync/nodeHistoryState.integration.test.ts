@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 
+import { closeLibraries, createPeer, joinPeers, startLibraries } from '../../../electron/database/syncLibrary.testSupport.js';
+import { withLibraryRequestSnapshot } from '../../../electron/database/syncRequestSnapshot.testSupport.js';
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
 import { migrateNodeHistoryState } from '../database/nodeHistoryStateMigration.js';
 import { hashTextBody } from '../database/textBodyHash.js';
@@ -11,9 +13,8 @@ import { projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
 import { retainLocalEditBase } from './nodeVersionLocalEditHold.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
-import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
-import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
-import { rehydrateStoredVersionBodies, loadVerifiedExistingSyncPackVersions } from './syncPackStoredVersionFacts.js';
+import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
+import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
 afterEach(() => devices.splice(0).forEach(device => device.sqlite.close()));
@@ -126,18 +127,19 @@ it('keeps a version unready until every retained complete alternative is restore
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v2'))!.alternative_bodies).toEqual(record.alternative_bodies);
 });
 
-it('does not resurrect an explicitly deleted historical body through a replayed sync pack or merge-base restore', async () => {
-  const a = await host();
-  a.sqlite.exec(`ATTACH DATABASE ':memory:' AS inc;
-    CREATE TABLE inc.node_sync_versions AS SELECT * FROM main.node_sync_versions;
-    CREATE TABLE inc.node_sync_tombstones AS SELECT * FROM main.node_sync_tombstones;
-    CREATE TABLE inc.nodes AS SELECT * FROM main.nodes;
-    UPDATE inc.nodes SET current_version_id = 'v1' WHERE id = 'topic'`);
-  await upsertRemoteVersion(a.db, deletion);
-  await loadVerifiedExistingSyncPackVersions(a.db, 'inc');
-  await rehydrateStoredVersionBodies(a.db, 'inc');
-  await restoreIncomingNodeMergeBases(a.db, 'inc');
-  expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!).toMatchObject({
-    body_text: null, content_hash: v1.content_hash, snapshot: { body_deleted: true } });
-  expect((await a.current()).body_text).toBe(v2.body_text);
+it('does not resurrect an explicitly deleted historical body through a replayed current request', async () => {
+  await startLibraries();
+  try {
+    const source = createPeer('source'); const target = createPeer('target');
+    joinPeers(source, target);
+    await applyConvergentSyncNodesWithDbPort(source.port, [v1]);
+    await withLibraryRequestSnapshot(source, target, async replay => {
+      await applyConvergentSyncNodesWithDbPort(target.port, [v1, v2]);
+      await upsertRemoteVersion(target.port, deletion);
+      await replay();
+      expect((await loadRetainedSyncNodeVersionFact(target.port, 'v1'))!).toMatchObject({
+        body_text: null, content_hash: v1.content_hash, snapshot: { body_deleted: true } });
+      expect((await loadCurrentSyncNodeRecord(target.port, 'topic'))!.body_text).toBe(v2.body_text);
+    });
+  } finally { await closeLibraries(); }
 });

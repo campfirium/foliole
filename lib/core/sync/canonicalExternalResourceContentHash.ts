@@ -18,5 +18,7 @@ export function hasCanonicalExternalResourceContentHash(record: {
   let parsed: unknown;
   try { parsed = JSON.parse(record.payload_json); } catch { return false; }
   const payload = normalizeCanonicalExternalResourcePayload(record.object_type, parsed);
-  return payload !== null && record.content_hash === computeSyncContentHash(record.object_type, payload);
+  if (!payload) return false;
+  const identity = 'document_id' in payload ? payload.document_id : payload.id;
+  return identity === record.object_id && record.content_hash === computeSyncContentHash(record.object_type, payload);
 }

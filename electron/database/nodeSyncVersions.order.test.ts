@@ -19,12 +19,18 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
+import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
+
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { moveNodes, replaceNodeOrder, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from './nodeMutations.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-import { readPackRowsFromZip } from './syncPackZipReaderTestSupport.js';
 
 let tempRoot = '';
 
@@ -98,7 +104,7 @@ it('keeps an article version unchanged after a pure reorder', () => {
   });
 });
 
-it('packs an ordinary order change as one parent object without article rows', async () => {
+it('publishes an ordinary order change as one requested parent object without article facts', async () => {
   upsertTestNode('node-1', 0);
   upsertTestNode('node-2', 1);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
@@ -107,20 +113,24 @@ it('packs an ordinary order change as one parent object without article rows', a
     'SELECT MAX(state_seq) AS value FROM sync_object_state'
   )!.value;
 
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const before = await readFramedSyncInventory(port);
   replaceNodeOrder(['node-2', 'node-1']);
-  const packPath = path.join(tempRoot, 'order.syncpack');
-  const pack = await buildDesktopSyncPack({
-    createdAt: '2026-04-21T10:02:00.000Z', fromPeerId: 'mac', fromStateSeq: previousSeq,
-    outputPath: packPath, packId: 'order-pack', toPeerId: 'windows'
+  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(port), remote: before })
+    .filter(difference => difference.direction === 'local_to_remote');
+  expect(differences).toEqual([expect.objectContaining({ objectType: 'parent_child_order', direction: 'local_to_remote' })]);
+  expect(driver.queryOne<{ value: number }>('SELECT MAX(state_seq) AS value FROM sync_object_state')!.value)
+    .toBeGreaterThan(previousSeq);
+  await withRequestSyncFiles(createDesktopFramedSyncFiles(path.join(tempRoot, 'order-request')), async request => {
+    await writeRequestSyncSnapshot(port, differences[0]!, request);
+    const facts = [];
+    for await (const fact of request.readFacts()) facts.push(fact);
+    expect(facts.filter(fact => fact.objectType === 'node')).toEqual([]);
+    expect(facts.filter(fact => fact.kind === 2)).toEqual([]);
+    expect(facts.map(restoreFramedSyncObjectStateFact)).toEqual([
+      expect.objectContaining({ object_type: 'parent_child_order', payload_json: expect.stringContaining('node-2') })
+    ]);
   });
-  const rows = readPackRowsFromZip(packPath, tempRoot);
-
-  expect(pack.toStateSeq).toBeGreaterThan(previousSeq);
-  expect(rows.nodes).toEqual([]);
-  expect(rows.nodeVersions).toEqual([]);
-  expect(rows.syncObjects).toEqual([
-    expect.objectContaining({ object_type: 'parent_child_order', payload_json: expect.stringContaining('node-2') })
-  ]);
 });
 
 it('leaves a shifted sibling clean when a different node moves', () => {
@@ -155,22 +165,19 @@ it('leaves existing siblings clean when creating a new node', () => {
   ).map((row) => row.id)).toEqual([]);
 });
 
-it('ignores obsolete ranking rows in the next automatic pack', async () => {
+it('ignores obsolete ranking rows in the next request inventory', async () => {
   upsertTestNode('node-1', 0);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
   const driver = openDatabaseConnection().driver;
   const previousSeq = driver.queryOne<{ value: number }>(
     'SELECT MAX(state_seq) AS value FROM sync_object_state'
   )!.value;
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const before = await readFramedSyncInventory(port);
   openDatabaseConnection().sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 7]);
 
-  const packPath = path.join(tempRoot, 'stale-order.syncpack');
-  const pack = await buildDesktopSyncPack({
-    createdAt: '2026-04-21T10:02:00.000Z', fromPeerId: 'mac', fromStateSeq: previousSeq,
-    outputPath: packPath, packId: 'stale-order-pack', toPeerId: 'windows'
-  });
-  const rows = readPackRowsFromZip(packPath, tempRoot);
-  expect(pack.toStateSeq).toBe(previousSeq);
-  expect(rows.nodeVersions).toEqual([]);
+  expect(compareFramedSyncInventories({ local: await readFramedSyncInventory(port), remote: before })).toEqual([]);
+  expect(driver.queryOne<{ value: number }>('SELECT MAX(state_seq) AS value FROM sync_object_state')!.value)
+    .toBe(previousSeq);
 });

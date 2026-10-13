@@ -2,219 +2,147 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-import { insertImportSourceSyncState } from './syncPackBuilderImportSourceTestSupport.js';
-import {
-  insertAttachmentSyncState,
-  insertExternalFolderSyncState,
-  insertNodeReadingSyncState,
-  insertNodeReviewSyncState,
-  insertPdfPageTextSyncState,
-  insertViewStateSyncState,
-  mockedSyncPackBuilderAppDataDir,
-  readPackRows,
-  resolveSyncPackPath,
-  setupSyncPackBuilderTestLifecycle
-} from './syncPackBuilderTestSupport.js';
+import { insertAttachmentSyncState, insertExternalFolderSyncState, insertImportSourceSyncState,
+  insertNodeReadingSyncState, insertNodeReviewSyncState, insertPdfPageTextSyncState,
+  insertViewStateSyncState, prepareGenericRequestFacts } from './requestGenericObjects.testSupport.js';
+import { mockedRequestProjectionAppDataDir, ownerPort, projectionPeer, setupRequestProjection,
+  transferProjection } from './requestProjection.testSupport.js';
 
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_data_dir: mockedSyncPackBuilderAppDataDir,
-    app_cache_dir: path.join(mockedSyncPackBuilderAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedSyncPackBuilderAppDataDir, 'config'),
-    app_log_dir: path.join(mockedSyncPackBuilderAppDataDir, 'logs')
-  })
-}));
+vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
+  app_data_dir: mockedRequestProjectionAppDataDir,
+  app_cache_dir: path.join(mockedRequestProjectionAppDataDir, 'cache'),
+  app_config_dir: path.join(mockedRequestProjectionAppDataDir, 'config'),
+  app_log_dir: path.join(mockedRequestProjectionAppDataDir, 'logs')
+}) }));
+setupRequestProjection();
 
-setupSyncPackBuilderTestLifecycle();
+async function receive() {
+  prepareGenericRequestFacts();
+  const target = projectionPeer('target');
+  await transferProjection(ownerPort(), target.db);
+  return target.sqlite;
+}
 
-it('packs a changed direct-child sequence without node rows or article versions', async () => {
-  const driver = openDatabaseConnection().driver;
-  bindParentOrderWriter(driver, { deviceAnchor: 'pack-test', libraryPath: openDatabaseConnection().dbPath });
+it('transfers a changed direct-child sequence without creating article versions', async () => {
+  const { driver, dbPath } = openDatabaseConnection();
+  bindParentOrderWriter(driver, { deviceAnchor: 'request-test', libraryPath: dbPath });
   const now = '2026-09-27T00:00:00.000Z';
+  const target = projectionPeer('target');
   for (const id of ['node-a', 'node-b']) {
-    driver.execute(
-      `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
-       VALUES (?, NULL, 'topic', ?, '', ?, ?)`, [id, id, now, now]
-    );
+    const sql = `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at, sync_dirty)
+      VALUES (?, NULL, 'topic', ?, '', ?, ?, 0)`;
+    driver.execute(sql, [id, id, now, now]); target.sqlite.prepare(sql).run(id, id, now, now);
   }
-  driver.execute("UPDATE nodes SET sync_dirty = 0 WHERE id IN ('node-a', 'node-b')");
-  replaceNodeOrder(driver, ['node-a', 'node-b']);
-  flushDirtyNodeSyncVersions(now);
-  const versionCount = driver.queryOne<{ value: number }>(
-    'SELECT COUNT(*) AS value FROM node_sync_versions'
-  )?.value ?? 0;
-  const fromStateSeq = driver.queryOne<{ value: number }>(
-    'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
-  )?.value ?? 0;
+  replaceNodeOrder(driver, ['node-a', 'node-b']); flushDirtyNodeSyncVersions(now);
+  await transferProjection(ownerPort(), target.db);
+  const before = await readFramedSyncInventory(ownerPort());
+  const targetVersions = target.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  const versions = driver.queryAll('SELECT * FROM node_sync_versions');
   replaceNodeOrder(driver, ['node-b', 'node-a']);
-  expect(driver.queryOne<{ value: number }>('SELECT COUNT(*) AS value FROM node_sync_versions')?.value).toBe(versionCount);
-  const packPath = resolveSyncPackPath('incoming-parent-order.db');
-
-  const result = await buildDesktopSyncPack({
-    fromPeerId: 'authorization-desktop', outputPath: packPath,
-    packId: 'pack-parent-order-1', fromStateSeq
-  });
-
-  expect(result.objectCount).toBe(1);
-  const rows = readPackRows(packPath);
-  expect(rows.nodes).toEqual([]);
-  expect(rows.stateRows.map((row) => (row as { object_type: string }).object_type)).toEqual(['parent_child_order']);
-  expect(rows.syncObjects).toEqual(expect.arrayContaining([
-    expect.objectContaining({ object_type: 'parent_child_order',
-      payload_json: expect.stringContaining('node-b') })
-  ]));
+  expect(driver.queryAll('SELECT * FROM node_sync_versions')).toEqual(versions);
+  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(ownerPort()), remote: before });
+  expect(differences.filter(row => row.direction === 'local_to_remote').map(row => row.objectType))
+    .toEqual(['parent_child_order']);
+  await transferProjection(ownerPort(), target.db);
+  expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order').pluck().all()).toEqual(['["node-b","node-a"]']);
+  expect(target.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(targetVersions);
 });
 
-it('ignores retired independent attachment state while consuming its cursor', async () => {
+it('ignores retired independent attachment state', async () => {
   insertAttachmentSyncState();
-  const packPath = resolveSyncPackPath('incoming-attachment.db');
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath,
-    packId: 'pack-attachment-1', fromStateSeq: 0 });
-  expect(result).toMatchObject({ objectCount: 0, toStateSeq: 3 });
-  expect(readPackRows(packPath)).toMatchObject({ stateRows: [], syncObjects: [], nodes: [] });
+  expect(await readFramedSyncInventory(ownerPort())).toEqual([]);
+  const target = await receive();
+  expect(target.prepare('SELECT * FROM sync_object_state').all()).toEqual([]);
 });
 
-it('packs external folder metadata as a generic sync object', async () => {
+it('transfers external folder metadata without leaking the source filesystem path', async () => {
   insertExternalFolderSyncState();
-  const packPath = resolveSyncPackPath('incoming-external-folder.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-external-folder-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-external-folder-1', toStateSeq: 4 });
-  const rows = readPackRows(packPath);
-  expect(rows).toMatchObject({
-    stateRows: [{ object_id: 'folder-1', object_type: 'external_folder', state_seq: 4 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'folder-1',
-      object_type: 'external_folder'
-    })]
-  });
-  const folderRow = rows.syncObjects[0] as { payload_json?: string } | undefined;
-  expect(JSON.parse(String(folderRow?.payload_json))).toEqual({
+  const target = await receive();
+  const row = target.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder).get('folder-1') as { payload_json: string };
+  expect(JSON.parse(row.payload_json)).toEqual({
     attachment_mode: 'document_relative_first_then_fixed_root', excluded_dirs_json: '[".git"]',
     host_name: 'desktop', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
   });
-  expect(String(folderRow?.payload_json)).not.toContain('/library');
+  expect(row.payload_json).not.toContain('/library');
+  expect(JSON.stringify(target.prepare('SELECT * FROM external_search_folders').all())).not.toContain('/library');
+  expect(JSON.stringify(target.prepare('SELECT * FROM desktop_sources').all())).not.toContain('/library');
 });
 
-it('packs import source metadata as a generic sync object', async () => {
+it('transfers import source metadata and its watched binding without the local absolute path', async () => {
   insertImportSourceSyncState();
-  const packPath = resolveSyncPackPath('incoming-import-source.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-import-source-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-import-source-1', toStateSeq: 5 });
-  expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'source-1', object_type: 'import_source', state_seq: 5 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'source-1',
-      object_type: 'import_source',
-      payload_json: expect.stringContaining('watched-source-1')
-    })]
-  });
+  const target = await receive();
+  expect(target.prepare('SELECT source_fingerprint, watched_binding_id, watched_relative_path, source_locator FROM import_sources').all())
+    .toEqual([{ source_fingerprint: 'source-1', watched_binding_id: 'watched-source-1', watched_relative_path: 'notes.md', source_locator: '' }]);
 });
 
-it('packs pdf page text as a generic sync object', async () => {
+it('transfers the complete PDF page text and dimensions', async () => {
   insertPdfPageTextSyncState();
-  const packPath = resolveSyncPackPath('incoming-pdf-page-text.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-pdf-page-text-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-pdf-page-text-1', toStateSeq: 7 });
-  expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'pdf-1:1', object_type: 'pdf_page_text', state_seq: 7 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'pdf-1:1',
-      object_type: 'pdf_page_text',
-      payload_json: expect.stringContaining('page text')
-    })]
-  });
+  const target = await receive();
+  expect(target.prepare('SELECT attachment_id, page, text, page_width, page_height FROM pdf_page_text').all())
+    .toEqual([{ attachment_id: 'pdf-1', page: 1, text: 'page text', page_width: 612, page_height: 792 }]);
 });
 
-it('packs review log rows with changed node review state', async () => {
+it('transfers original review operations with the node review state', async () => {
   insertNodeReviewSyncState();
-  const packPath = resolveSyncPackPath('incoming-review-log.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-review-log-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-review-log-1', toStateSeq: 7 });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({ tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }]) }),
-    reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
-    stateRows: [
-      { object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 },
-      { object_id: 'node-review-1', object_type: 'node', state_seq: 7 }
-    ],
-    syncObjects: [expect.objectContaining({
-      object_id: 'node-review-1',
-      object_type: 'node_review',
-      payload_json: expect.stringContaining('last_review_at')
-    })]
-  });
+  const source = openDatabaseConnection().driver;
+  const logs = source.queryAll('SELECT * FROM review_log');
+  const review = source.queryAll('SELECT * FROM node_review');
+  const target = await receive();
+  expect(target.prepare('SELECT * FROM review_log').all()).toEqual(logs);
+  expect(target.prepare('SELECT * FROM node_review').all()).toEqual(review);
+  expect(logs).toEqual([expect.objectContaining({ grade: 3, node_id: 'node-review-1', op_id: 'op-1' })]);
 });
 
-it('packs node reading state as a generic sync object', async () => {
+it('transfers live reading state atomically with its node', async () => {
   insertNodeReadingSyncState();
-  const packPath = resolveSyncPackPath('incoming-node-reading.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-node-reading-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-node-reading-1', toStateSeq: 9 });
-  expect(readPackRows(packPath)).toMatchObject({
-    nodes: [expect.objectContaining({ id: 'node-reading-1' })],
-    stateRows: [
-      { object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 },
-      { object_id: 'node-reading-1', object_type: 'node', state_seq: 9 }
-    ],
-    syncObjects: [expect.objectContaining({
-      object_id: 'node-reading-1',
-      object_type: 'node_reading',
-      payload_json: expect.stringContaining('interval_duration_ms')
-    })]
-  });
+  const reading = openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading');
+  const target = await receive();
+  expect(target.prepare('SELECT * FROM node_reading').all()).toEqual(reading);
+  expect(target.prepare("SELECT id FROM nodes WHERE id = 'node-reading-1'").get()).toEqual({ id: 'node-reading-1' });
 });
 
-it('omits stale node reading state without a backing reading row', async () => {
+it('omits stale reading state without a backing reading row while retaining the node', async () => {
   insertNodeReadingSyncState();
-  openDatabaseConnection().driver.execute(
-    "DELETE FROM node_reading WHERE node_id = 'node-reading-1'"
-  );
-  const packPath = resolveSyncPackPath('incoming-stale-node-reading.db');
-
-  const result = await buildDesktopSyncPack({
-    fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-stale-node-reading-1', fromStateSeq: 0
-  });
-
-  expect(result).toMatchObject({ objectCount: 1, toStateSeq: 9 });
-  expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'node-reading-1', object_type: 'node', state_seq: 9 }],
-    syncObjects: []
-  });
+  prepareGenericRequestFacts();
+  openDatabaseConnection().driver.execute("DELETE FROM node_reading WHERE node_id = 'node-reading-1'");
+  expect((await readFramedSyncInventory(ownerPort())).find(entry => entry.objectType === 'node')?.stateFactIds)
+    .toEqual([]);
+  const target = await receive();
+  expect(target.prepare('SELECT * FROM node_reading').all()).toEqual([]);
+  expect(target.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_reading'").all()).toEqual([]);
+  expect(target.prepare("SELECT id FROM nodes WHERE id = 'node-reading-1'").get()).toEqual({ id: 'node-reading-1' });
 });
 
-it('packs view state as a carried sync object payload', async () => {
+it('refreshes a stale reading inventory during desktop retirement without changing original facts', () => {
+  insertNodeReadingSyncState(); prepareGenericRequestFacts();
+  const { sqlite } = openDatabaseConnection();
+  sqlite.exec("DELETE FROM node_reading WHERE node_id = 'node-reading-1'");
+  sqlite.exec(`UPDATE framed_sync_inventory SET states_json = '["node_reading:stale"]'
+    WHERE object_type = 'node' AND object_id = 'node-reading-1'`);
+  const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_object_state'];
+  const facts = () => tables.map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+  const before = facts();
+  sqlite.pragma('user_version = 152'); initializeDatabaseSchema(sqlite);
+  expect(sqlite.prepare("SELECT states_json FROM framed_sync_inventory WHERE object_id = 'node-reading-1'").pluck().get())
+    .toBe('[]');
+  expect(facts()).toEqual(before);
+});
+
+it('keeps host view state local instead of publishing the private active node', async () => {
   insertViewStateSyncState();
-  const packPath = resolveSyncPackPath('incoming-view-state.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-view-state-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-view-state-1', toStateSeq: 9 });
-  expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{
-      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
-      object_type: 'view_state',
-      state_seq: 9
-    }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'session_resume:windows:desktop:desktop-test:active_node',
-      object_type: 'view_state',
-      payload_json: expect.stringContaining('node-1')
-    })]
-  });
+  const original = openDatabaseConnection().driver.queryAll('SELECT * FROM workspace_meta');
+  expect(await readFramedSyncInventory(ownerPort())).toEqual([]);
+  const target = await receive();
+  expect(target.prepare('SELECT * FROM workspace_meta').all()).toEqual([]);
+  expect(target.prepare("SELECT * FROM sync_object_state WHERE object_type = 'view_state'").all()).toEqual([]);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM workspace_meta')).toEqual(original);
 });
