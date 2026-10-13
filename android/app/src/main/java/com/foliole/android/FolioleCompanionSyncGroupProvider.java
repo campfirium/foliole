@@ -83,9 +83,9 @@ final class FolioleCompanionSyncGroupProvider {
         String identityKey = request.deviceIdentityKey();
         JSONObject device = request.registeredDevice(identityKey);
         dataBridge.request("register_device", new JSONObject().put("group_id", groupId).put("device", device));
-        JSObject acceptance = joinProvider.accept(requestId, System.currentTimeMillis());
+        joinProvider.accept(requestId, System.currentTimeMillis());
         stateListener.run();
-        return acceptance;
+        return state();
     }
 
     static synchronized JSObject reject(Context context, PluginCall call) throws Exception {
