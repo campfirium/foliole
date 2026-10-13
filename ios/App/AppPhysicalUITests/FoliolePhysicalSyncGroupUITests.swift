@@ -35,6 +35,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         waitForLocalNetworkDecision(allow: true)
         let groupId = requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID")
         tapButton(named: "Join \(groupId)", in: app, timeout: 90)
+        tapButton(named: "Use the sync group’s data to overwrite this device", in: app, timeout: 30)
 
         XCTAssertTrue(
             app.staticTexts["Current Sync Group"].waitForExistence(timeout: 120)
