@@ -11,7 +11,7 @@ import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 import { currentCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { companionRequestSyncHttpChunks, spoolCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
-import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+import { combineCompanionRequestSignals, withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 import { requireCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 import { companionSyncPeerRoundOwner } from './companionSyncPeerRounds.js';
 
@@ -43,7 +43,7 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
   const round = parseRequestSyncPeerRound(payload.peer_round_id, payload.peer_round_mode);
   const rounds = await companionSyncPeerRoundOwner();
   const lease = rounds.acceptInbound(context.initiatorDeviceId, round.id, round.mode === 'start' || round.mode === 'single');
-  const signal = AbortSignal.any([parentSignal, lease.signal]);
+  const { signal, dispose } = combineCompanionRequestSignals([parentSignal, lease.signal]);
   let host: Awaited<ReturnType<typeof currentCompanionRequestSyncDatabaseHost>> | undefined;
   let stream: FramedSyncStreamBody | undefined;
   try {
@@ -74,6 +74,7 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     await host?.files.remove(directory);
     throw error;
   } finally {
+    dispose();
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();
   }

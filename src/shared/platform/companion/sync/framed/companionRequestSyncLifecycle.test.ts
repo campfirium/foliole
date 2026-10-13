@@ -10,9 +10,35 @@ vi.mock('../../../appLifecycle.js', () => ({
   }
 }));
 
-import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+import { combineCompanionRequestSignals, withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 
 afterEach(() => { lifecycle.active = true; lifecycle.background = undefined; lifecycle.remove.mockClear(); });
+
+it.each([0, 1])('propagates cancellation from source %s and preserves the first reason', index => {
+  const sources = [new AbortController(), new AbortController()];
+  const combined = combineCompanionRequestSignals(sources.map(source => source.signal));
+  const reason = new Error('request_cancelled');
+  sources[index]!.abort(reason);
+  sources[1 - index]!.abort(new Error('later'));
+  expect(combined.signal.aborted).toBe(true);
+  expect(combined.signal.reason).toBe(reason);
+  combined.dispose();
+});
+
+it('preserves an already cancelled source and detaches completed request listeners', () => {
+  const cancelled = new AbortController();
+  cancelled.abort(new Error('already_cancelled'));
+  const prior = combineCompanionRequestSignals([cancelled.signal]);
+  expect(() => prior.signal.throwIfAborted()).toThrow('already_cancelled');
+  prior.dispose();
+  const parent = new AbortController();
+  const remove = vi.spyOn(parent.signal, 'removeEventListener');
+  const completed = combineCompanionRequestSignals([parent.signal]);
+  completed.dispose();
+  parent.abort(new Error('after_completion'));
+  expect(completed.signal.aborted).toBe(false);
+  expect(remove).toHaveBeenCalledOnce();
+});
 
 it('rejects an already backgrounded request before acquiring storage', async () => {
   lifecycle.active = false;

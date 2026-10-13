@@ -2,7 +2,7 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { textBranch, textDevice } from '../../../../../../electron/database/topicTextState.testSupport.js';
 import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
@@ -38,6 +38,13 @@ vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () 
 import { rememberCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 import { respondCompanionRequestSync } from './companionRequestSyncResponse.js';
 import { closeCompanionSyncPeerRounds } from './companionSyncPeerRounds.js';
+
+beforeEach(() => {
+  vi.stubGlobal('AbortSignal', new Proxy(AbortSignal, {
+    get: (target, key, receiver) => key === 'any' ? undefined : Reflect.get(target, key, receiver)
+  }));
+});
+afterEach(() => { vi.unstubAllGlobals(); });
 
 it.each([false, true])('applies the native handoff and cleans a late rejected reply=%s', async lateReply => {
   await mkdir('.tmp/artifacts', { recursive: true });

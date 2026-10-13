@@ -1,5 +1,16 @@
 import { readNativeAppActiveState, subscribeNativeAppBackground } from '../../../appLifecycle.js';
 
+export function combineCompanionRequestSignals(signals: readonly AbortSignal[]) {
+  const controller = new AbortController();
+  const subscriptions = signals.map(signal => {
+    const cancel = () => controller.abort(signal.reason);
+    signal.addEventListener('abort', cancel, { once: true });
+    if (signal.aborted) cancel();
+    return () => signal.removeEventListener('abort', cancel);
+  });
+  return { signal: controller.signal, dispose: () => subscriptions.forEach(remove => remove()) };
+}
+
 /** A foreground request owns its cancellation until files and SQLite snapshots are released. */
 export async function withCompanionRequestSyncLifecycle<T>(run: (signal: AbortSignal) => Promise<T>, parent?: AbortSignal) {
   const controller = new AbortController();
