@@ -27,7 +27,7 @@ export function verifyAcceptanceScenario(args) {
   if (args.scenario === 'sync-pack-runtime') {
     return { sync_pack: verifySyncPackAcceptance(
       args.firstBridge, args.secondBridge, args.firstScenarioSnapshot, args.secondScenarioSnapshot,
-      args.syncPackRejections, args.providerObservations
+      args.providerObservations
     ) };
   }
   if (args.scenario === 'state-writeback-runtime') {

@@ -72,7 +72,6 @@ let package = Package(
                 "FolioleCompanionSyncGroupRequestRoutes.swift",
                 "FolioleCompanionSyncGroupMemberStateEndpoint.swift",
                 "FolioleCompanionSyncGroupResources.swift",
-                "FolioleCompanionSyncGroupSnapshot.swift",
                 "FolioleCompanionSyncGroupWorkgroup.swift",
                 "FolioleCompanionWorkgroupClient.swift",
                 "FolioleCompanionZlib.swift",

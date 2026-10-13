@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  apply: vi.fn(),
+  request: vi.fn(),
   advancePhase: vi.fn(),
   ensureGroup: vi.fn(),
   loadPhase: vi.fn(),
@@ -10,13 +10,11 @@ const mocks = vi.hoisted(() => ({
   postResult: vi.fn(),
   rerunRoundtrip: vi.fn(),
   runRoundtrip: vi.fn(),
-  saveEndpoint: vi.fn(),
-  sign: vi.fn()
+  saveEndpoint: vi.fn()
 }));
 
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
-vi.mock('../shared/platform/companion/network/signedRequest', () => ({ createSignedRequestHeaders: mocks.sign }));
-vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
+vi.mock('./iosAcceptanceRequestSync', () => ({ syncIosAcceptanceRequest: mocks.request }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
@@ -30,7 +28,7 @@ vi.mock('./iosNodeVersionRoundtripAcceptance', () => ({
 }));
 vi.mock('./iosSyncPackAcceptancePhase', () => ({
   advanceIosSyncPackAcceptancePhase: mocks.advancePhase,
-  IOS_SYNC_PACK_ACCEPTANCE_PHASES: ['apply', 'reapply', 'wrong-target', 'cursor-gap'],
+  IOS_SYNC_PACK_ACCEPTANCE_PHASES: ['apply', 'reapply'],
   loadIosSyncPackAcceptancePhase: mocks.loadPhase
 }));
 
@@ -39,25 +37,24 @@ import { runIosSyncPackAcceptance } from './iosSyncPackAcceptance';
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadPhase.mockResolvedValue('apply');
-  mocks.apply.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
+  mocks.request.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 1, to_state_seq: 2 });
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
     group: { group_id: 'group-1' }, joined: true,
     peer: { sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1' } });
   mocks.runRoundtrip.mockResolvedValue({ push: { pushedObjectIds: ['node:capture', 'node:restore'] } });
   mocks.rerunRoundtrip.mockResolvedValue({ push: { pushedObjectIds: [] } });
-  mocks.sign.mockResolvedValue({ 'X-Signature': 'signed' });
 });
 
-it('joins and applies the identity-bound legal pack on the first launch', async () => {
+it('joins and requests current facts from the accepted peer on the first launch', async () => {
   await runIosSyncPackAcceptance();
 
   expect(mocks.ensureGroup).toHaveBeenCalledWith('/app/foliole.db');
-  expect(mocks.apply).toHaveBeenCalledWith({
-    headers: { 'X-Signature': 'signed' },
-    sourceHostName: 'Acceptance Desktop',
-    sourcePeerId: 'desktop-1',
-    url: 'http://127.0.0.1:43123/acceptance/sync-pack/legal'
+  expect(mocks.request).toHaveBeenCalledWith('http://127.0.0.1:43123', {
+    sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1'
+  });
+  expect(mocks.runRoundtrip).toHaveBeenCalledWith('http://127.0.0.1:43123', {
+    sourceHostName: 'Acceptance Desktop', sourcePeerId: 'desktop-1'
   });
   expect(mocks.advancePhase).toHaveBeenCalledWith('apply');
   expect(mocks.advancePhase.mock.invocationCallOrder[0] ?? Infinity)
@@ -74,31 +71,19 @@ it('reapplies through the shared path while reusing the accepted Sync Group iden
   expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
     .toBeLessThan(mocks.rerunRoundtrip.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.ensureGroup).toHaveBeenCalledOnce();
-  expect(mocks.apply).not.toHaveBeenCalled();
+  expect(mocks.request).not.toHaveBeenCalled();
   expect(mocks.rerunRoundtrip).toHaveBeenCalledOnce();
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'reapplied', status: 'passed' }));
 });
 
-it.each([
-  ['wrong-target', 'sync_pack_target_mismatch'],
-  ['cursor-gap', 'sync_pack_cursor_not_contiguous']
-])('accepts only the deterministic %s rejection', async (phase, error) => {
-  mocks.loadPhase.mockResolvedValue(phase);
-  mocks.apply.mockRejectedValue(new Error(error));
+it('reports request failure without advancing the durable phase', async () => {
+  mocks.request.mockRejectedValueOnce(new Error('request transport failed'));
 
   await runIosSyncPackAcceptance();
 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
-    error, phase: 'rejected', rejection: phase, scenario: 'sync-pack-runtime', status: 'passed'
+    error: 'request transport failed', phase: 'failed', status: 'failed'
   }));
-});
-
-it('fails when a rejection category does not match the active phase', async () => {
-  mocks.loadPhase.mockResolvedValue('wrong-target');
-  mocks.apply.mockRejectedValue(new Error('missing_sync_pack_entry'));
-
-  await runIosSyncPackAcceptance();
-
-  expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({ phase: 'failed', status: 'failed' }));
+  expect(mocks.runRoundtrip).not.toHaveBeenCalled();
   expect(mocks.advancePhase).not.toHaveBeenCalled();
 });

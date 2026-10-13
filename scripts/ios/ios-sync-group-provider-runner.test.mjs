@@ -1,6 +1,5 @@
 // @vitest-environment node
 /* global process */
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -8,32 +7,18 @@ import { expect, it } from 'vitest';
 
 import { compileSyncGroupProvider } from './ios-sync-group-provider-runner.mjs';
 
-const RELATIVE_ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
-
-it('copies the immutable acceptance corpus beside the compiled service', () => {
+it('compiles the request provider and its runtime dependencies', () => {
   const outputDirectory = '.tmp/artifacts/ios-sync-group-provider-distribution-test';
   fs.rmSync(outputDirectory, { force: true, recursive: true });
   try {
     compileSyncGroupProvider(process.cwd(), outputDirectory);
-    const sourceIdentity = readIdentity(RELATIVE_ROOT);
     const distributionRoot = path.join(outputDirectory, 'service-dist');
-    const copiedRoot = path.join(distributionRoot, RELATIVE_ROOT);
     expect(fs.existsSync(path.join(
       distributionRoot, 'scripts/ios/ios-sync-group-provider-fixture.js'
     ))).toBe(true);
-    expect(readIdentity(copiedRoot)).toEqual(sourceIdentity);
-    for (const [relativePath, expectedHash] of Object.entries(sourceIdentity.files)) {
-      expect(hash(path.join(copiedRoot, relativePath))).toBe(expectedHash);
-    }
+    expect(fs.existsSync(path.join(distributionRoot, 'scripts/ios/ios-hosted-state-writeback-facts.mjs'))).toBe(true);
+
   } finally {
     fs.rmSync(outputDirectory, { force: true, recursive: true });
   }
 }, 30_000);
-
-function readIdentity(root) {
-  return JSON.parse(fs.readFileSync(path.join(root, 'corpus.json'), 'utf8'));
-}
-
-function hash(file) {
-  return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-}

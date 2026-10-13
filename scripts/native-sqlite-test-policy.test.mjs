@@ -69,9 +69,9 @@ describe('native sqlite test policy', () => {
     expect(controlledElectronSqliteTests).toContain('electron/database/publicDesktopDatabaseUpgrades.test.ts');
   });
 
-  it('keeps the fixed iOS corpus product contract on the Electron ABI test entry', () => {
-    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs');
-    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-acceptance-contract-corpus-product.test.mjs');
+  it('keeps iOS request fixtures on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-hosted-request-seed.test.mjs');
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-hosted-request-scenario.test.mjs');
     expect(controlledElectronSqliteTests.some((file) => file.includes('ios-sync-pack-acceptance-fixture')))
       .toBe(false);
     expect(controlledElectronSqliteTests.some((file) => file.includes('ios-database-upgrade-acceptance-fixture')))

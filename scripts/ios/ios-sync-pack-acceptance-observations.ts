@@ -1,5 +1,7 @@
 export function createIosSyncPackAcceptanceObservations() {
   return {
+    received_version_ids: [] as string[],
+    successor_version_id: null as string | null,
     ack_statuses: [] as string[],
     capture_node_id: null as string | null,
     push_requests: 0,

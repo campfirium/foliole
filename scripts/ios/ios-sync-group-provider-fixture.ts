@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createRequire } from 'node:module';
@@ -5,11 +6,12 @@ import path from 'node:path';
 
 import { app } from 'electron';
 
-import {
-  type IosContentResourceAcceptanceFixture,
-  routeIosContentResourceRequest
-} from './ios-content-resource-acceptance-service.ts';
-import { createIosHostedLiveScenario } from './ios-hosted-live-scenario.ts';
+import { closeDatabaseConnection } from '../../electron/database/connection.js';
+import { handleProductionCompanionFramedSyncPost } from '../../electron/sync/companionLanFramedSyncRoute.js';
+
+import { createIosForegroundSyncLifecycleService } from './ios-foreground-sync-lifecycle-service.ts';
+import { createIosHostedRequestLibrary, initializeIosHostedRequestLibrary } from './ios-hosted-request-library.js';
+import { createIosHostedRequestScenario } from './ios-hosted-request-scenario.js';
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
 import {
   readProviderJson,
@@ -21,13 +23,7 @@ import {
   hostedRegistrationInput,
   registerHostedProvider
 } from './ios-sync-group-provider-registration.ts';
-import {
-  sendSignedProviderJson,
-  sendSignedProviderResponse
-} from './ios-sync-group-provider-response.ts';
-import { routeIosSyncPackProviderRequest } from './ios-sync-group-provider-sync-pack.ts';
-import { createIosSyncGroupScenarioService } from './ios-sync-group-scenario-service.ts';
-import type { IosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-routes.ts';
+import { sendSignedProviderJson } from './ios-sync-group-provider-response.ts';
 
 const artifactDir = process.argv[2];
 if (!artifactDir) throw new Error('Acceptance artifact directory is required.');
@@ -38,22 +34,27 @@ const corpusScenario = [
 mkdirSync(artifactDir, { recursive: true });
 
 const observations = createIosSyncGroupProviderObservations();
-const provider = createIosSyncGroupProviderContract(observations);
+const workgroupKey = randomBytes(32).toString('base64url');
+let requestLibrary: Awaited<ReturnType<typeof createIosHostedRequestLibrary>> | null = null;
+const provider = createIosSyncGroupProviderContract(observations, { workgroupKey,
+  registerAcceptedDevice: async device => {
+    if (!requestLibrary) throw new Error('ios_hosted_request_library_not_ready');
+    await requestLibrary.registerAcceptedDevice(device);
+  } });
 const require = createRequire(import.meta.url);
 const dnsSd = require(path.join(process.cwd(), 'scripts/desktop/desktop-dnssd-harness-loader.cjs')) as {
   register: Parameters<typeof registerHostedProvider>[0];
 };
-let contentResourceFixture: IosContentResourceAcceptanceFixture | null = null;
-let scenarioService: Awaited<ReturnType<typeof createIosSyncGroupScenarioService>> | null = null;
-let syncPackService: IosSyncPackAcceptanceRoutes | null = null;
 let registration: ReturnType<typeof registerHostedProvider> | null = null;
 let stopping = false;
-const liveScenario = corpusScenario ? createIosHostedLiveScenario({
-  artifactRoot: artifactDir,
-  observations,
-  providerDeviceId: provider.discovery.provider_device_id,
-  scenario
-}) : null;
+const usesRequestScenario = corpusScenario;
+const requestScenario = createIosHostedRequestScenario(provider.discovery.provider_device_id, observations.sync_pack, {
+  seed: scenario === 'content-resource-read' ? 'contentResource' : scenario === 'sync-pack-runtime' ? 'legal' : 'stateInitial',
+  stateObservations: observations.state_writeback
+});
+const lifecycleService = createIosForegroundSyncLifecycleService({
+  artifactDir, observations: observations.foreground_sync_lifecycle, route: async () => null
+});
 
 function writeObservations() {
   writeFileSync(path.join(artifactDir, 'service-observations.json'), `${JSON.stringify(observations, null, 2)}\n`);
@@ -87,29 +88,12 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
     return;
   }
   const bodyText = provider.decryptRequest(request, wireBodyText);
-  await prepareLiveServices();
-  writeObservations();
-  if (await routeScenarioRequest(request, response, bodyText)) return;
-  if (await routeIosSyncPackProviderRequest({
-    bodyText, onObserved: writeObservations, provider, request, response, service: syncPackService
-  })) return;
-  if (contentResourceFixture) {
-    const routed = routeIosContentResourceRequest({
-      bodyText,
-      fixture: contentResourceFixture,
-      method: request.method ?? 'GET',
-      observations: observations.content_resource,
-      providerDeviceId: provider.discovery.provider_device_id,
-      requestUrl: request.url ?? '/'
-    });
-    if (routed) {
-      writeObservations();
-      sendSignedProviderResponse(
-        provider, request, response, routed.status, routed.body,
-        routed.headers['Content-Type'] ?? 'application/octet-stream'
-      );
-      return;
-    }
+  if (request.method === 'POST' && request.url === '/sync-group/member-state') {
+    if (!requestLibrary || !provider.acceptedDeviceId()) throw new Error('ios_hosted_request_library_not_ready');
+    const result = await requestLibrary.acceptMemberState(bodyText, provider.acceptedDeviceId()!);
+    sendSignedProviderJson(provider, request, response, 200, result.state);
+    writeObservations();
+    return;
   }
   if (request.url === '/acceptance/redirect') {
     sendSignedProviderJson(
@@ -124,36 +108,27 @@ async function handleSignedRequest(request: IncomingMessage, response: ServerRes
   sendSignedProviderJson(provider, request, response, 200, { ok: true });
 }
 
-async function prepareLiveServices() {
-  if (!liveScenario) return;
-  const prepared = await liveScenario.prepare(
-    provider.acceptedDeviceId(), observations.acceptance_collected_count
-  );
-  contentResourceFixture = prepared.contentResourceFixture;
-  scenarioService = prepared.scenarioService;
-  syncPackService = prepared.syncPackService;
-}
-
-async function routeScenarioRequest(
-  request: IncomingMessage,
-  response: ServerResponse,
-  bodyText: string
-) {
-  if (!scenarioService) return false;
-  const routed = await scenarioService.route({
-    bodyText,
-    method: request.method ?? 'GET',
-    url: request.url ?? '/'
-  });
-  if (!routed) return false;
+async function handleRequestSync(request: IncomingMessage, response: ServerResponse) {
+  const execute = async () => {
+    if (usesRequestScenario) await requestScenario(request, response);
+    else await handleProductionCompanionFramedSyncPost({ deviceId: provider.discovery.provider_device_id, request, response });
+    return { body: '', contentType: 'application/json', status: response.statusCode };
+  };
+  const result = scenario === 'foreground-sync-lifecycle'
+    ? await lifecycleService({ bodyText: '', method: request.method ?? 'POST', url: request.url ?? '/' }, execute)
+    : await execute();
+  if (result && !response.writableEnded) {
+    response.writeHead(result.status ?? 200, { 'Content-Type': result.contentType });
+    response.end(result.body);
+  }
   writeObservations();
-  sendSignedProviderResponse(provider, request, response, routed.status ?? 200, routed.body, routed.contentType);
-  return true;
 }
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.method === 'GET' && request.url === '/companion/discovery') {
+    if (request.method === 'POST' && new URL(request.url ?? '/', 'http://localhost').pathname === '/companion/framed-sync') {
+      await handleRequestSync(request, response);
+    } else if (request.method === 'GET' && request.url === '/companion/discovery') {
       sendProviderResponse(response, 200, provider.discovery);
     } else if (request.method === 'POST' && request.url === '/sync-group/join-requests') {
       await handleJoinRequest(request, response);
@@ -171,7 +146,7 @@ const server = createServer(async (request, response) => {
 });
 
 async function start() {
-  await app.whenReady();
+  requestLibrary = await initializeIosHostedRequestLibrary(artifactDir, workgroupKey);
   server.listen(0, () => void registerListener());
 }
 
@@ -218,8 +193,7 @@ async function stop(exitCode: number) {
   });
   observations.registration.closed = true;
   writeObservations();
-  scenarioService?.close();
-  syncPackService?.close();
+  closeDatabaseConnection();
   process.send?.({ kind: 'stopped' });
   app.exit(exitCode);
 }

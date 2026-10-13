@@ -28,9 +28,6 @@ if (isIosBridgeAcceptance) {
     : iosAcceptanceScenario === 'readonly-snapshot'
       ? import('./readonlySnapshotAcceptance').then(({ mountReadonlySnapshotAcceptance }) =>
         mountReadonlySnapshotAcceptance(rootElement))
-    : iosAcceptanceScenario === 'sync-fact-probe'
-      ? import('./syncFactProbeAcceptance').then(({ mountSyncFactProbeAcceptance }) =>
-        mountSyncFactProbeAcceptance(rootElement))
     : iosAcceptanceScenario === 'library-capacity-workspace'
       ? import('./capacityWorkspaceAcceptance').then(({ mountCapacityWorkspaceAcceptance }) =>
         mountCapacityWorkspaceAcceptance(rootElement))

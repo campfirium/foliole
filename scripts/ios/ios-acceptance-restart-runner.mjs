@@ -5,7 +5,6 @@ import {
   waitForAcceptanceObservation,
   waitForBootstrapSnapshot
 } from './ios-simulator-acceptance-runner.mjs';
-import { runSyncPackRejections } from './ios-sync-pack-acceptance-runner.mjs';
 
 const DEFAULT_BRIDGE_RESULT_TIMEOUT_MS = 15_000;
 const SYNC_PACK_BRIDGE_RESULT_TIMEOUT_MS = 60_000;
@@ -21,16 +20,7 @@ export async function runAcceptanceRestart(options) {
   const second = await waitForBootstrapSnapshot(options.readBootstrap, options.launch, options.bootstrapTimeoutMs);
   const secondBridge = verifyBridgeResult(await readBridgeResult(options), options.scenario);
   options.terminate();
-  const syncPackRejections = options.scenario === 'sync-pack-runtime'
-    ? await runSyncPackRejections({
-      ...options,
-      launchAndReadBridge: async () => {
-        options.launch();
-        return verifyBridgeResult(await readBridgeResult(options), options.scenario);
-      }
-    })
-    : [];
-  return { second, secondBridge, syncPackRejections };
+  return { second, secondBridge, syncPackRejections: [] };
 }
 
 function readBridgeResult(options) {

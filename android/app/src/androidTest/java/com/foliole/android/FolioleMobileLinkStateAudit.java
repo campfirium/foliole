@@ -4,12 +4,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import com.getcapacitor.JSArray;
+import com.getcapacitor.community.database.sqlite.CapacitorSQLite;
+import com.getcapacitor.community.database.sqlite.SQLite.SqliteConfig;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -20,7 +22,7 @@ final class FolioleMobileLinkStateAudit {
     private final long startedAt = System.currentTimeMillis();
 
     FolioleMobileLinkStateAudit(Context context) throws Exception {
-        before = read(context);
+        before = readCurrentSnapshot(context);
         host = before.get("companion_meta").get("host_name").getString("value");
     }
 
@@ -131,39 +133,46 @@ final class FolioleMobileLinkStateAudit {
     }
 
     private static Map<String, Map<String, JSONObject>> readCurrentSnapshot(Context context) throws Exception {
-        FolioleCompanionSyncGroupSnapshot snapshots = new FolioleCompanionSyncGroupSnapshot(
-            context, FolioleCompanionSyncGroupDataBridge.current());
+        String name = "foliole-companion";
+        SqliteConfig config = new SqliteConfig();
+        config.setIsEncryption(false);
+        CapacitorSQLite sqlite = new CapacitorSQLite(context, config);
+        // Readonly connections do not initialize or upgrade the existing database.
+        sqlite.createConnection(name, false, "no-encryption", 1, new Hashtable<>(), true);
         try {
-            return snapshots.refresh("mobile-link-state-audit", FolioleMobileLinkStateAudit::read);
+            sqlite.open(name, true);
+            // The plugin's transaction methods address the writer; query selects the readonly connection.
+            sqlite.query(name, "BEGIN DEFERRED", new JSArray(), true);
+            try { return read(sqlite, name); }
+            finally { sqlite.query(name, "ROLLBACK", new JSArray(), true); }
         } finally {
-            snapshots.close();
+            sqlite.closeConnection(name, true);
         }
     }
 
-    private static Map<String, Map<String, JSONObject>> read(Context context) throws Exception {
-        return read(context.getDatabasePath("foliole-companionSQLite.db").getAbsolutePath());
-    }
-
-    private static Map<String, Map<String, JSONObject>> read(String path) throws Exception {
+    private static Map<String, Map<String, JSONObject>> read(CapacitorSQLite sqlite, String name) throws Exception {
         Map<String, Map<String, JSONObject>> result = new TreeMap<>();
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE)) {
-            for (String table : new String[] { "companion_meta", "workspace_meta", "node_open_state", "node_view_state", "sync_object_state" }) {
-                Map<String, JSONObject> rows = new TreeMap<>();
-                try (Cursor cursor = db.rawQuery("SELECT * FROM " + table, null)) {
-                    while (cursor.moveToNext()) {
-                        JSONObject row = new JSONObject();
-                        for (int index = 0; index < cursor.getColumnCount(); index++) {
-                            row.put(cursor.getColumnName(index), cursor.isNull(index) ? JSONObject.NULL : cursor.getString(index));
-                        }
-                        String key = table.endsWith("meta") ? row.getString("key") : row.getString(table.equals("sync_object_state") ? "object_id" : "node_id");
-                        if (table.equals("node_view_state")) key += "|" + row.getString("host_name");
-                        if (table.equals("sync_object_state")) key = row.getString("object_type") + "|" + key;
-                        rows.put(key, row);
-                    }
-                }
-                result.put(table, rows);
+        for (String table : new String[] { "companion_meta", "workspace_meta", "node_open_state", "node_view_state", "sync_object_state" }) {
+            Map<String, JSONObject> rows = new TreeMap<>();
+            JSArray values = sqlite.query(name, "SELECT * FROM " + table, new JSArray(), true);
+            for (int index = 0; index < values.length(); index++) {
+                JSONObject row = stringValues(values.getJSONObject(index));
+                String key = table.endsWith("meta") ? row.getString("key") : row.getString(table.equals("sync_object_state") ? "object_id" : "node_id");
+                if (table.equals("node_view_state")) key += "|" + row.getString("host_name");
+                if (table.equals("sync_object_state")) key = row.getString("object_type") + "|" + key;
+                rows.put(key, row);
             }
+            result.put(table, rows);
         }
         return result;
+    }
+
+    private static JSONObject stringValues(JSONObject values) throws Exception {
+        JSONObject row = new JSONObject();
+        for (java.util.Iterator<String> keys = values.keys(); keys.hasNext();) {
+            String key = keys.next();
+            row.put(key, values.isNull(key) ? JSONObject.NULL : values.get(key).toString());
+        }
+        return row;
     }
 }

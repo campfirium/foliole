@@ -20,6 +20,12 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 assertQualityCommandAllowed('runner:ios-runtime-contract');
 
 export const IOS_RUNTIME_CONTRACT_TESTS = [
+  'src/companion/iosAcceptanceRequestSync.test.ts',
+  'scripts/ios/ios-hosted-request-successor.test.mjs',
+  'scripts/ios/ios-hosted-request-resources.test.mjs',
+  'scripts/ios/ios-hosted-request-scenario.test.mjs',
+  'scripts/ios/ios-hosted-request-seed.test.mjs',
+  'scripts/ios/ios-hosted-request-library.test.mjs',
   'src/shared/platform/companionRuntimeCapabilities.test.ts',
   'src/shared/platform/appLifecycle.test.ts',
   'src/shared/platform/companionHandoffNotifications.test.ts',
@@ -100,10 +106,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/fri-s220-preflight.test.mjs',
   'scripts/ios/fri-two-device-run-proof.test.mjs',
   'scripts/ios/ios-acceptance-contract-corpus.test.mjs',
-  'scripts/ios/ios-acceptance-mechanical-push.test.mjs',
   'scripts/ios/ios-acceptance-sync-event-projection.test.mjs',
   'scripts/ios/ios-content-resource-acceptance-runner.test.mjs',
-  'scripts/ios/ios-content-resource-acceptance-service.test.mjs',
   'scripts/ios/ios-attachment-resource-host-contract.test.mjs',
   'scripts/ios/ios-app-identity-host-contract.test.mjs',
   'scripts/ios/ios-app-icon-host-contract.test.mjs',
@@ -127,8 +131,6 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-desktop-http-security-host-contract.test.mjs',
   'scripts/ios/ios-hosted-acceptance-bucket.test.mjs',
   'scripts/ios/ios-hosted-provider-contract.test.mjs',
-  'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
-  'scripts/ios/ios-hosted-sync-pack-semantics.test.mjs',
   'scripts/ios/ios-local-storage.test.mjs',
   'scripts/ios/ios-active-database-owner-contract.test.mjs',
   'scripts/ios/ios-launch-screen-host-contract.test.mjs',
@@ -136,14 +138,11 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-privacy-manifest-host-contract.test.mjs',
   'scripts/ios/ios-resource-profile.test.mjs',
   'scripts/ios/ios-scene-lifecycle-host-contract.test.mjs',
-  'scripts/ios/ios-sync-pack-transfer-contract.test.mjs',
-  'scripts/ios/ios-state-writeback-acceptance-service.test.mjs',
   'scripts/ios/ios-state-writeback-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-discovery-contract.test.mjs',
   'scripts/ios/ios-sync-group-discovery-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-join-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-provider-contract.test.mjs',
-  'scripts/ios/ios-sync-group-member-state-service.test.mjs',
   'scripts/ios/ios-sync-group-provider-registration.test.mjs',
   'scripts/ios/ios-sync-pack-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-participation-host-contract.test.mjs',
@@ -155,7 +154,6 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
-  'scripts/ios/ios-acceptance-contract-corpus-product.test.mjs',
   'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/companion/companionTrashActions.ios.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts',

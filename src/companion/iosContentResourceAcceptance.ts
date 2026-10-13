@@ -1,23 +1,19 @@
 import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
-import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import { syncCompanionAttachmentResourceRequestsFromDesktop } from '../shared/platform/companionDesktopAttachmentResources';
-import { pullMissingContentBlobs } from '../shared/platform/companionDesktopSyncContentBlobs';
 import { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import { searchCompanionFullText } from '../shared/platform/companionFullTextSearch';
 import { loadCompanionPdfPageText } from '../shared/platform/companionSyncObjects';
-import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
+import { syncIosAcceptanceRequest } from './iosAcceptanceRequestSync';
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
 
-const PACK_PATH = '/acceptance/sync-pack/content-resource';
 const IDS = {
   corrupt: '5703850972e2da20d5cd065cbb73c20c5d18778148a664b1238ce99120b1d301',
   external: 'ios-external:orchid.md',
@@ -38,14 +34,6 @@ const RESOURCE_KEYS = {
   valid: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d.pdf'
 } as const;
 
-async function applyStructure(endpoint: string, peer: { sourceHostName: string; sourcePeerId: string }) {
-  await applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: PACK_PATH }),
-    ...peer,
-    url: `${endpoint}${PACK_PATH}`
-  });
-}
-
 async function loadReadEvidence() {
   const workspace = await loadCompanionWorkspaceSyncState();
   const [topic, corruptBody, missingBody, pdfPages, external, topicSearch, pdfSearch, externalSearch,
@@ -63,9 +51,21 @@ async function loadReadEvidence() {
     resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.failed}`),
     resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.missing}`)
   ]);
-  if (valid?.status !== 'ready') throw new Error('The valid acceptance attachment was not readable.');
+  if (valid?.status !== 'ready' || valid.mime_type !== 'application/pdf' || !valid.resource_url) {
+    throw new Error('The valid acceptance attachment was not readable.');
+  }
+  if (corruptBody?.bodyStatus !== 'ready' || corruptBody.content !== '# Corrupt\n\nexpected corrupt body' ||
+      missingBody?.bodyStatus !== 'ready' || missingBody.content !== '# Missing\n\nexpected missing body') {
+    throw new Error('The acceptance bodies were not preserved completely.');
+  }
+  if ([corrupt, failed, missing].some(resource => resource?.status !== 'missing_file')) {
+    throw new Error('An unavailable acceptance attachment was reported as readable.');
+  }
   return {
-    body_failures: { corrupt: corruptBody?.bodyStatus, missing: missingBody?.bodyStatus },
+    bodies: {
+      corrupt: { body_status: corruptBody.bodyStatus, content: corruptBody.content },
+      missing: { body_status: missingBody.bodyStatus, content: missingBody.content }
+    },
     external: { body_status: external?.bodyStatus, content: external?.content, document_id: external?.document_id },
     pdf: { pages: pdfPages, search_matches: pdfSearch.pdf.map((row) => row.attachment_id) },
     resources: {
@@ -91,15 +91,7 @@ export async function runIosContentResourceAcceptance() {
     let resourceSync = null;
     if (!group) {
       await saveCompanionWorkspaceSyncEndpoint(endpoint);
-      await applyStructure(endpoint, joined.peer);
-      resourceSync = {
-        content: await pullMissingContentBlobs(endpoint),
-        attachments: await syncCompanionAttachmentResourceRequestsFromDesktop(endpoint,
-          (['corrupt', 'failed', 'missing', 'valid'] as const).map((key) => ({
-            attachmentId: IDS[key], contentHash: IDS[key], storageKey: RESOURCE_KEYS[key],
-            mimeType: key === 'valid' ? 'application/pdf' : 'image/png'
-          })))
-      };
+      resourceSync = await syncIosAcceptanceRequest(endpoint, joined.peer);
     }
     postResult({
       error: null,

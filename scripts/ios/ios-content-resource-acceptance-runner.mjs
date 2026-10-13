@@ -14,9 +14,7 @@ export function verifyContentResourceAcceptance(first, second, firstObservations
   const firstPassed = first?.phase === 'resources-synced' && first?.resource_sync && evidencePassed(first.evidence);
   const secondPassed = second?.phase === 'resources-restored' && second?.resource_sync === null && evidencePassed(second.evidence);
   const observationsPassed = hostedProviderLifecyclePassed(secondObservations) &&
-    firstObservations?.signature_headers_valid && firstObservations?.content_resource &&
-    observationCountsPassed(firstObservations.content_resource) &&
-    JSON.stringify(firstObservations.content_resource) === JSON.stringify(secondObservations?.content_resource);
+    firstObservations?.signature_headers_valid && first.resource_sync.remainingAttachmentResourceCount === 3;
   if (!firstPassed || !secondPassed || !observationsPassed) {
     throw new Error('iOS content resource acceptance evidence is incomplete.');
   }
@@ -30,23 +28,15 @@ export function verifyContentResourceAcceptance(first, second, firstObservations
 
 function evidencePassed(evidence) {
   return evidence?.topic?.node_id === IDS.topic && evidence.topic.body_status === 'ready' &&
-    evidence.topic.content?.includes(TOKENS.topic) &&
+    evidence.topic.content === `# Topic\n\n${TOKENS.topic}` &&
     evidence?.external?.document_id === IDS.external && evidence.external.body_status === 'ready' &&
-    evidence.external.content?.includes(TOKENS.external) &&
+    evidence.external.content === `# External\n\n${TOKENS.external}` &&
     evidence?.pdf?.pages?.some((page) => page.text?.includes(TOKENS.pdf)) &&
     evidence.pdf.search_matches?.includes(IDS.valid) &&
     evidence?.searches?.topic?.includes(IDS.topic) && evidence.searches.external?.includes(IDS.external) &&
-    evidence?.body_failures?.corrupt === 'failed' && evidence.body_failures.missing === 'failed' &&
+    evidence?.bodies?.corrupt?.body_status === 'ready' && evidence.bodies.corrupt.content?.includes('expected corrupt body') &&
+    evidence?.bodies?.missing?.body_status === 'ready' && evidence.bodies.missing.content?.includes('expected missing body') &&
     evidence?.resources?.valid?.status === 'ready' && evidence.resources.valid.mime_type === 'application/pdf' &&
     Boolean(evidence.resources.valid.resource_url) &&
     ['corrupt', 'failed', 'missing'].every((key) => evidence.resources[key] === 'missing_file');
-}
-
-function observationCountsPassed(observations) {
-  const requested = observations.content_requested_hashes?.flat() ?? [];
-  const firstRequests = observations.attachment_batch_requests ?? {};
-  const fallback = observations.attachment_fallback_requests ?? {};
-  return observations.content_batch_requests === 1 && requested.length === 4 && new Set(requested).size === 4 &&
-    [IDS.corrupt, IDS.failed, IDS.missing, IDS.valid].every((id) => firstRequests[id] === 1) &&
-    Object.keys(fallback).length === 0;
 }

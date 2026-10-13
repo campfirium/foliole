@@ -35,17 +35,6 @@ it('rejects unknown measurement inputs before building', () => {
   expect(checked).not.toHaveBeenCalled();
 });
 
-it('builds the isolated sync fact probe rather than the product app', () => {
-  const checked = vi.fn();
-  const captured = vi.fn((_command, args) => manifests(args.at(-1)));
-  buildA5DatabasePerformance({ checked, captured, paths,
-    env: { ...env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'sync-fact-probe' } });
-  for (const [, , options] of checked.mock.calls) {
-    expect(options.env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID).toBe(appId);
-    expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('sync-fact-probe');
-  }
-});
-
 it('builds the production request snapshot only for the fixed acceptance app', () => {
   const checked = vi.fn();
   buildA5DatabasePerformance({ checked, captured: (_command, args) => manifests(args.at(-1)), paths,

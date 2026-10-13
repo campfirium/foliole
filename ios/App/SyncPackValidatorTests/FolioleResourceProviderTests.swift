@@ -23,31 +23,16 @@ final class FolioleResourceProviderTests: XCTestCase {
         XCTAssertEqual(claims.compactMap { $0["status"] as? String }, ["available", "checksum_mismatch", "missing"])
     }
 
-    func testAvailabilityRefreshesAnUnseenPeerAndRevokesLostBytesWithoutAPack() throws {
+    func testAvailabilityRevokesLostBytes() throws {
         let fixture = try ResourceFixture()
         defer { fixture.close() }
         let hash = digest(Data("present".utf8))
         try fixture.insert(hash, bytes: Data("present".utf8))
-        let snapshots = FolioleCompanionSyncGroupSnapshot(bridge: SnapshotBridge(source: fixture.source))
-        defer { snapshots.close() }
-        XCTAssertThrowsError(try snapshots.read("new-peer") { $0 })
-        let first = try snapshots.refresh("new-peer") { try reply($0, hashes: [hash]) }
+        let first = try reply(fixture.source, hashes: [hash])
         XCTAssertEqual((first["resources"] as? [[String: Any]])?.first?["status"] as? String, "available")
         try fixture.execute("DELETE FROM content_blob_data")
-        let second = try snapshots.refresh("new-peer") { try reply($0, hashes: [hash]) }
+        let second = try reply(fixture.source, hashes: [hash])
         XCTAssertEqual((second["resources"] as? [[String: Any]])?.first?["status"] as? String, "missing")
-    }
-
-    func testStructureContinuationReusesItsSourceSnapshot() throws {
-        let fixture = try ResourceFixture()
-        defer { fixture.close() }
-        let snapshots = FolioleCompanionSyncGroupSnapshot(bridge: SnapshotBridge(source: fixture.source))
-        defer { snapshots.close() }
-        let first = try snapshots.refresh("peer") { $0 }
-        let second = try snapshots.continueOrRefresh("peer") { $0 }
-        XCTAssertEqual(first, second)
-        let nextRound = try snapshots.refresh("peer") { $0 }
-        XCTAssertNotEqual(first, nextRound)
     }
 
     func testMixedContentTransferKeepsOnlyVerifiedRequestedBytes() {
@@ -95,17 +80,6 @@ final class FolioleResourceProviderTests: XCTestCase {
     }
 
     private func digest(_ bytes: Data) -> String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
-}
-
-private struct SnapshotBridge: FolioleCompanionSyncGroupDataRequesting {
-    let source: URL
-    func request(_ operation: String, _ payload: [String: Any]) throws -> [String: Any] {
-        guard operation == "create_snapshot", let target = payload["target_path"] as? String else {
-            throw NSError(domain: "SnapshotFixture", code: 1)
-        }
-        try FileManager.default.copyItem(at: source, to: URL(fileURLWithPath: target))
-        return ["snapshot_path": target]
-    }
 }
 
 private final class ResourceFixture {

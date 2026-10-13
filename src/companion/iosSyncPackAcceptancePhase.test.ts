@@ -28,10 +28,15 @@ it('persists the next phase in companion_meta before process termination', async
   database.query.mockResolvedValue([{ value: 'reapply' }]);
 
   await expect(loadIosSyncPackAcceptancePhase()).resolves.toBe('reapply');
-  await advanceIosSyncPackAcceptancePhase('reapply');
+  await advanceIosSyncPackAcceptancePhase('apply');
 
   expect(database.run).toHaveBeenCalledWith(
     expect.stringContaining('INSERT INTO companion_meta'),
-    ['ios_sync_pack_acceptance_phase', 'wrong-target', expect.any(String)]
+    ['ios_sync_pack_acceptance_phase', 'reapply', expect.any(String)]
   );
+});
+
+it('keeps reapply as the final phase without creating a retired pack phase', async () => {
+  await advanceIosSyncPackAcceptancePhase('reapply');
+  expect(database.run).not.toHaveBeenCalled();
 });

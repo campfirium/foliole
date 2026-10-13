@@ -1,6 +1,6 @@
 /* global clearTimeout, process, setTimeout */
 
-import { cpSync, rmSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -20,6 +20,7 @@ export function createSyncGroupProviderCompileArgs(repoRoot, artifactDir) {
     '--target', 'ES2022',
     '--lib', 'ES2022,DOM',
     '--resolveJsonModule',
+    '--allowJs',
     '--rewriteRelativeImportExtensions',
     '--noCheck'
   ];
@@ -104,12 +105,6 @@ export function compileSyncGroupProvider(repoRoot, artifactDir) {
     stdio: 'inherit'
   });
   if (result.status !== 0) throw new Error(`Failed to compile iOS Sync Group provider (${result.status}).`);
-  copyAcceptanceContractCorpus(repoRoot, outputDirectory);
-}
-
-function copyAcceptanceContractCorpus(repoRoot, outputDirectory) {
-  const relativePath = path.join('scripts', 'ios', 'fixtures', 'acceptance-contract-corpus');
-  cpSync(path.join(repoRoot, relativePath), path.join(outputDirectory, relativePath), { recursive: true });
 }
 
 export function verifySyncGroupTransportAcceptance(first, second, observations) {

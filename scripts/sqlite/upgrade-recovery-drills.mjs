@@ -26,12 +26,9 @@ const release = [...changed,
   'electron/database/backupRestore.workgroup.test.ts'
 ];
 const quarterly = [...release,
+  'electron/database/requestSyncRestoreRecovery.integration.test.ts',
   'electron/database/backupRestore.orphanCleanup.test.ts',
   'electron/database/integrity.test.ts',
-  'electron/database/workgroupRestoreIntegration.test.ts',
-  'electron/database/workgroupRestoreOffline.test.ts',
-  'electron/database/workgroupRestoreStaleTraffic.test.ts',
-  'electron/database/workgroupRestoreConvergence.test.ts',
   'electron/sync/syncGroupJoinMobile.http.integration.test.ts',
   'electron/database/dynamicNodeVersionChains.recovery.test.ts'
 ];

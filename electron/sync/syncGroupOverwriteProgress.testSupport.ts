@@ -1,12 +1,17 @@
-import { restoreFramedSyncNodeMetadata } from '../../lib/core/sync/framedSyncNodeRestore.js';
-import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
-import { canonicalFactFromValidatedMessage } from '../../lib/core/sync/framedSyncWireFact.js';
+
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import Database from 'better-sqlite3';
+
+import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { SyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
-
-import { verifiedCompanionFixture } from './companionFramedSyncVerifiedApply.testSupport.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
 export const adoption = { endpointUrl: 'http://localhost:38641', groupId: 'group-1',
   libraryEpoch: 'receiver-epoch', providerDeviceId: 'sender', providerDeviceName: 'Sender', providerPlatform: 'darwin' };
@@ -19,18 +24,12 @@ export const context = { groupId: progress.groupId, protocolVersion: 24,
 const body = '\ufeffOld library 中文😀\0';
 
 export async function overwriteFixture(mode: 'adoption' | 'restore' = 'adoption') {
-  const host = await verifiedCompanionFixture('android', body);
+  const host = await currentFixture();
   try {
-    const frame = host.native.prepare<[], { authenticated_plaintext: Uint8Array }>(
-      `SELECT authenticated_plaintext FROM ${host.prefix}_frames WHERE frame_type = 3`).get();
-    if (!frame) throw new Error('fixture_fact_missing');
-    const fact = canonicalFactFromValidatedMessage(decodeAndValidateProtocolMessage(frame.authenticated_plaintext, 3));
-    const supplement = () => host.port().transaction(async (tx) => {
-      const metadata = restoreFramedSyncNodeMetadata(fact);
-      await applySyncNodesWithDbPort(tx, [{ ...metadata, body_text: body,
-        snapshot: { ...metadata.snapshot, content: body } }],
-      { operation: 'local_restore', enqueueSearchInvalidations: false });
-    });
+    const original = textBranch('version-1', body);
+    const record = { ...original, object_id: 'node-1', snapshot: { ...original.snapshot, id: 'node-1' } };
+    const supplement = () => host.port().transaction(tx => applySyncNodesWithDbPort(tx, [record],
+      { operation: 'local_restore', enqueueSearchInvalidations: false }));
     await supplement();
     if (mode === 'adoption') await beginSyncGroupLocalAdoption(host.port(), adoption);
     else {
@@ -49,4 +48,17 @@ export function overwriteBusinessState(host: Awaited<ReturnType<typeof overwrite
     'sync_object_state', 'content_blobs', 'sync_group_metadata',
     'node_version_local_proof_state', 'sync_state_sequence'].map((table) =>
     [table, host.main.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
+}
+
+async function currentFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-overwrite-progress-'));
+  const file = path.join(root, 'main.sqlite');
+  let main = new Database(file);
+  await bootstrapCompanionDatabase(createBetterSqliteDbPort(main), {
+    allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06'
+  });
+  main.exec('DELETE FROM nodes');
+  return { get main() { return main; }, port: () => createBetterSqliteDbPort(main),
+    reopen() { main.close(); main = new Database(file); },
+    close() { main.close(); fs.rmSync(root, { recursive: true, force: true }); } };
 }

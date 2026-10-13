@@ -38,25 +38,23 @@ describe('iOS bridge acceptance host contract', () => {
     expect(acceptanceSyncGroup).toContain('loadCompanionDiscoveryCandidates(candidates)');
     expect(acceptanceSyncGroup).not.toContain('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
-    expect(syncPackScenario).toContain('applyCompanionDesktopSyncPack({');
+    expect(syncPackScenario).toContain('syncIosAcceptanceRequest(endpoint, peer)');
     expect(syncPackPhase).toContain(
-      "'apply', 'reapply', 'wrong-target', 'cursor-gap'"
+      "'apply', 'reapply'"
     );
     expect(syncPackPhase).toContain('INSERT INTO companion_meta');
     expect(syncPackScenario).not.toContain('localStorage');
-    expect(syncPackScenario).toContain('pathWithQuery: path');
-    expect(contentResourceScenario).toContain('pullMissingContentBlobs(endpoint)');
+    expect(contentResourceScenario).toContain('syncIosAcceptanceRequest(endpoint, joined.peer)');
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT === '1'");
     expect(databaseUpgradeScenario).toContain("VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO === 'database-upgrade-runtime'");
     expect(databaseUpgradeScenario).not.toContain('localStorage');
     expect(deviceIdentityScenario).toContain('loadCompanionBootstrapState()');
     expect(deviceIdentityScenario).not.toContain('localStorage');
-    expect(contentResourceScenario).toContain('syncCompanionAttachmentResourceRequestsFromDesktop(endpoint,');
     expect(contentResourceScenario).toContain('searchCompanionFullText(TOKENS.topic)');
     expect(contentResourceScenario).toContain('resolveRuntimeAttachmentResource(`asset://${RESOURCE_KEYS.valid}`)');
     expect(stateWritebackScenario).toContain('saveCompanionSyncNodeReadingRecord({');
     expect(stateWritebackScenario).toContain('saveCompanionSyncNodeReviewRecord({');
-    expect(stateWritebackScenario).toContain('syncCompanionObjectsFromDesktop(endpoint, { includeResources: false })');
+    expect(stateWritebackScenario).toContain('syncIosAcceptanceRequest(endpoint, peer)');
     expect(syncTriggerScenario).toContain("beginNativeCompanionSyncRun('manual', runId)");
     expect(syncTriggerScenario).toContain("kind: 'run_finished'");
     expect(syncTriggerScenario).toContain('loadCompanionWorkspaceSyncState()');
@@ -128,27 +126,6 @@ describe('iOS bridge acceptance host contract', () => {
     expect(sources).toContain('sync-group-signed-transport');
     expect(sources).toContain('/sync-group/join-requests');
     expect(sources).toContain('/sync-group/join-acceptance');
-  });
-
-  it('keeps route services free of generator ownership and retired builders', () => {
-    for (const retired of [
-      'scripts/ios/generate-ios-acceptance-contract-corpus.ts',
-      'scripts/ios/ios-content-resource-acceptance-fixture.ts',
-      'scripts/ios/ios-database-upgrade-acceptance-fixture.ts',
-      'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
-      'scripts/ios/ios-sync-pack-acceptance-fixture.ts'
-    ]) expect(fs.existsSync(retired), retired).toBe(false);
-    const serviceFiles = [
-      'scripts/ios/ios-sync-group-provider-fixture.ts',
-      'scripts/ios/ios-sync-group-scenario-service.ts',
-      'scripts/ios/ios-state-writeback-acceptance-service.ts',
-      'scripts/ios/ios-sync-pack-acceptance-routes.ts',
-      'scripts/ios/ios-content-resource-acceptance-service.ts',
-      'scripts/ios/ios-acceptance-contract-corpus.ts',
-      'scripts/ios/ios-acceptance-mechanical-push.ts'
-    ].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
-    expect(serviceFiles).not.toMatch(/better-sqlite3|syncPackBuilderFromDriver|companionLanSyncPushWithApply/);
-    expect(serviceFiles).not.toMatch(/ios-(?:sync-pack|state-writeback|content-resource)-acceptance-fixture/);
   });
 
   it('keeps node-version roundtrip identity in the product contract', () => {

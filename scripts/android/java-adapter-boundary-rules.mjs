@@ -92,7 +92,6 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncGroupHttpError.java',
       'FolioleCompanionSyncGroupSessionAuth.java',
-      'FolioleCompanionSyncGroupSnapshot.java',
       'FolioleCompanionIdentityPageContract.java',
       'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWorkgroupEnvelopeStream.java',

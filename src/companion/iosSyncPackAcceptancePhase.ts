@@ -5,7 +5,7 @@ import {
 
 const PHASE_KEY = 'ios_sync_pack_acceptance_phase';
 export const IOS_SYNC_PACK_ACCEPTANCE_PHASES = [
-  'apply', 'reapply', 'wrong-target', 'cursor-gap'
+  'apply', 'reapply'
 ] as const;
 export type IosSyncPackAcceptancePhase = typeof IOS_SYNC_PACK_ACCEPTANCE_PHASES[number];
 

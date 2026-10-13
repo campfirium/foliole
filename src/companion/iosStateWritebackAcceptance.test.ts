@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.loadBootstrap }));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: mocks.loadGroup }));
-vi.mock('../shared/platform/companionDesktopSyncObjects', () => ({ syncCompanionObjectsFromDesktop: mocks.sync }));
+vi.mock('./iosAcceptanceRequestSync', () => ({ syncIosAcceptanceRequest: mocks.sync }));
 vi.mock('../shared/platform/companionSyncStateWriters', () => ({
   saveCompanionSyncActiveViewState: mocks.saveActive,
   saveCompanionSyncNodeReadingRecord: mocks.saveReading,
@@ -34,11 +34,11 @@ vi.mock('./iosAcceptanceSyncGroup', () => ({ ensureIosAcceptanceSyncGroup: mocks
 import { runIosStateWritebackAcceptance } from './iosStateWritebackAcceptance';
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.loadBootstrap.mockResolvedValue({ database_path: '/app/foliole.db' });
   mocks.loadGroup.mockResolvedValue(null);
   mocks.ensureGroup.mockResolvedValue({ endpointUrl: 'http://127.0.0.1:43123',
-    group: { group_id: 'group-1' }, joined: true });
+    group: { group_id: 'group-1' }, joined: true, peer: { sourcePeerId: 'provider-1' } });
   mocks.sync.mockResolvedValue({ pushedObjectIds: [] });
 });
 
@@ -46,7 +46,8 @@ it('seeds the node, writes through shared writers, and confirms on the first lau
   await runIosStateWritebackAcceptance();
 
   expect(mocks.sync).toHaveBeenCalledTimes(2);
-  expect(mocks.sync).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:43123', { includeResources: false });
+  expect(mocks.sync).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:43123', { sourcePeerId: 'provider-1' });
+  expect(mocks.sync).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:43123', { sourcePeerId: 'provider-1' });
   expect(mocks.saveActive).toHaveBeenCalledWith('ios-state-node');
   expect(mocks.saveView).toHaveBeenCalledWith({ nodeId: 'ios-state-node', scrollTop: 42 });
   expect(mocks.saveReading).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'ios-state-node' }));
@@ -68,6 +69,7 @@ it('syncs without rewriting state after process restart', async () => {
   expect(mocks.loadBootstrap.mock.invocationCallOrder[0] ?? Infinity)
     .toBeLessThan(mocks.sync.mock.invocationCallOrder[0] ?? -Infinity);
   expect(mocks.sync).toHaveBeenCalledOnce();
+  expect(mocks.sync).toHaveBeenCalledWith('http://127.0.0.1:43123', { sourcePeerId: 'provider-1' });
   expect(mocks.saveActive).not.toHaveBeenCalled();
   expect(mocks.saveReading).not.toHaveBeenCalled();
   expect(mocks.saveReview).not.toHaveBeenCalled();
@@ -84,5 +86,18 @@ it('posts a structured sync failure', async () => {
 
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
     error: 'push rejected', phase: 'failed', scenario: 'state-writeback-runtime', status: 'failed'
+  }));
+});
+
+
+it('does not write local state when the initial request fails', async () => {
+  mocks.sync.mockRejectedValueOnce(new Error('ios_acceptance_request_peer_unavailable'));
+  await runIosStateWritebackAcceptance();
+  expect(mocks.sync).toHaveBeenCalledOnce();
+  for (const writer of [mocks.saveActive, mocks.saveView, mocks.saveReading, mocks.saveReview, mocks.saveSetting]) {
+    expect(writer).not.toHaveBeenCalled();
+  }
+  expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
+    error: 'ios_acceptance_request_peer_unavailable', phase: 'failed', status: 'failed'
   }));
 });

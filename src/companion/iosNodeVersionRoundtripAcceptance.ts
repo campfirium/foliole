@@ -5,16 +5,13 @@ import {
   IOS_SYNC_PACK_RESTORED_AT,
   IOS_SYNC_PACK_RESTORE_VERSION_ID
 } from '../../lib/platform/iosSyncPackAcceptanceContract';
-import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
-import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
-import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { persistCompanionCapturedText } from './companionCaptureTextActions';
 import { restoreCompanionTrashNode } from './companionTrashActions';
+import { syncIosAcceptanceRequest } from './iosAcceptanceRequestSync';
 const RESTORE_NODE_ID = 'ios-acceptance-restore';
-const SUCCESSOR_PATH = '/acceptance/sync-pack/successor';
 type SyncPeer = { sourceHostName: string; sourcePeerId: string };
 
 export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, peer: SyncPeer) {
@@ -35,7 +32,7 @@ export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, pee
     versionId: IOS_SYNC_PACK_RESTORE_VERSION_ID
   });
   if (!restored) throw new Error('ios_node_version_roundtrip_restore_missing');
-  const push = await pushLocalDirtyObjects(endpoint);
+  const push = await syncIosAcceptanceRequest(endpoint, peer);
   if (push.pushError || push.pushConflictCount !== 0 || push.pushRejectedCount !== 0) {
     throw new Error(`ios_node_version_roundtrip_push_failed:${push.pushError ?? 'rejected'}`);
   }
@@ -52,17 +49,13 @@ export async function runIosNodeVersionRoundtripAcceptance(endpoint: string, pee
 export async function rerunIosNodeVersionRoundtripAcceptance(endpoint: string, peer: SyncPeer) {
   return {
     gates: readMutationGates(),
-    push: await pushLocalDirtyObjects(endpoint),
+    push: await syncIosAcceptanceRequest(endpoint, peer),
     successor: await applySuccessor(endpoint, peer)
   };
 }
 
 async function applySuccessor(endpoint: string, peer: SyncPeer) {
-  return applyCompanionDesktopSyncPack({
-    headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery: SUCCESSOR_PATH }),
-    ...peer,
-    url: `${endpoint}${SUCCESSOR_PATH}`
-  });
+  return syncIosAcceptanceRequest(endpoint, peer);
 }
 
 function readMutationGates() {

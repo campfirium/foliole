@@ -18,12 +18,8 @@ export const framedSyncSuites = [
   'electron/sync/desktopFramedSyncTwoProcessRecovery.integration.test.ts',
   'electron/sync/desktopFramedSyncVersionChainRegression.integration.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncApply.resources.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncApply.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncInventory.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.test.ts',
-  'lib/core/sync/requestSyncRoundFailures.test.ts'
 ];
 
 export function parseMaintenanceArgs(argv) {

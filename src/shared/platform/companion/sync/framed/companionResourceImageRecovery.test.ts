@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { appendFile, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -14,31 +15,31 @@ import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from '../
 import { resetAttachmentResourceResolutionCacheForTest } from '../../../attachmentResources';
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null,
-  pull: vi.fn(), resolve: vi.fn() }));
+  access: vi.fn(), resolve: vi.fn() }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true,
   convertFileSrc: (url: string) => url }, registerPlugin: () => ({}) }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
   isNativeCompanionAttachmentResourceRuntime: () => true,
-  FolioleCompanionSync: { pullFramedSyncObject: native.pull, resolveAttachmentResource: native.resolve }
+  FolioleCompanionSync: { accessFramedSyncFile: native.access, resolveAttachmentResource: native.resolve }
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
   read: (task: (db: DbPort) => unknown) => task(native.db!),
   runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
 }) }));
-vi.mock('./companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => native.files! }));
+vi.mock('./companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => native.files!, createCompanionFramedSyncFiles: () => native.files! }));
 
 
-import { runCompanionFramedSyncResourceRound } from './companionFramedSyncResourceRound';
+import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
 
-const hash = 'b'.repeat(64);
+const bytes = Buffer.from('verified native bytes');
+const hash = createHash('sha256').update(bytes).digest('hex');
 const key = `${hash}.png`;
 const bodyHash = 'a'.repeat(64);
 const body = `![restored](asset://${key})`;
-const request = { endpoint_url: 'http://desktop:43110', receiver_device_id: 'desktop',
-  receiver_library_epoch: 'desktop-epoch', sync_group_id: 'group' };
 
 function seed(sqlite: Database.Database) {
-  sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT, group_id TEXT,
+  sqlite.exec(`CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER);
+    CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT, group_id TEXT,
     local_device_identity_key TEXT);
     INSERT INTO sync_group_local_state VALUES (1, 'active', 'group', 'mobile');
     CREATE TABLE node_version_local_proof_state (singleton_id INTEGER, library_epoch TEXT);
@@ -52,7 +53,7 @@ function seed(sqlite: Database.Database) {
     .run('version', 'article', 'c'.repeat(64), JSON.stringify({ body_blob_hash: bodyHash }));
 }
 
-it('shows an already missing image after a background resource round without changing its body', async () => {
+it('shows an already missing image after current attachment completion without changing its body', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-resource-image-'));
   const sqlite = new Database(path.join(root, 'library.db'));
   const attachment = path.join(root, key);
@@ -68,13 +69,28 @@ it('shows an already missing image after a background resource round without cha
     native.files = createDesktopFramedSyncFiles(path.join(root, 'transport'));
     document.body.append(widget);
     await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
-    native.pull.mockRejectedValueOnce(new Error('framed_sync_resource_source_unavailable'));
-    const failed = await runCompanionFramedSyncResourceRound(request, new Uint8Array(16), ['article']);
-    expect(failed.pending).toBe(1);
+    const partial = path.join(root, 'partial');
+    native.access.mockImplementation(async (input: { action: string; partial?: boolean; base64?: string; length?: number }) => {
+      const file = input.partial ? partial : attachment;
+      if (input.action === 'acquire') return {};
+      if (input.action === 'stat') {
+        const data = await readFile(file).catch(() => null);
+        return { present: data !== null, length: data?.length ?? 0,
+          hash: data ? createHash('sha256').update(data).digest('hex') : '' };
+      }
+      if (input.action === 'truncate') { await writeFile(partial, Buffer.alloc(input.length!)); return {}; }
+      if (input.action === 'append') { await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {}; }
+      if (input.action === 'hash') return { hash: createHash('sha256').update(await readFile(partial)).digest('hex') };
+      if (input.action === 'publish') { await rename(partial, attachment); return {}; }
+      throw new Error('unexpected_attachment_operation');
+    });
+    const db = { files: native.files, readSnapshot: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!),
+      write: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!) };
+    const receiver = await createCompanionAttachmentHost(db, { library_key: '/fixture', generation_id: 'generation' });
+    const resource = { storageKey: key, byteLength: bytes.length };
+    expect(await receiver.status(resource)).toEqual({ kind: 'partial', offset: 0 });
     expect(widget.querySelector('img')).toBeNull();
-    native.pull.mockImplementationOnce(async () => { await writeFile(attachment, 'verified native bytes'); });
-    const restored = await runCompanionFramedSyncResourceRound(request, new Uint8Array(16), ['article']);
-    expect(restored.transferred).toBe(1);
+    expect(await receiver.receive(resource, 0, bytes)).toEqual({ kind: 'complete', offset: bytes.length });
     expect(await readFile(attachment, 'utf8')).toBe('verified native bytes');
     expect(sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe(body);
     await waitFor(() => expect(widget.querySelector('.cm-md-image-element'))

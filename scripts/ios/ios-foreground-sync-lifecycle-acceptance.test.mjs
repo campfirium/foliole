@@ -121,10 +121,10 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     const observations = createIosForegroundSyncLifecycleObservations();
     const route = createIosForegroundSyncLifecycleService({
       artifactDir, observations,
-      route: async () => ({ body: 'pack', contentType: 'application/vnd.foliole.sync-pack' })
+      route: async () => ({ body: 'request', contentType: 'application/octet-stream' })
     });
     fs.writeFileSync(path.join(artifactDir, 'lifecycle-control.json'), '{"phase":"failed-resume"}\n');
-    await expect(route({ bodyText: '', method: 'GET', url: '/companion/sync-pack?after_state_seq=0' }))
+    await expect(route({ bodyText: '', method: 'POST', url: '/companion/framed-sync?request=inventory&peer_round_id=round-1&peer_round_mode=start' }))
       .resolves.toMatchObject({ status: 503 });
     expect(observations).toMatchObject({ active_requests: 0, failed_requests: 1, max_concurrency: 1,
       phase_requests: { 'failed-resume': 1 }, request_count: 1 });

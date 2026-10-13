@@ -1,130 +1,18 @@
 // @vitest-environment node
-import { Buffer } from 'node:buffer';
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
-import { createIosSyncPackAcceptanceRoutes } from './ios-sync-pack-acceptance-routes.ts';
-import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
-
-const ROOT = 'scripts/ios/fixtures/acceptance-contract-corpus';
-const RETIRED_BUILDERS = [
-  'scripts/ios/generate-ios-acceptance-contract-corpus.ts',
-  'scripts/ios/ios-content-resource-acceptance-fixture.ts',
-  'scripts/ios/ios-database-upgrade-acceptance-fixture.ts',
-  'scripts/ios/ios-state-writeback-acceptance-fixture.ts',
-  'scripts/ios/ios-state-writeback-contract-inputs.ts',
-  'scripts/ios/ios-sync-pack-acceptance-fixture.ts',
-  'scripts/ios/ios-sync-pack-acceptance-mutations.ts',
-  'scripts/ios/ios-sync-pack-contract-roundtrip-fixture.ts'
-];
-const HOSTED_GENERATION_ROOT = 'scripts/ios/ios-hosted-sync-pack-generator.ts';
-const HOSTED_SOURCE_ROOT = 'scripts/ios/ios-hosted-sync-pack-task-source.ts';
-
-describe('iOS formal acceptance contract corpus', () => {
-  it('keeps every served byte version-controlled and hash-identified', () => {
-    const identity = JSON.parse(fs.readFileSync(path.join(ROOT, 'corpus.json'), 'utf8'));
-    expect(identity).toMatchObject({
-      payload_schema_version: 78, peer_id: 'ios-acceptance-contract-peer', version: 2
-    });
-    expect(Object.keys(identity.files).sort()).toEqual([
-      'content-resource-read/content-resource.syncpack',
-      'state-writeback-runtime/confirmation-0.syncpack',
-      'state-writeback-runtime/confirmation-1.syncpack',
-      'sync-pack-runtime/corrupt-envelope.syncpack',
-      'sync-pack-runtime/cursor-gap.syncpack',
-      'sync-pack-runtime/illegal-dag.syncpack',
-      'sync-pack-runtime/legacy-format.syncpack',
-      'sync-pack-runtime/legal.syncpack',
-      'sync-pack-runtime/successor.syncpack',
-      'sync-pack-runtime/wrong-target.syncpack'
-    ]);
-    for (const [relativePath, expectedHash] of Object.entries(identity.files)) {
-      const bytes = fs.readFileSync(path.join(ROOT, relativePath));
-      expect(createHash('sha256').update(bytes).digest('hex')).toBe(expectedHash);
-    }
-  });
-
-  it('limits production writer and sqlite generation to the named hosted roots', () => {
-    for (const retired of RETIRED_BUILDERS) expect(fs.existsSync(retired), retired).toBe(false);
-    expect(fs.readFileSync(HOSTED_GENERATION_ROOT, 'utf8')).toContain('buildDesktopSyncPackFromDriver');
-    const source = fs.readFileSync(HOSTED_SOURCE_ROOT, 'utf8');
-    expect(source).toContain('createBetterSqlite3Driver');
-    expect(source).toContain('initializeDatabaseSchema');
-    const unauthorized = fs.readdirSync('scripts/ios')
-      .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
-      .map((name) => `scripts/ios/${name}`)
-      .filter((file) => ![HOSTED_GENERATION_ROOT, HOSTED_SOURCE_ROOT].includes(file))
-      .filter((file) => /better-sqlite3|syncPackBuilderFromDriver|initializeDatabaseSchema/u
-        .test(fs.readFileSync(file, 'utf8')));
-    expect(unauthorized).toEqual([]);
-    for (const root of ['electron/main.ts', 'src/companion/main.tsx']) {
-      const files = reachableImports(root);
-      expect(files.some((file) => file.includes('ios-hosted-sync-pack'))).toBe(false);
-      expect(files.some((file) => file.includes('ios-hosted-live-scenario'))).toBe(false);
-    }
-  });
-
-  it('serves a pathname-normalized legal pack with an explicit byte length', async () => {
-    const response = captureResponse();
-    const routes = await createIosSyncPackAcceptanceRoutes({
-      observations: createIosSyncPackAcceptanceObservations(),
-      packPaths: syncPackPaths()
-    });
-
-    await expect(routes.handle({
-      bodyText: '', method: 'GET', url: '/acceptance/sync-pack/legal?request=contract'
-    }, response)).resolves.toBe(true);
-    expect(response.headers).toMatchObject({ 'Content-Length': String(response.body.length) });
-    expect(response.body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
-  });
-
-  it('retains raw pushed version payloads for action-local failure evidence', async () => {
-    const observations = createIosSyncPackAcceptanceObservations();
-    const routes = await createIosSyncPackAcceptanceRoutes({ observations, packPaths: syncPackPaths() });
-    const payloadJson = JSON.stringify({ version_id: 'ios-evidence-version' });
-    const bodyText = JSON.stringify({ items: [{
-      clientOpId: 'node:ios-evidence-version',
-      identity: { objectId: 'ios-evidence-node', objectType: 'node', scope: 'workspace' },
-      payloadJson
-    }] });
-
-    await expect(routes.handle({ bodyText, method: 'POST', url: '/companion/sync-push' }, captureResponse()))
-      .resolves.toBe(true);
-    expect(observations.pushed_payload_json).toEqual([payloadJson]);
-  });
-
-  it('keeps the versioned old database isolated to its independent upgrade entry', () => {
-    const files = reachableImports('scripts/ios/ios-database-upgrade-acceptance-runner.mjs');
-    expect(files).toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
-    const importers = fs.readdirSync('scripts/ios')
-      .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
-      .filter((name) => fs.readFileSync(`scripts/ios/${name}`, 'utf8')
-        .includes('./ios-database-upgrade-contract-fixture.mjs'));
-    expect(importers).toEqual(['ios-database-upgrade-acceptance-runner.mjs']);
-  });
+it('keeps the versioned old database isolated to its independent upgrade entry', () => {
+  const files = reachableImports('scripts/ios/ios-database-upgrade-acceptance-runner.mjs');
+  expect(files).toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
+  const importers = fs.readdirSync('scripts/ios')
+    .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
+    .filter((name) => fs.readFileSync(`scripts/ios/${name}`, 'utf8')
+      .includes('./ios-database-upgrade-contract-fixture.mjs'));
+  expect(importers).toEqual(['ios-database-upgrade-acceptance-runner.mjs']);
 });
-
-function captureResponse() {
-  return {
-    body: Buffer.alloc(0),
-    headers: {},
-    end(body) { this.body = body; },
-    writeHead(_status, headers) { this.headers = headers; }
-  };
-}
-
-function syncPackPaths() {
-  const root = path.join(ROOT, 'sync-pack-runtime');
-  return {
-    cursorGap: path.join(root, 'cursor-gap.syncpack'),
-    legal: path.join(root, 'legal.syncpack'),
-    successor: path.join(root, 'successor.syncpack'),
-    wrongTarget: path.join(root, 'wrong-target.syncpack')
-  };
-}
 
 function reachableImports(entry) {
   const pending = [entry];

@@ -1,74 +1,66 @@
 import path from 'node:path';
 
 import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
-
-const SHARED_TYPES = "'node_reading', 'node_review', 'setting'";
+import { IOS_STATE_WRITEBACK_FACT_QUERIES } from './ios-hosted-state-writeback-facts.mjs';
 
 export function parseStateWritebackSnapshot(output) {
   const [row] = JSON.parse(output || '[]');
   return {
     active_node_id: row?.active_node_id ?? null,
-    confirmed_review_delivery_count: Number(row?.confirmed_review_delivery_count ?? 0),
     local_reading_position: Number(row?.local_reading_position ?? -1),
     local_scroll_top: Number(row?.local_scroll_top ?? -1),
-    local_view_state_count: Number(row?.local_view_state_count ?? -1),
-    pending_ack_count: Number(row?.pending_ack_count ?? -1),
-    review_log_count: Number(row?.review_log_count ?? 0),
-    review_op_id: row?.review_op_id ?? null,
-    shared_dirty_count: Number(row?.shared_dirty_count ?? -1),
-    shared_state_count: Number(row?.shared_state_count ?? 0)
+    private_setting: JSON.parse(row?.private_setting_json ?? 'null'),
+    reading: JSON.parse(row?.reading_json ?? 'null'),
+    review: JSON.parse(row?.review_json ?? 'null'),
+    review_log: JSON.parse(row?.review_log_json ?? '[]')
   };
 }
 
 export function readStateWritebackSnapshot(options) {
   const databasePath = path.join(options.containerPath, options.databaseRelativePath);
-  const sql = `SELECT
+  const host = "(SELECT value FROM companion_meta WHERE key = 'host_name')";
+  const facts = Object.entries(IOS_STATE_WRITEBACK_FACT_QUERIES)
+    .map(([key, sql]) => `(SELECT json FROM (${sql})) AS ${key}_json`).join(',\n');
+  const sql = `SELECT ${facts},
     (SELECT value FROM workspace_meta WHERE key = 'active_node_id') AS active_node_id,
-    (SELECT reading_position FROM node_reading_host_state WHERE node_id = 'ios-state-node') AS local_reading_position,
-    (SELECT scroll_top FROM node_view_state WHERE node_id = 'ios-state-node') AS local_scroll_top,
-    (SELECT count(*) FROM sync_delivery_receipts
-      WHERE object_type <> 'view_state' AND status <> 'confirmed') AS pending_ack_count,
-    (SELECT count(*) FROM review_log WHERE node_id = 'ios-state-node') AS review_log_count,
-    (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1) AS review_op_id,
-    (SELECT count(*) FROM sync_delivery_receipts
-      WHERE stream_name = 'review_log' AND status = 'confirmed'
-      AND object_id = (SELECT op_id FROM review_log WHERE node_id = 'ios-state-node' LIMIT 1)
-    ) AS confirmed_review_delivery_count,
-    (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES}) AND sync_dirty = 1) AS shared_dirty_count,
-    (SELECT count(*) FROM sync_object_state WHERE object_type IN (${SHARED_TYPES})) AS shared_state_count,
-    (SELECT count(*) FROM sync_object_state WHERE object_type = 'view_state') AS local_view_state_count;`;
+    (SELECT reading_position FROM node_reading_host_state WHERE node_id = 'ios-state-node' AND host_name = ${host}) AS local_reading_position,
+    (SELECT scroll_top FROM node_view_state WHERE node_id = 'ios-state-node' AND host_name = ${host}) AS local_scroll_top,
+    (SELECT value_json FROM setting_records WHERE key = 'handoff_reminder_settings'
+      AND scope = 'host' AND platform = 'ios' AND form_factor = 'phone' AND host_name = ${host}
+      AND deleted_at IS NULL) AS private_setting_json;`;
   return parseStateWritebackSnapshot(options.capture('sqlite3', ['-json', databasePath, sql]));
 }
 
-function bridgeEvidencePassed(first, second) {
-  return first.phase === 'applied' && first.sync?.pushRejectedCount === 0 &&
-    first.sync?.pushedObjectIds?.length === 3 && first.sync?.pushedReviewOpIds?.length === 1 &&
-    second.phase === 'reapplied' && second.sync?.pushedObjectIds?.length === 0 &&
-    second.sync?.pushedReviewOpIds?.length === 0;
+function matches(actual, expected) {
+  return actual && Object.entries(expected).every(([key, value]) => actual[key] === value);
 }
 
-function snapshotPassed(snapshot) {
-  return snapshot.active_node_id === 'ios-state-node' && snapshot.local_reading_position === 42 &&
-    snapshot.local_scroll_top === 42 && snapshot.pending_ack_count === 0 &&
-    snapshot.review_log_count === 1 && snapshot.confirmed_review_delivery_count === 1 &&
-    snapshot.shared_dirty_count === 0 && snapshot.shared_state_count === 3 &&
-    snapshot.local_view_state_count === 2;
+function sharedFactsPassed(facts) {
+  return matches(facts?.reading, { interval_duration_ms: 60000, interval_growth_factor: 1.5,
+    last_handled_at: '2026-07-21T00:01:00.000Z', next_at: '2026-07-21T00:02:00.000Z',
+    priority: 2, repetition_count: 3, state: 'active' }) &&
+    matches(facts?.review, { difficulty: 5.2, due: '2026-07-28T00:01:00.000Z', elapsed_days: 3,
+      lapses: 1, last_review_at: '2026-07-21T00:01:00.000Z', reps: 4, scheduled_days: 7, stability: 8.5, state: 2 }) &&
+    facts?.review_log?.length === 1 && typeof facts.review_log[0].op_id === 'string' &&
+    facts.review_log[0].op_id.length > 0 && matches(facts.review_log[0], {
+      grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+      due_before: '2026-07-21T00:01:00.000Z', stability_before: 4.2, difficulty_before: 6.1,
+      due_after: '2026-07-28T00:01:00.000Z', stability_after: 8.5, difficulty_after: 5.2 });
 }
 
 export function verifyStateWritebackAcceptance(first, second, firstSnapshot, secondSnapshot, observations) {
   const state = observations.state_writeback ?? {};
-  const pushedTypes = [...(state.pushed_object_types ?? [])].sort();
-  const servicePassed = hostedProviderLifecyclePassed(observations) &&
-    state.push_requests === 1 && state.pack_requests === 3 &&
-    JSON.stringify(pushedTypes) === JSON.stringify(['node_reading', 'node_review', 'review_log', 'setting']) &&
-    state.ack_statuses?.length === 4 && state.ack_statuses.every((status) => status === 'accepted');
+  const persisted = state.persisted;
   const verdicts = {
-    bridge: bridgeEvidencePassed(first, second),
+    bridge: first.phase === 'applied' && first.status === 'passed' && second.phase === 'reapplied' && second.status === 'passed',
     restartStable: JSON.stringify(secondSnapshot) === JSON.stringify(firstSnapshot),
-    service: servicePassed,
-    snapshot: snapshotPassed(firstSnapshot)
+    service: hostedProviderLifecyclePassed(observations) && sharedFactsPassed(persisted) &&
+      persisted.phone_private_setting_count === 0 && persisted.review_log[0].op_id === firstSnapshot.review_log?.[0]?.op_id,
+    snapshot: sharedFactsPassed(firstSnapshot) && firstSnapshot.active_node_id === 'ios-state-node' &&
+      firstSnapshot.local_reading_position === 42 && firstSnapshot.local_scroll_top === 42 &&
+      matches(firstSnapshot.private_setting, { enabled: true })
   };
-  if (Object.values(verdicts).some((passed) => !passed)) {
+  if (Object.values(verdicts).some(passed => !passed)) {
     throw new Error(`iOS state writeback acceptance evidence is incomplete: ${JSON.stringify({
       first, firstSnapshot, second, secondSnapshot, verdicts
     })}`);

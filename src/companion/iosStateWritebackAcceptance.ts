@@ -1,6 +1,5 @@
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import { syncCompanionObjectsFromDesktop } from '../shared/platform/companionDesktopSyncObjects';
 import {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeReadingRecord,
@@ -10,6 +9,7 @@ import {
 } from '../shared/platform/companionSyncStateWriters';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { syncIosAcceptanceRequest } from './iosAcceptanceRequestSync';
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
 
@@ -59,21 +59,17 @@ async function writeAcceptanceState() {
   });
 }
 
-async function syncWithoutResources(endpoint: string) {
-  return await syncCompanionObjectsFromDesktop(endpoint, { includeResources: false });
-}
-
 export async function runIosStateWritebackAcceptance() {
   try {
     const bootstrap = await loadCompanionBootstrapState();
     const group = await loadCompanionSyncGroup();
-    const endpoint = (await ensureIosAcceptanceSyncGroup(bootstrap.database_path)).endpointUrl;
+    const { endpointUrl: endpoint, peer } = await ensureIosAcceptanceSyncGroup(bootstrap.database_path);
     if (!group) {
       await saveCompanionWorkspaceSyncEndpoint(endpoint);
-      await syncWithoutResources(endpoint);
+      await syncIosAcceptanceRequest(endpoint, peer);
       await writeAcceptanceState();
     }
-    const sync = await syncWithoutResources(endpoint);
+    const sync = await syncIosAcceptanceRequest(endpoint, peer);
     postResult({
       error: null,
       phase: group ? 'reapplied' : 'applied',

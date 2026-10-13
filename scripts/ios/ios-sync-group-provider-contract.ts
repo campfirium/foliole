@@ -13,6 +13,7 @@ import {
   IOS_HOSTED_PROVIDER_NAME,
   IOS_HOSTED_SYNC_GROUP_ID
 } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import type { SyncGroupJoinRequestInput } from '../../lib/platform/syncGroupJoinContract.ts';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.ts';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.ts';
 
@@ -21,14 +22,20 @@ import type { createIosSyncGroupProviderObservations } from './ios-sync-group-pr
 const GROUP_NAME = 'Acceptance Sync Group';
 type Observations = ReturnType<typeof createIosSyncGroupProviderObservations>;
 
-export function createIosSyncGroupProviderContract(observations: Observations) {
-  const workgroupKey = randomBytes(32).toString('base64url');
+interface ProviderOptions {
+  workgroupKey?: string;
+  registerAcceptedDevice?: (device: SyncGroupJoinRequestInput['device']) => void | Promise<void>;
+}
+
+export function createIosSyncGroupProviderContract(observations: Observations, options: ProviderOptions = {}) {
+  const workgroupKey = options.workgroupKey ?? randomBytes(32).toString('base64url');
   const runtimeInstanceId = randomUUID();
   const groupTag = createHash('sha256').update(Buffer.from(workgroupKey, 'base64url')).digest('hex').slice(0, 32);
   let acceptedDeviceId: string | null = null;
   const provider = new DesktopSyncGroupJoinProvider({
     display_name: GROUP_NAME, group_id: IOS_HOSTED_SYNC_GROUP_ID, workgroup_key: workgroupKey
-  }, (device) => {
+  }, async (device) => {
+    await options.registerAcceptedDevice?.(device);
     acceptedDeviceId = createSyncGroupDeviceIdentity({
       device_anchor: device.device_anchor, group_id: IOS_HOSTED_SYNC_GROUP_ID,
       library_path: device.canonical_library_path, path_flavor: device.path_flavor
@@ -87,7 +94,7 @@ function createProviderDiscovery(groupTag: string, runtimeInstanceId: string) {
     app_version: '0.7.9', group_display_name: GROUP_NAME, group_id: IOS_HOSTED_SYNC_GROUP_ID,
     group_tag: groupTag, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     provider_device_id: IOS_HOSTED_PROVIDER_DEVICE_ID, provider_device_name: IOS_HOSTED_PROVIDER_NAME,
-    provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId, topology_role: 'anchor'
+    provider_platform: 'macOS', runtime_instance_id: runtimeInstanceId
   };
 }
 
