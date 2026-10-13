@@ -133,9 +133,9 @@ it.each([null, { complete: false, cursor: 9 }])('does not publish completion for
   transport.loadDesktopSyncGroupPeers.mockReturnValue([peer, peerB]);
   transport.continueDesktopSyncGroupSync.mockResolvedValueOnce(outcome);
   try {
-    await expect(runDesktopSyncCoordinator('manual')).rejects.toThrow('sync_group_sync_incomplete');
+    await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'pending', error: null });
     expect(settings.saveJsonSetting).toHaveBeenLastCalledWith('sync_group_last_trigger_result',
-      expect.objectContaining({ status: 'failed', error: 'sync_group_sync_incomplete' }));
+      expect.objectContaining({ status: 'pending', error: null }));
     expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2);
     expect(completed).not.toHaveBeenCalled();
     await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });

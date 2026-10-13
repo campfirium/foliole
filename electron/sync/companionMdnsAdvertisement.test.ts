@@ -62,7 +62,6 @@ describe('desktop OS DNS-SD advertisement', () => {
       txt: { app_version: '0.1.0-test', device_id: 'desktop-local',
         group_id: 'group-1', group_tag: 'tag-1', provider_platform: process.platform,
         ipv4_addresses: '192.168.0.11', runtime_instance_id: 'runtime-desktop-v',
-        topology_role: 'observing',
         ...serializeSyncProtocolTxt() }
     });
   });
@@ -123,7 +122,7 @@ describe('desktop OS DNS-SD advertisement recovery', () => {
 
     await vi.advanceTimersByTimeAsync(1_000);
     expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
-      txt: expect.objectContaining({ topology_role: 'anchor' })
+      txt: expect.not.objectContaining({ topology_role: expect.anything() })
     });
   });
 
@@ -176,7 +175,7 @@ describe('desktop OS DNS-SD advertisement roles and stop', () => {
 
     expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
       name: 'V-runtimed-anchor',
-      txt: expect.objectContaining({ topology_role: 'anchor' })
+      txt: expect.not.objectContaining({ topology_role: expect.anything() })
     });
     expect(runtime.cancel).toHaveBeenCalledOnce();
   });

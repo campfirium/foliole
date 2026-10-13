@@ -131,8 +131,6 @@ export function SettingsCompanionSyncSection() {
         joinRequests={state.overview.join_requests}
         joinRequest={state.overview.join_request ?? null}
         syncEnabled={state.overview.sync_enabled}
-        topologyRole={state.overview.server_status.topology_role}
-        topologyStatus={state.overview.server_status.topology_status}
         discoveryError={state.overview.discovery_error}
         syncPaused={state.overview.sync_paused}
         removingDeviceIds={state.overview.removing_device_ids}

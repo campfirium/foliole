@@ -37,6 +37,7 @@ export async function handleCompanionLanFramedSyncPost(args: {
   }>) => Promise<FramedSyncStreamBody>;
   request: http.IncomingMessage;
   response: http.ServerResponse;
+  onProgress?: () => void;
 }) {
   const { request, response } = args;
   if (request.method !== 'POST' || pathname(request) !== FRAMED_SYNC_PATH) {
@@ -52,7 +53,7 @@ export async function handleCompanionLanFramedSyncPost(args: {
   const contentLength = readHeader(request, 'content-length');
   try {
     await withVerifiedFramedHttpBody({
-      body: request,
+      body: progressBytes(request, args.onProgress),
       payloadBudget: args.payloadBudget,
       expectedSha256: readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER)!,
       ...(contentLength === null ? {} : { contentLength })
@@ -74,9 +75,14 @@ export async function handleCompanionLanFramedSyncPost(args: {
         [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
         [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
       });
-      await writeDesktopFramedSyncHttpBody(response, encodeFramedSyncHttpBody(reply));
+      await writeDesktopFramedSyncHttpBody(response, progressBytes(encodeFramedSyncHttpBody(reply), args.onProgress));
     });
   } catch (error) {
+    handleResponseError(response, error);
+  }
+}
+
+function handleResponseError(response: http.ServerResponse, error: unknown) {
     if (response.headersSent) {
       appendMainProcessDiagnosticLog('companion_framed_response_failed', { error });
       response.destroy(error instanceof Error ? error : undefined);
@@ -85,7 +91,10 @@ export async function handleCompanionLanFramedSyncPost(args: {
     const message = error instanceof Error ? error.message : 'framed_sync_request_invalid';
     appendMainProcessDiagnosticLog('companion_framed_request_failed', { error });
     writeError(response, message === 'invalid_signature' ? 401 : message === 'wire_frame_limit_exceeded' ? 413 : 400, message);
-  }
+}
+
+async function* progressBytes(source: AsyncIterable<Uint8Array>, onProgress?: () => void) {
+  for await (const bytes of source) { onProgress?.(); yield bytes; }
 }
 
 function authenticateContext(args: {

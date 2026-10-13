@@ -6,14 +6,11 @@ import type {
 
 const DESKTOP_DISCOVERY_WAIT_MS = 10_000;
 
-export function desktopAnchorAdvertisements(event: {
+export function companionPeerAdvertisements(event: {
   candidates?: CompanionDiscoveryCandidate[];
 }, requiredGroupId?: string) {
   return (event.candidates ?? []).filter((candidate) => {
-    const platform = candidate.protocol_txt?.provider_platform ?? '';
     return candidate.source === 'nsd'
-      && !['android-capacitor', 'ios-capacitor'].includes(platform)
-      && candidate.protocol_txt?.topology_role === 'anchor'
       && (!requiredGroupId || candidate.protocol_txt?.group_id === requiredGroupId);
   });
 }
@@ -40,7 +37,7 @@ export async function waitForCompanionDesktopAdvertisements(
         .then(() => resolve(candidates));
     };
     const inspect = (event: CompanionNativeDiscoveryEvent) => {
-      const candidates = desktopAnchorAdvertisements(event, requiredGroupId);
+      const candidates = companionPeerAdvertisements(event, requiredGroupId);
       if (candidates.length > 0) finish(candidates);
       else if (event.status === 'permission_required' || event.status === 'unavailable') finish([]);
     };

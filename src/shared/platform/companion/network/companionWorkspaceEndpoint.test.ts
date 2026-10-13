@@ -107,7 +107,7 @@ it('routes every reachable same-group desktop during anchor convergence', async 
   }]);
 });
 
-it('does not route companion sync through a discovered mobile Device', async () => {
+it('routes companion sync through a discovered mobile Device', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mobile',
@@ -115,7 +115,8 @@ it('does not route companion sync through a discovered mobile Device', async () 
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://phone:38641'))
-    .rejects.toThrow('discovery_waiting_anchor');
+    .resolves.toEqual([{ deviceId: 'device-mobile', deviceName: 'Phone',
+      endpointUrl: 'http://phone:38641', groupId: 'group-1' }]);
 });
 
 it('routes an authenticated same-group desktop before it exists in the local member list', async () => {

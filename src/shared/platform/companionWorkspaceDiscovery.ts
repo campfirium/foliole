@@ -6,10 +6,9 @@ import {
 } from '../../../lib/platform/syncProtocolContract';
 
 import {
-  desktopAnchorAdvertisements,
+  companionPeerAdvertisements,
   waitForCompanionDesktopAdvertisements
 } from './companion/companionDesktopDiscoveryWait';
-import { qualifyPreparedCompanionAnchorCandidate } from './companion/preparedAnchorDiscovery';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
@@ -72,7 +71,7 @@ async function loadNativeDiscoveryCandidates(
   }
   try {
     const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-    const immediate = desktopAnchorAdvertisements(payload, options.requiredGroupId);
+    const immediate = companionPeerAdvertisements(payload, options.requiredGroupId);
     const discovered = immediate.length > 0
       ? immediate
       : await waitForCompanionDesktopAdvertisements(
@@ -102,12 +101,10 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
       status: 'incompatible'
     } satisfies SyncProtocolCompatibilityResult;
   }
-  const qualification = qualifyPreparedCompanionAnchorCandidate({
-    endpoint_url: candidate.endpointUrl,
-    http: discovery as unknown as Record<string, unknown>,
-    protocol_txt: candidate.protocolTxt ?? {}
-  });
-  return qualification.eligible ? compatibility : {
+  const identityMatches = candidate.protocolTxt?.group_id === discovery.group_id
+    && candidate.protocolTxt?.group_tag === discovery.group_tag
+    && candidate.protocolTxt?.device_id === discovery.provider_device_id;
+  return identityMatches ? compatibility : {
     missing_capabilities: [],
     negotiated_version: null,
     reason: 'protocol_advertisement_mismatch',
@@ -199,7 +196,7 @@ export async function discoverCompanionDesktop(
   const results = await loadCompanionDiscoveryCandidates([directCandidate(preferredEndpointUrl)]);
   const [firstResult] = results;
   if (!firstResult) {
-    throw new Error('No desktop sync device found. Make sure desktop Sync is on and both devices are on the same Wi-Fi.');
+    throw new Error('No sync device found. Make sure Sync is on and both devices are on the same Wi-Fi.');
   }
   return firstResult;
 }

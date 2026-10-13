@@ -1,47 +1,26 @@
-import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watchedFolderConflictDecisions.js';
 
-import { recoverCompanionMdnsAdvertisement, updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
-import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
-import {
-  startDesktopAnchorTopologySession,
-  type DesktopAnchorTarget,
-  type DesktopAnchorTopologySession
-} from './desktopAnchorTopologySession.js';
+import { recoverCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
-import { requestDesktopHighValueSync, updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
+import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
-import {
-  loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted
-} from './desktopSyncCoordinator.js';
+import { loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
-import {
-  clearDesktopSyncGroupDiscoveryErrors,
-  setDesktopSyncGroupDiscoveryError
-} from './desktopSyncGroupDiscoveryStatus.js';
-import {
-  exchangeAllDesktopSyncGroupMemberStates,
-  loadDesktopSyncGroupMemberEndpoints,
-  startDesktopSyncGroupMemberStateSession
-} from './desktopSyncGroupMemberStateSession.js';
+import { clearDesktopSyncGroupDiscoveryErrors, setDesktopSyncGroupDiscoveryError } from './desktopSyncGroupDiscoveryStatus.js';
+import { exchangeAllDesktopSyncGroupMemberStates, loadDesktopSyncGroupMemberEndpoints,
+  startDesktopSyncGroupMemberStateSession } from './desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { resetDesktopSyncGroupRecovery, scheduleDesktopSyncGroupRecovery } from './desktopSyncGroupRecoveryScheduler.js';
-import { routeFromCandidate, routeFromTarget } from './desktopSyncGroupRouteCandidate.js';
-import {
-  clearDesktopSyncGroupRoutes,
-  loadDesktopSyncGroupRoutes,
-  removeDesktopSyncGroupRoute,
-  restoreDesktopSyncGroupMobileGuideRoute,
-  saveDesktopSyncGroupRoute,
-  type DesktopSyncGroupPeer
-} from './desktopSyncGroupRoutes.js';
+import { routeFromCandidate } from './desktopSyncGroupRouteCandidate.js';
+import { clearDesktopSyncGroupRoutes, loadDesktopSyncGroupRoutes, removeDesktopSyncGroupRoute,
+  saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { closeDesktopSyncPeerRounds } from './desktopSyncPeerRoundOwner.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
-let runtime: DesktopAnchorTopologySession | null = null;
-let memberStateRuntime: RecoverableDesktopDnsSdSession | null = null;
+let runtime: RecoverableDesktopDnsSdSession | null = null;
 let stopReadwiseContinuation: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
 const inFlight = new Map<string, Promise<boolean>>();
@@ -53,44 +32,13 @@ export function startDesktopSyncGroupAutoSync() {
   resetDesktopSyncGroupRecovery();
   clearDesktopSyncGroupDiscoveryErrors();
   stopReadwiseContinuation = subscribeDesktopSyncCompleted(resumeReadwiseHandoff);
-  runtime = startDesktopAnchorTopologySession({
-    group,
-    onDiscoveryError: (error) => setDesktopSyncGroupDiscoveryError('topology', error),
-    onDiscoveryStarted: () => setDesktopSyncGroupDiscoveryError('topology', null),
-    onAnchor: (target, requireSyncBeforeDemote) => (
-      activateAnchorRoute(group, target, requireSyncBeforeDemote)
-    ),
-    onAnchorLost: (deviceId) => {
-      removeDesktopSyncGroupRoute(deviceId);
-      updateDesktopSyncFreshness(false);
-    },
-    onState: (state) => {
-      void updateCompanionMdnsAdvertisementRole(state.role).catch((error) => {
-        console.warn('[sync-group] failed to publish desktop topology role', error);
-      });
-      updateFreshnessForRole(group.group_id);
-      notifyDesktopSyncGroupOverviewChanged();
-      void resumeDesktopSyncAfterWatchedDecision().catch((error) => {
-        console.info('[sync-group] watched decision sync paused', error);
-      });
-    }
-  });
-  memberStateRuntime = startDesktopSyncGroupMemberStateSession(
-    group,
-    () => { notifyDesktopSyncGroupOverviewChanged(); resumeReadwiseHandoff(); },
-    (peer) => activateMemberRoute(group, peer),
-    (deviceId) => {
-      const topology = loadDesktopAnchorTopologyState();
-      if (topology.role === 'member' && topology.anchor_device_id === deviceId) return;
-      if (loadDesktopSyncGroupRoutes(group.group_id).some((route) =>
-        route.peer_device_id === deviceId && route.route_kind === 'mobile_guide')) return;
-      removeDesktopSyncGroupRoute(deviceId);
-      updateFreshnessForRole(group.group_id);
-    },
-    (error) => setDesktopSyncGroupDiscoveryError('member', error)
-  );
-  const mobileGuide = restoreDesktopSyncGroupMobileGuideRoute(group.group_id);
-  if (mobileGuide) resumeMobileGuideRoute(mobileGuide);
+  runtime = startDesktopSyncGroupMemberStateSession(group, () => {
+    notifyDesktopSyncGroupOverviewChanged();
+    resumeReadwiseHandoff();
+  }, activatePeer, deviceId => {
+    removeDesktopSyncGroupRoute(deviceId);
+    refreshEligibility(group.group_id);
+  }, error => setDesktopSyncGroupDiscoveryError('member', error));
 }
 
 export function stopDesktopSyncGroupAutoSync() {
@@ -99,8 +47,7 @@ export function stopDesktopSyncGroupAutoSync() {
   stopReadwiseContinuation = null;
   runtime?.stop();
   runtime = null;
-  memberStateRuntime?.stop();
-  memberStateRuntime = null;
+  closeDesktopSyncPeerRounds();
   clearDesktopSyncGroupDiscoveryErrors();
   clearDesktopSyncGroupRoutes();
   updateDesktopSyncFreshness(false);
@@ -110,16 +57,15 @@ export function recoverDesktopSyncGroupDiscovery() {
   if (!isDesktopCompanionSyncParticipating()) return;
   scheduleDesktopSyncGroupRecovery(() => {
     if (!isDesktopCompanionSyncParticipating()) return;
-    runtime?.recoverDiscovery();
-    memberStateRuntime?.recover();
+    runtime?.recover();
     recoverCompanionMdnsAdvertisement();
   });
 }
 
 function resumeReadwiseHandoff() {
-  void continuePendingReadwiseHandoff().then((result) => {
+  void continuePendingReadwiseHandoff().then(result => {
     if (result?.is_active) notifyDesktopSyncGroupOverviewChanged();
-  }).catch((error) => console.info('[readwise] handoff remains pending', error));
+  }).catch(error => console.info('[readwise] handoff remains pending', error));
 }
 
 export function runDesktopManualSyncWithDiscovery() {
@@ -135,138 +81,47 @@ export async function resumeDesktopSyncAfterWatchedDecision() {
     group: loadDesktopSyncGroup(), participating: isDesktopCompanionSyncParticipating(),
     pending: loadUnreconciledWatchedFolderConflictDecisions().length > 0
   }));
-  const group = state.group;
-  if (!group || !state.participating || !state.pending) return;
-  const topology = loadDesktopAnchorTopologyState();
-  if (topology.status === 'sync_before_demote') {
-    await runtime?.resumePendingSync();
-    return;
-  }
-  const peers = loadDesktopSyncGroupMemberEndpoints(group.group_id);
-  if (topology.role === 'anchor') {
-    const active = loadDesktopSyncGroupRoutes(group.group_id).some((peer) => peer.route_kind === 'member');
-    if (active) { await requestDesktopHighValueSync(); return; }
-    await Promise.all(peers.filter((peer) => peer.route_kind === 'member' &&
-      isDesktopSyncGroupPlatform(peer.peer_platform)).map((peer) => activateMemberRoute(group, peer)));
-  } else if (topology.role === 'member') {
-    const active = loadDesktopSyncGroupRoutes(group.group_id).some((peer) => peer.route_kind === 'anchor');
-    if (active) { await requestDesktopHighValueSync(); return; }
-    const anchor = peers.find((peer) => peer.route_kind === 'anchor');
-    if (anchor) await activateAnchorRoute(group, {
-      endpointUrl: anchor.endpoint_url, groupId: group.group_id,
-      peerDeviceId: anchor.peer_device_id
-    });
-  }
+  if (!state.group || !state.participating || !state.pending) return;
+  for (const peer of loadDesktopSyncGroupMemberEndpoints(state.group.group_id)) saveDesktopSyncGroupRoute(peer);
+  if (loadDesktopSyncGroupRoutes(state.group.group_id).length) await runDesktopSyncCoordinator('automatic');
 }
 
-function resumeMobileGuideRoute(route: DesktopSyncGroupPeer) {
-  if (inFlight.has(route.peer_device_id)) return;
-  updateDesktopSyncFreshness(true);
-  const work = runDesktopSyncCoordinator('automatic', route)
-    .then(() => {
-      removeDesktopSyncGroupRoute(route.peer_device_id);
-      return true;
-    })
-    .catch((error) => {
-      console.info('[sync-group] mobile guide sync paused until it is available', {
-        error: error instanceof Error ? error.message : String(error),
-        peerDeviceId: route.peer_device_id
-      });
-      return false;
-    })
-    .finally(() => inFlight.delete(route.peer_device_id));
-  inFlight.set(route.peer_device_id, work);
+function activatePeer(peer: DesktopSyncGroupPeer) {
+  const existing = inFlight.get(peer.peer_device_id);
+  if (existing) return existing;
+  saveDesktopSyncGroupRoute(peer);
+  refreshEligibility(peer.group_id);
+  const work = runDesktopSyncCoordinator('automatic', peer).then(result => result.status === 'completed').catch(error => {
+    console.info('[sync-group] peer sync remains pending', { peerDeviceId: peer.peer_device_id,
+      error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }).finally(() => inFlight.delete(peer.peer_device_id));
+  inFlight.set(peer.peer_device_id, work);
+  return work;
 }
 
 async function runDesktopManualSync() {
   const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
   if (!group) return runDesktopSyncCoordinator('manual');
   await exchangeAllDesktopSyncGroupMemberStates();
-  if (loadDesktopAnchorTopologyState().role === 'anchor') {
-    const memberRoutes = loadDesktopSyncGroupRoutes(group.group_id)
-      .filter((route) => route.route_kind === 'member');
-    for (const peer of loadDesktopSyncGroupMemberEndpoints(group.group_id)) {
-      if (peer.route_kind !== 'member' || !isDesktopSyncGroupPlatform(peer.peer_platform)) continue;
-      if (memberRoutes.some((route) => route.peer_device_id === peer.peer_device_id)) continue;
-      memberRoutes.push(saveDesktopSyncGroupRoute(peer));
+  for (const peer of loadDesktopSyncGroupMemberEndpoints(group.group_id)) saveDesktopSyncGroupRoute(peer);
+  if (!loadDesktopSyncGroupRoutes(group.group_id).length) {
+    const candidates = await discoverDesktopSyncGroups(fetch, true);
+    for (const candidate of candidates) {
+      if (candidate.provider_device_id === group.local_device_identity_key) continue;
+      const route = await runWithDatabaseConnectionOwner(() => routeFromCandidate(group, candidate));
+      if (route) saveDesktopSyncGroupRoute(route);
     }
-    if (!memberRoutes.length) { await recordDesktopSyncNoPeer('manual'); return null; }
-    return runDesktopSyncCoordinator('manual');
   }
-  const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
-  if (current) return runDesktopSyncCoordinator('manual', current);
-  const candidates = await discoverDesktopSyncGroups();
-  const candidate = candidates.find((value) => value.group_id === group.group_id
-    && value.provider_device_id !== group.local_device_identity_key
-    && !['android-capacitor', 'ios-capacitor'].includes(value.provider_platform.toLowerCase()));
-  if (!candidate) return runDesktopSyncCoordinator('manual');
-  const route = await runWithDatabaseConnectionOwner(() => routeFromCandidate(group, candidate));
-  if (!route) return runDesktopSyncCoordinator('manual');
-  saveDesktopSyncGroupRoute(route);
-  try {
-    return await runDesktopSyncCoordinator('manual', route);
-  } finally {
-    removeDesktopSyncGroupRoute(route.peer_device_id);
+  if (!loadDesktopSyncGroupRoutes(group.group_id).length) {
+    await recordDesktopSyncNoPeer('manual');
+    return null;
   }
+  refreshEligibility(group.group_id);
+  return runDesktopSyncCoordinator('manual');
 }
 
-async function activateAnchorRoute(
-  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  target: DesktopAnchorTarget,
-  requireSyncBeforeDemote = false
-) {
-  if (loadDesktopAnchorTopologyState().role === 'anchor' && !requireSyncBeforeDemote) {
-    return Promise.resolve(false);
-  }
-  const route = await runWithDatabaseConnectionOwner(() => routeFromTarget(group, target));
-  if (!route) return false;
-  saveDesktopSyncGroupRoute(route);
-  updateDesktopSyncFreshness(true);
-  const active = inFlight.get(target.peerDeviceId);
-  if (active) return active;
-  const work = runDesktopSyncCoordinator('automatic', route)
-    .then(() => true)
-    .catch((error) => {
-      console.info('[sync-group] anchor sync paused until it is available', {
-        error: error instanceof Error ? error.message : String(error),
-        peerDeviceId: target.peerDeviceId
-      });
-      return false;
-    })
-    .finally(() => inFlight.delete(target.peerDeviceId));
-  inFlight.set(target.peerDeviceId, work);
-  return work;
-}
-
-function activateMemberRoute(
-  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  peer: DesktopSyncGroupPeer
-) {
-  if (loadDesktopAnchorTopologyState().role !== 'anchor'
-      || !isDesktopSyncGroupPlatform(peer.peer_platform)) return Promise.resolve(false);
-  const route = { ...peer, route_kind: 'member' as const };
-  saveDesktopSyncGroupRoute(route);
-  updateDesktopSyncFreshness(true);
-  const active = inFlight.get(route.peer_device_id);
-  if (active) return active;
-  const work = runDesktopSyncCoordinator('automatic', route)
-    .then(() => true)
-    .catch((error) => {
-      console.info('[sync-group] member collection paused until it is available', {
-        error: error instanceof Error ? error.message : String(error),
-        peerDeviceId: route.peer_device_id
-      });
-      return false;
-    })
-    .finally(() => inFlight.delete(route.peer_device_id));
-  inFlight.set(route.peer_device_id, work);
-  return work;
-}
-
-function updateFreshnessForRole(groupId: string) {
-  const role = loadDesktopAnchorTopologyState().role;
-  const routes = loadDesktopSyncGroupRoutes(groupId);
-  updateDesktopSyncFreshness(routes.some((route) =>
-    role === 'member' ? route.route_kind === 'anchor' : role === 'anchor' && route.route_kind === 'member'
-  ));
+function refreshEligibility(groupId: string) {
+  updateDesktopSyncFreshness(isDesktopCompanionSyncParticipating() && loadDesktopSyncGroupRoutes(groupId).length > 0);
+  notifyDesktopSyncGroupOverviewChanged();
 }

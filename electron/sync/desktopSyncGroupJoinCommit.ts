@@ -42,8 +42,6 @@ export async function commitDesktopSyncGroupJoin(pending: DesktopSyncGroupPendin
   return {
     endpoint_url: pending.candidate.endpoint_url, group_id: info.group_id,
     local_device_id: group.local_device_identity_key, peer_device_id: pending.candidate.provider_device_id,
-    peer_device_name: pending.candidate.provider_device_name, peer_platform: pending.candidate.provider_platform,
-    route_kind: ['android-capacitor', 'ios-capacitor'].includes(pending.candidate.provider_platform.toLowerCase())
-      ? 'mobile_guide' : 'anchor'
+    peer_device_name: pending.candidate.provider_device_name, peer_platform: pending.candidate.provider_platform
   } satisfies DesktopSyncGroupPeer;
 }

@@ -12,14 +12,11 @@ import {
   DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
   DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
 } from './desktopSyncGroupDiscoveryTiming.js';
-import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
-type ProbedCandidate = DesktopSyncGroupJoinCandidatePayload & {
-  kind: 'anchor' | 'mobile_guide';
-};
+type ProbedCandidate = DesktopSyncGroupJoinCandidatePayload;
 
-export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = fetch) {
+export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = fetch, allPeers = false) {
   const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const services = new Map<string, { endpointUrl: string; name: string; txt: Record<string, unknown> }>();
   let failure: Error | null = null;
@@ -40,7 +37,7 @@ export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = f
   const candidates = (await Promise.all([...services.values()].map((service) =>
     probeCandidate(fetchDiscovery, service, localRuntimeInstanceId)
   ))).filter((candidate): candidate is ProbedCandidate => candidate !== null);
-  return selectStableGroupProviders(candidates);
+  return allPeers ? candidates.map(toPublicCandidate) : selectStableGroupProviders(candidates);
 }
 
 async function probeCandidate(
@@ -57,23 +54,16 @@ async function probeCandidate(
     if (payload.runtime_instance_id === localRuntimeInstanceId) return null;
     if (payload.group_id !== service.txt.group_id || payload.group_tag !== service.txt.group_tag) return null;
     const providerPlatform = text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '');
-    const mobileGuide = isMobile(providerPlatform);
-    if (mobileGuide) {
-      const hint = parseSyncProtocolTxt(service.txt);
-      if (evaluateSyncProtocolCompatibility(payload.protocol).status !== 'compatible'
-          || !syncProtocolVersionHintMatchesDescriptor(hint, payload.protocol)) return null;
-    } else if (!qualifyPreparedDesktopAnchorCandidate({
-      endpoint_url: service.endpointUrl,
-      http: payload,
-      txt: service.txt
-    }).eligible) return null;
+    const hint = parseSyncProtocolTxt(service.txt);
+    if (evaluateSyncProtocolCompatibility(payload.protocol).status !== 'compatible'
+        || !syncProtocolVersionHintMatchesDescriptor(hint, payload.protocol)
+        || payload.provider_device_id !== service.txt.device_id) return null;
     return {
       endpoint_url: service.endpointUrl,
       group_display_name: text(payload.group_display_name)
         ?? text(service.txt.group_display_name) ?? service.name,
       group_id: String(payload.group_id),
       group_tag: String(payload.group_tag),
-      kind: mobileGuide ? 'mobile_guide' : 'anchor',
       provider_device_id: text(payload.provider_device_id) ?? String(service.txt.device_id),
       provider_device_name: text(payload.provider_device_name) ?? service.name,
       provider_platform: providerPlatform
@@ -91,9 +81,7 @@ function selectStableGroupProviders(candidates: ProbedCandidate[]) {
     groups.set(candidate.group_tag, current);
   }
   return [...groups.values()].map((members) => {
-    const ordered = [...members].sort((left, right) =>
-      left.provider_device_id.localeCompare(right.provider_device_id));
-    return ordered.find((candidate) => candidate.kind === 'anchor') ?? ordered[0]!;
+    return members[0]!;
   }).map((candidate) => toPublicCandidate(candidate))
     .sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
 }
@@ -108,10 +96,6 @@ function toPublicCandidate(candidate: ProbedCandidate): DesktopSyncGroupJoinCand
     provider_device_name: candidate.provider_device_name,
     provider_platform: candidate.provider_platform
   };
-}
-
-function isMobile(platform: string) {
-  return ['android-capacitor', 'ios-capacitor'].includes(platform.toLowerCase());
 }
 
 function desktopKind(platform: string) {

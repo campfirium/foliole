@@ -135,23 +135,13 @@ type SettingsSyncGroupRowsProps = {
   syncEnabled: boolean;
   syncPaused: boolean;
   removingDeviceIds: string[];
-  topologyRole: 'anchor' | 'member' | 'observing';
-  topologyStatus: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
 };
-
-function topologyMessageKey(props: SettingsSyncGroupRowsProps) {
-  return props.topologyStatus === 'ready'
-    ? `settings.companionSync.group.topology.${props.topologyRole}` as const
-    : `settings.companionSync.group.topology.${props.topologyStatus}` as const;
-}
 
 export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
   const t = useTranslation();
   if (!props.group) return <EmptySyncGroupRow {...props} />;
   const group = props.group;
   const groupHeadingId = `sync-group-${group.group_id}-heading`;
-  const topologyKey = props.syncEnabled && !props.syncPaused && !props.discoveryError
-    ? topologyMessageKey(props) : null;
   return (
     <>
       <div className="px-settings-panel-x pt-1">
@@ -176,9 +166,7 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
                 key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
                 syncEnabled={props.syncEnabled}
-                removing={props.removingDeviceIds.includes(device.device_identity_key)}
-                topologyLabel={device.device_identity_key === group.local_device_identity_key
-                  ? topologyKey ? t(topologyKey) : undefined : undefined} />
+                removing={props.removingDeviceIds.includes(device.device_identity_key)} />
             ))}
           </div>
         </section>

@@ -32,6 +32,11 @@ vi.mock('./desktopSyncGroupPeerSingleFlight.js', () => ({
   runDesktopSyncGroupPeerSingleFlight: (_id: string, task: () => unknown) => task()
 }));
 vi.mock('./desktopSyncGroupRoutes.js', () => ({ loadDesktopSyncGroupRoutes: vi.fn() }));
+vi.mock('./workgroupKeyStore.js', () => ({ loadDesktopWorkgroupKey: () => ({ group_key: Buffer.alloc(32, 7).toString('base64url') }) }));
+vi.mock('./desktopRequestSyncExchange.js', () => ({ createDesktopRequestSyncExchange: () => ({}) }));
+vi.mock('../../lib/core/sync/requestSyncPeerRound.js', () => ({
+  withRequestSyncPeerRound: async (_exchange: unknown, _round: unknown, run: () => Promise<unknown>) => run()
+}));
 
 import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
@@ -52,9 +57,9 @@ beforeEach(() => {
 
 it('routes a normal compatible peer through the request database round', async () => {
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true });
-  expect(runtime.framedRound).toHaveBeenCalledWith({
+  expect(runtime.framedRound).toHaveBeenCalledWith(expect.objectContaining({
     localLibraryEpoch: 'epoch-a', peer, peerState: undefined, remoteLibraryEpoch: 'epoch-b'
-  });
+  }));
   expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(2);
 });
 

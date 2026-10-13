@@ -1,4 +1,8 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopRequestSyncAttachments.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionAttachmentImageRecovery.test.ts',
+  'electron/sync/desktopSyncGroupDiscoveryRecovery.integration.test.ts',
+  'electron/sync/desktopSyncPeerTopology.integration.test.ts',
   'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
   'electron/database/requestSyncReadonlyConnection.integration.test.ts',
   'electron/database/requestSyncReadonlySnapshot.integration.test.ts',

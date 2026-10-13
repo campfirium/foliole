@@ -204,7 +204,7 @@ function createHandler() {
       pending_join_request_count: 0,
       port: 38641,
       state: 'running',
-      topology_role: 'anchor',
+      topology_role: null,
       topology_status: 'ready'
     })
   });

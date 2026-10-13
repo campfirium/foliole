@@ -1,5 +1,6 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { exchangeRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentExchange.js';
+import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
@@ -8,7 +9,9 @@ import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncD
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 
-export function continueCompanionRequestSyncResources(input: NativeCompanionFramedSyncInventoryRequest) {
+export function continueCompanionRequestSyncResources(input: NativeCompanionFramedSyncInventoryRequest & {
+  peerRound?: RequestSyncPeerRound; signal?: AbortSignal;
+}) {
   return withCompanionRequestSyncLifecycle(async signal => {
     const host = await currentCompanionRequestSyncDatabaseHost();
     const credential = await loadCurrentCredential({ group_id: input.sync_group_id });
@@ -21,7 +24,8 @@ export function continueCompanionRequestSyncResources(input: NativeCompanionFram
       initiatorDeviceId: credential.device_id, initiatorLibraryEpoch: proof.library_epoch,
       responderDeviceId: input.receiver_device_id, responderLibraryEpoch: input.receiver_library_epoch } as const;
     return exchangeRequestSyncAttachments(await currentCompanionAttachmentHost(host),
-      createCompanionRequestSyncExchange(host, { context, groupKey, endpointUrl: input.endpoint_url, signal }),
+      createCompanionRequestSyncExchange(host, { context, groupKey, endpointUrl: input.endpoint_url, signal,
+        ...(input.peerRound ? { peerRound: input.peerRound } : {}) }),
       (storageKey, error) => console.error('[sync] attachment transfer failed', { storageKey, error: String(error) }));
-  });
+  }, input.signal);
 }

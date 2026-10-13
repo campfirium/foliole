@@ -29,7 +29,10 @@ final class FolioleCompanionRequestSyncHttp {
             if (ACTIVE.putIfAbsent(id, operation) != null) throw new IllegalStateException("request_sync_http_duplicate");
             try { executor.execute(() -> {
                 try { call.resolve(execute(context, call, operation)); }
-                catch (Exception error) { call.reject(error.getMessage(), error); }
+                catch (Exception error) {
+                    if (error instanceof java.net.SocketTimeoutException) call.reject(error.getMessage(), "ETIMEDOUT", error);
+                    else call.reject(error.getMessage(), error);
+                }
                 finally { ACTIVE.remove(id, operation); }
             }); } catch (RuntimeException error) {
                 ACTIVE.remove(id, operation);
@@ -56,11 +59,16 @@ final class FolioleCompanionRequestSyncHttp {
         java.util.Iterator<String> keys = rawHeaders.keys();
         while (keys.hasNext()) { String key = keys.next(); headers.put(key, rawHeaders.getString(key)); }
         FramedSyncFiles files = new FramedSyncFiles(context, operation.owner.libraryKey());
+        FolioleRequestSyncHttpChunks.Check progress = () -> {
+            String roundId = call.getString("peer_round_id");
+            if (roundId != null) FolioleRequestSyncRoute.touchRound(FolioleCompanionSyncGroupDataBridge.current(),
+                operation.owner, call.getString("receiver_device_id"), roundId, "outbound", false);
+        };
         operation.check();
         return FramedSyncHttpTransport.postRawStream(new URL(call.getString("url")), call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
-            output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check),
-            input -> FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check), operation::opened);
+            output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check, progress),
+            input -> FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress), operation::opened);
     }
 
     private static FramedSyncPayloadBudget owner(PluginCall call) {

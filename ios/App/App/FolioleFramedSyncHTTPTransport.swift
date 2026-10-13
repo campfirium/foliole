@@ -18,7 +18,8 @@ enum FolioleFramedSyncHTTPTransport {
         responseBodyURL: URL,
         configuration: URLSessionConfiguration = makeConfiguration(),
         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
-        requestLoan: FolioleFramedSyncPayloadBudget.Loan? = nil, receiptSequence: Bool = false
+        requestLoan: FolioleFramedSyncPayloadBudget.Loan? = nil, receiptSequence: Bool = false,
+        onProgress: (() throws -> Void)? = nil
     ) async throws -> URL {
         let request = try makeRequest(endpoint: endpoint, peer: peer)
         guard FileManager.default.fileExists(atPath: requestBodyURL.path) else {
@@ -30,7 +31,8 @@ enum FolioleFramedSyncHTTPTransport {
         let receiver = FolioleFramedSyncHTTPReceiver(
             responseURL: responseBodyURL,
             expectedDeviceID: peer.deviceID,
-            expectedLibraryEpoch: peer.libraryEpoch, owner: owner, responseLane: responseLane, receiptSequence: receiptSequence
+            expectedLibraryEpoch: peer.libraryEpoch, owner: owner, responseLane: responseLane,
+            receiptSequence: receiptSequence, onProgress: onProgress
         )
         let networkLoan = try await FolioleFramedSyncPayloadWorker.run {
             try owner.flatMap { requestLoan == nil ? try FolioleFramedSyncPayloadWorker.borrow($0, direction: .outbound) : nil }
@@ -86,7 +88,7 @@ enum FolioleFramedSyncHTTPTransport {
         guard body.count <= 4 * 1024,
               let object = try? JSONSerialization.jsonObject(with: body) as? [String: String],
               let detail = object["error"] else { return fallback }
-        if ["framed_sync_source_changed", "framed_sync_difference_request_source_changed",
+        if ["sync_round_busy", "sync_round_expired", "framed_sync_source_changed", "framed_sync_difference_request_source_changed",
             "framed_sync_resource_source_unavailable", "node_version_graph_cycle"].contains(detail) { return "\(fallback):\(detail)" }
         for prefix in ["node_version_missing_parents:", "node_version_parent_identity_mismatch:"] where detail.hasPrefix(prefix) {
             let identities = String(detail.dropFirst(prefix.count))

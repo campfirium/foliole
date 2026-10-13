@@ -19,7 +19,7 @@ export function normalizeServerStatus(value: unknown): DesktopCompanionSyncServe
       ? raw.pending_join_request_count : 0,
     port: typeof raw.port === 'number' ? raw.port : null,
     state: raw.state === 'failed' || raw.state === 'running' || raw.state === 'stopped' ? raw.state : 'stopped',
-    topology_role: raw.topology_role === 'anchor' || raw.topology_role === 'member'
+    topology_role: raw.topology_role === null ? null : raw.topology_role === 'anchor' || raw.topology_role === 'member'
       ? raw.topology_role : 'observing',
     topology_status: ['ready', 'waiting_anchor', 'incompatible', 'sync_before_demote'].includes(
       String(raw.topology_status)

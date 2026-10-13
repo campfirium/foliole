@@ -23,6 +23,7 @@ export async function continueDesktopRequestSyncResources(input: Parameters<type
   return exchangeRequestSyncAttachments(createDesktopRequestSyncAttachmentHost(host), createDesktopRequestSyncExchange({
     context, endpointUrl: input.peer.endpoint_url, groupSecret: key.group_key,
     groupKey: new Uint8Array(Buffer.from(key.group_key, 'base64url')),
+    ...(input.peerRound ? { peerRound: input.peerRound } : {}),
     ...(input.signal ? { signal: input.signal } : {})
   }), (storageKey, error) => appendMainProcessDiagnosticLog('request_sync_attachment_failed', {
     storageKey, sourceDeviceId: input.peer.peer_device_id, error: String(error)

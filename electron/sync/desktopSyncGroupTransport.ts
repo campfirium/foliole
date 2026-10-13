@@ -1,3 +1,6 @@
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
+import { runSyncPeerRound, isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -5,6 +8,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
 import { runDesktopRequestSyncDatabaseRound } from './desktopRequestSyncDatabaseRound.js';
+import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { continueDesktopRequestSyncResources } from './desktopRequestSyncResources.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
@@ -14,6 +18,8 @@ import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
+import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
+import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
@@ -30,17 +36,26 @@ export async function continueDesktopSyncGroupSync(
   if (!target) return null;
   return runDesktopSyncGroupPeerSingleFlight(
     target.peer_device_id,
-    () => continuePeerSync(target, activity)
+    async () => {
+      try {
+        return await runSyncPeerRound({ owner: desktopSyncPeerRoundOwner(), peerId: target.peer_device_id,
+          execute: (id, lease) => continuePeerSync(target, activity, { id, lease, admitted: false }) });
+      } catch (error) {
+        if (isSyncPeerRoundRetryableError(error)) return { complete: false };
+        throw error;
+      }
+    }
   );
 }
 
 async function continuePeerSync(
   target: DesktopSyncGroupPeer,
-  activity?: DesktopSyncActivityContext
+  activity: DesktopSyncActivityContext | undefined,
+  peerRound: RequestSyncPeerRound
 ) {
   await runPeerSyncStage(
     'compatibility',
-    () => assertDesktopSyncGroupPeerCompatible(target),
+    () => assertDesktopSyncGroupPeerCompatible(target, fetch, peerRound.lease.signal),
     target,
     activity
   );
@@ -77,6 +92,8 @@ async function continuePeerSync(
     peer: target,
     peerState: memberState.peerState,
     remoteLibraryEpoch: memberState.remoteLibraryEpoch,
+    signal: peerRound.lease.signal,
+    peerRound,
     ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {})
   };
   const result = await runPeerSyncStage('sync_pack', () => continueDatabaseAndResources(input), target, activity);
@@ -92,10 +109,20 @@ async function continuePeerSync(
 }
 
 async function continueDatabaseAndResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]) {
-  const database = await runDesktopRequestSyncDatabaseRound(input);
-  if (!database.complete) return database;
-  const resources = await continueDesktopRequestSyncResources(input);
-  return { ...database, complete: resources.pending === 0 };
+  const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(input.peer.group_id));
+  if (!key || !input.peerRound) throw new Error('sync_round_context_missing');
+  const context = { groupId: input.peer.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: input.peer.local_device_id, initiatorLibraryEpoch: input.localLibraryEpoch,
+    responderDeviceId: input.peer.peer_device_id, responderLibraryEpoch: input.remoteLibraryEpoch } as const;
+  const exchange = createDesktopRequestSyncExchange({ context, groupSecret: key.group_key,
+    groupKey: new Uint8Array(Buffer.from(key.group_key, 'base64url')), endpointUrl: input.peer.endpoint_url,
+    peerRound: input.peerRound, ...(input.signal ? { signal: input.signal } : {}) });
+  return withRequestSyncPeerRound(exchange, input.peerRound, async () => {
+    const database = await runDesktopRequestSyncDatabaseRound(input);
+    if (!database.complete) return database;
+    const resources = await continueDesktopRequestSyncResources(input);
+    return { ...database, complete: resources.pending === 0 };
+  });
 }
 
 async function skipPeerSync(

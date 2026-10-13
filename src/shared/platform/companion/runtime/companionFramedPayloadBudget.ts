@@ -5,6 +5,7 @@ import type {
 } from '../../../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import { createCompanionUuid } from '../../companionUuid';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { closeCompanionSyncPeerRounds } from '../sync/framed/companionSyncPeerRounds.js';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 
@@ -30,6 +31,7 @@ export async function configureCompanionFramedPayloadBudget(owner: CapacitorComp
 }
 
 export async function closeCompanionFramedPayloadBudget(owner: CapacitorCompanionDatabaseOwner) {
+  closeCompanionSyncPeerRounds(owner);
   const state = owners.get(owner);
   if (!state) return;
   state.closing = true;

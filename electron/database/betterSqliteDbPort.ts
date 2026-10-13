@@ -10,29 +10,9 @@ import {
   SqliteConnectionOwnerError,
   type SqliteConnectionOwner
 } from './sqliteConnectionCoordinator.js';
+import { prepareCachedSqliteStatement as prepareStatement } from './sqliteStatementCache.js';
 
 type SqliteDatabase = BetterSqlite3.Database;
-const statementCaches = new WeakMap<SqliteDatabase, Map<string, BetterSqlite3.Statement>>();
-const MAX_CACHED_STATEMENTS = 128;
-
-function prepareStatement(sqlite: SqliteDatabase, sql: string) {
-  let cache = statementCaches.get(sqlite);
-  if (!cache) {
-    cache = new Map();
-    statementCaches.set(sqlite, cache);
-  }
-  const existing = cache.get(sql);
-  if (existing) {
-    cache.delete(sql);
-    cache.set(sql, existing);
-    return existing;
-  }
-  const statement = sqlite.prepare(sql);
-  if (cache.size === MAX_CACHED_STATEMENTS) cache.delete(cache.keys().next().value!);
-  cache.set(sql, statement);
-  return statement;
-}
-
 export interface BetterSqliteDbPortOptions {
   name?: string;
 }

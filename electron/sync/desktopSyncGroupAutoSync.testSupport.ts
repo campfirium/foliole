@@ -10,6 +10,7 @@ const runtime = vi.hoisted(() => ({
     onChanged(): void;
     onMember(peer: Record<string, unknown>): Promise<boolean>;
     onMemberLost(deviceId: string): void;
+    onDiscoveryState(error: Error | null): void;
   },
   notifyOverviewChanged: vi.fn(),
   recoverTopology: vi.fn(),
@@ -91,8 +92,8 @@ vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
   startDesktopSyncGroupMemberStateSession: (_group: unknown, onChanged: () => void,
     onMember: (peer: Record<string, unknown>) => Promise<boolean>,
-    onMemberLost: (deviceId: string) => void) => {
-    runtime.memberSessionArgs = { onChanged, onMember, onMemberLost };
+    onMemberLost: (deviceId: string) => void, onDiscoveryState: (error: Error | null) => void) => {
+    runtime.memberSessionArgs = { onChanged, onMember, onMemberLost, onDiscoveryState };
     return { recover: runtime.recoverMembers, stop: vi.fn() };
   }
 }));

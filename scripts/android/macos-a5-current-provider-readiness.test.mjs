@@ -55,7 +55,7 @@ it('rejects a discovery payload that belongs to another Device', async () => {
   await expect(waiting).rejects.toThrow('Current Device provider was not published');
 });
 
-it('requires the current topology role when the caller identifies one', async () => {
+it('accepts a current provider without a topology role', async () => {
   let collect;
   const waiting = waitForCurrentA5Provider({
     deviceId: 'device-a5', groupId: 'group-a', topologyRole: 'anchor'
@@ -75,7 +75,7 @@ it('requires the current topology role when the caller identifies one', async ()
   await collect({ addresses: ['192.168.0.9'], port: 38641,
     txt: { device_id: 'device-a5', group_id: 'group-a', topology_role: 'anchor' } });
 
-  await expect(waiting).resolves.toMatchObject({ endpointUrl: 'http://192.168.0.9:38641' });
+  await expect(waiting).resolves.toMatchObject({ endpointUrl: 'http://192.168.0.8:38641' });
 });
 
 it('accepts the product-facing Windows label behind a win32 advertisement', async () => {

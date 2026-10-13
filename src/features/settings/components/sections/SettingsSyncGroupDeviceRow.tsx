@@ -11,7 +11,6 @@ export function SettingsSyncGroupDeviceRow(props: {
   removing: boolean;
   syncEnabled: boolean;
   syncPaused: boolean;
-  topologyLabel: string | undefined;
 }) {
   const t = useTranslation();
   const local = props.device.device_identity_key === props.group.local_device_identity_key;
@@ -28,9 +27,7 @@ export function SettingsSyncGroupDeviceRow(props: {
       </div>
     );
   }
-  const label = local && props.topologyLabel
-    ? props.topologyLabel
-    : local
+  const label = local
       ? t(props.syncPaused ? 'settings.companionSync.group.resume' : 'settings.companionSync.group.pause')
       : t(props.removing ? 'settings.companionSync.group.remove.pending' : 'settings.companionSync.group.remove');
   return (

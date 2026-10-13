@@ -124,7 +124,7 @@ export async function waitForMacosProviderAfterJoin(session, group, {
 } = {}) {
   await observe(session);
   return waitForProvider({ deviceId: group.local_device_identity_key,
-    groupId: group.group_id, topologyRole: 'anchor' });
+    groupId: group.group_id });
 }
 
 export async function establishFreshAB({ execute, reportProgress, repoRoot, runId, signal }) {

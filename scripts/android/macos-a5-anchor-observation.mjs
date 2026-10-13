@@ -1,7 +1,7 @@
 export function assertMacosAnchorReady(overview) {
   const status = overview?.server_status;
-  if (status?.topology_role !== 'anchor' || status?.topology_status !== 'ready') {
-    throw Object.assign(new Error('Mac did not become the ready Sync Group anchor.'), {
+  if (status?.state !== 'running' || status?.topology_status !== 'ready') {
+    throw Object.assign(new Error('Mac Sync Group provider is not ready.'), {
       serverStatus: status ?? null
     });
   }
@@ -13,7 +13,7 @@ export async function observeMacosAnchorAfterElection(session, {
 } = {}) {
   const overview = await session.waitForState({
     command: 'load_sync_group_overview',
-    condition: { kind: 'sync-group-topology', role: 'anchor', status: 'ready' },
+    condition: { kind: 'sync-group-topology', role: null, status: 'ready' },
     eventName: 'onSyncGroupOverviewChanged',
     timeoutMs
   });

@@ -1,7 +1,7 @@
 export const SYNC_TRIGGER_REASONS = ['initial', 'automatic', 'manual'] as const;
 
 export type SyncTriggerReason = (typeof SYNC_TRIGGER_REASONS)[number];
-export type SyncTriggerStatus = 'completed' | 'failed' | 'skipped';
+export type SyncTriggerStatus = 'completed' | 'failed' | 'pending' | 'skipped';
 
 export interface SyncTriggerResult {
   error: string | null;

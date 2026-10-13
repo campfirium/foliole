@@ -6,7 +6,7 @@ extension FolioleCompanionSyncGroupJoinServer {
     func respondRequestSync(_ connection: NWConnection, _ request: FolioleCompanionHttpMessage,
         mode: String, context: [String: String], bridge: FolioleCompanionSyncGroupDataRequesting,
         owner: FolioleFramedSyncPayloadBudget) throws {
-        guard ["inventory", "pull", "object", "pulls", "objects", "attachments"].contains(mode) else { throw Self.invalid("request_sync_mode_invalid") }
+        guard ["inventory", "pull", "object", "pulls", "objects", "attachments", "round_finish"].contains(mode) else { throw Self.invalid("request_sync_mode_invalid") }
         let files = try FolioleFramedSyncFiles(libraryKey: owner.libraryKey)
         let directory = "requests/\(UUID().uuidString.lowercased())"
         defer { try? files.remove(directory) }
@@ -28,7 +28,7 @@ extension FolioleCompanionSyncGroupJoinServer {
         payload["mode"] = mode
         payload["request_chunk_count"] = chunks["response_chunk_count"]
         payload["request_byte_length"] = chunks["response_byte_length"]
-        for key in ["object_type", "global_id"] { payload[key] = Self.query(request.path, key) }
+        for key in ["object_type", "global_id", "peer_round_id", "peer_round_mode"] { payload[key] = Self.query(request.path, key) }
         let result = try bridge.request("respond_request_sync", payload, documentOwner: owner)
         guard let count = result["response_chunk_count"] as? Int else { throw Self.invalid("request_sync_http_response_invalid") }
         try owner.requireActive()
@@ -37,8 +37,19 @@ extension FolioleCompanionSyncGroupJoinServer {
         guard let deviceID = context["responder_device_id"], let epoch = context["responder_library_epoch"] else {
             throw Self.invalid("request_sync_peer_context_mismatch")
         }
+        guard let peer = context["initiator_device_id"], let roundID = payload["peer_round_id"] as? String else {
+            throw Self.invalid("sync_round_identity_missing")
+        }
         try FolioleFramedSyncFileResponse.sendFile(connection, url: response, directory: temporary,
-            deviceID: deviceID, epoch: epoch, owner: owner)
+            deviceID: deviceID, epoch: epoch, owner: owner, onProgress: {
+                try FolioleRequestSyncHTTPChunks.touchRound(bridge: bridge, owner: owner,
+                    peer: peer, roundID: roundID, direction: "inbound")
+            }, onComplete: {
+                if payload["peer_round_mode"] as? String == "single" || payload["peer_round_mode"] as? String == "finish" {
+                    try FolioleRequestSyncHTTPChunks.touchRound(bridge: bridge, owner: owner,
+                        peer: peer, roundID: roundID, direction: "inbound", finish: true)
+                }
+            })
         handedOff = true
     }
 }

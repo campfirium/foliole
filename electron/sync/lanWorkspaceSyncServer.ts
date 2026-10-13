@@ -1,5 +1,6 @@
 import http from 'node:http';
 
+import type { DesktopCompanionSyncServerStatusPayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
@@ -16,7 +17,6 @@ import {
 import {
   stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
-import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
@@ -41,13 +41,12 @@ export interface LanWorkspaceSyncServerStatus {
   pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
-  topology_role: 'anchor' | 'member' | 'observing';
+  topology_role: DesktopCompanionSyncServerStatusPayload['topology_role'];
   topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
 }
 
 function topologyStatus() {
-  const topology = loadDesktopAnchorTopologyState();
-  return { topology_role: topology.role, topology_status: topology.status };
+  return { topology_role: null, topology_status: activeServer ? 'ready' as const : 'observing' as const };
 }
 
 let activeJoinRequestHandler: (() => void) | null = null;

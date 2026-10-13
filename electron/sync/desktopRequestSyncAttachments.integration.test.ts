@@ -14,6 +14,8 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
+import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
+import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
@@ -39,19 +41,27 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
   const server = await attachmentHttpServer(dropAt);
   try {
     const failures: unknown[] = [];
-    const exchange = createDesktopRequestSyncExchange({ endpointUrl: server.url, groupKey: attachmentGroupKey,
+    const roundId = crypto.randomUUID();
+    const lease = createSyncPeerRoundOwnership(60_000).acquireOutbound('local', roundId);
+    if (!lease) throw new Error('test_round_busy');
+    const peerRound = { id: roundId, lease, admitted: false };
+    const exchange = createDesktopRequestSyncExchange({ peerRound, endpointUrl: server.url, groupKey: attachmentGroupKey,
       groupSecret: Buffer.from(attachmentGroupKey).toString('base64url'),
       context: { protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: 'group', initiatorDeviceId: 'peer',
         initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
-    expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)))
-      .toEqual({ pending: 0, transferred: 2 });
-    expect(failures).toEqual([]);
-    const hashFile = vi.spyOn(resourceHash, 'hashResourceFile').mockRejectedValue(new Error('Unexpected content read during needs'));
-    expect(await local.host.needs()).toEqual([]);
-    expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)))
-      .toEqual({ pending: 0, transferred: 0 });
-    expect(hashFile).not.toHaveBeenCalled();
-    hashFile.mockRestore();
+    try {
+      await withRequestSyncPeerRound(exchange, peerRound, async () => {
+        const result = await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error));
+        expect(failures).toEqual([]);
+        expect(result).toEqual({ pending: 0, transferred: 2 });
+        const hashFile = vi.spyOn(resourceHash, 'hashResourceFile').mockRejectedValue(new Error('Unexpected content read during needs'));
+        expect(await local.host.needs()).toEqual([]);
+        expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)))
+          .toEqual({ pending: 0, transferred: 0 });
+        expect(hashFile).not.toHaveBeenCalled();
+        hashFile.mockRestore();
+      });
+    } finally { lease.release(); }
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     const reopened = new Database(target.databasePath, { readonly: true });
     try {

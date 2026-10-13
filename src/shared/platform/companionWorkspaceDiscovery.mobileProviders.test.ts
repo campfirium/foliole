@@ -29,13 +29,13 @@ beforeEach(() => {
   });
 });
 
-it('does not probe a mobile provider while finding desktop sync targets', async () => {
+it('discovers a mobile provider without requiring a desktop', async () => {
   runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
     candidates: [{
       endpoint_url: 'http://iphone.local:45678',
       protocol_txt: {
         ...serializeSyncProtocolTxt(protocol),
-        provider_platform: 'ios-capacitor'
+        provider_platform: 'ios-capacitor', device_id: 'phone', group_id: 'group-1', group_tag: 'group-tag-1'
       },
       source: 'nsd'
     }]
@@ -43,21 +43,18 @@ it('does not probe a mobile provider while finding desktop sync targets', async 
   runtime.plugin.desktopHttpRequest.mockResolvedValue({
     body: JSON.stringify({
       app_version: '0.1.0', group_display_name: 'Foliole', group_id: 'group-1',
-      group_tag: 'group-tag-1', protocol, provider_device_id: 'desktop-mac',
-      provider_device_name: 'Mac', provider_platform: 'macOS', runtime_instance_id: 'runtime-mac'
+      group_tag: 'group-tag-1', protocol, provider_device_id: 'phone',
+      provider_device_name: 'Phone', provider_platform: 'ios-capacitor', runtime_instance_id: 'runtime-phone'
     }),
     status: 200
   });
 
-  await discoverCompanionDesktops('http://accepted-mac.local:38641');
-
-  expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalled();
-  expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalledWith(
-    expect.objectContaining({ url: expect.stringContaining('iphone.local') })
-  );
+  expect(await discoverCompanionDesktops('http://accepted-mac.local:38641')).toEqual([
+    expect.objectContaining({ endpointUrl: 'http://iphone.local:45678', compatibility: expect.objectContaining({ status: 'compatible' }) })
+  ]);
 });
 
-it('does not probe a stale member advertisement whose platform metadata is missing', async () => {
+it('refuses a peer whose HTTP identity disagrees with its advertisement', async () => {
   runtime.plugin.loadDiscoveryCandidates.mockResolvedValue({
     candidates: [{
       endpoint_url: 'http://stale-phone.local:38644',
@@ -70,8 +67,13 @@ it('does not probe a stale member advertisement whose platform metadata is missi
     }]
   });
 
-  await expect(discoverCompanionDesktops('http://old-desktop.local:38641')).resolves.toEqual([]);
-  expect(runtime.plugin.desktopHttpRequest).not.toHaveBeenCalled();
+  runtime.plugin.desktopHttpRequest.mockResolvedValue({ status: 200, body: JSON.stringify({
+    group_id: 'group-1', group_tag: 'group-tag-1', protocol, provider_device_id: 'another-phone',
+    provider_platform: 'ios-capacitor'
+  }) });
+  expect(await discoverCompanionDesktops('http://old-desktop.local:38641')).toEqual([
+    expect.objectContaining({ compatibility: expect.objectContaining({ status: 'incompatible' }) })
+  ]);
 });
 
 it('does not let a stalled native probe block a reachable iOS desktop', async () => {

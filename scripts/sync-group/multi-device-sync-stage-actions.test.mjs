@@ -64,7 +64,7 @@ it('uses public Android Sync Now to consume the admitted C fact', async () => {
 it('waits for the current Android member provider to be externally discoverable', async () => {
   const waitForProvider = vi.fn(async (expected) => expected);
   await expect(waitForCurrentAndroidProvider({ group_id: 'group-1' }, waitForProvider))
-    .resolves.toEqual({ groupId: 'group-1', topologyRole: 'member' });
+    .resolves.toEqual({ groupId: 'group-1', advertisedPlatform: 'android-capacitor' });
 });
 
 it('preserves the fixed Windows native startup failure attribution', () => {

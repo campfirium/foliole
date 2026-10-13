@@ -43,10 +43,18 @@ final class FolioleCompanionHttpResponse {
 
     static void framed(OutputStream output, java.io.File body, String deviceId, String libraryEpoch)
         throws Exception {
+        framed(output, body, deviceId, libraryEpoch, () -> {});
+    }
+
+    static void framed(OutputStream output, java.io.File body, String deviceId, String libraryEpoch,
+        FolioleRequestSyncHttpChunks.Check progress) throws Exception {
         framedHeaders(output, body.length(), deviceId, libraryEpoch);
         try (var input = new java.io.FileInputStream(body)) {
             byte[] buffer = new byte[64 * 1024];
-            for (int count; (count = input.read(buffer)) >= 0;) output.write(buffer, 0, count);
+            for (int count; (count = input.read(buffer)) >= 0;) {
+                output.write(buffer, 0, count);
+                progress.run();
+            }
         }
         output.flush();
     }

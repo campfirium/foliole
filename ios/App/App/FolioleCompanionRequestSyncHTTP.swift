@@ -30,8 +30,12 @@ extension FolioleCompanionSyncPlugin {
             let owner = try Self.requestHTTPOwner(call)
             let id = try Self.requestHTTPID(call)
             try requestHTTPTasks.start(id) {
-                do { call.resolve(try await Self.postRequestHTTP(call, owner: owner)) }
-                catch { call.reject("\(error.localizedDescription)") }
+                do { call.resolve(try await Self.postRequestHTTP(call, owner: owner, bridge: self.groupData)) }
+                catch {
+                    if let network = error as? URLError, network.code == .timedOut {
+                        call.reject("\(error.localizedDescription)", "ETIMEDOUT")
+                    } else { call.reject("\(error.localizedDescription)") }
+                }
             }
         } catch { call.reject("\(error.localizedDescription)") }
     }
@@ -44,7 +48,8 @@ extension FolioleCompanionSyncPlugin {
         } catch { call.reject("\(error.localizedDescription)") }
     }
 
-    private static func postRequestHTTP(_ call: CAPPluginCall, owner: FolioleFramedSyncPayloadBudget) async throws -> JSObject {
+    private static func postRequestHTTP(_ call: CAPPluginCall, owner: FolioleFramedSyncPayloadBudget,
+        bridge: FolioleCompanionSyncGroupDataRequesting) async throws -> JSObject {
         guard let directory = call.getString("directory"),
               directory.range(of: "^requests/[a-f0-9-]{36}$", options: .regularExpression) != nil,
               let count = call.getInt("request_chunk_count"), let urlText = call.getString("url"), let url = URL(string: urlText),
@@ -62,7 +67,12 @@ extension FolioleCompanionSyncPlugin {
         try FolioleRequestSyncHTTPChunks.assemble(files: files, directory: directory, count: count, output: body)
         _ = try await FolioleFramedSyncHTTPTransport.post(endpoint: url,
             peer: .init(groupID: group, deviceID: peer, libraryEpoch: epoch, memberAuthHeaders: headers),
-            requestBodyURL: body, responseBodyURL: response, owner: owner)
+            requestBodyURL: body, responseBodyURL: response, owner: owner, onProgress: {
+                if let roundID = call.getString("peer_round_id") {
+                    try FolioleRequestSyncHTTPChunks.touchRound(bridge: bridge, owner: owner,
+                        peer: peer, roundID: roundID, direction: "outbound")
+                }
+            })
         return try FolioleRequestSyncHTTPChunks.split(files: files, directory: directory, input: response)
     }
 

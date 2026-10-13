@@ -5,7 +5,6 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import {
   startCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
-import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 interface DesktopSyncGroupAdvertisementInput {
@@ -37,6 +36,6 @@ function prepareAdvertisement(args: DesktopSyncGroupAdvertisementInput) {
     ...(args.onRecovered ? { onRecovered: args.onRecovered } : {}),
     onWarning: args.onWarning,
     port: args.port,
-    role: loadDesktopAnchorTopologyState().role
+    role: 'observing' as const
   };
 }

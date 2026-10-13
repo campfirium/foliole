@@ -5,6 +5,7 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private let owner: FolioleFramedSyncPayloadBudget?
     private let receiptSequence: Bool
     private let responseLane: FolioleFramedSyncPayloadBudget.Lane
+    private let onProgress: (() throws -> Void)?
     private let delegateQueue = OperationQueue()
     private var payloadLoan: FolioleFramedSyncPayloadBudget.Loan?
     private var receiptPrefix = Data()
@@ -22,7 +23,9 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private var session: URLSession?
 
     init(responseURL: URL, expectedDeviceID: String, expectedLibraryEpoch: String,
-         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload, receiptSequence: Bool = false) {
+         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
+         receiptSequence: Bool = false, onProgress: (() throws -> Void)? = nil) {
+        self.onProgress = onProgress
         self.owner = owner; self.responseLane = responseLane; self.receiptSequence = receiptSequence
         self.responseURL = responseURL
         partialURL = responseURL.deletingLastPathComponent()
@@ -58,6 +61,8 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
                     totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        do { if bytesSent > 0 { try onProgress?() } }
+        catch { task.cancel(); finish(.failure(error)); return }
         if totalBytesExpectedToSend >= 0 && totalBytesSent >= totalBytesExpectedToSend {
             outgoingLoan?.release(); outgoingLoan = nil
         }
@@ -124,6 +129,7 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             return
         }
         do {
+            if !data.isEmpty { try onProgress?() }
             if responseLane == .receipt {
                 let maximum = receiptSequence ? 2_097_152 + 128 * 32 : 1_048_576 + 112
                 guard data.count <= maximum - receivedBytes else {

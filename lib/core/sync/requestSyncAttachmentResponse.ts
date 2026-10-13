@@ -11,6 +11,7 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
+  onProgress?: () => void;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
   let request: AttachmentRequest | undefined;
   for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) {
@@ -25,7 +26,7 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
   };
   if (request.operation === 'pull' || request.operation === 'describe') {
     const selected = request;
-    return host.withFile(selected.storageKey, file => reply(sourceMessages(selected, file, input.signal)));
+    return host.withFile(selected.storageKey, file => reply(sourceMessages(selected, file, input.signal, input.onProgress)));
   }
   return reply(responseMessages(host, request));
 }
@@ -46,7 +47,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, request: Attac
 }
 
 async function* sourceMessages(request: AttachmentRequest,
-  file: Parameters<Parameters<AttachmentBlockSource['withFile']>[1]>[0], signal?: AbortSignal) {
+  file: Parameters<Parameters<AttachmentBlockSource['withFile']>[1]>[0], signal?: AbortSignal, onProgress?: () => void) {
   if (request.operation === 'describe') {
     yield attachmentMessage({ ...request, ...file.resource, state: 'complete' });
     return;
@@ -55,7 +56,9 @@ async function* sourceMessages(request: AttachmentRequest,
       request.offset % ATTACHMENT_BLOCK_BYTES !== 0) throw new Error('attachment_pull_range_invalid');
   for (let offset = request.offset; offset < file.resource.byteLength; offset += ATTACHMENT_BLOCK_BYTES) {
     signal?.throwIfAborted();
+    onProgress?.();
     const data = await file.read(offset, Math.min(ATTACHMENT_BLOCK_BYTES, file.resource.byteLength - offset));
+    onProgress?.();
     yield attachmentMessage({ ...request, offset, data, state: 'block' });
   }
   yield attachmentMessage({ ...request, offset: file.resource.byteLength, state: 'end' });

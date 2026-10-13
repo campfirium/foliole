@@ -41,4 +41,11 @@ enum FolioleRequestSyncHTTPChunks {
     }
 
     private static func invalid(_ code: String) -> FolioleFramedSyncValidationError { .init(code) }
+
+    static func touchRound(bridge: FolioleCompanionSyncGroupDataRequesting, owner: FolioleFramedSyncPayloadBudget,
+        peer: String, roundID: String, direction: String, finish: Bool = false) throws {
+        _ = try bridge.request("touch_request_sync_round", ["library_key": owner.libraryKey,
+            "generation_id": owner.generationID, "peer_device_id": peer, "peer_round_id": roundID,
+            "direction": direction, "finish_round": finish], documentOwner: owner)
+    }
 }

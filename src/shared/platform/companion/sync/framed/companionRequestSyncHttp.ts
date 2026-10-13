@@ -4,6 +4,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { encodeFramedSyncStream, readFramedSyncStream, type FramedSyncStreamBody } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from '../../../../../../lib/core/sync/requestSyncFiles.js';
+import { requestSyncPeerRoundPath, touchRequestSyncStream, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
@@ -20,12 +21,15 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
   context: RequestSyncAuthenticatedContext;
   body: FramedSyncStreamBody;
   signal?: AbortSignal;
+  peerRound?: RequestSyncPeerRound;
 }, consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
   return withRequestSyncFiles(files, async temporary => {
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
-    const prepared = await spoolCompanionRequestSyncHttp(files, temporary.directory, input.body, input.signal);
+    const prepared = await spoolCompanionRequestSyncHttp(files, temporary.directory, { ...input.body,
+      frames: touchRequestSyncStream(input.body.frames, input.peerRound?.lease) }, input.signal);
     const requestId = crypto.randomUUID();
-    const pathWithQuery = framedSyncPathWithIdentity({ ...input.context, pathWithQuery: input.pathWithQuery });
+    const pathWithQuery = framedSyncPathWithIdentity({ ...input.context,
+      pathWithQuery: requestSyncPeerRoundPath(input.pathWithQuery, input.peerRound) });
     const signature = await FolioleCompanionSync.signCompanionSyncRequest({
       endpoint_url: input.endpointUrl, method: 'POST', nonce: crypto.randomUUID(),
       path_with_query: pathWithQuery, sync_group_id: input.context.groupId,
@@ -39,6 +43,7 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
         'x-foliole-library-epoch': input.context.initiatorLibraryEpoch
       }, sync_group_id: input.context.groupId, receiver_device_id: input.context.responderDeviceId,
       receiver_library_epoch: input.context.responderLibraryEpoch };
+    if (input.peerRound) request.peer_round_id = input.peerRound.id;
     input.signal?.throwIfAborted();
     const operation = FolioleCompanionSync.postRequestSyncHttp(request);
     let cancellation: Promise<void> | undefined;
@@ -48,8 +53,13 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
     try {
       const response = await operation;
       input.signal?.throwIfAborted();
-      const stream = await readFramedSyncStream(companionRequestSyncHttpChunks(files, temporary.directory, response, input.signal));
-      try { return await consume(stream); }
+      const stream = await readFramedSyncStream(touchRequestSyncStream(
+        companionRequestSyncHttpChunks(files, temporary.directory, response, input.signal), input.peerRound?.lease));
+      try {
+        const result = await consume(stream);
+        if (input.peerRound) input.peerRound.admitted = true;
+        return result;
+      }
       finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
     } finally {
       input.signal?.removeEventListener('abort', cancel);

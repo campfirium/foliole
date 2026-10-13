@@ -212,7 +212,7 @@ export interface DesktopCompanionSyncServerStatusPayload {
   pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
-  topology_role: 'anchor' | 'member' | 'observing';
+  topology_role: 'anchor' | 'member' | 'observing' | null;
   topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
 }
 

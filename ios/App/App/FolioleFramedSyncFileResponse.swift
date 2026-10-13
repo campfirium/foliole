@@ -23,7 +23,8 @@ enum FolioleFramedSyncFileResponse {
 
     static func sendFile(_ connection: NWConnection, url: URL, directory: URL,
         deviceID: String, epoch: String, owner: FolioleFramedSyncPayloadBudget? = nil,
-        lane: FolioleFramedSyncPayloadBudget.Lane = .payload) throws {
+        lane: FolioleFramedSyncPayloadBudget.Lane = .payload,
+        onProgress: (() throws -> Void)? = nil, onComplete: (() throws -> Void)? = nil) throws {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard let length = attributes[.size] as? NSNumber else {
             throw FolioleFramedSyncValidationError("framed_sync_session_file_size_missing")
@@ -52,7 +53,9 @@ enum FolioleFramedSyncFileResponse {
                     guard cancellation?.isCancelled != true else { throw CancellationError() }
                     guard let chunk = try input.read(upToCount: 64 * 1024), !chunk.isEmpty else { break }
                     try await send(connection, chunk)
+                    try onProgress?()
                 }
+                try onComplete?()
             } catch { connection.cancel() }
         }
     }

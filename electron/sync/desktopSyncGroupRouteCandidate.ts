@@ -32,7 +32,6 @@ export function routeFromCandidate(
     local_device_id: group.local_device_identity_key,
     peer_device_id: candidate.provider_device_id,
     peer_device_name: remote?.device_name ?? candidate.provider_device_name ?? candidate.provider_device_id,
-    peer_platform: remote?.platform ?? candidate.provider_platform ?? 'desktop',
-    route_kind: 'anchor'
+    peer_platform: remote?.platform ?? candidate.provider_platform ?? 'desktop'
   };
 }

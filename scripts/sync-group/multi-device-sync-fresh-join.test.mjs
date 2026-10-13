@@ -56,7 +56,7 @@ it('waits for the current Mac anchor advertisement after the Device joins', asyn
   });
   await expect(waitForMacosProviderAfterJoin(session, group, {
     observe, waitForProvider
-  })).resolves.toEqual({ deviceId: 'mac-a', groupId: 'group-1', topologyRole: 'anchor' });
+  })).resolves.toEqual({ deviceId: 'mac-a', groupId: 'group-1' });
   expect(order).toEqual(['anchor-ready', 'discoverable']);
 });
 

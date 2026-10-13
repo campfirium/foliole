@@ -26,7 +26,7 @@ import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberSta
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 import {
-  removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer
+  saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
 
 let joinCompletionInFlight: Promise<ReturnType<typeof loadDesktopSyncGroup>> | null = null;
@@ -97,13 +97,11 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
     const route = loadDesktopSyncGroupRoutes(adoption.groupId).find((peer) => peer.peer_device_id === adoption.providerDeviceId) ?? {
       endpoint_url: adoption.endpointUrl, group_id: adoption.groupId,
       local_device_id: group.local_device_identity_key, peer_device_id: adoption.providerDeviceId,
-      peer_device_name: adoption.providerDeviceName, peer_platform: adoption.providerPlatform,
-      route_kind: ['android-capacitor', 'ios-capacitor'].includes(adoption.providerPlatform.toLowerCase())
-        ? 'mobile_guide' as const : 'anchor' as const
+      peer_device_name: adoption.providerDeviceName, peer_platform: adoption.providerPlatform
     };
     saveDesktopSyncGroupRoute(route);
     await options.onMembershipCommitted?.();
-    await runDesktopSyncCoordinator('initial', route);
+    await requireInitialSyncComplete(route);
     return loadDesktopSyncGroup();
   }
   if (Date.now() >= new Date(pending.request.expires_at).getTime()) {
@@ -123,30 +121,30 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
   const route = await runWithDatabaseConnectionOwner(() => commitDesktopSyncGroupJoin(pending, groupInfo));
   saveDesktopSyncGroupRoute(route);
   await options.onMembershipCommitted?.();
-  if (route.route_kind !== 'mobile_guide') {
-    await exchangeDesktopSyncGroupMemberState(route).catch((error) => {
+  await exchangeDesktopSyncGroupMemberState(route).catch((error) => {
       console.info('[sync-group] watched source exchange will retry', {
         error: error instanceof Error ? error.message : String(error)
       });
     });
-    notifyDesktopSyncGroupOverviewChanged();
-  }
-  if (pending.mode === 'use-group') await runDesktopSyncCoordinator('initial', route);
+  notifyDesktopSyncGroupOverviewChanged();
+  if (pending.mode === 'use-group') await requireInitialSyncComplete(route);
   else queueInitialSync(route);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
 }
 
 function queueInitialSync(route: DesktopSyncGroupPeer) {
   void runDesktopSyncCoordinator('initial', route)
-    .then(() => {
-      if (route.route_kind === 'mobile_guide') removeDesktopSyncGroupRoute(route.peer_device_id);
-    })
     .catch((error) => {
       console.info('[sync-group] initial convergence will retry while the member remains active', {
         error: error instanceof Error ? error.message : String(error),
         peerDeviceId: route.peer_device_id
       });
     });
+}
+
+async function requireInitialSyncComplete(route: DesktopSyncGroupPeer) {
+  const result = await runDesktopSyncCoordinator('initial', route);
+  if (result.status === 'pending') throw new Error('sync_group_sync_incomplete');
 }
 
 function parseAcceptance(value: Record<string, unknown>, requestId: string): SyncGroupJoinAcceptance {

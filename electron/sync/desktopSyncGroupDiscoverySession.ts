@@ -3,7 +3,8 @@ import type { DesktopDnsSdService } from '@foliole/desktop-dnssd';
 import type { DesktopSyncGroupJoinCandidatePayload } from '../../lib/platform/nativeCompanionSyncContract.js';
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract.js';
 import { normalizeDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
-import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
+import { evaluateSyncProtocolCompatibility, parseSyncProtocolTxt,
+  syncProtocolVersionHintMatchesDescriptor } from '../../lib/platform/syncProtocolContract.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
@@ -11,7 +12,6 @@ import {
   DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
   DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
 } from './desktopSyncGroupDiscoveryTiming.js';
-import { qualifyPreparedDesktopAnchorCandidate } from './preparedDesktopAnchorAdapter.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 export class DesktopSyncGroupDiscoverySession {
@@ -129,7 +129,7 @@ export class DesktopSyncGroupDiscoverySession {
   }
 
   private snapshot(change: SyncGroupDiscoverySnapshot['change']): SyncGroupDiscoverySnapshot {
-    const candidates = selectJoinCandidates([...this.candidates.values()], this.observationComplete);
+    const candidates = selectJoinCandidates([...this.candidates.values()]);
     return { candidates, change, error_code: null,
       status: change === 'stopped' ? 'stopped' : candidates.length > 0 ? 'results' : 'searching' };
   }
@@ -158,16 +158,9 @@ async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSd
       return { error_code: 'protocol_incompatible', status: 'incompatible' as const };
     }
     const providerPlatform = text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '');
-    if (!isMobile(providerPlatform)) {
-      const qualification = qualifyPreparedDesktopAnchorCandidate({
-        endpoint_url: endpointUrl,
-        http: payload,
-        txt: service.txt as Record<string, unknown>
-      });
-      if (!qualification.eligible) {
-        return { status: qualification.reason === 'not_anchor'
-          ? 'waiting_anchor' as const : 'incompatible' as const };
-      }
+    if (payload.provider_device_id !== service.txt.device_id ||
+      !syncProtocolVersionHintMatchesDescriptor(parseSyncProtocolTxt(service.txt), payload.protocol)) {
+      return { status: 'incompatible' as const };
     }
     const candidate = {
       endpoint_url: endpointUrl,
@@ -181,23 +174,15 @@ async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSd
   } catch { return { status: 'connection_failed' as const }; }
 }
 
-function selectJoinCandidates(candidates: DesktopSyncGroupJoinCandidatePayload[], observationComplete: boolean) {
+function selectJoinCandidates(candidates: DesktopSyncGroupJoinCandidatePayload[]) {
   const groups = new Map<string, DesktopSyncGroupJoinCandidatePayload[]>();
   for (const candidate of candidates) {
     const current = groups.get(candidate.group_tag) ?? [];
     current.push(candidate);
     groups.set(candidate.group_tag, current);
   }
-  return [...groups.values()].flatMap((members) => {
-    const ordered = [...members].sort((left, right) =>
-      left.provider_device_id.localeCompare(right.provider_device_id));
-    const anchor = ordered.find((candidate) => !isMobile(candidate.provider_platform));
-    return anchor ? [anchor] : observationComplete ? ordered.slice(0, 1) : [];
-  }).sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
-}
-
-function isMobile(platform: string) {
-  return ['android-capacitor', 'ios-capacitor'].includes(platform.toLowerCase());
+  return [...groups.values()].map(members => members[0]!)
+    .sort((left, right) => left.group_display_name.localeCompare(right.group_display_name));
 }
 
 function desktopKind(platform: string) {

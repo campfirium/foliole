@@ -1,4 +1,3 @@
-import { parseDesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -114,13 +113,13 @@ async function probeAndExchange(
   try {
     const qualified = await probe(group, deviceId, endpointUrl);
     if (!qualified || !isCurrent()) return;
-    const { peer, role } = qualified;
+    const { peer } = qualified;
     endpoints.set(deviceId, peer);
     await exchangeDesktopSyncGroupMemberState(peer);
     if (!isCurrent()) return;
     onChanged();
     const activation = JSON.stringify([service.txt.runtime_instance_id, peer.endpoint_url]);
-    if (role === 'member' && activatedMembers.get(deviceId) !== activation
+    if (activatedMembers.get(deviceId) !== activation
         && await onMember(peer) && isCurrent()) activatedMembers.set(deviceId, activation);
   } catch (error) {
     console.info('[sync-group] member state exchange paused', {
@@ -137,17 +136,14 @@ async function probe(group: SyncGroupPayload, deviceId: string, endpointUrl: str
   const discovery = await response.json() as Record<string, unknown>;
   if (discovery.group_id !== group.group_id || discovery.provider_device_id !== deviceId ||
       evaluateSyncProtocolCompatibility(discovery.protocol).status !== 'compatible') return null;
-  const role = parseDesktopAnchorRole(discovery.topology_role);
   return { peer: {
     endpoint_url: endpointUrl,
     group_id: group.group_id,
     local_device_id: group.local_device_identity_key,
     peer_device_id: deviceId,
     peer_device_name: text(discovery.provider_device_name) ?? deviceId,
-    peer_platform: text(discovery.provider_platform) ?? 'desktop',
-    ...(role === 'member' || role === 'anchor' ? { route_kind: role } : {})
-  } satisfies DesktopSyncGroupPeer,
-  role };
+    peer_platform: text(discovery.provider_platform) ?? 'desktop'
+  } satisfies DesktopSyncGroupPeer };
 }
 
 function text(value: unknown) {

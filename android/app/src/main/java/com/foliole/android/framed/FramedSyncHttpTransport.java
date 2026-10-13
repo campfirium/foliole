@@ -123,7 +123,8 @@ public final class FramedSyncHttpTransport {
             String prefix = "{\"error\":\"";
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);
-            if (SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error) ||
+            if ("sync_round_busy".equals(error) || "sync_round_expired".equals(error) ||
+                SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error) ||
                 "framed_sync_resource_source_unavailable".equals(error) || "node_version_graph_cycle".equals(error)) return error;
             for (String graph : new String[] { "node_version_missing_parents:", "node_version_parent_identity_mismatch:" }) {
                 if (error.startsWith(graph)) return error.substring(graph.length()).matches("[A-Za-z0-9_,:-]{1,3000}") ? error : null;

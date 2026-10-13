@@ -1,4 +1,5 @@
 import CryptoKit
+import FolioleFramedSyncRuntime
 import XCTest
 @testable import FolioleSyncPackValidator
 
@@ -6,7 +7,9 @@ final class FolioleCompanionHttpRequestReaderTests: XCTestCase {
     func testSpoolsFiftyMiBRawBytesAndSignsTheirExactDigest() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let chunk = Data((0..<64 * 1024).map { UInt8(truncatingIfNeeded: $0 &* 131 &+ 17) })
+        var chunk = Data((0..<64 * 1024).map { UInt8(truncatingIfNeeded: $0 &* 131 &+ 17) })
+        let header = try FolioleFramedSyncWireHeader(ciphertextBytes: 512, sequence: 0, frameType: .sessionControl)
+        chunk.replaceSubrange(96..<112, with: header.encode())
         var hash = SHA256()
         for _ in 0..<800 { hash.update(data: chunk) }
         let digest = hash.finalize().map { String(format: "%02x", $0) }.joined()

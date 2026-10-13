@@ -128,8 +128,7 @@ it('commits membership before queueing initial convergence', async () => {
   expect(mocks.route).toHaveBeenCalledWith({
     endpoint_url: CANDIDATE.endpoint_url, group_id: 'group-1',
     local_device_id: DEVICE.identity_key, peer_device_id: CANDIDATE.provider_device_id,
-    peer_device_name: CANDIDATE.provider_device_name, peer_platform: CANDIDATE.provider_platform,
-    route_kind: 'anchor'
+    peer_device_name: CANDIDATE.provider_device_name, peer_platform: CANDIDATE.provider_platform
   });
   expect(mocks.coordinator).toHaveBeenCalledWith('initial', expect.any(Object));
 });
@@ -151,7 +150,7 @@ it('keeps the committed membership successful when initial sync fails', async ()
   expect(mocks.savePending).toHaveBeenCalledWith(null);
 });
 
-it('drops the one-time mobile guide route after initial convergence', async () => {
+it('retains a mobile peer route after initial convergence', async () => {
   const mobile = { ...CANDIDATE, provider_platform: 'android-capacitor' };
   mocks.state.pending = {
     candidate: mobile, mode: 'overwrite', key: { privateKey: 'private', publicKey: 'public' },
@@ -162,8 +161,9 @@ it('drops the one-time mobile guide route after initial convergence', async () =
 
   await completeDesktopSyncGroupJoin();
 
-  expect(mocks.route).toHaveBeenCalledWith(expect.objectContaining({ route_kind: 'mobile_guide' }));
-  expect(mocks.removeRoute).toHaveBeenCalledWith(mobile.provider_device_id);
+  expect(mocks.route).toHaveBeenCalledWith(expect.objectContaining({ peer_platform: 'android-capacitor',
+    peer_device_id: mobile.provider_device_id }));
+  expect(mocks.removeRoute).not.toHaveBeenCalled();
 });
 
 it('clears an expired request without contacting or migrating its endpoint', async () => {

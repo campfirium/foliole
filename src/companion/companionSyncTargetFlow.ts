@@ -1,3 +1,4 @@
+import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
@@ -91,6 +92,16 @@ async function runOwnedTarget(args: {
     }) ?? 'skipped';
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
+    if (isSyncPeerRoundRetryableError(syncError)) {
+      args.syncArgs.setSyncProgress(null);
+      args.syncArgs.setError(null);
+      const pending = await recordCompanionWorkspaceSyncEvent({
+        endpointUrl, kind: 'run_finished', message: 'Sync remains pending.', result: 'partial',
+        runId, startedAt, status: 'skipped', triggerReason
+      });
+      if (pending) args.syncArgs.setState(pending);
+      return 'backlog';
+    }
     return recordTargetFailure({
       endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason
     });

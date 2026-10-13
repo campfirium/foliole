@@ -41,7 +41,6 @@ final class FolioleCompanionSyncGroupProvider {
             .put("device_id", deviceId)
             .put("device_name", value(context, call, "deviceName"))
             .put("platform", value(context, call, "platform"))
-            .put("topology_role", "member")
             .put("protocol", FolioleCompanionSyncPackProviderDefinitions.load(context).protocol())
             .put("sync_group", group)
             .put("group_tag", FolioleCompanionSyncGroupCrypto.groupTag(credential.workgroupKey));

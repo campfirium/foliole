@@ -1,6 +1,7 @@
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  'electron/database/betterSqlite3Driver.statements.test.ts',
   ...controlledSyncSqliteTests,
   'electron/foregroundTimeRuntime.test.ts',
   'electron/database/backupRestore.foregroundTime.test.ts',

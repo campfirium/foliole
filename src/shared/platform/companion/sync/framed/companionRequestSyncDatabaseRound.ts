@@ -4,6 +4,7 @@ import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/reques
 import { exchangeRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { runRequestSyncDatabaseRound, type RequestSyncDatabaseRoundPort } from '../../../../../../lib/core/sync/requestSyncDatabaseRound.js';
 import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/requestSyncOverwriteRound.js';
+import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
@@ -21,6 +22,7 @@ type RoundInput = {
   peerState: SyncGroupMemberStatePayload;
   restoreId?: string;
   signal?: AbortSignal;
+  peerRound?: RequestSyncPeerRound;
   reportObjectError: RequestSyncDatabaseRoundPort['reportObjectError'];
 };
 
@@ -43,6 +45,7 @@ async function runRound(input: RoundInput) {
   const encodedKey = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
   const groupKey = Uint8Array.from(atob(encodedKey), character => character.charCodeAt(0));
   const exchange = createCompanionRequestSyncExchange(host, { context, groupKey,
+    ...(input.peerRound ? { peerRound: input.peerRound } : {}),
     endpointUrl: input.endpointUrl, ...(input.signal ? { signal: input.signal } : {}) });
   const progress = { groupId: context.groupId, overwriteId: overwriteId ?? '', providerDeviceId: peerDeviceId,
     providerLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,

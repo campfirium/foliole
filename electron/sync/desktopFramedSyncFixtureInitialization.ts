@@ -15,7 +15,7 @@ function initializeSyncGroup(deviceId: string) {
   const groupKey = Buffer.alloc(32, 7).toString('base64url');
   driver.execute(`INSERT OR IGNORE INTO sync_groups VALUES ('t326-group', 'T326', ?, ?, ?)`,
     [groupKey, now, now]);
-  for (const name of ['desktop-a', 'desktop-b'] as const) {
+  for (const name of ['desktop-a', 'desktop-b', 'desktop-c'] as const) {
     const identity = deviceId.startsWith('[') ? requestSyncFixtureIdentity(name) : null;
     const memberId = identity?.identity_key ?? name;
     driver.execute(`INSERT OR IGNORE INTO sync_group_devices VALUES

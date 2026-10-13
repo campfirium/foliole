@@ -82,7 +82,7 @@ function registrationDetails(input: CompanionMdnsAdvertisementInput, runtimeId: 
     txt: { app_version: input.appVersion, device_id: input.deviceId,
       group_id: input.groupId, group_tag: input.groupTag,
       ipv4_addresses: addresses.join(','), provider_platform: process.platform,
-      runtime_instance_id: runtimeId, topology_role: input.role,
+      runtime_instance_id: runtimeId,
       ...serializeSyncProtocolTxt() } };
 }
 

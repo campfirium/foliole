@@ -12,6 +12,7 @@ vi.mock('../database/betterSqliteDbPort.js', () => ({
   createBetterSqliteDbPort: vi.fn(() => ({}))
 }));
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   openDatabaseConnection: vi.fn(() => ({ sqlite: {}, dbPath: '/test-library/Data/foliole.db' })),
   runWithDatabaseConnectionOwner: vi.fn((run: () => unknown) => run())
 }));

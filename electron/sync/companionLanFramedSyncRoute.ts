@@ -8,6 +8,8 @@ import {
 import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { createFramedSyncFileStaging } from '../../lib/core/sync/framedSyncFileStaging.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
+import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
@@ -26,6 +28,7 @@ import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptRecei
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
+import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 
 export async function handleProductionCompanionFramedSyncPost(args: {
   deviceId: string;
@@ -39,9 +42,18 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   const staging = createFramedSyncFileStaging(runtime.files);
   const noncePort = createFramedSyncFileSessionNoncePort(runtime.files);
   const controller = new AbortController();
+  const round = url.searchParams.has('request') ? parseRequestSyncPeerRound(
+    url.searchParams.get('peer_round_id'), url.searchParams.get('peer_round_mode')) : undefined;
+  const { lease, ownershipError } = acquireInboundRound(runtime, round);
   const disconnected = () => {
     if (!args.response.writableFinished) controller.abort(new Error('request_sync_peer_disconnected'));
   };
+  const completed = () => {
+    if (round && lease && (round.mode === 'finish' || round.mode === 'single')) {
+      desktopSyncPeerRoundOwner().finishInbound(runtime.auth.ok ? runtime.auth.device_id : '', round.id);
+    }
+  };
+  args.response.once('finish', completed);
   args.request.once('aborted', disconnected);
   args.response.once('close', disconnected);
   if (args.request.aborted || args.response.destroyed) disconnected();
@@ -49,12 +61,53 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     authenticate: () => runtime.auth,
     payloadBudget: runtime.payloadBudget,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
+    onProgress: () => lease?.touch(),
     onStream: async ({ context, stream }) => {
       if (url.searchParams.has('request')) {
-        return respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath), {
-          context, stream, url, groupKey: runtime.groupKey, signal: controller.signal
+        if (!round) throw new Error('sync_round_identity_missing');
+        if (ownershipError) throw ownershipError;
+        if (!lease) throw new Error('sync_round_identity_missing');
+        const reply = await respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath), {
+          context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
+          url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
+          onProgress: () => lease?.touch()
         });
+        return { ...reply, frames: touchRequestSyncStream(reply.frames, lease) };
       }
+      return respondLegacyStream(runtime, context, stream, noncePort, staging);
+    },
+    request: args.request,
+    response: args.response
+  }); } finally {
+    args.response.off('finish', completed);
+    args.request.off('aborted', disconnected);
+    args.response.off('close', disconnected);
+    if (round && lease && (round.mode === 'finish' || round.mode === 'single' ||
+        controller.signal.aborted || (round.mode === 'start' && args.response.statusCode !== 200))) {
+      desktopSyncPeerRoundOwner().finishInbound(runtime.auth.ok ? runtime.auth.device_id : '', round.id);
+    }
+  }
+  return true;
+}
+
+function acquireInboundRound(runtime: Awaited<ReturnType<typeof loadInboundRuntime>>,
+  round: ReturnType<typeof parseRequestSyncPeerRound> | undefined): {
+    lease: SyncPeerRoundLease | undefined; ownershipError: unknown
+  } {
+  try {
+    return { lease: round && runtime.auth.ok ? desktopSyncPeerRoundOwner().acceptInbound(
+      runtime.auth.device_id, round.id, round.mode === 'start' || round.mode === 'single') : undefined,
+    ownershipError: undefined };
+  } catch (ownershipError) { return { lease: undefined, ownershipError }; }
+}
+
+async function respondLegacyStream(
+  runtime: Awaited<ReturnType<typeof loadInboundRuntime>>,
+  context: Omit<import('../../lib/core/sync/framedSyncSession.js').FramedSyncSessionContext, 'sessionId'>,
+  stream: FramedSyncStreamBody<FramedSyncWireFrame>,
+  noncePort: ReturnType<typeof createFramedSyncFileSessionNoncePort>,
+  staging: ReturnType<typeof createFramedSyncFileStaging>
+) {
       const preamble = decodeFramedSyncPreamble(stream.preamble);
       if (preamble.contextKind === 'session') return respondDesktopFramedSyncInventory({
         files: runtime.files, context, db: runtime.db, groupKey: runtime.groupKey,
@@ -76,14 +129,6 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         staging,
         stream: inspected.stream
       });
-    },
-    request: args.request,
-    response: args.response
-  }); } finally {
-    args.request.off('aborted', disconnected);
-    args.response.off('close', disconnected);
-  }
-  return true;
 }
 
 function readHeader(request: http.IncomingMessage, name: string) {

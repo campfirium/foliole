@@ -1,6 +1,7 @@
 import type { DatabaseDriver, DatabaseExecuteResult, DatabaseRow, DatabaseStatement } from '../../lib/core/database/driver.js';
 
 import type { SqliteDatabase } from './connection.js';
+import { prepareCachedSqliteStatement } from './sqliteStatementCache.js';
 
 function toExecuteResult(result: { changes: number; lastInsertRowid: number | bigint }) : DatabaseExecuteResult {
   return {
@@ -12,7 +13,7 @@ function toExecuteResult(result: { changes: number; lastInsertRowid: number | bi
 export function createBetterSqlite3Driver(sqlite: SqliteDatabase): DatabaseDriver {
   const driver: DatabaseDriver = {
     prepare(sql: string) {
-      const statement = sqlite.prepare(sql);
+      const statement = prepareCachedSqliteStatement(sqlite, sql);
       const driverStatement: DatabaseStatement = {
         sql,
         run(params = []) {
@@ -28,13 +29,13 @@ export function createBetterSqlite3Driver(sqlite: SqliteDatabase): DatabaseDrive
       return driverStatement;
     },
     execute(sql: string, params = []) {
-      return toExecuteResult(sqlite.prepare(sql).run(...params));
+      return toExecuteResult(prepareCachedSqliteStatement(sqlite, sql).run(...params));
     },
     queryOne<T extends DatabaseRow = DatabaseRow>(sql: string, params = []) {
-      return sqlite.prepare(sql).get(...params) as T | undefined;
+      return prepareCachedSqliteStatement(sqlite, sql).get(...params) as T | undefined;
     },
     queryAll<T extends DatabaseRow = DatabaseRow>(sql: string, params = []) {
-      return sqlite.prepare(sql).all(...params) as T[];
+      return prepareCachedSqliteStatement(sqlite, sql).all(...params) as T[];
     },
     transaction<T>(execute: (driver: DatabaseDriver) => T): T {
       const wrapped = sqlite.transaction(() => execute(driver));

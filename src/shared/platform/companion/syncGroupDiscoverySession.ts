@@ -11,15 +11,9 @@ function isDesktopProvider(platform: string) {
   return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
 }
 
-function isMobileAdvertisement(candidate: CompanionNativeDiscoveryEvent['candidates'][number]) {
-  const platform = candidate.protocol_txt?.provider_platform ?? '';
-  return ['android-capacitor', 'ios-capacitor'].includes(platform);
-}
-
 function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDiscoverySnapshot {
   const incompatible = event.candidates.some((candidate) =>
-    !isMobileAdvertisement(candidate)
-    && evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
+    evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
   const status = incompatible ? 'incompatible' : 'waiting_anchor';
   return { candidates: [], change: event.change,
     error_code: incompatible ? 'protocol_incompatible' : null, status };
@@ -57,8 +51,7 @@ export async function startCompanionSyncGroupDiscoverySession(
       onSnapshot({ candidates: [], change: event.change, error_code: event.error_code, status: event.status });
       return;
     }
-    const desktopAdvertisements = event.candidates.filter((candidate) =>
-      !isMobileAdvertisement(candidate) && candidate.protocol_txt?.topology_role === 'anchor');
+    const desktopAdvertisements = event.candidates;
     if (desktopAdvertisements.length === 0) return void onSnapshot(searchingSnapshot(event));
     const candidates = await loadCompanionDiscoveryCandidates(desktopAdvertisements.map((candidate) => ({
       endpointUrl: candidate.endpoint_url,

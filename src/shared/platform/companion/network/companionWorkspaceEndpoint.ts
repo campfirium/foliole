@@ -1,5 +1,4 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
-import { isDesktopSyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
@@ -35,11 +34,8 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     ...options, requiredGroupId: group.group_id
   });
   const matches = discovered.filter((candidate) => {
-    const known = group.devices.find((device) =>
-      device.device_identity_key === candidate.discovery.provider_device_id);
     return candidate.compatibility.status === 'compatible'
       && candidate.discovery.group_id === group.group_id
-      && isDesktopSyncGroupPlatform(candidate.discovery.provider_platform ?? known?.platform ?? '')
       && candidate.discovery.provider_device_id !== group.local_device_identity_key;
   });
   if (matches.length === 0) {

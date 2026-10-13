@@ -1,6 +1,7 @@
 import { respondRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
+import { respondRequestSyncRoundControl } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
@@ -17,9 +18,12 @@ export function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHost, inp
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
   groupKey: Uint8Array;
   signal: AbortSignal;
+  onProgress?: () => void;
 }) {
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {
+    case 'round_finish': return respondRequestSyncRoundControl({ ...input,
+      roundId: input.url.searchParams.get('peer_round_id') ?? '' });
     case 'attachments': return respondRequestSyncAttachments(createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);

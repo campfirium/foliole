@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
+
 const runtime = vi.hoisted(() => ({ database: vi.fn(), resources: vi.fn() }));
 vi.mock('./framed/companionRequestSyncDatabaseRound.js', () => ({ runCompanionRequestSyncDatabaseRound: runtime.database }));
 vi.mock('./framed/companionRequestSyncResources.js', () => ({ continueCompanionRequestSyncResources: runtime.resources }));
@@ -7,6 +9,14 @@ vi.mock('./framed/companionRequestSyncPeerState.js', () => ({ requireCompanionRe
   (_group: string, device: string, epoch: string) => ({ sender_device_identity_key: device, library_epoch: epoch }) }));
 vi.mock('./syncGroupMemberStateStore.js', () => ({ loadCompanionSyncGroupMemberState: async () => ({ library_epoch: 'local-epoch' }) }));
 vi.mock('./syncGroupStore', () => ({ loadCompanionSyncGroup: async () => ({ group_id: 'group', local_device_identity_key: 'local' }) }));
+vi.mock('./framed/companionSyncPeerRounds.js', () => ({
+  withCompanionSyncPeerRound: async (_peer: string, run: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<unknown>) => {
+    const signal = new AbortController().signal;
+    return run({ id: 'd3f3cceb-206e-49eb-b24b-7c9db0859ae8', admitted: false,
+      lease: { signal, touch() {}, release() {} } }, signal);
+  },
+  withCompanionRequestSyncPeerRound: async (_context: unknown, _endpoint: string, _round: unknown, run: () => Promise<unknown>) => run()
+}));
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 

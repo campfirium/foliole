@@ -19,7 +19,7 @@ it('offers removal for a remote Device', () => {
   const onRemove = vi.fn();
   renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} disabled={false} group={group}
     onRemove={onRemove} onTogglePause={vi.fn()} removing={false} syncEnabled syncPaused={false}
-    topologyLabel={undefined} />);
+    />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
 
@@ -29,7 +29,7 @@ it('offers removal for a remote Device', () => {
 it('shows durable removal progress instead of a clickable action', () => {
   renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} disabled={false} group={group}
     onRemove={vi.fn()} onTogglePause={vi.fn()} removing syncEnabled syncPaused={false}
-    topologyLabel={undefined} />);
+    />);
 
   expect(screen.getByRole('button', { name: 'Removing…' })).toBeDisabled();
 });
@@ -37,7 +37,7 @@ it('shows durable removal progress instead of a clickable action', () => {
 it('shows the local device as offline when Sync is off', () => {
   renderWithLocalization(<SettingsSyncGroupDeviceRow device={group.devices[0]!} disabled={false} group={group}
     onRemove={vi.fn()} onTogglePause={vi.fn()} removing={false} syncEnabled={false} syncPaused={false}
-    topologyLabel="Finding sync anchor…" />);
+    />);
 
   expect(screen.getByText('Sync off')).toBeVisible();
   expect(screen.queryByText('Finding sync anchor…')).not.toBeInTheDocument();

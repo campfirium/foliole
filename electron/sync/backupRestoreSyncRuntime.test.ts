@@ -44,7 +44,7 @@ it('releases SQLite ownership before waiting for sync service reconciliation', a
       pending_join_request_count: 0,
       port: null,
       state: 'stopped',
-      topology_role: 'observing',
+      topology_role: null,
       topology_status: 'observing'
     }); }));
 

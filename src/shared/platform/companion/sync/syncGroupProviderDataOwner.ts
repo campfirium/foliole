@@ -25,6 +25,7 @@ import {
 import { resumeCompanionFramedSyncRespondingPeer } from './framed/companionFramedSyncPeerRoutes';
 import { rememberCompanionRequestSyncProviderState } from './framed/companionRequestSyncPeerState';
 import { respondCompanionRequestSync } from './framed/companionRequestSyncResponse';
+import { touchCompanionSyncPeerRound } from './framed/companionSyncPeerRounds.js';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -94,6 +95,7 @@ function replyFailure(request: CompanionSyncGroupDataRequest, error: unknown) {
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
+  if (operation === CONTRACT.operations.touchRequestSyncRound) return touchCompanionSyncPeerRound(payload);
   if (operation === CONTRACT.operations.respondRequestSync) return respondCompanionRequestSync(payload);
   if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async (db) => {
     await assertSyncGroupJoinAdmission(db, payload);

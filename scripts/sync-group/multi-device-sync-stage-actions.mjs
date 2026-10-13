@@ -80,7 +80,7 @@ export async function syncAdmittedCToAndroid({
 
 export function waitForCurrentAndroidProvider(group, waitForProvider = waitForCurrentProvider) {
   if (!group?.group_id) throw new Error('Android B Sync Group identity is unavailable.');
-  return waitForProvider({ groupId: group.group_id, topologyRole: 'member' });
+  return waitForProvider({ groupId: group.group_id, advertisedPlatform: 'android-capacitor' });
 }
 
 async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stage }) {

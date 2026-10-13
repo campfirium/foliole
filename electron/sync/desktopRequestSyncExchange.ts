@@ -1,4 +1,5 @@
 import type { RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { requestSyncPeerRoundPath, touchRequestSyncStream, type RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
@@ -10,15 +11,23 @@ export function createDesktopRequestSyncExchange(input: {
   groupSecret: string;
   endpointUrl: string;
   signal?: AbortSignal;
+  peerRound?: RequestSyncPeerRound;
 }): RequestSyncExchange {
   return { ...input, request: async (pathWithQuery, stream, consume) => {
-    const body = await prepareDesktopRequestSyncBody(stream);
+    const body = await prepareDesktopRequestSyncBody({ ...stream,
+      frames: touchRequestSyncStream(stream.frames, input.peerRound?.lease) });
     const { context } = input;
     const response = await postDesktopFramedSync({ body, endpointUrl: input.endpointUrl,
       groupId: context.groupId, localDeviceId: context.initiatorDeviceId,
       localLibraryEpoch: context.initiatorLibraryEpoch, remoteDeviceId: context.responderDeviceId,
-      remoteLibraryEpoch: context.responderLibraryEpoch, secret: input.groupSecret, pathWithQuery,
+      remoteLibraryEpoch: context.responderLibraryEpoch, secret: input.groupSecret,
+      pathWithQuery: requestSyncPeerRoundPath(pathWithQuery, input.peerRound),
+      ...(input.peerRound ? { onProgress: () => input.peerRound?.lease.touch() } : {}),
       ...(input.signal ? { signal: input.signal } : {}) });
-    return consume(response.stream);
+    try {
+      const result = await consume({ ...response.stream, frames: touchRequestSyncStream(response.stream.frames, input.peerRound?.lease) });
+      if (input.peerRound) input.peerRound.admitted = true;
+      return result;
+    } finally { await response.stream.frames[Symbol.asyncIterator]().return?.(); }
   } };
 }

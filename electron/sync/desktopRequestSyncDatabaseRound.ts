@@ -3,6 +3,7 @@ import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSync
 import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
+import type { RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
@@ -24,6 +25,7 @@ export async function runDesktopRequestSyncDatabaseRound(input: {
   peerState: SyncGroupMemberStatePayload;
   restoreId?: string;
   signal?: AbortSignal;
+  peerRound?: RequestSyncPeerRound;
 }) {
   const runtime = await runWithDatabaseConnectionOwner(() => {
     const key = loadDesktopWorkgroupKey(input.peer.group_id);
@@ -41,6 +43,7 @@ export async function runDesktopRequestSyncDatabaseRound(input: {
     responderDeviceId: input.peer.peer_device_id, responderLibraryEpoch: input.remoteLibraryEpoch } as const;
   const exchange = { context, endpointUrl: input.peer.endpoint_url, groupSecret: runtime.groupSecret,
     groupKey: new Uint8Array(Buffer.from(runtime.groupSecret, 'base64url')),
+    ...(input.peerRound ? { peerRound: input.peerRound } : {}),
     ...(input.signal ? { signal: input.signal } : {}) };
   const port: import('../../lib/core/sync/requestSyncDatabaseRound.js').RequestSyncDatabaseRoundPort = {
     exchangeInventory: async () => exchangeDesktopRequestSyncInventory(host, { ...exchange,

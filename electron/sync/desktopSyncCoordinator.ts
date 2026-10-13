@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import type { SyncTriggerReason, SyncTriggerResult } from '../../lib/platform/syncTriggerContract.js';
 import { syncTriggerError } from '../../lib/platform/syncTriggerContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -97,10 +98,16 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
     }
     let complete = true;
     for (const peer of peers) {
-      const outcome = await continueDesktopSyncGroupSync(peer, activity);
-      if (!outcome?.complete) complete = false;
+      try {
+        const outcome = await continueDesktopSyncGroupSync(peer, activity);
+        if (!outcome?.complete) complete = false;
+      } catch (error) {
+        if (!isSyncPeerRoundRetryableError(error)) throw error;
+        complete = false;
+      }
     }
-    if (!complete) throw new Error('sync_group_sync_incomplete');
+    if (!complete) return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+      run_id: runId, started_at: startedAt, status: 'pending' });
     await runWithDatabaseConnectionOwner(() => markWatchedConflictDecisionsSynced(startedAt));
     await refreshKeepImportMonitorFromSettings();
     const result = await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
@@ -118,8 +125,10 @@ async function persistResult(result: SyncTriggerResult) {
   const context: DesktopSyncActivityContext = { runId: result.run_id,
     reason: result.reason, startedAt: result.started_at };
   await recordDesktopSyncActivity(context, { direction: 'local', kind: 'run_finished',
-    message: result.error ?? (result.status === 'skipped' ? 'No available device' : 'Local sync round completed'),
-    result: result.status === 'skipped' ? 'waiting' : result.status, stage: 'run', status: result.status });
+    message: result.error ?? (result.status === 'skipped' ? 'No available device'
+      : result.status === 'pending' ? 'Sync remains pending.' : 'Local sync round completed'),
+    result: result.status === 'skipped' ? 'waiting' : result.status === 'pending' ? 'partial' : result.status,
+    stage: 'run', status: result.status === 'pending' ? 'skipped' : result.status });
   await runWithDatabaseConnectionOwner(() => saveJsonSetting(RESULT_SETTING_KEY, result));
   return result;
 }

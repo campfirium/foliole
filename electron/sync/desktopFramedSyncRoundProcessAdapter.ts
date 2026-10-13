@@ -25,6 +25,7 @@ import {
   readDesktopFramedSyncRoundInventory,
   readDesktopFramedSyncRoundInventoryEntry
 } from './desktopFramedSyncRoundInventory.js';
+import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
@@ -69,6 +70,7 @@ const command = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('request_reconcile'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('reconcile'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('expire_completions'), now: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal('trigger_sync') }),
   z.object({ kind: z.literal('read_inventory') }),
   z.object({ globalId: z.string().min(1), kind: z.literal('read_entry'),
     objectType: z.string().min(1) }),
@@ -105,6 +107,7 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
   const controlLog: string[] = [];
   return async (value: unknown): Promise<unknown> => {
     const request = command.parse(value);
+    if (request.kind === 'trigger_sync') return runDesktopSyncCoordinator('manual');
     if (request.kind === 'remember_peer') return saveDesktopSyncGroupRoute({
       endpoint_url: request.peerOrigin, group_id: input.groupId, local_device_id: input.local.deviceId,
       peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop'

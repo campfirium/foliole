@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 import {
-  desktopAnchorAdvertisements,
+  companionPeerAdvertisements,
   waitForCompanionDesktopAdvertisements
 } from './companionDesktopDiscoveryWait';
 
@@ -13,10 +13,12 @@ function candidate(role = 'anchor', groupId = 'group-1') {
 
 afterEach(() => vi.useRealTimers());
 
-it('keeps only desktop anchor advertisements', () => {
-  expect(desktopAnchorAdvertisements({ candidates: [candidate(), candidate('member'), {
+it('keeps desktop and mobile advertisements regardless of legacy role', () => {
+  const mobile = {
     ...candidate(), protocol_txt: { provider_platform: 'android-capacitor', topology_role: 'anchor' }
-  }] })).toEqual([candidate()]);
+  };
+  expect(companionPeerAdvertisements({ candidates: [candidate(), candidate('member'), mobile] }))
+    .toEqual([candidate(), candidate('member'), mobile]);
 });
 
 it('waits for a late desktop anchor and releases the discovery session', async () => {

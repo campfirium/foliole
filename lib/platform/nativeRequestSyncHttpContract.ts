@@ -10,6 +10,7 @@ export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPaylo
   sync_group_id: string;
   receiver_device_id: string;
   receiver_library_epoch: string;
+  peer_round_id?: string;
 }
 
 export interface NativeRequestSyncHttpPlugin {

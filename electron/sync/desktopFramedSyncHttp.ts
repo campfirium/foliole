@@ -4,6 +4,7 @@ import https from 'node:https';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
+import { requestSyncPeerRoundPath } from '../../lib/core/sync/requestSyncPeerRound.js';
 
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
@@ -31,12 +32,13 @@ type PostInput = {
   remoteLibraryEpoch: string;
   secret: string;
   signal?: AbortSignal;
+  onProgress?: () => void;
 };
 
 export async function postDesktopFramedSync(args: PostInput) {
   const response = await postDesktopFramedSyncBytes(args);
   try {
-    const stream = await readFramedSyncStream(response.response, args.payloadBudget, { reuseCiphertext: true });
+    const stream = await readFramedSyncStream(progressBytes(response.response, args.onProgress), args.payloadBudget, { reuseCiphertext: true });
     return { context: response.context, stream };
   } catch (error) { response.response.destroy(); throw error; }
 }
@@ -47,10 +49,13 @@ export async function postDesktopFramedSyncBytes(args: PostInput) {
 }
 
 async function postOwnedBody(args: PostInput) {
+  const route = new URL(args.pathWithQuery, args.endpointUrl);
+  const roundPath = route.searchParams.has('request') && !route.searchParams.has('peer_round_id')
+    ? requestSyncPeerRoundPath(args.pathWithQuery) : args.pathWithQuery;
   const pathWithQuery = framedSyncPathWithIdentity({
     initiatorDeviceId: args.localDeviceId,
     initiatorLibraryEpoch: args.localLibraryEpoch,
-    pathWithQuery: args.pathWithQuery,
+    pathWithQuery: roundPath,
     responderDeviceId: args.remoteDeviceId,
     responderLibraryEpoch: args.remoteLibraryEpoch
   });
@@ -73,7 +78,7 @@ async function postOwnedBody(args: PostInput) {
   const request = transport.request(url, { headers, method: 'POST',
     ...(args.signal ? { signal: args.signal } : {}) });
   const responsePromise = waitForResponse(request);
-  const sendPromise = writeDesktopFramedSyncHttpBody(request, encodeFramedSyncHttpBody(args.body));
+  const sendPromise = writeDesktopFramedSyncHttpBody(request, progressBytes(encodeFramedSyncHttpBody(args.body), args.onProgress));
   const [response] = await Promise.all([responsePromise, sendPromise]).catch(async (error: unknown) => {
     request.destroy(error instanceof Error ? error : undefined);
     await Promise.allSettled([responsePromise, sendPromise]);
@@ -89,6 +94,10 @@ async function postOwnedBody(args: PostInput) {
     responderLibraryEpoch: args.remoteLibraryEpoch
   };
   return { context, response };
+}
+
+async function* progressBytes(source: AsyncIterable<Uint8Array>, onProgress?: () => void) {
+  for await (const bytes of source) { onProgress?.(); yield bytes; }
 }
 
 function ensureTrailingSlash(value: string) {

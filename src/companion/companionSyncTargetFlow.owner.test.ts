@@ -2,13 +2,14 @@ import { expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   exchangeMemberState: vi.fn(),
+  recordEvent: vi.fn(async () => undefined),
   run: vi.fn()
 }));
 
 vi.mock('./companionSyncRunOwner', () => ({ runCompanionSyncAsOwner: mocks.run }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
-  recordCompanionWorkspaceSyncEvent: vi.fn(async () => undefined),
+  recordCompanionWorkspaceSyncEvent: mocks.recordEvent,
   saveCompanionWorkspaceSyncEndpoint: vi.fn(async () => undefined)
 }));
 vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => ({
@@ -65,4 +66,23 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
   expect(runStreamSync).toHaveBeenCalledWith(expect.objectContaining({ framedPeer: {
     deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 24
   } }));
+});
+
+it('keeps a timed-out foreground round pending for retry without reporting success or failure', async () => {
+  mocks.exchangeMemberState.mockRejectedValueOnce(new DOMException('Discovery timed out', 'TimeoutError'));
+  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work(), mode: 'started', runId }));
+  mocks.recordEvent.mockClear();
+  const setError = vi.fn();
+  const setSyncProgress = vi.fn();
+  const runStreamSync = vi.fn();
+  const { tryForegroundAutoSyncTarget } = await import('./companionSyncTargetFlow');
+  await expect(tryForegroundAutoSyncTarget({ cancelled: () => false, setError, setSyncProgress,
+    setState: vi.fn(), setStatus: vi.fn(), state: { endpoint_url: 'http://peer:38641', last_synced_at: null,
+      remembered_targets: [], sync_events: [], sync_onboarding_status: 'completed', workspace_snapshot: null }
+  }, { endpointUrl: 'http://peer:38641' }, runStreamSync)).resolves.toBe('backlog');
+  expect(runStreamSync).not.toHaveBeenCalled();
+  expect(setError.mock.calls.every(([error]) => error === null)).toBe(true);
+  expect(setSyncProgress).toHaveBeenLastCalledWith(null);
+  expect(mocks.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ kind: 'run_finished',
+    result: 'partial', status: 'skipped' }));
 });

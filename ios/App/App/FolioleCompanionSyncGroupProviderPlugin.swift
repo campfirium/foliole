@@ -31,8 +31,7 @@ extension FolioleCompanionSyncPlugin {
                 "provider_device_id": try self.requiredString(call, ["deviceId": "device_id"], "deviceId"),
                 "provider_device_name": try self.requiredString(call, ["deviceName": "device_name"], "deviceName"),
                 "provider_platform": try self.requiredString(call, ["platform": "platform"], "platform"),
-                "runtime_instance_id": runtimeId,
-                "topology_role": "member"
+                "runtime_instance_id": runtimeId
             ]
             _ = try FolioleCompanionSyncGroupJoinService.shared.install(
                 groupInfo: info, discovery: discovery, dataBridge: self.groupData,

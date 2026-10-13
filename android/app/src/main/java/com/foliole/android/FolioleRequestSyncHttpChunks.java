@@ -11,7 +11,7 @@ final class FolioleRequestSyncHttpChunks {
     interface Check { void run() throws Exception; }
     private FolioleRequestSyncHttpChunks() {}
 
-    static void write(FramedSyncFiles files, String directory, int count, OutputStream output, Check check) throws Exception {
+    static void write(FramedSyncFiles files, String directory, int count, OutputStream output, Check check, Check progress) throws Exception {
         if (count < 1) throw new IllegalArgumentException("request_sync_http_request_invalid");
         for (int index = 0; index < count; index++) {
             check.run();
@@ -20,10 +20,11 @@ final class FolioleRequestSyncHttpChunks {
                 throw new IllegalArgumentException("request_sync_http_request_truncated");
             }
             output.write(chunk);
+            progress.run();
         }
     }
 
-    static JSObject read(FramedSyncFiles files, String directory, InputStream input, Check check) throws Exception {
+    static JSObject read(FramedSyncFiles files, String directory, InputStream input, Check check, Check progress) throws Exception {
         byte[] buffer = new byte[CHUNK_BYTES];
         int count = 0;
         long length = 0;
@@ -39,6 +40,7 @@ final class FolioleRequestSyncHttpChunks {
             if (size == 0) break;
             files.write(directory + "/http-in-" + count++, size == buffer.length ? buffer : Arrays.copyOf(buffer, size));
             length += size;
+            progress.run();
         }
         JSObject result = new JSObject();
         result.put("response_chunk_count", count);

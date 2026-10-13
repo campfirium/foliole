@@ -60,13 +60,16 @@ it('reports an old bridge as incompatible without a timed fallback', async () =>
   expect(runtime.load).not.toHaveBeenCalled();
 });
 
-it('shows that a mobile-only group is waiting for a desktop anchor', async () => {
+it('offers a mobile-only group without waiting for a desktop', async () => {
   const subscription: { listener?: (event: CompanionNativeDiscoveryEvent) => void } = {};
   runtime.addListener.mockImplementation(async (_name, next) => {
     subscription.listener = next;
     return { remove: runtime.remove };
   });
   const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  runtime.load.mockResolvedValue([{ compatibility: { status: 'compatible' }, endpointUrl: 'http://iphone:38641',
+    discovery: { group_id: 'group-1', group_tag: 'tag-1', group_display_name: 'Phone',
+      provider_device_id: 'phone', provider_device_name: 'Phone', provider_platform: 'ios-capacitor' } }]);
   await startCompanionSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot));
 
   subscription.listener?.({ candidates: [{
@@ -74,8 +77,9 @@ it('shows that a mobile-only group is waiting for a desktop anchor', async () =>
     protocol_txt: { provider_platform: 'ios-capacitor' }
   }], change: 'found', error_code: null, status: 'results' });
 
-  expect(snapshots.at(-1)).toEqual(expect.objectContaining({ candidates: [], status: 'waiting_anchor' }));
-  expect(runtime.load).not.toHaveBeenCalled();
+  await vi.waitFor(() => expect(snapshots.at(-1)).toEqual(expect.objectContaining({ status: 'results',
+    candidates: [expect.objectContaining({ provider_device_id: 'phone' })] })));
+  expect(runtime.load).toHaveBeenCalledOnce();
 });
 
 it('publishes one join result when several members advertise the same Sync Group', async () => {

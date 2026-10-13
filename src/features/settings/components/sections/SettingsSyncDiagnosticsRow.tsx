@@ -26,9 +26,6 @@ function SnapshotStatus({ result }: { result: DesktopSyncDiagnosticsPayload }) {
   const state = !overview.sync_enabled ? 'off' : overview.sync_paused ? 'paused' : result.active_run ? 'running' : 'idle';
   return <section className="space-y-3">
     <SettingsRow title={t(`${PREFIX}.current`)} description={t(`${PREFIX}.state.${state}`)} />
-    {overview.sync_enabled && !overview.sync_paused ? <SettingsRow title={t(`${PREFIX}.connection`)}
-      description={t(`settings.companionSync.group.topology.${overview.server_status.topology_status === 'ready'
-        ? overview.server_status.topology_role : overview.server_status.topology_status}`)} /> : null}
     {overview.discovery_error ? <SettingsErrorState title={t(`${PREFIX}.discoveryIssue`)}
       description={t(`settings.companionSync.group.discovery.active_${overview.discovery_error}`)} /> : null}
     {overview.server_status.last_error ? <SettingsErrorState title={t(`${PREFIX}.failed`)}

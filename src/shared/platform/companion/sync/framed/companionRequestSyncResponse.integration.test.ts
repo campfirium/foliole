@@ -17,14 +17,16 @@ import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/reques
 import type { RequestSyncExchange } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
+import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 const runtime = vi.hoisted(() => ({ db: undefined as DbPort | undefined, files: undefined as FramedSyncFilePort | undefined }));
-vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompanionDatabaseOwner: () => ({
+const databaseOwner = {
   databasePath: '/test-library',
   runWriter: <T>(read: (db: DbPort) => Promise<T>) => read(runtime.db!),
   read: <T>(read: (db: DbPort) => Promise<T>) => read(runtime.db!),
   readSnapshot: <T>(read: (db: DbPort) => Promise<T>) => read(runtime.db!)
-}) }));
+};
+vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompanionDatabaseOwner: () => databaseOwner }));
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({
   library_key: '/test-library', generation_id: 'generation'
 }) }));
@@ -32,8 +34,10 @@ vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFile
 vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
   subscribeNativeAppBackground: async () => () => undefined }));
 
+
 import { rememberCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 import { respondCompanionRequestSync } from './companionRequestSyncResponse.js';
+import { closeCompanionSyncPeerRounds } from './companionSyncPeerRounds.js';
 
 it.each([false, true])('applies the native handoff and cleans a late rejected reply=%s', async lateReply => {
   await mkdir('.tmp/artifacts', { recursive: true });
@@ -65,7 +69,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       for (let offset = 0; offset < bytes.length; offset += size) {
         await runtime.files!.write(`${directory}/http-in-${offset / size}`, bytes.subarray(offset, offset + size));
       }
-      const payload = { directory, library_key: '/test-library', generation_id: 'generation', mode: 'object',
+      const payload = { peer_round_id: crypto.randomUUID(), peer_round_mode: 'single', directory, library_key: '/test-library', generation_id: 'generation', mode: 'object',
         group_id: 'group', initiator_device_id: 'peer', initiator_library_epoch: 'peer-epoch',
         responder_device_id: 'local', responder_library_epoch: 'local-epoch', object_type: 'node', global_id: 'topic',
         request_chunk_count: Math.ceil(bytes.length / size), request_byte_length: bytes.length };
@@ -89,9 +93,10 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       expect((await target.current()).body_text).toBe(body);
       expect(await target.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toContainEqual({ adopted_version_id: 'head' });
       expect(await target.db.query('SELECT count(*) AS count FROM framed_sync_inbound_transfers')).toEqual([{ count: 0 }]);
+      closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
       await runtime.files!.remove(directory);
     });
-  } finally { source.sqlite.close(); target.sqlite.close(); await rm(root, { force: true, recursive: true }); }
+  } finally { closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); source.sqlite.close(); target.sqlite.close(); await rm(root, { force: true, recursive: true }); }
 });
 
 function seed(device: ReturnType<typeof textDevice>, id: string, groupKey: Uint8Array) {
@@ -162,7 +167,7 @@ it.each(['push', 'pull', 'cancel-pull', 'lost-push'])('isolates objects through 
         .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
     }
     expect(modes).toEqual(mode === 'lost-push' ? ['objects', 'objects'] : [pushing ? 'objects' : 'pulls']);
-  } finally { initiator.sqlite.close(); responder.sqlite.close(); await rm(root, { force: true, recursive: true }); }
+  } finally { closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); initiator.sqlite.close(); responder.sqlite.close(); await rm(root, { force: true, recursive: true }); }
 });
 
 async function assertLostBatchResponse(transfer: Promise<unknown>, retry: () => Promise<unknown>, source: DbPort, target: DbPort) {
@@ -190,7 +195,7 @@ function nativeBatchExchange(modes: string[], loseResponse = false): RequestSync
     for await (const chunk of encodeFramedSyncStream(body)) chunks.push(chunk);
     const bytes = Buffer.concat(chunks);
     await runtime.files!.write(`${directory}/http-in-0`, bytes);
-    const response = await respondCompanionRequestSync({ directory, mode,
+    const response = await respondCompanionRequestSync({ peer_round_id: crypto.randomUUID(), peer_round_mode: 'single', directory, mode,
       library_key: '/test-library', generation_id: 'generation', group_id: 'group',
       initiator_device_id: 'peer', initiator_library_epoch: 'peer-epoch', responder_device_id: 'local',
       responder_library_epoch: 'local-epoch', request_chunk_count: 1, request_byte_length: bytes.length });
@@ -201,6 +206,6 @@ function nativeBatchExchange(modes: string[], loseResponse = false): RequestSync
       if (loseResponse) throw new Error('test_response_lost');
       return await consume(stream);
     }
-    finally { await stream.frames[Symbol.asyncIterator]().return?.(); await runtime.files!.remove(directory); }
+    finally { closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); await stream.frames[Symbol.asyncIterator]().return?.(); await runtime.files!.remove(directory); }
   };
 }

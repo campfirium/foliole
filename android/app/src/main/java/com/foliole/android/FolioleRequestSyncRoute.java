@@ -18,31 +18,45 @@ final class FolioleRequestSyncRoute {
         OutputStream output, Map<String, String> query, String groupId, File temporary,
         FramedSyncPayloadBudget owner) throws Exception {
         String mode = query.get("request");
-        if (!java.util.Set.of("inventory", "pull", "object", "pulls", "objects", "attachments").contains(mode)) {
+        if (!java.util.Set.of("inventory", "pull", "object", "pulls", "objects", "attachments", "round_finish").contains(mode)) {
             throw new IllegalArgumentException("request_sync_mode_invalid");
         }
         FramedSyncFiles files = new FramedSyncFiles(context, owner.libraryKey());
         String directory = "requests/" + UUID.randomUUID();
         File response = File.createTempFile("request-sync-response-", ".body", temporary);
         try {
-            var chunks = FolioleRequestSyncHttpChunks.read(files, directory, input, () -> check(owner));
+            FolioleRequestSyncHttpChunks.Check progress = () -> touchRound(bridge, owner,
+                query.get("initiator_device_id"), query.get("peer_round_id"), "inbound", false);
+            var chunks = FolioleRequestSyncHttpChunks.read(files, directory, input, () -> check(owner), () -> {
+                if ("continue".equals(query.get("peer_round_mode")) || "finish".equals(query.get("peer_round_mode"))) progress.run();
+            });
             JSONObject payload = new JSONObject().put("directory", directory).put("mode", mode)
                 .put("library_key", owner.libraryKey()).put("generation_id", owner.generationId())
                 .put("group_id", groupId).put("request_chunk_count", chunks.getInt("response_chunk_count"))
                 .put("request_byte_length", chunks.getLong("response_byte_length"));
             for (String key : new String[] { "initiator_device_id", "initiator_library_epoch", "responder_device_id",
-                    "responder_library_epoch", "object_type", "global_id" }) {
+                    "responder_library_epoch", "object_type", "global_id", "peer_round_id", "peer_round_mode" }) {
                 if (query.containsKey(key)) payload.put(key, query.get(key));
             }
             JSONObject result = bridge.request("respond_request_sync", payload, owner);
             try (var body = new FileOutputStream(response)) {
-                FolioleRequestSyncHttpChunks.write(files, directory, result.getInt("response_chunk_count"), body, () -> check(owner));
+                FolioleRequestSyncHttpChunks.write(files, directory, result.getInt("response_chunk_count"), body, () -> check(owner), progress);
             }
-            FolioleCompanionHttpResponse.framed(output, response, query.get("responder_device_id"), query.get("responder_library_epoch"));
+            FolioleCompanionHttpResponse.framed(output, response, query.get("responder_device_id"), query.get("responder_library_epoch"), progress);
+            if ("single".equals(query.get("peer_round_mode")) || "finish".equals(query.get("peer_round_mode"))) {
+                touchRound(bridge, owner, query.get("initiator_device_id"), query.get("peer_round_id"), "inbound", true);
+            }
         } finally {
             try { files.remove(directory); }
             finally { java.nio.file.Files.deleteIfExists(response.toPath()); }
         }
+    }
+
+    static void touchRound(FolioleCompanionSyncGroupDataBridge bridge, FramedSyncPayloadBudget owner,
+        String peer, String roundId, String direction, boolean finish) throws Exception {
+        bridge.request("touch_request_sync_round", new JSONObject().put("library_key", owner.libraryKey())
+            .put("generation_id", owner.generationId()).put("peer_device_id", peer).put("peer_round_id", roundId)
+            .put("direction", direction).put("finish_round", finish), owner);
     }
 
     private static void check(FramedSyncPayloadBudget owner) {

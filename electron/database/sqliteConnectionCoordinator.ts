@@ -30,7 +30,11 @@ export class SqliteConnectionCoordinator {
   private readonly waitingOwners: WaitingOwner[] = [];
   private activeOwner: SqliteConnectionOwner | null = null;
 
-  constructor(private readonly database = { name: 'unbound', readonly: false }) {}
+  private readonly database: { name: string; readonly: boolean };
+
+  constructor(database = { name: 'unbound', readonly: false }) {
+    this.database = database;
+  }
 
   private trace(event: string, owner: SqliteConnectionOwner) {
     if (!diagnosticChannel.hasSubscribers) return;
