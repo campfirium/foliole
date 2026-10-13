@@ -35,6 +35,22 @@ const identities = anchors.map((deviceAnchor, index) => createSyncGroupDeviceIde
 beforeEach(() => databases.splice(0));
 afterEach(() => databases.splice(0).forEach((database) => database.close()));
 
+it('shares active and departed device identities without including the stored group key', () => {
+  const database = deviceDatabase(0, [1]);
+  leaveDesktopSyncGroupDevice(identities[1]!.identity_key, '2026-09-15T01:00:00.000Z');
+  const state = loadDesktopSyncGroupMemberState();
+  expect(state.devices.map(device => ({ id: device.device_identity_key, state: device.state })))
+    .toEqual(expect.arrayContaining([
+      { id: identities[0]!.identity_key, state: 'active' },
+      { id: identities[1]!.identity_key, state: 'left' }
+    ]));
+  const key = database.prepare('SELECT workgroup_key FROM sync_groups').pluck().get();
+  expect(key).toBe(Buffer.alloc(32, 4).toString('base64url'));
+  const serialized = JSON.stringify(state);
+  expect(serialized).not.toContain('workgroup_key');
+  expect(serialized).not.toContain(String(key));
+});
+
 it('completes an offline target removal after every Device in the initiator list confirms', () => {
   const a = deviceDatabase(0, [1, 2]);
   const b = deviceDatabase(1, [0, 2]);
