@@ -22,19 +22,23 @@ import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash } from '../../lib/core/sync/currentParentOrder.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { restoreOwnedFramedSyncNode } from '../../lib/core/sync/framedSyncNodeRecordSource.js';
+import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
+import { readFramedSyncObjectPayload } from '../../lib/core/sync/framedSyncObjectStatePayload.js';
+import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
+import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
 import { upsertExternalDocuments } from './externalDocuments.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-import {
-  SYNC_PACK_CONTRACT_IMPORT_SOURCES,
-  SYNC_PACK_CONTRACT_TABLES
-} from './syncPackContractExpectedRows.js';
-import { readSyncPackContractRows } from './syncPackContractFixtureReader.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
-const CONTRACT_FIXTURE_PATH = path.resolve(process.cwd(), 'android/app/src/androidTest/assets/sync-pack-contract.syncpack');
 let tempRoot = '';
 
 beforeEach(async () => {
@@ -62,7 +66,7 @@ function insertNodeSyncState() {
        manual_child_order, title, is_title_manual, hide_title_heading, opening_text, content,
        body_blob_hash, virtual_filter, reveal, anchor_link, image_regions,
        import_source_fingerprint, import_content_fingerprint, current_version_id, created_at, updated_at
-     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ver_contract-v1', ?, ?)`,
+     ) VALUES (?, 'folder', 4, 0.92, 0, 1, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
     ['node-1', '["child-2","child-1"]', 'Node 1', 'Node opening preview',
       'node body must stay out of pack', bodyHash, '{"kind":"manual"}', 'Contract answer',
       '{"id":"anchor-1","kind":"highlight"}', '[{"source":"contract"}]',
@@ -73,12 +77,6 @@ function insertNodeSyncState() {
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
     ) VALUES ('node', 'node-1', 1, 'node-hash', 'desktop', '2026-04-27T00:00:00.000Z', 1)`
-  );
-  driver.execute(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
-     ) VALUES ('ver_contract-v1', 'node-1', NULL, 'desktop',
-       '2026-04-27T00:00:00.000Z', 'node-hash', '', '{"id":"node-1","title":"Node 1"}')`
   );
   driver.execute(
     'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
@@ -158,67 +156,55 @@ function insertReadwiseIdentitySyncState() {
     '2026-04-27T00:03:00.000Z',1)`);
 }
 
-async function buildContractFixturePack(outputPath: string) {
-  openDatabaseConnection().driver.execute(
-    "UPDATE sync_state_sequence SET source_epoch = 'source-contract-fixture' WHERE singleton_id = 1"
-  );
+async function prepareCurrentFacts() {
   insertNodeSyncState();
   insertNodeAttachmentRows();
   insertExternalDocumentSyncState();
   insertReadwiseIdentitySyncState();
-  return buildDesktopSyncPack({
-    createdAt: '2026-04-27T02:00:00.000Z',
-    fromPeerId: 'authorization-desktop-fixture',
-    fromStateSeq: 0,
-    outputPath,
-    packId: 'sync-pack-contract-v1',
-    toPeerId: 'android-fixture'
-  });
+  const { driver, sqlite } = openDatabaseConnection();
+  flushNodeSyncVersionWithDriver(driver, 'node-1', 'desktop', '2026-04-27T00:00:00.000Z', 'ver_contract-v1');
+  const port = createBetterSqliteDbPort(sqlite);
+  const payload = await readFramedSyncObjectPayload(port, { objectType: 'import_source', globalId: 'source-contract' });
+  driver.execute("UPDATE sync_object_state SET content_hash = ? WHERE object_type = 'import_source'", [
+    computeSyncContentHash('import_source', JSON.parse(payload!))
+  ]);
+  return port;
 }
 
-it('keeps the Android sync pack contract fixture deterministic', async () => {
-  const generatedPath = path.join(tempRoot, 'sync-pack-contract.syncpack');
-  await buildContractFixturePack(generatedPath);
-  const generatedBytes = await fs.readFile(generatedPath);
-  const expectedRows = {
-    externalDocuments: [expect.objectContaining({ content: '# External Doc\n\nOwned external body', document_id: 'folder-1:doc.md' })],
-    manifest: expect.objectContaining({
-      pack_id: 'sync-pack-contract-v1',
-      tables: SYNC_PACK_CONTRACT_TABLES
-    }),
-    nodeResources: [{ id: 'node-1', resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }]) }],
-    parentChildOrders: [expect.objectContaining({ object_id: ROOT_CHILD_ORDER_ID })],
-    importSources: SYNC_PACK_CONTRACT_IMPORT_SOURCES,
-    nodeVersions: [expect.objectContaining({
-      object_id: 'node-1',
-      parent_version_id: null,
-      version_id: 'ver_contract-v1'
-    })],
-    nodes: [expect.objectContaining({
-      anchor_link: '{"id":"anchor-1","kind":"highlight"}',
-      content: '',
-      desired_retention: 0.92,
-      enable_short_term: 0,
-      id: 'node-1',
-      image_regions: '[{"source":"contract"}]',
-      import_content_fingerprint: 'content-contract',
-      import_source_fingerprint: 'source-contract',
-      manual_child_order: '["child-2","child-1"]',
-      opening_text: 'Node opening preview',
-      priority: 4,
-      reveal: 'Contract answer',
-      sequential_reading_enabled: 1,
-      virtual_filter: '{"kind":"manual"}'
-    })]
-  };
-  expect(readSyncPackContractRows(generatedPath, tempRoot)).toMatchObject(expectedRows);
-
-  if (process.env.UPDATE_SYNC_PACK_CONTRACT_FIXTURE === '1') {
-    await fs.mkdir(path.dirname(CONTRACT_FIXTURE_PATH), { recursive: true });
-    await fs.writeFile(CONTRACT_FIXTURE_PATH, generatedBytes);
-  }
-
-  const fixtureBytes = await fs.readFile(CONTRACT_FIXTURE_PATH);
-  expect(generatedBytes.equals(fixtureBytes)).toBe(true);
-  expect(readSyncPackContractRows(CONTRACT_FIXTURE_PATH, tempRoot)).toMatchObject(expectedRows);
+it('preserves the original contract metadata and complete import identities through current request snapshots', async () => {
+  const port = await prepareCurrentFacts();
+  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(port), remote: [] });
+  const files = createDesktopFramedSyncFiles(path.join(tempRoot, 'request-contract'));
+  const states: Array<{ object_type: string; payload_json: string | null }> = [];
+  const nodes: NativeSyncNodeRecord[] = [];
+  const externalBodies: string[] = [];
+  for (const difference of differences) await withRequestSyncFiles(files, async request => {
+    await writeRequestSyncSnapshot(port, difference, request);
+    for await (const fact of request.readFacts()) {
+      if (fact.kind === 2) nodes.push(await restoreOwnedFramedSyncNode(port, fact, (_db, blob) => request.loadBody(blob)));
+      if (fact.kind === 1) {
+        states.push(restoreFramedSyncObjectStateFact(fact));
+        for (const blob of fact.blobs) externalBodies.push(new TextDecoder().decode(await request.loadBody(blob)));
+      }
+    }
+  });
+  expect(nodes).toEqual([expect.objectContaining({ object_id: 'node-1', parent_version_id: null,
+    version_id: 'ver_contract-v1', snapshot: expect.objectContaining({
+      anchor_link: '{"id":"anchor-1","kind":"highlight"}', desired_retention: 0.92,
+      enable_short_term: false, id: 'node-1', image_regions: '[{"source":"contract"}]',
+      import_content_fingerprint: 'content-contract', import_source_fingerprint: 'source-contract',
+      manual_child_order: '["child-2","child-1"]', opening_text: 'Node opening preview', priority: 4,
+      reveal: 'Contract answer', sequential_reading_enabled: true, virtual_filter: '{"kind":"manual"}',
+      resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }])
+    }) })]);
+  expect(externalBodies).toContain('# External Doc\n\nOwned external body');
+  const payloads = (type: string) => states.filter(row => row.object_type === type).map(row => JSON.parse(row.payload_json!));
+  expect(payloads('external_document')).toEqual([expect.objectContaining({ document_id: 'folder-1:doc.md' })]);
+  expect(payloads('parent_child_order')).toEqual([expect.objectContaining({ parent_id: ROOT_CHILD_ORDER_ID })]);
+  expect(payloads('import_source')).toEqual([expect.objectContaining({
+    remote_annotations_json: '[{"kind":"highlight","nodeId":"highlight-1","remoteId":"reader-highlight"}]',
+    remote_import_state_json: '{"version":1,"bodyState":"materialized"}', remote_connection_ref: 'readwise-connection',
+    remote_document_id: 'reader-document', remote_provider: 'readwise', source_fingerprint: 'source-contract',
+    source_location: 'Source.md', source_locator: '/history/Source.md'
+  })]);
 });

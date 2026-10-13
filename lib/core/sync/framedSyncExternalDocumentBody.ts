@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
 import type { DbPort } from './dbPort.js';
@@ -66,7 +67,7 @@ export function decodeFramedExternalDocumentBodies(
 export function withFramedExternalDocumentBody<T extends NativeSyncObjectRecord>(record: T,
   bodies: readonly { hash: string; text: string }[]): T {
   if (record.object_type !== 'external_document' || record.deleted_at || !record.payload_json) return record;
-  const payload = JSON.parse(record.payload_json) as { body_blob_hash?: unknown };
+  const payload = JSON.parse(record.payload_json) as { body_blob_hash?: unknown; title?: string };
   if (typeof payload.body_blob_hash !== 'string') return record;
   const body = bodies.find((entry) => entry.hash === payload.body_blob_hash);
   if (!body) throw new Error('framed_sync_external_document_body_invalid');
@@ -74,5 +75,6 @@ export function withFramedExternalDocumentBody<T extends NativeSyncObjectRecord>
   if (data.byteLength > TEXT_BODY_MAX_BYTES || bytesToHex(sha256(data)) !== body.hash) {
     throw new Error('framed_sync_external_document_body_invalid');
   }
-  return { ...record, payload_json: JSON.stringify({ ...payload, content: body.text }) };
+  return { ...record, payload_json: JSON.stringify({ ...payload, content: body.text,
+    opening_text: resolveNodeOpeningText(body.text, payload.title ?? '') }) };
 }

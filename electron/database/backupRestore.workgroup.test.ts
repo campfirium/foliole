@@ -6,8 +6,13 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 let appDataDir = '';
 vi.mock('../ipc/paths.js', () => ({
@@ -21,11 +26,13 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { inspectBackupRestoreSync } from './backupRestoreSyncPreview.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
+import { loadDesktopSyncGroupMemberState } from './syncGroupMemberStateStore.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup } from './syncGroupStore.js';
-import { buildDesktopSyncPackFromDriver } from './syncPackBuilderFromDriver.js';
 
 let root = '';
 beforeEach(async () => {
@@ -46,6 +53,7 @@ it('restores an older backup and keeps the current workgroup connection with an 
     isTitleManual: true, kind: 'topic', nodeId: 'backup-topic', parentNodeId: null,
     position: 0, reveal: null, title: 'Backup topic', updatedAt: '2026-09-27T00:00:00.000Z'
   });
+  flushNodeSyncVersionWithDriver(openDatabaseConnection().driver, 'backup-topic', 'A', '2026-09-27T00:00:00.000Z');
   const backup = await createApplicationDatabaseBackup();
   const identity = createSyncGroupDeviceIdentity({
     device_anchor: '11111111-1111-4111-8111-111111111111',
@@ -92,11 +100,24 @@ it('restores an older backup and keeps the current workgroup connection with an 
   expect(driver.queryOne<{ workgroup_key: string }>(
     'SELECT workgroup_key FROM sync_groups WHERE group_id = ?', ['group-restore']
   )?.workgroup_key).toBe('current-secret');
-  const pack = await buildDesktopSyncPackFromDriver({ fromPeerId: identity.identity_key,
-    fromStateSeq: 0, outputPath: path.join(root, 'restore.syncpack'),
-    packId: 'restore-pack', restoreId: event!.restore_id }, driver);
-  expect(pack.objectCount).toBeGreaterThan(0);
-  expect(pack.manifest.restore_id).toBe(event!.restore_id);
+  const memberState = loadDesktopSyncGroupMemberState();
+  expect(memberState?.restore?.event.restore_id).toBe(event!.restore_id);
+  expect(memberState?.restore?.applied).toBe(true);
+  await expectRestoredRequest();
   expect(driver.queryOne('SELECT source_epoch FROM sync_state_sequence'))
     .toEqual({ source_epoch: event!.restore_id });
 });
+
+async function expectRestoredRequest() {
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const entry = await readFramedSyncInventoryEntry(port, { objectType: 'node', globalId: 'backup-topic' });
+  expect(entry).not.toBeNull();
+  const [difference] = compareFramedSyncInventories({ local: [entry!], remote: [] });
+  await withRequestSyncFiles(createDesktopFramedSyncFiles(path.join(root, 'request')), async request => {
+    await writeRequestSyncSnapshot(port, difference!, request);
+    const facts = [];
+    for await (const fact of request.readFacts()) facts.push(fact);
+    expect(facts.length).toBeGreaterThan(0);
+    expect(facts.every(fact => fact.globalId === 'backup-topic')).toBe(true);
+  });
+}

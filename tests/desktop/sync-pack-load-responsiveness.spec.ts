@@ -9,12 +9,12 @@ const NODE_COUNT = 3500;
 async function waitForMarker(markerPath: string) {
   const deadline = Date.now() + 30_000;
   while (!existsSync(markerPath)) {
-    if (Date.now() > deadline) throw new Error('sync pack workload did not start');
+    if (Date.now() > deadline) throw new Error('request sync workload did not start');
     await delay(10);
   }
 }
 
-test('keeps a real renderer to main IPC read responsive during sync pack apply', async ({
+test('keeps a real renderer to main IPC read responsive during request object apply', async ({
   desktopSession, desktopWindow
 }, testInfo) => {
   test.setTimeout(90_000);

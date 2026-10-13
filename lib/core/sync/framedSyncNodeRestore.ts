@@ -16,6 +16,7 @@ import {
   isFramedSyncNodeIdentityFact,
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
+import { readNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { restoreTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 import { textAlternativesSchema, type TopicTextBody } from './topicTextState.js';
 
@@ -98,7 +99,7 @@ function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
     }),
     created_at: readString(get('created_at'))!,
     deleted_at: readString(get('deleted_at'), true),
-    desired_retention: readNumber(get('desired_retention')),
+    desired_retention: readNodeRetention(get('desired_retention')),
     enable_short_term: readBool(get('enable_short_term'), true),
     hide_title_heading: readBool(get('hide_title_heading'))!,
     id: readString(get('id'))!,

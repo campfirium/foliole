@@ -17,6 +17,7 @@ import {
 } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
 import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
+import { projectNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 import { projectTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 
@@ -58,7 +59,7 @@ function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: st
     field('text_selection', scalarValue(snapshot.text_selection ? JSON.stringify(snapshot.text_selection) : null)),
     field('created_at', scalarValue(snapshot.created_at)),
     field('deleted_at', scalarValue(snapshot.deleted_at)),
-    field('desired_retention', numberValue(snapshot.desired_retention)),
+    field('desired_retention', projectNodeRetention(snapshot.desired_retention)),
     field('enable_short_term', scalarValue(snapshot.enable_short_term)),
     field('hide_title_heading', scalarValue(snapshot.hide_title_heading)),
     field('id', scalarValue(snapshot.id)),

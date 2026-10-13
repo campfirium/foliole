@@ -3,11 +3,9 @@ import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceN
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers.js';
 import type { NativeWorkspaceReviewProfile } from '../../lib/platform/nativeStorageContract.js';
 import type {
-  NativeSyncNodeRecord,
   NativeSyncStateObjectRecord
 } from '../../lib/platform/nativeSyncContract.js';
 
-import type { CompanionSyncPushPayload } from './companionSyncPushTypes.js';
 
 export const ANDROID_SOURCE_DEVICE_ID = 'android-device';
 export const ARTICLE_PARENT_ID = 'article-parent';
@@ -106,27 +104,9 @@ function reviewPayload() {
   };
 }
 
-function nodePushPayload(record: NativeSyncNodeRecord): CompanionSyncPushPayload {
-  return {
-    authorHostName: record.host_name ?? '',
-    base: {
-      ancestorVersionIds: [...record.ancestor_version_ids],
-      kind: 'node_version',
-      parentVersionId: record.parent_version_id,
-      ...(record.parent_version_ids ? { parentVersionIds: record.parent_version_ids } : {})
-    },
-    clientOpId: `node:${record.version_id}`,
-    ...(record.content_hash ? { contentHash: record.content_hash } : {}),
-    identity: { objectId: record.object_id, objectType: 'node', scope: 'workspace' },
-    payloadJson: JSON.stringify(record),
-    updatedAt: record.updated_at
-  };
-}
-
-function reviewRecord(): NativeSyncStateObjectRecord & { base_content_hash: null } {
+function reviewRecord(): NativeSyncStateObjectRecord {
   const payload = reviewPayload();
   return {
-    base_content_hash: null,
     content_hash: computeSyncContentHash('node_review', payload),
     deleted_at: null,
     last_modified_by_host_name: ANDROID_SOURCE_DEVICE_ID,
@@ -138,26 +118,13 @@ function reviewRecord(): NativeSyncStateObjectRecord & { base_content_hash: null
   };
 }
 
-function reviewPushPayload(record: ReturnType<typeof reviewRecord>): CompanionSyncPushPayload {
-  return {
-    authorHostName: record.last_modified_by_host_name,
-    base: { baseContentHash: record.base_content_hash, kind: 'content_hash' },
-    clientOpId: `${record.object_type}:${record.object_id}:${record.state_seq}`,
-    contentHash: record.content_hash,
-    deletedAt: record.deleted_at,
-    identity: { objectId: record.object_id, objectType: record.object_type, scope: 'workspace' },
-    payloadJson: record.payload_json,
-    updatedAt: record.updated_at
-  };
-}
-
-export async function buildAndroidCaptureAnnotationPushPayloads() {
+export async function buildAndroidCaptureAnnotationRecords() {
   const versions = [];
   for (const node of [captureNode(), clozeNode(), noteNode()]) {
     versions.push(await toWorkspaceNativeNodeVersion(node, ANDROID_SOURCE_DEVICE_ID));
   }
-  return [
-    ...versions.map(nodePushPayload),
-    reviewPushPayload(reviewRecord())
-  ];
+  const parent = await toWorkspaceNativeNodeVersion(baseNode({ anchorLink: null,
+    content: 'Alpha Beta Gamma', id: ARTICLE_PARENT_ID, kind: 'topic', parentNodeId: null,
+    reveal: null, title: 'Article' }), ANDROID_SOURCE_DEVICE_ID);
+  return { versions: [parent, ...versions], review: reviewRecord() };
 }

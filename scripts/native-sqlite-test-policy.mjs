@@ -2,6 +2,8 @@ import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
   'electron/database/betterSqlite3Driver.statements.test.ts',
+  'electron/database/syncPackNonemptyLibraryUnion.test.ts',
+  'electron/database/syncPackNonemptyTopicConvergence.test.ts',
   ...controlledSyncSqliteTests,
   'electron/foregroundTimeRuntime.test.ts',
   'electron/database/backupRestore.foregroundTime.test.ts',
@@ -22,7 +24,6 @@ const controlledElectronSqliteTests = [
   'electron/database/backupRestore.legacySync.test.ts',
   'electron/database/companionLegacyStorageRetirement.test.ts',
   'electron/database/legacyStorageRetirementMigration.test.ts',
-  'electron/database/nodeVersionConfirmationMigration.test.ts',
   'electron/database/readingTrashRetention.integration.test.ts',
   'electron/database/reviewDailyCounts.migration.test.ts',
   'electron/database/reviewDailyCounts.pack.test.ts',
@@ -44,6 +45,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionWorkspaceMutation.integration.test.ts',
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',
+  'scripts/desktop/fixed-performance-sync.test.mjs',
   'src/shared/platform/companion/runtime/companionCurrentVersionBodies.sqlite.test.ts',
   'src/shared/platform/companion/runtime/companionSearchPagination.sqlite.test.ts',
   'src/shared/platform/companion/runtime/companionSearchSnapshot.sqlite.test.ts',
@@ -169,7 +171,6 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackContentBlobsExecutor.test.ts',
   'electron/sync/syncPackLearningDependencyApply.test.ts',
   'electron/sync/syncPackNodeEmptyBodyApply.test.ts',
-  'electron/sync/syncPackNodeFieldPreservation.test.ts',
   'electron/sync/syncPackNodeFullProjection.test.ts',
   'electron/sync/syncPackNodeOpenLineageApply.test.ts',
   'electron/sync/syncPackGroupFactsExecutor.test.ts',

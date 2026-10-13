@@ -6,6 +6,7 @@ import type {
   CanonicalValue
 } from './framedSyncCanonicalManifest.js';
 import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
+import { readNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
 export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
@@ -100,7 +101,8 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
   for (const name of ['created_at', 'kind', 'title', 'updated_at']) stringValue(get(name));
   for (const name of ['hide_title_heading', 'is_title_manual']) boolValue(get(name));
   for (const name of ['enable_short_term', 'sequential_reading_enabled']) boolValue(get(name), true);
-  for (const name of ['desired_retention', 'position', 'priority']) numberValue(get(name));
+  readNodeRetention(get('desired_retention'));
+  for (const name of ['position', 'priority']) numberValue(get(name));
   attachments(get('attachments'));
   const alternativesText = stringValue(get('text_alternatives'), true);
   if (alternativesText !== null) textAlternativesSchema.parse(JSON.parse(alternativesText));

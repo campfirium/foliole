@@ -1,109 +1,65 @@
 // @vitest-environment node
-
-import { promises as fs } from 'node:fs';
-import fsSync from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { inflateSync } from 'node:zlib';
-
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-let mockedAppDataDir = '/tmp/foliole-sync-pack-nonempty-topic-tests';
-
-vi.mock('../ipc/paths.js', () => ({
-  resolveAppPaths: () => ({
-    app_cache_dir: path.join(mockedAppDataDir, 'cache'),
-    app_config_dir: path.join(mockedAppDataDir, 'config'),
-    app_data_dir: mockedAppDataDir,
-    app_log_dir: path.join(mockedAppDataDir, 'logs')
-  })
-}));
-
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
-
-let tempRoot = '';
+import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
+import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
 beforeEach(async () => {
+  await startLibraries();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-07T01:00:00.000Z'));
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-nonempty-topic-'));
 });
+afterEach(async () => { await closeLibraries(); vi.useRealTimers(); });
 
-afterEach(async () => {
-  closeDatabaseConnection();
-  vi.useRealTimers();
-  await fs.rm(tempRoot, { force: true, recursive: true });
-});
-
-it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
-  const incomingPath = await buildIncomingBranchPack();
-  openLibrary('target');
-  insertBranch('target', 'branch-a', 'Local body', '2026-08-14T01:02:00.000Z');
-  const reverseIncomingPath = await buildCurrentPack('branch-a-pack', 'target-device', 'source-device');
-  closeDatabaseConnection();
-  const target = await applyConflictPack('target', incomingPath, 'target-device', true);
-  expect(target.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(target.parents).toEqual(['branch-a', 'branch-b']);
-  const alternative = target.alternative;
-  expect(new Set([alternative.body_text, target.projection.content])).toEqual(
-    new Set(['Local body', 'Remote body'])
-  );
-  expect(alternative.expires_at).toBe('2026-11-06T01:00:00.000Z');
-  const source = await applyConflictPack('source', reverseIncomingPath, 'source-device', false);
-  expect(source).toEqual(target);
-  const reopened = openLibrary('target');
-  expect(reopened.sqlite.prepare(
-    `SELECT version_id FROM node_sync_versions
-     WHERE object_id = 'shared-topic' ORDER BY version_id`
-  ).all()).toEqual(['base', 'branch-a', 'branch-b', target.current_version_id]
-    .sort().map((version_id) => ({ version_id })));
-  expect(reopened.sqlite.prepare(
-    `SELECT COUNT(*) AS count FROM node_text_alternatives
-     WHERE node_id = 'shared-topic' AND status = 'available'`
-  ).get()).toEqual({ count: 0 });
-});
-
-async function applyConflictPack(
-  library: string,
-  incomingPath: string,
-  hostName: string,
-  replay: boolean
-) {
-  const connection = openLibrary(library);
-  const port = createBetterSqliteDbPort(connection.sqlite, { name: `nonempty-topic-${library}` });
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+it('keeps both bodies when current requests join nonempty topic branches', async () => {
+  const source = createPeer('source'); const target = createPeer('target');
+  joinPeers(source, target);
+  insertBranch(source, 'source', 'branch-b', 'Remote body', '2026-08-14T01:03:00.000Z');
+  insertBranch(target, 'target', 'branch-a', 'Local body', '2026-08-14T01:02:00.000Z');
+  await withLibraryRequestSnapshot(source, target, async toTarget => {
+    await withLibraryRequestSnapshot(target, source, async toSource => {
+      await toTarget();
+      const before = readConflict(target);
+      await toTarget();
+      expect(readConflict(target)).toEqual(before);
+      await toSource();
+    });
+  });
+  const merged = readConflict(target);
+  expect(merged.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
+  expect(merged.parents).toEqual(['branch-a', 'branch-b']);
+  expect(new Set([merged.alternative.body_text, merged.projection.content]))
+    .toEqual(new Set(['Local body', 'Remote body']));
+  expect(merged.alternative.expires_at).toBe('2026-11-06T01:00:00.000Z');
+  expect(readConflict(source)).toEqual(merged);
+  const db = new Database(target.file, { readonly: true });
   try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0,
-      hostName
-    })).resolves.toMatchObject({ handledConflictCount: 1, toStateSeq: 1 });
-    if (replay) {
-      await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-        currentCursor: 1,
-        hostName
-      })).resolves.toMatchObject({ applied: false, handledConflictCount: 0 });
-    }
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
-  const current = connection.sqlite.prepare(
+    expect(readConflict({ db })).toEqual(merged);
+    expect(db.prepare("SELECT version_id FROM node_sync_versions WHERE object_id = 'shared-topic' ORDER BY version_id").all())
+      .toEqual(['base', 'branch-a', 'branch-b', merged.current_version_id].sort().map(version_id => ({ version_id })));
+    expect(db.prepare("SELECT COUNT(*) AS count FROM node_text_alternatives WHERE node_id = 'shared-topic' AND status = 'available'").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+function readConflict(peer: Pick<Peer, 'db'>) {
+  const current = peer.db.prepare(
     `SELECT current_version_id FROM nodes WHERE id = 'shared-topic'`
   ).get() as { current_version_id: string };
-  const parents = (connection.sqlite.prepare(
+  const parents = (peer.db.prepare(
     `SELECT parent_version_id AS id FROM node_sync_version_parents
      WHERE version_id = ? ORDER BY parent_version_id`
   ).all(current.current_version_id) as Array<{ id: string }>).map((row) => row.id);
-  const projection = connection.sqlite.prepare(
+  const projection = peer.db.prepare(
     `SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = 'shared-topic'`
   ).get() as { content: string };
-  const version = connection.sqlite.prepare(
+  const version = peer.db.prepare(
     'SELECT snapshot_json, content_hash FROM node_sync_versions WHERE version_id = ?'
   ).get(current.current_version_id) as { snapshot_json: string; content_hash: string };
   const state = JSON.parse(version.snapshot_json);
@@ -112,66 +68,12 @@ async function applyConflictPack(
   const body = state.text_alternative_bodies.find((entry: { hash: string }) => entry.hash === reference.body_blob_hash);
   expect(body).toBeDefined();
   const alternative = { ...reference, body_text: body.text };
-  closeDatabaseConnection();
   return { alternative, current_version_id: current.current_version_id, parents, projection,
     snapshot: JSON.parse(version.snapshot_json), contentHash: version.content_hash };
 }
 
-async function buildCurrentPack(packId: string, fromPeerId: string, toPeerId: string) {
-  const packPath = path.join(tempRoot, `${packId}.syncpack`);
-  await buildDesktopSyncPack({
-    createdAt: '2026-08-14T01:04:00.000Z',
-    fromPeerId,
-    fromStateSeq: 0,
-    outputPath: packPath,
-    packId,
-    toPeerId
-  });
-  const incomingPath = path.join(tempRoot, `${packId}.db`);
-  fsSync.writeFileSync(incomingPath, inflateSync(
-    readZipEntries(packPath).get('incoming.db.deflate') ?? Buffer.alloc(0)
-  ));
-  return incomingPath;
-}
-
-async function buildIncomingBranchPack() {
-  openLibrary('source');
-  insertBranch('source', 'branch-b', 'Remote body', '2026-08-14T01:03:00.000Z');
-  const packPath = path.join(tempRoot, 'branch-b.syncpack');
-  await buildDesktopSyncPack({
-    createdAt: '2026-08-14T01:04:00.000Z',
-    fromPeerId: 'authorization-source',
-    fromStateSeq: 0,
-    outputPath: packPath,
-    packId: 'branch-b-pack',
-    toPeerId: 'target-device'
-  });
-  closeDatabaseConnection();
-  const incomingPath = path.join(tempRoot, 'branch-b.db');
-  fsSync.writeFileSync(incomingPath, inflateSync(
-    readZipEntries(packPath).get('incoming.db.deflate') ?? Buffer.alloc(0)
-  ));
-  return incomingPath;
-}
-
-function openLibrary(name: string) {
-  mockedAppDataDir = path.join(tempRoot, name);
-  initializeDatabaseConnection(openDatabaseConnection());
-  openDatabaseConnection().sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS sync_push_ack (
-      client_op_id TEXT PRIMARY KEY NOT NULL,
-      object_type TEXT NOT NULL,
-      object_id TEXT NOT NULL,
-      state_seq INTEGER,
-      status TEXT NOT NULL,
-      acked_at TEXT NOT NULL
-    )
-  `);
-  return openDatabaseConnection();
-}
-
-function insertBranch(device: string, versionId: string, body: string, updatedAt: string) {
-  const db = openDatabaseConnection().sqlite;
+function insertBranch(peer: Peer, device: string, versionId: string, body: string, updatedAt: string) {
+  const db = peer.db;
   db.prepare(
     `INSERT INTO nodes (
        id, kind, title, is_title_manual, hide_title_heading, content,
@@ -185,19 +87,20 @@ function insertBranch(device: string, versionId: string, body: string, updatedAt
        version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json
      ) VALUES (?, 'shared-topic', ?, ?, ?, ?, ?, ?)`
-  ).run('base', null, 'origin', '2026-08-14T01:00:00.000Z', 'base-hash', 'Base body', JSON.stringify(baseSnapshot));
+  ).run('base', null, 'origin', '2026-08-14T01:00:00.000Z', versionHash(baseSnapshot), 'Base body', JSON.stringify(baseSnapshot));
   db.prepare(
     `INSERT INTO node_sync_versions (
        version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json
      ) VALUES (?, 'shared-topic', 'base', ?, ?, ?, ?, ?)`
-  ).run(versionId, device, updatedAt, `${versionId}-hash`, body, JSON.stringify(branchSnapshot));
+  ).run(versionId, device, updatedAt, versionHash(branchSnapshot), body, JSON.stringify(branchSnapshot));
   db.prepare(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash,
        last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('node', 'shared-topic', 1, ?, ?, ?, ?, 1)`
-  ).run(versionId, `${versionId}-hash`, device, updatedAt);
+  ).run(versionId, versionHash(branchSnapshot), device, updatedAt);
+  db.prepare('INSERT INTO node_sync_version_parents VALUES (?, ?, 0)').run(versionId, 'base');
 }
 
 function snapshot(content: string, updatedAt: string) {
@@ -210,18 +113,7 @@ function snapshot(content: string, updatedAt: string) {
   };
 }
 
-function readZipEntries(filePath: string) {
-  const buffer = fsSync.readFileSync(filePath);
-  const entries = new Map<string, Buffer>();
-  for (let offset = 0; buffer.readUInt32LE(offset) === 0x04034b50;) {
-    const size = buffer.readUInt32LE(offset + 18);
-    const nameLength = buffer.readUInt16LE(offset + 26);
-    const extraLength = buffer.readUInt16LE(offset + 28);
-    const nameStart = offset + 30;
-    const contentStart = nameStart + nameLength + extraLength;
-    entries.set(buffer.subarray(nameStart, nameStart + nameLength).toString('utf8'),
-      buffer.subarray(contentStart, contentStart + size));
-    offset = contentStart + size;
-  }
-  return entries;
+
+function versionHash(value: ReturnType<typeof snapshot>) {
+  return computeNodeSyncHash({ ...nodeSyncSnapshotHashMetadata(value), content: value.content });
 }

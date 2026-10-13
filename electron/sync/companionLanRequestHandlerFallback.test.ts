@@ -33,9 +33,6 @@ vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_RESOURCE_PATH: '/companion/content-blob',
   loadCompanionContentBlobResource: vi.fn()
 }));
-vi.mock('./companionLanSyncPackGet.js', () => ({
-  handleSyncPackGet: vi.fn(async () => false)
-}));
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: vi.fn()
 }));

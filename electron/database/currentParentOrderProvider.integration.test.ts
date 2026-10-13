@@ -9,11 +9,17 @@ import { expect, it } from 'vitest';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash } from '../../lib/core/sync/currentParentOrder.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
+import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
+import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { buildProviderPack } from './androidSyncPackProviderDefinitions.testSupport.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-it('preserves original current sources with quoted and Unicode identities', () => {
+it('preserves original current sources with quoted and Unicode identities through a current request', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-current-order-provider-'));
   const sourcePath = path.join(root, 'source.db');
   const source = new Database(sourcePath);
@@ -27,12 +33,19 @@ it('preserves original current sources with quoted and Unicode identities', () =
     upsertSyncObjectState(createBetterSqlite3Driver(source), { objectType: 'parent_child_order',
       objectId: 'parent', contentHash: currentParentOrderHash('parent', sources),
       lastModifiedByHostName: 'android-b', updatedAt: 'now' });
-    const pack = buildProviderPack(sourcePath, 0, 100);
-    const row = pack.prepare("SELECT payload_json, content_hash FROM sync_objects WHERE object_type = 'parent_child_order'")
-      .get() as { payload_json: string; content_hash: string };
-    const payload = JSON.parse(row.payload_json);
-    expect(JSON.parse(payload.sources_json)).toEqual(sources);
-    expect(currentParentOrderHash(payload.parent_id, JSON.parse(payload.sources_json))).toBe(row.content_hash);
-    pack.close();
+    const port = createBetterSqliteDbPort(source);
+    const entry = await readFramedSyncInventoryEntry(port, { objectType: 'parent_child_order', globalId: 'parent' });
+    expect(entry).not.toBeNull();
+    const [difference] = compareFramedSyncInventories({ local: [entry!], remote: [] });
+    await withRequestSyncFiles(createDesktopFramedSyncFiles(path.join(root, 'request')), async request => {
+      await writeRequestSyncSnapshot(port, difference!, request);
+      const facts = [];
+      for await (const fact of request.readFacts()) facts.push(fact);
+      expect(facts).toHaveLength(1);
+      const row = restoreFramedSyncObjectStateFact(facts[0]!);
+      const payload = JSON.parse(row.payload_json!);
+      expect(JSON.parse(payload.sources_json)).toEqual(sources);
+      expect(currentParentOrderHash(payload.parent_id, JSON.parse(payload.sources_json))).toBe(row.content_hash);
+    });
   } finally { source.close(); fs.rmSync(root, { force: true, recursive: true }); }
 });
