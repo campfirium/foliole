@@ -61,6 +61,24 @@ beforeEach(() => {
   runtime.complete.mockResolvedValue({ group_id: candidate.group_id });
 });
 
+it('clears a transient incompatible discovery when a compatible group appears', async () => {
+  const onError = vi.fn();
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError, onSaveEndpoint: vi.fn(async () => undefined)
+  }));
+  await act(() => result.current.discover());
+  act(() => runtime.callback?.({ candidates: [], change: 'failed',
+    error_code: 'protocol_incompatible', status: 'incompatible' }));
+  expect(onError).toHaveBeenLastCalledWith('protocol_incompatible');
+  act(() => runtime.callback?.({ candidates: [candidate], change: 'found',
+    error_code: null, status: 'results' }));
+  expect(result.current.discoveries).toHaveLength(1);
+  expect(onError).toHaveBeenLastCalledWith(null);
+  await act(() => result.current.request(candidate.endpoint_url));
+  expect(result.current.status).toBe('awaiting-acceptance');
+});
+
 it('completes an accepted request when the active discovery session publishes a later change', async () => {
   const onSaveEndpoint = vi.fn(async () => undefined);
   const { result } = renderHook(() => useCompanionSyncGroupJoin({

@@ -3,6 +3,14 @@ import { expect, it } from 'vitest';
 
 import { useSyncProtocolIncompatibleNotice } from './useSyncProtocolIncompatibleNotice';
 
+it('dismisses an obsolete incompatibility notice after discovery recovers', () => {
+  const { result, rerender } = renderHook(({ incompatible }) =>
+    useSyncProtocolIncompatibleNotice(incompatible), { initialProps: { incompatible: true } });
+  expect(result.current.open).toBe(true);
+  rerender({ incompatible: false });
+  expect(result.current.open).toBe(false);
+});
+
 it('does not reopen for background retries, but allows a new manual attempt', () => {
   const { result, rerender } = renderHook(({ incompatible }) =>
     useSyncProtocolIncompatibleNotice(incompatible), { initialProps: { incompatible: true } });

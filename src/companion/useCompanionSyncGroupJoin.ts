@@ -174,13 +174,18 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const discover = useCallback(async () => {
     await stopDiscovery();
     setStatus('discovering'); args.onError(null);
+    let discoveryFailed = false;
     stopRef.current = await startCompanionSyncGroupDiscoverySession((snapshot) => {
       setDiscoveries(mapCandidates(snapshot));
       if (snapshot.status === 'permission_required' || snapshot.status === 'unavailable'
         || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed'
         || snapshot.status === 'waiting_anchor') {
+        discoveryFailed = true;
         args.onError(snapshot.error_code === 'protocol_incompatible'
           ? 'protocol_incompatible' : `discovery_${snapshot.status}`); setStatus('idle');
+      } else if (snapshot.status === 'results' && discoveryFailed) {
+        discoveryFailed = false;
+        args.onError(null);
       }
       const pending = pendingRequestRef.current;
       if (pending && snapshot.candidates.some((candidate) => matchesPending(candidate, pending))) {

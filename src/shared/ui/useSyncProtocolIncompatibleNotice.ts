@@ -8,6 +8,7 @@ export function useSyncProtocolIncompatibleNotice(incompatible: boolean) {
   const [open, setOpen] = useState(false);
   const shown = useRef(false);
   useEffect(() => {
+    if (!incompatible) setOpen(false);
     if (incompatible && !shown.current) {
       shown.current = true;
       setOpen(true);
