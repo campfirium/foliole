@@ -6,6 +6,7 @@ const controlledElectronSqliteTests = [
   'electron/database/requestSyncStateSafety.integration.test.ts',
   'electron/database/requestSyncKnownFacts.integration.test.ts',
   'electron/database/requestSyncGraphScope.integration.test.ts',
+  'electron/database/requestSyncPdfPageDeletion.integration.test.ts',
   'electron/database/requestSyncImmutableMetadata.integration.test.ts',
   'electron/database/requestSyncProjectionIsolation.integration.test.ts',
   'electron/database/requestSyncInventoryOrphans.integration.test.ts',

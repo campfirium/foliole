@@ -2,9 +2,9 @@ import { expect, it } from 'vitest';
 
 import { applySyncObjectPayloadWithDbPort } from '../lib/core/sync/syncObjectPayloadExecutor.ts';
 import {
-  SYNC_PACK_PAYLOAD_OBJECT_TYPES,
-  isSyncPackPayloadObjectType,
-} from '../lib/core/sync/syncPackManifest.ts';
+  FRAMED_SYNC_STATE_OBJECT_TYPES,
+  isFramedSyncSharedStateObject,
+} from '../lib/core/sync/framedSyncObjectStateInventory.ts';
 import { SYNC_OBJECT_POLICIES } from '../lib/core/sync/syncObjectPolicy.ts';
 
 function createRecordingPort() {
@@ -51,8 +51,8 @@ it('keeps PDF page text classified as workspace sync content', () => {
     storage: ['pdf_page_text'],
     userVisible: true
   });
-  expect([...SYNC_PACK_PAYLOAD_OBJECT_TYPES]).toContain('pdf_page_text');
-  expect(isSyncPackPayloadObjectType('pdf_page_text')).toBe(true);
+  expect([...FRAMED_SYNC_STATE_OBJECT_TYPES]).toContain('pdf_page_text');
+  expect(isFramedSyncSharedStateObject('pdf_page_text', 'pdf-1:2')).toBe(true);
 });
 
 it('applies PDF page text payloads and tombstones as page facts', async () => {

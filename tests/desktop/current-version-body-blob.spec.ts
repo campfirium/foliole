@@ -5,7 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 const BODY = 'Current version 正文\r\nAlready received.\n';
 const NODE_ID = 't277-current-body';
 
-test('restores an already received current body without a resource peer and preserves it after reload', async ({
+test('reads an owned current body without a resource peer or shared cache after reload', async ({
   desktopApp, desktopWindow: page
 }, testInfo) => {
   await expectWorkspaceShell(page);
@@ -27,25 +27,21 @@ test('restores an already received current body without a resource peer and pres
       return { node, state };
     });
   }, NODE_ID);
-  expect((await loadNodeDocument(page, NODE_ID))?.content).not.toBe(BODY);
+  expect((await loadNodeDocument(page, NODE_ID))?.content).toBe(BODY);
   const after = await desktopApp.evaluate(async (_, id) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
-    const resources = require(`${process.cwd()}/dist/electron/sync/desktopSyncGroupResources.js`);
-    const result = await resources.downloadDesktopSyncGroupResources({
-      endpoint_url: 'http://127.0.0.1:1', group_id: 'unused', local_device_id: 'unused', peer_device_id: 'unused'
-    });
     return connection.runWithDatabaseConnectionOwner(() => {
       const db = connection.openDatabaseConnection().sqlite;
-      return { result,
+      return { cacheRows: db.prepare('SELECT COUNT(*) FROM content_blob_data WHERE hash=?').pluck().get(
+        db.prepare('SELECT body_blob_hash FROM nodes WHERE id=?').pluck().get(id)),
         node: db.prepare('SELECT body_blob_hash, current_version_id FROM nodes WHERE id=?').get(id),
         state: db.prepare("SELECT * FROM sync_object_state WHERE object_type='node' AND object_id=?").get(id) };
     });
   }, NODE_ID);
   expect(after.node).toEqual(before.node);
   expect(after.state).toEqual(before.state);
-  expect(after.result.remainingContentBlobCount).toBe(0);
-  expect(after.result.resourceResults).toEqual([]);
+  expect(after.cacheRows).toBe(0);
   await expect.poll(async () => (await loadNodeDocument(page, NODE_ID))?.content).toBe(BODY);
   await page.reload();
   await expectWorkspaceShell(page);
