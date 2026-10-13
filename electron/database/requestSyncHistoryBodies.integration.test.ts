@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { applyFramedFactSources } from '../../lib/core/sync/framedSyncFactApply.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
@@ -38,11 +39,16 @@ function versions(sqlite: Database.Database) {
     FROM node_sync_versions ORDER BY version_id`).all();
 }
 
-async function fixture() {
+function businessState(sqlite: Database.Database) {
+  return Object.fromEntries(['nodes', 'node_sync_versions', 'node_sync_version_parents',
+    'sync_object_state', 'content_blobs'].map(table => [table,
+    sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
+}
+
+async function fixture(records = history()) {
   await mkdir('.tmp/artifacts', { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/request-history-'));
   const source = textDevice();
-  const records = history();
   await applySyncNodesWithDbPort(source.db, records);
   const file = path.join(root, 'companion.db');
   let sqlite = new Database(file);
@@ -66,7 +72,9 @@ function assertHistory(host: Awaited<ReturnType<typeof fixture>>) {
   expect(host.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_receipts'").get()).toBeUndefined();
 }
 
-it.each([false, true])('preserves fifteen complete large bodies across reopening, corrupt final body=%s', async corrupt => {
+it.each(['ordered', 'child-first', 'corrupt-final'] as const)(
+  'preserves fifteen complete large bodies across reopening: %s', async order => {
+  const corrupt = order === 'corrupt-final';
   const host = await fixture();
   try {
     const entry = await readFramedSyncInventoryEntry(host.source.db, { objectType: 'node', globalId: 'topic' });
@@ -81,6 +89,7 @@ it.each([false, true])('preserves fifteen complete large bodies across reopening
       const nodeFacts = facts.filter(fact => fact.kind === 2);
       expect(nodeFacts).toHaveLength(versionCount);
       const finalBlob = nodeFacts.at(-1)!.blobs[0]!;
+      if (order === 'child-first') facts.reverse();
       const key = `${request.directory}/body-${bytesToHex(finalBlob.sha256)}-0`;
       const original = await host.files.read(key);
       if (!original) throw new Error('final_history_chunk_not_spooled');
@@ -112,5 +121,46 @@ it.each([false, true])('preserves fifteen complete large bodies across reopening
       assertHistory(host);
     });
     expect(await host.files.list('requests')).toEqual([]);
+    host.reopen();
+    assertHistory(host);
   } finally { await host.close(); }
 }, 120_000);
+
+
+it.each(['', '\uFEFF---\r\nkey: 中文😀\0\r\n---\r\n' + '中😀'.repeat(100_000)])(
+  'owns the exact body and original version hash after request cleanup (%#)', async body => {
+    const record = { ...textBranch('original-version', body), content_hash: '4'.repeat(64) };
+    const host = await fixture([record]);
+    try {
+      const entry = await readFramedSyncInventoryEntry(host.source.db, { objectType: 'node', globalId: 'topic' });
+      if (!entry) throw new Error('body_inventory_missing');
+      const [difference] = compareFramedSyncInventories({ local: [entry], remote: [] });
+      if (!difference) throw new Error('body_difference_missing');
+      await withRequestSyncFiles(host.files, async request => {
+        await writeRequestSyncSnapshot(host.source.db, difference, request);
+        const apply = (invalid = false) => applyFramedFactSources(createBetterSqliteDbPort(host.sqlite),
+          [() => request.readFacts()], { requireCompleteVersionGraph: true,
+            loadBody: async (_db, blob) => invalid ? new TextEncoder().encode('Altered!') : request.loadBody(blob) });
+        const empty = businessState(host.sqlite);
+        await expect(apply(true)).rejects.toThrow();
+        expect(businessState(host.sqlite)).toEqual(empty);
+        await apply();
+        const before = businessState(host.sqlite);
+        await expect(apply(true)).rejects.toThrow();
+        expect(businessState(host.sqlite)).toEqual(before);
+        assertHistory(host);
+        host.reopen();
+        await apply();
+        assertHistory(host);
+      });
+      expect(await host.files.list('requests')).toEqual([]);
+      host.reopen();
+      assertHistory(host);
+      expect(host.sqlite.prepare('SELECT content, body_blob_hash, current_version_id FROM nodes WHERE id = ?')
+        .get('topic')).toEqual({ content: body, body_blob_hash: hashTextBody(body), current_version_id: 'original-version' });
+      expect(versions(host.sqlite)).toEqual([{ version_id: 'original-version', parent_version_id: null,
+        content_hash: '4'.repeat(64), body_text: body }]);
+      expect(host.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('settings', 'search_index_invalidations')").all())
+        .toEqual([]);
+    } finally { await host.close(); }
+  });

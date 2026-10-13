@@ -34,6 +34,18 @@ function deferred() {
   return { promise, resolve };
 }
 
+function businessState(db: Database.Database) {
+  return Object.fromEntries(['nodes', 'node_sync_versions', 'node_sync_version_parents',
+    'sync_object_state', 'content_blobs'].map(table => [table,
+    db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
+}
+
+function readBusinessState(file: string) {
+  const db = new Database(file, { readonly: true });
+  try { return businessState(db); }
+  finally { db.close(); }
+}
+
 it('waits for the database writer when opening and checking attachment paths', async () => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
@@ -89,6 +101,8 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
   const target = resolveRuntimeDataPaths();
   await writeFile(path.join(local.assetsDir, keys[0]!), localBytes);
   await writeFile(path.join(target.assetsDir, keys[1]!), remoteBytes);
+  const sourceBefore = businessState(local.sqlite);
+  const targetBefore = readBusinessState(target.databasePath);
   const server = await attachmentHttpServer(dropAt);
   try {
     const failures: unknown[] = [];
@@ -116,6 +130,8 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     const reopened = new Database(target.databasePath, { readonly: true });
     try {
+      expect(businessState(reopened)).toEqual(targetBefore);
+      expect(businessState(local.sqlite)).toEqual(sourceBefore);
       for (const [index, bytes] of [localBytes, remoteBytes].entries()) {
         expect(await readFile(path.join(target.assetsDir, keys[index]!))).toEqual(bytes);
         expect(await readFile(path.join(local.assetsDir, keys[index]!))).toEqual(bytes);
