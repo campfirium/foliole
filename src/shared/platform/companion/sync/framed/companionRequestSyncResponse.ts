@@ -6,6 +6,7 @@ import { respondRequestSyncDatabase } from '../../../../../../lib/core/sync/requ
 import { parseRequestSyncPeerRound, respondRequestSyncRoundControl, touchRequestSyncStream } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
+import { publishCompanionSyncApplied } from '../companionSyncApplied.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
 import { currentCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
@@ -46,9 +47,10 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
   const { signal, dispose } = combineCompanionRequestSignals([parentSignal, lease.signal]);
   let host: Awaited<ReturnType<typeof currentCompanionRequestSyncDatabaseHost>> | undefined;
   let stream: FramedSyncStreamBody | undefined;
+  let applied = false;
   try {
     const groupKey = Uint8Array.from(atob(credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0));
-    host = await currentCompanionRequestSyncDatabaseHost();
+    host = await currentCompanionRequestSyncDatabaseHost(() => { applied = true; });
     const files = host.files;
     stream = await readFramedSyncStream(touchRequestSyncStream(companionRequestSyncHttpChunks(host.files, directory, {
       response_chunk_count: Number(payload.request_chunk_count), response_byte_length: Number(payload.request_byte_length)
@@ -74,6 +76,7 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     await host?.files.remove(directory);
     throw error;
   } finally {
+    if (applied) publishCompanionSyncApplied();
     dispose();
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();

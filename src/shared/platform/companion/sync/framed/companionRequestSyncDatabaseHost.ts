@@ -6,7 +6,9 @@ import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js
 import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 
 /** The owner serializes writes while its independent readonly connection produces request files. */
-export async function currentCompanionRequestSyncDatabaseHost(): Promise<RequestSyncDatabaseHost> {
+export async function currentCompanionRequestSyncDatabaseHost(
+  objectApplied: RequestSyncDatabaseHost['objectApplied'] = () => undefined
+): Promise<RequestSyncDatabaseHost> {
   const owner = getIosCompanionDatabaseOwner();
   const databasePath = owner.databasePath;
   const files = await currentCompanionFramedSyncFiles();
@@ -15,6 +17,7 @@ export async function currentCompanionRequestSyncDatabaseHost(): Promise<Request
   };
   return {
     enqueueSearchInvalidations: false,
+    objectApplied,
     objectOptions: async db => ({ hostName: await iosCompanionHostName(db) }),
     files,
     readSnapshot: (read, signal) => owner.readSnapshot(db => {

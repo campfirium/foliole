@@ -18,8 +18,10 @@ import type { RequestSyncExchange } from '../../../../../../lib/core/sync/reques
 import { sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
+import { subscribeCompanionSyncApplied } from '../companionSyncApplied.js';
 
 const runtime = vi.hoisted(() => ({ db: undefined as DbPort | undefined, files: undefined as FramedSyncFilePort | undefined }));
+const groupKey = new Uint8Array(32).fill(7);
 const databaseOwner = {
   databasePath: '/test-library',
   runWriter: <T>(read: (db: DbPort) => Promise<T>) => read(runtime.db!),
@@ -50,7 +52,10 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
   await mkdir('.tmp/artifacts', { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-request-'));
   const source = textDevice(); const target = textDevice();
-  const groupKey = new Uint8Array(32).fill(7);
+  const visibleBodies: Promise<string>[] = [];
+  const unsubscribe = subscribeCompanionSyncApplied(() => {
+    visibleBodies.push(target.current().then(current => current.body_text));
+  });
   try {
     seed(source, 'peer', groupKey); seed(target, 'local', groupKey);
     target.sqlite.exec('DROP TABLE settings');
@@ -68,25 +73,21 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } as const;
     await sendRequestSyncObject({ files,
       readSnapshot: read => read(source.db), write: write => write(source.db) }, { context, groupKey, difference }, async stream => {
-      const chunks = [];
-      for await (const chunk of encodeFramedSyncStream(stream)) chunks.push(chunk);
-      const bytes = Buffer.concat(chunks);
-      const directory = `requests/${crypto.randomUUID()}`;
-      const size = 512 * 1024;
-      for (let offset = 0; offset < bytes.length; offset += size) {
-        await runtime.files!.write(`${directory}/http-in-${offset / size}`, bytes.subarray(offset, offset + size));
-      }
+      const { directory, count, byteLength } = await spoolNativeObjectRequest(runtime.files!, stream);
       const payload = { peer_round_id: crypto.randomUUID(), peer_round_mode: 'single', directory, library_key: '/test-library', generation_id: 'generation', mode: 'object',
         group_id: 'group', initiator_device_id: 'peer', initiator_library_epoch: 'peer-epoch',
         responder_device_id: 'local', responder_library_epoch: 'local-epoch', object_type: 'node', global_id: 'topic',
-        request_chunk_count: Math.ceil(bytes.length / size), request_byte_length: bytes.length };
+        request_chunk_count: count, request_byte_length: byteLength };
       await expect(respondCompanionRequestSync({ ...payload, generation_id: 'obsolete' })).rejects.toThrow('request_sync_library_changed');
       expect(await target.db.query('SELECT id FROM nodes')).toEqual([]);
+      expect(visibleBodies).toEqual([]);
       if (lateReply) {
         await expect(respondCompanionRequestSync(payload, async () => {
           throw new Error('sync_group_data_request_not_found');
         })).rejects.toThrow('sync_group_data_request_not_found');
         expect((await target.current()).body_text).toBe(body);
+        expect(visibleBodies).toHaveLength(1);
+        expect(await Promise.all(visibleBodies)).toEqual([body]);
         expect(await runtime.files!.list(directory)).toEqual([]);
         return;
       }
@@ -98,13 +99,27 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       for await (const decoded of readRequestSyncWire({ ...response, context, groupKey })) messages.push(decoded.message);
       expect(messages).toMatchObject([{ payloadCase: 'round_receipt', payload: { result: 1 } }]);
       expect((await target.current()).body_text).toBe(body);
+      expect(visibleBodies).toHaveLength(1);
+      expect(await Promise.all(visibleBodies)).toEqual([body]);
       expect(await target.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toContainEqual({ adopted_version_id: 'head' });
       expect(await target.db.query('SELECT count(*) AS count FROM framed_sync_inbound_transfers')).toEqual([{ count: 0 }]);
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
       await runtime.files!.remove(directory);
     });
-  } finally { closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); source.sqlite.close(); target.sqlite.close(); await rm(root, { force: true, recursive: true }); }
+  } finally { unsubscribe(); closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); source.sqlite.close(); target.sqlite.close(); await rm(root, { force: true, recursive: true }); }
 });
+
+async function spoolNativeObjectRequest(files: FramedSyncFilePort, stream: Parameters<typeof encodeFramedSyncStream>[0]) {
+  const chunks = [];
+  for await (const chunk of encodeFramedSyncStream(stream)) chunks.push(chunk);
+  const bytes = Buffer.concat(chunks);
+  const directory = `requests/${crypto.randomUUID()}`;
+  const size = 512 * 1024;
+  for (let offset = 0; offset < bytes.length; offset += size) {
+    await files.write(`${directory}/http-in-${offset / size}`, bytes.subarray(offset, offset + size));
+  }
+  return { directory, count: Math.ceil(bytes.length / size), byteLength: bytes.length };
+}
 
 function seed(device: ReturnType<typeof textDevice>, id: string, groupKey: Uint8Array) {
   for (const statement of ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS) device.sqlite.exec(statement);
@@ -125,7 +140,6 @@ it.each(['push', 'pull', 'cancel-pull', 'lost-push'])('isolates objects through 
   const pushing = mode.endsWith('push');
   const source = pushing ? initiator : responder;
   const target = pushing ? responder : initiator;
-  const groupKey = new Uint8Array(32).fill(7);
   const cancellation = new AbortController();
   try {
     seed(initiator, 'peer', groupKey); seed(responder, 'local', groupKey);
