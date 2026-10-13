@@ -1,5 +1,5 @@
 import { readSyncGroupControllerState } from '../desktop/sync-group-controller-read.mjs';
-import { observeMacosAnchorAfterElection } from './macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from './macos-a5-provider-observation.mjs';
 
 export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, repoRoot,
   session, sharedRoot }) {
@@ -15,7 +15,7 @@ export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, 
     if (restarted.sync_group?.group_id !== expectedGroupId) {
       throw new Error('Mac did not restore its A5 Sync Group.');
     }
-    const topology = await observeMacosAnchorAfterElection(restartedSession);
+    const topology = await observeMacosProviderReady(restartedSession);
     const manualRun = await restartedSession.invoke('sync_companion_now');
     const afterRestart = await readSyncGroupControllerState(() => restartedSession.invoke(
       'load_workspace_list_snapshot', { includePdfOpenings: false }

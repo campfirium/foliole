@@ -2,7 +2,8 @@ import { isReadingState } from '../review/readingState.js';
 
 import type { DbPort } from './dbPort.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
+
 
 export interface SyncObjectPayloadApplyOptions {
   hostName?: string;
@@ -10,7 +11,7 @@ export interface SyncObjectPayloadApplyOptions {
 
 export async function applyNodeReadingObject(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   if (record.deleted_at) {
@@ -47,7 +48,7 @@ export async function applyNodeReadingObject(
 
 async function shouldApplyNodeReading(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   incomingLastHandledAt: string,
   incomingRepetitionCount: number
 ) {
@@ -76,7 +77,7 @@ async function shouldApplyNodeReading(
   return incomingKey.join('\n') > existingKey.join('\n');
 }
 
-export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+export async function applyNodeReviewObject(port: DbPort, record: SyncObjectRecord) {
   if (record.deleted_at) {
     await port.run('DELETE FROM node_review WHERE node_id = ?', [record.object_id]);
     return;
@@ -100,7 +101,7 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncPackSyncOb
 
 async function shouldApplyNodeReview(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   incomingLastReviewAt: string | null,
   incomingReps: number
 ) {
@@ -120,7 +121,7 @@ async function shouldApplyNodeReview(
 
 async function applyReadingPosition(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   payload: Record<string, unknown>,
   localHostName?: string
 ) {

@@ -3,7 +3,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
-import { snapshotStage, snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
@@ -11,12 +10,12 @@ import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInvento
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
+import { seedLargeOverwriteFixture } from './desktopFramedSyncLargeOverwrite.fixture.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
-import { finishRequestSyncSeedProbe, recordRequestSyncConnection, seedWithRequestSyncProbe } from './desktopRequestSyncSeedProbe.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -37,24 +36,11 @@ const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
 
-if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) {
-  const fetchDiscovery = globalThis.fetch;
-  globalThis.fetch = (input, init) => typeof input === 'string' && input.endsWith('/companion/discovery')
-    ? snapshotStage('fixture.discovery.client', () => fetchDiscovery(input, init))
-    : fetchDiscovery(input, init);
-}
-
 const requestCounts: Record<string, number> = {};
 const server = createServer((request, response) => {
   const route = new URL(request.url ?? '/', 'http://localhost');
   const label = route.searchParams.get('request') ?? route.pathname;
   requestCounts[label] = (requestCounts[label] ?? 0) + 1;
-  const discovery = route.pathname === '/companion/discovery';
-  if (discovery) {
-    finishRequestSyncSeedProbe();
-    snapshotTrace('fixture.discovery', 'received');
-    response.once('finish', () => snapshotTrace('fixture.discovery', 'finished'));
-  }
   if (request.url === '/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ deviceId, pid: process.pid }));
@@ -62,14 +48,11 @@ const server = createServer((request, response) => {
   }
   void loadProcessPort().then(
     (port) => {
-      if (discovery) snapshotTrace('fixture.discovery', 'handler_ready');
       return port.handleHttpRequest(request, response);
     },
     (error: unknown) => writeHttpError(response, error)
   );
 });
-
-server.on('connection', recordRequestSyncConnection);
 
 function requiredEnvironment(name: string) {
   const value = process.env[name];
@@ -209,7 +192,7 @@ async function run(command: Command) {
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
-  if (command.action === 'seed_large_overwrite') return seedWithRequestSyncProbe();
+  if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
   if (['reorder', 'standalone_edit', 'rejoin', 'register_order_member', 'restore_local_order'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);
   }

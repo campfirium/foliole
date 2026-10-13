@@ -1,14 +1,14 @@
 import type { DbPort } from './dbPort.js';
+import { SYNC_NODE_VERSION_COLUMNS } from './syncNodeVersionRows.js';
 import type { SyncPackCursor } from './syncPackCursor.js';
 import {
   DEPENDENCY_SCOPE_SQL, dependencyScopeParams, type SyncPackDependencyTransfer
 } from './syncPackDependencyTransfer.js';
 import { assertDirectSyncPackKnownFactClaims, assertStagedSyncPackKnownFactsStillHeld,
   clearSyncPackKnownFactClaims } from './syncPackKnownFactClaims.js';
-import { SYNC_PACK_NODE_VERSION_COLUMNS } from './syncPackNodeVersions.js';
 
 const TABLE_COLUMNS = {
-  node_sync_versions: SYNC_PACK_NODE_VERSION_COLUMNS,
+  node_sync_versions: SYNC_NODE_VERSION_COLUMNS,
   node_sync_version_parents: ['version_id', 'parent_version_id', 'ordinal'],
   review_log: ['id', 'op_id', 'host_name', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
     'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after', 'difficulty_after']

@@ -2,35 +2,21 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
-import { chainReferencesQuery } from '../../lib/core/sync/nodeVersionChainSql.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { applyNodeMemberPosition } from '../../lib/core/sync/nodeVersionMemberPositionApply.js';
 import { nodePositionFactId, nodePositionPayloadSchema } from '../../lib/core/sync/nodeVersionMemberPositionFact.js';
 import { publishLocalNodePosition } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { compareSyncIdentityNodeFacts, selectRequiredSyncIdentityNodeFacts,
-  type SyncIdentityNodeFactDescription } from '../../lib/core/sync/syncIdentityNodeFactComparison.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
-import { describeVersionFact } from '../../lib/core/sync/syncPackFactPresence.js';
 
-import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync,
+import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
   type Peer } from './syncEmptyLibraryTestSupport.js';
+import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
-
-function description(peer: Peer): SyncIdentityNodeFactDescription {
-  const references = chainReferencesQuery('topic');
-  const head = peer.driver.queryOne<{ current_version_id: string }>(
-    "SELECT current_version_id FROM nodes WHERE id = 'topic'");
-  if (!head) throw new Error('test_head_missing');
-  return { headId: head.current_version_id, nodeId: 'topic', reviews: [],
-    requirements: peer.driver.queryAll(references.sql, references.params),
-    parents: peer.driver.queryAll('SELECT * FROM node_sync_version_parents'),
-    versions: peer.driver.queryAll<Parameters<typeof describeVersionFact>[0]>(
-      `SELECT *, json_remove(snapshot_json, '$.content') AS snapshot_metadata
-        FROM node_sync_versions WHERE object_id = 'topic'`).map(describeVersionFact) };
-}
 
 it('accepts legal retired edges with immutable metadata intact through both production collectors', async () => {
   const source = createPeer('source');
@@ -43,8 +29,6 @@ it('accepts legal retired edges with immutable metadata intact through both prod
   await sync(target, source);
   const original = history(target).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }));
   target.db.prepare('DELETE FROM node_sync_version_parents WHERE version_id = ?').run(middle);
-  expect(compareSyncIdentityNodeFacts(description(source), description(target)))
-    .toEqual({ leftNeedsRepair: false, rightNeedsRepair: false });
   collectNodeVersionChainWithDriver(target.driver, 'topic');
   expect((await collectNodeVersionPayloads(target.port, 'topic')).skipped).toBeNull();
   expect(history(target).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id })))
@@ -52,9 +36,7 @@ it('accepts legal retired edges with immutable metadata intact through both prod
   expect(history(target).find((row) => row.version_id === middle)?.parent_version_id).toBe(base);
   expect(target.db.prepare('SELECT COUNT(*) FROM node_sync_version_parents WHERE version_id = ?')
     .pluck().get(middle)).toBe(0);
-  const required = selectRequiredSyncIdentityNodeFacts(description(source), description(source).requirements);
-  expect(required.bodyIds).toEqual([description(source).headId]);
-  expect(required.parents).toEqual([]);
+
 });
 
 it('requests a necessary body from its legitimate holder and never publishes missing adoption evidence', async () => {
@@ -84,8 +66,10 @@ it('requests a necessary body from its legitimate holder and never publishes mis
   await applyNodeMemberPosition(target.port, { object_type: 'node_position', object_id: nodePositionFactId(payload),
     content_hash: hashText(JSON.stringify(payload)), payload_json: JSON.stringify(payload),
     deleted_at: null, updated_at: payload.updated_at });
-  expect(compareSyncIdentityNodeFacts(description(source), description(target)))
-    .toEqual({ leftNeedsRepair: false, rightNeedsRepair: true });
+  expect(compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
+    remote: await readFramedSyncInventory(target.port) })).toEqual(expect.arrayContaining([
+    expect.objectContaining({ globalId: 'topic', direction: 'local_to_remote' })
+  ]));
   const before = target.db.prepare('SELECT * FROM node_version_member_positions WHERE device_identity_key = ?').get(target.id);
   await target.port.transaction((tx) => publishLocalNodePosition(tx, 'topic'));
   expect(target.db.prepare('SELECT * FROM node_version_member_positions WHERE device_identity_key = ?').get(target.id))

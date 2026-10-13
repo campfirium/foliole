@@ -5,17 +5,9 @@ import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncG
 const mocks = vi.hoisted(() => ({
   listener: null as null | ((event: Record<string, unknown>) => void),
   query: vi.fn(),
-  commitFileReceipt: vi.fn(), releaseFileHold: vi.fn(),
   resolve: vi.fn(),
   run: vi.fn(),
   writer: vi.fn()
-}));
-
-vi.mock('./framed/companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => ({}) }));
-vi.mock('../../../../../lib/core/sync/framedSyncFileOutbound.js', () => ({
-  createFramedSyncFileOutboundStaging: () => ({
-    commitOutboundReceipt: mocks.commitFileReceipt, releaseOutboundHolds: mocks.releaseFileHold
-  })
 }));
 
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
@@ -58,64 +50,23 @@ it.each([['group-1', true], ['other-group', false]])('validates group admission 
 
 beforeEach(async () => {
   mocks.query.mockReset().mockResolvedValue([]);
-  mocks.commitFileReceipt.mockReset().mockResolvedValue('committed');
-  mocks.releaseFileHold.mockReset().mockResolvedValue(undefined);
   mocks.resolve.mockReset().mockResolvedValue(undefined);
   mocks.run.mockReset().mockResolvedValue({ changes: 0, lastInsertRowId: null });
   mocks.writer.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
   await ensureCompanionSyncGroupDataOwner();
 });
 
-it('runs provider live-database writes through the shared writer queue', async () => {
-  mocks.listener?.({
-    operation: 'record_supply_cursor',
-    payload: { from_cursor: 4, peer_id: 'desktop-c', to_cursor: 9 },
-    request_id: 'request-1'
-  });
-  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
-  expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.run).toHaveBeenCalledWith(expect.stringContaining('(peer_id, stream_name'), [
-    'desktop-c', '4:9', expect.any(String)
-  ]);
-  expect(mocks.resolve).toHaveBeenCalledWith({ request_id: 'request-1', result: { recorded: true } });
-});
-
-it('routes receipt completion through the file owner and releases its hold after commit', async () => {
-  const transferId = '11'.repeat(32);
-  const contentId = '22'.repeat(32);
-  mocks.listener?.({
-    operation: 'complete_framed_outbound',
-    payload: {
-      applied_state_hash: '33'.repeat(32), content_id: contentId,
-      receiver_device_id: 'peer-1', receiver_library_epoch: 'epoch-1', transfer_id: transferId
-    },
-    request_id: 'framed-receipt'
-  });
-  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalledWith({
-    request_id: 'framed-receipt', result: { receipt_state: 'committed', transfer_id: transferId }
-  }));
-  expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.releaseFileHold).toHaveBeenCalledWith(Uint8Array.from({ length: 32 }, () => 0x11));
-  expect(mocks.commitFileReceipt.mock.invocationCallOrder[0]).toBeLessThan(mocks.releaseFileHold.mock.invocationCallOrder[0]!);
-  expect(mocks.run).not.toHaveBeenCalled();
-});
-
-it('creates provider read snapshots through the Capacitor database owner', async () => {
-  mocks.listener?.({
-    operation: 'create_snapshot',
-    payload: { target_path: '/data/user/0/com.foliole.android/cache/foliole-provider-source-1.db' },
-    request_id: 'request-2'
-  });
-  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalled());
-  expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.run).toHaveBeenCalledWith(
-    "VACUUM INTO '/data/user/0/com.foliole.android/cache/foliole-provider-source-1.db'"
-  );
-  expect(mocks.resolve).toHaveBeenCalledWith({
-    request_id: 'request-2',
-    result: { snapshot_path: '/data/user/0/com.foliole.android/cache/foliole-provider-source-1.db' }
-  });
-});
+it.each(['record_supply_cursor', 'complete_framed_outbound', 'create_snapshot'])(
+  'rejects retired operation %s without database access', async operation => {
+    mocks.listener?.({ operation, payload: {}, request_id: 'retired-request' });
+    await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalledWith({
+      request_id: 'retired-request', error: 'sync_group_data_operation_unsupported'
+    }));
+    expect(mocks.writer).not.toHaveBeenCalled();
+    expect(mocks.query).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
+  }
+);
 
 it('loads the active Device credential through the Capacitor database owner', async () => {
   mocks.query.mockResolvedValueOnce([{ device_id: 'device-1', workgroup_key: 'group-key' }]);

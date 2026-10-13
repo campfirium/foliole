@@ -25,7 +25,7 @@ vi.mock('../../lib/core/sync/syncNodeConvergence.js', () => ({
 vi.mock('../../lib/core/sync/framedSyncPeerEpoch.js', () => ({
   recordFramedSyncPeerEpoch: mocks.recordPeerEpoch
 }));
-vi.mock('../../lib/core/sync/nodeVersionInboundReceipt.js', () => ({
+vi.mock('../../lib/core/sync/nodeVersionSourceRevision.js', () => ({
   advanceLocalSourceRevision: mocks.advanceRevision
 }));
 vi.mock('../../lib/core/sync/syncNodeTextBodyBlobs.js', () => ({

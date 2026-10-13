@@ -6,8 +6,6 @@ import { pathToFileURL } from 'node:url';
 
 import { build } from 'vite';
 
-import { snapshotStage } from '../database/requestSyncSnapshot.trace.js';
-
 export { readDesktopFramedSyncLibraryEvidence } from './desktopFramedSyncTwoProcessEvidence.js';
 
 export type DesktopFramedSyncFixtureSnapshot = Readonly<{
@@ -123,7 +121,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
   let diagnostics = '';
   let sequence = 0;
   const pending = new Map<number, PendingReply>();
-  child.stdout?.on('data', (data) => { diagnostics += recordFixtureStdout(data); });
+  child.stdout?.on('data', (data) => { diagnostics += String(data); });
   child.stderr?.on('data', (data) => {
     diagnostics += String(data);
     if (fixtureEnvironment(input).FOLIOLE_REQUEST_SYNC_DIAGNOSTICS === '1') process.stderr.write(data);
@@ -142,7 +140,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
     pending.clear();
   });
   const send = (action: string, args: Readonly<Record<string, unknown>> = {}) =>
-    snapshotStage(`fixture.${input.deviceId}.${action}`, () => new Promise<unknown>((resolve, reject) => {
+    new Promise<unknown>((resolve, reject) => {
       if (!child.connected) { reject(new Error(`fixture_unavailable\n${diagnostics}`)); return; }
       const id = ++sequence;
       pending.set(id, { reject, resolve });
@@ -151,7 +149,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
         pending.delete(id);
         reject(error);
       });
-    }));
+    });
   return {
     child,
     diagnostics: () => diagnostics, invoke: send,
@@ -184,11 +182,6 @@ function fixtureEnvironment(input: FixtureProcessInput) {
     FOLIOLE_FRAMED_SYNC_DEVICE_ID: input.deviceId,
     FOLIOLE_DESKTOP_FRAMED_SYNC_PROCESS_MODULE: pathToFileURL(input.script).href
   };
-}
-
-function recordFixtureStdout(data: Buffer) {
-  if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) process.stderr.write(data);
-  return String(data);
 }
 
 async function seedResource(send: (action: string, args?: Readonly<Record<string, unknown>>) => Promise<unknown>,

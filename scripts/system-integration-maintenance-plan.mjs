@@ -21,9 +21,9 @@ export const framedSyncSuites = [
   'src/shared/platform/companion/sync/framed/companionFramedSyncApply.resources.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncApply.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncInventory.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncInventoryRound.test.ts',
+  'src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.test.ts',
-  'src/shared/platform/companion/sync/framed/companionFramedSyncTransfer.test.ts'
+  'lib/core/sync/requestSyncRoundFailures.test.ts'
 ];
 
 export function parseMaintenanceArgs(argv) {

@@ -10,17 +10,13 @@ import { createBetterSqliteDbPort } from '../../../../../../electron/database/be
 import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/companionDatabaseLifecycle.js';
 import { readFramedSyncInventory, readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
-import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
-import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
+import { applyRequestSyncObject, type RequestSyncObjectInput } from '../../../../../../lib/core/sync/requestSyncObjectApply.js';
 import { beginSyncGroupLocalAdoption, finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
 import { assertCompanionPeerProofFresh } from '../nodeVersionCompanionPeerProof.js';
-
-import { applyCompanionFramedSyncTransfer, prepareCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
-import { installCompanionFramedSyncStaging } from './companionFramedSyncApply.testSupport.js';
-import { applyPreparedCompanionFramedSyncTransfers } from './companionFramedSyncApplyPrepared.js';
 
 const databases: Database.Database[] = [];
 const roots: string[] = [];
@@ -38,33 +34,31 @@ async function setup(kind: 'android' | 'ios') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-local-adoption-'));
   roots.push(root);
   const main = new Database(path.join(root, 'main.db'));
-  const stagingPath = path.join(root, 'staging.db');
-  const staging = new Database(stagingPath);
-  databases.push(main, staging);
+  databases.push(main);
   const port = createBetterSqliteDbPort(main);
   await bootstrapCompanionDatabase(port, { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
-  const prefix = `framed_sync_${kind}`;
-  installCompanionFramedSyncStaging(staging, prefix);
+  main.exec(`INSERT INTO sync_groups VALUES ('group-1', 'Group', 'key', 'now', 'now');
+    INSERT INTO sync_group_local_state VALUES (1, 'group-1', 'receiver', 'active', 'now');
+    INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
+      device_name, platform, state, joined_at, updated_at)
+    VALUES ('group-1', 'sender', 'sender-anchor', '/sender', 'Sender', 'mac', 'active', 'now', 'now'),
+      ('group-1', 'receiver', 'receiver-anchor', '/receiver', 'Receiver', '${kind}', 'active', 'now', 'now')`);
   let index = 0;
-  const prepare = async (record: NativeSyncNodeRecord) => {
+  const prepare = async (record: NativeSyncNodeRecord): Promise<RequestSyncObjectInput> => {
     const projection = projectFramedSyncNodeRecord(record);
-    const transferId = new Uint8Array(32).fill(++index);
-    const attemptId = new Uint8Array(16).fill(index);
-    staging.prepare(`INSERT INTO ${prefix}_transfers VALUES
-      (?, ?, 'sender', 'sender-epoch', 'receiver', 'adoption-epoch', ?, 'ready_to_apply')`)
-      .run(transferId, transferId, attemptId);
-    staging.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, '0', 3, ?)`)
-      .run(transferId, attemptId, encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!)));
-    const blob = projection.manifest.blobs[0]!;
-    staging.prepare(`INSERT OR IGNORE INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
-      .run(blob.sha256, Number(blob.byteLength), projection.bodyBlob);
-    staging.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, 1, 1)`)
-      .run(transferId, blob.sha256, Number(blob.byteLength));
-    return prepareCompanionFramedSyncTransfer(port, { stagingKind: kind, stagingPath, transferId,
-      senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', receiverDeviceId: 'receiver',
-      receiverLibraryEpoch: 'adoption-epoch' });
+    return {
+      context: { groupId: adoption.groupId, protocolVersion: 24,
+        senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', receiverDeviceId: 'receiver',
+        receiverLibraryEpoch: adoption.libraryEpoch },
+      globalId: record.object_id, objectType: record.object_type, requestId: new Uint8Array(16).fill(++index),
+      peerState: { contract_version: 3, group_id: adoption.groupId, sender_device_identity_key: 'sender',
+        library_epoch: 'sender-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
+      facts: async function* () { yield* projection.manifest.facts; },
+      loadBody: async () => projection.bodyBlob,
+      enqueueSearchInvalidations: false
+    };
   };
-  await applyPreparedCompanionFramedSyncTransfers(port, [await prepare(nodeRecord('local'))]);
+  await port.transaction(tx => applySyncNodesWithDbPort(tx, [nodeRecord('local')], { enqueueSearchInvalidations: false }));
   await port.transaction((tx) => beginSyncGroupLocalAdoption(tx, adoption));
   return { main, port, prepare };
 }
@@ -76,16 +70,16 @@ it.each(['android', 'ios'] as const)('clears once and commits %s objects indepen
   expect(main.prepare('SELECT id FROM nodes WHERE id = ?').get('local')).toEqual({ id: 'local' });
   expect(main.prepare('SELECT id FROM nodes WHERE id = ?').get('group-a')).toBeUndefined();
   expect(await readFramedSyncInventory(port)).toEqual([]);
-  await expect(applyCompanionFramedSyncTransfer(port, first.input)).rejects.toThrow('sync_group_local_adoption_pending');
+  await expect(applyRequestSyncObject(port, first)).rejects.toThrow('sync_group_local_adoption_pending');
   expect(await loadSyncGroupLocalAdoption(port)).toEqual(adoption);
 
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(true);
-  await applyPreparedCompanionFramedSyncTransfers(port, [first]);
+  await applyRequestSyncObject(port, first);
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
   expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 24,
     senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
     receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch })).toHaveLength(1);
-  await applyPreparedCompanionFramedSyncTransfers(port, [second]);
+  await applyRequestSyncObject(port, second);
   await port.transaction(async (tx) => {
     await finishSyncGroupOverwriteProgress(tx, progress);
     await finishSyncGroupLocalAdoption(tx, adoption);
@@ -93,11 +87,13 @@ it.each(['android', 'ios'] as const)('clears once and commits %s objects indepen
 
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%' ORDER BY id").all())
     .toEqual([{ id: 'group-a' }, { id: 'group-b' }]);
-  expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
   expect(await loadSyncGroupLocalAdoption(port)).toBeNull();
   expect(await readFramedSyncInventory(port)).toHaveLength(2);
-  await applyCompanionFramedSyncTransfer(port, first.input);
-  expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
+  const nodes = main.prepare('SELECT * FROM nodes ORDER BY id').all();
+  const versions = main.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  await applyRequestSyncObject(port, first);
+  expect(main.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
+  expect(main.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(versions);
 });
 
 it.each(['android', 'ios'] as const)('preserves committed %s units when the next object is invalid', async (kind) => {
@@ -108,16 +104,15 @@ it.each(['android', 'ios'] as const)('preserves committed %s units when the next
   const invalid = await prepare(invalidRecord);
 
   await prepareSyncGroupOverwrite(port, progress);
-  await applyPreparedCompanionFramedSyncTransfers(port, [valid]);
-  await expect(applyPreparedCompanionFramedSyncTransfers(port, [invalid]))
+  await applyRequestSyncObject(port, valid);
+  await expect(applyRequestSyncObject(port, invalid))
     .rejects.toThrow('framed_sync_node_parent_missing:missing-parent');
 
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ id: 'group-a' }]);
   expect(await loadSyncGroupLocalAdoption(port)).toEqual(adoption);
-  expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
   expect(main.prepare("SELECT version_id FROM node_sync_versions WHERE object_id = 'group-b'").all()).toEqual([]);
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
-  await applyPreparedCompanionFramedSyncTransfers(port, [valid]);
+  await applyRequestSyncObject(port, valid);
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ id: 'group-a' }]);
 });
 

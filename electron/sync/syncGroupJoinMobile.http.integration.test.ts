@@ -70,7 +70,7 @@ async function restoredApplicant(platform: string) {
   await source.send('seed', { id: 'local-topic', content: 'Restored local data' });
   const backup = await source.send('backup');
   await provider.send('seed', { id: 'remote-topic', content: 'New remote data' });
-  await provider.send('joinProviderEnable', { anchor: true });
+  await provider.send('joinProviderEnable');
   for (const [worker, target] of [[source, peer], [provider, local]] as const) {
     await worker.send('sync', { ...target }).catch((error: Error) => {
       if (!error.message.includes('sync_group_sync_incomplete')) throw error;

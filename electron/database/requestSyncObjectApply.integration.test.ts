@@ -61,7 +61,7 @@ it('commits business facts, source progress, peer epoch and local position toget
   expect(await host.db.query('SELECT adopted_version_id, pending_version_ids_json FROM node_version_member_positions')).toEqual(position);
   for (const table of ['framed_sync_outbound_publications', 'framed_sync_inbound_transfers',
     'framed_sync_receipts', 'sync_delivery_receipts', 'node_version_inbound_receipts']) {
-    expect(await host.db.query(`SELECT count(*) AS count FROM ${table}`)).toEqual([{ count: 0 }]);
+    expect(await host.db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", [table])).toEqual([]);
   }
 });
 

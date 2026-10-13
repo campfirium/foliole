@@ -6,8 +6,8 @@ import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
 import type { DbPort } from './dbPort.js';
 import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
-import { validateFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import type { FramedSyncBlobContent } from './framedSyncTransferPayloads.js';
+import { validateSyncBodyBytes } from './syncBodyBytes.js';
 
 export async function loadFramedExternalDocumentBody(db: DbPort, documentId: string, blob: CanonicalBlob) {
   const [row] = await db.query<{ content: string }>(
@@ -15,7 +15,7 @@ export async function loadFramedExternalDocumentBody(db: DbPort, documentId: str
   if (!row || blob.role !== 5 || !blob.required || blob.byteLength > BigInt(TEXT_BODY_MAX_BYTES)) {
     throw new Error('framed_sync_external_document_body_invalid');
   }
-  return validateFramedSyncFrozenBody(blob, new TextEncoder().encode(row.content));
+  return validateSyncBodyBytes(blob, new TextEncoder().encode(row.content));
 }
 
 export async function selectFramedExternalDocumentBody(db: DbPort, payload: string | null): Promise<CanonicalBlob[]> {

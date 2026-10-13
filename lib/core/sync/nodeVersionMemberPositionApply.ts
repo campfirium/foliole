@@ -2,10 +2,11 @@ import type { DbPort, DbRow } from './dbPort.js';
 import { nodePositionFactId, nodePositionPayloadSchema, nodePositionWriteStatements,
   parseNodePositionPayload, versionPositionStorage } from './nodeVersionMemberPositionFact.js';
 import { hashText } from './syncNodeResolution.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
+
 
 /** An authenticated relay carries the owner's original, comparable declaration. */
-export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSyncObjectRecord) {
+export async function applyNodeMemberPosition(port: DbPort, record: SyncObjectRecord) {
   const storage = versionPositionStorage();
   if (record.deleted_at || !record.payload_json) throw new Error('node_position_fact_invalid');
   const { payload, pending } = parseNodePositionPayload(JSON.parse(record.payload_json));
@@ -41,7 +42,7 @@ export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSync
 
 export async function applySyncPackNodeMemberPositions(port: DbPort, incomingAlias = 'inc') {
   if (!/^[a-z][a-z0-9_]*$/u.test(incomingAlias)) throw new Error('sync_identity_schema_invalid');
-  const rows = await port.query<SyncPackSyncObjectRecord & DbRow>(`SELECT * FROM
+  const rows = await port.query<SyncObjectRecord & DbRow>(`SELECT * FROM
     ${incomingAlias}.sync_objects WHERE object_type = 'node_position' ORDER BY object_id`);
   let applied = 0;
   for (const row of rows) if (await applyNodeMemberPosition(port, row)) applied++;

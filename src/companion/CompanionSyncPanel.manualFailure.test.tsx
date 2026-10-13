@@ -15,7 +15,7 @@ it('uses the action-local terminal result instead of a waiting discovery message
       }}
       discoveries={[]}
       endpointUrl="http://desktop:38641"
-      error="discovery_waiting_anchor"
+      error="discovery_no_devices"
       handoffReminderSettings={{ fixedTime: null, shortDelay: 'off' }}
       joinRequest={null}
       joinStatus="idle"

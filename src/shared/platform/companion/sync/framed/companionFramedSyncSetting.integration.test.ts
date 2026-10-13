@@ -1,5 +1,4 @@
 // @vitest-environment node
-import fs from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -13,27 +12,26 @@ import { buildCanonicalSettingSyncPayload } from '../../../../../../lib/core/syn
 import { buildCanonicalSyncTombstone } from '../../../../../../lib/core/sync/canonicalSyncTombstone.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import type { CanonicalFact } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { expireFramedSyncCompletions, FRAMED_SYNC_RECEIPT_RETENTION_MS } from '../../../../../../lib/core/sync/framedSyncCompletionRetention.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { selectFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
-import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
-import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
+import { applyRequestSyncObject, type RequestSyncObjectInput } from '../../../../../../lib/core/sync/requestSyncObjectApply.js';
 import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 
-import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
-import { installCompanionFramedSyncStaging } from './companionFramedSyncApply.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-function stage(database: Database.Database, prefix: string, fact: CanonicalFact, sequence: number) {
-  const transferId = new Uint8Array(32).fill(sequence);
-  const attemptId = new Uint8Array(16).fill(sequence);
-  database.prepare(`INSERT INTO ${prefix}_transfers VALUES
-    (?, ?, 'sender', 'sender-epoch', 'receiver', 'receiver-epoch', ?, 'ready_to_apply')`)
-    .run(transferId, new Uint8Array(32).fill(sequence), attemptId);
-  database.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, '0', 3, ?)`)
-    .run(transferId, attemptId, encodeValidatedProtocolMessage('fact', factToWire(fact)));
-  return transferId;
+function request(fact: CanonicalFact): RequestSyncObjectInput {
+  return {
+    context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+      senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch',
+      receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch' },
+    peerState: { contract_version: 3 as const, group_id: 'group', sender_device_identity_key: 'sender',
+      library_epoch: 'sender-epoch', proof_revision: 0, devices: [], removals: [], restore: null, source_proof_revisions: {} },
+    objectType: fact.objectType, globalId: fact.globalId, requestId: new Uint8Array(16),
+    facts: async function* () { yield fact; },
+    loadBody: async () => { throw new Error('setting_body_unexpected'); }, enqueueSearchInvalidations: false
+  };
 }
 
 async function seedPrivateSetting(receiver: DbPort, kind: 'android' | 'ios') {
@@ -49,15 +47,17 @@ async function seedPrivateSetting(receiver: DbPort, kind: 'android' | 'ios') {
 it.each(['android', 'ios'] as const)('applies shared settings and tombstones while preserving private settings through %s restart', async (kind) => {
   const source = createPeer('setting-source');
   const file = path.join(root, 'companion-setting.db');
-  const stagingPath = path.join(root, 'setting-staging.db');
   const sqlite = new Database(file);
-  const staging = new Database(stagingPath);
   const receiver = createBetterSqliteDbPort(sqlite);
-  const prefix = `framed_sync_${kind}`;
-  let sequence = 0;
   try {
     await bootstrapCompanionDatabase(receiver, { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
-    installCompanionFramedSyncStaging(staging, prefix);
+    sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now');
+      INSERT INTO sync_group_local_state VALUES (1, 'group', 'receiver', 'active', 'now');
+      UPDATE node_version_local_proof_state SET library_epoch = 'receiver-epoch';
+      INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
+        device_name, platform, state, joined_at, updated_at) VALUES
+        ('group', 'sender', 'sender', '/sender', 'Sender', 'mac', 'active', 'now', 'now'),
+        ('group', 'receiver', 'receiver', '/receiver', 'Receiver', 'mac', 'active', 'now', 'now')`);
     const privatePayload = await seedPrivateSetting(receiver, kind);
     for (const host of ['*']) {
       const id = `user_space:${kind}:phone:${host}:search_aliases_document`;
@@ -70,11 +70,9 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
       const apply = async (contentHash: string) => {
         const fact = await selectFramedSyncObjectStateFact(source.port,
           { globalId: id, objectType: 'setting' }, `setting:${contentHash}`);
-        const input = { receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
-          senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', stagingKind: kind, stagingPath,
-          transferId: stage(staging, prefix, fact, ++sequence) };
-        await applyCompanionFramedSyncTransfer(receiver, input);
-        await applyCompanionFramedSyncTransfer(receiver, input);
+        const input = request(fact);
+        await applyRequestSyncObject(receiver, input);
+        await applyRequestSyncObject(receiver, input);
         expect(await selectFramedSyncObjectStateFact(receiver,
           { globalId: id, objectType: 'setting' }, `setting:${contentHash}`)).toEqual(fact);
         return input;
@@ -86,9 +84,8 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
       await applySyncObjectInTransaction(source.port, { ...record, content_hash: deletedHash,
         deleted_at: '2026-10-07', payload_json: null, updated_at: '2026-10-07' }, { hostName: host });
       await apply(deletedHash);
-      expect(await expireFramedSyncCompletions(receiver, Date.now() + FRAMED_SYNC_RECEIPT_RETENTION_MS + 1000)).toBe(2);
-      await applyCompanionFramedSyncTransfer(receiver, originalInput);
-      await applyCompanionFramedSyncTransfer(receiver, originalInput);
+      await applyRequestSyncObject(receiver, originalInput);
+      await applyRequestSyncObject(receiver, originalInput);
       expect(sqlite.prepare('SELECT content_hash, deleted_at FROM sync_object_state WHERE object_id = ?').get(id))
         .toEqual({ content_hash: deletedHash, deleted_at: '2026-10-07' });
       expect(sqlite.prepare('SELECT value_json FROM setting_records WHERE host_name = ? AND key = ?').get(host, payload.key)).toBeUndefined();
@@ -96,10 +93,10 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
     await bootstrapCompanionDatabase(receiver, { allowCreate: false, expectedHostName: 'receiver', now: '2026-10-08' });
     const reopened = new Database(file, { readonly: true });
     try {
-      expect(reopened.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(1);
+      expect(reopened.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_receipts'").get()).toBeUndefined();
       expect(reopened.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_type = 'setting' AND deleted_at IS NOT NULL").pluck().get()).toBe(1);
       expect(reopened.prepare('SELECT value_json FROM setting_records WHERE key = ? AND host_name = ?').pluck().get(privatePayload.key, 'receiver')).toBe(privatePayload.value_json);
       expect(reopened.prepare("SELECT value FROM companion_meta WHERE key = 'host_name'").pluck().get()).toBe('receiver');
     } finally { reopened.close(); }
-  } finally { staging.close(); sqlite.close(); fs.rmSync(stagingPath); }
+  } finally { sqlite.close(); }
 });

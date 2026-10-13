@@ -1,7 +1,7 @@
 import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import type { FramedSyncDependencyResolver } from './framedSyncInventoryRoundDelivery.js';
-import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 /** Read dependency needs from the same fixed inventory without cloning the whole graph. */
 export function createFramedSyncInventoryDependencyLookup(inventories: {
@@ -27,8 +27,8 @@ function findEntry(entries: readonly FramedSyncInventoryEntry[], key: {
   while (low <= high) {
     const middle = Math.floor((low + high) / 2);
     const entry = entries[middle]!;
-    const order = compareSyncIdentityText(entry.objectType, key.objectType) ||
-      compareSyncIdentityText(entry.globalId, key.globalId);
+    const order = compareSyncFactText(entry.objectType, key.objectType) ||
+      compareSyncFactText(entry.globalId, key.globalId);
     if (!order) return entry;
     if (order < 0) low = middle + 1;
     else high = middle - 1;

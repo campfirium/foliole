@@ -9,7 +9,8 @@ import { shouldApplyForegroundTime } from './syncForegroundDailyTime.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
+
 
 const REMOTE_DEVICE_ID = 'sync-remote';
 export const SYNC_OBJECT_APPLY_BATCH_SIZE = 25;
@@ -41,7 +42,7 @@ export interface ApplySyncObjectsWithDbPortOptions {
   includeAlreadyApplied?: boolean;
   hostName?: string;
   onSkippedRecord?: (record: unknown, reason: unknown) => void;
-  onPayloadAppliedInTransaction?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
+  onPayloadAppliedInTransaction?: (port: DbPort, record: SyncObjectRecord) => Promise<void>;
 }
 
 type SyncObjectApplyStatus = 'apply' | 'already_applied' | 'stale';
@@ -71,7 +72,7 @@ export function applySyncObjectInTransaction(
   return applySingleSyncObjectInTransaction(port, validateSyncObjectRecord(record), options);
 }
 
-function validateSyncObjectRecord(value: unknown): SyncPackSyncObjectRecord {
+function validateSyncObjectRecord(value: unknown): SyncObjectRecord {
   if (!isRecord(value)) throw new Error('Invalid sync object record');
   const objectType = requireString(value, 'object_type') as NativeSyncObjectRecord['object_type'];
   if (!STATE_OBJECT_TYPES.has(objectType)) throw new Error(`Unsupported sync object type: ${objectType}`);
@@ -88,7 +89,7 @@ function validateSyncObjectRecord(value: unknown): SyncPackSyncObjectRecord {
 
 async function applySyncObjectBatch(
   port: DbPort,
-  records: SyncPackSyncObjectRecord[],
+  records: SyncObjectRecord[],
   options: ApplySyncObjectsWithDbPortOptions
 ) {
   return await port.transaction(async (tx) => {
@@ -122,7 +123,7 @@ async function applySyncObjectBatchWithIsolation(
 
 async function applySingleSyncObjectInTransaction(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   options: ApplySyncObjectsWithDbPortOptions
 ) {
   if (record.object_type === 'parent_child_order') {
@@ -146,7 +147,7 @@ async function applySingleSyncObjectInTransaction(
   return `${record.object_type}:${record.object_id}`;
 }
 
-async function restoreMissingExternalBody(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function restoreMissingExternalBody(port: DbPort, record: SyncObjectRecord) {
   if (record.object_type !== 'external_document' || record.deleted_at) return;
   const payload = asObject(record);
   const content = text(payload.content);
@@ -163,7 +164,7 @@ async function restoreMissingExternalBody(port: DbPort, record: SyncPackSyncObje
     [content, record.object_id, hash]);
 }
 
-async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function upsertAppliedSyncObjectState(port: DbPort, record: SyncObjectRecord) {
   await port.run(
     `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +
@@ -176,7 +177,7 @@ async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncOb
   );
 }
 
-async function getSyncObjectApplyStatus(port: DbPort, record: SyncPackSyncObjectRecord): Promise<SyncObjectApplyStatus> {
+async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord): Promise<SyncObjectApplyStatus> {
   const current = (await port.query<ExistingSyncObjectState>(
     'SELECT content_hash, deleted_at, updated_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     [record.object_type, record.object_id]

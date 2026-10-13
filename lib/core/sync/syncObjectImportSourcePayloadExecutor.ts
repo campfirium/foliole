@@ -1,8 +1,9 @@
 import type { DbPort } from './dbPort.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 
-export async function applyImportSourceObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+
+export async function applyImportSourceObject(port: DbPort, record: SyncObjectRecord) {
   if (record.deleted_at) {
     await port.run('DELETE FROM import_sources WHERE source_fingerprint = ?', [record.object_id]);
     return;

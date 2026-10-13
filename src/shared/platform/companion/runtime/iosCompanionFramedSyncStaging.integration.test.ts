@@ -13,6 +13,9 @@ vi.mock('../../companionWorkspaceRuntimeRepository', async () => {
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../lib/core/database/framedSyncStagingSchema';
+import { encodeFramedSyncManifest } from '../../../../../lib/core/database/framedSyncStagingSerialization';
+import { RETIRED_SYNC_TABLES } from '../../../../../lib/core/database/retiredSyncSchema';
+import { projectFramedSyncReview } from '../../../../../lib/core/sync/framedSyncRelationReviewFact';
 import { COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
 import { createFakeCapacitorConnection } from '../../companionSyncNodeVersionsTestSupport';
 
@@ -24,73 +27,88 @@ import {
 
 const roots: string[] = [];
 const databases: Database.Database[] = [];
-let previousStage = performance.now();
-
-function traceStage(stage: string) {
-  const now = performance.now();
-  if (process.env.CI || process.env.FOLIOLE_REQUEST_SYNC_TRACE_ROOT) {
-    process.stderr.write(`${JSON.stringify({ at: new Date().toISOString(), pid: process.pid,
-      stage: `ios_staging.${stage}`, elapsedMs: now - previousStage })}\n`);
-  }
-  previousStage = now;
-}
-
 afterEach(async () => {
-  traceStage('close.start');
+
   await closeIosCompanionDatabase();
-  traceStage('close.end');
+
   for (const database of databases.splice(0)) database.close();
-  traceStage('connections.closed');
+
   for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
-  traceStage('directories.removed');
+
 });
 
-describe('iOS active companion framed sync staging', () => {
-  it('installs the shared staging schema in a fresh active database', async () => {
+describe('iOS active companion sync schema retirement', () => {
+  it('retires unbacked temporary publications from v81 and reopens without changing business rows', async () => {
     const fixture = databaseFixture(false);
-    traceStage('initialize.start');
-    await initializeIosCompanionDatabase(nativeState(), fixture.manager, {
-      afterRepair: () => { traceStage('repair.complete'); }
-    });
-    traceStage('initialize.end');
+    await initializeIosCompanionDatabase(nativeState(), fixture.manager);
+    fixture.sqlite.prepare(`INSERT INTO nodes
+      (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
+       created_at, updated_at, deleted_at) VALUES ('kept-node', NULL, 'topic', 'Kept', 1, 0, 'Body', 0, ?, ?, NULL)`)
+      .run('2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
+    const before = fixture.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all();
+    installUnbackedPublication(fixture.sqlite);
+    fixture.sqlite.pragma('user_version = 81');
+    expect(fixture.sqlite.prepare('SELECT COUNT(*) FROM review_log').pluck().get()).toBe(0);
 
-    expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
-      FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
-    ));
+    for (let opening = 0; opening < 2; opening += 1) {
+      const state = await initializeIosCompanionDatabase(nativeState(), fixture.manager);
+      expect(state.database_ready).toBe(true);
+      expect(framedTables(fixture.sqlite).filter(name => new Set<string>(RETIRED_SYNC_TABLES).has(String(name)))).toEqual([]);
+      expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
+      expect(fixture.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(before);
+      expect(fixture.sqlite.prepare('SELECT COUNT(*) FROM review_log').pluck().get()).toBe(0);
+    }
+  });
+
+  it('creates a fresh database without retired transmission state', async () => {
+    const fixture = databaseFixture(false);
+
+    await initializeIosCompanionDatabase(nativeState(), fixture.manager);
+
+    expect(framedTables(fixture.sqlite).filter(name => new Set<string>(RETIRED_SYNC_TABLES).has(String(name)))).toEqual([]);
+    expect(framedTables(fixture.sqlite)).toContain('framed_sync_inventory');
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
-    traceStage('assertions.complete');
+
   });
 
   it('upgrades a version 70 active database without losing business rows', async () => {
-    traceStage('upgrade.start');
+
     const fixture = databaseFixture(true);
-    traceStage('fixture.created');
+
     fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.filter((sql) => !sql.includes('framed_sync_')).join(';\n'));
-    traceStage('old_schema.created');
+
     fixture.sqlite.prepare('INSERT INTO companion_meta VALUES (?, ?, ?)')
       .run('device_id', 'ios-device', '2026-10-05T00:00:00Z');
     fixture.sqlite.prepare(`INSERT INTO nodes
       (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
        created_at, updated_at, deleted_at) VALUES (?, NULL, 'topic', 'Kept', 1, 0, '', 0, ?, ?, NULL)`)
       .run('kept-node', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
-    traceStage('business_rows.inserted');
+
     fixture.sqlite.pragma('user_version = 70');
-    traceStage('version.set');
 
-    traceStage('initialize.start');
-    await initializeIosCompanionDatabase(nativeState(), fixture.manager, {
-      afterRepair: () => { traceStage('repair.complete'); }
-    });
-    traceStage('initialize.end');
+    await initializeIosCompanionDatabase(nativeState(), fixture.manager);
 
-    expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
-      FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
-    ));
+    expect(framedTables(fixture.sqlite).filter(name => new Set<string>(RETIRED_SYNC_TABLES).has(String(name)))).toEqual([]);
+    expect(framedTables(fixture.sqlite)).toContain('framed_sync_inventory');
     expect(fixture.sqlite.prepare("SELECT title FROM nodes WHERE id = 'kept-node'").pluck().get()).toBe('Kept');
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
-    traceStage('assertions.complete');
+
   });
 });
+
+function installUnbackedPublication(sqlite: Database.Database) {
+  for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
+  const fact = projectFramedSyncReview({ id: 'review', op_id: 'temporary-review', host_name: 'iPhone',
+    node_id: 'kept-node', grade: 3, scheduler_version: 'v1', reviewed_at: '2026-10-01',
+    due_before: '2026-10-01', stability_before: 1, difficulty_before: 2,
+    due_after: '2026-10-02', stability_after: 3, difficulty_after: 4 });
+  sqlite.prepare(`INSERT INTO framed_sync_outbound_publications
+    (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
+     group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
+     fact_count, blob_count, total_blob_bytes, state)
+    VALUES (x'01', x'02', x'03', x'04', ?, 24, 'group', 'a', 'a-epoch', 'b', 'b-epoch', 1, 0, 0, 'published')`)
+    .run(encodeFramedSyncManifest({ facts: [fact], blobs: [] }));
+}
 
 function databaseFixture(existed: boolean) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-ios-framed-staging-'));

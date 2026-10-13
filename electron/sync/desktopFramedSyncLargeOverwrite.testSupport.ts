@@ -21,7 +21,7 @@ export function largeOverwriteState(databasePath: string) {
         body_blob_hash: string; parent_version_id: string | null }>(
         `SELECT object_id, version_id, content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash, parent_version_id
           FROM node_sync_versions WHERE object_id LIKE ? ORDER BY object_id, version_id`).all(`${LARGE_OVERWRITE_PREFIX}%`),
-      receipts: sqlite.prepare('SELECT * FROM framed_sync_receipts ORDER BY rowid').all(),
+      retiredTables: sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").all(),
       inlineCount: sqlite.prepare<[string], { count: number }>(`SELECT count(*) AS count FROM node_sync_versions
         WHERE object_id LIKE ? AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text')`)
         .get(`${LARGE_OVERWRITE_PREFIX}%`)?.count,

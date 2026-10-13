@@ -3,10 +3,11 @@ import { retireExternalFolderDocumentsWithDbPort } from '../database/externalFol
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort } from './dbPort.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { writeSourceHostProjection } from './syncObjectSourcePayload.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
-export async function applyExternalFolderObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+
+export async function applyExternalFolderObject(port: DbPort, record: SyncObjectRecord) {
   if (!hasCanonicalExternalResourceContentHash(record)) {
     throw new Error('sync_content_hash_mismatch:external_folder');
   }

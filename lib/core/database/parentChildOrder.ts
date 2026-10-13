@@ -1,4 +1,4 @@
-import { compareUtf8Text } from '../sync/syncIdentityKeyOrder.js';
+import { compareUtf8Text } from '../sync/syncFactKeyOrder.js';
 
 import { flushCurrentParentOrderProjections } from './currentParentOrderStore.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';

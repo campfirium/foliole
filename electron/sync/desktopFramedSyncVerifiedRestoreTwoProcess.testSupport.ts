@@ -107,7 +107,7 @@ export function restoreBusinessRows(databasePath: string) {
       'node_version_local_source_revisions', 'node_version_device_revisions', 'node_version_local_origins',
       'node_version_local_holds', 'parent_child_order', 'sync_group_metadata', 'sync_group_restore_events',
       'search_index_invalidations', 'framed_sync_inventory', 'framed_sync_version_summary',
-      'framed_sync_fact_summary', 'framed_sync_resource_availability', 'framed_sync_receipts']
+      'framed_sync_fact_summary', 'framed_sync_resource_availability']
       .map((table) => ({ table, rows: sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all() }));
   } finally { sqlite.close(); }
 }

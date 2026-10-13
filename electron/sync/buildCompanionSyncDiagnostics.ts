@@ -6,7 +6,6 @@ import type {
 } from '../../lib/platform/syncDiagnosticsContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
-import { loadMaxStateSeq } from '../database/syncPackRows.js';
 
 import { loadDesktopSyncActivity } from './desktopSyncActivityStore.js';
 import type { LanWorkspaceSyncServerStatus } from './lanWorkspaceSyncServer.js';
@@ -137,7 +136,8 @@ export function buildCompanionSyncDiagnostics(args: {
 }): SyncDiagnosticSnapshot {
   const collectedAt = new Date().toISOString();
   const storage = loadStorage();
-  const maxStateSeq = loadMaxStateSeq(openDatabaseConnection().driver);
+  const maxStateSeq = openDatabaseConnection().driver.queryOne<{ value: number }>(
+    'SELECT high_water AS value FROM sync_state_sequence WHERE singleton_id = 1')?.value ?? 0;
   const connection = buildConnection(args.serverStatus);
   return {
     collected_at: collectedAt,

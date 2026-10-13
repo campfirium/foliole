@@ -10,7 +10,7 @@ import { textAlternativesSchema } from './topicTextState.js';
 
 export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyFields: [
-    'ancestor_version_ids', 'content_hash', 'host_name', 'is_tombstone',
+    'content_hash', 'host_name', 'is_tombstone',
     'parent_version_id', 'parent_version_ids', 'snapshot', 'updated_at',
     'version_created_at'
   ],
@@ -147,7 +147,6 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
   );
   const get = (name: string) => required(fields, name);
   if (fields.has('body_deleted')) boolValue(get('body_deleted'));
-  stringList(get('ancestor_version_ids'));
   stringList(get('parent_version_ids'));
   for (const name of ['host_name', 'parent_version_id', 'version_created_at']) {
     stringValue(get(name), true);

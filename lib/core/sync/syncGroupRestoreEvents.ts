@@ -22,12 +22,6 @@ export async function receiveSyncGroupRestoreEvent(port: DbPort, incoming: SyncG
   const event = parseSyncGroupRestoreEvent(incoming);
   const current = await loadLatestSyncGroupRestoreEvent(port, event.group_id);
   if (current && compareSyncGroupRestoreEvents(current.event, event) >= 0) return current;
-  for (const table of ['sync_group_restore_page_rows', 'sync_pack_dependency_rows',
-    'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
-    'sync_identity_receive_rounds', 'sync_identity_retired_views',
-    'sync_identity_pack_receipts', 'sync_identity_peer_baselines']) {
-    await port.run(`DELETE FROM ${table}`);
-  }
   await port.run(`INSERT INTO sync_group_restore_events
     (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
     VALUES (?, ?, ?, ?, NULL, ?)`, [event.restore_id, event.group_id,

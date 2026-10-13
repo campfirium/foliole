@@ -12,12 +12,15 @@ import { loadCompanionSyncGroupMemberState } from '../syncGroupMemberStateStore.
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 
-it.each([false, true])('retries a failed requested body after receiver restart and sender restart=%s', async restartSender => {
+const bodies = [{ label: 'empty', content: '' },
+  { label: 'BOM Unicode NUL CRLF', content: '\ufeff---\r\n中文😀\0\r\n---\r\n' + '中😀'.repeat(149_000) }];
+const cases = bodies.flatMap(body => [false, true].map(restartSender => ({ ...body, restartSender })));
+
+it.each(cases)('retries $label after receiver restart and sender restart=$restartSender', async ({ content, restartSender }) => {
   host = await createCompanionRequestFixture();
   const current = host;
   const { fixture } = current;
   const nodeId = 't326-invalidated-request';
-  const content = 'Complete immutable retry body 😀\n'.repeat(4096);
   await fixture.right.seed({ nodeId, title: 'Retry', content });
   const sourceBefore = readFacts(fixture.rightSnapshot.databasePath);
   let interrupted = false;

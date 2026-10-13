@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { validateStoredVersionDependencies } from '../../lib/core/sync/syncPackNodeVersionDependencyValidation.js';
+import { validateStoredVersionDependencies } from '../../lib/core/sync/syncNodeVersionDependencyValidation.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 function createFixture() {

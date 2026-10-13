@@ -175,7 +175,7 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       allowWhileNotParticipating: args.triggerReason === 'manual'
     });
   } catch (error) {
-    args.setError(error instanceof Error ? error.message : 'discovery_waiting_anchor');
+    args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
     args.setStatus('idle');
     return 'failed';
   }

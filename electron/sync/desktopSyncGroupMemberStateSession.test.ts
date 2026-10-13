@@ -53,7 +53,7 @@ const group = { group_id: 'test-group', local_device_identity_key: 'mac',
 let session: ReturnType<typeof startDesktopSyncGroupMemberStateSession>;
 let role = 'member';
 const activate = vi.fn(async (peer: DesktopSyncGroupPeer) => {
-  saveDesktopSyncGroupRoute({ ...peer, route_kind: 'member' });
+  saveDesktopSyncGroupRoute(peer);
   return true;
 });
 

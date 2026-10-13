@@ -56,7 +56,6 @@ function fact(): CanonicalFact {
   const stateHash = digest(1);
   const blobHash = digest(2);
   const bodyValues: Record<string, CanonicalField['value']> = {
-    ancestor_version_ids: { kind: 'list', value: [string('version-0')] },
     content_hash: string('01'.repeat(32)),
     host_name: nullableString(null),
     is_tombstone: { kind: 'bool', value: false },
@@ -105,7 +104,7 @@ it('rejects incomplete, nullable, or mistyped top-level fields', () => {
     .toThrow('node_version_fact_body_shape_invalid');
   expect(() => assertNodeVersionFactShape(replaceBodyField(fact(), 'is_tombstone', { kind: 'null' })))
     .toThrow('node_version_fact_bool_invalid');
-  expect(() => assertNodeVersionFactShape(replaceBodyField(fact(), 'ancestor_version_ids', string('v'))))
+  expect(() => assertNodeVersionFactShape(replaceBodyField(fact(), 'parent_version_ids', string('v'))))
     .toThrow('node_version_fact_string_list_invalid');
 });
 

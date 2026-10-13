@@ -122,8 +122,8 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
       }
       expect(reopened.prepare('SELECT available FROM framed_sync_resource_availability').pluck().all()).toEqual([1, 1]);
       for (const table of ['framed_sync_resource_demands', 'framed_sync_inbound_transfers', 'framed_sync_receipts']) {
-        expect(reopened.prepare(`SELECT count(*) FROM ${table}`).pluck().get()).toBe(0);
-        expect(local.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()).toBe(0);
+        expect(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
+        expect(local.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
       }
     } finally { reopened.close(); }
   } finally {

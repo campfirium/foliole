@@ -21,16 +21,11 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
-import { loadDesktopAnchorTopologyState, saveDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
-import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
-import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
-import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
-import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
@@ -58,39 +53,6 @@ function seed(args: Record<string, unknown>) {
     content: body, parentNodeId: args.parentId ? String(args.parentId) : null, position: 0, anchorLink: null, reveal: null,
     isTitleManual: true, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
   flushDirtyNodeSyncVersions();
-}
-async function pull(args: Record<string, unknown>) {
-  const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup()!);
-  const peer = { endpoint_url: String(args.origin), group_id: group.group_id,
-    local_device_id: group.local_device_identity_key, peer_device_id: String(args.identity),
-    peer_device_name: String(args.name), peer_platform: 'darwin' };
-  const exchanged = await exchangeDesktopSyncGroupMemberState(peer);
-  if (!exchanged.restoreFromPeer) return exchanged;
-  // Send the learned restore event back before the source authorizes restore pages.
-  await exchangeDesktopSyncGroupMemberState(peer);
-  const progress = openDatabaseConnection().driver.queryOne<{
-    cursor_state_seq: number; frontier_state_seq: number; source_epoch: string
-  }>('SELECT cursor_state_seq, frontier_state_seq, source_epoch FROM sync_pack_receive_progress WHERE group_id = ? AND peer_id = ? AND restore_id = ?',
-    [group.group_id, peer.peer_device_id, exchanged.restoreFromPeer]);
-  let after = progress?.cursor_state_seq ?? 0;
-  let frontier = progress?.frontier_state_seq;
-  let epoch = progress?.source_epoch;
-  for (let page = 0; page < 100; page++) {
-    const result = await downloadAndApplyDesktopSyncGroupPack({ after, peer,
-      ...(frontier === undefined ? {} : { frontierStateSeq: frontier }),
-      ...(epoch ? { sourceEpoch: epoch } : {}),
-      restoreId: exchanged.restoreFromPeer, createHeaders: createDesktopSyncGroupSignedHeaders });
-    after = result.cursor;
-    frontier = result.frontierStateSeq;
-    epoch = result.sourceEpoch;
-    if (args.firstPage && after < result.frontierStateSeq) return { applied: false, cursor: after, frontier: result.frontierStateSeq };
-    if (after === result.frontierStateSeq) {
-      await exchangeDesktopSyncGroupMemberState(peer);
-      await drainDesktopSyncGroupResourceArticles(peer);
-      return { applied: true, restoreId: exchanged.restoreFromPeer };
-    }
-  }
-  throw new Error('test restore did not converge');
 }
 function snapshot() {
   const driver = openDatabaseConnection().driver;
@@ -128,7 +90,6 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
   if (action === 'joinComplete') return handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
   if (action === 'joinProviderEnable') {
     const result = await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
-    if (args.anchor) saveDesktopAnchorTopologyState({ ...loadDesktopAnchorTopologyState(), role: 'anchor' });
     return result;
   }
   if (action === 'joinOverview') return handleSyncGroupCommand(NATIVE_COMMANDS.loadSyncGroupOverview, {});
@@ -183,7 +144,6 @@ async function run(action: string, args: Record<string, unknown>) {
     deviceId: loadDesktopSyncGroup()!.local_device_identity_key }, args.confirm ? loadBackupRestorePendingSync()?.restoreId : undefined);
   if (action === 'enable') return enableDesktopCompanionSync({ appVersion: '0.7.14',
     deviceId: loadDesktopSyncGroup()!.local_device_identity_key });
-  if (action === 'pull') return pull(args);
   if (action === 'windowEvents') return windowEvents.splice(0);
   if (action === 'preserveConcurrent') return preserveWithConcurrentTransaction(String(args.groupId));
   if (action === 'snapshot') return runWithDatabaseConnectionOwner(snapshot);
@@ -209,4 +169,4 @@ process.on('message', (message: { id: number; action: string; args: Record<strin
 void fs.mkdir(process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT!, { recursive: true });
 
 export type FixtureReply = ReturnType<typeof snapshot> & Awaited<ReturnType<typeof initializeGroup>> &
-  Awaited<ReturnType<typeof createApplicationDatabaseBackup>> & Awaited<ReturnType<typeof restoreFactsSnapshot>> & { applied: boolean; cursor: number; frontier: number };
+  Awaited<ReturnType<typeof createApplicationDatabaseBackup>> & Awaited<ReturnType<typeof restoreFactsSnapshot>>;

@@ -1,24 +1,18 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from './syncPackApplyStatements.js';
 
 export interface SyncPackSyncObjectsOptions extends SyncPackApplyableRowsOptions {
   hostName?: string;
-  onSettingApplied?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
+  onSettingApplied?: (port: DbPort, record: SyncObjectRecord) => Promise<void>;
 }
 
-export interface SyncPackSyncObjectRecord {
-  content_hash: string;
-  deleted_at: string | null;
-  object_id: string;
-  object_type: string;
-  payload_json: string | null;
-  updated_at: string;
-}
 
-interface SyncPackSyncObjectRow extends DbRow, SyncPackSyncObjectRecord {}
 
-export function isConsumableSyncPackSyncObject(record: Pick<SyncPackSyncObjectRecord, 'object_id' | 'object_type'>, hostName?: string) {
+interface SyncPackSyncObjectRow extends DbRow, SyncObjectRecord {}
+
+export function isConsumableSyncPackSyncObject(record: Pick<SyncObjectRecord, 'object_id' | 'object_type'>, hostName?: string) {
   if (record.object_type !== 'view_state') return true;
   return isLocalAndroidViewStateObject(record.object_id, hostName);
 }

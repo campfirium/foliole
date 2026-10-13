@@ -1,7 +1,7 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { SYNC_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncNodeVersionRows.js';
 import { SYNC_PACK_DEPENDENCY_MAX_BYTES, SYNC_PACK_DEPENDENCY_MAX_ROWS } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
-import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNodeVersions.js';
 
 export type SyncPackDependencyTable = 'node_sync_versions' | 'node_sync_version_parents' | 'review_log';
 
@@ -36,7 +36,7 @@ function dependencyQuery(table: SyncPackDependencyTable) {
   return table === 'node_sync_versions' ? {
     prefix: LINEAGE, from: 'node_sync_versions row',
     scope: 'row.version_id IN (SELECT version_id FROM lineage)',
-    key: 'row.version_id', ordinal: '-1', columns: [...SYNC_PACK_NODE_VERSION_COLUMNS]
+    key: 'row.version_id', ordinal: '-1', columns: [...SYNC_NODE_VERSION_COLUMNS]
   } : {
     prefix: LINEAGE, from: 'node_sync_version_parents row',
     scope: `row.version_id IN (SELECT version_id FROM lineage)

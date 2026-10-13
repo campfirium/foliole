@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { compareParentOrderNames } from './parentOrderNameOrder.js';
-import { compareUtf8Text } from './syncIdentityKeyOrder.js';
+import { compareUtf8Text } from './syncFactKeyOrder.js';
 import { hashText } from './syncNodeResolution.js';
 
 const ids = z.array(z.string().min(1)).refine((value) => new Set(value).size === value.length);

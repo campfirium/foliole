@@ -36,7 +36,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     await applicant!.send('seed', { id: 'discarded-local', content: 'Unwanted applicant data' });
     await provider!.send('seed', { id: 'group-source', content: 'Authoritative group content' });
     await existing!.send('seed', { id: 'existing-topic', content: 'Existing member content' });
-    await provider!.send('joinProviderEnable', { anchor: true });
+    await provider!.send('joinProviderEnable');
     await sync(provider!, peers[2]!);
     await applicant!.send('leave');
     withDatabase(peers[1]!.database, (db) => seedRetiredExternalDocuments(db));
@@ -50,7 +50,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     const identity = localIdentity(peers[0]!.database);
     withDatabase(peers[1]!.database, restorePreCurrentParentOrderFixture);
     await provider!.send('reopen');
-    await provider!.send('joinProviderEnable', { anchor: true });
+    await provider!.send('joinProviderEnable');
     await applicant!.send('joinComplete');
     expect(localIdentity(peers[0]!.database)).toBe(identity);
     expect(readAdoption(peers[0]!.database)).toBeNull();

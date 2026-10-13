@@ -1,5 +1,5 @@
 import type { DbPort } from './dbPort.js';
-import { SYNC_PACK_NODE_VERSION_COLUMNS } from './syncPackNodeVersions.js';
+import { SYNC_NODE_VERSION_COLUMNS } from './syncNodeVersionRows.js';
 import { eligiblePackVersion } from './syncPackVersionEligibility.js';
 
 export async function loadVerifiedExistingSyncPackVersions(port: DbPort, alias: string) {
@@ -32,7 +32,7 @@ export async function rehydrateStoredVersionBodies(port: DbPort, alias: string) 
 }
 
 async function assertExistingVersionsMatch(port: DbPort, alias: string) {
-  const immutableColumns = SYNC_PACK_NODE_VERSION_COLUMNS.filter((column) =>
+  const immutableColumns = SYNC_NODE_VERSION_COLUMNS.filter((column) =>
     !['version_id', 'parent_version_id', 'body_text', 'snapshot_json'].includes(column));
   const mismatch = [
     ...immutableColumns.map((column) => `existing.${column} IS NOT incoming.${column}`),

@@ -31,6 +31,17 @@ export function verifiedReceiverEvidence(databasePath: string, nodeId: string) {
   } finally { sqlite.close(); }
 }
 
+export function verifiedReceiverBusinessEvidence(databasePath: string, nodeId: string) {
+  const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
+  try {
+    return {
+      node: sqlite.prepare('SELECT id, content, current_version_id FROM nodes WHERE id = ?').get(nodeId),
+      versions: sqlite.prepare('SELECT version_id, body_text, json_extract(snapshot_json, \'$.content\') AS content FROM node_sync_versions WHERE object_id = ?').all(nodeId),
+
+    };
+  } finally { sqlite.close(); }
+}
+
 export function sourceArticleIdentity(databasePath: string, nodeId: string) {
   const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
   try {

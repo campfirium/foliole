@@ -13,13 +13,13 @@ import {
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import { applySettingObject, applyViewStateObject } from './syncObjectPrivateStatePayloadExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 import { applyTopicDailyCount } from './syncTopicDailyCount.js';
 
 export async function applySyncObjectPayloadWithDbPort(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   switch (record.object_type) {
@@ -58,7 +58,7 @@ export async function applySyncObjectPayloadWithDbPort(
   }
 }
 
-async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function applyNodeTextAlternativeObject(port: DbPort, record: SyncObjectRecord) {
   if (record.deleted_at) {
     await port.run('DELETE FROM node_text_alternatives WHERE alternative_id = ?', [record.object_id]);
     return;
@@ -88,7 +88,7 @@ async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSync
   );
 }
 
-async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function applyExternalDocumentObject(port: DbPort, record: SyncObjectRecord) {
   if (!hasCanonicalExternalResourceContentHash(record)) {
     throw new Error('sync_content_hash_mismatch:external_document');
   }
@@ -119,7 +119,7 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
   );
 }
 
-async function applyPdfPageTextObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+async function applyPdfPageTextObject(port: DbPort, record: SyncObjectRecord) {
   const payload = asObject(record);
   const attachmentId = text(payload.attachment_id) ?? record.object_id.split(':')[0] ?? record.object_id;
   const page = numberOrNull(payload.page) ?? Number(record.object_id.split(':').at(-1));

@@ -72,8 +72,8 @@ export const REACHABILITY_MANIFEST = Object.freeze({
       identity_page_push: ['ios/App/App/FolioleCompanionSyncIdentityRoutes.swift',
         'ios/App/App/FolioleCompanionSyncIdentityPushRoute.swift']
     },
-    framed: [{ root: 'ios/App/App/FolioleCompanionSyncGroupRequestRoutes.swift',
-      file: 'ios/App/FramedSyncRuntimePackage/Sources/FolioleFramedSyncRuntime/FolioleFramedSyncCodec.swift' }]
+    framed: [{ root: 'ios/App/App/FolioleRequestSyncRoute.swift',
+      file: 'ios/App/App/FolioleRequestSyncHTTPChunks.swift' }]
   }
 });
 

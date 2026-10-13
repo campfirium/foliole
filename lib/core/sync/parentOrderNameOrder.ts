@@ -1,4 +1,4 @@
-import { compareUtf8Text } from './syncIdentityKeyOrder.js';
+import { compareUtf8Text } from './syncFactKeyOrder.js';
 
 function parts(value: string) {
   return value.normalize('NFKC').toLowerCase().match(/[0-9]+|[^0-9]+/gu) ?? [];

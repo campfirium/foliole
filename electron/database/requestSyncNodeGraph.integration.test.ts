@@ -12,6 +12,37 @@ const devices: ReturnType<typeof textDevice>[] = [];
 afterEach(() => { for (const device of devices.splice(0)) device.sqlite.close(); vi.useRealTimers(); });
 function device() { const host = textDevice(); devices.push(host); return host; }
 
+function businessRows(host: ReturnType<typeof textDevice>) {
+  return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_text_alternatives',
+    'sync_object_state', 'content_blob_data'].map(table => ({ table,
+    rows: host.sqlite.prepare(`SELECT * FROM ${table}`).all().map(row => JSON.stringify(row)).sort() }));
+}
+
+it.each(['cycle', 'cross-object parent', 'changed immutable hash'] as const)(
+  'rejects %s through request receive without changing business rows', async fault => {
+    const host = device();
+    const base = textBranch('base', 'Original');
+    await host.receive([base]);
+    const before = businessRows(host);
+    const valid = textBranch('independent', 'Independent body');
+    valid.object_id = 'independent'; valid.snapshot = { ...valid.snapshot, id: 'independent' };
+    const invalid = fault === 'changed immutable hash' ? { ...base, content_hash: 'f'.repeat(64) } :
+      textBranch('invalid', 'Invalid body', base);
+    if (fault === 'cycle') {
+      invalid.parent_version_id = 'invalid'; invalid.parent_version_ids = ['invalid'];
+    } else if (fault === 'cross-object parent') {
+      invalid.object_id = 'different'; invalid.snapshot = { ...invalid.snapshot, id: 'different' };
+    }
+    const expected = fault === 'cycle' ? 'node_version_graph_cycle' : fault === 'cross-object parent'
+      ? 'node_version_missing_parents:base' : 'sync_pack_node_version_immutable_mismatch';
+    await expect(host.db.transaction(async tx => {
+      const source = await requestSyncNodeSource(tx, arraySyncNodeRecordSource([valid, invalid]));
+      await applyConvergentSyncNodeSource(tx, source);
+    })).rejects.toThrow(expected);
+    expect(businessRows(host)).toEqual(before);
+    expect((await host.current()).body_text).toBe('Original');
+  });
+
 it('matches ordinary apply and conflict alternatives without per-record ancestor arrays', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime('2026-10-04T00:00:00Z');

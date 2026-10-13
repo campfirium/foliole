@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
-import { observeMacosAnchorAfterElection } from './macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from './macos-a5-provider-observation.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import { prepareS220EvidenceRoot } from './macos-a5-s220-evidence-root.mjs';
@@ -64,7 +64,7 @@ export async function verifyS220A5Resource(args) {
       || overview.sync_group?.group_id !== before.inspection.group.group_id) {
       throw new Error('S220 isolated Mac group not ready.');
     }
-    receipt.anchor = await observeMacosAnchorAfterElection(session);
+    receipt.anchor = await observeMacosProviderReady(session);
     receipt.online = await observe(args, root, fixture,
       overview.sync_group.group_id, 'restored');
     checked(paths.adb, ['-s', serial, 'install', '-r', '-t', paths.androidTestApk]);

@@ -1,5 +1,5 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import type { SyncPackNodeVersionRow } from '../../lib/core/sync/syncPackNodeVersions.js';
+import type { SyncNodeVersionRow } from '../../lib/core/sync/syncNodeVersionRows.js';
 
 import type { VersionHead } from './syncPackVersionHeads.js';
 
@@ -10,7 +10,7 @@ export function stageDesktopSyncPackNodeHolds(args: {
   nodes: VersionHead[];
   packId: string;
   toPeerId: string;
-  versions: SyncPackNodeVersionRow[];
+  versions: SyncNodeVersionRow[];
   knownVersionIds?: string[];
 }) {
   const local = args.driver.queryOne<{ group_id: string }>(
@@ -31,7 +31,7 @@ export function stageDesktopSyncPackNodeHolds(args: {
   for (const node of heads) {
     const versionId = node.current_version_id!;
     const head = versions.get(versionId) ?? (knownVersions.has(versionId)
-      ? args.driver.queryOne<SyncPackNodeVersionRow>(
+      ? args.driver.queryOne<SyncNodeVersionRow>(
         'SELECT * FROM node_sync_versions WHERE version_id = ? AND object_id = ?',
         [versionId, node.id]) : undefined);
     if (!head || head.object_id !== node.id || !hasPayload(head)) {
@@ -54,7 +54,7 @@ export function stageDesktopSyncPackNodeHolds(args: {
   }
 }
 
-function hasPayload(row: SyncPackNodeVersionRow) {
+function hasPayload(row: SyncNodeVersionRow) {
   if (row.body_text !== null) return true;
   const snapshot = JSON.parse(row.snapshot_json) as { content?: unknown };
   return snapshot.content === undefined || typeof snapshot.content === 'string';

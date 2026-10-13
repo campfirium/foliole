@@ -22,7 +22,7 @@ function largeNodeFact(): CanonicalFact {
   });
   const body: Record<string, CanonicalValue> = Object.fromEntries(contract.bodyFields.map((name) => [name, nil]));
   Object.assign(body, {
-    ancestor_version_ids: { kind: 'list', value: [] }, parent_version_ids: { kind: 'list', value: [] },
+    parent_version_ids: { kind: 'list', value: [] },
     content_hash: string('01'.repeat(32)), is_tombstone: { kind: 'bool', value: false },
     snapshot: { kind: 'object', value: contract.snapshotFields.map((name) => ({ name, value: snapshot[name]! })) },
     updated_at: string('2026-10-08T00:00:00.000Z')

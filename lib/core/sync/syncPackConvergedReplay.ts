@@ -1,13 +1,13 @@
 import type { DbPort } from './dbPort.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
-import type { SyncPackNodeVersionParentRow } from './syncPackNodeVersions.js';
+import type { SyncNodeVersionParentRow } from './syncNodeVersionRows.js';
 
 /** Verified immutable duplicates may retain different local projections of history.
  * Do not import those projections as new ancestry. Require a complete incoming path
  * back to retained local history; equal text or a matching head ID is insufficient.
  */
 export async function loadConvergedSyncPackReplays(port: DbPort, alias: string,
-  verifiedIds: readonly string[], parents: SyncPackNodeVersionParentRow[]) {
+  verifiedIds: readonly string[], parents: SyncNodeVersionParentRow[]) {
   const heads = await port.query<{ version_id: string; object_id: string }>(
     `SELECT local.current_version_id AS version_id, local.id AS object_id
      FROM main.nodes local JOIN ${alias}.nodes incoming ON incoming.id = local.id
@@ -31,7 +31,7 @@ export async function loadConvergedSyncPackReplays(port: DbPort, alias: string,
 
 async function reachesRetainedHistory(port: DbPort, alias: string,
   head: { version_id: string; object_id: string }, versionId: string,
-  parents: SyncPackNodeVersionParentRow[], visiting: Set<string>): Promise<boolean> {
+  parents: SyncNodeVersionParentRow[], visiting: Set<string>): Promise<boolean> {
   if (versionId === head.version_id || visiting.has(versionId)) return false;
   const [record] = await port.query<{ object_id: string; complete: number }>(
     `SELECT object_id, CASE WHEN body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'

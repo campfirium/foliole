@@ -2,9 +2,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
+import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { postCompanionRequestFixture } from '../../../../../../electron/sync/companionRequestSyncHttp.testSupport.js';
 import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
@@ -17,9 +18,9 @@ import { loadLatestSyncGroupRestoreEvent, receiveSyncGroupRestoreEvent } from '.
 import { syncCompanionIdentityObjects } from '../syncGroupIdentityCompanionResult.js';
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null,
-  inventory: vi.fn(), post: vi.fn(), sign: vi.fn() }));
+  post: vi.fn(), sign: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
-  readFramedSyncInventory: native.inventory, postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign
 } }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
   databasePath: '/fixture',
@@ -30,13 +31,15 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionD
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({
   library_key: '/fixture', generation_id: 'generation'
 }) }));
-vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => native.files! }));
+vi.mock('./companionFramedSyncFiles.js', () => ({
+  currentCompanionFramedSyncFiles: () => native.files!, createCompanionFramedSyncFiles: () => native.files!
+}));
 vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
   subscribeNativeAppBackground: async () => () => undefined }));
 
 import { rememberCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 
-let bridge: ReturnType<typeof companionContinuationBridge> | undefined;
+let bridge: { sqlite: Database.Database; db: DbPort } | undefined;
 let fixture: Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>> | undefined;
 afterEach(async () => {
   native.db = null;
@@ -50,11 +53,12 @@ afterEach(async () => {
 
 it('resumes companion request restore after an object fails without erasing the accepted object', async () => {
   fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
-  bridge = companionContinuationBridge(fixture.leftSnapshot, fixture.rightSnapshot);
+  const sqlite = new Database(fixture.leftSnapshot.databasePath);
+  sqlite.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
+  bridge = { sqlite, db: createBetterSqliteDbPort(sqlite) };
   native.db = bridge.db;
   await bridge.db.run("INSERT INTO companion_meta VALUES ('host_name', 'Mobile', 'now')");
   native.files = createDesktopFramedSyncFiles(path.join(fixture.root, 'mobile-files'));
-  native.inventory.mockImplementation(bridge.readInventory);
   native.post.mockImplementation(input => postCompanionRequestFixture(native.files!, input));
   native.sign.mockImplementation(input => ({ headers: createDesktopSyncGroupSignedHeaders({
     groupId: input.sync_group_id, localDeviceId: fixture!.leftSnapshot.deviceId, method: input.method,

@@ -102,7 +102,7 @@ async function testRecordsMissingFailureDetails() {
 
 async function testSurfacesMissingAnchorBeforeSyncStarts() {
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
-    .mockRejectedValueOnce(new Error('discovery_waiting_anchor'));
+    .mockRejectedValueOnce(new Error('discovery_no_devices'));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setError = vi.fn();
   const setStatus = vi.fn();
@@ -117,7 +117,7 @@ async function testSurfacesMissingAnchorBeforeSyncStarts() {
   });
 
   expect(outcome).toBe('failed');
-  expect(setError).toHaveBeenCalledWith('discovery_waiting_anchor');
+  expect(setError).toHaveBeenCalledWith('discovery_no_devices');
   expect(setStatus).toHaveBeenLastCalledWith('idle');
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
 }

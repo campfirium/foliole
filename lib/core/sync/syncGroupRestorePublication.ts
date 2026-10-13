@@ -12,17 +12,9 @@ export async function publishSyncGroupRestoreEvent(port: DbPort, value: SyncGrou
     await port.run("DELETE FROM sync_object_state WHERE object_type = 'node_position'");
   }
   for (const table of [
-    'node_version_outbound_payload_holds', 'node_version_outbound_holds',
-    'node_version_local_holds', 'node_version_pack_receipts', 'node_version_confirmation_state',
-    'node_version_inbound_receipts', 'node_version_device_bases', 'node_version_member_positions',
+    'node_version_local_holds', 'node_version_member_positions',
     'node_version_device_revisions', 'node_version_local_source_revisions',
-    'sync_delivery_receipts', 'sync_push_ack', 'sync_peer_cursors',
-    'sync_identity_receive_rounds', 'sync_identity_retired_views',
-    'sync_identity_pack_receipts', 'sync_identity_peer_baselines',
-    'sync_identity_fact_staging', 'sync_identity_fact_sections',
-    'sync_pack_receive_progress', 'sync_pack_resource_articles', 'framed_sync_resource_demands',
-    'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims'
-  ]) {
+    'sync_push_ack', ]) {
     if (tables.has(table)) await port.run(`DELETE FROM ${table}`);
   }
   await port.run(`UPDATE node_version_local_proof_state SET library_epoch = ?, proof_revision = 0

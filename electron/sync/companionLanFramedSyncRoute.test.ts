@@ -60,7 +60,7 @@ it('verifies the production framed request against its declared binary body hash
   const nonce = 'android-nonce';
   const pathWithQuery = '/companion/framed-sync?initiator_device_id=android-a' +
     '&initiator_library_epoch=android-epoch&responder_device_id=desktop-a' +
-    '&responder_library_epoch=desktop-epoch';
+    '&responder_library_epoch=desktop-epoch&request=inventory&peer_round_id=12345678-1234-4234-8234-123456789abc&peer_round_mode=single';
   const timestamp = new Date().toISOString();
   const signature = createHmac('sha256', 'android-production-secret').update([
     'POST', pathWithQuery, timestamp, nonce, bodySha256
@@ -86,4 +86,16 @@ it('verifies the production framed request against its declared binary body hash
   expect(handlerArgs?.authenticate()).toEqual({
     device_id: 'android-a', device_name: 'A5', ok: true
   });
+});
+
+it('rejects the retired durable transfer endpoint without preparing transmission state', async () => {
+  mocks.handle.mockClear();
+  const request = Object.assign(new http.IncomingMessage(new Socket()), {
+    method: 'POST', url: '/companion/framed-sync'
+  });
+  const response = new http.ServerResponse(request);
+  expect(await handleProductionCompanionFramedSyncPost({ deviceId: 'desktop-a', request, response })).toBe(true);
+  expect(response.statusCode).toBe(410);
+  expect(response.writableEnded).toBe(true);
+  expect(mocks.handle).not.toHaveBeenCalled();
 });

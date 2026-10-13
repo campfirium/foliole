@@ -22,7 +22,7 @@ export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload 
     pending_join_request_count: 0,
     port: null,
     state: 'stopped',
-    topology_role: 'observing',
+    topology_role: null,
     topology_status: 'observing'
   },
   sync_group: null,

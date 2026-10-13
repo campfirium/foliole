@@ -71,7 +71,7 @@ export async function respondDesktopFramedSyncInventory(args: {
     try { yield first.value; yield* incoming; }
     finally { await incoming.return(undefined); }
   })());
-  const entries = await readDesktopFramedSyncRoundInventory(args.db, args.files);
+  const entries = await readDesktopFramedSyncRoundInventory(args.db);
   const messages = iterateFramedSyncInventory({ entries: detailGlobalIds.length ?
     entries.filter(entry => entry.objectType === 'node' && detailGlobalIds.includes(entry.globalId)) :
     summaryOnly ? framedSyncInventorySummary(entries) : entries, roundId });
@@ -134,7 +134,7 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   noncePort: FramedSyncSessionNoncePort;
   detailGlobalIds?: readonly string[];
 }) {
-  const localInventory = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db, args.files);
+  const localInventory = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db);
   return exchangeDesktopFramedSyncInventorySnapshotHttp({ ...args, localInventory,
     payloadBudget: readFramedSyncPayloadBudget(args.db) });
 }

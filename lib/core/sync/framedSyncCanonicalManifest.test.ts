@@ -169,7 +169,7 @@ describe('framed sync limits and golden corpus', () => {
       if (!entry || typeof entry !== 'object' || !('name' in entry)) throw new Error('golden_case_invalid');
       return entry.name;
     });
-    expect(names).toHaveLength(20);
+    expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(expect.arrayContaining([
       'handshake', 'inventory-chunk', 'transfer-header', 'fact', 'blob-chunk',
       'transfer-receipt', 'round-receipt', 'transfer-termination', 'protocol-error', 'fact-fragment'

@@ -1,6 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
-import { applyReviewLogRecordsWithDbPort } from '../../../lib/core/sync/syncPackReviewLogExecutor';
+import { applyReviewLogRecordsWithDbPort } from '../../../lib/core/sync/syncReviewLogApply';
 import type { NativeSyncReviewLogRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';

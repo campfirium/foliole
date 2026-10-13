@@ -6,9 +6,9 @@ import { applyFramedFactSources, type FramedFactSource } from './framedSyncFactA
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { recordFramedSyncPeerEpoch } from './framedSyncPeerEpoch.js';
-import { advanceLocalSourceRevision } from './nodeVersionInboundReceipt.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
 import { assertNodeVersionPeerEpoch } from './nodeVersionPeerProof.js';
+import { advanceLocalSourceRevision } from './nodeVersionSourceRevision.js';
 import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';

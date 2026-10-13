@@ -7,8 +7,8 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 import { applyImportSourceObject } from '../../lib/core/sync/syncObjectImportSourcePayloadExecutor.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
+import type { SyncObjectRecord } from '../../lib/core/sync/syncObjectRecord.js';
 import { applyWatchedFolderObject } from '../../lib/core/sync/syncObjectWatchedFolderPayloadExecutor.js';
-import type { SyncPackSyncObjectRecord } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 const db = new Database(':memory:');
@@ -16,7 +16,7 @@ initializeDatabaseSchema(db);
 afterEach(() => db.exec('DELETE FROM import_sources; DELETE FROM watched_folder_bindings; DELETE FROM desktop_sources'));
 afterAll(() => db.close());
 
-function record(payload: Record<string, unknown>): SyncPackSyncObjectRecord {
+function record(payload: Record<string, unknown>): SyncObjectRecord {
   return { content_hash: 'hash', deleted_at: null, object_id: 'watched-a',
     object_type: 'watched_folder', payload_json: JSON.stringify(payload), updated_at: 'later' };
 }

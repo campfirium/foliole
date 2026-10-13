@@ -2,9 +2,10 @@ import { topicDailyCountId, validateReviewDayKey } from '../review/topicDailyCou
 
 import type { DbPort } from './dbPort.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 
-export async function applyTopicDailyCount(port: DbPort, record: SyncPackSyncObjectRecord) {
+
+export async function applyTopicDailyCount(port: DbPort, record: SyncObjectRecord) {
   if (record.deleted_at) throw new Error('Daily counts cannot be deleted by a snapshot');
   const payload = asObject(record);
   const day = text(payload.day_key);

@@ -8,8 +8,8 @@ import {
 
 import { selectDesktopSyncPackFactWindow } from './syncPackFactWindow.js';
 import {
-  loadSyncPackNodeVersionParentRows,
-  iterateSyncPackNodeVersionRows
+  loadSyncNodeVersionParentRows,
+  iterateSyncNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { loadPackRows } from './syncPackRows.js';
 import { loadSyncPackTombstoneRows } from './syncPackTombstoneRows.js';
@@ -27,7 +27,7 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   const toStateSeq = window.toStateSeq;
   const base = loadPackRows(args.fromStateSeq, toStateSeq, driver);
   const versions: SyncPackFactPage['versions'] = [];
-  for (const row of iterateSyncPackNodeVersionRows(driver, syncPackVersionHeads(driver, base.nodes,
+  for (const row of iterateSyncNodeVersionRows(driver, syncPackVersionHeads(driver, base.nodes,
     loadSyncPackTombstoneRows(driver, { fromStateSeq: args.fromStateSeq, toStateSeq })))) {
     if (versions.length >= MAX_FACTS_PER_KIND) throw new Error('sync_pack_fact_index_over_budget');
     versions.push(describeVersionFact({ ...row,
@@ -36,7 +36,7 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   }
   const page: SyncPackFactPage = {
     versions,
-    parents: loadSyncPackNodeVersionParentRows(driver, versions),
+    parents: loadSyncNodeVersionParentRows(driver, versions),
     reviews: base.reviewLog
   };
   if (Object.values(page).some((facts) => facts.length > MAX_FACTS_PER_KIND)) {

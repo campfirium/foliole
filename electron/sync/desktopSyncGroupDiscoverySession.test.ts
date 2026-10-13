@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { serializePreparedAnchorTxt } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract.js';
+import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({
@@ -41,7 +41,7 @@ it('publishes found, changed, and lost until explicitly stopped', async () => {
   const service = { addresses: ['192.168.0.12'], fqdn: 'daily._foliole-sync._tcp.local', name: 'Daily', port: 38641,
     txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1',
       provider_platform: 'darwin', runtime_instance_id: 'remote',
-      ...serializePreparedAnchorTxt('anchor') } };
+      ...serializeSyncProtocolTxt() } };
 
   session.start();
   runtime.onService?.({ kind: 'found', service });
@@ -104,7 +104,7 @@ it('ends a failed resolved route without probing advertised address fallbacks', 
     domain: 'local.', fqdn: 'daily', host: 'daily.local.', interfaceIndex: 1,
     name: 'Daily', port: 38641, type: '_foliole-sync._tcp',
     txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
-      ...serializePreparedAnchorTxt('anchor'),
+      ...serializeSyncProtocolTxt(),
       ipv4_addresses: '192.168.0.10,169.254.161.89', runtime_instance_id: 'remote' } } });
 
   await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('connection_failed'));
@@ -123,7 +123,7 @@ it('keeps discovery open while a found provider probe is still pending', async (
     host: 'daily.local.', interfaceIndex: 1, name: 'Daily', port: 38641,
     type: '_foliole-sync._tcp', txt: { device_id: 'device-a', group_id: 'group-1',
       group_tag: 'tag-1', provider_platform: 'darwin', runtime_instance_id: 'remote',
-      ...serializePreparedAnchorTxt('anchor') } };
+      ...serializeSyncProtocolTxt() } };
 
   session.start();
   runtime.onService?.({ kind: 'found', service });

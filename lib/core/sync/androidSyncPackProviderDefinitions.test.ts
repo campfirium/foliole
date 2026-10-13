@@ -17,10 +17,10 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
   expect(definitions.protocol).toMatchObject({
     capabilities: [
       'article-image-sources-v1', 'author-host-snapshots-v1',
-      'bounded-sync-pack-pages-v1', 'canonical-attachment-storage-key-v1',
-      'complete-member-data-plane', 'current-parent-order-sources-v1', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
-      'device-sync-groups-v1', 'dynamic-node-version-chains-v1', 'framed-sync-transfer-sequences-v1', 'framed-sync-v24',
-      'global-object-identity-v2', 'group-key-routing-v1', 'independent-node-fact-pages-v1',
+      'canonical-attachment-storage-key-v1',
+      'complete-member-data-plane', 'current-parent-order-sources-v1',
+      'device-sync-groups-v1', 'dynamic-node-version-chains-v1', 'framed-sync-v24',
+      'global-object-identity-v2', 'group-key-routing-v1',
       'lan-sync-v1', 'node-owned-resource-references-v1', 'node-tombstone-pack-v1',
       'opaque-sync-refs-v1',
       'parent-child-order-v1',
@@ -28,7 +28,6 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'resource-availability-v1',
       'source-host-ownership-v1', 'sync-group-device-facts-v1',
       'sync-group-member-state-v1',
-      'sync-pack-fact-probe-v1',
       'system-entry-display-names-v1', 'topic-text-attachments-v1', 'watched-device-binding-v1',
       'watched-source-identity-and-path-v1', 'workgroup-aead-v1', 'workgroup-restore-v1'
     ],

@@ -7,6 +7,7 @@ import {
 } from './nodeVersionInboundReceipt.js';
 import { applySyncPackNodeMemberPositions } from './nodeVersionMemberPositionApply.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 import {
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
@@ -51,7 +52,7 @@ export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOption
   enqueueSearchInvalidations?: boolean;
   hostName: string;
   identityOrderMerge?: boolean;
-  onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
+  onSettingApplied?: (port: DbPort, record: SyncObjectRecord) => Promise<void>;
   recordVersionReceipt?: boolean;
   sourceHostName?: string;
   sourcePeerId?: string;

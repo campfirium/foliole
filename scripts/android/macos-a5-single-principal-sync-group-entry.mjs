@@ -13,8 +13,8 @@ import { projectA5InitialRun, readA5JoinReceipt,
   validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import {
-  assertMacosAnchorReady, observeMacosAnchorAfterElection
-} from './macos-a5-anchor-observation.mjs';
+  assertMacosProviderReady, observeMacosProviderReady
+} from './macos-a5-provider-observation.mjs';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 import { assertMacosAcceptanceSyncGroupServer } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -118,7 +118,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     const factReceipt = JSON.parse(fs.readFileSync(androidFact.manifestPath, 'utf8')).receipt;
     await waitForMacFact(session);
-    const macosTopologyBeforeRestart = assertMacosAnchorReady(await session.load());
+    const macosTopologyBeforeRestart = assertMacosProviderReady(await session.load());
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-manual-fact'), session });
     await waitForMacFact(session);
@@ -141,7 +141,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'a5-resume-after-conflict'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial });
     await session.invoke('resume_companion_sync');
-    await observeMacosAnchorAfterElection(session);
+    await observeMacosProviderReady(session);
     assertMacosAcceptanceSyncGroupServer(await session.load());
     const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
       action: 'sync-now', transportRequired: false, appId: ACCEPTANCE_APP_ID,

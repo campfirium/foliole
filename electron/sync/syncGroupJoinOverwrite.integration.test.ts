@@ -60,7 +60,7 @@ it('supplies an overwrite to the approving device without prior local membership
   await source!.send('seed', { id: 'local-note', content: 'Fresh source data' });
   await provider!.send('seed', { id: 'remote-note', content: 'Provider data' });
   await source!.send('leave');
-  await provider!.send('joinProviderEnable', { anchor: true });
+  await provider!.send('joinProviderEnable');
   const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'overwrite' }) as unknown as {
     join_request: { request_id: string }
   };
@@ -80,8 +80,8 @@ for (const mode of ['overwrite']) {
     const backup = await source!.send('backup');
     await provider!.send('seed', { id: 'remote-note', content: 'Remote historical data' });
     await offline!.send('seed', { id: 'offline-note', content: 'Offline historical data' });
-    await source!.send('joinProviderEnable', { anchor: true });
-    await provider!.send('joinProviderEnable', { anchor: true });
+    await source!.send('joinProviderEnable');
+    await provider!.send('joinProviderEnable');
     await sync(source!, peers[1]!);
     await sync(provider!, peers[0]!);
     const proofs = await provider!.send('proofs') as unknown as Array<{
@@ -134,11 +134,11 @@ it.each([false, true])('uses group data to replace local data with an empty prov
   await source!.send('seed', { id: 'local-note', content: 'Local data' });
   if (!emptyProvider) await provider!.send('seed', { id: 'remote-note', content: 'Independent data' });
   await source!.send('leave');
-  await provider!.send('joinProviderEnable', { anchor: true });
+  await provider!.send('joinProviderEnable');
   await expect.poll(async () => {
-    const overview = await provider!.send('joinOverview') as unknown as { server_status: { topology_role: string } };
-    return overview.server_status.topology_role;
-  }, { timeout: 15000 }).toBe('anchor');
+    const overview = await provider!.send('joinOverview') as unknown as { server_status: { state: string } };
+    return overview.server_status.state;
+  }, { timeout: 15000 }).toBe('running');
   const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'use-group' }) as unknown as {
     join_request: { request_id: string }
   };

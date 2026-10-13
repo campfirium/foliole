@@ -1,5 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncPackReviewLogExecutor.js';
+import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewLogApply.js';
 import type { NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';

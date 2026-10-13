@@ -19,11 +19,9 @@ export function loadDesktopResourceProviders(target: DesktopSyncGroupPeer) {
   return {
     eligibleDeviceIds,
     providers: [...unique.values()].filter((peer) => eligibleDeviceIds.includes(peer.peer_device_id))
-      .map((peer): DesktopResourceProvider => {
-        const provider = { ...peer, deviceId: peer.peer_device_id, endpointUrl: peer.endpoint_url };
-        delete provider.route_kind;
-        return provider;
-      })
+      .map((peer): DesktopResourceProvider => ({
+        ...peer, deviceId: peer.peer_device_id, endpointUrl: peer.endpoint_url
+      }))
   };
 }
 

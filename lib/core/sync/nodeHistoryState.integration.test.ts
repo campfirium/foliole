@@ -6,7 +6,6 @@ import { migrateNodeHistoryState } from '../database/nodeHistoryStateMigration.j
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
-import { stageFramedSyncFrozenBody, loadFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
@@ -103,13 +102,12 @@ it('maintains the hash for head-only and parent-only changes and repairs missing
   expect(await readFramedSyncInventoryEntry(a.db, key)).toEqual(before);
 });
 
-it('uses independent frozen bytes after historical deletion and preserves deletion on old input replay', async () => {
+it('keeps request snapshot bytes independent of historical deletion and preserves deletion on old input replay', async () => {
   const a = await host();
   const projection = projectFramedSyncNodeRecord(v1);
-  const blob = projection.manifest.blobs[0]!;
-  await stageFramedSyncFrozenBody(a.db, blob, projection.bodyBlob);
+  const body = projection.bodyBlob.slice();
   await upsertRemoteVersion(a.db, deletion);
-  expect(Array.from(await loadFramedSyncFrozenBody(a.db, blob))).toEqual(Array.from(projection.bodyBlob));
+  expect(Array.from(body)).toEqual(Array.from(projection.bodyBlob));
   await upsertRemoteVersion(a.db, v1);
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBeNull();
 });

@@ -9,6 +9,7 @@ import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desk
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
+import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -19,13 +20,13 @@ const TABLES = ['node_version_confirmation_state', 'node_version_local_origins',
   'node_version_local_source_revisions', 'node_version_member_positions'];
 
 function dropRetentionTables(sqlite: Database.Database) {
-  for (const name of TABLES) sqlite.exec(`DROP TABLE ${name}`);
+  for (const name of TABLES) sqlite.exec(`DROP TABLE IF EXISTS ${name}`);
 }
 
 function expectTables(sqlite: Database.Database) {
   const names = sqlite.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'
     AND name LIKE 'node_version_%' ORDER BY name`).all() as Array<{ name: string }>;
-  expect(names.map((row) => row.name)).toEqual([...TABLES].sort());
+  expect(names.map((row) => row.name)).toEqual(TABLES.filter(name => !isRetiredSyncSchema(name)).sort());
 }
 
 it('adds retention state and a stable library epoch without touching desktop versions', () => {

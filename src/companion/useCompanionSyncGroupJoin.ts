@@ -179,7 +179,7 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
       setDiscoveries(mapCandidates(snapshot));
       if (snapshot.status === 'permission_required' || snapshot.status === 'unavailable'
         || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed'
-        || snapshot.status === 'waiting_anchor') {
+        || snapshot.status === 'no_devices') {
         discoveryFailed = true;
         args.onError(snapshot.error_code === 'protocol_incompatible'
           ? 'protocol_incompatible' : `discovery_${snapshot.status}`); setStatus('idle');

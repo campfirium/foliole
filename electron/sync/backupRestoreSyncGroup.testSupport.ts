@@ -4,8 +4,6 @@ import path from 'node:path';
 
 import { build } from 'vite';
 
-import { snapshotTrace } from '../database/requestSyncSnapshot.trace.js';
-
 import type { FixtureReply } from './backupRestoreSyncGroup.fixture.js';
 
 export async function buildRestoreFixture(outputPath: string) {
@@ -54,11 +52,10 @@ export function startRestoreFixture(script: string, root: string, port: number) 
   const send = (action: string, args: Record<string, unknown> = {}) => new Promise<unknown>((resolve, reject) => {
     if (!child.connected) { reject(new Error(`fixture unavailable: ${diagnostics}`)); return; }
     const id = ++sequence;
-    const stage = `fixture:${path.basename(root)}:${id}:${action}`;
-    snapshotTrace(stage, 'start');
+
     pending.set(id, {
-      resolve(value) { snapshotTrace(stage, 'end'); resolve(value); },
-      reject(error) { snapshotTrace(stage, 'error'); reject(error); }
+      resolve(value) {  resolve(value); },
+      reject(error) {  reject(error); }
     });
     child.send({ id, action, args }, (error) => {
       if (error) { pending.delete(id); reject(error); }

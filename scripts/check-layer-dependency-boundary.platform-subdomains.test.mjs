@@ -55,9 +55,6 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/companion/customAdapter.ts')).toBe(
       'companion-runtime-plugin'
     );
-    expect(resolvePlatformSubdomain('src/shared/platform/companionSyncInstrumentationProbe.ts')).toBe(
-      'companion-sync-pack-apply'
-    );
     expect(resolvePlatformSubdomain('src/shared/platform/webLookupEntries.ts')).toBe('external-runtime');
     expect(resolvePlatformSubdomain('src/shared/platform/databaseMaintenanceStatusRuntimeRepository.ts')).toBe(
       'desktop-runtime-repository'

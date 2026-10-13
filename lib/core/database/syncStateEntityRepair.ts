@@ -2,7 +2,6 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { tableExists } from './numberedMigrationHelpers.js';
-import { RETIRE_STALE_STATE_RECEIPTS_SQL, SYNC_STATE_RECEIPT_LIFECYCLE_TRIGGERS } from './syncStateReceiptLifecycle.js';
 
 const ENTITIES = [
   ['node', 'nodes', 'id'],
@@ -29,15 +28,10 @@ export function repairSyncStateEntities(sqlite: DatabaseMigrationTarget) {
         !tableExists(sqlite, 'node_sync_versions'))) continue;
     sqlite.exec(removeUnbackedCleanStateSql(type, table, key));
   }
-  if (!tableExists(sqlite, 'sync_delivery_receipts')) return;
-  sqlite.exec(RETIRE_STALE_STATE_RECEIPTS_SQL);
-  for (const statement of SYNC_STATE_RECEIPT_LIFECYCLE_TRIGGERS) sqlite.exec(statement);
 }
 
 export async function repairCompanionSyncStateEntities(db: DbPort) {
   for (const [type, table, key] of ENTITIES) {
     await db.run(removeUnbackedCleanStateSql(type, table, key));
   }
-  await db.run(RETIRE_STALE_STATE_RECEIPTS_SQL);
-  for (const statement of SYNC_STATE_RECEIPT_LIFECYCLE_TRIGGERS) await db.run(statement);
 }

@@ -108,7 +108,7 @@ it('keeps the Mac provider available until the Fri consumer completes', () => {
   const provider = read('scripts/ios/fri-sync-group-provider.mjs');
 
   expect(provider).toContain('const signal = await waitForRelease();');
-  expect(provider).toContain('await observeMacosAnchorAfterElection(session);');
+  expect(provider).toContain('await observeMacosProviderReady(session);');
   expect(provider).not.toContain('waitForMacosAutomaticRun');
   expect(provider).toContain("FOLIOLE_T173_STANDALONE_PROVIDER === '1'");
   expect(provider).toContain("for (const device of ['A', 'B', 'C'])");

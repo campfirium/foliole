@@ -5,9 +5,7 @@ import { expect, it } from 'vitest';
 import { createCompanionDatabase, migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from '../../lib/core/database/nodeVersionRetentionIndexSchema.js';
-import { chainReferencesQuery } from '../../lib/core/sync/nodeVersionChainSql.js';
-import { prepareReadySyncIdentityIndex } from '../../lib/core/sync/syncIdentityIndexPreparation.js';
-import { buildSyncIdentityNodeFactIndex, readSyncIdentityNodeFactProofRoot } from '../../lib/core/sync/syncIdentityNodeFactIndex.js';
+import { requestSyncBodyReferences } from '../../lib/core/sync/requestSyncBodyRetention.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -49,13 +47,9 @@ it.each(['desktop', 'companion68', 'companion69'])('preserves original facts and
         current_version_id, content_hash, last_modified_by_host_name, updated_at)
       VALUES ('node', 'article', 1, 'head', 'h2', 'Mac', 't2')`);
     const port = createBetterSqliteDbPort(db);
-    await prepareReadySyncIdentityIndex(port);
-    await buildSyncIdentityNodeFactIndex(port);
-    const proof = await readSyncIdentityNodeFactProofRoot(port);
     const facts = db.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
     const edges = db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
-    const query = chainReferencesQuery('article');
-    const retained = db.prepare(query.sql).all(...query.params);
+    const retained = await requestSyncBodyReferences(port, 'article', 'head');
     for (let attempt = 0; attempt < 2; attempt++) {
       if (host === 'desktop') {
         db.pragma('user_version = 134');
@@ -65,9 +59,7 @@ it.each(['desktop', 'companion68', 'companion69'])('preserves original facts and
         await port.transaction(tx => migrateCompanionDatabase(tx, from, COMPANION_DATABASE_VERSION));
       }
       assertIndexes(db);
-      await buildSyncIdentityNodeFactIndex(port);
-      expect(await readSyncIdentityNodeFactProofRoot(port)).toBe(proof);
-      expect(db.prepare(query.sql).all(...query.params)).toEqual(retained);
+      expect(await requestSyncBodyReferences(port, 'article', 'head')).toEqual(retained);
       expect(db.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(facts);
       expect(db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(edges);
     }

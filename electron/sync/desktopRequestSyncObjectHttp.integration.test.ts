@@ -153,7 +153,7 @@ async function assertCommitted() {
     expect(persisted.prepare('SELECT count(*) FROM sync_group_nonce_ledger').pluck().get()).toBe(1);
     for (const table of ['framed_sync_outbound_publications', 'framed_sync_inbound_transfers', 'framed_sync_receipts',
       'sync_delivery_receipts', 'node_version_inbound_receipts']) {
-      expect(persisted.prepare(`SELECT count(*) FROM ${table}`).pluck().get()).toBe(0);
+      expect(persisted.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
     }
   } finally { persisted.close(); }
   return databasePath;

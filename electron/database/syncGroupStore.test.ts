@@ -34,8 +34,6 @@ beforeEach(() => {
   sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT)');
   sqlite.exec('CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT)');
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
-  sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
-  sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
   connection.current = { driver: createBetterSqlite3Driver(sqlite) };
 });
 
@@ -67,14 +65,10 @@ it('updates the local Device name and locally leaving removes only the active bi
   expect(updateLocalSyncGroupHostName('Studio Mac')?.devices.find(
     (device) => device.device_identity_key === local.identity_key
   )?.device_name).toBe('Studio Mac');
-  sqlite.exec("INSERT INTO sync_delivery_receipts VALUES ('device-a5')");
-  sqlite.exec("INSERT INTO sync_peer_cursors VALUES ('device-a5')");
   leaveDesktopSyncGroupDevice(local.identity_key, '2026-08-26T01:00:00.000Z');
   expect(loadDesktopSyncGroup()).toBeNull();
   expect(sqlite.prepare('SELECT state FROM sync_group_devices WHERE device_identity_key = ?').get(remote.identity_key))
     .toEqual({ state: 'active' });
-  expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_delivery_receipts').get()).toEqual({ value: 0 });
-  expect(sqlite.prepare('SELECT COUNT(*) AS value FROM sync_peer_cursors').get()).toEqual({ value: 0 });
 });
 
 it('keeps discovered routes and native DNS-SD handles out of SQLite', () => {

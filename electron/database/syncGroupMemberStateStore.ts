@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 
-import { framedSyncMemberRemovalReleaseStatements } from '../../lib/core/sync/framedSyncMemberRemovalRelease.js';
 import type { SyncGroupDevicePayload } from '../../lib/platform/syncGroupContract.js';
 import type {
   SyncGroupMemberStatePayload,
@@ -83,8 +82,8 @@ export function initiateDesktopSyncGroupDeviceRemoval(targetDeviceId: string, no
        created_at, completed_at, superseded_at) VALUES (?, ?, ?, ?, ?, NULL, NULL)`,
     [state.group_id, decisionId, targetDeviceId, state.sender_device_identity_key, now]);
     confirm(state.group_id, decisionId, state.sender_device_identity_key, 'enforced', now);
-    driver.execute('DELETE FROM sync_delivery_receipts WHERE peer_id = ?', [targetDeviceId]);
-    driver.execute('DELETE FROM sync_peer_cursors WHERE peer_id = ?', [targetDeviceId]);
+
+
     completeEligibleRemovals(state.group_id, state.sender_device_identity_key, now);
   });
   return decisionId;
@@ -126,10 +125,8 @@ export function applyDesktopSyncGroupMemberState(
       const targetsLocal = removal.target_device_identity_key === local.sender_device_identity_key;
       confirm(incoming.group_id, removal.decision_id, local.sender_device_identity_key,
         targetsLocal ? 'target_exit' : 'enforced', now);
-      driver.execute('DELETE FROM sync_delivery_receipts WHERE peer_id = ?',
-        [removal.target_device_identity_key]);
-      driver.execute('DELETE FROM sync_peer_cursors WHERE peer_id = ?',
-        [removal.target_device_identity_key]);
+
+
       if (targetsLocal) {
         leaveDesktopSyncGroupDevice(local.sender_device_identity_key, now);
         localExited = true;
@@ -265,8 +262,5 @@ function completeEligibleRemovals(groupId: string, localDeviceId: string, now: s
     driver.execute(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`,
     [now, now, groupId, removal.target_device_identity_key]);
-  }
-  for (const statement of framedSyncMemberRemovalReleaseStatements(groupId, localDeviceId)) {
-    driver.execute(statement.sql, statement.params);
   }
 }

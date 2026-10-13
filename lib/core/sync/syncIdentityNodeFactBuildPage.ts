@@ -5,8 +5,8 @@ import { z } from 'zod';
 import type { DbPort, DbRow } from './dbPort.js';
 import { planNodeVersionChain, type ChainVersion, type ChainEdge } from './nodeVersionChainPlan.js';
 import { CHAIN_HEAD_SQL, chainReferencesQuery, qualifyNodeVersionReadSql } from './nodeVersionChainSql.js';
-import { identityReviewRowSchema } from './syncIdentityFactRowSchemas.js';
-import { IDENTITY_REVIEW_COLUMNS } from './syncIdentityFactSourceRows.js';
+import { identityReviewRowSchema } from './syncFactRowSchemas.js';
+import { REVIEW_FACT_COLUMNS } from './syncFactRowSchemas.js';
 import { addSyncIdentityNodeFactDigest } from './syncIdentityNodeFactDigest.js';
 import { describeVersionFact } from './syncPackFactPresence.js';
 
@@ -69,7 +69,7 @@ async function scanParents(port: DbPort, schema: string, ids: string, builders: 
 async function scanReviews(port: DbPort, schema: string, ids: string, builders: Map<string, Builder>) {
   let after = ['', ''];
   for (;;) {
-    const rows = await port.query<ReviewRow>(`SELECT ${IDENTITY_REVIEW_COLUMNS.join(', ')}
+    const rows = await port.query<ReviewRow>(`SELECT ${REVIEW_FACT_COLUMNS.join(', ')}
       FROM ${schema}.review_log WHERE node_id IN (SELECT value FROM json_each(?))
       AND (node_id, op_id) > (?, ?) ORDER BY node_id, op_id LIMIT ?`, [ids, ...after, LIMIT]);
     for (const row of rows) addSyncIdentityNodeFactDigest(builders.get(row.node_id)!.hash,

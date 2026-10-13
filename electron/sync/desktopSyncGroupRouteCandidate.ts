@@ -1,16 +1,7 @@
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 
-import type { DesktopAnchorTarget } from './desktopAnchorTopologySession.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
-
-export function routeFromTarget(group: SyncGroupPayload, target: DesktopAnchorTarget) {
-  return routeFromCandidate(group, {
-    endpoint_url: target.endpointUrl,
-    group_id: target.groupId,
-    provider_device_id: target.peerDeviceId
-  });
-}
 
 export function routeFromCandidate(
   group: SyncGroupPayload,

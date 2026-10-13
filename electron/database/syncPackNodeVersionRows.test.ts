@@ -2,16 +2,16 @@ import { expect, it, vi } from 'vitest';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type {
-  SyncPackNodeVersionParentRow,
-  SyncPackNodeVersionRow
-} from '../../lib/core/sync/syncPackNodeVersions.js';
+  SyncNodeVersionParentRow,
+  SyncNodeVersionRow
+} from '../../lib/core/sync/syncNodeVersionRows.js';
 
 import {
-  loadSyncPackNodeVersionParentRows,
-  loadSyncPackNodeVersionRows
+  loadSyncNodeVersionParentRows,
+  loadSyncNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 
-function createVersion(overrides: Partial<SyncPackNodeVersionRow> = {}): SyncPackNodeVersionRow {
+function createVersion(overrides: Partial<SyncNodeVersionRow> = {}): SyncNodeVersionRow {
   return {
     body_text: null,
     content_hash: 'node-hash',
@@ -26,8 +26,8 @@ function createVersion(overrides: Partial<SyncPackNodeVersionRow> = {}): SyncPac
 }
 
 function createDriver(args: {
-  parentRows?: SyncPackNodeVersionParentRow[];
-  versions: SyncPackNodeVersionRow[];
+  parentRows?: SyncNodeVersionParentRow[];
+  versions: SyncNodeVersionRow[];
 }): DatabaseDriver {
   return {
     execute: vi.fn(),
@@ -51,13 +51,13 @@ it('packs current head lineage references without requiring missing historical p
     parentRows: [{ ordinal: 0, parent_version_id: 'desktop#missing-parent', version_id: 'desktop#head' }]
   });
 
-  const versions = loadSyncPackNodeVersionRows(driver, [{
+  const versions = loadSyncNodeVersionRows(driver, [{
     current_version_id: 'desktop#head',
     id: 'node-1'
   } as never]);
 
   expect(versions).toEqual([head]);
-  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([
+  expect(loadSyncNodeVersionParentRows(driver, versions)).toEqual([
     { ordinal: 0, parent_version_id: 'desktop#missing-parent', version_id: 'desktop#head' }
   ]);
 });
@@ -75,12 +75,12 @@ it('packs every retained branch of the current merge lineage', () => {
   ];
   const driver = createDriver({ parentRows, versions: [base, macos, fri, merged] });
 
-  const versions = loadSyncPackNodeVersionRows(driver, [{
+  const versions = loadSyncNodeVersionRows(driver, [{
     current_version_id: 'merged', id: 'node-1'
   } as never]);
 
   expect(versions.map((version) => version.version_id)).toEqual(['base', 'fri', 'macos', 'merged']);
-  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([
+  expect(loadSyncNodeVersionParentRows(driver, versions)).toEqual([
     parentRows[1], parentRows[0], parentRows[2], parentRows[3]
   ]);
 });
@@ -90,9 +90,9 @@ it('keeps parent references and rejects known cross-object edges', () => {
   const head = createVersion({ parent_version_id: 'desktop#parent' });
   const rows = [{ ordinal: 0, parent_version_id: 'desktop#parent', version_id: 'desktop#head' }];
 
-  expect(loadSyncPackNodeVersionParentRows(createDriver({ versions: [], parentRows: rows }), [parent, head]))
+  expect(loadSyncNodeVersionParentRows(createDriver({ versions: [], parentRows: rows }), [parent, head]))
     .toEqual(rows);
-  expect(() => loadSyncPackNodeVersionParentRows(createDriver({ versions: [], parentRows: rows }), [
+  expect(() => loadSyncNodeVersionParentRows(createDriver({ versions: [], parentRows: rows }), [
     { ...parent, object_id: 'other-node' },
     head
   ])).toThrow('sync_pack_node_version_cross_object:desktop#head');
@@ -107,7 +107,7 @@ it('loads a large lineage without exceeding a bounded SQL parameter count', () =
   ];
   const driver = createDriver({ parentRows: rows, versions: [] });
 
-  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual(rows);
+  expect(loadSyncNodeVersionParentRows(driver, versions)).toEqual(rows);
   for (const [, params] of vi.mocked(driver.queryAll).mock.calls) {
     expect(params!.length).toBeLessThanOrEqual(900);
   }
@@ -117,7 +117,7 @@ it('loads a large lineage without exceeding a bounded SQL parameter count', () =
 it('still rejects a missing current head row', () => {
   const driver = createDriver({ versions: [] });
 
-  expect(() => loadSyncPackNodeVersionRows(driver, [{
+  expect(() => loadSyncNodeVersionRows(driver, [{
     current_version_id: 'desktop#missing-head',
     id: 'node-1'
   } as never])).toThrow('sync_pack_node_version_missing:desktop#missing-head');

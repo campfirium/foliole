@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY } from '../../lib/platform/syncProtocolContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(),
@@ -105,7 +105,7 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before applying or 
   const incoming = memberState();
   if (kind === 'missing') delete incoming.protocol;
   else incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY) };
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== 'framed-sync-v24') };
   expect(() => acceptDesktopSyncGroupMemberState(JSON.stringify(incoming), receiverDeviceId))
     .toThrow('sync_group_peer_incompatible');
   expect(mocks.apply).not.toHaveBeenCalled();

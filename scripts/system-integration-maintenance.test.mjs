@@ -20,7 +20,7 @@ it('runs the current framed production boundary instead of the legacy simulator'
   expect(sync.args).toContain('electron/sync/desktopFramedSyncTwoProcess.integration.test.ts');
   expect(sync.args).toContain('electron/sync/desktopFramedSyncTwoProcessRecovery.integration.test.ts');
   expect(sync.args).toContain(
-    'src/shared/platform/companion/sync/framed/companionFramedSyncInventoryRound.test.ts'
+    'src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts'
   );
   expect(sync.args).not.toContain('sync:simulate');
   expect(steps.at(-1)).toMatchObject({

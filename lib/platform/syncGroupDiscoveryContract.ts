@@ -7,7 +7,7 @@ export type SyncGroupDiscoveryStatus =
   | 'unavailable'
   | 'incompatible'
   | 'connection_failed'
-  | 'waiting_anchor'
+  | 'no_devices'
   | 'stopped';
 
 export interface SyncGroupDiscoverySnapshot {

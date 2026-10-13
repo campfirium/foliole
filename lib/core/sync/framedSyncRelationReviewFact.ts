@@ -10,7 +10,7 @@ import {
 import {
   identityParentRowSchema,
   identityReviewRowSchema
-} from './syncIdentityFactRowSchemas.js';
+} from './syncFactRowSchemas.js';
 
 const parentSourceSchema = identityParentRowSchema.extend({
   object_id: z.string().min(1),

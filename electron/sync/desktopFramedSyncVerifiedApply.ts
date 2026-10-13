@@ -1,6 +1,7 @@
 import { recordFramedSyncPinnedResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applyFramedFactSources, type FramedFactSource } from '../../lib/core/sync/framedSyncFactApply.js';
+import { loadFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import type { FramedBodyLoader } from '../../lib/core/sync/framedSyncNodeRecordSource.js';
 import { FRAMED_SYNC_RESOURCE_FACT_KIND } from '../../lib/core/sync/framedSyncResourceFact.js';
 import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -46,7 +47,7 @@ export async function applyDesktopFramedSyncBusinessSources(tx: DbPort,
   transfers: readonly DesktopFramedVerifiedInbound[], sources: readonly FramedFactSource[], loadBody?: FramedBodyLoader) {
   const hostName = transfers.some((transfer) => transfer.objectType === 'setting') ? await readDesktopHostName(tx) : null;
   const result = await applyFramedFactSources(tx, sources, {
-    ...(loadBody ? { loadBody } : {}), enqueueSearchInvalidations: true,
+    loadBody: loadBody ?? loadFramedSyncFrozenBody, enqueueSearchInvalidations: true,
     objectOptions: { ...(hostName ? { hostName } : {}), onPayloadAppliedInTransaction: materializeDesktopSettingRecord }
   });
   await recordDesktopFramedSourceProgress(tx, transfers);

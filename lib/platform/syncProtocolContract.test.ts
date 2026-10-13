@@ -4,7 +4,6 @@ import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   evaluateSyncProtocolCompatibility,
   evaluateSyncProtocolVersionHint,
-  FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY,
   parseSyncProtocolDescriptor,
   parseSyncProtocolTxt,
   serializeSyncProtocolTxt,
@@ -18,12 +17,12 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 
 const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities];
 
-it('rejects a same-version peer lacking original transfer sequence support', () => {
+it('rejects a same-version peer lacking the current request transport', () => {
   const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-    .filter(value => value !== FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY) });
+    .filter(value => value !== 'framed-sync-v24') });
   expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
     status: 'incompatible', reason: 'required_capability_missing',
-    missing_capabilities: [FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY]
+    missing_capabilities: ['framed-sync-v24']
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).status).toBe('compatible');
 });

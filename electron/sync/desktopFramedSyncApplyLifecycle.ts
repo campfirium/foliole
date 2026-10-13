@@ -2,7 +2,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { PublishedTransfer, TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
-import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
+import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionSourceRevision.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
 export type DesktopFramedInboundIdentity = Pick<PublishedTransfer, 'context' | 'manifestHash' | 'transferId'> & {

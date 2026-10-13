@@ -5,7 +5,7 @@ import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
-import { includeLegacyVersionParents, validateStoredVersionDependencies } from './syncPackNodeVersionDependencyValidation.js';
+import { includeLegacyVersionParents, validateStoredVersionDependencies } from './syncNodeVersionDependencyValidation.js';
 
 export function isNodeVersionIdentityOnly(record: SyncNodeRecordMetadata & { body_text?: string | null;
   snapshot: SyncNodeRecordMetadata['snapshot'] & { content?: string | null } }) {

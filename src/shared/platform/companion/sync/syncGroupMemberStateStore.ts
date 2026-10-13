@@ -1,5 +1,4 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { framedSyncMemberRemovalReleaseStatements } from '../../../../../lib/core/sync/framedSyncMemberRemovalRelease.js';
 import { retirePeerPositionStatements } from '../../../../../lib/core/sync/syncGroupAdoptedPeerEpoch';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import {
@@ -79,10 +78,8 @@ export async function applyCompanionSyncGroupMemberState(
         const targetsLocal = removal.target_device_identity_key === context.localDeviceId;
         await persistRemovalConfirmation(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
           targetsLocal ? 'target_exit' : 'enforced', now);
-        await tx.run('DELETE FROM sync_delivery_receipts WHERE peer_id = ?',
-          [removal.target_device_identity_key]);
-        await tx.run('DELETE FROM sync_peer_cursors WHERE peer_id = ?',
-          [removal.target_device_identity_key]);
+
+
         if (targetsLocal) {
           await persistLocalExit(tx, context, now);
           localExited = true;
@@ -241,9 +238,6 @@ async function completeEligibleRemovals(db: DbPort, context: Context, now: strin
       WHERE group_id = ? AND device_identity_key = ?`,
     [now, now, context.groupId, removal.target_device_identity_key]);
   }
-  for (const statement of framedSyncMemberRemovalReleaseStatements(context.groupId, context.localDeviceId)) {
-    await db.run(statement.sql, statement.params);
-  }
 }
 
 async function persistLocalExit(db: DbPort, context: Context, now: string) {
@@ -251,8 +245,8 @@ async function persistLocalExit(db: DbPort, context: Context, now: string) {
     WHERE group_id = ? AND device_identity_key = ?`, [now, now, context.groupId, context.localDeviceId]);
   await db.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
   await db.run('DELETE FROM sync_group_metadata');
-  await db.run('DELETE FROM sync_delivery_receipts');
-  await db.run('DELETE FROM sync_peer_cursors');
+
+
   await db.run('DELETE FROM sync_group_nonce_ledger');
 }
 

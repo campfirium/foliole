@@ -8,7 +8,8 @@ import {
 } from '../../lib/core/import/readwiseSourceMode.js';
 import { READWISE_SOURCE_CUTOVER_COMPLETION_VERSION } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
-import type { SyncPackSyncObjectRecord } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from '../../lib/core/sync/syncObjectRecord.js';
+
 
 interface SettingValueRow extends DbRow {
   updated_at: string;
@@ -19,7 +20,7 @@ interface StoredSettingRow extends DbRow {
   value: string;
 }
 
-export async function materializeDesktopSettingRecord(port: DbPort, record: SyncPackSyncObjectRecord) {
+export async function materializeDesktopSettingRecord(port: DbPort, record: SyncObjectRecord) {
   if (record.object_type !== 'setting') return;
   const identity = parseSettingIdentity(record.object_id);
   if (!identity) return;

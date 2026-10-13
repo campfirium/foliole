@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 
 import '../app/styles.css';
 import './companionMinimal.css';
-import { installCompanionSyncInstrumentationProbe } from '../shared/platform/companionSyncInstrumentationProbe';
 import { StartupErrorBoundary } from '../shared/ui/StartupErrorBoundary';
 
 import { CompanionApp } from './CompanionApp';
@@ -11,7 +10,6 @@ import { installCompanionWebViewCompatibilityPolyfills } from './companionWebVie
 import type { AcceptanceResult } from './iosBridgeAcceptance';
 
 installCompanionWebViewCompatibilityPolyfills();
-installCompanionSyncInstrumentationProbe();
 
 const isIosBridgeAcceptance = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE === '1';
 const iosAcceptanceScenario = import.meta.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO;

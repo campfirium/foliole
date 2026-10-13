@@ -104,7 +104,6 @@ export {
   loadCompanionMissingAttachmentResource,
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
-export { applyCompanionDesktopSyncPack } from './companionSyncPackApply';
 export {
   loadCompanionPendingSyncSummary,
   loadCompanionSyncNodeVersionCursor,

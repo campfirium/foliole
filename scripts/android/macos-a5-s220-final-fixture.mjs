@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
-import { observeMacosAnchorAfterElection } from './macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from './macos-a5-provider-observation.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import { inspectS220A5Group } from './macos-a5-s220-group-inspect.mjs';
 import { S220_APP_ID, inspectS220A5Packages } from './macos-a5-s220-package-inventory.mjs';
@@ -50,7 +50,7 @@ export async function seedS220FinalFixture(args) {
     const overview = await session.load();
     if (overview.sync_group?.group_id !== fixture.groupId
       || overview.server_status?.state !== 'running') throw new Error('S220 Mac group not ready.');
-    fixture.anchor = await observeMacosAnchorAfterElection(session);
+    fixture.anchor = await observeMacosProviderReady(session);
     const snapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     });

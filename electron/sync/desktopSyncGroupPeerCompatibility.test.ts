@@ -28,7 +28,7 @@ it('accepts a peer only when its complete descriptor and identity match', async 
 
 it('accepts an explicit desktop member collection route', async () => {
   await expect(assertDesktopSyncGroupPeerCompatible(
-    { ...peer, route_kind: 'member' },
+    peer,
     vi.fn(async () => response(CURRENT_SYNC_PROTOCOL_DESCRIPTOR, 'member')) as typeof fetch
   )).resolves.toBeUndefined();
 });
@@ -44,11 +44,11 @@ it('rejects a v4 peer missing the complete member capability', async () => {
   )).rejects.toThrow('sync_group_peer_incompatible:required_capability_missing');
 });
 
-it('rejects an older provider before requesting an unbounded structure pack', async () => {
+it('rejects a provider missing the current request transport', async () => {
   const protocol = {
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-      .filter((capability) => capability !== 'bounded-sync-pack-pages-v1')
+      .filter((capability) => capability !== 'framed-sync-v24')
   };
   await expect(assertDesktopSyncGroupPeerCompatible(
     peer, vi.fn(async () => response(protocol)) as typeof fetch

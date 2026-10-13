@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
-import { observeMacosAnchorAfterElection } from './macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from './macos-a5-provider-observation.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import { readS220FinalFixture } from './macos-a5-s220-final-fixture.mjs';
 import { inspectS220A5Group } from './macos-a5-s220-group-inspect.mjs';
@@ -75,7 +75,7 @@ export async function runS220A5Offline(args) {
     const overview = await session.load();
     if (overview.sync_group?.group_id !== before.inspection.group.group_id
       || overview.server_status?.state !== 'running') throw new Error('S220 Mac group not ready.');
-    receipt.anchor = await observeMacosAnchorAfterElection(session);
+    receipt.anchor = await observeMacosProviderReady(session);
     checked(paths.adb, ['-s', serial, 'install', '-r', '-t', paths.androidTestApk]);
     disconnected = true;
     receipt.networkOff = instrumentation(captured, paths, serial, 'disconnectOnly');

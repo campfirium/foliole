@@ -14,7 +14,7 @@ import {
   assertManifestBlobGraph,
   assertUniqueCanonicalFacts
 } from './framedSyncManifestGraph.js';
-import { compareUtf8Text } from './syncIdentityKeyOrder.js';
+import { compareUtf8Text } from './syncFactKeyOrder.js';
 
 export type CanonicalValue =
   | Readonly<{ kind: 'bool'; value: boolean }>

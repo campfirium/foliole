@@ -14,7 +14,7 @@ function isDesktopProvider(platform: string) {
 function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDiscoverySnapshot {
   const incompatible = event.candidates.some((candidate) =>
     evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
-  const status = incompatible ? 'incompatible' : 'waiting_anchor';
+  const status = incompatible ? 'incompatible' : 'no_devices';
   return { candidates: [], change: event.change,
     error_code: incompatible ? 'protocol_incompatible' : null, status };
 }

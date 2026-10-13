@@ -131,7 +131,7 @@ it('does not fall back to the accepted endpoint after remote Device inventory ex
   runtime.discover.mockResolvedValue([]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641'))
-    .rejects.toThrow('discovery_waiting_anchor');
+    .rejects.toThrow('discovery_no_devices');
 });
 
 it('surfaces a same-group incompatible desktop instead of waiting indefinitely', async () => {

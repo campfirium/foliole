@@ -32,7 +32,7 @@ export interface SyncGroupDiscoveryPayload {
   provider_device_id: string;
   provider_device_name: string;
   provider_platform: string;
-  topology_role: import('./syncAnchorTopologyContract.js').DesktopAnchorRole | null;
+  topology_role: null;
 }
 
 export interface SyncGroupLibraryFacts {

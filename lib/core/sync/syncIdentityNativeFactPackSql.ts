@@ -1,5 +1,5 @@
-import { IDENTITY_REVIEW_COLUMNS } from './syncIdentityFactSourceRows.js';
-import { SYNC_PACK_NODE_VERSION_COLUMNS } from './syncPackNodeVersions.js';
+import { REVIEW_FACT_COLUMNS } from './syncFactRowSchemas.js';
+import { SYNC_NODE_VERSION_COLUMNS } from './syncNodeVersionRows.js';
 
 function factPlan(section: string, table: string, columns: readonly string[], owner: string,
   key: string, order: string, after: string) {
@@ -35,7 +35,7 @@ function factPlan(section: string, table: string, columns: readonly string[], ow
 }
 
 export const SYNC_IDENTITY_NATIVE_FACT_PLANS = [
-  factPlan('versions', 'node_sync_versions', SYNC_PACK_NODE_VERSION_COLUMNS,
+  factPlan('versions', 'node_sync_versions', SYNC_NODE_VERSION_COLUMNS,
     'object_id = (SELECT object_id FROM selected_identity_objects)', 'version_id', 'version_id',
     'version_id > (SELECT after_key FROM selected_identity_fact)'),
   factPlan('parents', 'node_sync_version_parents', ['version_id', 'parent_version_id', 'ordinal'],
@@ -44,7 +44,7 @@ export const SYNC_IDENTITY_NATIVE_FACT_PLANS = [
     `(version_id, ordinal, parent_version_id) >
       (SELECT json_extract(after_key, '$[0]'), json_extract(after_key, '$[1]'),
         json_extract(after_key, '$[2]') FROM selected_identity_fact)`),
-  factPlan('reviews', 'review_log', IDENTITY_REVIEW_COLUMNS,
+  factPlan('reviews', 'review_log', REVIEW_FACT_COLUMNS,
     'node_id = (SELECT object_id FROM selected_identity_objects)', 'op_id', 'op_id',
     'op_id > (SELECT after_key FROM selected_identity_fact)')
 ];

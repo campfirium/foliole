@@ -79,5 +79,5 @@ export function createDesktopFramedSyncFiles(root: string): FramedSyncFilePort {
 }
 
 export function createDesktopLibrarySyncFiles(databasePath: string) {
-  return createDesktopFramedSyncFiles(path.join(path.dirname(databasePath), '..', 'SyncTransport'));
+  return createDesktopFramedSyncFiles(path.join(path.dirname(databasePath), '..', 'SyncRequests'));
 }

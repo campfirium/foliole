@@ -4,19 +4,9 @@ import { clearRestoreWorkspaceSettings } from './syncGroupRestoreSettings.js';
 // An explicit overwrite replaces library data while keeping ordinary device preferences.
 // The caller commits this reset together with its durable clear-once progress marker.
 const CLEAR_TABLES = [
-  'framed_sync_receipts',
-  'node_version_local_origins', 'node_version_outbound_payload_holds', 'node_version_outbound_holds',
-  'node_version_local_holds', 'node_version_pack_receipts', 'node_version_confirmation_state',
-  'node_version_inbound_receipts', 'node_version_device_bases', 'node_version_member_positions',
+  'node_version_local_origins', 'node_version_local_holds', 'node_version_member_positions',
   'node_version_device_revisions', 'node_version_local_source_revisions',
-  'sync_delivery_receipts', 'sync_push_ack', 'sync_peer_cursors',
-  'sync_identity_receive_rounds', 'sync_identity_retired_views',
-  'sync_identity_pack_receipts', 'sync_identity_peer_baselines',
-  'sync_identity_fact_staging', 'sync_identity_fact_sections',
-  'sync_identity_index_rows', 'sync_identity_partition_digest',
-  'sync_pack_receive_progress', 'sync_pack_resource_articles', 'framed_sync_resource_demands',
-  'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
-  'sync_change_log', 'node_text_alternatives',
+  'sync_push_ack', 'sync_change_log', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_view_state', 'review_log',
@@ -45,13 +35,6 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
       continue;
     }
     await port.run(`DELETE FROM main.${table}`);
-  }
-  if (tableNames.has('sync_identity_dirty_keys')) {
-    await port.run('DELETE FROM main.sync_identity_dirty_keys');
-  }
-  if (tableNames.has('sync_identity_index_meta')) {
-    await port.run(`UPDATE main.sync_identity_index_meta SET backfill_complete = 0,
-      last_object_type = NULL, last_object_id = NULL WHERE singleton_id = 1`);
   }
   await clearRestoreWorkspaceSettings(port, tableNames);
   if (tableNames.has('nodes')) {

@@ -148,9 +148,9 @@ for (const enabled of [false, true]) {
     const peer = await provider.send('init', { groupId, name: 'Provider' });
     await provider.send('joinProviderEnable');
     await expect.poll(async () => {
-      const overview = await provider.send('joinOverview') as unknown as { server_status: { topology_role: string } };
-      return overview.server_status.topology_role;
-    }, { timeout: 15000 }).toBe('anchor');
+      const overview = await provider.send('joinOverview') as unknown as { server_status: { state: string } };
+      return overview.server_status.state;
+    }, { timeout: 15000 }).toBe('running');
     await provider.send('seed', { id: 'provider-note', content: 'Retained remote note' });
     const restored = await joining.send('initLocal', { enabled });
     expect(restored.group).toBeUndefined();

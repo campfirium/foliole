@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { assertFramedSyncDigest } from './framedSyncContract.js';
 import { changedNodeVersionIds } from './framedSyncNodeInventoryState.js';
 import { parseFramedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
-import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export type FramedSyncInventoryEntry = Readonly<{
   frontierFactIds: readonly string[];
@@ -59,8 +59,8 @@ export function requiredFramedSyncNodeVersionIds(difference: FramedSyncInventory
 }
 
 function compareKey(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
-  return compareSyncIdentityText(left.objectType, right.objectType) ||
-    compareSyncIdentityText(left.globalId, right.globalId);
+  return compareSyncFactText(left.objectType, right.objectType) ||
+    compareSyncFactText(left.globalId, right.globalId);
 }
 
 function bytesKey(value: Uint8Array) {

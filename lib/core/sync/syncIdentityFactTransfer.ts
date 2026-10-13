@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { DbRow } from './dbPort.js';
-import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export const syncIdentityFactChunkSchema = z.object({ key: z.string().min(1).max(4096),
   offset: z.number().int().nonnegative(), total: z.number().int().positive()
@@ -34,9 +34,9 @@ export function syncIdentityFactKey(section: SyncIdentityFactTransfer['section']
 
 export function compareSyncIdentityFactKeys(section: SyncIdentityFactTransfer['section'],
   left: string, right: string) {
-  if (section !== 'parents') return compareSyncIdentityText(left, right);
+  if (section !== 'parents') return compareSyncFactText(left, right);
   const tuple = z.tuple([z.string(), z.number().int().nonnegative(), z.string()]);
   const a = tuple.parse(JSON.parse(left));
   const b = tuple.parse(JSON.parse(right));
-  return compareSyncIdentityText(a[0], b[0]) || a[1] - b[1] || compareSyncIdentityText(a[2], b[2]);
+  return compareSyncFactText(a[0], b[0]) || a[1] - b[1] || compareSyncFactText(a[2], b[2]);
 }

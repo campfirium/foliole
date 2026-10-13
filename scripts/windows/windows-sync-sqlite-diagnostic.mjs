@@ -9,8 +9,8 @@ import { executeBounded } from './windows-bounded-process.mjs';
 export function diagnosticCases(selection) {
   if (selection === 'remaining') return [
     { name: 'companion-continuation',
-      files: ['src/shared/platform/companion/sync/framed/companionFramedSyncContinuation.integration.test.ts'],
-      filter: 'returns pending without spinning', timeoutMs: 120_000 },
+      files: ['src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts'],
+      filter: 'leaves an unavailable body pending', timeoutMs: 120_000 },
     { name: 'overwrite-join', files: ['electron/sync/syncGroupJoinOverwrite.integration.test.ts'],
       filter: 'overwrites the whole group despite retained history', timeoutMs: 120_000 },
     { name: 'preview-status', files: ['scripts/preview/preview-dedupe-status-contract.test.mjs'],

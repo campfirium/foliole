@@ -1,8 +1,8 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { compareSyncFactKey } from './syncFactKeyOrder.js';
 import { syncIdentityFactTransferSchema, type SyncIdentityFactTransfer } from './syncIdentityFactTransfer.js';
-import { compareSyncIdentityKey } from './syncIdentityKeyOrder.js';
 import { isSyncPackStateObjectType } from './syncPackManifest.js';
 
 export interface SyncIdentityPackObject {
@@ -56,7 +56,7 @@ function validInput(input: PageInput) {
     if (!object || !isSyncPackStateObjectType(object.object_type) ||
         typeof object.object_id !== 'string' || !object.object_id ||
         object.object_id.length > 2048 || !hex.test(object.fingerprint) ||
-        previous && compareSyncIdentityKey(previous, object) >= 0) {
+        previous && compareSyncFactKey(previous, object) >= 0) {
       throw new Error('sync_identity_pack_page_invalid');
     }
     previous = object;

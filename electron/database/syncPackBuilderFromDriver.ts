@@ -19,8 +19,8 @@ import { loadSyncPackGroupRows } from './syncPackGroupRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 import { stageDesktopSyncPackNodeHolds } from './syncPackNodeVersionHolds.js';
 import {
-  loadSyncPackNodeVersionParentRows,
-  iterateSyncPackNodeVersionRows
+  loadSyncNodeVersionParentRows,
+  iterateSyncNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { measureSyncPackPage, syncPackPageFits, type SyncPackPageBudget } from './syncPackPageBudget.js';
 import { assertSyncPackPreloadBudget } from './syncPackPreloadBudget.js';
@@ -165,9 +165,9 @@ function loadSourceRows(
   const versionIdentities: { version_id: string; object_id: string }[] = [];
   const selectedFacts = input.allFactsKnown ? { versions: [], parents: [], reviews: [] } :
     selectMissingSyncPackFacts({
-      versions: [...iterateSyncPackNodeVersionRows(driver, inlineHeads,
+      versions: [...iterateSyncNodeVersionRows(driver, inlineHeads,
         input.receiverFacts?.versions, (row) => versionIdentities.push(row))],
-      parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
+      parents: loadSyncNodeVersionParentRows(driver, versionIdentities),
       reviews: baseRows.reviewLog
     }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
   // Retention may release historical payloads; current heads must remain usable.

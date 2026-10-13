@@ -37,8 +37,8 @@ it.each(['restore', 'adoption'] as const)('resumes production %s after an object
     ]);
     expect(overwriteProgressRow(fixture.rightSnapshot.databasePath)).toBeUndefined();
     withDb(fixture.rightSnapshot.databasePath, db => {
-      expect(db.prepare('SELECT count(*) FROM framed_sync_inbound_transfers').pluck().get()).toBe(0);
-      expect(db.prepare('SELECT count(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get('framed_sync_inbound_transfers')).toBeUndefined();
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get('framed_sync_receipts')).toBeUndefined();
       expect(db.prepare('SELECT object_id FROM node_version_member_positions WHERE device_identity_key = ? ORDER BY object_id')
         .all(fixture.rightSnapshot.deviceId)).toEqual([{ object_id: 'a' }, { object_id: 'b' }]);
     });

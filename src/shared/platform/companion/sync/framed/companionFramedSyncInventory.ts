@@ -1,5 +1,4 @@
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
-import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import type { FramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import {
   readFramedSyncInventory,
@@ -22,8 +21,8 @@ function serialize(entry: FramedSyncInventoryEntry) {
   };
 }
 
-export async function readCompanionFramedSyncInventory(db: DbPort, files?: FramedSyncFilePort) {
-  const entries = await readFramedSyncInventory(db, files);
+export async function readCompanionFramedSyncInventory(db: DbPort) {
+  const entries = await readFramedSyncInventory(db);
   return { entries: entries.map(serialize) };
 }
 

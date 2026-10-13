@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { serializePreparedAnchorTxt } from '../../lib/platform/syncAnchorTopologyContract.js';
+import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({
@@ -58,7 +58,7 @@ describe('desktop Sync Group discovery', () => {
         group_id: 'group-1',
         group_tag: 'tag-1',
         device_id: 'device-a', provider_platform: 'android-capacitor',
-        ...serializePreparedAnchorTxt('member')
+        ...serializeSyncProtocolTxt()
       }, type: '_foliole-sync._tcp'
     } });
     await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
@@ -93,7 +93,7 @@ describe('desktop Sync Group bounded route selection', () => {
       domain: 'local.', fqdn: 'desktop-a', host: 'desktop-a.local.', interfaceIndex: 1,
       name: 'Desktop A', port: 38641, type: '_foliole-sync._tcp',
       txt: { device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
-        ...serializePreparedAnchorTxt('anchor'),
+        ...serializeSyncProtocolTxt(),
         ipv4_addresses: '192.168.0.10,169.254.161.89' } } });
     await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
 
@@ -121,13 +121,13 @@ describe('desktop Sync Group provider selection', () => {
       domain: 'local.', fqdn: 'desktop-a', host: 'desktop-a.local.', interfaceIndex: 1,
       name: 'Desktop A', port: 38641, type: '_foliole-sync._tcp', txt: {
         device_id: 'device-a', group_id: 'group-1', group_tag: 'tag-1', provider_platform: 'darwin',
-        ...serializePreparedAnchorTxt('anchor')
+        ...serializeSyncProtocolTxt()
       } } });
     runtime.onService?.({ kind: 'found', service: { addresses: ['192.168.0.13'],
       domain: 'local.', fqdn: 'android-b', host: 'android-b.local.', interfaceIndex: 1,
       name: 'Android B', port: 37819, type: '_foliole-sync._tcp', txt: {
         device_id: 'device-b', group_id: 'group-1', group_tag: 'tag-1',
-        provider_platform: 'android-capacitor', ...serializePreparedAnchorTxt('member')
+        provider_platform: 'android-capacitor', ...serializeSyncProtocolTxt()
       } } });
     await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
 

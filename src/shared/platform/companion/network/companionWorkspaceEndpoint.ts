@@ -41,7 +41,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   if (matches.length === 0) {
     const incompatible = discovered.some((candidate) => candidate.compatibility.status === 'incompatible'
       && candidate.discovery.group_id === group.group_id);
-    throw new Error(incompatible ? 'discovery_incompatible' : 'discovery_waiting_anchor');
+    throw new Error(incompatible ? 'discovery_incompatible' : 'discovery_no_devices');
   }
   return matches.map((match) => {
     const known = group.devices.find((device) =>

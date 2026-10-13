@@ -1,12 +1,12 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
-import { createEmptyResourceStages,
-  createSkippedResourceSummary } from '../../companionDesktopSyncResourceStages';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult
 } from '../../companionDesktopSyncTypes';
 
+import { createEmptyResourceStages,
+  createSkippedResourceSummary } from './companionSyncResourceSummary';
 import { runCompanionRequestSyncDatabaseRound } from './framed/companionRequestSyncDatabaseRound.js';
 import { requireCompanionRequestSyncPeerState } from './framed/companionRequestSyncPeerState.js';
 import { continueCompanionRequestSyncResources } from './framed/companionRequestSyncResources.js';

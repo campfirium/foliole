@@ -185,7 +185,7 @@ export interface CompanionWorkspaceDiscoveryPayload {
   provider_device_name: string;
   provider_platform: string;
   runtime_instance_id: string;
-  topology_role: import('./syncAnchorTopologyContract.js').DesktopAnchorRole | null;
+  topology_role: null;
 }
 
 export interface SyncGroupJoinEncryptedInfoPayload {
@@ -212,8 +212,8 @@ export interface DesktopCompanionSyncServerStatusPayload {
   pending_join_request_count: number;
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
-  topology_role: 'anchor' | 'member' | 'observing' | null;
-  topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
+  topology_role: null;
+  topology_status: 'observing' | 'ready' | 'no_devices' | 'incompatible';
 }
 
 export interface DesktopSyncGroupJoinCandidatePayload {

@@ -15,18 +15,17 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { snapshotStage, snapshotStream, snapshotTrace, traceRequestClose } from './requestSyncSnapshot.trace.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
 let root = '';
 afterEach(async () => {
   for (const host of devices.splice(0)) host.sqlite.close();
-  if (root) await snapshotStage('fixture.remove', () => rm(root, { recursive: true }));
+  if (root) await rm(root, { recursive: true });
 });
 
 it('spools a complete history with retired middle bodies and applies it without publication state', async () => {
-  snapshotTrace('fixture', 'start');
+
   const source = textDevice(); const target = textDevice(); devices.push(source, target);
   const base = textBranch('base', 'Original');
   const middle = textBranch('middle', 'Intermediate', base);
@@ -43,33 +42,33 @@ it('spools a complete history with retired middle bodies and applies it without 
   root = await mkdtemp(path.resolve('.tmp/artifacts/request-sync-files-'));
   const files = createDesktopFramedSyncFiles(root);
   const remove = files.remove.bind(files);
-  files.remove = key => snapshotStage(`remove:${key}`, () => remove(key));
-  snapshotTrace('fixture', 'end');
+  files.remove = key => remove(key);
+
   await withRequestSyncFiles(files, async request => {
-    traceRequestClose('request', request);
-    await snapshotStage('writeSnapshot', () => writeRequestSyncSnapshot(source.db, difference, request));
+
+    await writeRequestSyncSnapshot(source.db, difference, request);
     const facts = [];
-    for await (const fact of snapshotStream('readFacts', request.readFacts())) facts.push(fact);
+    for await (const fact of request.readFacts()) facts.push(fact);
     expect(facts.filter(fact => fact.kind === 2).map(fact => fact.factId).sort()).toEqual(['base', 'head', 'middle']);
     for (const fact of facts.filter(fact => fact.kind === 2)) {
-      expect(fact.body.find(field => field.name === 'ancestor_version_ids')?.value).toEqual({ kind: 'list', value: [] });
+      expect(fact.body.find(field => field.name === 'ancestor_version_ids')).toBeUndefined();
     }
     await withRequestSyncFiles(files, async received => {
-      traceRequestClose('received', received);
+
       const header = { requestId: new Uint8Array(16).fill(1), objectType: 'node', globalId: 'topic',
         sourceStateHash: entry.sharedStateHash };
       const context: RequestSyncAuthenticatedContext = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
         initiatorDeviceId: 'source', initiatorLibraryEpoch: 'source-epoch',
         responderDeviceId: 'target', responderLibraryEpoch: 'target-epoch' };
       const groupKey = new Uint8Array(32).fill(7);
-      const wire = await snapshotStage('prepareRequestSyncWire', () => prepareRequestSyncWire({ context, groupKey,
-        messages: contextId => requestSyncObjectMessages(header, contextId, request) }));
-      const decoded = snapshotStream('readRequestSyncWire', readRequestSyncWire({ context, groupKey,
-        preamble: wire.preamble, frames: snapshotStream('encodeFrames', wire.frames) }));
-      expect(await snapshotStage('receive', () => receiveRequestSyncObjectMessages(decoded, wire.contextId, received))).toEqual(header);
-      await snapshotStage('apply', () => applyFramedFactSources(target.db, [async function* () { yield* received.readFacts(); }], {
+      const wire = await prepareRequestSyncWire({ context, groupKey,
+        messages: contextId => requestSyncObjectMessages(header, contextId, request) });
+      const decoded = readRequestSyncWire({ context, groupKey,
+        preamble: wire.preamble, frames: wire.frames });
+      expect(await receiveRequestSyncObjectMessages(decoded, wire.contextId, received)).toEqual(header);
+      await applyFramedFactSources(target.db, [async function* () { yield* received.readFacts(); }], {
         requireCompleteVersionGraph: true, loadBody: (_db, blob) => received.loadBody(blob)
-      }));
+      });
     });
     expect((await target.current()).body_text).toBe(head.body_text);
     expect(await target.db.query('SELECT version_id, parent_version_id FROM node_sync_versions ORDER BY version_id'))

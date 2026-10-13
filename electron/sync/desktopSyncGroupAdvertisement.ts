@@ -35,7 +35,6 @@ function prepareAdvertisement(args: DesktopSyncGroupAdvertisementInput) {
     groupTag: workgroup.group_tag,
     ...(args.onRecovered ? { onRecovered: args.onRecovered } : {}),
     onWarning: args.onWarning,
-    port: args.port,
-    role: 'observing' as const
+    port: args.port
   };
 }

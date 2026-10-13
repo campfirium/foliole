@@ -57,7 +57,7 @@ it.each(['missing-ordinary', 'constructor', 'toString'])('retains late member %s
     expect(sqlite.prepare('SELECT child_ids_json FROM parent_order_sources').pluck().get())
       .toBe(JSON.stringify([VIRTUAL_ROOT_NODE_ID, id]));
     expect(sqlite.prepare('SELECT * FROM nodes').all()).toEqual(before);
-    expect(sqlite.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_receipts'").get()).toBeUndefined();
   } finally { sqlite.close(); }
 });
 

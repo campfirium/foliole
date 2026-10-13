@@ -10,7 +10,7 @@ import {
   projectFramedSyncParentRelation,
   projectFramedSyncReview
 } from './framedSyncRelationReviewFact.js';
-import { IDENTITY_REVIEW_COLUMNS } from './syncIdentityFactSourceRows.js';
+import { REVIEW_FACT_COLUMNS } from './syncFactRowSchemas.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 type SelectionResult =
@@ -55,7 +55,7 @@ async function loadParent(tx: DbPort, nodeId: string, factId: string) {
 
 async function loadReview(tx: DbPort, nodeId: string, opId: string) {
   if (!opId) throw new Error('framed_sync_review_id_invalid');
-  const rows = await tx.query<DbRow>(`SELECT ${IDENTITY_REVIEW_COLUMNS.join(', ')}
+  const rows = await tx.query<DbRow>(`SELECT ${REVIEW_FACT_COLUMNS.join(', ')}
     FROM review_log WHERE node_id = ? AND op_id = ?`, [nodeId, opId]);
   return rows.length === 1 ? projectFramedSyncReview(rows[0]) : null;
 }

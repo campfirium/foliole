@@ -2,8 +2,8 @@ import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { applyFramedFactSources } from '../../../../../../lib/core/sync/framedSyncFactApply.js';
-import { validateFramedSyncFrozenBody } from '../../../../../../lib/core/sync/framedSyncFrozenBody.js';
 import type { FramedBodyLoader } from '../../../../../../lib/core/sync/framedSyncNodeRecordSource.js';
+import { validateSyncBodyBytes } from '../../../../../../lib/core/sync/syncBodyBytes.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
 import type { CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
@@ -72,6 +72,6 @@ function readyBodyLoader(input: CompanionFramedSyncApplyInput): FramedBodyLoader
     const data = row.data === null && descriptor.byteLength === 0n &&
       row.data_type === 'blob' && row.actual_byte_length === 0 ? new Uint8Array() : row.data;
     if (data === null) throw new Error('framed_sync_published_body_unavailable');
-    return validateFramedSyncFrozenBody(descriptor, data);
+    return validateSyncBodyBytes(descriptor, data);
   };
 }

@@ -29,16 +29,13 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
-import { FRAMED_SYNC_COMPLETION_BACKFILL } from './framedSyncCompletionSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
-import { migrateCompanionFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
+import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
-import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
-import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicTextState } from './topicTextStateMigration.js';
@@ -94,22 +91,17 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 57 && targetVersion >= 57) await migrateCompanionDynamicNodeVersionChains(db);
   if (currentVersion < 58 && targetVersion >= 58) await repairCompanionSyncStateEntities(db);
   if (currentVersion < 59 && targetVersion >= 59) await migrateCompanionIndependentNodeVersions(db);
-  if (currentVersion < 61 && targetVersion >= 61) await migrateCompanionNodeVersionConfirmations(db);
   if (currentVersion < 62 && targetVersion >= 62) await retireCompanionLegacyStorage(db);
-  if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
   if (currentVersion < 71 && targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   if (currentVersion < 73 && targetVersion >= 73) await migrateCompanionFramedSyncTombstoneInventory(db);
   if (currentVersion < 74 && targetVersion >= 74) await migrateCompanionFramedSyncPermanentDeleteHistory(db);
   if (currentVersion < 76 && targetVersion >= 76) await migrateCompanionTopicTextState(db);
-  if (currentVersion < 77 && targetVersion >= 77) {
-    await db.run(FRAMED_SYNC_COMPLETION_BACKFILL);
-    await migrateCompanionFramedSyncPayloads(db);
-  }
   if (currentVersion < COMPANION_TEXT_BODY_OWNERSHIP_VERSION && targetVersion >= COMPANION_TEXT_BODY_OWNERSHIP_VERSION) {
     await migrateCompanionTextBodyOwnership(db);
   }
   if (currentVersion < 80 && targetVersion >= 80) await migrateCompanionNodeHistoryState(db);
   if (currentVersion < 81 && targetVersion >= 81) await migrateCompanionCurrentParentOrders(db);
+  if (currentVersion < 82 && targetVersion >= 82) await retireCompanionLegacySyncState(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -131,14 +123,9 @@ export async function createCompanionDatabase(
 ) {
   await installCompanionSchema(db);
   await repairCompanionDatabase(db);
-  if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
   if (targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
-}
-
-async function installSyncIdentityEntityTriggers(db: DbPort) {
-  for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS) await db.run(statement);
 }
 
 export async function repairCompanionDatabase(db: DbPort) {

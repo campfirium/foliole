@@ -6,7 +6,6 @@ import {
   type DesktopDnsSdHandle
 } from '@foliole/desktop-dnssd';
 
-import type { DesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
@@ -26,11 +25,9 @@ type ActiveAdvertisement = {
 
 let activeAdvertisement: ActiveAdvertisement | null = null;
 let lifecycleRevision = 0;
-let refreshQueue = Promise.resolve();
 let retryFailures = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let stableTimer: ReturnType<typeof setTimeout> | null = null;
-let desiredRole: DesktopAnchorRole | null = null;
 let lastInput: CompanionMdnsAdvertisementInput | null = null;
 
 export interface CompanionMdnsAdvertisementInput {
@@ -42,7 +39,6 @@ export interface CompanionMdnsAdvertisementInput {
   groupDisplayName: string;
   groupId: string;
   groupTag: string;
-  role: DesktopAnchorRole;
 }
 
 function runtimeSuffix(runtimeInstanceId: string) {
@@ -56,19 +52,18 @@ export function resolveCompanionMdnsIpv4Addresses(interfaces = os.networkInterfa
 }
 
 export function resolveCompanionMdnsServiceName(
-  groupDisplayName: string, runtimeInstanceId: string, role: DesktopAnchorRole
+  groupDisplayName: string, runtimeInstanceId: string
 ) {
-  const suffix = `${runtimeSuffix(runtimeInstanceId)}-${role}`;
+  const suffix = runtimeSuffix(runtimeInstanceId);
   const displayLimit = Math.max(1, 62 - suffix.length);
   return `${Array.from(groupDisplayName).slice(0, displayLimit).join('')}-${suffix}`;
 }
 
 export function startCompanionMdnsAdvertisement(input: CompanionMdnsAdvertisementInput) {
   stopCompanionMdnsAdvertisement();
-  desiredRole = input.role;
   lastInput = input;
   const registered = beginAdvertisement(input, lifecycleRevision);
-  refreshQueue = registered.catch(() => undefined);
+  void registered.catch(() => undefined);
   return registered;
 }
 
@@ -90,7 +85,7 @@ function beginAdvertisement(input: CompanionMdnsAdvertisementInput, lifecycle: n
   recovering = false) {
   const runtimeId = loadSyncGroupRuntimeInstanceId();
   const addresses = resolveCompanionMdnsIpv4Addresses();
-  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId, input.role);
+  const name = resolveCompanionMdnsServiceName(input.groupDisplayName, runtimeId);
   logDesktopDnsSdDiagnostic('register_started', {
     addresses, lifecycle, name, port: input.port, type: SERVICE.type
   });
@@ -165,38 +160,19 @@ function scheduleRegistrationRetry(input: CompanionMdnsAdvertisementInput) {
   const revision = lifecycleRevision;
   retryTimer = setTimeout(() => {
     retryTimer = null;
-    if (revision !== lifecycleRevision || desiredRole === null) return;
-    const next = { ...input, role: desiredRole };
-    const recovered = beginAdvertisement(next, revision, true).then(() => {
+    if (revision !== lifecycleRevision || lastInput === null) return;
+    const next = input;
+    void beginAdvertisement(next, revision, true).then(() => {
       if (activeAdvertisement?.lifecycle === revision) next.onRecovered?.();
     })
       .catch(() => {
-        if (desiredRole !== null) scheduleRegistrationRetry(next);
+        if (lastInput !== null) scheduleRegistrationRetry(next);
       });
-    refreshQueue = recovered;
   }, delay);
 }
 
-export function updateCompanionMdnsAdvertisementRole(role: DesktopAnchorRole) {
-  desiredRole = role;
-  const targetLifecycle = activeAdvertisement?.lifecycle;
-  refreshQueue = refreshQueue.then(() => {
-    if (targetLifecycle === undefined
-        || activeAdvertisement?.lifecycle !== targetLifecycle) return;
-    const input = activeAdvertisement?.input;
-    if (!input || input.role === desiredRole) return;
-    stopCompanionMdnsAdvertisement();
-    desiredRole = role;
-    lastInput = { ...input, role };
-    return beginAdvertisement(lastInput, lifecycleRevision);
-  });
-  const refreshed = refreshQueue;
-  refreshQueue = refreshed.catch(() => undefined);
-  return refreshed;
-}
-
 export function recoverCompanionMdnsAdvertisement() {
-  if (activeAdvertisement || retryTimer || !lastInput || desiredRole === null) return;
+  if (activeAdvertisement || retryTimer || !lastInput) return;
   retryFailures = 0;
   scheduleRegistrationRetry(lastInput);
 }
@@ -205,7 +181,6 @@ export function stopCompanionMdnsAdvertisement() {
   if (retryTimer) clearTimeout(retryTimer);
   retryTimer = null;
   retryFailures = 0;
-  desiredRole = null;
   lastInput = null;
   stopCurrentAdvertisement();
 }

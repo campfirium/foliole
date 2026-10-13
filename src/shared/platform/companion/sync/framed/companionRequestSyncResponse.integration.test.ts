@@ -102,7 +102,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       expect(visibleBodies).toHaveLength(1);
       expect(await Promise.all(visibleBodies)).toEqual([body]);
       expect(await target.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toContainEqual({ adopted_version_id: 'head' });
-      expect(await target.db.query('SELECT count(*) AS count FROM framed_sync_inbound_transfers')).toEqual([{ count: 0 }]);
+      expect(await target.db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_inbound_transfers'")).toEqual([]);
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
       await runtime.files!.remove(directory);
     });
@@ -204,7 +204,7 @@ async function assertLostBatchResponse(transfer: Promise<unknown>, retry: () => 
     .toEqual([{ version_id: 'a-good-head' }, { version_id: 'c-good-head' }]);
   expect(await target.query('SELECT object_id FROM node_version_member_positions ORDER BY object_id'))
     .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
-  expect(await target.query('SELECT count(*) AS count FROM framed_sync_inbound_transfers')).toEqual([{ count: 0 }]);
+  expect(await target.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_inbound_transfers'")).toEqual([]);
 }
 
 function nativeBatchExchange(modes: string[], loseResponse = false): RequestSyncExchange['request'] {

@@ -1,7 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { compareSyncIdentityKey } from './syncIdentityKeyOrder.js';
+import { compareSyncFactKey } from './syncFactKeyOrder.js';
 
 export interface SyncIdentityState {
   content_hash: string;
@@ -35,7 +35,7 @@ export function createSyncIdentityDigest() {
   let previous: SyncIdentityEntry | undefined;
   return {
     add(entry: SyncIdentityEntry) {
-      if (previous && compareSyncIdentityKey(previous, entry) >= 0) {
+      if (previous && compareSyncFactKey(previous, entry) >= 0) {
         throw new Error('sync_identity_partition_order_invalid');
       }
       digest.update(encoder.encode(`${JSON.stringify([

@@ -26,13 +26,12 @@ vi.mock('./syncGroupRuntimeInstance.js', () => ({
 import {
   recoverCompanionMdnsAdvertisement,
   startCompanionMdnsAdvertisement,
-  stopCompanionMdnsAdvertisement,
-  updateCompanionMdnsAdvertisementRole
+  stopCompanionMdnsAdvertisement
 } from './companionMdnsAdvertisement.js';
 
 const input = {
   appVersion: '0.1.0-test', deviceId: 'desktop-local', groupDisplayName: 'V',
-  groupId: 'group-1', groupTag: 'tag-1', port: 38683, role: 'observing' as const
+  groupId: 'group-1', groupTag: 'tag-1', port: 38683
 };
 
 beforeEach(() => {
@@ -57,7 +56,7 @@ describe('desktop OS DNS-SD advertisement', () => {
 
     expect(runtime.register).toHaveBeenCalledOnce();
     expect(runtime.register).toHaveBeenCalledWith({
-      domain: 'local.', name: 'V-runtimed-observing',
+      domain: 'local.', name: 'V-runtimed',
       port: 38683, type: '_foliole-sync._tcp',
       txt: { app_version: '0.1.0-test', device_id: 'desktop-local',
         group_id: 'group-1', group_tag: 'tag-1', provider_platform: process.platform,
@@ -111,20 +110,7 @@ describe('desktop OS DNS-SD advertisement recovery', () => {
     expect(runtime.register).toHaveBeenCalledOnce();
   });
 
-  it('uses the latest topology role when retrying a failed registration', async () => {
-    vi.useFakeTimers();
-    const ready = startCompanionMdnsAdvertisement(input);
-    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
-    await ready;
-    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
-      message: 'network changed' });
-    await updateCompanionMdnsAdvertisementRole('anchor');
 
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
-      txt: expect.not.objectContaining({ topology_role: expect.anything() })
-    });
-  });
 
   it('limits retries when the system keeps rejecting registration', async () => {
     vi.useFakeTimers();
@@ -163,32 +149,10 @@ it('allows a later user or network recovery to retry exhausted publication', asy
   expect(runtime.register).toHaveBeenCalledTimes(5);
 });
 
-describe('desktop OS DNS-SD advertisement roles and stop', () => {
-  it('withdraws the old registration only when the topology role changes', async () => {
-    const ready = startCompanionMdnsAdvertisement(input);
-    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
-    await ready;
-    const refreshed = updateCompanionMdnsAdvertisementRole('anchor');
-    await vi.waitFor(() => expect(runtime.register).toHaveBeenCalledTimes(2));
-    runtime.callbacks[1]?.({ kind: 'registered', service: {} });
-    await refreshed;
+describe('desktop OS DNS-SD advertisement stop', () => {
 
-    expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
-      name: 'V-runtimed-anchor',
-      txt: expect.not.objectContaining({ topology_role: expect.anything() })
-    });
-    expect(runtime.cancel).toHaveBeenCalledOnce();
-  });
 
-  it('does not rebuild the provider when the topology role is unchanged', async () => {
-    const ready = startCompanionMdnsAdvertisement(input);
-    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
-    await ready;
-    await updateCompanionMdnsAdvertisementRole('observing');
 
-    expect(runtime.register).toHaveBeenCalledOnce();
-    expect(runtime.cancel).not.toHaveBeenCalled();
-  });
 
   it('cancels exactly the active system registration when stopped', async () => {
     const ready = startCompanionMdnsAdvertisement(input);

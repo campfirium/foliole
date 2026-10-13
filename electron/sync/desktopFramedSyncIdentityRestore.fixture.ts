@@ -6,9 +6,8 @@ import { publishSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupResto
 import { saveBackupSettings } from '../database/backupSettings.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 
-import { runDesktopFramedSyncInventoryRound } from './desktopFramedSyncInventoryRound.js';
+import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
 type FixtureContext = Readonly<{ deviceId: string; stateRoot: string }>;
 
@@ -43,10 +42,7 @@ export async function runIdentityRestoreFixtureCommand(action: string,
     });
     return { directory };
   }
-  return runDesktopFramedSyncInventoryRound({
-    localLibraryEpoch: loadDesktopLocalNodeProof().library_epoch, remoteLibraryEpoch: `${args.peerDeviceId}-epoch`,
-    ...(args.mode === 'restore' ? { restoreId: args.restoreId } : {}),
-    peer: { endpoint_url: args.peerOrigin, group_id: groupId, local_device_id: context.deviceId,
-      peer_device_id: args.peerDeviceId, peer_device_name: args.peerDeviceId, peer_platform: 'desktop' }
-  });
+  return continueDesktopSyncGroupSync({ endpoint_url: args.peerOrigin, group_id: groupId,
+    local_device_id: context.deviceId, peer_device_id: args.peerDeviceId,
+    peer_device_name: args.peerDeviceId, peer_platform: 'desktop' });
 }

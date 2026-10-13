@@ -1,7 +1,7 @@
 import type { DbPort, DbRow } from './dbPort.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 import { syncIdentityFingerprint, type SyncIdentityState } from './syncIdentityDigest.js';
 import { syncIdentityFactChunkSchema, syncIdentityFactTailSchema } from './syncIdentityFactTransfer.js';
-import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 import { parseSyncIdentityPackPage } from './syncIdentityPackPage.js';
 import { SYNC_PACK_COMPRESSION, SYNC_PACK_DATABASE_ENTRY,
   SYNC_PACK_FORMAT, SYNC_PACK_PAYLOAD_SCHEMA_VERSION } from './syncPackEnvelopeContract.js';
@@ -41,7 +41,7 @@ function dependencies(value: unknown, page: ReturnType<typeof parseSyncIdentityP
     const row = record(item);
     if (Object.keys(row).length !== 3 || row.object_type !== 'node' ||
         typeof row.object_id !== 'string' || !row.object_id || row.object_id.length > 2048 ||
-        compareSyncIdentityText(row.object_id, previous) <= 0 ||
+        compareSyncFactText(row.object_id, previous) <= 0 ||
         selected.has(`node\0${row.object_id}`) ||
         typeof row.fingerprint !== 'string' || !hex.test(row.fingerprint)) {
       throw new Error('sync_identity_pack_dependencies_invalid');

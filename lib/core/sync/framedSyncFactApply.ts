@@ -6,7 +6,6 @@ import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrd
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
-import { loadFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDependencies.js';
 import { restoreFramedSyncNodeReadingFact } from './framedSyncNodeReadingFact.js';
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
@@ -22,10 +21,10 @@ export type FramedFactSource = (db: DbPort) => AsyncIterable<CanonicalFact>;
 
 /** The ready owner fixes metadata and body bytes throughout the existing business transaction. */
 export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: {
-  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; loadBody?: FramedBodyLoader;
+  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; loadBody: FramedBodyLoader;
   enqueueSearchInvalidations?: boolean;
   requireCompleteVersionGraph?: boolean;
-} = {}) {
+}) {
   return db.transaction(async (tx) => {
     const nodes: CanonicalFact[] = [];
     for (const source of sources) {
@@ -57,15 +56,15 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
     }
     for (const source of sources) for await (const fact of source(tx)) {
-      if (fact.kind === 1) await applyFramedStateFact(tx, fact, options.objectOptions, options.loadBody);
+      if (fact.kind === 1) await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions);
     }
     await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return { generatedChanges };
   });
 }
 
-async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, options?: ApplySyncObjectsWithDbPortOptions,
-  loadBody: FramedBodyLoader = loadFramedSyncFrozenBody) {
+async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,
+  options?: ApplySyncObjectsWithDbPortOptions) {
   if (fact.objectType === 'node') {
     await applyFramedSyncObjectStateRecord(db, restoreFramedSyncNodeReadingFact(fact), options);
     return;

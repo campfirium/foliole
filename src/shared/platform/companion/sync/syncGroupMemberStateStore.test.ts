@@ -8,7 +8,7 @@ import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/s
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY } from '../../../../../lib/platform/syncProtocolContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 
 const database = vi.hoisted(() => ({ driver: null as unknown as DbPort }));
 
@@ -79,7 +79,7 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before any companio
   const incoming = { ...state, sender_device_identity_key: provider.identity_key };
   if (kind === 'missing') delete incoming.protocol;
   else incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY) };
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== 'framed-sync-v24') };
   const writer = vi.spyOn(database.driver, 'run');
   await expect(applyCompanionSyncGroupMemberState(incoming, provider.identity_key))
     .rejects.toThrow('sync_group_peer_incompatible');

@@ -14,6 +14,7 @@ import { migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInvent
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
+import { retireLegacySyncState } from './legacySyncRetirement.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
@@ -247,5 +248,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 149, migrate: (sqlite) => sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA) },
   { version: 150, migrate: migrateTextBodyOwnership },
   { version: 151, migrate: migrateNodeHistoryState },
-  { version: 152, migrate: migrateCurrentParentOrders }
+  { version: 152, migrate: migrateCurrentParentOrders },
+  { version: 153, migrate: retireLegacySyncState }
 ];

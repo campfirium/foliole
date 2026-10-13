@@ -41,7 +41,7 @@ async function converge(fixture: Awaited<ReturnType<typeof createDesktopFramedSy
 }
 
 it('adds independent offline contributions once across authenticated transfers, replay and process restarts', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await contribute(fixture.leftSnapshot.databasePath, leftSource, 600_000);
     await contribute(fixture.rightSnapshot.databasePath, rightSource, 600_000);
@@ -61,7 +61,7 @@ it('adds independent offline contributions once across authenticated transfers, 
 }, 60_000);
 
 it('preserves unpublished maxima on overwrite and publishes them with later independent contributions after reopening', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const sourceFile = fixture.leftSnapshot.databasePath, receiverFile = fixture.rightSnapshot.databasePath;
     await contribute(sourceFile, leftSource, 60_000);
@@ -74,7 +74,10 @@ it('preserves unpublished maxima on overwrite and publishes them with later inde
       sqlite.prepare("DELETE FROM sync_object_state WHERE object_type = 'foreground_daily_time'").run();
     } finally { sqlite.close(); }
     const args = { mode: 'restore', peerOrigin: fixture.leftSnapshot.origin,
-      peerDeviceId: 'desktop-a', restoreId: 'foreground-restore' };
+      peerDeviceId: fixture.leftSnapshot.deviceId, restoreId: 'foreground-restore' };
+    if (args.mode === 'restore') await fixture.left.invoke('publish_identity_restore', {
+      ...args, peerOrigin: fixture.rightSnapshot.origin, peerDeviceId: fixture.rightSnapshot.deviceId
+    });
     await fixture.right.invoke('begin_identity_restore', args);
     expect(await fixture.right.invoke('identity_restore_round', args)).toMatchObject({ complete: true });
     expect(total(receiverFile)).toBe(120_000);

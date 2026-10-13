@@ -72,6 +72,38 @@ function outcome(difference: FramedSyncInventoryDifference, error = '') {
   return { requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error };
 }
 
+it.each([
+  ['framed_sync_source_changed', false],
+  ['framed_sync_difference_request_source_changed', false],
+  ['framed_sync_source_changed', true],
+  ['framed_sync_difference_request_source_changed', true]
+] as const)('defers %s without blocking healthy work, dependent child=%s', async (failure, withChild) => {
+  const local = (withChild ? ['a-child', 'b-parent', 'c-healthy'] : ['b-parent', 'c-healthy']).map(entry);
+  const accepted = new Map<string, FramedSyncInventoryEntry>();
+  let inventories = 0;
+  let transfers = 0;
+  const result = await runRequestSyncDatabaseRound({
+    exchangeInventory: async () => {
+      if (++inventories > 3) throw new Error('unchanged_inventory_repeated');
+      return { local, remote: [...accepted.values()] };
+    },
+    transferObjects: async differences => {
+      if (++transfers > 4) throw new Error('unchanged_source_retried');
+      return differences.map(difference => {
+        if (difference.globalId === 'a-child') return outcome(difference, 'framed_sync_node_parent_missing:b-parent');
+        if (difference.globalId === 'b-parent') return outcome(difference, `framed_sync_http_400:${failure}`);
+        accepted.set(difference.globalId, difference.sourceSnapshot);
+        return outcome(difference);
+      });
+    },
+    reportObjectError: () => { throw new Error('source_change_reported_as_invalid_object'); }
+  });
+  expect(result).toEqual({ complete: false, pending: withChild ? 2 : 1, transferred: 1 });
+  expect([...accepted.keys()]).toEqual(['c-healthy']);
+  expect(inventories).toBe(3);
+  expect(transfers).toBeLessThanOrEqual(4);
+});
+
 it.each([false, true])('rechecks cached position failure after child recovery, persistent failure=%s', async persistent => {
   const inventories = { local: [entry('a-child'), entry('z-parent'),
     { ...entry('position'), objectType: 'node_position' as const }], remote: [] };

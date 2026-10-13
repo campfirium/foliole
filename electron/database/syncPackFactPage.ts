@@ -1,8 +1,8 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
+import { assertValidNodeVersionSnapshot } from '../../lib/core/sync/syncNodeVersionRows.js';
 import { describeVersionFact, type SyncPackFactIndex, type SyncPackFactPage,
   type SyncParentFact } from '../../lib/core/sync/syncPackFactPresence.js';
-import { assertValidNodeVersionSnapshot } from '../../lib/core/sync/syncPackNodeVersions.js';
 import type { SyncPackReviewLogRecord } from '../../lib/core/sync/syncPackReviewLogExecutor.js';
 
 import type { DesktopSyncPackFactWindow } from './syncPackFactWindow.js';

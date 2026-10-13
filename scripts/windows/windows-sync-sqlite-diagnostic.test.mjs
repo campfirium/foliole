@@ -75,7 +75,7 @@ it('runs the remaining failures separately without SQLite interception', () => {
     .toMatchObject({ diagnosticMode: 'remaining' });
   const cases = diagnosticCases('remaining');
   expect(cases.map(item => item.filter)).toEqual([
-    'returns pending without spinning', 'overwrites the whole group despite retained history',
+    'leaves an unavailable body pending', 'overwrites the whole group despite retained history',
     'does not print a success status while a validation-window request is waiting'
   ]);
   for (const scenario of cases) {

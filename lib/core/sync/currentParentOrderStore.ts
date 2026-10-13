@@ -8,7 +8,8 @@ import { canonicalParentOrderSources, currentParentOrderHash, joinParentOrderSou
   projectCurrentParentOrder, type CurrentOrderMember } from './currentParentOrder.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { requireParentOrderWriterWithDbPort } from './parentOrderWriter.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
+
 
 export async function loadCurrentParentOrderSources(port: DbPort, parentId: string) {
   const rows = await port.query<{ authorId: string; counter: number; child_ids_json: string }>(
@@ -36,7 +37,7 @@ export async function flushCurrentParentOrderProjectionsWithDbPort(port: DbPort)
 
 const payloadSchema = z.object({ parent_id: z.string().min(1), sources_json: z.string() }).strict();
 
-export function applyCurrentParentOrderRecord(port: DbPort, record: SyncPackSyncObjectRecord) {
+export function applyCurrentParentOrderRecord(port: DbPort, record: SyncObjectRecord) {
   return port.transaction(async (tx) => {
     if (record.deleted_at || !record.payload_json) throw new Error('invalid_parent_child_order');
     const payload = payloadSchema.parse(JSON.parse(record.payload_json));

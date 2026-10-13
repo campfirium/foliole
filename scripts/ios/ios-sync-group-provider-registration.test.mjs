@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.ts';
-import { qualifyPreparedCompanionAnchorCandidate } from '../../src/shared/platform/companion/preparedAnchorDiscovery.ts';
+import { evaluateSyncProtocolVersionHint, parseSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.ts';
 
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
 import {
@@ -15,23 +15,21 @@ const discovery = {
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   provider_device_id: 'ios-acceptance-contract-peer',
   provider_platform: 'macOS',
-  runtime_instance_id: 'runtime-attempt-1',
-  topology_role: 'anchor'
+  runtime_instance_id: 'runtime-attempt-1'
 };
 
 describe('iOS hosted provider OS DNS-SD registration', () => {
-  it('publishes matching TXT and HTTP evidence for a desktop soft anchor', () => {
+  it('publishes matching TXT and HTTP evidence for a peer provider', () => {
     const provider = createIosSyncGroupProviderContract({});
     const input = hostedRegistrationInput(provider.discovery, 43123);
-
-    expect(qualifyPreparedCompanionAnchorCandidate({
-      endpoint_url: 'http://hosted-provider.local:43123',
-      http: provider.discovery,
-      protocol_txt: input.txt
-    })).toEqual({ eligible: true, reason: 'eligible' });
+    expect(evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(input.txt)).status).toBe('compatible');
+    expect(input.txt.device_id).toBe(provider.discovery.provider_device_id);
+    expect(input.txt.group_id).toBe(provider.discovery.group_id);
+    expect(input.txt.group_tag).toBe(provider.discovery.group_tag);
+    expect(input.txt).not.toHaveProperty('topology_role');
   });
 
-  it('binds production anchor identity to the dynamic listener port', async () => {
+  it('binds production provider identity to the dynamic listener port', async () => {
     const input = hostedRegistrationInput(discovery, 43123);
     const cancel = vi.fn();
     const register = vi.fn((actual, callback) => {
@@ -52,8 +50,7 @@ describe('iOS hosted provider OS DNS-SD registration', () => {
       group_tag: discovery.group_tag,
       protocol_version: String(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version),
       provider_platform: 'macOS',
-      runtime_instance_id: discovery.runtime_instance_id,
-      topology_role: 'anchor'
+      runtime_instance_id: discovery.runtime_instance_id
     });
     registration.cancel();
     registration.cancel();

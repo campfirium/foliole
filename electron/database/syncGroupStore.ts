@@ -133,15 +133,14 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
       driver.execute('DELETE FROM sync_group_metadata');
       retagLocalWatchedFolderBindings(driver, deviceIdentityKey,
         loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
-      driver.execute('DELETE FROM sync_delivery_receipts');
-      driver.execute('DELETE FROM sync_peer_cursors');
+
+
       driver.execute('DELETE FROM sync_group_nonce_ledger');
-      driver.execute('DELETE FROM node_version_outbound_holds');
-      driver.execute('DELETE FROM node_version_outbound_payload_holds');
+
+
     }
-    driver.execute(`DELETE FROM node_version_outbound_payload_holds WHERE pack_id IN
-      (SELECT pack_id FROM node_version_outbound_holds WHERE device_identity_key = ?)`, [deviceIdentityKey]);
-    driver.execute('DELETE FROM node_version_outbound_holds WHERE device_identity_key = ?', [deviceIdentityKey]);
+
+
     collectAllNodeVersionChainsWithDriver(driver);
   });
 }

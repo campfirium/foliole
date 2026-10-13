@@ -42,7 +42,7 @@ export async function retireCompanionAttachmentRegistry(db: DbPort) {
   await db.run('ALTER TABLE pdf_page_text_next RENAME TO pdf_page_text');
   await db.run('DROP TABLE node_attachments');
   await db.run('DROP TABLE attachments');
-  for (const table of ['sync_object_state', 'sync_change_log', 'sync_delivery_receipts']) {
+  for (const table of ['sync_object_state', 'sync_change_log']) {
     await db.run(`DELETE FROM ${table} WHERE object_type = 'attachment'`);
   }
 }

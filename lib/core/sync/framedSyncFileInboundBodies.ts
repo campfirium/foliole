@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
 import { framedSyncInboundAttemptDirectory } from './framedSyncFileInboundRecord.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
-import { validateFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
+import { validateSyncBodyBytes } from './syncBodyBytes.js';
 
 type Owner = Readonly<{ transferId: Uint8Array; attemptId: Uint8Array }>;
 
@@ -13,21 +13,21 @@ function bodyKey(owner: Owner, blob: CanonicalBlob) {
 }
 
 export async function stageFramedSyncFileInboundBody(files: FramedSyncFilePort, owner: Owner, blob: CanonicalBlob, data: Uint8Array) {
-  validateFramedSyncFrozenBody(blob, data);
+  validateSyncBodyBytes(blob, data);
   await files.write(bodyKey(owner, blob), data);
 }
 
 export async function hasFramedSyncFileInboundBody(files: FramedSyncFilePort, owner: Owner, blob: CanonicalBlob) {
   const data = await files.read(bodyKey(owner, blob));
   if (!data) return false;
-  validateFramedSyncFrozenBody(blob, data);
+  validateSyncBodyBytes(blob, data);
   return true;
 }
 
 export async function loadFramedSyncFileInboundBody(files: FramedSyncFilePort, owner: Owner, blob: CanonicalBlob) {
   const data = await files.read(bodyKey(owner, blob));
   if (!data) throw new Error('framed_sync_published_body_unavailable');
-  return validateFramedSyncFrozenBody(blob, data);
+  return validateSyncBodyBytes(blob, data);
 }
 
 /** Validated sources explicitly own the bodies needed by this apply batch. */

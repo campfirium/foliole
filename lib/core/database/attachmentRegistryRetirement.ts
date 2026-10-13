@@ -22,7 +22,6 @@ export function retireAttachmentRegistry(sqlite: DatabaseMigrationTarget) {
   DROP TABLE attachments;
   DELETE FROM sync_object_state WHERE object_type = 'attachment';
   DELETE FROM sync_change_log WHERE object_type = 'attachment';
-  DELETE FROM sync_delivery_receipts WHERE object_type = 'attachment';
   UPDATE nodes SET sync_dirty = 1 WHERE resource_references <> '[]';`);
   appendMigratedNodeResourceVersions(sqlite);
 }

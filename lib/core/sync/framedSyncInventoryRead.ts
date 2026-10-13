@@ -4,14 +4,12 @@ import { z } from 'zod';
 
 import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
-import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
 import { FRAMED_SYNC_LIMITS, type FramedSyncContext } from './framedSyncContract.js';
-import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
-import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 interface InventoryRow extends DbRow {
@@ -52,8 +50,8 @@ async function read(port: DbPort, key: InventoryKey | undefined) {
   const nodes = await readNodes(port, key);
   const states = key ? [] : await readFramedSyncObjectStateInventory(port);
   return [...nodes, ...states].sort((left, right) =>
-    compareSyncIdentityText(left.objectType, right.objectType) ||
-    compareSyncIdentityText(left.globalId, right.globalId));
+    compareSyncFactText(left.objectType, right.objectType) ||
+    compareSyncFactText(left.globalId, right.globalId));
 }
 
 async function readNodes(port: DbPort, key: InventoryKey | undefined) {
@@ -71,10 +69,9 @@ async function readNodes(port: DbPort, key: InventoryKey | undefined) {
   }
 }
 
-export function readFramedSyncInventory(port: DbPort, files?: FramedSyncFilePort) {
+export function readFramedSyncInventory(port: DbPort) {
   return port.transaction(async (tx) => {
     if (await syncGroupLocalPublicationBlockReason(tx)) return [];
-    if (!files) await expireFramedSyncCompletions(tx);
     await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return read(tx, undefined);
   });

@@ -2,7 +2,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
-import { validateFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
+import { validateSyncBodyBytes } from './syncBodyBytes.js';
 
 export type FramedSyncBodyOwner = { purpose: 'outbound'; transferId: Uint8Array };
 
@@ -20,11 +20,11 @@ function bodyKey(blob: CanonicalBlob) {
 
 export async function stageFramedSyncFileBody(files: FramedSyncFilePort, blob: CanonicalBlob, data: Uint8Array,
   owner: FramedSyncBodyOwner) {
-  validateFramedSyncFrozenBody(blob, data);
+  validateSyncBodyBytes(blob, data);
   const key = bodyKey(blob);
   await files.exclusive(key, async () => {
     const prior = await files.read(key);
-    if (prior) validateFramedSyncFrozenBody(blob, prior);
+    if (prior) validateSyncBodyBytes(blob, prior);
     await files.write(holdKey(blob, owner), new Uint8Array());
     if (!prior) await files.write(key, data);
   });
@@ -35,7 +35,7 @@ export async function holdFramedSyncFileBody(files: FramedSyncFilePort, blob: Ca
   return files.exclusive(bodyKey(blob), async () => {
     const bytes = await files.read(bodyKey(blob));
     if (!bytes) return false;
-    validateFramedSyncFrozenBody(blob, bytes);
+    validateSyncBodyBytes(blob, bytes);
     await files.write(holdKey(blob, owner), new Uint8Array());
     return true;
   });
@@ -55,5 +55,5 @@ export async function releaseFramedSyncFileBodies(files: FramedSyncFilePort, blo
 export async function loadFramedSyncFileBody(files: FramedSyncFilePort, blob: CanonicalBlob) {
   const data = await files.read(bodyKey(blob));
   if (!data) throw new Error('framed_sync_published_body_unavailable');
-  return validateFramedSyncFrozenBody(blob, data);
+  return validateSyncBodyBytes(blob, data);
 }

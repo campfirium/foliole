@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
@@ -16,5 +17,6 @@ export function seedRetiredExternalDocuments(sqlite: Database.Database, count = 
   for (let index = 0; index < count; index++) insert.run('external_document',
     `retired-folder:document-${index}.md`, computeSyncContentHash('external_document', { legacy: index }),
     '2026-07-01T00:00:00.000Z', null);
+  for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   sqlite.pragma('user_version = 142');
 }

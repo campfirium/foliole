@@ -1,9 +1,10 @@
 import type { DbPort } from './dbPort.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { requireSourceHostPayload, writeSourceHostProjection } from './syncObjectSourcePayload.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
-export async function applyWatchedFolderObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+
+export async function applyWatchedFolderObject(port: DbPort, record: SyncObjectRecord) {
   if (record.deleted_at) {
     await port.run('DELETE FROM watched_folder_bindings WHERE binding_id = ?', [record.object_id]);
     return;

@@ -53,7 +53,7 @@ function formatSyncPanelError(message: string, t: Translate) {
   if (message === 'discovery_permission_required') return t('companion.sync.discovery.permissionRequired');
   if (message === 'discovery_unavailable') return t('companion.sync.discovery.unavailable');
   if (message === 'discovery_incompatible') return t('companion.sync.discovery.incompatible');
-  if (message === 'discovery_waiting_anchor') return t('companion.sync.discovery.waitingAnchor');
+  if (message === 'discovery_no_devices') return t('companion.sync.discovery.noDevices');
   if (message === 'discovery_connection_failed') return t('companion.sync.discovery.connectionFailed');
   if (message.includes('sync_participation_inactive')) return t('companion.sync.participation.inactive');
   if (message.includes('sync_group_join_request_not_found')) return t('companion.sync.discovery.error.joinExpired');
@@ -63,7 +63,7 @@ function formatSyncPanelError(message: string, t: Translate) {
 }
 
 function formatManualSyncFailure(message: string | null, t: Translate) {
-  if (message === 'discovery_waiting_anchor' || message === 'discovery_unavailable'
+  if (message === 'discovery_no_devices' || message === 'discovery_unavailable'
     || message === 'discovery_connection_failed') {
     return t('companion.sync.action.failedConnection');
   }

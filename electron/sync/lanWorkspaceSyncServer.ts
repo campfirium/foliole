@@ -42,7 +42,7 @@ export interface LanWorkspaceSyncServerStatus {
   port: number | null;
   state: 'failed' | 'running' | 'stopped';
   topology_role: DesktopCompanionSyncServerStatusPayload['topology_role'];
-  topology_status: 'observing' | 'ready' | 'waiting_anchor' | 'incompatible' | 'sync_before_demote';
+  topology_status: 'observing' | 'ready' | 'no_devices' | 'incompatible';
 }
 
 function topologyStatus() {

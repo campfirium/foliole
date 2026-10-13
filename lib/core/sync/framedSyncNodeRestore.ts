@@ -183,7 +183,7 @@ function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: s
     throw new Error('node_version_projection_identity_invalid');
   }
   return {
-    ancestor_version_ids: readStringList(get('ancestor_version_ids')),
+    ancestor_version_ids: [],
     body_text: body,
     content_hash: contentHash,
     host_name: readString(get('host_name'), true),

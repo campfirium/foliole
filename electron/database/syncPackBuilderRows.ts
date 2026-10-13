@@ -1,8 +1,8 @@
 import { NODE_VERSION_PEER_HEAD_COLUMNS } from '../../lib/core/sync/nodeVersionDependencies.js';
+import { SYNC_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncNodeVersionRows.js';
 import type { SyncPackDependencyManifest } from '../../lib/core/sync/syncPackDependencyManifest.js';
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
-import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNodeVersions.js';
 
 import type { LoadedDesktopSyncPackRows, WritableDesktopSyncPackRows } from './syncPackLoadedRows.js';
 import { syncPackTableRows } from './syncPackTableRows.js';
@@ -110,7 +110,7 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: Writable
   copyRows({
     db,
     table: 'node_sync_versions',
-    columns: [...SYNC_PACK_NODE_VERSION_COLUMNS],
+    columns: [...SYNC_NODE_VERSION_COLUMNS],
     rows: rows.nodeVersions
   });
   copyRows({

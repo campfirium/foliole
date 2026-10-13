@@ -1,7 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import { migrateCompanionExternalDocumentBodyOwnership, migrateExternalDocumentBodyOwnership } from './externalDocumentBodyOwnershipMigration.js';
-import { migrateCompanionFramedSyncFrozenBodies, migrateFramedSyncFrozenBodies } from './framedSyncFrozenBodyMigration.js';
 import { framedSyncNodeInventorySql } from './framedSyncInventoryProjectionSql.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -25,7 +24,6 @@ function inventoryStatements() {
 export function migrateTextBodyOwnership(sqlite: DatabaseMigrationTarget) {
   migrateOversizeVersionBodies(sqlite);
   migrateTopicTextBodyOwnership(sqlite);
-  migrateFramedSyncFrozenBodies(sqlite);
   migrateNodeBodyOwnership(sqlite);
   migrateExternalDocumentBodyOwnership(sqlite);
   migrateReadwiseSourceUpdateBodyOwnership(sqlite);
@@ -35,7 +33,6 @@ export function migrateTextBodyOwnership(sqlite: DatabaseMigrationTarget) {
 export async function migrateCompanionTextBodyOwnership(db: DbPort) {
   await migrateCompanionOversizeVersionBodies(db);
   await migrateCompanionTopicTextBodyOwnership(db);
-  await migrateCompanionFramedSyncFrozenBodies(db);
   await migrateCompanionNodeBodyOwnership(db);
   await migrateCompanionExternalDocumentBodyOwnership(db);
   await migrateCompanionReadwiseSourceUpdateBodyOwnership(db);

@@ -1,48 +1,23 @@
 import type { PluginListenerHandle } from '@capacitor/core';
 
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { readFramedSyncPublishedBodyOperation } from '../../../../../lib/core/sync/framedSyncPublishedBodyOperation';
-import { readFramedSyncPublishedFactOperation } from '../../../../../lib/core/sync/framedSyncPublishedFactOperation';
 import { assertSyncGroupJoinAdmission } from '../../../../../lib/core/sync/syncGroupJoinAdmission';
-import {
-  COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
-  type CompanionSyncGroupDataRequest
-} from '../../../../../lib/platform/companionSyncGroupDataContract';
+import { COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
+  type CompanionSyncGroupDataRequest } from '../../../../../lib/platform/companionSyncGroupDataContract';
 import { parseSyncGroupMemberState } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
-import { withCompanionFramedPayload } from '../runtime/companionFramedPayloadBudget';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-import * as framedSyncData from './framed/companionFramedSyncDataOperation';
-import { currentCompanionFramedSyncFiles } from './framed/companionFramedSyncFiles';
-import {
-  inspectCompanionFramedSyncOutbound,
-  prepareCompanionFramedSyncOutbound
-} from './framed/companionFramedSyncOutbound';
-import { resumeCompanionFramedSyncRespondingPeer } from './framed/companionFramedSyncPeerRoutes';
 import { rememberCompanionRequestSyncProviderState } from './framed/companionRequestSyncPeerState';
 import { respondCompanionRequestSync } from './framed/companionRequestSyncResponse';
-import { touchCompanionSyncPeerRound } from './framed/companionSyncPeerRounds.js';
-import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
-import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
-import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
-import {
-  applyCompanionSyncGroupMemberState,
-  loadCompanionSyncGroupMemberState
-} from './syncGroupMemberStateStore';
+import { touchCompanionSyncPeerRound } from './framed/companionSyncPeerRounds';
+import { applyCompanionSyncGroupMemberState, loadCompanionSyncGroupMemberState } from './syncGroupMemberStateStore';
 import { loadCurrentCredential, loadGroupPayload } from './syncGroupProviderCredentialStore';
-import { createCompanionSyncGroupSourceSnapshot } from './syncGroupSourceSnapshot';
-import { confirmVersionPack, stageVersionPack } from './syncGroupVersionPackDataOwner';
 
 let listenerReady: Promise<void> | null = null;
-const PAYLOAD_OPERATIONS = new Set<string>([
-  CONTRACT.operations.readFramedBody, CONTRACT.operations.readFramedOutboundFact,
-  CONTRACT.operations.prepareFramedOutbound, CONTRACT.operations.inspectFramedOutbound,
-  CONTRACT.operations.readFramedInventory
-]);
 
 function dataPlugin() {
   return FolioleCompanionSync as typeof FolioleCompanionSync & {
@@ -52,23 +27,10 @@ function dataPlugin() {
 }
 
 export function ensureCompanionSyncGroupDataOwner() {
-  listenerReady ??= dataPlugin().addListener(CONTRACT.eventName, (request) => {
-    void handleRequest(request);
+  listenerReady ??= dataPlugin().addListener(CONTRACT.eventName, request => {
+    void respondRequest(request);
   }).then(() => undefined);
   return listenerReady;
-}
-
-async function handleRequest(request: CompanionSyncGroupDataRequest) {
-  const receiptOnly = request.operation === CONTRACT.operations.inspectFramedOutbound &&
-    request.payload.receipt_only === true && request.payload.transfer_id !== undefined;
-  if (PAYLOAD_OPERATIONS.has(request.operation) && !receiptOnly) {
-    try {
-      await withCompanionFramedPayload(getIosCompanionDatabaseOwner(), request.payload,
-        () => respondRequest(request), (error) => replyFailure(request, error));
-    } catch (error) { await replyFailure(request, error); }
-    return;
-  }
-  await respondRequest(request);
 }
 
 async function respondRequest(request: CompanionSyncGroupDataRequest) {
@@ -80,57 +42,22 @@ async function respondRequest(request: CompanionSyncGroupDataRequest) {
       return;
     }
     const result = await dispatch(request.operation, request.payload);
-    await dataPlugin().resolveSyncGroupDataRequest({
-      request_id: request.request_id, result: { ...result }
-    });
+    await dataPlugin().resolveSyncGroupDataRequest({ request_id: request.request_id, result: { ...result } });
   } catch (error) {
-    await replyFailure(request, error);
+    await dataPlugin().resolveSyncGroupDataRequest({
+      error: error instanceof Error ? error.message : String(error), request_id: request.request_id
+    });
   }
-}
-
-function replyFailure(request: CompanionSyncGroupDataRequest, error: unknown) {
-  return dataPlugin().resolveSyncGroupDataRequest({
-    error: error instanceof Error ? error.message : String(error), request_id: request.request_id
-  });
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.touchRequestSyncRound) return touchCompanionSyncPeerRound(payload);
-  if (operation === CONTRACT.operations.respondRequestSync) return respondCompanionRequestSync(payload);
-  if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async (db) => {
+  if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async db => {
     await assertSyncGroupJoinAdmission(db, payload);
     return { allowed: true };
   });
-  if (operation === CONTRACT.operations.attachmentCheckpoint) return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);
-  if (operation === CONTRACT.operations.createSnapshot) return createCompanionSyncGroupSourceSnapshot(payload);
-  if (operation === CONTRACT.operations.readIdentitySource) return getIosCompanionDatabaseOwner()
-    .read((db) => readCompanionSyncIdentitySource(db, payload));
-  if (operation === CONTRACT.operations.prepareIdentityPack) return getIosCompanionDatabaseOwner()
-    .read((db) => prepareCompanionSyncIdentityPack(db, payload));
-  if (operation === CONTRACT.operations.applyIdentityPack) return writer(async (db) => {
-    const sourcePeerId = requiredText(payload.authenticated_device_id);
-    const targetPeerId = requiredText(payload.local_device_id);
-    const result = await applyCompanionSyncIdentityPackWithDbPort(db, {
-      hostName: requiredText(payload.host_name), manifest: payload.manifest,
-      packPath: requiredText(payload.pack_path), sourcePeerId, targetPeerId
-    });
-    const page = requiredObject(requiredObject(payload.manifest).identity_page);
-    return { applied: result.applied, pageId: requiredText(page.page_id) };
-  });
-  if (operation === CONTRACT.operations.applyFramedTransfer)
-    return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload,
-      currentCompanionFramedSyncFiles()));
-  if (operation === CONTRACT.operations.completeFramedOutbound)
-    return writer((db) => framedSyncData.completeCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
-  if (operation === CONTRACT.operations.inspectFramedOutbound)
-    return getIosCompanionDatabaseOwner().read((db) => inspectCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
-  if (operation === CONTRACT.operations.prepareFramedOutbound)
-    return writer((db) => prepareCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
-  if (operation === CONTRACT.operations.readFramedInventory) return readFramedInventory(payload);
-  if (operation === CONTRACT.operations.readFramedBody) return getIosCompanionDatabaseOwner()
-    .read((db) => readFramedSyncPublishedBodyOperation(db, payload, currentCompanionFramedSyncFiles()));
-  if (operation === CONTRACT.operations.readFramedOutboundFact) return getIosCompanionDatabaseOwner()
-    .read((db) => readFramedSyncPublishedFactOperation(db, payload, currentCompanionFramedSyncFiles()));
+  if (operation === CONTRACT.operations.attachmentCheckpoint)
+    return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);
   if (operation === CONTRACT.operations.applyMemberState) {
     const state = parseSyncGroupMemberState(payload.state);
     return applyCompanionSyncGroupMemberState(state, requiredText(payload.authenticated_device_id)).then(result => {
@@ -143,10 +70,7 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.loadMemberState) return loadCompanionSyncGroupMemberState();
   if (operation === CONTRACT.operations.registerDevice) return registerDevice(payload);
   if (operation === CONTRACT.operations.verifyDevice) return verifyDevice(payload);
-  if (operation === CONTRACT.operations.recordSupplyCursor) return recordSupplyCursor(payload);
   if (operation === CONTRACT.operations.saveSyncEndpoint) return saveSyncEndpoint(payload);
-  if (operation === CONTRACT.operations.stageVersionPack) return stageVersionPack(payload);
-  if (operation === CONTRACT.operations.confirmVersionPack) return confirmVersionPack(payload);
   throw new Error('sync_group_data_operation_unsupported');
 }
 
@@ -199,18 +123,6 @@ async function verifyDevice(payload: Record<string, unknown>) {
   });
 }
 
-function recordSupplyCursor(payload: Record<string, unknown>) {
-  return writer(async (db) => {
-    await db.run(
-      `INSERT OR REPLACE INTO sync_peer_cursors
-       (peer_id, stream_name, cursor_value, updated_at) VALUES (?, 'sync-pack-supply', ?, ?)`,
-      [requiredText(payload.peer_id), `${requiredNumber(payload.from_cursor)}:${requiredNumber(payload.to_cursor)}`,
-        new Date().toISOString()]
-    );
-    return { recorded: true };
-  });
-}
-
 function saveSyncEndpoint(payload: Record<string, unknown>) {
   return writer(async (db) => {
     await db.run(
@@ -231,18 +143,7 @@ function requiredText(value: unknown) {
   return value.trim();
 }
 
-function requiredNumber(value: unknown) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('sync_group_data_number_required');
-  return value;
-}
-
 function requiredObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('sync_group_data_object_required');
   return value as Record<string, unknown>;
-}
-
-async function readFramedInventory(payload: Record<string, unknown>) {
-  await resumeCompanionFramedSyncRespondingPeer(payload);
-  return getIosCompanionDatabaseOwner().read((db) =>
-    framedSyncData.readCompanionFramedSyncInventory(db, currentCompanionFramedSyncFiles()));
 }

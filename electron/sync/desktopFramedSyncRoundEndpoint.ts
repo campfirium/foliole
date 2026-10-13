@@ -101,7 +101,7 @@ export function createDesktopFramedSyncRoundEndpoint(
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,
-    readInventory: () => readDesktopFramedSyncRoundInventory(input.db, input.files),
+    readInventory: () => readDesktopFramedSyncRoundInventory(input.db),
     readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key),
     selectOutbound: (difference) => selectOutbound(state, difference),
     sendPublishedTransfer: ({ publication }) => sendPublishedTransfer(state, { publication }),

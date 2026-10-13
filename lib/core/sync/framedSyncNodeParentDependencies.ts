@@ -1,11 +1,15 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
+import { ensureSyncSpecialRootNodes } from './syncSpecialRootNodes.js';
 
 export async function assertFramedSyncNodeParentDependencies(
   db: DbPort,
   nodes: readonly SyncNodeRecordMetadata[]
 ) {
+  const currentNodes = nodes.filter(node => !isNodeVersionIdentityOnly(node));
+  await ensureSyncSpecialRootNodes(db, currentNodes.flatMap(node => node.snapshot.parent_id
+    ? [{ nodeId: node.snapshot.parent_id, referencedAt: node.snapshot.updated_at }] : []));
   const incomingIds = new Set(nodes.map((node) => node.object_id));
   for (const node of nodes) {
     if (isNodeVersionIdentityOnly(node)) continue;

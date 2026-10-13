@@ -12,9 +12,7 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 import { continueAfterObjectCommitFailure, installObjectCommitFailure, overwriteProgressRow,
   preservedRestoreArticle, restoreIdentityState } from './desktopFramedSyncVerifiedRestoreTwoProcess.testSupport.js';
 
-const modes = process.env.FOLIOLE_SQLITE_DIAGNOSTIC_ROOT
-  ? ['restore', 'adoption', 'adoption-command-barrier'] as const
-  : ['restore', 'adoption'] as const;
+const modes = ['restore', 'adoption'] as const;
 
 it.each(modes)(
   'resumes production request %s of 1000 nodes after object 400 and a process restart', async mode => {
@@ -22,15 +20,13 @@ it.each(modes)(
     const started = performance.now();
     let passed = false;
     try {
-      const actualMode = mode === 'restore' ? 'restore' : 'adoption';
-      const { workload, source, request } = await prepare(fixture, actualMode);
-      if (mode === 'adoption-command-barrier') await fixture.left.invoke('request_counts');
+      const { workload, source, request } = await prepare(fixture, mode);
       const transferStarted = performance.now();
       installObjectCommitFailure(fixture.rightSnapshot.databasePath, 400);
       await expect(fixture.right.invoke('round', request)).rejects.toThrow('identity_restore_object_rejected');
       const failed = largeOverwriteState(fixture.rightSnapshot.databasePath);
       expect(failed.nodes).toHaveLength(400); expect(failed.versions).toHaveLength(1200);
-      expect(failed.receipts).toEqual([]);
+      expect(failed.retiredTables).toEqual([]);
       const progress = overwriteProgressRow(fixture.rightSnapshot.databasePath);
       expect(progress).toBeDefined();
       const identity = restoreIdentityState(fixture.rightSnapshot.databasePath);
@@ -53,7 +49,7 @@ it.each(modes)(
       expect(completed.versions.slice(0, 1200)).toEqual(failed.versions);
       await verifyLargeOverwriteAttachments(restarted.snapshot.stateRoot);
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toBeUndefined();
-      assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, actualMode);
+      assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, mode);
       const requests = z.record(z.string(), z.number()).parse(await fixture.left.invoke('request_counts'));
       const requestCount = Object.values(requests).reduce((sum, count) => sum + count, 0);
       expect(requests.pulls).toBeGreaterThan(0);
@@ -91,7 +87,7 @@ function assertFinished(file: string, deviceId: string, mode: 'restore' | 'adopt
     expect(db.prepare('SELECT count(*) FROM node_version_member_positions WHERE device_identity_key = ?')
       .pluck().get(deviceId)).toBe(1000);
     for (const table of ['framed_sync_inbound_transfers', 'framed_sync_receipts'])
-      expect(db.prepare(`SELECT count(*) FROM ${table}`).pluck().get()).toBe(0);
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
     const state = restoreIdentityState(file);
     if (mode === 'restore') expect(state.restores).toEqual(expect.arrayContaining([
       expect.objectContaining({ restore_id: 'request-large-restore', applied_at: expect.any(String) })]));

@@ -61,21 +61,11 @@ vi.mock('../database/settingsStore.js', () => ({
     runtime.persistedRoute = value;
   }
 }));
-vi.mock('./desktopAnchorTopologyRole.js', () => ({
-  loadDesktopAnchorTopologyState: () => ({ role: runtime.role })
-}));
-vi.mock('./desktopAnchorTopologySession.js', () => ({
-  startDesktopAnchorTopologySession: (args: typeof runtime.sessionArgs) => {
-    runtime.sessionArgs = args;
-    return { recoverDiscovery: runtime.recoverTopology, stop: runtime.stop };
-  }
-}));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => runtime.participating
 }));
 vi.mock('./companionMdnsAdvertisement.js', () => ({
-  recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement,
-  updateCompanionMdnsAdvertisementRole: runtime.updateRole
+  recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement
 }));
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
 vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator,

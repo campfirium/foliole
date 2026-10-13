@@ -1,5 +1,5 @@
+import { compareSyncFactKey } from './syncFactKeyOrder.js';
 import { createSyncIdentityDigest, type SyncIdentityEntry } from './syncIdentityDigest.js';
-import { compareSyncIdentityKey } from './syncIdentityKeyOrder.js';
 
 export interface SyncIdentityInventory {
   digest: string;
@@ -38,7 +38,7 @@ async function* scanInventory(inventory: SyncIdentityInventory,
     for (const entry of page.entries) {
       if (!entry || !entry.object_type || !entry.object_id ||
           !/^[a-f0-9]{64}$/u.test(entry.fingerprint) ||
-          after && compareSyncIdentityKey(after, entry) >= 0) {
+          after && compareSyncFactKey(after, entry) >= 0) {
         throw new Error('sync_identity_global_page_order_invalid');
       }
       digest.add(entry);
@@ -48,7 +48,7 @@ async function* scanInventory(inventory: SyncIdentityInventory,
       yield entry;
     }
     if (page.nextAfter === null) break;
-    if (!after || compareSyncIdentityKey(after, page.nextAfter) !== 0) {
+    if (!after || compareSyncFactKey(after, page.nextAfter) !== 0) {
       throw new Error('sync_identity_global_page_cursor_invalid');
     }
   }
@@ -69,7 +69,7 @@ export async function* diffSyncIdentityGlobalPages(
   let fromReceiver = await right.next();
   while (!fromSource.done || !fromReceiver.done) {
     const order = fromSource.done ? 1 : fromReceiver.done ? -1 :
-      compareSyncIdentityKey(fromSource.value, fromReceiver.value);
+      compareSyncFactKey(fromSource.value, fromReceiver.value);
     if (order < 0) {
       if (fromSource.done) throw new Error('sync_identity_global_page_invalid');
       yield { kind: 'source_only' as const, source: fromSource.value };

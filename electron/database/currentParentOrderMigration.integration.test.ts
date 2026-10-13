@@ -3,24 +3,18 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
-import { decodeFramedSyncManifest, encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord, loadCurrentParentOrderSources, saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { stageFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
-import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { bindParentOrderWriterWithDbPort } from '../../lib/core/sync/parentOrderWriter.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { textBranch } from './topicTextState.testSupport.js';
 
 const databases: Database.Database[] = [];
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });
-const projection = projectFramedSyncNodeRecord(textBranch('original-version', 'Original unpublished body'));
-const body = projection.bodyBlob;
-const blob = projection.manifest.blobs[0]!;
-const nodeFact = projection.manifest.facts[0]!;
 const orderFact: CanonicalFact = { kind: 1, objectType: 'parent_child_order', globalId: 'parent',
   factId: 'old-order', sharedStateHash: new Uint8Array(32), blobs: [], body: [] };
 
@@ -28,6 +22,7 @@ function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  for (const sql of FRAMED_SYNC_STAGING_SCHEMA) db.exec(sql);
   db.exec(`DROP TRIGGER trg_parent_order_node_insert;
     DROP TRIGGER trg_parent_order_node_update;
     DROP TRIGGER trg_parent_order_node_delete;
@@ -49,24 +44,21 @@ function fixture() {
 }
 
 async function publish(host: ReturnType<typeof fixture>, facts: CanonicalFact[]) {
-  const manifest = { facts, blobs: facts.includes(nodeFact) ? [blob] : [] };
+  const manifest = { facts, blobs: [] };
   const context = { protocolVersion: 22, groupId: 'group',
     senderDeviceId: 'a', senderLibraryEpoch: 'a-epoch', receiverDeviceId: 'b', receiverLibraryEpoch: 'b-epoch' };
   const contentId = await canonicalContentId(manifest);
   const transferId = canonicalTransferIdSync(context, contentId);
   await host.port.transaction(async (tx) => {
-    if (manifest.blobs.length) await stageFramedSyncFrozenBody(tx, blob, body);
     await tx.run(`INSERT INTO framed_sync_outbound_publications
       (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
         group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
         fact_count, blob_count, total_blob_bytes, state)
       VALUES (?, ?, ?, ?, ?, 22, 'group', 'a', 'a-epoch', 'b', 'b-epoch', ?, ?, ?, 'published')`,
     [transferId, contentId, contentId, new Uint8Array(), encodeFramedSyncManifest(manifest),
-      facts.length, manifest.blobs.length, manifest.blobs.reduce((sum, value) => sum + value.byteLength, 0n)]);
+      facts.length, manifest.blobs.length, 0]);
     for (const fact of facts) await tx.run('INSERT INTO framed_sync_outbound_fact_refs VALUES (?, ?, ?, ?, ?)',
       [transferId, fact.kind, fact.objectType, fact.globalId, fact.factId]);
-    for (const value of manifest.blobs) await tx.run('INSERT INTO framed_sync_outbound_blob_refs VALUES (?, ?, ?, ?, ?)',
-      [transferId, value.sha256, value.byteLength, value.role, value.required ? 1 : 0]);
     await tx.run('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)', [transferId, 'b']);
   });
   return transferId;
@@ -74,57 +66,32 @@ async function publish(host: ReturnType<typeof fixture>, facts: CanonicalFact[])
 
 function upgrade(host: ReturnType<typeof fixture>, kind: 'desktop' | 'companion') {
   if (kind === 'desktop') return Promise.resolve().then(() => initializeDatabaseSchema(host.db));
-  return host.port.transaction(tx => migrateCompanionDatabase(tx, 80, 81));
+  return host.port.transaction(tx => migrateCompanionDatabase(tx, 80, 82));
 }
 
-it.each(['desktop', 'companion'] as const)('transfers mixed original facts and body ownership atomically on %s', async (kind) => {
+it.each(['desktop', 'companion'] as const)('seeds current order and retires old publications on %s', async kind => {
   const host = fixture();
-  const oldId = await publish(host, [nodeFact, orderFact]);
+  await publish(host, [orderFact]);
   await upgrade(host, kind);
-  expect(host.db.prepare('SELECT state, retirement_reason FROM framed_sync_outbound_publications WHERE transfer_id = ?')
-    .get(oldId)).toEqual({ state: 'terminated', retirement_reason: 'parent-order-format-upgrade' });
-  const next = host.db.prepare<[], { manifest_json: string }>(
-    "SELECT manifest_json FROM framed_sync_outbound_publications WHERE state = 'published'").all();
-  expect(next).toHaveLength(2);
-  expect(next.flatMap((row) => decodeFramedSyncManifest(row.manifest_json).facts)).toContainEqual(nodeFact);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(2);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
-  expect(host.db.prepare('SELECT data FROM framed_sync_available_blobs').pluck().get()).toEqual(Buffer.from(body));
   expect(host.db.prepare('SELECT counter, child_ids_json FROM parent_order_sources').all())
     .toEqual([{ counter: 0, child_ids_json: '["a"]' }]);
-  expect(host.db.prepare("SELECT name FROM sqlite_master WHERE name = 'parent_order_versions'").get()).toBeUndefined();
+  for (const name of ['parent_order_versions', 'framed_sync_outbound_publications', 'framed_sync_receipts']) {
+    expect(host.db.prepare('SELECT name FROM sqlite_master WHERE name = ?').get(name)).toBeUndefined();
+  }
   expect(host.db.prepare("SELECT content FROM nodes WHERE id = 'a'").pluck().get()).toBe('Original node body');
 });
 
-it('retires pure order publication without inventing a delivery receipt', async () => {
+it.each(['desktop', 'companion'] as const)('rolls back the order seed and original publication on %s failure', async kind => {
   const host = fixture();
-  await publish(host, [orderFact]);
-  await upgrade(host, 'desktop');
-  expect(host.db.prepare('SELECT state FROM framed_sync_outbound_publications').pluck().all()).toEqual(['terminated']);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
-});
-
-it.each(['desktop', 'companion'] as const)('rolls back owner transfer and schema after an injected %s failure', async (kind) => {
-  const host = fixture();
-  const oldId = await publish(host, [nodeFact, orderFact]);
-  host.db.exec(`CREATE TRIGGER fail_order_retirement BEFORE UPDATE OF state ON framed_sync_outbound_publications
-    WHEN NEW.state = 'terminated' BEGIN SELECT RAISE(ABORT, 'injected-retirement-failure'); END`);
-  await expect(upgrade(host, kind)).rejects.toThrow('injected-retirement-failure');
+  const original = await publish(host, [orderFact]);
+  host.db.exec(`CREATE TRIGGER fail_order_migration BEFORE INSERT ON parent_child_order
+    BEGIN SELECT RAISE(ABORT, 'injected-order-failure'); END`);
+  await expect(upgrade(host, kind)).rejects.toThrow('injected-order-failure');
   expect(host.db.prepare('SELECT transfer_id, state FROM framed_sync_outbound_publications').all())
-    .toEqual([{ transfer_id: Buffer.from(oldId), state: 'published' }]);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(1);
-  expect(host.db.prepare('SELECT data FROM framed_sync_available_blobs').pluck().get()).toEqual(Buffer.from(body));
+    .toEqual([{ transfer_id: Buffer.from(original), state: 'published' }]);
   expect(host.db.prepare("SELECT name FROM sqlite_master WHERE name = 'parent_order_sources'").get()).toBeUndefined();
-});
-
-it('rejects missing frozen body before releasing its original owner', async () => {
-  const host = fixture();
-  await publish(host, [nodeFact, orderFact]);
-  host.db.exec('DELETE FROM framed_sync_available_blobs');
-  await expect(upgrade(host, 'desktop')).rejects.toThrow('frozen_body_missing');
-  expect(host.db.prepare('SELECT state FROM framed_sync_outbound_publications').pluck().all()).toEqual(['published']);
-  expect(host.db.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(1);
+  expect(host.db.prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent'").pluck().get()).toBe('["a"]');
+  expect(host.db.pragma('user_version', { simple: true })).toBe(151);
 });
 
 it('keeps a real edit above a later upgrade seed without discarding the old device new member', async () => {

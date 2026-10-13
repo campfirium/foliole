@@ -99,11 +99,11 @@ export function leaveCompanionSyncGroupDevice() {
     );
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
     await tx.run('DELETE FROM sync_group_metadata');
-    await tx.run('DELETE FROM sync_delivery_receipts');
-    await tx.run('DELETE FROM sync_peer_cursors');
+
+
     await tx.run('DELETE FROM sync_group_nonce_ledger');
-    await tx.run('DELETE FROM node_version_outbound_holds');
-    await tx.run('DELETE FROM node_version_outbound_payload_holds');
+
+
     await collectAllNodeVersionChains(tx);
   }));
 }

@@ -2,7 +2,7 @@
 import { expect, it } from 'vitest';
 
 import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { compareSyncIdentityText } from '../../lib/core/sync/syncIdentityKeyOrder.js';
+import { compareSyncFactText } from '../../lib/core/sync/syncFactKeyOrder.js';
 import { textDevice } from '../database/topicTextState.testSupport.js';
 
 it('reads every mixed identity and its exact dependency lists, including later shared settings', async () => {
@@ -37,7 +37,7 @@ it('reads every mixed identity and its exact dependency lists, including later s
     [settingId, hash]);
     expected.push({ globalId: settingId, objectType: 'setting', frontierFactIds: [], requiredRelationIds: [],
       reviewFactIds: [], resourceHashes: [], sharedStateHash: new Uint8Array(32).fill(0x77), stateFactIds: [`setting:${hash}`] });
-    expected.sort((a, b) => compareSyncIdentityText(a.objectType, b.objectType) || compareSyncIdentityText(a.globalId, b.globalId));
+    expected.sort((a, b) => compareSyncFactText(a.objectType, b.objectType) || compareSyncFactText(a.globalId, b.globalId));
     expect(await readFramedSyncInventory(host.db)).toEqual(expected);
     for (const value of [expected[0]!, expected[Math.floor(expected.length / 2)]!, expected.at(-1)!]) {
       expect(await readFramedSyncInventoryEntry(host.db, value)).toEqual(value);

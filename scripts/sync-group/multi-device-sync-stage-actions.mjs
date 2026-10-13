@@ -28,7 +28,7 @@ import { startWindowsSyncGroupProvider } from './multi-device-sync-windows-provi
 import { macosAcceptanceEnv, macosAcceptanceSessionOptions } from './multi-device-sync-macos-channel.mjs';
 import { createIsolatedMacosRoot } from './multi-device-sync-workspace.mjs';
 import { MULTI_DEVICE_ANDROID_APP_ID } from './multi-device-sync-android-profile.mjs';
-import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from '../android/macos-a5-provider-observation.mjs';
 import { waitForCurrentProvider } from '../android/macos-a5-current-provider-readiness.mjs';
 
 /* global AbortController, AbortSignal */
@@ -130,7 +130,7 @@ async function admitC(repoRoot, runId, sourceRef, { reportProgress, signal, stag
       waitForFact: (factId) => waitForAndroidJourneyFact(paths, factId),
       waitForProvider: (group) => waitForCurrentAndroidProvider(group),
       waitForListener: async (session) => {
-        await observeMacosAnchorAfterElection(session);
+        await observeMacosProviderReady(session);
         return session.load();
       }
     });

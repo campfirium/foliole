@@ -8,11 +8,12 @@ import { hasCanonicalPrivateStateContentHash } from './canonicalPrivateStateCont
 import type { DbPort } from './dbPort.js';
 import type { SyncObjectPayloadApplyOptions } from './syncObjectLearningPayloadExecutor.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import type { SyncObjectRecord } from './syncObjectRecord.js';
+
 
 export async function applySettingObject(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   options: SyncObjectPayloadApplyOptions
 ) {
   assertCanonicalHash(record);
@@ -46,7 +47,7 @@ export async function applySettingObject(
 
 export async function applyViewStateObject(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   options: SyncObjectPayloadApplyOptions
 ) {
   assertCanonicalHash(record);
@@ -77,7 +78,7 @@ export async function applyViewStateObject(
   return true;
 }
 
-function assertCanonicalHash(record: SyncPackSyncObjectRecord) {
+function assertCanonicalHash(record: SyncObjectRecord) {
   if (!hasCanonicalPrivateStateContentHash(record)) {
     throw new Error(`sync_content_hash_mismatch:${record.object_type}`);
   }
@@ -85,7 +86,7 @@ function assertCanonicalHash(record: SyncPackSyncObjectRecord) {
 
 async function applyActiveNodeViewStateObject(
   port: DbPort,
-  record: SyncPackSyncObjectRecord,
+  record: SyncObjectRecord,
   activeNodeId: string | null
 ) {
   if (!activeNodeId) {

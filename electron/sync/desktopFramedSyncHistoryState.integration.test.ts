@@ -30,7 +30,7 @@ function removeBody(databasePath: string, versionId: string) {
 }
 
 it.each([false, true])('repairs history with one available source and refuses completion with both missing=%s', async bothMissing => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original 中文\r\n😀', nodeId: 'history-state', title: 'History' });
     const [first] = await readFixtureInventory(fixture.left);
@@ -97,7 +97,7 @@ it('keeps an offline editor branch and converges three production request peers 
 }, 60_000);
 
 it.each(['restore', 'adoption'] as const)('preserves deletion and full current text through %s and restart', async mode => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Historical body', nodeId: 'history-state', title: 'History' });
     const base = (await readFixtureInventory(fixture.left)).find(entry => entry.globalId === 'history-state')!.currentVersionId!;
@@ -106,7 +106,10 @@ it.each(['restore', 'adoption'] as const)('preserves deletion and full current t
     try { source.prepare(`UPDATE node_sync_versions SET body_text = NULL,
       snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true'))
       WHERE version_id = ?`).run(base); } finally { source.close(); }
-    const args = { mode, peerOrigin: fixture.leftSnapshot.origin, peerDeviceId: 'desktop-a', restoreId: 'history-restore' };
+    const args = { mode, peerOrigin: fixture.leftSnapshot.origin, peerDeviceId: fixture.leftSnapshot.deviceId, restoreId: 'history-restore' };
+    if (args.mode === 'restore') await fixture.left.invoke('publish_identity_restore', {
+      ...args, peerOrigin: fixture.rightSnapshot.origin, peerDeviceId: fixture.rightSnapshot.deviceId
+    });
     await fixture.right.invoke('begin_identity_restore', args);
     expect(await fixture.right.invoke('identity_restore_round', args)).toMatchObject({ complete: true });
     const restarted = await fixture.restartRight();

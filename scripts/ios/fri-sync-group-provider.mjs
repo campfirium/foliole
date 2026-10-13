@@ -9,7 +9,7 @@ import {
   openMacosSyncGroupDesktopSession,
   waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
-import { observeMacosAnchorAfterElection } from '../android/macos-a5-anchor-observation.mjs';
+import { observeMacosProviderReady } from '../android/macos-a5-provider-observation.mjs';
 import {
   assertMacosAcceptanceSyncGroupServer, macosAcceptanceEnv
 } from '../sync-group/multi-device-sync-macos-channel.mjs';
@@ -83,7 +83,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
     const conflictSeed = twoDevice ? await createDesktopSyncConflictSeed({
       evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session }) : null;
     await session.enable();
-    await observeMacosAnchorAfterElection(session);
+    await observeMacosProviderReady(session);
     const initial = assertMacosAcceptanceSyncGroupServer(await session.load());
     const initialOrigins = journeyOrigins(await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
@@ -149,7 +149,7 @@ export async function runFriSyncGroupProvider({ acceptanceRoot = evidenceRoot,
         throw new Error('Mac did not restore its Fri Sync Group.');
       }
       await runStage('wait-for-anchor-after-restart', () => (
-        observeMacosAnchorAfterElection(session)
+        observeMacosProviderReady(session)
       ));
       const afterRestart = await runStage('load-after-macos-restart', () => (
         session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false })

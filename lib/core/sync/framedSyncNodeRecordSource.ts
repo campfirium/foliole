@@ -4,7 +4,6 @@ import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
 import type { DbPort } from './dbPort.js';
 import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
-import { loadFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import { framedSyncMainBodyBlob, isFramedSyncNodeIdentityFact } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeIdentityFact, restoreFramedSyncNodeMetadata, restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
 import type { SyncNodeRecordMetadata, SyncNodeRecordSource } from './syncNodeRecordSource.js';
@@ -12,7 +11,7 @@ import type { SyncNodeRecordMetadata, SyncNodeRecordSource } from './syncNodeRec
 /** Facts contain signed metadata; the enclosing ready owner retains the immutable bytes. */
 export type FramedBodyLoader = (db: DbPort, blob: CanonicalBlob) => Promise<Uint8Array>;
 
-export function framedSyncNodeRecordSource(facts: readonly CanonicalFact[], loadBody: FramedBodyLoader = loadFramedSyncFrozenBody): SyncNodeRecordSource {
+export function framedSyncNodeRecordSource(facts: readonly CanonicalFact[], loadBody: FramedBodyLoader): SyncNodeRecordSource {
   const entries = new Map(facts.map((fact) => [restoreFramedSyncNodeMetadata(fact), fact]));
   const factFor = (metadata: SyncNodeRecordMetadata) => {
     const fact = entries.get(metadata);
@@ -23,7 +22,7 @@ export function framedSyncNodeRecordSource(facts: readonly CanonicalFact[], load
     load: (db, metadata) => restoreOwnedFramedSyncNode(db, factFor(metadata), loadBody) };
 }
 
-export async function restoreOwnedFramedSyncNode(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader = loadFramedSyncFrozenBody) {
+export async function restoreOwnedFramedSyncNode(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader) {
   if (isFramedSyncNodeIdentityFact(fact)) return restoreFramedSyncNodeIdentityFact(fact);
   const main = framedSyncMainBodyBlob(fact);
   if (!main) throw new Error('node_version_projection_body_blob_invalid');

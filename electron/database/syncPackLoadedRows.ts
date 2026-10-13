@@ -1,8 +1,8 @@
 import type { NodeVersionDependency } from '../../lib/core/sync/nodeVersionDependencies.js';
 import type {
-  SyncPackNodeVersionParentRow,
-  SyncPackNodeVersionRow
-} from '../../lib/core/sync/syncPackNodeVersions.js';
+  SyncNodeVersionParentRow,
+  SyncNodeVersionRow
+} from '../../lib/core/sync/syncNodeVersionRows.js';
 
 import type { SyncPackGroupDeviceRow, SyncPackGroupRow } from './syncPackGroupRows.js';
 import type { LoadedSyncPackRows } from './syncPackRows.js';
@@ -12,9 +12,9 @@ export interface LoadedDesktopSyncPackRows extends LoadedSyncPackRows {
   nodeVersionDependencies?: NodeVersionDependency[];
   groupDevices: SyncPackGroupDeviceRow[];
   groups: SyncPackGroupRow[];
-  nodeVersions: SyncPackNodeVersionRow[];
+  nodeVersions: SyncNodeVersionRow[];
   nodeTombstones: SyncPackTombstoneRow[];
-  nodeVersionParents: SyncPackNodeVersionParentRow[];
+  nodeVersionParents: SyncNodeVersionParentRow[];
 }
 
 export type WritableDesktopSyncPackRows = Omit<LoadedDesktopSyncPackRows, 'consumedStateSeq'>;

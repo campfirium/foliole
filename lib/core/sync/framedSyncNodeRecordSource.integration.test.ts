@@ -1,31 +1,37 @@
 // @vitest-environment node
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { textBranch, textDevice, wholeBodies } from '../../../electron/database/topicTextState.testSupport.js';
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
-import { stageFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import { projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
 import { framedSyncNodeRecordSource } from './framedSyncNodeRecordSource.js';
+import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 
 const now = '2026-10-08T00:00:00.000Z';
 const hosts: ReturnType<typeof textDevice>[] = [];
-afterEach(() => { hosts.splice(0).forEach((host) => host.sqlite.close()); vi.useRealTimers(); });
+const bodies = new Map<string, Uint8Array>();
+afterEach(() => { hosts.splice(0).forEach((host) => host.sqlite.close()); bodies.clear(); vi.useRealTimers(); });
 
 async function prepare(host: ReturnType<typeof textDevice>, records: NativeSyncNodeRecord[]) {
   const facts = [];
   for (const record of records) {
     const projection = projectFramedSyncNodeRecord(record);
     const fact = projection.manifest.facts[0]!;
-    await stageFramedSyncFrozenBody(host.db, fact.blobs[0]!, projection.bodyBlob);
+    bodies.set(bytesToHex(fact.blobs[0]!.sha256), projection.bodyBlob);
     for (const alternative of projection.alternativeBodyBlobs ?? []) {
-      await stageFramedSyncFrozenBody(host.db, alternative.blob, alternative.data);
+      bodies.set(bytesToHex(alternative.blob.sha256), alternative.data);
     }
     facts.push(fact);
   }
-  return framedSyncNodeRecordSource(facts);
+  return requestSyncNodeSource(host.db, framedSyncNodeRecordSource(facts, async (_db, blob) => {
+    const body = bodies.get(bytesToHex(blob.sha256));
+    if (!body) throw new Error('request_sync_body_missing');
+    return body;
+  }));
 }
 
 it.each(['', '\ufeff中文😀\0后段', 'a'.repeat(1048576)])('applies exact full owned text after obsolete cache is removed', async (body) => {
@@ -37,7 +43,7 @@ it.each(['', '\ufeff中文😀\0后段', 'a'.repeat(1048576)])('applies exact fu
   expect((await host.current()).body_text === body).toBe(true);
   expect(host.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic') === body).toBe(true);
   expect(host.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get('original') === body).toBe(true);
-  host.sqlite.exec('DELETE FROM framed_sync_available_blobs');
+  bodies.clear();
   expect((await host.current()).body_text === body).toBe(true);
 });
 
@@ -70,8 +76,8 @@ it('rolls back earlier full writes when a later ready body is missing, then appl
   const second = { ...textBranch('second', 'Second', undefined, now), object_id: 'second-topic',
     snapshot: { ...first.snapshot, id: 'second-topic', content: 'Second' } };
   const source = await prepare(host, [first, second]);
-  host.sqlite.prepare('DELETE FROM framed_sync_available_blobs WHERE data = ?').run(new TextEncoder().encode('Second'));
-  await expect(applySyncNodeSourceWithDbPort(host.db, source)).rejects.toThrow('framed_sync_published_body_unavailable');
+  for (const [hash, body] of bodies) if (new TextDecoder().decode(body) === 'Second') bodies.delete(hash);
+  await expect(applySyncNodeSourceWithDbPort(host.db, source)).rejects.toThrow('request_sync_body_missing');
   expect(host.sqlite.prepare('SELECT count(*) FROM nodes').pluck().get()).toBe(0);
   expect(host.sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(0);
   await prepare(host, [second]);
@@ -80,4 +86,15 @@ it('rolls back earlier full writes when a later ready body is missing, then appl
     { id: 'second-topic', content: 'Second', current_version_id: 'second' },
     { id: 'topic', content: 'First', current_version_id: 'first' }
   ]);
+});
+
+it('transmits parent identities without materializing an ancestor list', () => {
+  const base = textBranch('base', 'Base');
+  const record = textBranch('next', 'Next', base);
+  const projection = projectFramedSyncNodeRecord(record);
+  const fact = projection.manifest.facts[0];
+  expect(fact?.body.some(field => field.name === 'ancestor_version_ids')).toBe(false);
+  expect(fact?.body.find(field => field.name === 'parent_version_ids')?.value).toEqual({
+    kind: 'list', value: [{ kind: 'string', value: 'base' }]
+  });
 });

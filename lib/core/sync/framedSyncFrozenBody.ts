@@ -1,24 +1,13 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, isBytes } from '@noble/hashes/utils.js';
-
 import type { DbPort } from './dbPort.js';
 import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
-
-export function validateFramedSyncFrozenBody(blob: Pick<CanonicalBlob, 'sha256' | 'byteLength'>,
-  data: Uint8Array) {
-  if (!isBytes(data) || BigInt(data.byteLength) !== blob.byteLength ||
-      bytesToHex(sha256(data)) !== bytesToHex(blob.sha256)) {
-    throw new Error('framed_sync_published_body_unavailable');
-  }
-  return data;
-}
+import { validateSyncBodyBytes } from './syncBodyBytes.js';
 
 /** Caller owns the transaction that publishes the corresponding frozen input and hold. */
 export async function stageFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob, data: Uint8Array) {
-  validateFramedSyncFrozenBody(blob, data);
+  validateSyncBodyBytes(blob, data);
   const prior = await readFrozenBody(db, blob);
   if (prior !== undefined) {
-    validateFramedSyncFrozenBody(blob, prior);
+    validateSyncBodyBytes(blob, prior);
     return;
   }
   await db.run('INSERT INTO framed_sync_available_blobs VALUES (?, ?, ?)',
@@ -28,7 +17,7 @@ export async function stageFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob,
 export async function loadFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob) {
   const data = await readFrozenBody(db, blob);
   if (data === undefined) throw new Error('framed_sync_published_body_unavailable');
-  return validateFramedSyncFrozenBody(blob, data);
+  return validateSyncBodyBytes(blob, data);
 }
 
 async function readFrozenBody(db: DbPort, blob: CanonicalBlob) {

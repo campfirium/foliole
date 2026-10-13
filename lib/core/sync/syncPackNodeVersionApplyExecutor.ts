@@ -1,25 +1,25 @@
 import type { DbPort, DbRow } from './dbPort.js';
-import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
-import { loadConvergedSyncPackReplays } from './syncPackConvergedReplay.js';
-import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import {
   assertCurrentVersionAvailable,
   includeLegacyVersionParents,
   validateStoredVersionDependencies
-} from './syncPackNodeVersionDependencyValidation.js';
+} from './syncNodeVersionDependencyValidation.js';
 import {
   assertValidNodeVersionSnapshot,
-  SYNC_PACK_NODE_VERSION_COLUMNS,
-  type SyncPackNodeVersionParentRow,
-  type SyncPackNodeVersionRow
-} from './syncPackNodeVersions.js';
+  SYNC_NODE_VERSION_COLUMNS,
+  type SyncNodeVersionParentRow,
+  type SyncNodeVersionRow
+} from './syncNodeVersionRows.js';
+import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
+import { loadConvergedSyncPackReplays } from './syncPackConvergedReplay.js';
+import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import { loadVerifiedExistingSyncPackVersions, rehydrateStoredVersionBodies } from './syncPackStoredVersionFacts.js';
 import { eligiblePackVersion } from './syncPackVersionEligibility.js';
 import { readTopicTextSnapshot } from './topicTextBodies.js';
 
 // Assembled dependency history can exceed a transport page; read one body at a time.
 const VERSION_BATCH_SIZE = 1;
-type VersionIdentity = Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id' | 'parent_version_id'>;
+type VersionIdentity = Pick<SyncNodeVersionRow, 'version_id' | 'object_id' | 'parent_version_id'>;
 
 export async function applySyncPackNodeVersionsWithDbPort(
   port: DbPort,
@@ -51,8 +51,8 @@ export async function applySyncPackNodeVersionsWithDbPort(
 
 async function storeIncomingVersions(port: DbPort, alias: string, replays: Set<string>) {
   await port.run(
-    `INSERT INTO main.node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
-     SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => `incoming.${column}`).join(', ')}
+    `INSERT INTO main.node_sync_versions (${SYNC_NODE_VERSION_COLUMNS.join(', ')})
+     SELECT ${SYNC_NODE_VERSION_COLUMNS.map((column) => `incoming.${column}`).join(', ')}
      FROM ${alias}.node_sync_versions incoming
      WHERE ${eligiblePackVersion('incoming', alias)}
      ON CONFLICT(version_id) DO NOTHING`
@@ -83,7 +83,7 @@ async function validateIncomingBodies(port: DbPort, alias: string, ordered: Vers
   for (let offset = 0; offset < ordered.length; offset += VERSION_BATCH_SIZE) {
     const identities = ordered.slice(offset, offset + VERSION_BATCH_SIZE);
     const rows = (await port.query(
-      `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions
+      `SELECT ${SYNC_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions
        WHERE version_id IN (SELECT value FROM json_each(?))`,
       [JSON.stringify(identities.map((row) => row.version_id))]
     )).map(normalizeVersionRow);
@@ -104,9 +104,9 @@ function normalizeVersionIdentity(row: DbRow): VersionIdentity {
   };
 }
 
-function normalizeVersionRow(row: DbRow): SyncPackNodeVersionRow {
+function normalizeVersionRow(row: DbRow): SyncNodeVersionRow {
   const versionId = requireString(row.version_id, 'version_id');
-  const normalized: SyncPackNodeVersionRow = {
+  const normalized: SyncNodeVersionRow = {
     version_id: versionId,
     object_id: requireString(row.object_id, 'object_id'),
     parent_version_id: requireNullableString(row.parent_version_id, 'parent_version_id'),
@@ -120,7 +120,7 @@ function normalizeVersionRow(row: DbRow): SyncPackNodeVersionRow {
   return normalized;
 }
 
-function normalizeVersionParentRow(row: DbRow): SyncPackNodeVersionParentRow {
+function normalizeVersionParentRow(row: DbRow): SyncNodeVersionParentRow {
   const ordinal = row.ordinal;
   if (typeof ordinal !== 'number' || !Number.isSafeInteger(ordinal) || ordinal < 0) {
     throw new Error('sync_pack_node_version_parent_field_invalid:ordinal');
@@ -134,10 +134,10 @@ function normalizeVersionParentRow(row: DbRow): SyncPackNodeVersionParentRow {
 
 function validateIncomingDag(
   rows: VersionIdentity[],
-  parentRows: SyncPackNodeVersionParentRow[]
+  parentRows: SyncNodeVersionParentRow[]
 ) {
   const byId = new Map(rows.map((row) => [row.version_id, row]));
-  const parentsByVersion = new Map<string, SyncPackNodeVersionParentRow[]>();
+  const parentsByVersion = new Map<string, SyncNodeVersionParentRow[]>();
   for (const parentRow of parentRows) {
     const entries = parentsByVersion.get(parentRow.version_id) ?? [];
     entries.push(parentRow);

@@ -37,7 +37,7 @@ async function setup(leave = true) {
     peers.push(await worker.send('init', { groupId, name }));
   }
   if (leave) await workers[0]!.send('leave');
-  await workers[1]!.send('joinProviderEnable', { anchor: true });
+  await workers[1]!.send('joinProviderEnable');
   return peers;
 }
 
@@ -54,7 +54,7 @@ it('continues ordinary UUID sync with a previously synchronized offline member a
   for (const worker of workers) await worker.send('register', {
     members: peers.map((peer, index) => ({ device: peer.device, name: `Member ${index}` }))
   });
-  await other!.send('joinProviderEnable', { anchor: true });
+  await other!.send('joinProviderEnable');
   await applicant!.send('seed', { id: 'prior-shared', content: 'Prior shared data' });
   await sync(applicant!, peers[2]!).catch((error: Error) => { throw new Error(`before adoption: ${error.message}`); });
   const proofs = await other!.send('proofs') as unknown as { device_identity_key: string }[];

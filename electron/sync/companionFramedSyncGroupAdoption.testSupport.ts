@@ -8,8 +8,8 @@ import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncSt
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import type { TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { compareSyncFactText } from '../../lib/core/sync/syncFactKeyOrder.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
-import { compareSyncIdentityText } from '../../lib/core/sync/syncIdentityKeyOrder.js';
 import { prepareCompanionFramedSyncTransfer }
   from '../../src/shared/platform/companion/sync/framed/companionFramedSyncApply.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -115,8 +115,8 @@ async function prepareAuthenticatedTransfers(input: {
     resourceStorageKeys: []
   }));
   return prepared.sort((left, right) =>
-    compareSyncIdentityText(left.decoded.objectType, right.decoded.objectType) ||
-    compareSyncIdentityText(left.decoded.globalId, right.decoded.globalId));
+    compareSyncFactText(left.decoded.objectType, right.decoded.objectType) ||
+    compareSyncFactText(left.decoded.globalId, right.decoded.globalId));
 }
 
 function installAuthenticatedStagingViews(sqlite: Database.Database) {
