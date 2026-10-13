@@ -50,10 +50,11 @@ async function runRound(input: RoundInput) {
   const progress = { groupId: context.groupId, overwriteId: overwriteId ?? '', providerDeviceId: peerDeviceId,
     providerLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
     receiverLibraryEpoch: context.initiatorLibraryEpoch };
+  let receivingOverwrite = Boolean(overwriteId);
   const received = new Set<string>();
   const sent = new Set<string>();
   const port: RequestSyncDatabaseRoundPort = {
-    exchangeInventory: async () => exchangeRequestSyncInventory(host, exchange, overwriteId
+    exchangeInventory: async () => exchangeRequestSyncInventory(host, exchange, receivingOverwrite
       ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
         protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
@@ -68,9 +69,14 @@ async function runRound(input: RoundInput) {
     reportObjectError: input.reportObjectError
   };
   if (!overwriteId) return { ...await runRequestSyncDatabaseRound(port, input.signal), received: [...received], sent: [...sent] };
-  const result = await withCompanionForegroundTimeMaintenance(async () => {
+  let result = await withCompanionForegroundTimeMaintenance(async () => {
     await host.write(db => prepareSyncGroupOverwrite(db, progress));
     return runRequestSyncOverwriteRound(host, progress, port, input.signal);
   }, async () => !await host.readSnapshot(loadSyncGroupOverwriteProgress));
+  if (result.complete && adoption) {
+    receivingOverwrite = false;
+    const continuation = await runRequestSyncDatabaseRound(port, input.signal);
+    result = { ...continuation, transferred: result.transferred + continuation.transferred };
+  }
   return { ...result, received: [...received], sent: [...sent] };
 }
