@@ -79,7 +79,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     ]);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'wm', 'dismiss-keyguard']);
     const result = await mechanics({ appId: ACCEPTANCE_APP_ID, buildIdentity, env,
-      evidenceRoot, execute: args.execute, observeConcurrently: true,
+      evidenceRoot, execute: args.execute, observeConcurrently: true, instrumentationOwnsActivity: true,
       instrumentationArgs: ['-e', 'resourceNodeId', resourceFixture.nodeId,
         '-e', 'availableHash', resourceFixture.images[0].hash,
         '-e', 'recoveringHash', resourceFixture.images[1].hash],
