@@ -7,9 +7,10 @@ import { expect, it } from 'vitest';
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from './desktopFramedSyncTwoProcess.testSupport.js';
+import { requestProcessEvidence } from './requestSyncProcessRecovery.testSupport.js';
 
-it('keeps fresh ready ownership after business rollback and applies it after an actual receiver restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('rolls back a failed object and receives it after an actual receiver restart', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
     await fixture.left.seed({ content: 'Durable ready body', nodeId: 't326-rollback-ready', title: 'Ready' });
@@ -21,18 +22,21 @@ it('keeps fresh ready ownership after business rollback and applies it after an 
     await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).rejects.toThrow('ready_business_rejected');
     const failed = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
     expect(failed.nodes).toEqual([]);
-    expect(failed.framedSync.inboundStates).toEqual([{ state: 'ready_to_apply' }]);
+    expect(failed.versions).toEqual([]);
+    expect(requestProcessEvidence(fixture.rightSnapshot.databasePath).retiredTables).toEqual([]);
     expect(failed.framedSync.receipts).toBe(0);
     const owned = new Database(fixture.rightSnapshot.databasePath);
     try {
-      expect(owned.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBeGreaterThan(0);
       owned.exec('DROP TRIGGER reject_ready_node');
     } finally { owned.close(); }
     const restarted = await fixture.restartRight();
+    expect(restarted.snapshot.pid).not.toBe(fixture.rightSnapshot.pid);
+    expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual([]);
     await reconnectFixturePeer(fixture.left, restarted.snapshot);
     const applied = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
     expect(applied.versions).toContainEqual(expect.objectContaining({ body_text: 'Durable ready body' }));
-    expect(applied.framedSync.receipts).toBeGreaterThan(0);
+    expect(applied.framedSync.receipts).toBe(0);
+    expect(applied.versions).toEqual(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).versions);
     succeeded = true;
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

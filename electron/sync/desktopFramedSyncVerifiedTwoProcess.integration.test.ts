@@ -5,7 +5,8 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
-import { sourceArticleIdentity, verifiedReceiverArticle, verifiedReceiverEvidence } from './desktopFramedSyncVerifiedTwoProcess.testSupport.js';
+import { sourceArticleIdentity, verifiedReceiverArticle, verifiedReceiverBusinessEvidence } from './desktopFramedSyncVerifiedTwoProcess.testSupport.js';
+import { requestProcessEvidence } from './requestSyncProcessRecovery.testSupport.js';
 
 const prefix = '\ufeff中😀\0文';
 const content = prefix + 'x'.repeat(1048576 - Buffer.byteLength(prefix));
@@ -20,49 +21,51 @@ async function closeFixture(fixture: Awaited<ReturnType<typeof createDesktopFram
 registerReceiveTest();
 registerRestartTest();
 
-it('exchanges inventory and delivers a stable publication through the production authenticated round', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('exchanges inventory and delivers complete original facts through the production authenticated round', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
     await fixture.left.seed({ content, nodeId, title: 'Verified round' });
     const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
     const result = await fixture.left.invoke('round', { input: {
-      kind: 'reconcile', peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' },
+      kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin
     } });
-    expect(result).toMatchObject({ complete: true, pending: 0 });
+    expect(result).toEqual({ complete: true });
     expect(await verifiedReceiverArticle(fixture.rightSnapshot.databasePath, nodeId))
       .toMatchObject({ ...expected, content });
-    expect(verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, nodeId).pins).toEqual([]);
+    expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId).retiredTables).toEqual([]);
     succeeded = true;
   } finally { await closeFixture(fixture, succeeded); }
 });
 
 it('requests a stable remote difference and converges through the inbound authenticated round', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
     await fixture.right.seed({ content, nodeId, title: 'Verified pull' });
     const expected = sourceArticleIdentity(fixture.rightSnapshot.databasePath, nodeId);
-    const input = { kind: 'reconcile', peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' },
+    const input = { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin };
-    expect(await fixture.left.invoke('round', { input })).toMatchObject({ complete: true, pending: 0 });
+    expect(await fixture.left.invoke('round', { input })).toEqual({ complete: true });
     expect(await verifiedReceiverArticle(fixture.leftSnapshot.databasePath, nodeId))
       .toMatchObject({ ...expected, content });
-    // The completed round already exchanges the adopted node and its member position.
+    const originalFacts = requestProcessEvidence(fixture.leftSnapshot.databasePath, nodeId).versions;
+    // A repeat round must converge without duplicating or changing the original versions.
     expect(await fixture.left.invoke('round', { input }))
-      .toMatchObject({ complete: true, databaseComplete: true, pending: 0, transferred: 0 });
+      .toEqual({ complete: true });
     const read = { input: { kind: 'read_inventory' } };
     expect(await fixture.left.invoke('round', read)).toEqual(await fixture.right.invoke('round', read));
     expect(await fixture.left.invoke('round', { input }))
-      .toMatchObject({ complete: true, databaseComplete: true, pending: 0, transferred: 0 });
+      .toEqual({ complete: true });
+    expect(requestProcessEvidence(fixture.leftSnapshot.databasePath, nodeId).versions).toEqual(originalFacts);
     succeeded = true;
   } finally { await closeFixture(fixture, succeeded); }
 });
 
 function registerReceiveTest() {
   it('receives an exact 1 MiB Unicode body through authenticated HTTP between independent processes', async () => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     let succeeded = false;
     try {
       expect(fixture.leftSnapshot.pid).not.toBe(fixture.rightSnapshot.pid);
@@ -71,13 +74,9 @@ function registerReceiveTest() {
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       await fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId);
       expect(await verifiedReceiverArticle(fixture.rightSnapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
-      const evidence = verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, nodeId);
-      expect(evidence.receipts).toHaveLength(1);
-      expect(evidence.transfers).toEqual([{ state: 'applied', header_json: null, active_attempt_id: null }]);
-      expect(evidence.pins).toEqual([]);
-      expect(evidence.available).toEqual([]);
-      expect(evidence.chunks).toEqual([]);
-      expect(evidence.versions).toEqual([expect.objectContaining({ body_text: content, content: null })]);
+      const evidence = verifiedReceiverBusinessEvidence(fixture.rightSnapshot.databasePath, nodeId);
+      expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId).retiredTables).toEqual([]);
+      expect(evidence.versions).toEqual([expect.objectContaining({ body_text: content })]);
       succeeded = true;
     } finally { await closeFixture(fixture, succeeded); }
   });
@@ -85,39 +84,36 @@ function registerReceiveTest() {
 }
 
 function registerRestartTest() {
-  it('retains authenticated ready ownership after late receipt rollback and applies after an actual receiver process restart', async () => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  it('rolls back a late position failure and receives original facts after an actual receiver process restart', async () => {
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     let succeeded = false;
     try {
       await fixture.left.seed({ content, nodeId, title: 'Verified restart' });
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       const receiver = new Database(fixture.rightSnapshot.databasePath);
       try {
-        receiver.exec(`CREATE TRIGGER reject_verified_http_receipt BEFORE INSERT ON framed_sync_receipts
-          BEGIN SELECT RAISE(ABORT, 'verified_http_receipt_rejected'); END`);
+        receiver.exec(`CREATE TRIGGER reject_verified_http_position BEFORE INSERT ON node_version_member_positions
+          WHEN new.object_id = 't326-verified-receiver'
+          BEGIN SELECT RAISE(ABORT, 'verified_http_position_rejected'); END`);
       } finally { receiver.close(); }
-      await expect(fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).rejects.toThrow('verified_http_receipt_rejected');
-      const failed = verifiedReceiverEvidence(fixture.rightSnapshot.databasePath, nodeId);
+      await expect(fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).rejects.toThrow('verified_http_position_rejected');
+      const failed = verifiedReceiverBusinessEvidence(fixture.rightSnapshot.databasePath, nodeId);
       expect(failed.node).toBeUndefined();
       expect(failed.versions).toEqual([]);
-      expect(failed.receipts).toEqual([]);
-      expect(failed.transfers).toEqual([expect.objectContaining({ state: 'ready_to_apply' })]);
-      expect(failed.pins.length).toBeGreaterThan(0);
-      expect(failed.available).toHaveLength(1);
-      expect(failed.chunks).toEqual([]);
+      expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId)).toMatchObject({
+        nodes: [], versions: [], parents: [], state: [], positions: [], retiredTables: []
+      });
       const restarted = await fixture.restartRight();
       expect(restarted.snapshot.pid).not.toBe(fixture.rightSnapshot.pid);
-      const reopened = verifiedReceiverEvidence(restarted.snapshot.databasePath, nodeId);
+      const reopened = verifiedReceiverBusinessEvidence(restarted.snapshot.databasePath, nodeId);
       expect(reopened).toEqual(failed);
       const retry = new Database(restarted.snapshot.databasePath);
-      try { retry.exec('DROP TRIGGER reject_verified_http_receipt'); } finally { retry.close(); }
+      try { retry.exec('DROP TRIGGER reject_verified_http_position'); } finally { retry.close(); }
       await fixture.left.synchronize(restarted.snapshot.origin, nodeId);
       expect(await verifiedReceiverArticle(restarted.snapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
-      const committed = verifiedReceiverEvidence(restarted.snapshot.databasePath, nodeId);
-      expect(committed.receipts).toHaveLength(1);
-      expect(committed.pins).toEqual([]);
-      expect(committed.frames).toEqual([]);
-      expect(committed.chunks).toEqual([]);
+      const committed = verifiedReceiverBusinessEvidence(restarted.snapshot.databasePath, nodeId);
+      expect(committed.versions).toEqual([expect.objectContaining({ body_text: content })]);
+      expect(requestProcessEvidence(restarted.snapshot.databasePath, nodeId).retiredTables).toEqual([]);
       succeeded = true;
     } finally { await closeFixture(fixture, succeeded); }
   });

@@ -110,6 +110,10 @@ it('transfers canonical resource references without requiring attachment files',
   expect(source.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(original);
   expect(target.sqlite.prepare("SELECT content, resource_references FROM nodes WHERE id = 'topic'").get())
     .toEqual({ content: 'Original body', resource_references: references });
+  const inventory = await readFramedSyncInventoryEntry(target.db, { objectType: 'node', globalId: 'topic' });
+  expect(inventory).not.toBeNull();
+  expect(inventory?.resourceHashes.map(value => Buffer.from(value).toString('hex')))
+    .not.toContain('a'.repeat(64));
 });
 
 it('rejects unavailable current text without committing partial receiver facts', async () => {

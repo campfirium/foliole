@@ -55,7 +55,7 @@ describe('path-domains', () => {
     expect(inferPreviewTargetsFromFiles(['electron/main.ts'])).toEqual(['windows']);
     expect(inferPreviewTargetsFromFiles(['android/app/build.gradle'])).toEqual(['android']);
     expect(inferPreviewTargetsFromFiles(['package.json'])).toEqual(['android', 'windows']);
-    expect(inferPreviewTargetsFromFiles(['lib/core/sync/syncPackManifest.ts'])).toEqual(['android', 'windows']);
+    expect(inferPreviewTargetsFromFiles(['lib/core/sync/requestSyncSnapshot.ts'])).toEqual(['android', 'windows']);
   });
 
   it('keeps quality route path decisions separate from dynamic source checks', () => {

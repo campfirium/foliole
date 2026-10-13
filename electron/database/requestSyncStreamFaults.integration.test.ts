@@ -16,7 +16,7 @@ import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js'
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 type Fault = 'truncated' | 'missing-body' | 'corrupt-body' | 'duplicate-fact' | 'missing-parent' |
-  'wrong-peer' | 'corrupt-ciphertext' | 'missing-frame';
+  'wrong-peer' | 'wrong-protocol' | 'corrupt-ciphertext' | 'missing-frame';
 const context: RequestSyncAuthenticatedContext = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
   initiatorDeviceId: 'source', initiatorLibraryEpoch: 'source-epoch',
   responderDeviceId: 'target', responderLibraryEpoch: 'target-epoch' };
@@ -25,11 +25,12 @@ const errors: Record<Fault, string> = {
   truncated: 'request_sync_object_incomplete', 'missing-body': 'request_sync_object_incomplete',
   'corrupt-body': 'request_sync_body_identity_mismatch', 'duplicate-fact': 'request_sync_body_incomplete',
   'missing-parent': 'node_version_missing_parents:missing', 'wrong-peer': 'session_context_mismatch',
+  'wrong-protocol': 'framed_sync_preamble_invalid',
   'corrupt-ciphertext': 'frame_authentication_failed', 'missing-frame': 'frame_sequence_not_contiguous'
 };
 
 it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', 'missing-parent',
-  'wrong-peer', 'corrupt-ciphertext', 'missing-frame'])('rejects %s without applying an object and removes its request files', async fault => {
+  'wrong-peer', 'wrong-protocol', 'corrupt-ciphertext', 'missing-frame'])('rejects %s without applying an object and removes its request files', async fault => {
   await mkdir('.tmp/artifacts', { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/request-sync-fault-'));
   const files = createDesktopFramedSyncFiles(root);
@@ -39,9 +40,11 @@ it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', '
       const header = await seed(outgoing, fault);
       const wire = await prepareRequestSyncWire({ context, groupKey,
         messages: id => mutateMessages(requestSyncObjectMessages(header, id, outgoing), fault) });
+      const preamble = wire.preamble.slice();
+      if (fault === 'wrong-protocol') new DataView(preamble.buffer, preamble.byteOffset, preamble.byteLength).setUint16(10, 21);
       await withRequestSyncFiles(files, async incoming => {
         const messages = readRequestSyncWire({ context: fault === 'wrong-peer' ?
-          { ...context, responderDeviceId: 'another-device' } : context, groupKey, preamble: wire.preamble,
+          { ...context, responderDeviceId: 'another-device' } : context, groupKey, preamble,
         frames: mutateFrames(wire.frames, fault) });
         await receiveRequestSyncObjectMessages(messages, wire.contextId, incoming);
         await applyFramedFactSources(target.db, [async function* () { yield* incoming.readFacts(); }], {

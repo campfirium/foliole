@@ -1,6 +1,8 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
-import { exchangeRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentExchange.js';
-import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { exchangeRequestSyncAttachments, pullRequestSyncAttachment } from '../../../../../../lib/core/sync/requestSyncAttachmentExchange.js';
+import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
+import type { RequestSyncExchange } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
@@ -8,10 +10,27 @@ import { currentCompanionAttachmentHost } from './companionAttachmentBlockFiles.
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+import { requireCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 
-export function continueCompanionRequestSyncResources(input: NativeCompanionFramedSyncInventoryRequest & {
+type ResourceInput = NativeCompanionFramedSyncInventoryRequest & {
   peerRound?: RequestSyncPeerRound; signal?: AbortSignal;
+};
+
+export function continueCompanionRequestSyncResources(input: ResourceInput) {
+  return withResources(input, (host, exchange) => exchangeRequestSyncAttachments(host, exchange,
+    (storageKey, error) => console.error('[sync] attachment transfer failed', { storageKey, error: String(error) })));
+}
+
+export function pullCompanionRequestSyncResource(input: ResourceInput & {
+  peerRound: RequestSyncPeerRound; storageKey: string;
 }) {
+  requireCompanionRequestSyncPeerState(input.sync_group_id, input.receiver_device_id, input.receiver_library_epoch);
+  return withResources(input, (host, exchange) => withRequestSyncPeerRound(exchange, input.peerRound,
+    () => pullRequestSyncAttachment(host, exchange, input.storageKey)));
+}
+
+function withResources<T>(input: ResourceInput,
+  run: (host: RequestSyncAttachmentHost, exchange: RequestSyncExchange) => Promise<T>) {
   return withCompanionRequestSyncLifecycle(async signal => {
     const host = await currentCompanionRequestSyncDatabaseHost();
     const credential = await loadCurrentCredential({ group_id: input.sync_group_id });
@@ -23,9 +42,8 @@ export function continueCompanionRequestSyncResources(input: NativeCompanionFram
     const context = { groupId: input.sync_group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
       initiatorDeviceId: credential.device_id, initiatorLibraryEpoch: proof.library_epoch,
       responderDeviceId: input.receiver_device_id, responderLibraryEpoch: input.receiver_library_epoch } as const;
-    return exchangeRequestSyncAttachments(await currentCompanionAttachmentHost(host),
+    return run(await currentCompanionAttachmentHost(host),
       createCompanionRequestSyncExchange(host, { context, groupKey, endpointUrl: input.endpoint_url, signal,
-        ...(input.peerRound ? { peerRound: input.peerRound } : {}) }),
-      (storageKey, error) => console.error('[sync] attachment transfer failed', { storageKey, error: String(error) }));
+        ...(input.peerRound ? { peerRound: input.peerRound } : {}) }));
   }, input.signal);
 }

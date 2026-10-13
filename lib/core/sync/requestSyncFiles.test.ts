@@ -5,12 +5,13 @@ import { RequestSyncFiles, REQUEST_SYNC_MEMORY_BYTES, type RequestSyncFilePort }
 
 function storage() {
   const disk = new Map<string, Uint8Array>();
+  const reads: string[] = [];
   const port: RequestSyncFilePort = {
-    read: async key => disk.get(key) ?? null,
+    read: async key => { reads.push(key); return disk.get(key) ?? null; },
     write: async (key, bytes) => { disk.set(key, bytes.slice()); },
     remove: async directory => { for (const key of disk.keys()) if (key.startsWith(directory + '/')) disk.delete(key); }
   };
-  return { disk, port };
+  return { disk, port, reads };
 }
 
 it('keeps small bodies in owned memory and spills only bytes beyond the request budget', async () => {
@@ -41,4 +42,52 @@ it('does not write small facts to scratch storage', async () => {
   expect(result).toEqual([fact]);
   expect(disk.size).toBe(0);
   await request.close();
+});
+
+
+async function spilledFacts() {
+  const stored = storage();
+  const request = new RequestSyncFiles(stored.port, 'requests/lazy');
+  for (let index = 0; index < REQUEST_SYNC_MEMORY_BYTES / (1024 * 1024); index++) {
+    const filler = new Uint8Array(1024 * 1024).fill(index);
+    await request.writeBody({ byteLength: BigInt(filler.length), role: 1, required: true, sha256: sha256(filler) }, filler);
+  }
+  const body = new Uint8Array(1024 * 1024).fill(8);
+  const blob = { byteLength: BigInt(body.length), role: 1, required: true, sha256: sha256(body) };
+  await request.writeBody(blob, body);
+  const first = { factId: 'v1', globalId: 'node', objectType: 'node', kind: 2,
+    sharedStateHash: new Uint8Array(32), body: [], blobs: [blob] };
+  const second = { ...first, factId: 'v2' };
+  await request.writeFact(first); await request.writeFact(second);
+  return { ...stored, request, first, second, body, blob };
+}
+
+it('stops after one fact without reading the next oversized malformed frame or any body', async () => {
+  const fixture = await spilledFacts();
+  try {
+    const factKeys = [...fixture.disk.keys()].filter(key => key.includes('/fact-'));
+    expect(factKeys).toHaveLength(2);
+    fixture.disk.set(factKeys[1]!, new Uint8Array(3 * 1024 * 1024).fill(255));
+    const received = [];
+    for await (const fact of fixture.request.readFacts()) { received.push(fact); break; }
+    expect(received).toEqual([fixture.first]);
+    expect(fixture.reads).toEqual([factKeys[0]]);
+    const resumed = fixture.request.readFacts()[Symbol.asyncIterator]();
+    expect((await resumed.next()).value).toEqual(fixture.first);
+    await expect(resumed.next()).rejects.toThrow();
+    expect(fixture.reads).toEqual([factKeys[0], factKeys[0], factKeys[1]]);
+  } finally { await fixture.request.close(); }
+});
+
+it('reads all fact descriptors without preloading their body bytes', async () => {
+  const fixture = await spilledFacts();
+  try {
+    const facts = [];
+    for await (const fact of fixture.request.readFacts()) facts.push(fact);
+    expect(facts).toEqual([fixture.first, fixture.second]);
+    expect(fixture.reads).toEqual([...fixture.disk.keys()].filter(key => key.includes('/fact-')));
+    expect(await fixture.request.loadBody(fixture.blob)).toEqual(fixture.body);
+    expect(fixture.reads.filter(key => key.includes('/body-')))
+      .toEqual([...fixture.disk.keys()].filter(key => key.includes('/body-')));
+  } finally { await fixture.request.close(); }
 });

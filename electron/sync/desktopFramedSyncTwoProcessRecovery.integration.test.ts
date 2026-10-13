@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 
-import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import {
@@ -9,7 +8,7 @@ import {
   type DesktopFramedSyncFixtureProcess,
   readDesktopFramedSyncLibraryEvidence
 } from './desktopFramedSyncTwoProcess.testSupport.js';
-import { createDesktopFramedSyncFaultProxy } from './desktopFramedSyncTwoProcessFaultProxy.js';
+import { requestProcessEvidence, requestProcessFaultProxy } from './requestSyncProcessRecovery.testSupport.js';
 
 type Closeable = Readonly<{ close(): Promise<void> }>;
 let root = '';
@@ -33,191 +32,57 @@ afterEach(async ({ task }) => {
 });
 
 async function setup() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   return fixture;
 }
 
-it('rejects a tampered signed HTTP body before staging, then retries', async () => {
+it('rejects a tampered signed HTTP object before business writes, then retries', async () => {
   const fixture = await setup();
-  await fixture.left.seed({
-    content: 'Body recovered after an invalid attempt',
-    nodeId: 't326-attempt-recovery',
-    title: 'Attempt recovery'
-  });
-  installAttemptAudit(fixture.rightSnapshot.databasePath);
-  const proxy = await createDesktopFramedSyncFaultProxy({
-    fault: 'corrupt_trailer',
-    targetOrigin: fixture.rightSnapshot.origin
-  });
+  const nodeId = 't326-attempt-recovery';
+  const content = 'Body recovered after an invalid attempt';
+  await fixture.left.seed({ content, nodeId, title: 'Attempt recovery' });
+  const before = requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId);
+  const proxy = await requestProcessFaultProxy(fixture.rightSnapshot.origin, 'corrupt_body');
   closeables.push(proxy);
-
-  await expect(fixture.left.synchronize(
-    proxy.origin,
-    't326-attempt-recovery'
-  )).rejects.toThrow();
-
-  expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
-    attemptAudit: [],
-    availableBlobs: 0,
-    blobChunks: 0,
-    blobPins: 0,
-    inboundAttempts: [],
-    inboundFacts: 0,
-    inboundFrames: 0,
-    inboundStates: [],
-    receipts: 0
-  });
-
+  await expect(fixture.left.synchronize(proxy.origin, nodeId)).rejects.toThrow();
+  expect(proxy.injected()).toBeGreaterThan(0);
+  expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId)).toEqual(before);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
     nodes: [], versions: []
   });
-
-  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-attempt-recovery');
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId);
   const recovered = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(recovered.nodes).toEqual([expect.objectContaining({ id: 't326-attempt-recovery' })]);
-  expect(recovered.versions).toEqual([expect.objectContaining({
-    body_text: 'Body recovered after an invalid attempt', object_id: 't326-attempt-recovery'
-  })]);
-  expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
-    availableBlobs: 0,
-    blobChunks: 0,
-    blobPins: 0,
-    inboundAttempts: [],
-    inboundFacts: 0,
-    inboundFrames: 0,
-    inboundStates: ['applied'],
-    receipts: 1
-  });
+  expect(recovered.nodes).toEqual([expect.objectContaining({ id: nodeId })]);
+  expect(recovered.versions).toEqual([expect.objectContaining({ body_text: content, object_id: nodeId })]);
+  expect(recovered.versions).toEqual(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).versions);
+  expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId).retiredTables).toEqual([]);
 });
 
-it('replays the original durable receipt after its HTTP response is lost and the receiver restarts', async () => {
+it('preserves committed facts after its HTTP response is lost and the receiver process restarts', async () => {
   const fixture = await setup();
-  await fixture.left.seed({
-    content: 'Body applied before receipt loss',
-    nodeId: 't326-receipt-replay',
-    title: 'Receipt replay'
-  });
-  const proxy = await createDesktopFramedSyncFaultProxy({
-    fault: 'drop_receipt_response',
-    targetOrigin: fixture.rightSnapshot.origin
-  });
+  const nodeId = 't326-receipt-replay';
+  const content = 'Body applied before response loss';
+  await fixture.left.seed({ content, nodeId, title: 'Response loss' });
+  const proxy = await requestProcessFaultProxy(fixture.rightSnapshot.origin, 'drop_response');
   closeables.push(proxy);
-
-  await expect(fixture.left.synchronize(
-    proxy.origin,
-    't326-receipt-replay'
-  )).rejects.toThrow();
-
-  const firstReceipt = readRecoveryEvidence(fixture.rightSnapshot.databasePath);
-  expect(firstReceipt).toMatchObject({
-    inboundFrames: 0,
-    inboundStates: ['applied'],
-    receiptAttempts: 1,
-    receiptFrames: 1,
-    receipts: 1
-  });
-  expect(firstReceipt.receiptCiphertexts).toHaveLength(1);
+  // The production round retries after response loss and converges from the committed inventory.
+  await expect(fixture.left.synchronize(proxy.origin, nodeId)).resolves.toEqual({ complete: true });
+  expect(proxy.injected()).toBeGreaterThan(0);
   const applied = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(applied.versions).toEqual([expect.objectContaining({
-    body_text: 'Body applied before receipt loss', object_id: 't326-receipt-replay'
-  })]);
-  expect(readRecoveryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({
-    outboundHolds: 1,
-    outboundStates: ['published'],
-    receipts: 0
-  });
-
+  expect(applied.versions).toEqual([expect.objectContaining({ body_text: content, object_id: nodeId })]);
+  const facts = requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId);
+  expect(facts.retiredTables).toEqual([]);
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
-  await fixture.left.synchronize(restarted.snapshot.origin, 't326-receipt-replay');
-
-  const replayed = readRecoveryEvidence(restarted.snapshot.databasePath);
-  expect(replayed).toMatchObject({
-    inboundFrames: 0,
-    inboundStates: ['applied'],
-    receiptAttempts: 1,
-    receiptFrames: 1,
-    receipts: 1
-  });
-  expect(replayed.receiptCiphertexts).toEqual(firstReceipt.receiptCiphertexts);
+  expect(restarted.snapshot.pid).not.toBe(fixture.rightSnapshot.pid);
+  expect(requestProcessEvidence(restarted.snapshot.databasePath, nodeId)).toEqual(facts);
+  await fixture.left.synchronize(restarted.snapshot.origin, nodeId);
   const received = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
   expect(received.nodes).toEqual(applied.nodes);
   expect(received.versions).toEqual(applied.versions);
-  expect(readRecoveryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({
-    outboundHolds: 0,
-    outboundStates: ['receipt_committed'],
-    receipts: 1
-  });
+  expect(requestProcessEvidence(restarted.snapshot.databasePath, nodeId).parents).toEqual(facts.parents);
+  expect(requestProcessEvidence(restarted.snapshot.databasePath, nodeId).retiredTables).toEqual([]);
+  expect(requestProcessEvidence(fixture.leftSnapshot.databasePath, nodeId).retiredTables).toEqual([]);
 });
-
-function installAttemptAudit(databasePath: string) {
-  const sqlite = new Database(databasePath, { fileMustExist: true });
-  try {
-    sqlite.exec(`CREATE TABLE t326_attempt_audit (kind TEXT NOT NULL);
-      CREATE TRIGGER t326_audit_fact AFTER INSERT ON framed_sync_inbound_facts
-      BEGIN INSERT INTO t326_attempt_audit VALUES ('fact'); END;
-      CREATE TRIGGER t326_audit_blob AFTER INSERT ON framed_sync_blob_chunks
-      BEGIN INSERT INTO t326_attempt_audit VALUES ('blob'); END;`);
-  } finally {
-    sqlite.close();
-  }
-}
-
-function readRecoveryEvidence(databasePath: string) {
-  const sqlite = new Database(databasePath, { fileMustExist: true, readonly: true });
-  try {
-    const count = (table: string, where = '') => readCount(sqlite,
-      `SELECT COUNT(*) AS count FROM ${table} ${where}`);
-    return {
-      attemptAudit: tableExists(sqlite, 't326_attempt_audit')
-        ? readTextColumn(sqlite, 'SELECT kind AS value FROM t326_attempt_audit ORDER BY kind')
-        : [],
-      availableBlobs: count('framed_sync_available_blobs'),
-      blobChunks: count('framed_sync_blob_chunks'),
-      blobPins: count('framed_sync_blob_pins'),
-      inboundAttempts: readTextColumn(sqlite,
-        'SELECT state AS value FROM framed_sync_inbound_attempts ORDER BY rowid'),
-      inboundFacts: count('framed_sync_inbound_facts'),
-      inboundFrames: count('framed_sync_inbound_frames'),
-      inboundStates: readTextColumn(sqlite,
-        'SELECT state AS value FROM framed_sync_inbound_transfers ORDER BY rowid'),
-      outboundHolds: count('framed_sync_outbound_holds'),
-      outboundStates: readTextColumn(sqlite,
-        'SELECT state AS value FROM framed_sync_outbound_publications ORDER BY rowid'),
-      receiptAttempts: count('framed_sync_outbound_attempts', "WHERE purpose = 'receipt'"),
-      receiptCiphertexts: readTextColumn(sqlite, `SELECT hex(ciphertext) AS value
-        FROM framed_sync_outbound_frames WHERE purpose = 'receipt' ORDER BY rowid`),
-      receiptFrames: count('framed_sync_outbound_frames', "WHERE purpose = 'receipt'"),
-      receipts: count('framed_sync_receipts')
-    };
-  } finally {
-    sqlite.close();
-  }
-}
-
-function readCount(sqlite: Database.Database, sql: string) {
-  const value: unknown = sqlite.prepare(sql).get();
-  if (!isRecord(value) || typeof value.count !== 'number') throw new Error('recovery_count_invalid');
-  return value.count;
-}
-
-function tableExists(sqlite: Database.Database, table: string) {
-  const value: unknown = sqlite.prepare(
-    'SELECT 1 AS present FROM sqlite_master WHERE type = ? AND name = ?'
-  ).get('table', table);
-  return isRecord(value) && value.present === 1;
-}
-
-function readTextColumn(sqlite: Database.Database, sql: string) {
-  const values: unknown[] = sqlite.prepare(sql).all();
-  return values.map((value) => {
-    if (!isRecord(value) || typeof value.value !== 'string') throw new Error('recovery_row_invalid');
-    return value.value;
-  });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}

@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ sync: vi.fn(), resource: vi.fn(), providers: vi.fn(),
-  member: vi.fn(), group: vi.fn(), bootstrap: vi.fn(), availability: vi.fn(), article: vi.fn(),
+  member: vi.fn(), group: vi.fn(), bootstrap: vi.fn(), article: vi.fn(),
   join: vi.fn(), complete: vi.fn(), discovery: vi.fn(), native: vi.fn(), workspace: vi.fn(),
   endpoint: vi.fn(), result: vi.fn() }));
 vi.mock('./iosAcceptanceRequestSync', () => ({ syncIosAcceptanceRequest: mocks.sync }));
@@ -12,7 +12,6 @@ vi.mock('../shared/platform/companion/network/companionResourceProviders', () =>
 vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => ({ exchangeCompanionSyncGroupMemberState: mocks.member }));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: mocks.group }));
 vi.mock('../shared/platform/companionBootstrap', () => ({ loadCompanionBootstrapState: mocks.bootstrap }));
-vi.mock('../shared/platform/companionDesktopSyncHttp', () => ({ postDesktopJson: mocks.availability }));
 vi.mock('../shared/platform/companionReadableArticle', () => ({ resolveReadableCompanionArticleByNodeId: mocks.article }));
 vi.mock('../shared/platform/companionSyncGroupJoinClient', () => ({ requestCompanionSyncGroupJoin: mocks.join,
   completeCompanionSyncGroupJoin: mocks.complete }));
@@ -36,37 +35,55 @@ beforeEach(() => {
     discovery: { group_id: 'group', provider_device_id: 'mac', provider_device_name: 'Mac' } }]);
   mocks.group.mockResolvedValue(null); mocks.join.mockResolvedValue({ request_id: 'join' });
   mocks.providers.mockResolvedValue({ providers: ['mac', 'a5'].map(deviceId => ({ deviceId, endpointUrl: `http://${deviceId}`, groupId: 'group' })) });
-  mocks.availability.mockImplementation(async (endpoint: string) => ({ provider_device_id: endpoint.slice(7),
-    resources: [{ status: endpoint === 'http://mac' ? 'missing' : 'available' }] }));
   mocks.workspace.mockResolvedValue({ workspace_snapshot: {} });
   mocks.article.mockReturnValue({ bodyStatus: 'ready', content: `Resource LAN body remains readable. asset://${hash}.png` });
-  mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
+  mocks.resource.mockResolvedValue({ status: 'missing_file', resource_url: null });
+  mocks.sync.mockImplementation(async (_endpoint, _peer, resourcesOnly) => {
+    if (resourcesOnly) mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
+  });
 });
-it('observes both initial claims before current peer requests and reads the native resource', async () => {
+it('observes the missing attachment after Mac then recovers it from the A5 resource request', async () => {
   await run();
-  expect(Math.max(...mocks.availability.mock.invocationCallOrder)).toBeLessThan(Math.min(...mocks.sync.mock.invocationCallOrder));
   expect(mocks.sync).toHaveBeenCalledTimes(2);
-  expect(mocks.sync.mock.calls).toEqual(expect.arrayContaining([
-    ['http://mac', { sourcePeerId: 'mac' }], ['http://a5', { sourcePeerId: 'a5' }]
-  ]));
+  expect(mocks.sync.mock.calls).toEqual([
+    ['http://mac', { sourcePeerId: 'mac' }], ['http://a5', { sourcePeerId: 'a5' }, true]
+  ]);
   expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'passed', phase: 'provider-selected',
+    transfers: [
+      expect.objectContaining({ device_id: 'mac', before: { attachment_status: 'missing_file', resource_url: null },
+        after: expect.objectContaining({ article_body_status: 'ready', attachment_status: 'missing_file' }) }),
+      expect.objectContaining({ device_id: 'a5', before: expect.objectContaining({ attachment_status: 'missing_file' }),
+        after: expect.objectContaining({ attachment_status: 'ready', resource_url: 'capacitor://localhost/image.png' }) })
+    ],
     evidence: { article_body_status: 'ready', attachment_status: 'ready', resource_url: 'capacitor://localhost/image.png' } }));
 });
 it('reads durable content after restart without joining or synchronizing again', async () => {
   mocks.group.mockResolvedValue({ group_id: 'group' });
+  mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
   await run();
   expect(mocks.sync).not.toHaveBeenCalled(); expect(mocks.join).not.toHaveBeenCalled();
   expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'passed', phase: 'restart-clean' }));
 });
-it('rejects incorrect initial provider claims before any transfer', async () => {
-  mocks.availability.mockResolvedValue({ provider_device_id: 'mac', resources: [{ status: 'available' }] });
+it('rejects an already present attachment before the Mac transfer', async () => {
+  mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
   await run();
   expect(mocks.sync).not.toHaveBeenCalled();
-  expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'failed', error: expect.stringContaining('claims_invalid') }));
+  expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'failed', error: 'acceptance_attachment_already_available' }));
+});
+it('rejects an attachment filled early by the Mac stage instead of claiming A5 recovery', async () => {
+  mocks.sync.mockImplementation(async () => {
+    mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
+  });
+  await run();
+  expect(mocks.sync).toHaveBeenCalledExactlyOnceWith('http://mac', { sourcePeerId: 'mac' });
+  expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'failed', error: 'acceptance_attachment_already_available' }));
 });
 it.each(['body', 'url'])('rejects unreadable %s evidence', async kind => {
   if (kind === 'body') mocks.article.mockReturnValue({ bodyStatus: 'ready', content: 'wrong body' });
-  else mocks.resource.mockResolvedValue({ status: 'ready', resource_url: null });
+  else mocks.sync.mockImplementation(async (_endpoint, _peer, resourcesOnly) => {
+    if (resourcesOnly) mocks.resource.mockResolvedValue({ status: 'ready', resource_url: null });
+  });
   await run();
+  expect(mocks.sync).toHaveBeenCalledTimes(kind === 'body' ? 1 : 2);
   expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'failed', error: 'acceptance_article_or_attachment_unreadable' }));
 });

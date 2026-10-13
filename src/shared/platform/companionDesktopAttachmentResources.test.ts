@@ -1,257 +1,100 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import './companion/companionDesktopAttachmentResources.testSupport';
 
-const capacitorMock = vi.hoisted(() => ({
-  getPlatform: vi.fn(() => 'android'),
-  isNativePlatform: vi.fn(() => true),
-  lastDownloadedAttachmentIds: [] as string[],
-  plugin: {
-    commitAttachmentResourceBatch: vi.fn(async () => ({
-      synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-    })),
-    downloadAttachmentResourceBatch: vi.fn(async ({ resources }: {
-      resources: Array<{ attachment_id: string }>;
-    }) => {
-      capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
-      return {
-        batch_token: 'attachment-batch-token',
-        failed_attachment_ids: [],
-        synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-      };
-    }),
-    syncAttachmentResource: vi.fn(async () => ({ attachment_id: 'att-1', availability: 'cached' })),
-    syncAttachmentResources: vi.fn(async ({ resources }: {
-      resources: Array<{ attachment_id: string }>;
-    }) => ({ synced_attachment_ids: resources.map((resource) => resource.attachment_id) }))
-  }
-}));
-const pairingMock = vi.hoisted(() => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
-}));
-const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionMissingAttachmentResource: vi.fn(),
-  loadCompanionMissingAttachmentResources: vi.fn()
-}));
-const writerQueueMock = vi.hoisted(() => ({
-  run: vi.fn(async <T>(task: () => Promise<T>) => task())
-}));
-const iosDatabaseMock = vi.hoisted(() => ({
-  commit: vi.fn(async () => ({ syncedIds: [] as string[] })), db: {}, owner: { databasePath: '/isolated/fixture.db',
-    runWriter: vi.fn(async <T>(task: (db: unknown) => Promise<T>) => task(iosDatabaseMock.db)) }
-}));
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: {
-    getPlatform: capacitorMock.getPlatform,
-    isNativePlatform: capacitorMock.isNativePlatform
-  },
-  registerPlugin: vi.fn(() => capacitorMock.plugin)
-}));
-vi.mock('./companion/network/signedRequest', () => ({
-  createSignedRequestHeaders: pairingMock.createSignedRequestHeaders
-}));
-vi.mock('./companionSyncObjects', () => syncObjectsMock);
-vi.mock('./attachmentResources', () => ({
-  invalidateAttachmentResourceResolution: vi.fn()
-}));
-vi.mock('./companionSyncWriterQueue', () => ({
-  runCompanionSyncWriterTask: writerQueueMock.run
-}));
-vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
-  commitStagedCompanionAttachmentBatch: iosDatabaseMock.commit
-}));
-vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: vi.fn(() => iosDatabaseMock.owner)
-}));
+import { attachment, deferred, key, peers, readyState, resetAttachmentFixture } from './companion/companionDesktopAttachmentResources.testSupport';
+import { syncCompanionAttachmentResourceFromDesktop } from './companionDesktopAttachmentResources';
 
-import {
-  syncCompanionAttachmentResourceRequestsFromDesktop
-} from './companionDesktopAttachmentResources';
+beforeEach(() => { resetAttachmentFixture(); vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+afterEach(() => { expect(attachment.listeners.size).toBe(0); vi.restoreAllMocks(); });
+const sync = () => syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected');
 
-function resource(attachmentId: string, digit: string) {
-  const contentHash = digit.repeat(64);
-  return { attachmentId, contentHash, mimeType: 'image/png', storageKey: `${contentHash}.png` };
-}
-
-function resetDownloadMock() {
-  capacitorMock.plugin.downloadAttachmentResourceBatch.mockImplementation(async ({ resources }: {
-    resources: Array<{ attachment_id: string }>;
-  }) => {
-    capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
-    return {
-      batch_token: 'attachment-batch-token',
-      failed_attachment_ids: [],
-      synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-    };
-  });
-}
-
-function resetAttachmentResourceMocks() {
-  vi.clearAllMocks();
-  capacitorMock.plugin.commitAttachmentResourceBatch.mockReset();
-  capacitorMock.plugin.downloadAttachmentResourceBatch.mockReset();
-  capacitorMock.plugin.syncAttachmentResource.mockReset();
-  capacitorMock.plugin.syncAttachmentResources.mockReset();
-  capacitorMock.lastDownloadedAttachmentIds = [];
-  capacitorMock.plugin.commitAttachmentResourceBatch.mockImplementation(async () => ({
-    synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-  }));
-  resetDownloadMock();
-  capacitorMock.plugin.syncAttachmentResource.mockResolvedValue({ attachment_id: 'att-1', availability: 'cached' });
-  capacitorMock.plugin.syncAttachmentResources.mockImplementation(async ({ resources }: {
-    resources: Array<{ attachment_id: string }>;
-  }) => ({ synced_attachment_ids: resources.map((resource) => resource.attachment_id) }));
-  capacitorMock.getPlatform.mockReturnValue('android');
-  capacitorMock.isNativePlatform.mockReturnValue(true);
-  iosDatabaseMock.commit.mockImplementation(async () => ({ syncedIds: capacitorMock.lastDownloadedAttachmentIds }));
-}
-
-describe('companion desktop attachment resource manifests', () => {
-  beforeEach(resetAttachmentResourceMocks);
-
-  it('downloads attachment resources during native Android sync', async () => {
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-1', '1')
-    ])).resolves.toEqual(['att-1']);
-
-    expect(pairingMock.createSignedRequestHeaders).toHaveBeenCalledWith({
-      endpointUrl: 'http://10.0.2.2:38641',
-      method: 'GET',
-      pathWithQuery: `/companion/attachment-resource?attachment_id=att-1&content_hash=${'1'.repeat(64)}&storage_key=${'1'.repeat(64)}.png`
-    });
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
-      database_path: '/isolated/fixture.db',
-      resources: [{
-        attachment_id: 'att-1',
-        content_hash: '1'.repeat(64),
-        mime_type: 'image/png',
-        storage_key: `${'1'.repeat(64)}.png`,
-        headers: { 'X-Signature': 'signed' },
-        url: `http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-1&content_hash=${'1'.repeat(64)}&storage_key=${'1'.repeat(64)}.png`
-      }]
-    });
-    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
-      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
-    );
-    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch.mock.invocationCallOrder[0]!)
-      .toBeLessThan(iosDatabaseMock.commit.mock.invocationCallOrder[0]!);
-  });
-
-  it('downloads already enumerated missing attachment resources', async () => {
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-2', '2')
-    ])).resolves.toEqual(['att-2']);
-
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
-      database_path: '/isolated/fixture.db',
-      resources: [{
-        attachment_id: 'att-2',
-        content_hash: '2'.repeat(64),
-        mime_type: 'image/png',
-        storage_key: `${'2'.repeat(64)}.png`,
-        headers: { 'X-Signature': 'signed' },
-        url: `http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-2&content_hash=${'2'.repeat(64)}&storage_key=${'2'.repeat(64)}.png`
-      }]
-    });
-    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
-      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
-    );
-  });
+it('changes source after a failure and keeps the exact selected key', async () => {
+  attachment.pull.mockRejectedValueOnce(new Error('attachment_source_missing'));
+  expect(await sync()).toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.exchange.mock.calls.map(([peer]) => peer)).toEqual(peers);
+  expect(attachment.pull.mock.calls.map(([input]) => [input.receiver_device_id, input.storageKey]))
+    .toEqual([['first', key], ['second', key]]);
+  expect(attachment.exchange.mock.invocationCallOrder[1]).toBeLessThan(attachment.pull.mock.invocationCallOrder[1]!);
+  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
 });
 
-describe('companion iOS attachment resource manifests', () => {
-  beforeEach(resetAttachmentResourceMocks);
-
-  it('routes iOS attachment downloads through the same native bridge contract', async () => {
-    capacitorMock.getPlatform.mockReturnValue('ios');
-
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://192.168.1.2:38641/', [
-      resource('att-ios', '3')
-    ])).resolves.toEqual(['att-ios']);
-
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
-    expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
-      iosDatabaseMock.owner, capacitorMock.plugin, 'attachment-batch-token'
-    );
-    expect(capacitorMock.plugin.commitAttachmentResourceBatch).not.toHaveBeenCalled();
-  });
+it('attempts each source once and leaves the target missing when every source returns 404', async () => {
+  attachment.pull.mockRejectedValue(new Error('attachment_resource_http_404'));
+  expect(await sync()).toEqual({ attachmentId: 'selected', status: 'missing' });
+  expect(attachment.exchange).toHaveBeenCalledTimes(2);
+  expect(attachment.pull.mock.calls.map(([input]) => input.receiver_device_id)).toEqual(['first', 'second']);
+  expect(attachment.invalidate).not.toHaveBeenCalled();
 });
 
-describe('companion desktop attachment resource queue', () => {
-  beforeEach(resetAttachmentResourceMocks);
+it('does not pull from a candidate whose member authorization failed', async () => {
+  attachment.exchange.mockRejectedValueOnce(new Error('sync_group_member_state_failed_401'));
+  expect(await sync()).toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.pull).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ receiver_device_id: 'second' }));
+});
 
-  it('reports exhausted device storage while leaving the attachment pending', async () => {
-    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(
-      Object.assign(new Error('write failed'), { code: 'ENOSPC' }));
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-2', '2')
-    ])).rejects.toThrow('attachment_resource_disk_full');
-  });
+it.each([
+  { peerRemoved: true }, { normalSyncReady: false }, { peerLibraryEpoch: null }
+])('skips a candidate with unavailable member state: %j', async unavailable => {
+  attachment.exchange.mockResolvedValueOnce({ ...readyState, ...unavailable });
+  expect(await sync()).toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.pull).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ receiver_device_id: 'second' }));
+});
 
-  it('does not retry a failed batch and continues the next bounded batch', async () => {
-    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(new Error('Connection interrupted.'));
-    const requests = Array.from({ length: 7 }, (_, index) => resource(`att-${index}`, String(index + 1)));
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', requests))
-      .resolves.toEqual(['att-6']);
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(2);
-    const ids = capacitorMock.plugin.downloadAttachmentResourceBatch.mock.calls.flatMap(([call]) => call.resources.map((item) => item.attachment_id));
-    expect(new Set(ids).size).toBe(7);
-  });
+it('stops after local group exit without trying another source', async () => {
+  attachment.exchange.mockResolvedValueOnce({ ...readyState, localExited: true });
+  expect(await sync()).toEqual({ attachmentId: 'selected', status: 'missing' });
+  expect(attachment.exchange).toHaveBeenCalledTimes(1);
+  expect(attachment.pull).not.toHaveBeenCalled();
+  expect(attachment.invalidate).not.toHaveBeenCalled();
+});
 
-  it('starts attachment resource downloads in a bounded parallel batch', async () => {
-    let resolveFirst!: () => void;
-    capacitorMock.plugin.downloadAttachmentResourceBatch.mockImplementationOnce(async ({ resources }: {
-      resources: Array<{ attachment_id: string }>;
-    }) => new Promise((resolve) => {
-      capacitorMock.lastDownloadedAttachmentIds = resources.map((resource) => resource.attachment_id);
-      resolveFirst = () => resolve({
-        batch_token: 'attachment-batch-token',
-        failed_attachment_ids: [],
-        synced_attachment_ids: capacitorMock.lastDownloadedAttachmentIds
-      });
-    }));
+it('reports disk exhaustion with its original cause and never changes source or marks cached', async () => {
+  const cause = Object.assign(new Error('write failed'), { code: 'ENOSPC' });
+  attachment.pull.mockRejectedValueOnce(cause);
+  const failure: unknown = await sync().catch((error: unknown) => error);
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error)) throw new Error('Expected disk exhaustion');
+  expect(failure.message).toBe('attachment_resource_disk_full');
+  expect(failure.cause).toBe(cause);
+  expect(attachment.exchange).toHaveBeenCalledTimes(1);
+  expect(attachment.pull).toHaveBeenCalledTimes(1);
+  expect(attachment.invalidate).not.toHaveBeenCalled();
+});
 
-    const download = syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-2', '2'),
-      resource('att-3', '3')
-    ]);
+it.each(['request_sync_library_changed', 'request_sync_library_closed', 'attachment_generation_mismatch',
+  'sync_round_owner_closed'])('stops the operation after %s without trying another library or source', async message => {
+  const error = new Error(message);
+  attachment.pull.mockRejectedValueOnce(error);
+  await expect(sync()).rejects.toBe(error);
+  expect(attachment.pull).toHaveBeenCalledTimes(1);
+  expect(attachment.exchange).toHaveBeenCalledTimes(1);
+  expect(attachment.invalidate).not.toHaveBeenCalled();
+});
 
-    await Promise.resolve();
-    await Promise.resolve();
+it('rejects background work before discovery or transfer', async () => {
+  attachment.active = false;
+  await expect(sync()).rejects.toThrow('request_sync_foreground_ended');
+  expect(attachment.providers).not.toHaveBeenCalled();
+  expect(attachment.pull).not.toHaveBeenCalled();
+});
 
-    await vi.waitFor(() => {
-      expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
-      expect(iosDatabaseMock.commit).not.toHaveBeenCalled();
+it('cancels an active native pull on background without falling through to another source', async () => {
+  const started = deferred();
+  attachment.pull.mockImplementation(async ({ signal }: { signal: AbortSignal }) => {
+    started.resolve();
+    await new Promise<void>((_resolve, reject) => {
+      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+      signal.throwIfAborted();
     });
-    resolveFirst();
-    await expect(download).resolves.toEqual(['att-2', 'att-3']);
-    expect(iosDatabaseMock.commit).toHaveBeenCalledTimes(1);
   });
-
-  it('leaves files missing without retrying when the whole batch fails', async () => {
-    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValue(new Error('Desktop returned 404.'));
-
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-2', '2'),
-      resource('att-3', '3')
-    ])).resolves.toEqual([]);
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledTimes(1);
-  });
+  const pending = sync();
+  const rejected = expect(pending).rejects.toThrow('request_sync_foreground_ended');
+  await started.promise;
+  attachment.active = false;
+  for (const listener of [...attachment.listeners]) listener();
+  await rejected;
+  expect(attachment.exchange).toHaveBeenCalledTimes(1);
+  expect(attachment.pull).toHaveBeenCalledTimes(1);
+  expect(attachment.invalidate).not.toHaveBeenCalled();
 });
-
-describe('companion desktop attachment resource runtime guard', () => {
-  beforeEach(resetAttachmentResourceMocks);
-
-  it('skips attachment resource downloads outside native Android', async () => {
-    capacitorMock.isNativePlatform.mockReturnValue(false);
-
-    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
-      resource('att-1', '1')
-    ])).resolves.toEqual([]);
-
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();
-  });
-});
-
-vi.mock('./companion/network/companionResourceProviders', () => import('./companion/network/resourceProviderTestSupport'));

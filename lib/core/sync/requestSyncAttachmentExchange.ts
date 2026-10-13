@@ -37,7 +37,7 @@ function receiveResult(message: AttachmentRequest): AttachmentBlockResult {
   return { kind: message.state, offset: message.offset };
 }
 
-async function pull(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string) {
+export async function pullRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string) {
   const description = await single(exchange, { operation: 'describe', storageKey });
   if (description.state !== 'complete') throw new Error('attachment_description_invalid');
   const resource = attachmentBlockResourceSchema.parse(description);
@@ -72,7 +72,7 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
     try { await execute(); result.transferred++; }
     catch (error) { exchange.signal?.throwIfAborted(); result.pending++; report(key, error); }
   };
-  for (const key of await host.needs()) await attempt(key, () => pull(host, exchange, key));
+  for (const key of await host.needs()) await attempt(key, () => pullRequestSyncAttachment(host, exchange, key));
   for (const key of remoteNeeds) await attempt(key, () => transferAttachmentBlocks({ storageKey: key, source: host,
     ...(exchange.signal ? { signal: exchange.signal } : {}), destination: {
       async status(resource) {

@@ -1,10 +1,8 @@
-import { RESOURCE_AVAILABILITY_PATH, type ResourceAvailabilityReply } from '../../lib/platform/resourceAvailabilityContract';
 import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
 import { loadCompanionResourceProviders } from '../shared/platform/companion/network/companionResourceProviders';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import { postDesktopJson } from '../shared/platform/companionDesktopSyncHttp';
 import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
 import { completeCompanionSyncGroupJoin, requestCompanionSyncGroupJoin } from '../shared/platform/companionSyncGroupJoinClient';
 import { loadCompanionDiscoveryCandidates } from '../shared/platform/companionWorkspaceDiscovery';
@@ -67,12 +65,16 @@ async function loadBothProviders(endpointUrl: string) {
   throw new Error('acceptance_independent_a5_provider_not_discovered');
 }
 
-async function verifyRead() {
+async function verifyRead(expected: 'ready' | 'missing_file' = 'ready') {
   const workspace = await loadCompanionWorkspaceSyncState();
   const article = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, NODE_ID);
   const resource = await resolveRuntimeAttachmentResource(`asset://${IMAGE_HASH}.png`, { refresh: true });
+  if (expected === 'missing_file' && resource?.status === 'ready') {
+    throw new Error('acceptance_attachment_already_available');
+  }
   if (article?.bodyStatus !== 'ready' || !article.content.includes('Resource LAN body remains readable.') ||
-      !article.content.includes(`asset://${IMAGE_HASH}.png`) || resource?.status !== 'ready' || !resource.resource_url) {
+      !article.content.includes(`asset://${IMAGE_HASH}.png`) || resource?.status !== expected ||
+      (expected === 'ready' && !resource.resource_url)) {
     throw new Error('acceptance_article_or_attachment_unreadable');
   }
   return { article_body_status: article.bodyStatus, attachment_status: resource.status,
@@ -99,24 +101,21 @@ export async function runIosResourceProviderFailoverAcceptance() {
     await exchangeCompanionSyncGroupMemberState({ deviceId: MAC_ID, endpointUrl: discovered.endpointUrl,
       groupId: GROUP_ID });
     const providers = await loadBothProviders(discovered.endpointUrl);
-    const claims = await Promise.all(providers.filter((provider) =>
-      provider.deviceId === MAC_ID || provider.deviceId === A5_ID).map(async (provider) => {
-      await exchangeCompanionSyncGroupMemberState(provider);
-      const reply = await postDesktopJson<ResourceAvailabilityReply>(provider.endpointUrl,
-        RESOURCE_AVAILABILITY_PATH, { resources: [{ kind: 'attachment', id: IMAGE_HASH, storage_key: `${IMAGE_HASH}.png` }] });
-      return { device_id: provider.deviceId, endpoint: provider.endpointUrl,
-        claim: reply.resources[0]?.status, reply_device_id: reply.provider_device_id };
-    }));
-    if (claims.some((claim) => claim.device_id !== claim.reply_device_id) ||
-        claims.find((claim) => claim.device_id === MAC_ID)?.claim !== 'missing' ||
-        claims.find((claim) => claim.device_id === A5_ID)?.claim !== 'available') {
-      throw new Error(`acceptance_provider_claims_invalid_${JSON.stringify(claims)}`);
-    }
-    for (const provider of providers.filter((item) => item.deviceId === MAC_ID || item.deviceId === A5_ID)) {
-      await syncIosAcceptanceRequest(provider.endpointUrl, { sourcePeerId: provider.deviceId });
-    }
-    postResult({ claims, error: null, evidence: await verifyRead(), phase: 'provider-selected',
-      scenario: SCENARIO, status: 'passed' });
+    const mac = providers.find(provider => provider.deviceId === MAC_ID);
+    const a5 = providers.find(provider => provider.deviceId === A5_ID);
+    if (!mac || !a5) throw new Error('acceptance_required_provider_missing');
+    const beforeMac = await resolveRuntimeAttachmentResource(`asset://${IMAGE_HASH}.png`, { refresh: true });
+    if (beforeMac?.status === 'ready') throw new Error('acceptance_attachment_already_available');
+    await syncIosAcceptanceRequest(mac.endpointUrl, { sourcePeerId: mac.deviceId });
+    const afterMac = await verifyRead('missing_file');
+    const beforeA5 = await verifyRead('missing_file');
+    await syncIosAcceptanceRequest(a5.endpointUrl, { sourcePeerId: a5.deviceId }, true);
+    const afterA5 = await verifyRead();
+    postResult({ transfers: [
+      { device_id: mac.deviceId, endpoint: mac.endpointUrl,
+        before: { attachment_status: beforeMac?.status ?? null, resource_url: beforeMac?.resource_url ?? null }, after: afterMac },
+      { device_id: a5.deviceId, endpoint: a5.endpointUrl, before: beforeA5, after: afterA5 }
+    ], error: null, evidence: afterA5, phase: 'provider-selected', scenario: SCENARIO, status: 'passed' });
   } catch (error) {
     postResult({ error: error instanceof Error ? error.message : String(error),
       phase: 'failed', scenario: SCENARIO, status: 'failed' });

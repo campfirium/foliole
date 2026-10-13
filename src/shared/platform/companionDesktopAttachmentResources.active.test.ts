@@ -1,127 +1,58 @@
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import './companion/companionDesktopAttachmentResources.testSupport';
 
-const capacitorMock = vi.hoisted(() => ({
-  getPlatform: vi.fn(() => 'android'),
-  isNativePlatform: vi.fn(() => true),
-  plugin: {
-    commitAttachmentResourceBatch: vi.fn(async () => ({ synced_attachment_ids: ['att-3'] })),
-    downloadAttachmentResourceBatch: vi.fn(async () => ({
-      batch_token: 'attachment-batch-token',
-      failed_attachment_ids: [],
-      synced_attachment_ids: ['att-3']
-    })),
-    syncAttachmentResource: vi.fn(),
-    syncAttachmentResources: vi.fn()
-  }
-}));
-const pairingMock = vi.hoisted(() => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' }))
-}));
-const syncObjectsMock = vi.hoisted(() => ({
-  loadCompanionMissingAttachmentResource: vi.fn(async () => ({
-    attachment_id: 'att-3',
-    content_hash: 'blob-hash-3',
-    mime_type: 'image/png',
-    storage_key: 'blob-hash-3.png',
-    size_bytes: 4096
-  })),
-  loadCompanionMissingAttachmentResources: vi.fn()
-}));
-const attachmentResourceCacheMock = vi.hoisted(() => ({
-  invalidateAttachmentResourceResolution: vi.fn()
-}));
-const writerQueueMock = vi.hoisted(() => ({
-  run: vi.fn(async <T>(task: () => Promise<T>) => task())
-}));
-const databaseMock = vi.hoisted(() => ({
-  commit: vi.fn(async () => ({ syncedIds: ['att-3'] })),
-  owner: { databasePath: '/native/companion.db' }
-}));
+import { beforeEach, expect, it } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({
-  Capacitor: {
-    getPlatform: capacitorMock.getPlatform,
-    isNativePlatform: capacitorMock.isNativePlatform
-  },
-  registerPlugin: vi.fn(() => capacitorMock.plugin)
-}));
-vi.mock('./attachmentResources', () => attachmentResourceCacheMock);
-vi.mock('./companionSyncObjects', () => syncObjectsMock);
-vi.mock('./companionSyncWriterQueue', () => ({
-  runCompanionSyncWriterTask: writerQueueMock.run
-}));
-vi.mock('./companion/network/signedRequest', () => pairingMock);
-vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
-  commitStagedCompanionAttachmentBatch: databaseMock.commit
-}));
-vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: () => databaseMock.owner
-}));
-
+import { attachment, deferred, key, peers, resetAttachmentFixture } from './companion/companionDesktopAttachmentResources.testSupport';
 import { syncCompanionAttachmentResourceFromDesktop } from './companionDesktopAttachmentResources';
 
-function resetMocks() {
-  vi.clearAllMocks();
-  capacitorMock.getPlatform.mockReturnValue('android');
-  capacitorMock.isNativePlatform.mockReturnValue(true);
-  capacitorMock.plugin.commitAttachmentResourceBatch.mockResolvedValue({ synced_attachment_ids: ['att-3'] });
-  capacitorMock.plugin.downloadAttachmentResourceBatch.mockResolvedValue({
-    batch_token: 'attachment-batch-token',
-    failed_attachment_ids: [],
-    synced_attachment_ids: ['att-3']
-  });
-  syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
-    attachment_id: 'att-3',
-    content_hash: 'blob-hash-3',
-    mime_type: 'image/png',
-    storage_key: 'blob-hash-3.png',
-    size_bytes: 4096
-  });
-  databaseMock.commit.mockResolvedValue({ syncedIds: ['att-3'] });
-}
+beforeEach(resetAttachmentFixture);
 
-describe('companion desktop active attachment resource priority', () => {
-  beforeEach(resetMocks);
-
-  it('downloads a missing attachment resource by attachment id for active item priority', async () => {
-    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
-      attachmentId: 'att-3',
-      status: 'cached'
-    });
-
-    expect(syncObjectsMock.loadCompanionMissingAttachmentResource).toHaveBeenCalledWith('att-3');
-    expect(syncObjectsMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
-      database_path: '/native/companion.db',
-      resources: [{
-        attachment_id: 'att-3',
-        content_hash: 'blob-hash-3',
-        mime_type: 'image/png',
-        storage_key: 'blob-hash-3.png',
-        headers: { 'X-Signature': 'signed' },
-        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3&storage_key=blob-hash-3.png'
-      }]
-    });
-    expect(databaseMock.commit).toHaveBeenCalledWith(
-      databaseMock.owner,
-      capacitorMock.plugin,
-      'attachment-batch-token'
-    );
-    expect(capacitorMock.plugin.syncAttachmentResources).not.toHaveBeenCalled();
-    expect(capacitorMock.plugin.syncAttachmentResource).not.toHaveBeenCalled();
-    expect(attachmentResourceCacheMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith('att-3');
-  });
-
-  it('reports an attachment resource as not queued when it is not missing locally', async () => {
-    (syncObjectsMock.loadCompanionMissingAttachmentResource as Mock).mockResolvedValue(null);
-
-    await expect(syncCompanionAttachmentResourceFromDesktop('http://10.0.2.2:38641/', 'att-3')).resolves.toEqual({
-      attachmentId: 'att-3',
-      status: 'not_queued'
-    });
-
-    expect(capacitorMock.plugin.downloadAttachmentResourceBatch).not.toHaveBeenCalled();
-  });
+it.each(['android', 'ios'])('pulls only the selected attachment and refreshes after completion on %s', async platform => {
+  attachment.platform = platform;
+  expect(await syncCompanionAttachmentResourceFromDesktop('http://preferred/', 'selected'))
+    .toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.missing).toHaveBeenCalledExactlyOnceWith('selected');
+  expect(attachment.providers).toHaveBeenCalledExactlyOnceWith('http://preferred/');
+  expect(attachment.exchange).toHaveBeenCalledExactlyOnceWith(peers[0]);
+  expect(attachment.pull).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+    endpoint_url: peers[0]!.endpointUrl, sync_group_id: 'group', receiver_device_id: 'first',
+    receiver_library_epoch: 'peer-epoch', storageKey: key, signal: expect.any(AbortSignal),
+    peerRound: expect.objectContaining({ id: expect.any(String) })
+  }));
+  expect(attachment.exchange.mock.invocationCallOrder[0]).toBeLessThan(attachment.pull.mock.invocationCallOrder[0]!);
+  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
+  expect(attachment.pull.mock.invocationCallOrder[0]).toBeLessThan(attachment.invalidate.mock.invocationCallOrder[0]!);
 });
 
-vi.mock('./companion/network/companionResourceProviders', () => import('./companion/network/resourceProviderTestSupport'));
+it('does not start discovery or transfer when the requested attachment is already local', async () => {
+  attachment.missing.mockResolvedValue(null);
+  expect(await syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected'))
+    .toEqual({ attachmentId: 'selected', status: 'not_queued' });
+  expect(attachment.providers).not.toHaveBeenCalled();
+  expect(attachment.pull).not.toHaveBeenCalled();
+  expect(attachment.invalidate).not.toHaveBeenCalled();
+});
+
+it('leaves a missing attachment pending outside native runtimes', async () => {
+  attachment.platform = 'web';
+  expect(await syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected'))
+    .toEqual({ attachmentId: 'selected', status: 'missing' });
+  expect(attachment.providers).not.toHaveBeenCalled();
+  expect(attachment.pull).not.toHaveBeenCalled();
+  expect(attachment.invalidate).not.toHaveBeenCalled();
+});
+
+it('does not report cached or refresh while the selected transfer is unfinished', async () => {
+  const started = deferred(), finish = deferred();
+  attachment.pull.mockImplementation(async () => { started.resolve(); await finish.promise; });
+  let settled = false;
+  const pending = syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected')
+    .then(result => { settled = true; return result; });
+  try {
+    await started.promise;
+    expect(settled).toBe(false);
+    expect(attachment.invalidate).not.toHaveBeenCalled();
+  } finally { finish.resolve(); }
+  expect(await pending).toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
+});
