@@ -1,16 +1,5 @@
 import Foundation
 
-struct FolioleCompanionSyncPackContract {
-    let compression: String
-    let databaseEntry: String
-    let format: String
-    let formatVersion: Int
-    let manifestTableNames: Set<String>
-    let maximumSchemaVersion: Int
-    let minimumSchemaVersion: Int
-    let sqliteTableRequirements: [String: Set<String>]
-}
-
 struct FolioleCompanionNetworkContract {
     let protocolCapabilities: [String]
     let protocolMaximumVersion: Int
@@ -67,32 +56,6 @@ final class FolioleCompanionContractStore {
         #else
         return .main
         #endif
-    }
-
-    func transferRequestKey(_ key: String) throws -> String {
-        try string(path: ["hostApi", "syncPackTransfer", "requestKeys", key], root: bridge)
-    }
-
-    func transferResponseKey(_ key: String) throws -> String {
-        try string(path: ["hostApi", "syncPackTransfer", "responseKeys", key], root: bridge)
-    }
-
-    func syncPackContract() throws -> FolioleCompanionSyncPackContract {
-        let value = try object(path: ["syncPackEnvelope"], root: sync)
-        let requirements = try object(path: ["sqliteTableRequirements"], root: value)
-        return FolioleCompanionSyncPackContract(
-            compression: try string(path: ["compression"], root: value),
-            databaseEntry: try string(path: ["databaseEntry"], root: value),
-            format: try string(path: ["format"], root: value),
-            formatVersion: try integer(path: ["formatVersion"], root: value),
-            manifestTableNames: Set(try strings(path: ["manifestTableNames"], root: value)),
-            maximumSchemaVersion: try integer(path: ["maximumSchemaVersion"], root: value),
-            minimumSchemaVersion: try integer(path: ["minimumSchemaVersion"], root: value),
-            sqliteTableRequirements: try requirements.reduce(into: [:]) { result, entry in
-                guard let columns = entry.value as? [String] else { throw Self.contractError(entry.key) }
-                result[entry.key] = Set(columns)
-            }
-        )
     }
 
     func networkContract() throws -> FolioleCompanionNetworkContract {

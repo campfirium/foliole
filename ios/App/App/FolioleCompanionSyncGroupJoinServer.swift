@@ -12,7 +12,6 @@ final class FolioleCompanionSyncGroupJoinServer {
     let stateChanged: () -> Void
     private(set) var port: UInt16?
     let runtimeInstanceId: String
-    let framedTransfers: FolioleFramedSyncFileReceiver?
 
     init(
         discovery: [String: Any], provider: FolioleCompanionSyncGroupJoinProvider,
@@ -22,7 +21,6 @@ final class FolioleCompanionSyncGroupJoinServer {
         self.discovery = discovery
         self.provider = provider
         self.dataBridge = dataBridge
-        framedTransfers = dataBridge != nil ? .init() : nil
         self.stateChanged = stateChanged
         runtimeInstanceId = discovery["runtime_instance_id"] as? String ?? ""
         listener = try NWListener(using: .tcp, on: .any)
@@ -161,24 +159,7 @@ final class FolioleCompanionSyncGroupJoinServer {
                 "responder_library_epoch": responderEpoch
             ], bridge: dataBridge, owner: owner)
         }
-        let preamble = try FolioleFramedSyncPreamble(
-            decoding: request.bodyPrefix(FolioleFramedSyncPreamble.byteCount)
-        )
-        if preamble.contextKind == 2 {
-            return try respondFramedTransfer(
-                connection, request, peer: peer, localDevice: localDevice, localEpoch: localEpoch,
-                initiator: initiator, initiatorEpoch: initiatorEpoch,
-                groupKey: Base64URL.decode(provider.workgroupKey), owner: owner
-            )
-        }
-        let context = try FolioleFramedSyncSessionContext(
-            groupID: provider.groupId, initiatorDeviceID: initiator,
-            initiatorLibraryEpoch: initiatorEpoch, responderDeviceID: responder,
-            responderLibraryEpoch: responderEpoch
-        )
-        let groupKey = try Base64URL.decode(provider.workgroupKey)
-        try respondFramedSession(connection, request, groupKey: groupKey, context: context,
-            peer: initiator, peerEpoch: initiatorEpoch, localDevice: localDevice, localEpoch: localEpoch, owner: owner)
+        return try send(connection, 410, ["error": "request_sync_required"])
 
     }
 

@@ -122,8 +122,13 @@ final class FolioleFramedSyncPayloadBudgetTests: XCTestCase {
     }
 
     func testReceiptRejectsOversizedCiphertextBeforeReadingBody() throws {
-        let preamble = try FolioleFramedSyncTransferWriter.makePreamble(
-            transferID: Data(repeating: 1, count: 32), attemptID: Data(repeating: 2, count: 16), noncePrefix: Data(repeating: 3, count: 4))
+        var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
+        bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8))
+        bytes[9] = 96; bytes[11] = 24; bytes[12] = 2
+        bytes.replaceSubrange(16..<48, with: Data(repeating: 1, count: 32))
+        bytes.replaceSubrange(48..<64, with: Data(repeating: 2, count: 16))
+        bytes.replaceSubrange(64..<68, with: Data(repeating: 3, count: 4))
+        let preamble = try FolioleFramedSyncPreamble(decoding: bytes)
         let header = try FolioleFramedSyncWireHeader(ciphertextBytes: 1_048_577, sequence: 0, frameType: .transferReceipt).encode()
         XCTAssertThrowsError(try FolioleFramedSyncReceiptReader.read(preamble.encoded + header,
             groupKey: Data(repeating: 0, count: 32), transferID: preamble.contextID,

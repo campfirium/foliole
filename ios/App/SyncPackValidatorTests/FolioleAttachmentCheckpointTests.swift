@@ -19,7 +19,7 @@ final class FolioleAttachmentCheckpointTests: XCTestCase {
             try (short ? Data(bytes.prefix(range)) : Data(bytes.prefix(2 * range)) + Data(repeating: 0, count: range))
                 .write(to: partial)
             let dbURL = root.appendingPathComponent("fixture.db")
-            let db = try FolioleCompanionSyncPackSQLite(url: dbURL, create: true)
+            let db = try AttachmentCheckpointSQLite(url: dbURL, create: true)
             try db.execute("CREATE TABLE attachment_receive_checkpoints (content_hash TEXT, temporary_path TEXT, total_bytes INTEGER, confirmed_bytes INTEGER, PRIMARY KEY(content_hash,temporary_path))")
             try seed(dbURL, partial: partial, hash: hash, total: bytes.count)
             let checkpoint = try makeCheckpoint(dbURL, partial: partial, hash: hash)
@@ -43,7 +43,7 @@ final class FolioleAttachmentCheckpointTests: XCTestCase {
     }
 
     private func makeCheckpoint(_ dbURL: URL, partial: URL, hash: String) throws -> FolioleCompanionAttachmentCheckpoint {
-        let db = try FolioleCompanionSyncPackSQLite(url: dbURL, create: true)
+        let db = try AttachmentCheckpointSQLite(url: dbURL, create: true)
         let sql = try FolioleCompanionContractStore().attachmentResourceContract().sql
         return try FolioleCompanionAttachmentCheckpoint(databasePath: dbURL.path, partialURL: partial, hash: hash) { operation, payload in
             XCTAssertEqual(operation, "attachment_checkpoint")

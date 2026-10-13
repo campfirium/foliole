@@ -16,7 +16,6 @@ final class FolioleBridgeViewController: CAPBridgeViewController {
             framedLifecycle = observer
             webView?.navigationDelegate = observer
         }
-        bridge?.registerPluginInstance(FolioleCompanionSyncPackTransferPlugin())
         bridge?.registerPluginInstance(FolioleCompanionShareInboxPlugin())
 #if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)
         webView?.configuration.userContentController.add(self, name: Self.acceptanceHandler)

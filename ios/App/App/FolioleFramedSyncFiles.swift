@@ -13,7 +13,7 @@ final class FolioleFramedSyncFiles {
         let directory = try FileManager.default.url(for: .applicationSupportDirectory,
             in: .userDomainMask, appropriateFor: nil, create: true)
         let hash = SHA256.hash(data: Data(libraryKey.utf8)).map { String(format: "%02x", $0) }.joined()
-        root = directory.appendingPathComponent("SyncTransport").appendingPathComponent(hash).resolvingSymlinksInPath()
+        root = directory.appendingPathComponent("SyncRequests").appendingPathComponent(hash).resolvingSymlinksInPath()
     }
 
     func read(_ key: String) throws -> Data? {

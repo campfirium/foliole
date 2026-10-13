@@ -36,9 +36,7 @@ struct FolioleCompanionHttpHead {
               length <= Int.max - separator.upperBound else { throw invalid("request_too_large") }
         let value = Self(headers: headers, method: String(parts[0]), path: String(parts[1]),
                          bodyOffset: separator.upperBound, bodyLength: length)
-        let limit = value.method == "POST" && value.path.split(separator: "?").first == "/companion/sync-identity-push"
-            ? 2 * 1024 * 1024 : FolioleCompanionHttpMessage.maximumBytes
-        if !value.framed && value.bodyOffset + length > limit { throw invalid("request_too_large") }
+        if !value.framed && value.bodyOffset + length > FolioleCompanionHttpMessage.maximumBytes { throw invalid("request_too_large") }
         return value
     }
 

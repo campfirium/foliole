@@ -2,6 +2,12 @@ import Capacitor
 import Foundation
 
 extension FolioleCompanionSyncPlugin {
+    private func framedRequired(_ call: CAPPluginCall, _ key: String) throws -> String {
+        guard let value = call.getString(key)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else { throw invalid("\(key)_required") }
+        return value
+    }
+
     @objc func configureFramedSyncPayloadBudget(_ call: CAPPluginCall) {
         budgetLifecycle(call, configure: true)
     }

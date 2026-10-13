@@ -1,41 +1,14 @@
 import CryptoKit
 import XCTest
-import ZIPFoundation
 @testable import FolioleSyncPackValidator
 
 final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
-    func testProviderDefinitionsCarryTheActiveSyncPackContract() throws {
-        let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
-        try definitions.validate()
-        XCTAssertEqual(definitions.format, "foliole.sync-pack")
-        XCTAssertEqual(definitions.formatVersion, 20)
-        XCTAssertEqual(definitions.schemaVersion, 92)
-        XCTAssertTrue(definitions.copyStatements.contains { $0.contains("sync_group_devices") })
-        XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
-    }
-
-    func testCompleteMemberCapabilityUsesTheCurrentProductionProtocol() throws {
-        let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
-        let network = try FolioleCompanionContractStore().networkContract()
-        let production = definitions.value["protocol"] as? [String: Any]
-        let prepared = definitions.preparedMemberDataPlane
-        let preparedProtocol = prepared["protocol"] as? [String: Any]
-        let productionCapabilities = production?["capabilities"] as? [String] ?? []
-        let preparedCapabilities = preparedProtocol?["capabilities"] as? [String] ?? []
-
-        XCTAssertEqual(production?["version"] as? Int, network.protocolVersion)
-        XCTAssertTrue(productionCapabilities.contains("complete-member-data-plane"))
-        XCTAssertEqual(preparedProtocol?["version"] as? Int, network.protocolVersion)
-        XCTAssertTrue(preparedCapabilities.contains("complete-member-data-plane"))
-        XCTAssertEqual(Set(prepared["resourceKinds"] as? [String] ?? []), ["attachment", "content_blob"])
-    }
-
     func testAuthenticatedProviderRequestRejectsReplay() throws {
         let key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let nonce = UUID().uuidString.lowercased()
         let body = Data()
-        let canonical = ["GET", "/companion/sync-pack?after_state_seq=0", timestamp, nonce,
+        let canonical = ["GET", "/companion/framed-sync?request=inventory", timestamp, nonce,
             SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()].joined(separator: "\n")
         let signature = HMAC<SHA256>.authenticationCode(
             for: Data(canonical.utf8), using: SymmetricKey(data: Data(key.utf8))
@@ -43,7 +16,7 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         let request = FolioleCompanionHttpMessage(body: [:], bodyData: body, headers: [
             "x-device-id": "device-b", "x-nonce": nonce, "x-signature": signature,
             "x-sync-group-id": "group-a", "x-timestamp": timestamp
-        ], method: "GET", path: "/companion/sync-pack?after_state_seq=0")
+        ], method: "GET", path: "/companion/framed-sync?request=inventory")
         let bridge = ActiveDeviceBridge()
         XCTAssertEqual(try FolioleCompanionSyncGroupWorkgroup.authenticate(
             request, groupId: "group-a", workgroupKey: key, dataBridge: bridge
@@ -60,7 +33,7 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         let timestamp = formatter.string(from: Date())
         let nonce = UUID().uuidString.lowercased()
         let body = Data()
-        let path = "/companion/sync-pack?after_state_seq=0"
+        let path = "/companion/framed-sync?request=inventory"
         let canonical = ["GET", path, timestamp, nonce,
             SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()].joined(separator: "\n")
         let signature = HMAC<SHA256>.authenticationCode(
@@ -76,27 +49,13 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         ), "device-b")
     }
 
-    func testProviderArchiveUsesConsumerCompatibleZlibAndZip() throws {
-        let plain = Data("provider database bytes".utf8)
-        let compressed = try FolioleCompanionSyncPackArchive.deflate(plain)
-        XCTAssertEqual(try FolioleCompanionZlib.inflate(compressed, maxBytes: 4 * 1024 * 1024), plain)
-        let archiveData = FolioleCompanionSyncPackArchive.zip(entries: [
-            ("manifest.json", Data("{}".utf8)), ("incoming.db.deflate", compressed)
-        ])
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).syncpack")
-        defer { try? FileManager.default.removeItem(at: url) }
-        try archiveData.write(to: url)
-        let archive = try Archive(url: url, accessMode: .read)
-        XCTAssertEqual(Set(archive.map(\.path)), ["manifest.json", "incoming.db.deflate"])
-    }
-
-    func testIdentityPushAcceptsBoundedArchiveRequestWithoutWideningOtherRoutes() throws {
+    func testRetiredIdentityRoutesDoNotAllowLargeBodies() throws {
         let payload = String(repeating: "a", count: 1_500_000)
         func request(_ route: String) -> Data {
             Data("POST \(route) HTTP/1.1\r\nContent-Length: \(payload.count)\r\n\r\n\(payload)".utf8)
         }
         let push = request("/companion/sync-identity-push")
-        XCTAssertEqual(try FolioleCompanionHttpMessage.expectedLength(push), push.count)
+        XCTAssertThrowsError(try FolioleCompanionHttpMessage.expectedLength(push))
         XCTAssertThrowsError(try FolioleCompanionHttpMessage.expectedLength(
             request("/companion/sync-identity-pack")))
     }

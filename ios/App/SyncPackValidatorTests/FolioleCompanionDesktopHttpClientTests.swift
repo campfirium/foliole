@@ -33,18 +33,18 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(nil))
     }
 
-    func testBonjourProjectsPreparedTopologyRoleFromSharedHostFixture() throws {
+    func testBonjourPreservesDeviceAndProtocolIdentityFromSharedHostFixture() throws {
         let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: sharedFixtureURL()))
             as? [String: Any]
-        let roleKey = try XCTUnwrap(fixture?["role_txt_key"] as? String)
+        let deviceKey = try XCTUnwrap(fixture?["device_txt_key"] as? String)
         let protocolVersion = String(try XCTUnwrap(fixture?["production_protocol_version"] as? Int))
         let record = NetService.data(fromTXTRecord: [
-            roleKey: Data("anchor".utf8),
+            deviceKey: Data("device-a".utf8),
             "protocol_version": Data(protocolVersion.utf8)
         ])
         let decoded = FolioleCompanionBonjourTXT.decode(record)
 
-        XCTAssertEqual(decoded[roleKey], "anchor")
+        XCTAssertEqual(decoded[deviceKey], "device-a")
         XCTAssertEqual(decoded["protocol_version"], protocolVersion)
     }
 
@@ -80,6 +80,6 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("lib/platform/fixtures/sync-anchor-topology-v7.json")
+            .appendingPathComponent("lib/platform/fixtures/sync-group-discovery-v24.json")
     }
 }
