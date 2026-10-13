@@ -57,7 +57,6 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('view_state.active_node', 'view_state', 'ui_session', 'host', 'host_private', ['workspace_meta'], true, 'diagnostic'),
   policy('view_state.node', 'view_state', 'ui_session', 'host', 'host_private', ['node_view_state'], true, 'diagnostic'),
   policy('node_view_state', null, 'ui_session', 'host', 'host_private', ['node_view_state'], true, 'diagnostic'),
-  policy('sync_delivery_receipts', null, 'diagnostic', 'device', 'device_private', ['sync_delivery_receipts'], false, 'diagnostic')
 ];
 
 export const SYNC_POLICY_DEVICE_PRIVATE_OBJECT_TYPES = uniqueObjectTypes(

@@ -2,11 +2,14 @@
 const fs = require('node:fs');
 const { prepareRequestFixture } = require('./fixed-performance-request-fixture.cjs');
 
-async function runSyncPackLoad({ markerPath, nodeCount, blockMs }, services) {
+async function runSyncPackLoad({ markerPath, nodeCount, blockMs, mode = 'existing' }, services) {
   const fixture = await prepareRequestFixture(nodeCount, services);
   try {
-    await fixture.apply();
-    fixture.assertResult();
+    if (mode === 'existing') {
+      await fixture.apply();
+      fixture.assertResult();
+    }
+    const initialNodeCount = fixture.db.prepare('SELECT COUNT(*) AS count FROM nodes').get().count;
     fs.writeFileSync(markerPath, 'ready');
     await new Promise((resolve) => setTimeout(resolve, 250));
     const startedAt = Date.now();
@@ -24,7 +27,7 @@ async function runSyncPackLoad({ markerPath, nodeCount, blockMs }, services) {
     fixture.assertResult();
     const nodeCountAfter = fixture.db.prepare('SELECT COUNT(*) AS count FROM nodes').get().count;
     return { startedAt, endedAt, durationMs: endedAt - startedAt,
-      result: { passes, nodeCount: nodeCountAfter } };
+      result: { mode, initialNodeCount, passes, nodeCount: nodeCountAfter } };
   } finally {
     await fixture.close();
   }

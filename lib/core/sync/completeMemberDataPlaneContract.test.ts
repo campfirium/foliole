@@ -11,11 +11,8 @@ import {
   COMPLETE_MEMBER_PRIVATE_POLICY_KEYS,
   COMPLETE_MEMBER_SHARED_POLICY_KEYS
 } from './completeMemberDataPlaneContract.js';
+import { FRAMED_SYNC_STATE_OBJECT_TYPES } from './framedSyncObjectStateInventory.js';
 import { SYNC_OBJECT_POLICIES } from './syncObjectPolicy.js';
-import {
-  SYNC_PACK_OBJECT_TYPES,
-  SYNC_PACK_PAYLOAD_OBJECT_TYPES
-} from './syncPackManifest.js';
 
 describe('prepared complete member data plane contract', () => {
   it('classifies every sync policy exactly once and stops on catalog drift', () => {
@@ -33,8 +30,8 @@ describe('prepared complete member data plane contract', () => {
       .every(({ key }) => COMPLETE_MEMBER_PRIVATE_POLICY_KEYS.includes(key as never))).toBe(true);
   });
 
-  it('maps every shared object to the existing pack or resource surface', () => {
-    const carriedTypes = new Set([...SYNC_PACK_OBJECT_TYPES, ...SYNC_PACK_PAYLOAD_OBJECT_TYPES]);
+  it('maps every shared object to the current request or resource surface', () => {
+    const carriedTypes = new Set<string>(['node', ...FRAMED_SYNC_STATE_OBJECT_TYPES]);
     const missing = SYNC_OBJECT_POLICIES.filter(({ key }) => (
       COMPLETE_MEMBER_SHARED_POLICY_KEYS.includes(key as never)
     )).filter(({ key, objectType }) => (

@@ -44,6 +44,11 @@ it('shares active and departed device identities without including the stored gr
       { id: identities[0]!.identity_key, state: 'active' },
       { id: identities[1]!.identity_key, state: 'left' }
     ]));
+  for (const identity of identities.slice(0, 2)) {
+    expect(state.devices.find(device => device.device_identity_key === identity.identity_key))
+      .toMatchObject({ canonical_library_path: identity.canonical_library_path,
+        device_anchor: identity.device_anchor, device_identity_key: identity.identity_key });
+  }
   const key = database.prepare('SELECT workgroup_key FROM sync_groups').pluck().get();
   expect(key).toBe(Buffer.alloc(32, 4).toString('base64url'));
   const serialized = JSON.stringify(state);

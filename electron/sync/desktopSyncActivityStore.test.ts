@@ -1,21 +1,37 @@
 // @vitest-environment node
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
-import { mockedSyncPackBuilderAppDataDir, setupSyncPackBuilderTestLifecycle } from '../database/syncPackBuilderTestSupport.js';
+import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
 import { buildDesktopSyncDiagnostics } from './buildDesktopSyncDiagnostics.js';
 import { loadDesktopSyncActivity, recordDesktopSyncActivity } from './desktopSyncActivityStore.js';
 
+const fixture = vi.hoisted(() => ({ appDataDir: '/tmp/foliole-sync-activity-tests' }));
+let tempRoot = '';
+
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
-  app_data_dir: mockedSyncPackBuilderAppDataDir,
-  app_cache_dir: path.join(mockedSyncPackBuilderAppDataDir, 'cache'),
-  app_config_dir: path.join(mockedSyncPackBuilderAppDataDir, 'config'),
-  app_log_dir: path.join(mockedSyncPackBuilderAppDataDir, 'logs')
+  app_data_dir: fixture.appDataDir,
+  app_cache_dir: path.join(fixture.appDataDir, 'cache'),
+  app_config_dir: path.join(fixture.appDataDir, 'config'),
+  app_log_dir: path.join(fixture.appDataDir, 'logs')
 }) }));
-setupSyncPackBuilderTestLifecycle();
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-activity-'));
+  fixture.appDataDir = path.join(tempRoot, 'app-data');
+  initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture();
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+});
 
 const peerA = { peer_device_id: 'a', peer_device_name: 'Desktop A' };
 const peerB = { peer_device_id: 'b', peer_device_name: 'Desktop B' };

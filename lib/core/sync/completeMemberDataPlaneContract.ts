@@ -27,7 +27,6 @@ export const COMPLETE_MEMBER_PRIVATE_POLICY_KEYS = [
   'node_reading_host_state',
   'node_view_state',
   'setting.host',
-  'sync_delivery_receipts',
   'view_state.active_node',
   'view_state.node'
 ] as const;
@@ -55,8 +54,6 @@ export const COMPLETE_MEMBER_DATA_PLANE_CONTRACT = Object.freeze({
   session: Object.freeze({
     directions: Object.freeze(['push', 'pull']),
     idempotentApply: true,
-    peerScopedCursor: true,
-    peerScopedReceipt: true,
     resourceIntegrity: 'sha256'
   })
 });

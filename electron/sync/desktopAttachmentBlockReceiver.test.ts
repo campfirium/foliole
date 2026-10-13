@@ -132,3 +132,15 @@ it('writes availability only at transitions, including deletion after completion
   expect(await fs.readFile(f.final)).toEqual(bytes);
   expect(f.writes).toEqual([false, true, false, true]);
 });
+
+it('rejects an existing file with the wrong identity without marking it available or overwriting it', async () => {
+  const bytes = Buffer.from('correct attachment');
+  const f = await setup(bytes);
+  const receiver = await f.open();
+  const corrupted = Buffer.alloc(bytes.length, 0x52);
+  await fs.writeFile(f.final, corrupted);
+  await expect(receiver.status(f.resource)).rejects.toThrow('attachment_published_file_invalid');
+  await expect(receiver.receive(f.resource, 0, bytes)).rejects.toThrow('attachment_published_file_invalid');
+  expect(f.available()).not.toBe(1);
+  expect(await fs.readFile(f.final)).toEqual(corrupted);
+});

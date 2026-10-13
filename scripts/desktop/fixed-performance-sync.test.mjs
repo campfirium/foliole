@@ -55,7 +55,7 @@ test('applies real request versions and replays identical facts without changing
   } finally { await fixture.close(); }
 });
 
-test('keeps first and unchanged measurements while running the sustained real request workload', async () => {
+test.each(['new', 'existing'])('keeps first and unchanged measurements with the sustained %s request workload', async mode => {
   const report = await benchmark.runFixedSyncBenchmark({ nodeCount: 25, repeats: 2 }, services);
   expect(report.boundary).toContain('production request batch receive');
   for (const mode of ['first', 'unchanged']) {
@@ -69,9 +69,9 @@ test('keeps first and unchanged measurements while running the sustained real re
   const root = mkdtempSync(path.join(os.tmpdir(), 'request-performance-'));
   try {
     const markerPath = path.join(root, 'ready');
-    const result = await workload.runSyncPackLoad({ markerPath, nodeCount: 25, blockMs: 0 }, services);
+    const result = await workload.runSyncPackLoad({ markerPath, nodeCount: 25, blockMs: 0, mode }, services);
     expect(readFileSync(markerPath, 'utf8')).toBe('ready');
-    expect(result.result.nodeCount).toBe(25);
+    expect(result.result).toMatchObject({ mode, nodeCount: 25, initialNodeCount: mode === 'new' ? 0 : 25 });
     expect(result.result.passes).toBeGreaterThan(0);
     expect(result.durationMs).toBeGreaterThanOrEqual(2200);
     expect(result.endedAt - result.startedAt).toBe(result.durationMs);

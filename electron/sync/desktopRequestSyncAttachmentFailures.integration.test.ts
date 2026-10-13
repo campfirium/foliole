@@ -10,6 +10,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${sandbox.root}/host/${name}`, isPackaged: false
 } }));
 
+import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
@@ -60,8 +61,8 @@ async function withAttachments(keys: string[], execute: (fixture: {
   }
 }
 
-it('reports the original disk-full write error without marking the attachment ready and can retry', async () => {
-  const item = attachment('Disk full attachment');
+it.each([0, 1])('preserves the prefix and original disk-full error after %s blocks, then recovers', async (completedBlocks) => {
+  const item = attachment(completedBlocks ? 'x'.repeat(3 * ATTACHMENT_BLOCK_BYTES + 17) : 'Disk full attachment');
   await withAttachments([item.key], async ({ local, remoteDir, failures, transfer }) => {
     await fs.writeFile(path.join(remoteDir, item.key), item.bytes);
     const error = Object.assign(new Error('No space left on device'), { code: 'ENOSPC' });
@@ -69,13 +70,17 @@ it('reports the original disk-full write error without marking the attachment re
     const spy = vi.spyOn(fs, 'open').mockImplementation(async (...args) => {
       const handle = await open(...args);
       if (String(args[0]).startsWith(local.assetsDir) && String(args[0]).endsWith('.partial') && args[1] === 'r+') {
-        vi.spyOn(handle, 'write').mockRejectedValue(error);
+        if ((await handle.stat()).size >= completedBlocks * ATTACHMENT_BLOCK_BYTES) {
+          vi.spyOn(handle, 'write').mockRejectedValue(error);
+        }
       }
       return handle;
     });
     expect(await transfer()).toEqual({ pending: 1, transferred: 0 });
     expect(failures).toEqual([{ key: item.key, error }]);
     expect(failures[0]!.error).toBe(error);
+    const partial = path.join(local.assetsDir, `.attachment-${item.key.slice(0, 64)}.partial`);
+    expect(await fs.readFile(partial)).toEqual(item.bytes.subarray(0, completedBlocks * ATTACHMENT_BLOCK_BYTES));
     expect(await fs.stat(path.join(local.assetsDir, item.key)).catch(() => null)).toBeNull();
     expect(local.sqlite.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash = ?')
       .get(item.key.slice(0, 64))).toEqual({ available: 0 });

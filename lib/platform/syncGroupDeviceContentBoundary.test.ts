@@ -5,8 +5,9 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import { PACK_SCHEMA } from '../core/sync/syncPackSchema.js';
+import { projectFramedSyncNodeRecord, restoreFramedSyncProjectedNodeRecord } from '../core/sync/framedSyncNodeProjection.js';
 
+import type { NativeSyncNodeRecord } from './nativeSyncContract.js';
 import {
   assertBusinessPayloadExcludesDeviceIdentity,
   DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS
@@ -23,21 +24,39 @@ it('keeps T152 Device identity out of nested business payloads', () => {
   }
 });
 
-it('keeps Device identity in group facts and out of Sync Pack business rows', () => {
-  const groupFacts = PACK_SCHEMA.filter((statement) =>
-    statement.includes('sync_group_devices')).join('\n');
-  const businessRows = PACK_SCHEMA.filter((statement) =>
-    !/CREATE TABLE (pack_manifest|sync_groups|sync_group_devices|node_version_peer_heads)\b/.test(statement)).join('\n');
-  const peerHeads = PACK_SCHEMA.find((statement) => statement.includes('CREATE TABLE node_version_peer_heads'));
-  expect(peerHeads).toMatch(/\bdevice_identity_key\b/);
-  expect(peerHeads).toMatch(/\blibrary_epoch\b/);
-  for (const key of ['canonical_library_path', 'device_anchor', 'device_identity_key']) {
-    expect(groupFacts).toMatch(new RegExp(`\\b${key}\\b`));
-  }
-  for (const key of DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS) {
-    expect(businessRows).not.toMatch(new RegExp(`\\b${key}\\b`));
+it('keeps Device identity out of current request node facts and restored business payloads', () => {
+  const node = businessNode();
+  const input = { ...node, device_anchor: 'private-device', canonical_library_path: '/private/library',
+    device_identity_key: 'private-identity', snapshot: { ...node.snapshot,
+      device_anchor: 'private-device', canonical_library_path: '/private/library',
+      device_identity_key: 'private-identity' } };
+  const projection = projectFramedSyncNodeRecord(input);
+  const restored = restoreFramedSyncProjectedNodeRecord(projection);
+  expect(restored.snapshot).toMatchObject({ id: 'node', title: 'Topic', content: 'Body' });
+  expect(() => assertBusinessPayloadExcludesDeviceIdentity(restored)).not.toThrow();
+  for (const fact of projection.manifest.facts) {
+    const fields = JSON.stringify(fact.body, (_key, value: unknown) =>
+      typeof value === 'bigint' ? value.toString() : value);
+    for (const key of DEVICE_IDENTITY_BUSINESS_PAYLOAD_KEYS) {
+      expect(fields).not.toContain(`"name":"${key}"`);
+    }
   }
 });
+
+function businessNode(): NativeSyncNodeRecord {
+  return {
+    object_type: 'node', object_id: 'node', version_id: 'version', parent_version_id: null,
+    ancestor_version_ids: [], host_name: 'Host', updated_at: '2026-10-14T00:00:00.000Z',
+    content_hash: 'a'.repeat(64), body_text: 'Body', version_created_at: '2026-10-14T00:00:00.000Z',
+    snapshot: {
+      id: 'node', kind: 'topic', title: 'Topic', content: 'Body', parent_id: null,
+      created_at: '2026-10-14T00:00:00.000Z', updated_at: '2026-10-14T00:00:00.000Z',
+      deleted_at: null, attachments: [], anchor_link: null, desired_retention: null,
+      hide_title_heading: false, image_regions: null, is_title_manual: false,
+      opening_text: null, position: null, priority: null, reveal: null, virtual_filter: null
+    }
+  };
+}
 
 it('removes the inactive T151 manager/member admission prepare', () => {
   const retired = [

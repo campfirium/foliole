@@ -139,3 +139,37 @@ it('discovers and persists an open-state change after 2050 already known version
     expect(await differences(source, target)).toEqual([]);
   } finally { await fixture.close(); }
 });
+
+
+it('restores a receiver body reclaimed after inventory comparison through the frozen request difference', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  try {
+    const records = history(3);
+    await applySyncNodesWithDbPort(source.db, records);
+    await applySyncNodesWithDbPort(target.db, records.slice(0, 2));
+    const expectedGraph = graph(source); const expectedBodies = bodies(source);
+    const heldGraph = graph(target);
+    const difference = (await differences(source, target))
+      .find(value => value.objectType === 'node' && value.globalId === 'topic');
+    if (!difference) throw new Error('reclaimed_body_difference_missing');
+    expect(difference.need.frontierFactIds).toEqual(['v3']);
+    expect(target.sqlite.prepare("SELECT version_id, body_text FROM node_sync_versions WHERE version_id = 'v2'").get()).toEqual({
+      version_id: 'v2', body_text: records[1]?.body_text
+    });
+    target.sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL,
+      snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL)
+      WHERE version_id = 'v2'`);
+    expect(target.sqlite.prepare("SELECT version_id, body_text FROM node_sync_versions WHERE version_id = 'v2'").get()).toEqual({ version_id: 'v2', body_text: null });
+    expect(graph(target)).toEqual(heldGraph);
+    const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+      providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
+    for (let replay = 0; replay < 2; replay++) {
+      await transfer(source, target, progress, difference, false); target.reopen();
+      expect(graph(target)).toEqual(expectedGraph); expect(bodies(target)).toEqual(expectedBodies);
+      expect(graph(source)).toEqual(expectedGraph); expect(bodies(source)).toEqual(expectedBodies);
+      expect(target.sqlite.prepare("SELECT current_version_id, content FROM nodes WHERE id = 'topic'").get())
+        .toEqual({ current_version_id: 'v3', content: records[2]?.body_text });
+    }
+  } finally { await fixture.close(); }
+});
