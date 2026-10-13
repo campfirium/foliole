@@ -52,7 +52,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
   await mkdir('.tmp/artifacts', { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-request-'));
   const source = textDevice(); const target = textDevice();
-  const visibleBodies: Promise<string>[] = [];
+  const visibleBodies: Promise<string | null | undefined>[] = [];
   const unsubscribe = subscribeCompanionSyncApplied(() => {
     visibleBodies.push(target.current().then(current => current.body_text));
   });
