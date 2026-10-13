@@ -24,6 +24,7 @@ final class FolioleRequestSyncRoute {
         FramedSyncFiles files = new FramedSyncFiles(context, owner.libraryKey());
         String directory = "requests/" + UUID.randomUUID();
         File response = File.createTempFile("request-sync-response-", ".body", temporary);
+        boolean admitted = false;
         try {
             FolioleRequestSyncHttpChunks.Check progress = () -> touchRound(bridge, owner,
                 query.get("initiator_device_id"), query.get("peer_round_id"), "inbound", false);
@@ -39,6 +40,7 @@ final class FolioleRequestSyncRoute {
                 if (query.containsKey(key)) payload.put(key, query.get(key));
             }
             JSONObject result = bridge.request("respond_request_sync", payload, owner);
+            admitted = true;
             try (var body = new FileOutputStream(response)) {
                 FolioleRequestSyncHttpChunks.write(files, directory, result.getInt("response_chunk_count"), body, () -> check(owner), progress);
             }
@@ -46,6 +48,13 @@ final class FolioleRequestSyncRoute {
             if ("single".equals(query.get("peer_round_mode")) || "finish".equals(query.get("peer_round_mode"))) {
                 touchRound(bridge, owner, query.get("initiator_device_id"), query.get("peer_round_id"), "inbound", true);
             }
+        } catch (Exception error) {
+            if (admitted) {
+                try { touchRound(bridge, owner, query.get("initiator_device_id"),
+                    query.get("peer_round_id"), "inbound", true); }
+                catch (Exception cleanup) { error.addSuppressed(cleanup); }
+            }
+            throw error;
         } finally {
             try { files.remove(directory); }
             finally { java.nio.file.Files.deleteIfExists(response.toPath()); }
