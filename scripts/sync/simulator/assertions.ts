@@ -49,21 +49,11 @@ export function assertBody(peer: SimulatorPeer, content: string, id = 'topic', v
 }
 export async function assertCompleted(peer: SimulatorPeer, missingKeys: ReadonlySet<string> = new Set()) {
   const db = peer.sqlite;
-  expect(db.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts WHERE delivered_at IS NOT NULL').pluck().get()).toBe(0);
-  expect(db.prepare(`SELECT COUNT(*) FROM node_version_pack_receipts receipt WHERE NOT EXISTS
-    (SELECT 1 FROM node_version_outbound_holds hold WHERE hold.pack_id = receipt.pack_id
-      AND hold.object_id = receipt.object_id)`).pluck().get()).toBe(0);
-  expect(db.prepare('SELECT * FROM sync_pack_receive_progress WHERE completed<>1 OR cursor_state_seq<>frontier_state_seq').all()).toEqual([]);
-  expect(db.prepare('SELECT count(*) FROM sync_pack_dependency_rows').pluck().get()).toBe(0);
-  const pending = db.prepare('SELECT article_id FROM sync_pack_resource_articles').all() as { article_id: string }[];
-  if (pending.length) {
-    // Production retains an incomplete article batch until its remaining demands are available.
-    const demand = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(db), pending.map((row) => row.article_id));
-    expect(demand.unreadableArticleIds).toEqual([]);
-    const absent = demand.needs.filter((need) => inPeer(peer, () => resolveAttachmentFileForSync(need.storageKey).status !== 'ready'));
-    expect(absent.length).toBeGreaterThan(0);
-    expect(absent.filter((need) => !missingKeys.has(need.storageKey))).toEqual([]);
-  }
+  const ids = db.prepare('SELECT id FROM nodes WHERE deleted_at IS NULL').pluck().all() as string[];
+  const demand = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(db), ids);
+  expect(demand.unreadableArticleIds).toEqual([]);
+  const absent = demand.needs.filter(need => inPeer(peer, () => resolveAttachmentFileForSync(need.storageKey).status !== 'ready'));
+  expect(absent.filter(need => !missingKeys.has(need.storageKey))).toEqual([]);
   const nodes = db.prepare('SELECT id FROM nodes WHERE deleted_at IS NULL AND body_blob_hash IS NOT NULL').all() as { id: string }[];
   for (const node of nodes) expect(loadNodeBodyResolution(peer.driver, node.id)?.status).toBe('resolved');
 }
@@ -72,22 +62,16 @@ export function state(peer: SimulatorPeer) {
   return {
     nodes: table('nodes', 'id'), versions: table('node_sync_versions', 'version_id'),
     parents: table('node_sync_version_parents', 'version_id, ordinal'),
-    alternatives: table('node_text_alternatives', 'alternative_id'),
-    progress: table('sync_pack_receive_progress', 'peer_id'),
-    delivery: table('sync_delivery_receipts', 'peer_id, operation_id'),
-    inboundReceipts: table('node_version_inbound_receipts', 'pack_id'),
-    resourceArticles: table('sync_pack_resource_articles', 'article_id')
+    alternatives: graph(peer).alternatives
   };
 }
 export function stateSummary(peer: SimulatorPeer) {
-  const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_text_alternatives',
-    'content_blob_data', 'sync_pack_dependency_rows', 'sync_delivery_receipts',
-    'node_version_inbound_receipts', 'node_version_pack_receipts', 'node_version_confirmation_state'];
+  const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents',
+    'content_blob_data'];
   return { database: peer.dbPath, assets: peer.assets,
     counts: Object.fromEntries(tables.map((table) => [table,
-      peer.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()])),
-    progress: peer.sqlite.prepare('SELECT * FROM sync_pack_receive_progress ORDER BY peer_id').all(),
-    resourceArticles: peer.sqlite.prepare('SELECT * FROM sync_pack_resource_articles ORDER BY article_id').all() };
+      peer.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()])) };
+
 }
 export function addedDefects(before: ReturnType<typeof defects>, after: ReturnType<typeof defects>) {
   return Object.fromEntries(Object.entries(after).map(([key, rows]) => {
@@ -103,8 +87,11 @@ export function graph(peer: SimulatorPeer) {
       FROM node_sync_versions WHERE object_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY version_id`).all(),
     parents: peer.sqlite.prepare(`SELECT p.* FROM node_sync_version_parents p JOIN node_sync_versions v
       ON v.version_id=p.version_id WHERE v.object_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY p.version_id,p.ordinal`).all(),
-    alternatives: peer.sqlite.prepare(`SELECT node_id,source_version_id,body_text,status
-      FROM node_text_alternatives WHERE node_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY node_id,source_version_id`).all()
+    alternatives: peer.sqlite.prepare(`SELECT n.id AS node_id,
+      json_extract(v.snapshot_json, '$.text_alternatives') AS alternatives
+      FROM nodes n JOIN node_sync_versions v ON v.version_id=n.current_version_id
+      WHERE n.id NOT IN (${LOCAL_ROOT_IDS_SQL}) AND json_array_length(v.snapshot_json, '$.text_alternatives')>0
+      ORDER BY n.id`).all()
   };
 }
 export function convergenceState(peer: SimulatorPeer) {

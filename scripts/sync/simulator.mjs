@@ -49,14 +49,17 @@ function main() {
   writeFileSync(path.join(out, 'workspace.patch'), diff);
   writeFileSync(path.join(out, 'command.json'), JSON.stringify({ argv: process.argv.slice(2), options, selected, revision }, null, 2));
   const env = { ...process.env, FOLIOLE_SIM_SCENARIOS: selected.join(','), FOLIOLE_SIM_OUTPUT: out,
-    FOLIOLE_SIM_SEED: options.seed, FOLIOLE_SIM_SCALE: options.scale, FOLIOLE_SIM_REVISION: revision };
+    FOLIOLE_SIM_SEED: options.seed, FOLIOLE_SIM_SCALE: options.scale, FOLIOLE_SIM_REVISION: revision,
+    FOLIOLE_EXPECTED_TEST_FILES: JSON.stringify(['scripts/sync/simulator/simulator.runner.mjs']) };
   for (const [option, variable] of Object.entries({ database: 'DATABASE', assets: 'ASSETS',
     'target-database': 'TARGET_DATABASE', 'target-assets': 'TARGET_ASSETS' })) {
     if (options[option]) env[`FOLIOLE_SIM_${variable}`] = path.resolve(options[option]);
     else delete env[`FOLIOLE_SIM_${variable}`];
   }
   const child = spawnSync(process.execPath, ['scripts/electron-sqlite-runner.mjs',
-    'scripts/test-files.mjs', 'scripts/sync/simulator/simulator.runner.mjs'], { env, stdio: 'inherit' });
+    'scripts/run-vitest-with-summary.mjs', path.join(out, 'vitest.json'), '--',
+    '--silent=passed-only', '--pool=forks', '--maxWorkers=2', '--no-file-parallelism',
+    'scripts/sync/simulator/simulator.runner.mjs'], { env, stdio: 'inherit' });
   const results = selected.map((scenario) => {
     try { const { status, error } = JSON.parse(readFileSync(path.join(out, scenario, 'result.json'), 'utf8'));
       return { scenario, status, error }; }

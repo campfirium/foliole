@@ -7,7 +7,6 @@ import { useCompanionActionState } from './useCompanionActionState';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
 import { useCompanionFlowSession } from './useCompanionFlowSession';
-import { useCompanionMissingBodySync } from './useCompanionMissingBodySync';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 import { useCompanionViewStateSync } from './useCompanionViewStateSync';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -96,23 +95,6 @@ function useCompanionInteractionState(
   };
 }
 
-function useReadableArticleWithBodySyncStatus(
-  readableArticle: CompanionWorkspaceSyncApi['readableArticle'],
-  workspaceSync: CompanionWorkspaceSyncApi
-) {
-  const { fetchingBodyKey } = useCompanionMissingBodySync({ readableArticle, workspaceSync });
-  return useMemo(() => {
-    if (!readableArticle?.bodyBlobHash || !fetchingBodyKey) {
-      return readableArticle;
-    }
-    const articleKey = `${readableArticle.nodeId}:${readableArticle.bodyBlobHash}:${readableArticle.bodyStatus}`;
-    if (articleKey !== fetchingBodyKey) {
-      return readableArticle;
-    }
-    return { ...readableArticle, bodyStatus: 'fetching' as const };
-  }, [fetchingBodyKey, readableArticle]);
-}
-
 function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
   const isActiveActionUserOwnedRef = useRef(false);
   const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
@@ -175,15 +157,10 @@ export function useCompanionArticleSurface(
     workspaceSync
   );
 
-  const readableArticle = useReadableArticleWithBodySyncStatus(
-    currentArticle,
-    workspaceSync
-  );
-
   return {
     activeAction,
     browsedFolder: browseState.browsedFolder,
-    readableArticle,
+    readableArticle: currentArticle,
     recentArticles: browseState.recentArticles,
     effectiveReviewSession,
     onlyReviewSession: effectiveReviewSession,

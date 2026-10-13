@@ -2,19 +2,16 @@ import { RESOURCE_AVAILABILITY_PATH, type ResourceAvailabilityReply } from '../.
 import { resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
 import { loadCompanionResourceProviders } from '../shared/platform/companion/network/companionResourceProviders';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
-import { createSignedRequestHeaders } from '../shared/platform/companion/network/signedRequest';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import { syncCompanionAttachmentResourceFromDesktop } from '../shared/platform/companionDesktopAttachmentResources';
-import { pullMissingContentBlobs } from '../shared/platform/companionDesktopSyncContentBlobs';
 import { postDesktopJson } from '../shared/platform/companionDesktopSyncHttp';
 import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
 import { completeCompanionSyncGroupJoin, requestCompanionSyncGroupJoin } from '../shared/platform/companionSyncGroupJoinClient';
-import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
 import { loadCompanionDiscoveryCandidates } from '../shared/platform/companionWorkspaceDiscovery';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
+import { syncIosAcceptanceRequest } from './iosAcceptanceRequestSync';
 import { postResult } from './iosBridgeAcceptance';
 
 const SCENARIO = 'resource-provider-failover';
@@ -23,8 +20,6 @@ const MAC_ID = import.meta.env.VITE_FOLIOLE_ACCEPTANCE_MAC_ID;
 const A5_ID = import.meta.env.VITE_FOLIOLE_ACCEPTANCE_A5_ID;
 const NODE_ID = import.meta.env.VITE_FOLIOLE_ACCEPTANCE_NODE_ID;
 const IMAGE_HASH = import.meta.env.VITE_FOLIOLE_ACCEPTANCE_IMAGE_HASH;
-const TRANSFER_404 = import.meta.env.VITE_FOLIOLE_ACCEPTANCE_TRANSFER_404 === '1';
-const PACK_PATH = '/companion/sync-pack?after_state_seq=0';
 
 async function discoverMac() {
   const native = await FolioleCompanionSync.loadDiscoveryCandidates();
@@ -77,7 +72,7 @@ async function verifyRead() {
   const article = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, NODE_ID);
   const resource = await resolveRuntimeAttachmentResource(`asset://${IMAGE_HASH}.png`, { refresh: true });
   if (article?.bodyStatus !== 'ready' || !article.content.includes('Resource LAN body remains readable.') ||
-      !article.content.includes(`asset://${IMAGE_HASH}.png`) || resource?.status !== 'ready') {
+      !article.content.includes(`asset://${IMAGE_HASH}.png`) || resource?.status !== 'ready' || !resource.resource_url) {
     throw new Error('acceptance_article_or_attachment_unreadable');
   }
   return { article_body_status: article.bodyStatus, attachment_status: resource.status,
@@ -103,40 +98,25 @@ export async function runIosResourceProviderFailoverAcceptance() {
     await saveCompanionWorkspaceSyncEndpoint(discovered.endpointUrl);
     await exchangeCompanionSyncGroupMemberState({ deviceId: MAC_ID, endpointUrl: discovered.endpointUrl,
       groupId: GROUP_ID });
-    await applyCompanionDesktopSyncPack({
-      headers: await createSignedRequestHeaders({ endpointUrl: discovered.endpointUrl,
-        method: 'GET', pathWithQuery: PACK_PATH }),
-      sourceHostName: discovered.discovery.provider_device_name, sourcePeerId: MAC_ID,
-      url: `${discovered.endpointUrl}${PACK_PATH}`
-    });
-    await pullMissingContentBlobs(discovered.endpointUrl);
     const providers = await loadBothProviders(discovered.endpointUrl);
     const claims = await Promise.all(providers.filter((provider) =>
-      !TRANSFER_404 || provider.deviceId === A5_ID).map(async (provider) => {
+      provider.deviceId === MAC_ID || provider.deviceId === A5_ID).map(async (provider) => {
       await exchangeCompanionSyncGroupMemberState(provider);
       const reply = await postDesktopJson<ResourceAvailabilityReply>(provider.endpointUrl,
-        RESOURCE_AVAILABILITY_PATH, { resources: [{ kind: 'attachment', id: IMAGE_HASH }] });
+        RESOURCE_AVAILABILITY_PATH, { resources: [{ kind: 'attachment', id: IMAGE_HASH, storage_key: `${IMAGE_HASH}.png` }] });
       return { device_id: provider.deviceId, endpoint: provider.endpointUrl,
         claim: reply.resources[0]?.status, reply_device_id: reply.provider_device_id };
     }));
     if (claims.some((claim) => claim.device_id !== claim.reply_device_id) ||
-        (!TRANSFER_404 && claims.find((claim) => claim.device_id === MAC_ID)?.claim !== 'missing') ||
+        claims.find((claim) => claim.device_id === MAC_ID)?.claim !== 'missing' ||
         claims.find((claim) => claim.device_id === A5_ID)?.claim !== 'available') {
       throw new Error(`acceptance_provider_claims_invalid_${JSON.stringify(claims)}`);
     }
-    const transferAttempts: { deviceId: string; endpointUrl: string;
-      errors: Record<string, string>; ready: string[] }[] = [];
-    const transfer = await syncCompanionAttachmentResourceFromDesktop(discovered.endpointUrl,
-      IMAGE_HASH, (attempt) => transferAttempts.push(attempt));
-    if (transfer.status !== 'cached') throw new Error(`acceptance_transfer_${transfer.status}`);
-    if (TRANSFER_404 && (transferAttempts[0]?.deviceId !== MAC_ID ||
-        transferAttempts[0]?.errors[`attachment:${IMAGE_HASH}`] !== 'missing_file' ||
-        transferAttempts[1]?.deviceId !== A5_ID ||
-        !transferAttempts[1]?.ready.includes(`attachment:${IMAGE_HASH}`))) {
-      throw new Error(`acceptance_transfer_order_invalid_${JSON.stringify(transferAttempts)}`);
+    for (const provider of providers.filter((item) => item.deviceId === MAC_ID || item.deviceId === A5_ID)) {
+      await syncIosAcceptanceRequest(provider.endpointUrl, { sourcePeerId: provider.deviceId });
     }
     postResult({ claims, error: null, evidence: await verifyRead(), phase: 'provider-selected',
-      scenario: SCENARIO, status: 'passed', transfer, transfer_attempts: transferAttempts });
+      scenario: SCENARIO, status: 'passed' });
   } catch (error) {
     postResult({ error: error instanceof Error ? error.message : String(error),
       phase: 'failed', scenario: SCENARIO, status: 'failed' });

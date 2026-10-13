@@ -197,7 +197,8 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
         'electron/**/*.test.ts',
         'lib/**/*.test.ts',
         'lib/**/*.test.tsx',
-        'scripts/**/*.test.mjs'
+        'scripts/**/*.test.mjs',
+        ...(process.env.FOLIOLE_SIM_OUTPUT ? ['scripts/sync/simulator/simulator.runner.mjs'] : [])
       ],
       exclude: ['tests/**', 'node_modules/**', 'dist/**', ...resolvePlatformTestExcludes()],
       setupFiles: './src/test/setup.ts',

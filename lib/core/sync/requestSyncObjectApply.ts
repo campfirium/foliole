@@ -1,5 +1,6 @@
 import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
 
+import { reconcileCurrentNodeBody } from './currentNodeBodyProjection.js';
 import type { DbPort } from './dbPort.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
 import { applyFramedFactSources, type FramedFactSource } from './framedSyncFactApply.js';
@@ -65,6 +66,9 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     const result = await applyFramedFactSources(tx, [source], { loadBody: input.loadBody,
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
+    if (input.objectType === 'node') {
+      await reconcileCurrentNodeBody(tx, input.globalId, input.enqueueSearchInvalidations ?? true);
+    }
     await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
     await recordFramedSyncPeerEpoch(tx, { groupId: input.context.groupId, libraryEpoch: input.context.senderLibraryEpoch,
       peerDeviceId: input.context.senderDeviceId, transferId: input.requestId });

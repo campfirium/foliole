@@ -3,15 +3,15 @@ import type { AddressInfo } from 'node:net';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { createLanWorkspaceSyncRequestHandler } from '../../../electron/sync/companionLanRequestHandler.js';
-import { createDesktopSyncGroupSignedHeaders, postDesktopWorkgroupJson } from '../../../electron/sync/desktopSyncGroupHttp.js';
-import { downloadAndApplyDesktopSyncGroupPack } from '../../../electron/sync/desktopSyncGroupPackApply.js';
-import { drainDesktopSyncGroupResourceArticles } from '../../../electron/sync/desktopSyncGroupResourceArticleDrain.js';
-import { flushDesktopSyncGroupVersionReceipts } from '../../../electron/sync/desktopSyncGroupVersionReceipts.js';
-import { loadSyncPackReceiveProgress } from '../../../lib/core/sync/syncPackReceiveProgress.js';
+import { postDesktopWorkgroupJson } from '../../../electron/sync/desktopSyncGroupHttp.js';
+import { continueDesktopSyncGroupSync } from '../../../electron/sync/desktopSyncGroupTransport.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../lib/core/sync/framedSyncContract.js';
+import { exchangeCompanionSyncGroupMemberState } from '../../../src/shared/platform/companion/network/companionSyncGroupMemberState.js';
 import { createCompanionSyncbackDbStore } from '../../../src/shared/platform/companion/sync/syncback/companionSyncbackDbStore.js';
-import { pushLocalDirtyObjects, toPushAck } from '../../../src/shared/platform/companionDesktopSyncPush.js';
-import { applyCompanionDesktopSyncPack } from '../../../src/shared/platform/companionSyncPackApply.js';
+import { syncCompanionObjectsFromDesktop } from '../../../src/shared/platform/companionDesktopSyncObjects.js';
+import { toPushAck } from '../../../src/shared/platform/companionDesktopSyncPush.js';
 import { nodeVersionSyncAdapter } from '../../../src/shared/platform/companionSyncPushProtocol.js';
+
 
 import { assertCompleted } from './assertions.js';
 import { operations } from './operations.js';
@@ -63,54 +63,27 @@ export function route(endpoint: Endpoint, target: SimulatorPeer) {
 }
 export async function pull(endpoint: Endpoint, target: SimulatorPeer, receipt = true,
   missingKeys: ReadonlySet<string> = new Set()) {
+  if (!receipt) throw new Error('simulator_legacy_receipt_scenario_requires_migration');
   return inPeer(target, async () => {
-    const peer = route(endpoint, target);
-    const port = createBetterSqliteDbPort(target.sqlite);
-    const { progress } = await loadSyncPackReceiveProgress(port, endpoint.peer.id);
-    let cursor = progress?.cursorStateSeq ?? 0;
-    let frontier = progress && !progress.completed ? progress.frontierStateSeq : undefined;
-    let epoch = progress && !progress.completed ? progress.sourceEpoch : undefined;
-    for (let page = 0; page < 100000; page++) {
-      const mobile = process.env.FOLIOLE_SIM_PATH === 'companion' && target.name === 'b';
-      const received = mobile ? await applyCompanionDesktopSyncPack({ headers: {},
-        sourcePeerId: endpoint.peer.id, sourceHostName: endpoint.peer.name,
-        url: `${endpoint.origin}/companion/sync-pack?page_contract=bounded-v1&after_state_seq=${cursor}` +
-          (frontier === undefined ? '' : `&frontier_state_seq=${frontier}`) +
-          (epoch === undefined ? '' : `&source_epoch=${epoch}`) }) : null;
-      const result = received ? { cursor: received.to_state_seq, frontierStateSeq: received.frontier_state_seq,
-        sourceEpoch: received.source_epoch, roundRebased: received.round_rebased } : await downloadAndApplyDesktopSyncGroupPack({ after: cursor, peer,
-        ...(frontier === undefined ? {} : { frontierStateSeq: frontier }),
-        ...(epoch === undefined ? {} : { sourceEpoch: epoch }),
-        createHeaders: createDesktopSyncGroupSignedHeaders });
-      if (result.roundRebased) {
-        if (epoch && result.sourceEpoch !== epoch) throw new Error('sync_pack_source_epoch_changed');
-        frontier = result.frontierStateSeq;
+    if (process.env.FOLIOLE_SIM_PATH === 'companion' && target.name === 'b') {
+      const state = await exchangeCompanionSyncGroupMemberState({ endpointUrl: endpoint.origin,
+        deviceId: endpoint.peer.id, groupId: 'group' });
+      if (!state.normalSyncReady || !state.peerLibraryEpoch) throw new Error('simulator_peer_not_ready');
+      const result = await syncCompanionObjectsFromDesktop(endpoint.origin, { framedPeer: {
+        deviceId: endpoint.peer.id, libraryEpoch: state.peerLibraryEpoch,
+        protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION } });
+      if (result.pushError || result.pushRejectedCount || result.pushConflictCount) {
+        throw new Error(`simulator_request_failed:${JSON.stringify(result)}`);
       }
-      frontier ??= result.frontierStateSeq ?? result.cursor;
-      epoch ??= result.sourceEpoch;
-      if (result.frontierStateSeq !== undefined && result.frontierStateSeq !== frontier ||
-          result.sourceEpoch !== undefined && result.sourceEpoch !== epoch || result.cursor > frontier) {
-        throw new Error('sync_pack_round_changed');
-      }
-      if (result.cursor < cursor || (result.cursor === cursor && cursor < frontier)) {
-        throw new Error('simulator_cursor_no_progress');
-      }
-      cursor = result.cursor;
-      if (cursor === frontier) break;
+    } else {
+      const result = await continueDesktopSyncGroupSync(route(endpoint, target));
+      if (!result?.complete && !missingKeys.size) throw new Error('simulator_request_incomplete');
     }
-    if (cursor !== frontier) throw new Error('simulator_frontier_incomplete');
-    try { await drainDesktopSyncGroupResourceArticles(peer); }
-    catch (error) {
-      if (!missingKeys.size || !(error instanceof Error) || error.message !== 'sync_group_resources_incomplete') throw error;
-      const pending = target.sqlite.prepare('SELECT count(*) FROM sync_pack_resource_articles').pluck().get();
-      if (!pending) throw error;
-      await assertCompleted(target, missingKeys);
-      operations.push({ action: 'expected-resource-partial', peer: target.name, missingKeys: [...missingKeys] });
-    }
-    if (receipt) await flushDesktopSyncGroupVersionReceipts(peer);
-    return cursor;
+    await assertCompleted(target, missingKeys);
+    return 0;
   });
 }
+
 export function mobileStore(peer: SimulatorPeer) {
   const port = createBetterSqliteDbPort(peer.sqlite);
   return createCompanionSyncbackDbStore({ ...port, query: (sql, params = []) => {
@@ -126,10 +99,7 @@ export function mobileStore(peer: SimulatorPeer) {
 export async function push(endpoint: Endpoint, mobile: SimulatorPeer, save = true) {
   return inPeer(mobile, async () => {
     if (save) {
-      const result = await pushLocalDirtyObjects(endpoint.origin);
-      if (result.pushError || result.pushRejectedCount || result.pushConflictCount) {
-        throw new Error(`simulator_shared_push_failed:${JSON.stringify(result)}`);
-      }
+      await pull(endpoint, mobile);
       return [];
     }
     const store = mobileStore(mobile);

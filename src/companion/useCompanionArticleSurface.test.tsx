@@ -18,12 +18,7 @@ const syncObjectMock = vi.hoisted(() => ({
   saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'item-1' })),
   saveCompanionSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
 }));
-const desktopSyncMock = vi.hoisted(() => ({
-  syncCompanionContentBlobFromDesktop: vi.fn(async () => ({ availability: 'cached', hash: 'hash' }))
-}));
-
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
-vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
 
 afterEach(() => vi.useRealTimers());
 
@@ -83,8 +78,6 @@ async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValue({ content_hash: 'hash-reading', object_id: 'article-1' });
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
     syncObjectMock.saveCompanionSyncNodeViewState.mockClear();
-    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockClear();
-    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockResolvedValue({ availability: 'cached', hash: 'hash' });
   });
 
 describe('useCompanionArticleSurface', () => {
@@ -132,32 +125,26 @@ describe('useCompanionArticleSurface browsing', () => {
     );
   });
 
-  it('marks the selected missing body as loading while direct body sync runs', async () => {
-    desktopSyncMock.syncCompanionContentBlobFromDesktop.mockReturnValue(new Promise(() => undefined));
+  it('reads complete local content without starting an extra sync', async () => {
     const snapshot = createCompanionArticleSnapshot();
+    const body = 'Complete local body\n中文 original text';
     snapshot.nodesById['article-2'] = {
       ...snapshot.nodesById['article-2']!,
       bodyBlobHash: 'b'.repeat(64),
-      bodyStatus: 'missing',
-      content: ''
+      bodyStatus: 'ready',
+      content: body
     };
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-
-    act(() => {
-      result.current.handleSelectRecentArticle('article-2');
-    });
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(desktopSyncMock.syncCompanionContentBlobFromDesktop).toHaveBeenCalledWith(
-      'http://10.0.2.2:38641',
-      'b'.repeat(64)
-    );
-    expect(result.current.readableArticle?.bodyStatus).toBe('fetching');
+    await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
+    act(() => { result.current.handleSelectRecentArticle('article-2'); });
+    await waitFor(() => expect(result.current.readableArticle).toMatchObject({
+      nodeId: 'article-2', content: body, bodyStatus: 'ready'
+    }));
+    expect(workspaceSync.openReadableArticle).toHaveBeenCalledWith('article-2');
+    expect(workspaceSync.pullFromDesktop).not.toHaveBeenCalled();
   });
+
 });
 
 describe('useCompanionArticleSurface browse state', () => {

@@ -1,4 +1,7 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/currentNodeBodyProjection.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionRequestSyncMissingBody.integration.test.ts',
+  'electron/database/requestSyncLargeSettings.integration.test.ts',
   'electron/database/syncPackExternalDocumentTombstoneScenario.test.ts',
   'src/shared/platform/companion/sync/syncGroupRestoreMemberDependencies.sqlite.test.ts',
   'electron/database/requestSyncStateDependencies.integration.test.ts',
@@ -83,7 +86,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/syncGroupRestoreSources.integration.test.ts',
   'electron/sync/syncGroupRestoreSourceWork.integration.test.ts',
   'electron/sync/desktopFramedSyncBlobSources.integration.test.ts',
-  'electron/sync/desktopFramedSyncVerifiedReceiver.integration.test.ts',
   'lib/core/sync/syncGroupRestoreResetStable.integration.test.ts',
   'lib/core/sync/framedSyncExternalDocumentBody.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedApply.integration.test.ts',
@@ -167,7 +169,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncIndependentRound.integration.test.ts',
   'electron/sync/desktopFramedSyncLargeResource.integration.test.ts',
   'electron/sync/desktopFramedSyncLegacyTombstone.integration.test.ts',
-  'electron/sync/desktopFramedSyncPendingBudgets.integration.test.ts',
   'electron/sync/desktopFramedSyncPermanentDeletePosition.integration.test.ts',
   'electron/sync/desktopFramedSyncPrivateStateRound.integration.test.ts',
   'electron/sync/desktopFramedSyncRetiredHistory.integration.test.ts',

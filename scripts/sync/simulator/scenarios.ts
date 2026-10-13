@@ -4,6 +4,7 @@ import { createBetterSqliteDbPort } from '../../../electron/database/betterSqlit
 import { flushDesktopSyncGroupVersionReceipts } from '../../../electron/sync/desktopSyncGroupVersionReceipts.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
+import { validateTopicTextBodies } from '../../../lib/core/sync/topicTextBodies.js';
 
 import { assertBody, assertHealthy, assertCompleted, assertSharedVersionIdentities, convergenceState, graph } from './assertions.js';
 import { edit, mobileEdit, remove } from './operations.js';
@@ -30,9 +31,6 @@ export async function converge({ a, b, sa, sb, existingGaps = [], missingKeys = 
       assertHealthy(b, existingGaps);
       await assertCompleted(a, missingKeys);
       await assertCompleted(b, missingKeys);
-      for (const peer of [a, b]) {
-        expect(peer.sqlite.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts').pluck().get()).toBe(0);
-      }
       return;
     }
   }
@@ -53,19 +51,18 @@ async function branches(ctx: ScenarioContext, overlap: boolean) {
   const left = edit(a, '023\nx=0\n', 'topic', { anchorLink: { id: 'shared', kind: 'highlight' } });
   const text = overlap ? '923\nx=0\n' : '123\nx=1\n';
   const right = await mobileEdit(b, base, text);
-  const acks = await push(sa, b, false);
-  expect(acks[0]?.canonicalObjectId).toBeUndefined();
-  if (overlap) {
-    const initial = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(a.sqlite), 'topic');
-    const alternatives = a.sqlite.prepare('SELECT body_text FROM node_text_alternatives').pluck().all();
-    expect([initial!.body_text, ...alternatives]).toEqual(expect.arrayContaining(['023\nx=0\n', text]));
+  await push(sa, b);
+  for (const peer of [a, b]) {
+    const initial = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(peer.sqlite), 'topic');
+    const alternatives = validateTopicTextBodies(initial!.snapshot.text_alternatives ?? [], initial!.alternative_bodies ?? []);
+    expect([initial!.body_text, ...alternatives.map(body => body.text)])
+      .toEqual(expect.arrayContaining(['023\nx=0\n', text]));
   }
-  const tail = await mobileEdit(b, right, `${text}tail\n`);
-  const store = mobileStore(b);
-  await store.savePushAcks(a.id, acks);
-  await store.savePushAcks(a.id, acks);
-  assertBody(b, `${text}tail\n`, 'topic', tail);
-  expect((await store.loadNodeVersions(a.id, null)).map((row) => row.version_id)).toContain(tail);
+  const current = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(b.sqlite), 'topic');
+  const tailText = `${current!.body_text}tail\n`;
+  const tail = await mobileEdit(b, current!.version_id!, tailText);
+  assertBody(b, tailText, 'topic', tail);
+  expect(b.sqlite.prepare('SELECT version_id FROM node_sync_versions').pluck().all()).toContain(tail);
   await push(sa, b);
   await converge(ctx);
   const head = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(a.sqlite), 'topic');
@@ -73,10 +70,11 @@ async function branches(ctx: ScenarioContext, overlap: boolean) {
     'SELECT 1 FROM node_sync_versions WHERE version_id = ?').get(id))) {
     expect(await isStoredAncestorVersion(createBetterSqliteDbPort(a.sqlite), ancestor, head!.version_id!)).toBe(true);
   }
-  if (!overlap) assertBody(a, '023\nx=1\ntail\n');
-  else {
-    const alternatives = a.sqlite.prepare('SELECT body_text FROM node_text_alternatives').pluck().all();
-    expect([head!.body_text, ...alternatives]).toEqual(expect.arrayContaining(['023\nx=0\n', `${text}tail\n`]));
+  for (const peer of [a, b]) {
+    const final = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(peer.sqlite), 'topic');
+    const alternatives = validateTopicTextBodies(final!.snapshot.text_alternatives ?? [], final!.alternative_bodies ?? []);
+    expect([final!.body_text, ...alternatives.map(body => body.text)])
+      .toEqual(expect.arrayContaining(['023\nx=0\n', tailText]));
   }
 }
 async function kinds(ctx: ScenarioContext) {

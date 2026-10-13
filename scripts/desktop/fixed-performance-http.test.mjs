@@ -1,5 +1,6 @@
 // @vitest-environment node
 import process from 'node:process';
+import { URL } from 'node:url';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -66,7 +67,7 @@ async function round(size, sample, evidence) {
     expect(graph(b)).toEqual(before);
     expect(b.sqlite.prepare('SELECT * FROM sync_state_sequence').all()).toEqual(sequence);
     expect(evidence.unchanged.requests.filter((route) =>
-      /^\/companion\/(content-blobs|attachment-resource)(\?|$)/.test(route))).toEqual([]);
+      ['objects', 'pull', 'pulls'].includes(new URL(route, 'http://localhost').searchParams.get('request') ?? ''))).toEqual([]);
     assertHealthy(a);
     assertHealthy(b);
     evidence.correct = true;

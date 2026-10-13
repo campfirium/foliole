@@ -1,7 +1,6 @@
 import { syncCompanionIdentityObjects } from './companion/sync/syncGroupIdentityCompanionResult';
 import type { CompanionDesktopSyncOptions, CompanionDesktopSyncResult } from './companionDesktopSyncTypes';
 
-export { ATTACHMENT_RESOURCE_BATCH_LIMIT, CONTENT_BLOB_BATCH_LIMIT, syncCompanionContentBlobFromDesktop } from './companionDesktopSyncResources';
 export type { CompanionDesktopSyncOptions, CompanionDesktopSyncProgress, CompanionDesktopSyncResult } from './companionDesktopSyncTypes';
 
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();

@@ -9,7 +9,10 @@ import { migrateDesktopHostProfile } from '../../../electron/database/hostProfil
 import { createDesktopSyncGroup, registerSyncGroupDevice } from '../../../electron/database/syncGroupStore.js';
 import { markDesktopSyncGroupMemberStateReady } from '../../../electron/sync/desktopSyncGroupMemberStateReadiness.js';
 import { initializeDatabaseSchema } from '../../../lib/core/database/migrations.js';
+import { bindParentOrderWriter } from '../../../lib/core/database/parentOrderWriter.js';
+import { FramedSyncPayloadBudget } from '../../../lib/core/sync/framedSyncPayloadBudget.js';
 import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../../lib/platform/syncGroupUnifiedContract.js';
+
 
 import { inPeer, type SimulatorPeer } from './scope.js';
 
@@ -28,8 +31,9 @@ export function openPeer(root: string, name: string, seed: string): SimulatorPee
   const anchor = `${digest.slice(0,8)}-${digest.slice(8,12)}-4${digest.slice(13,16)}-8${digest.slice(17,20)}-${digest.slice(20,32)}`;
   const identity = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group',
     library_path: dbPath, path_flavor: devicePathFlavorFromCanonicalLibraryPath(dbPath) });
-  const peer = { sqlite, driver: createBetterSqlite3Driver(sqlite), dbPath, searchDbPath,
+  const peer = { sqlite, framedSyncPayloadBudget: new FramedSyncPayloadBudget(), driver: createBetterSqlite3Driver(sqlite), dbPath, searchDbPath,
     name, id: identity.identity_key, anchor, assets: path.join(folder, 'assets'), root: folder };
+  bindParentOrderWriter(peer.driver, { deviceAnchor: anchor, libraryPath: dbPath });
   if (!sqlite.prepare("SELECT 1 FROM settings WHERE key='host_name'").get()) migrateDesktopHostProfile(peer, name);
   sqlite.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   sqlite.prepare("INSERT OR REPLACE INTO companion_meta VALUES ('host_name', ?)").run(name);

@@ -20,6 +20,10 @@ const normalizePath = (value) => String(value).replaceAll('\\', '/');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
 describe('vite config', () => {
+  it('keeps the explicit sync simulator outside ordinary test discovery', () => {
+    expect(viteConfig.test?.include).not.toContain('scripts/sync/simulator/simulator.runner.mjs');
+  });
+
   it('routes the private POSIX upload credential proof to hosts with POSIX file permissions', () => {
     expect(resolvePlatformTestExcludes('win32')).toEqual(['scripts/android/macos-a5-upload-signing.test.mjs']);
     expect(resolvePlatformTestExcludes('linux')).toEqual([]);

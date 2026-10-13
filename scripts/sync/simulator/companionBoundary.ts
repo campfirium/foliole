@@ -9,7 +9,25 @@ vi.mock('../../../src/shared/platform/companionRuntimeCapabilities.js', async (o
 });
 vi.mock('../../../src/shared/platform/companionWorkspaceRuntimeRepository.js', async (original) => {
   const actual = await original<typeof import('../../../src/shared/platform/companionWorkspaceRuntimeRepository.js')>();
-  return { ...actual, getNativeCompanionSyncbackPlatform: () => 'android', isNativeCompanionNetworkRuntime: () => false };
+  const { currentPeer } = await import('./scope.js');
+  const { secret } = await import('./peers.js');
+  const { createDesktopSyncGroupSignedHeaders } = await import('../../../electron/sync/desktopSyncGroupSignedHeaders.js');
+  const { createDesktopFramedSyncFiles } = await import('../../../electron/sync/desktopFramedSyncFiles.js');
+  const { postCompanionRequestFixture } = await import('../../../electron/sync/companionRequestSyncHttp.testSupport.js');
+  const { postDesktopWorkgroupJson } = await import('../../../electron/sync/desktopSyncGroupHttp.js');
+  return { ...actual, FolioleCompanionSync: { ...actual.FolioleCompanionSync,
+    desktopHttpRequest: async (input: { url: string; body: string }) => {
+      const url = new URL(input.url);
+      const body = await postDesktopWorkgroupJson({ endpointUrl: url.origin, pathWithQuery: url.pathname + url.search,
+        groupId: 'group', localDeviceId: currentPeer().id, secret, body: input.body });
+      return { status: 200, body: JSON.stringify(body) };
+    },
+    signCompanionSyncRequest: async (args: { method: string; path_with_query: string; body_hash: string }) => ({ headers:
+      createDesktopSyncGroupSignedHeaders({ method: args.method, pathWithQuery: args.path_with_query,
+        bodySha256: args.body_hash, groupId: 'group', localDeviceId: currentPeer().id, secret }) }),
+    postRequestSyncHttp: (input: import('../../../lib/platform/nativeRequestSyncHttpContract.js').NativeRequestSyncHttpRequest) =>
+      postCompanionRequestFixture(createDesktopFramedSyncFiles(currentPeer().root + '/request-files'), input)
+  }, getNativeCompanionSyncbackPlatform: () => 'android', isNativeCompanionNetworkRuntime: () => true };
 });
 vi.mock('../../../src/shared/platform/companionBootstrap.js', async () => {
   const { currentPeer } = await import('./scope.js');
@@ -22,7 +40,11 @@ vi.mock('../../../src/shared/platform/companion/sync/syncGroupStore.js', async (
 });
 vi.mock('../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js', async () => {
   const { companionPort } = await import('./companionPort.js');
+  const { currentPeer } = await import('./scope.js');
+  const { withRequestSyncReadonlySnapshot } = await import('../../../electron/database/requestSyncReadonlySnapshot.js');
   return { getIosCompanionDatabaseOwner: () => ({
+    databasePath: currentPeer().dbPath,
+    readSnapshot: (task: Parameters<typeof withRequestSyncReadonlySnapshot>[1]) => withRequestSyncReadonlySnapshot(currentPeer().dbPath, task),
     read: async (task: (db: ReturnType<typeof companionPort>) => unknown) => task(companionPort()),
     runWriter: async (task: (db: ReturnType<typeof companionPort>) => unknown) => task(companionPort())
   }) };
@@ -31,7 +53,8 @@ vi.mock('../../../src/shared/platform/companion/network/signedRequest.js', async
   const { currentPeer } = await import('./scope.js');
   const { createDesktopSyncGroupSignedHeaders } = await import('../../../electron/sync/desktopSyncGroupHttp.js');
   const { secret } = await import('./peers.js');
-  return { createSignedRequestHeaders: async (args: { method: string; pathWithQuery: string; bodyText?: string }) =>
+  return { prepareNativeCompanionWorkgroupRequest: async (args: { bodyText: string }) => ({ body: args.bodyText, headers: {} }),
+    createSignedRequestHeaders: async (args: { method: string; pathWithQuery: string; bodyText?: string }) =>
     createDesktopSyncGroupSignedHeaders({ ...args, groupId: 'group', localDeviceId: currentPeer().id, secret }) };
 });
 vi.mock('../../../src/shared/platform/companionDesktopSyncHttp.js', async (original) => {
@@ -55,8 +78,19 @@ vi.mock('../../../src/shared/platform/companionDesktopSyncHttp.js', async (origi
       postDesktopWorkgroupJson({ ...parameters(endpoint, route), body: JSON.stringify(body) })
   };
 });
-vi.mock('../../../src/shared/platform/companionSyncPackTransfer.js', async () => {
-  const { downloadNativeAdapter, deleteNativeAdapter } = await import('./companionTransfer.js');
-  return { downloadCompanionDesktopSyncPack: downloadNativeAdapter,
-    deleteCompanionDownloadedSyncPack: deleteNativeAdapter };
+
+vi.mock('../../../src/shared/platform/companion/runtime/companionFramedPayloadBudget.js', async () => {
+  const { currentPeer } = await import('./scope.js');
+  return { companionFramedFileOwner: () => ({ library_key: currentPeer().dbPath, generation_id: currentPeer().id }) };
 });
+vi.mock('../../../src/shared/platform/companion/sync/framed/companionFramedSyncFiles.js', async () => {
+  const { currentPeer } = await import('./scope.js');
+  const { createDesktopFramedSyncFiles } = await import('../../../electron/sync/desktopFramedSyncFiles.js');
+  return { currentCompanionFramedSyncFiles: () => createDesktopFramedSyncFiles(currentPeer().root + '/request-files') };
+});
+vi.mock('../../../src/shared/platform/companion/sync/framed/companionAttachmentBlockFiles.js', async () => {
+  const { createDesktopRequestSyncAttachmentHost } = await import('../../../electron/sync/desktopRequestSyncAttachmentHost.js');
+  return { currentCompanionAttachmentHost: createDesktopRequestSyncAttachmentHost };
+});
+vi.mock('../../../src/shared/platform/appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
+  subscribeNativeAppBackground: async () => () => undefined }));

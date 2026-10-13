@@ -60,6 +60,6 @@ export async function unchangedReplay(ctx: ScenarioContext) {
     await pull(ctx.sb, ctx.a);
     expect([businessState(ctx.a), businessState(ctx.b)]).toEqual(before);
     expect(ctx.sa.requests.slice(start).filter((url) =>
-      /^\/companion\/(content-blobs|attachment-resource)(\?|$)/.test(url))).toEqual([]);
+      ['objects', 'pull', 'pulls'].includes(new URL(url, 'http://localhost').searchParams.get('request') ?? ''))).toEqual([]);
   }
 }

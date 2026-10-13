@@ -9,7 +9,6 @@ import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { expireAvailableResourceForAcceptance } from './acceptanceResourceGet404.js';
 import { hashResourceFile } from './resourceFileHash.js';
 
 export { hashResourceFile };
@@ -30,9 +29,6 @@ async function inspectResource(need: ResourceNeed): Promise<ResourceClaim> {
     const resource = resolveAttachmentFileForSync(need.storage_key);
     if (resource.status !== 'ready') return { ...need, status: 'missing' };
     const sha256 = await hashResourceFile(resource.filePath);
-    if (sha256 === need.id) {
-      await expireAvailableResourceForAcceptance(resource.filePath, sha256, resource.sizeBytes);
-    }
     return sha256 === need.id
       ? { ...need, status: 'available', sha256, size_bytes: resource.sizeBytes }
       : { ...need, status: 'checksum_mismatch' };

@@ -2,7 +2,6 @@ import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmen
 import { ATTACHMENT_RANGE_BYTES } from '../../lib/platform/resourceAvailabilityContract.js';
 import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 
-import { recordMissingResourceGetForAcceptance } from './acceptanceResourceGet404.js';
 
 export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
 export { ATTACHMENT_RANGE_BYTES };
@@ -51,7 +50,6 @@ export async function loadCompanionAttachmentResource(
     return errorResult('not_found', 404);
   }
   if (resolved.status === 'missing_file') {
-    await recordMissingResourceGetForAcceptance(normalizedAttachmentId, normalizedContentHash);
     return errorResult('missing_file', 404);
   }
 
