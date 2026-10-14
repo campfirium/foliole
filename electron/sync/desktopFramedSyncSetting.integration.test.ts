@@ -17,7 +17,7 @@ it.each([
   { platform: 'windows', formFactor: 'desktop', failProjection: true },
   { platform: 'android', formFactor: 'phone', failProjection: false }
 ])('applies the global $platform setting with projection failure=$failProjection', async ({ platform, formFactor, failProjection }) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const payload = buildCanonicalSettingSyncPayload({ form_factor: formFactor, host_name: '*',
     key: 'review_scheduler_settings', platform, scope: 'user_space', value_json: '{"dailyLimit":20}' });
   try {
@@ -37,7 +37,6 @@ it.each([
       try {
         expect(failed.prepare("SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'").get()).toBeUndefined();
         expect(failed.prepare("SELECT object_id FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:review_scheduler_settings'").all()).toEqual([]);
-        expect(failed.prepare("SELECT COUNT(*) FROM framed_sync_receipts WHERE transfer_id IN (SELECT transfer_id FROM framed_sync_inbound_transfers WHERE state = 'ready_to_apply')").pluck().get()).toBe(0);
         failed.exec('DROP TRIGGER reject_setting_projection');
       } finally { failed.close(); }
     }

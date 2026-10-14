@@ -25,18 +25,18 @@ function evidence(file: string) {
 }
 
 function reconcile(sender: DesktopFramedSyncFixtureProcess, peer: DesktopFramedSyncFixtureSnapshot) {
-  return sender.invoke('round', { input: { kind: 'reconcile', peer: { deviceId: peer.deviceId,
+  return sender.invoke('round', { input: { kind: 'request_reconcile', peer: { deviceId: peer.deviceId,
     libraryEpoch: `${peer.deviceId}-epoch` }, peerOrigin: peer.origin } });
 }
 
 it.each(schedules.map((schedule) => [schedule.join(','), schedule] as const))(
   'converges three independent processes with offline additions across exchange order %s', async (_label, schedule) => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     const third = await fixture.startThird();
     const processes = { a: fixture.left, b: fixture.right, c: third.process };
     const snapshots = { a: fixture.leftSnapshot, b: fixture.rightSnapshot, c: third.snapshot };
     try {
-      for (const process of Object.values(processes)) await process.invoke('register_order_member', { deviceId: 'desktop-c' });
+      for (const process of Object.values(processes)) await process.invoke('register_order_member', { deviceId: third.snapshot.deviceId });
       for (const nodeId of ['a', 'b']) await fixture.left.seed({ nodeId, title: nodeId, content: `Body ${nodeId}` });
       await reconcile(fixture.left, fixture.rightSnapshot);
       await reconcile(fixture.left, third.snapshot);
@@ -47,7 +47,7 @@ it.each(schedules.map((schedule) => [schedule.join(','), schedule] as const))(
       for (let pass = 0; pass < 2; pass += 1) {
         for (const pair of schedule) {
           const [sender, receiver] = pair === 'ab' ? ['a', 'b'] as const : pair === 'ac' ? ['a', 'c'] as const : ['b', 'c'] as const;
-          expect(await reconcile(processes[sender], snapshots[receiver])).toMatchObject({ complete: true, pending: 0 });
+          expect(await reconcile(processes[sender], snapshots[receiver])).toMatchObject({ complete: true });
         }
       }
       const expected = evidence(fixture.leftSnapshot.databasePath);

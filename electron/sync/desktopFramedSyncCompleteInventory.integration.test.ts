@@ -10,7 +10,7 @@ import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryE
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconciliation and restart', async (count) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
     expect(await fixture.left.invoke('seed_complete_inventory', { count }))
@@ -18,7 +18,7 @@ it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconcili
     const before = await readFixtureInventory(fixture.left);
     expect(before.filter((entry) => entry.objectType === 'node')).toHaveLength(count);
     await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot))
-      .resolves.toMatchObject({ complete: true, pending: 0 });
+      .resolves.toMatchObject({ complete: true });
     expect(compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
       remote: await readFixtureInventory(fixture.right) })).toEqual([]);
     const source = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);

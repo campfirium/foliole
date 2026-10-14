@@ -31,13 +31,13 @@ function assertNoTransportRows(databasePath: string) {
       'framed_sync_inbound_frames', 'framed_sync_inbound_facts', 'framed_sync_receipts',
       'framed_sync_session_send_states', 'framed_sync_blob_pins', 'framed_sync_available_blobs',
       'framed_sync_resource_demands', 'framed_sync_completion_windows', 'framed_sync_resource_pins']) {
-      expect(db.prepare(`SELECT count(*) FROM ${table}`).pluck().get(), table).toBe(0);
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table), table).toBeUndefined();
     }
   } finally { db.close(); }
 }
 
 it('converges independent processes through inventory, HTTP, resource transfer and reopening without transport rows', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   expect(fixture.leftSnapshot.pid).not.toBe(fixture.rightSnapshot.pid);
@@ -61,16 +61,17 @@ it('converges independent processes through inventory, HTTP, resource transfer a
 }, 120_000);
 
 it('delivers the same requested content again after file retirement and process restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   await fixture.left.seed({ content: 'Body requested again after acknowledgement',
-    nodeId: 'repeat-file-delivery', title: 'Repeated delivery' });
-  await fixture.left.synchronize(fixture.rightSnapshot.origin, 'repeat-file-delivery');
+    nodeId: 't326-repeat-file-delivery', title: 'Repeated delivery' });
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-repeat-file-delivery');
   const before = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(before.nodes).toEqual([expect.objectContaining({ content: 'Body requested again after acknowledgement' })]);
   const restarted = await fixture.restartLeft();
   processes.push(restarted.process);
-  await restarted.process.synchronize(fixture.rightSnapshot.origin, 'repeat-file-delivery');
+  await restarted.process.synchronize(fixture.rightSnapshot.origin, 't326-repeat-file-delivery');
   const after = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(after.nodes).toEqual(before.nodes);
   expect(after.versions).toEqual(before.versions);

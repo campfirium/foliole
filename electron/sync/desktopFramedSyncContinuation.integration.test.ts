@@ -9,7 +9,7 @@ import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryE
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it('returns pending for an unchanged unavailable body while committing neighbors, then resumes after restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let restarted: Awaited<ReturnType<typeof fixture.restartRight>> | undefined;
   try {
     await fixture.left.seed({ content: 'Initial body', nodeId: 't326-aaa', title: 'Unavailable' });
@@ -19,13 +19,13 @@ it('returns pending for an unchanged unavailable body while committing neighbors
     await fixture.left.seed({ content: 'Independent body', nodeId: 't326-ccc', title: 'Independent' });
     const source = new Database(fixture.leftSnapshot.databasePath);
     try {
-      source.prepare("UPDATE node_sync_versions SET body_text = NULL WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 't326-aaa')").run();
+      source.prepare("UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 't326-aaa')").run();
     } finally { source.close(); }
 
     expect((await readFixtureInventory(fixture.left)).find(entry => entry.globalId === 't326-aaa'))
       .toMatchObject({ resourceHashes: [] });
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot))
-      .toMatchObject({ complete: false, databaseComplete: false, pending: expect.any(Number) });
+      .toMatchObject({ complete: false });
     expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
       .toEqual([expect.objectContaining({ id: 't326-aaa', content: 'Initial body' }),
         expect.objectContaining({ id: 't326-ccc', content: 'Independent body' })]);
@@ -40,7 +40,7 @@ it('returns pending for an unchanged unavailable body while committing neighbors
         .run('Temporarily unavailable body');
     } finally { recovered.close(); }
 
-    expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true, pending: 0 });
+    expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true });
     expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual([
       expect.objectContaining({ id: 't326-aaa', content: 'Temporarily unavailable body' }),
       expect.objectContaining({ id: 't326-ccc', content: 'Independent body' })
@@ -52,8 +52,8 @@ it('returns pending for an unchanged unavailable body while committing neighbors
   }
 }, 15_000);
 
-it('delivers complete current text and retired oversized ancestry to a new member over HTTP', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('delivers complete current text and already retired ancestry to a new member over HTTP', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let restarted: Awaited<ReturnType<typeof fixture.restartRight>> | undefined;
   try {
     const nodeId = 'oversize-history';
@@ -63,12 +63,12 @@ it('delivers complete current text and retired oversized ancestry to a new membe
     source.close();
     await fixture.left.seed({ content: 'Complete current text 中文😀', nodeId, title: 'History' });
     const legacy = new Database(fixture.leftSnapshot.databasePath);
-    legacy.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?')
-      .run('雪'.repeat(350000), base);
+    legacy.prepare("UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true')) WHERE version_id = ?")
+      .run(base);
     const identities = legacy.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId);
     legacy.close();
 
-    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true, pending: 0 });
+    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     restarted = await fixture.restartRight();
     for (const snapshot of [fixture.leftSnapshot, restarted.snapshot]) {
       const db = new Database(snapshot.databasePath, { readonly: true });
@@ -78,7 +78,7 @@ it('delivers complete current text and retired oversized ancestry to a new membe
         expect(db.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId)).toEqual(identities);
       } finally { db.close(); }
     }
-    expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true, pending: 0 });
+    expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true });
   } finally {
     await Promise.allSettled([fixture.left.close(), restarted?.process.close() ?? fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });

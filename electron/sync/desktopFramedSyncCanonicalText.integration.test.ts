@@ -21,7 +21,7 @@ const source = { source_fingerprint: 'large-source', provider: 'desktop_text_fil
   remote_annotations_json: '[]', remote_import_state_json: importedState };
 
 it('transfers a canonical import payload above 64 KiB intact over production HTTP and across restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const db = new Database(fixture.leftSnapshot.databasePath);
     try {

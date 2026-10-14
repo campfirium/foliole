@@ -20,20 +20,18 @@ function evidence(file: string) {
       writer: db.prepare('SELECT author_id FROM parent_order_writer').pluck().get(),
       sources: db.prepare('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id').all(),
       order: JSON.parse(db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
-        .pluck().get('parent-child-order:root') as string) as string[],
-      pending: db.prepare('SELECT manifest_json FROM framed_sync_outbound_publications WHERE state = ?')
-        .pluck().all('published')
+        .pluck().get('parent-child-order:root') as string) as string[]
     };
   } finally { db.close(); }
 }
 
 function roundArgs(peer: DesktopFramedSyncFixtureSnapshot) {
-  return { input: { kind: 'reconcile', peer: { deviceId: peer.deviceId,
+  return { input: { kind: 'request_reconcile', peer: { deviceId: peer.deviceId,
     libraryEpoch: `${peer.deviceId}-epoch` }, peerOrigin: peer.origin } };
 }
 
 it.each(['left', 'right'] as const)('keeps the %s writer through offline group leave and rejoin', async (side) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b', 'c']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
     await fixture.left.invoke('round', roundArgs(fixture.rightSnapshot));
@@ -56,8 +54,8 @@ it.each(['left', 'right'] as const)('keeps the %s writer through offline group l
   }
 }, 60_000);
 
-it('retains a published current snapshot across edits, collection and restart until real delivery', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('delivers the latest saved order after offline edits, collection and restart', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b', 'c']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
     await fixture.left.invoke('round', roundArgs(fixture.rightSnapshot));
@@ -65,16 +63,15 @@ it('retains a published current snapshot across edits, collection and restart un
     const [difference] = compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
       remote: await readFixtureInventory(fixture.right) }).filter(value => value.objectType === 'parent_child_order');
     expect(difference).toBeDefined();
-    await fixture.left.invoke('round', { input: { ...roundArgs(fixture.rightSnapshot).input, kind: 'select', difference } });
-    const frozen = evidence(fixture.leftSnapshot.databasePath).pending;
-    expect(frozen.length).toBeGreaterThan(0);
     await fixture.left.invoke('reorder', { nodeIds: ['c', 'b', 'a'] });
     await fixture.left.invoke('collect_content');
+    const saved = evidence(fixture.leftSnapshot.databasePath);
     const restarted = await fixture.restartLeft();
-    expect(evidence(restarted.snapshot.databasePath).pending).toEqual(frozen);
+    expect(evidence(restarted.snapshot.databasePath)).toEqual(saved);
     await restarted.process.invoke('round', roundArgs(fixture.rightSnapshot));
     const final = evidence(restarted.snapshot.databasePath);
-    expect(final.pending).toEqual([]);
+    expect(final.order.filter(id => ['a', 'b', 'c'].includes(id))).toEqual(['c', 'b', 'a']);
+    expect(evidence(fixture.rightSnapshot.databasePath).sources).toEqual(final.sources);
     expect(evidence(fixture.rightSnapshot.databasePath).order).toEqual(final.order);
     await restarted.process.invoke('round', roundArgs(fixture.rightSnapshot));
     expect(evidence(restarted.snapshot.databasePath).sources).toEqual(final.sources);
@@ -85,7 +82,7 @@ it('retains a published current snapshot across edits, collection and restart un
 }, 60_000);
 
 it('propagates a changed source set even when both rendered arrays already match', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
     await fixture.left.invoke('round', roundArgs(fixture.rightSnapshot));
@@ -114,7 +111,7 @@ it('propagates a changed source set even when both rendered arrays already match
 }, 60_000);
 
 it('reprojects a renamed unconstrained addition on both peers and after restart without new order sources', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
     await fixture.left.invoke('round', roundArgs(fixture.rightSnapshot));

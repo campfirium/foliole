@@ -14,14 +14,12 @@ function persisted(databasePath: string) {
   try {
     return { nodes: db.prepare(`SELECT n.id, n.content, v.body_text FROM nodes n
       JOIN node_sync_versions v ON v.version_id = n.current_version_id
-      WHERE n.id LIKE 'duplex-%' ORDER BY n.id`).all(),
-    holds: db.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get(),
-    pending: db.prepare("SELECT count(*) FROM framed_sync_outbound_publications WHERE state = 'published'").pluck().get() };
+      WHERE n.id LIKE 'duplex-%' ORDER BY n.id`).all() };
   } finally { db.close(); }
 }
 
 it.each([0, 1, 2])('delivers complete maximum-sized articles concurrently in both directions and survives reopening (%i)', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   const bodies = ['a', 'b', 'c', 'd'].map((letter) => letter.repeat(1024 * 1024));
   try {
@@ -35,9 +33,9 @@ it.each([0, 1, 2])('delivers complete maximum-sized articles concurrently in bot
     ]);
     const results = attempts.map((result) => result.status === 'fulfilled' ? result.value : String(result.reason));
     await fs.writeFile(`${fixture.root}/duplex-results.json`, JSON.stringify(results, null, 2));
-    expect(results).toEqual([expect.objectContaining({ complete: true }), expect.objectContaining({ complete: true })]);
-    const expected = { nodes: bodies.map((content, index) => ({ id: `duplex-${index}`, content, body_text: content })),
-      holds: 0, pending: 0 };
+    expect(attempts.every(result => result.status === 'fulfilled')).toBe(true);
+    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
+    const expected = { nodes: bodies.map((content, index) => ({ id: `duplex-${index}`, content, body_text: content })) };
     expect(persisted(fixture.leftSnapshot.databasePath)).toEqual(expected);
     expect(persisted(fixture.rightSnapshot.databasePath)).toEqual(expected);
     expect(compareFramedSyncDatabaseInventories({ local: await readFixtureInventory(fixture.left),

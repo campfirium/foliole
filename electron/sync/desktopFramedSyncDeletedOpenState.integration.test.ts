@@ -14,10 +14,10 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it.each([false, true])('keeps ordinary HTTP synchronization working after an opened topic is deleted, historical residue=%s', async (historicalResidue) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const nodeId = 'deleted-open-topic';
-  const leftRound = { input: { kind: 'reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
-    libraryEpoch: 'desktop-b-epoch' }, peerOrigin: fixture.rightSnapshot.origin } };
+  const leftRound = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
+    libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
   try {
     await fixture.left.seed({ content: 'Protected complete original body', nodeId, title: 'Opened topic' });
     await fixture.left.invoke('round', leftRound);
@@ -25,8 +25,8 @@ it.each([false, true])('keeps ordinary HTTP synchronization working after an ope
     await fixture.left.invoke('round', leftRound);
     await expectDeletedState(fixture.rightSnapshot.databasePath, nodeId, historicalResidue, previousOpenState);
     await fixture.right.seed({ content: 'New saved body after deletion. 中文 😀.', nodeId: 'next-topic', title: 'Next topic' });
-    const rightRound = { input: { kind: 'reconcile', peer: { deviceId: fixture.leftSnapshot.deviceId,
-      libraryEpoch: 'desktop-a-epoch' }, peerOrigin: fixture.leftSnapshot.origin } };
+    const rightRound = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.leftSnapshot.deviceId,
+      libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch` }, peerOrigin: fixture.leftSnapshot.origin } };
     await fixture.right.invoke('round', rightRound);
     await expect(fixture.right.invoke('round', rightRound)).resolves.toMatchObject({ complete: true });
     await fixture.restartLeft();

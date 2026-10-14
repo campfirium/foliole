@@ -1,19 +1,27 @@
 import Database from 'better-sqlite3';
 
-import { decodeFramedSyncManifest, encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
-/** Converts this test's frozen production publications into one pre-upgrade mixed publication. */
+/** Seeds a historical mixed publication from exact current business facts in this temporary library. */
 export async function freezeLegacyOrderPublication(file: string) {
   const db = new Database(file);
   try {
-    const rows = db.prepare<[], { manifest_json: string }>(
-      "SELECT manifest_json FROM framed_sync_outbound_publications WHERE state = 'published'").all();
-    const manifests = rows.map(row => decodeFramedSyncManifest(row.manifest_json));
-    const manifest: CanonicalManifest = { facts: manifests.flatMap(value => value.facts),
-      blobs: [...new Map(manifests.flatMap(value => value.blobs)
-        .map(blob => [Buffer.from(blob.sha256).toString('hex'), blob])).values()] };
+    const port = createBetterSqliteDbPort(db);
+    const node = await loadCurrentSyncNodeRecord(port, 'original');
+    const key = { objectType: 'parent_child_order' as const, globalId: 'parent-child-order:root' };
+    const order = await readFramedSyncInventoryEntry(port, key);
+    if (!node || !order?.stateFactIds?.[0]) throw new Error('mixed_fixture_required');
+    const projected = projectFramedSyncNodeRecord(node).manifest;
+    const manifest: CanonicalManifest = { blobs: projected.blobs,
+      facts: [...projected.facts, await selectFramedSyncObjectStateFact(port, key, order.stateFactIds[0])] };
+    for (const sql of FRAMED_SYNC_STAGING_SCHEMA) db.exec(sql);
     if (!manifest.facts.some(fact => fact.objectType === 'node') ||
         !manifest.facts.some(fact => fact.objectType === 'parent_child_order')) throw new Error('mixed_fixture_required');
     const contentId = await canonicalContentId(manifest);

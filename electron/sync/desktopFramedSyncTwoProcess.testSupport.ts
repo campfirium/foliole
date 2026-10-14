@@ -161,7 +161,6 @@ function startFixtureProcess(input: FixtureProcessInput) {
     seedResource: (args: Readonly<{ bytes: Uint8Array; includeImageInBody?: boolean; nodeId: string }>) => seedResource(send, args),
     seedRelationReview: async (role: 'receiver' | 'receiver_conflict' | 'sender') =>
       parseSnapshot(await send('seed_relation_review', { role })),
-    seedBatch: (itemCount: number) => send('seedBatch', { itemCount }),
     snapshot: async () => parseSnapshot(await send('snapshot')),
     synchronize: (peerOrigin: string, nodeId?: string) => send('sync', { nodeId, peerOrigin }),
     synchronizeBatch: (peerOrigin: string, nodeIds: readonly string[]) =>

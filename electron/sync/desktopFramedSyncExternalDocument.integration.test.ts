@@ -11,9 +11,10 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
+import { requestProcessFaultProxy } from './requestSyncProcessRecovery.testSupport.js';
 
 it.each([false, true])('fills missing external document bytes with original identity and hash, receiver restart=%s', async (recovery) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const body = 'External original article with nonempty bytes';
   const hash = hashTextBody(body);
   const payload = { body_blob_hash: hash, content_hash: hash, document_id: 'external-original',
@@ -40,12 +41,14 @@ it.each([false, true])('fills missing external document bytes with original iden
     expect(missing.resourceHashes).toEqual([]);
     let receiver = fixture.rightSnapshot;
     if (recovery) {
-      await fixture.right.invoke('round', { input: { kind: 'pause_before_apply' } });
-      await expect(reconnectFixturePeer(fixture.left, receiver)).rejects.toThrow('fixture_paused_before_apply');
+      const proxy = await requestProcessFaultProxy(receiver.origin, 'corrupt_body');
+      try {
+        await expect(fixture.left.synchronize(proxy.origin)).rejects.toThrow();
+        expect(proxy.injected()).toBeGreaterThan(0);
+      } finally { await proxy.close(); }
       const pending = new Database(receiver.databasePath, { readonly: true });
       try {
-        expect(pending.prepare("SELECT COUNT(*) FROM framed_sync_inbound_transfers WHERE state = 'ready_to_apply'").pluck().get()).toBe(1);
-        expect(pending.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
+        expect(pending.prepare("SELECT name FROM sqlite_master WHERE name IN ('framed_sync_inbound_transfers', 'framed_sync_receipts')").all()).toEqual([]);
         expect(pending.prepare('SELECT COUNT(*) FROM content_blob_data WHERE hash = ?').pluck().get(hash)).toBe(0);
       } finally { pending.close(); }
       receiver = (await fixture.restartRight()).snapshot;

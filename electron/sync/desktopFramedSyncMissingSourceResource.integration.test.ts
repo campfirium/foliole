@@ -13,7 +13,7 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 
 it('commits a new article with a missing source attachment and fills it later without editing',
   async () => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     const bytes = Buffer.concat([
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(128, 1)
     ]);

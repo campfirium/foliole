@@ -9,7 +9,7 @@ import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncP
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it('discovers and fills a missing file when the Node identity, hash and resource reference are already equal', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const bytes = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(128, 1)]);
   const nodeId = 'same-reference-missing-image';
   try {

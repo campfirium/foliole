@@ -42,7 +42,7 @@ function readPrivate(file: string, id: string, key: string) {
 
 it.each([{ scope: 'host', key: 'discourse_publish_settings' }, { scope: 'session_resume', key: 'window_state' }])(
   'keeps each peer original $scope setting through shared rounds, restarts and a local tombstone', async ({ scope, key }) => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     try {
       const leftId = await writePrivate(fixture.leftSnapshot.databasePath, '{"local":"left"}', scope, key);
       const rightId = await writePrivate(fixture.rightSnapshot.databasePath, '{"local":"right"}', scope, key);

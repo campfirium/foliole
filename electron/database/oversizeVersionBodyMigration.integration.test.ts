@@ -2,11 +2,15 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
+import { retireOversizeNodeVersionBodies } from '../../lib/core/database/oversizeVersionBodyMigration.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { canonicalContentId, type CanonicalBlob, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
-import { streamRetainedNodeVersions } from '../../lib/core/sync/syncNodeVersionSelection.js';
 
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
@@ -17,6 +21,8 @@ afterEach(() => devices.splice(0).forEach((device) => device.sqlite.close()));
 async function fixture(held: boolean) {
   const host = textDevice();
   devices.push(host);
+  for (const statement of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(statement);
   const base = textBranch('base', 'Old text');
   const small = textBranch('small', 'Small historical text', base);
   await host.receive([base, small, textBranch('head', 'Current text', small)]);
@@ -118,7 +124,10 @@ it('publishes previously protected oversize history as identity after the curren
   const facts: CanonicalFact[] = [];
   const blobs: CanonicalBlob[] = [];
   await host.db.transaction(async (tx) => {
-    for await (const record of streamRetainedNodeVersions(tx, ['head', 'small', 'base'], 'topic')) {
+    await retireOversizeNodeVersionBodies(tx, 'topic');
+    for (const versionId of ['base', 'small', 'head']) {
+      const record = await loadRetainedSyncNodeVersionFact(tx, versionId, false);
+      if (!record) throw new Error('fixture_version_missing');
       const projection = isNodeVersionIdentityOnly(record)
         ? { facts: [projectFramedSyncNodeIdentityFact(record)], blobs: [] }
         : projectFramedSyncNodeRecord(record).manifest;
@@ -136,9 +145,10 @@ it('keeps editor basis identity while selecting retired oversize history for a n
   const host = await fixture(true);
   addNewMember(host);
   await host.db.transaction(async (tx) => {
-    for await (const record of streamRetainedNodeVersions(tx, ['base'], 'topic')) {
-      expect(isNodeVersionIdentityOnly(record)).toBe(true);
-    }
+    await retireOversizeNodeVersionBodies(tx, 'topic');
+    const record = await loadRetainedSyncNodeVersionFact(tx, 'base', false);
+    if (!record) throw new Error('fixture_version_missing');
+    expect(isNodeVersionIdentityOnly(record)).toBe(true);
   });
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
     .toEqual({ bytes: null });

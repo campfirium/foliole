@@ -47,7 +47,7 @@ const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload:
 ];
 
 it.each(cases)('discovers and persists the original $type payload through a normal round', async (sample) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original body', nodeId: 'topic', title: 'Original' });
     const source = new Database(fixture.leftSnapshot.databasePath);
@@ -80,7 +80,7 @@ it.each(cases)('discovers and persists the original $type payload through a norm
 }, 60_000);
 
 it('keeps a retired dirty review out of inventory and transfers unrelated live state', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Live body', nodeId: 'topic', title: 'Live' });
     await fixture.left.seed({ content: 'Deleted body', nodeId: 'retired-topic', title: 'Retired' });

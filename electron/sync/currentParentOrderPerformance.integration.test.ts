@@ -30,20 +30,20 @@ it('measures saved parent edits through the authenticated production round in tw
   if (!process.env.FOLIOLE_ORDER_PERFORMANCE_SCRIPT) await buildDesktopFramedSyncFixture(script);
   const reports: unknown[] = [];
   for (const kind of ['topics', 'items']) {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture(script);
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(script, true, true);
     await fs.writeFile(path.join(output, `${kind}-fixture.json`), JSON.stringify({
       root: fixture.root, left: fixture.leftSnapshot.databasePath, right: fixture.rightSnapshot.databasePath,
       pids: [fixture.leftSnapshot.pid, fixture.rightSnapshot.pid]
     }, null, 2));
     const proxy = await createDesktopFramedSyncFaultProxy({ fault: 'observe', targetOrigin: fixture.rightSnapshot.origin });
-    const input = { kind: 'reconcile', peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' },
+    const input = { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: proxy.origin };
     try {
       expect(fixture.leftSnapshot.pid).not.toBe(fixture.rightSnapshot.pid);
       console.info(`${kind}: seeding ${count} nodes`);
       await fixture.left.invoke('seed_parent_order_performance', { count, kind });
       console.info(`${kind}: initial production synchronization`);
-      expect(await fixture.left.invoke('round', { input })).toMatchObject({ complete: true, pending: 0 });
+      expect(await fixture.left.invoke('round', { input })).toMatchObject({ complete: true });
       for (let round = 0; round < rounds; round += 1) {
         for (const workload of round % 2 ? ['many', 'single'] : ['single', 'many']) {
           const edit = await fixture.left.invoke('edit_parent_order_performance', { count, kind, workload });
@@ -51,7 +51,7 @@ it('measures saved parent edits through the authenticated production round in tw
           const started = performance.now();
           const result = await fixture.left.invoke('round', { input });
           const durationMs = performance.now() - started;
-          expect(result).toMatchObject({ complete: true, pending: 0 });
+          expect(result).toMatchObject({ complete: true });
           const after = proxy.wireBytes();
           const left = storage(fixture.leftSnapshot.databasePath);
           const right = storage(fixture.rightSnapshot.databasePath);

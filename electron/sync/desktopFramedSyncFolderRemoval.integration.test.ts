@@ -25,7 +25,7 @@ const body = 'Original external document retained independently of folder config
 const bodyHash = hashTextBody(body);
 
 it('synchronizes folder deletion over production HTTP and preserves it after both peers reopen', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let target = fixture.rightSnapshot;
   try {
     await seedFolder(fixture.leftSnapshot.databasePath);

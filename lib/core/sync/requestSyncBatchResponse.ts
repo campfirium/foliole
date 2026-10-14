@@ -20,7 +20,7 @@ export async function respondRequestSyncBatch<T>(host: RequestSyncDatabaseHost,
       objectType: request.facts[0]!.objectType, globalId: request.facts[0]!.globalId,
       resolve: async (db: Parameters<typeof readFramedSyncInventoryEntry>[0]) => {
         const entry = await readFramedSyncInventoryEntry(db, request.facts[0]!);
-        if (!entry) throw new Error('request_sync_object_missing');
+        if (!entry) throw new Error('framed_sync_difference_request_source_changed');
         return resolveFramedSyncDifferenceRequest(entry, request);
       } }));
     return withRequestSyncBatchSnapshot(host, selections, input.signal, objects =>

@@ -45,7 +45,7 @@ function readPrivate(file: string) {
 }
 
 it('keeps each peer private UI state and identity across a complete business round and process restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Left original body', nodeId: 'left-topic', title: 'Left' });
     await fixture.left.seed({ content: 'Right original body', nodeId: 'right-topic', title: 'Right' });
@@ -55,9 +55,12 @@ it('keeps each peer private UI state and identity across a complete business rou
     await fixture.left.seed({ content: 'Updated shared body', nodeId: 'left-topic', title: 'Left' });
     const before = [readPrivate(fixture.leftSnapshot.databasePath), readPrivate(fixture.rightSnapshot.databasePath)];
     const first = await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-    expect(first).toEqual(expect.objectContaining({ transferred: expect.any(Number) }));
+    expect(first).toMatchObject({ complete: true });
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     expect(await readFixtureInventory(fixture.right)).toEqual(await readFixtureInventory(fixture.left));
+    const target = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
+    try { expect(target.prepare("SELECT content FROM nodes WHERE id = 'left-topic'").pluck().get()).toBe('Updated shared body'); }
+    finally { target.close(); }
     expect([readPrivate(fixture.leftSnapshot.databasePath), readPrivate(fixture.rightSnapshot.databasePath)]).toEqual(before);
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();

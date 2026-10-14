@@ -120,33 +120,6 @@ function seed(args: Readonly<Record<string, unknown>>) {
   return args.includeWorkspace === false ? { nodeId: String(args.nodeId) } : snapshot();
 }
 
-function seedBatch(args: Readonly<Record<string, unknown>>) {
-  const itemCount = Number(args.itemCount);
-  if (!Number.isSafeInteger(itemCount) || itemCount < 1) throw new Error('fixture_item_count_invalid');
-  for (let index = 0; index < itemCount; index += 1) {
-    const nodeId = benchmarkNodeId(index);
-    upsertNodeSnapshot({
-      anchorLink: null,
-      content: benchmarkBody(index),
-      createdAt: '2026-10-05T00:00:00.000Z',
-      isTitleManual: true,
-      kind: 'topic',
-      nodeId,
-      parentNodeId: null,
-      position: index,
-      reveal: null,
-      title: `Benchmark ${index}`,
-      updatedAt: '2026-10-05T00:00:00.000Z'
-    });
-  }
-  flushDirtyNodeSyncVersions();
-  return { itemCount };
-}
-
-const benchmarkNodeId = (index: number) => `t326-benchmark-${String(index).padStart(6, '0')}`;
-const benchmarkBody = (index: number) => `Benchmark article ${index}\n${
-  'Stable markdown **text** and [link](https://example.invalid).\n'.repeat(16)}`;
-
 function snapshot() {
   return {
     databasePath: openDatabaseConnection().dbPath,
@@ -190,7 +163,6 @@ async function run(command: Command) {
     return runIdentityRestoreFixtureCommand(command.action, command.args, { deviceId, stateRoot });
   }
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
-  if (command.action === 'seedBatch') return seedBatch(command.args);
   if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
   if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
   if (['reorder', 'standalone_edit', 'rejoin', 'register_order_member', 'restore_local_order'].includes(command.action)) {

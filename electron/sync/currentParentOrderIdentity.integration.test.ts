@@ -16,16 +16,16 @@ function state(file: string) {
 }
 
 it.each(['clone', 'restore'] as const)('rejoins after the first offline %s edit without reusing an author', async mode => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b', 'c']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
-    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    if (mode === 'restore') await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     const original = state(fixture.leftSnapshot.databasePath);
     if (mode === 'clone') {
       await Promise.all([fixture.left.close(), fixture.right.close()]);
       await fs.copyFile(fixture.leftSnapshot.databasePath, fixture.rightSnapshot.databasePath);
       const clone = new Database(fixture.rightSnapshot.databasePath);
-      clone.prepare("UPDATE sync_group_local_state SET local_device_identity_key = 'desktop-b'").run();
+      clone.prepare('UPDATE sync_group_local_state SET local_device_identity_key = ?').run(fixture.rightSnapshot.deviceId);
       clone.close();
       await fixture.restartLeft();
       await fixture.restartRight();

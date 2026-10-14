@@ -8,7 +8,7 @@ import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryE
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it('delivers a parent beyond the active batch before its child and preserves both directions after reopen', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
     await fixture.left.invoke('seed', { nodeId: 't326-zz-parent', title: 'Parent', content: 'Parent正文', includeWorkspace: false });
@@ -18,7 +18,7 @@ it('delivers a parent beyond the active batch before its child and preserves bot
       nodeId: `t326-middle-${String(index).padStart(3, '0')}`, title: 'Independent', content: `Body ${index}`, includeWorkspace: false
     });
     await fixture.right.invoke('seed', { nodeId: 't326-remote', title: 'Remote', content: 'Reverse正文', includeWorkspace: false });
-    await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).resolves.toMatchObject({ complete: true, pending: 0 });
+    await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).resolves.toMatchObject({ complete: true });
     const left = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
     const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
     expect(left.nodes).toHaveLength(133);

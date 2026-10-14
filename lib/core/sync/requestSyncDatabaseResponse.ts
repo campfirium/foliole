@@ -32,7 +32,7 @@ export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHos
     if (!request || !key) throw new Error('request_sync_object_identity_missing');
     const difference = await host.readSnapshot(async db => {
       const entry = await readFramedSyncInventoryEntry(db, key);
-      if (!entry) throw new Error('request_sync_object_missing');
+      if (!entry) throw new Error('framed_sync_difference_request_source_changed');
       return resolveFramedSyncDifferenceRequest(entry, request);
     }, input.signal);
     return sendRequestSyncObject(host, { ...input, difference }, consume);
