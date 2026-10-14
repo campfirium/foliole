@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
@@ -12,12 +12,15 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { pullRequestSyncAttachment } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
+import { readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
+import { isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
 import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
@@ -79,4 +82,49 @@ it.each([false, true])('pulls only the opened attachment without changing busine
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
+});
+
+
+it('recomputes needs after actual file loss and ignores deleted nodes without changing their version facts', async () => {
+  const directory = await attachmentHttpDirectory();
+  const item = attachment('Original attachment');
+  const local = await attachmentHttpSource([item.key], directory.root);
+  const before = local.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  try {
+    await writeFile(path.join(local.assetsDir, item.key), item.bytes);
+    expect(await local.host.needs()).toEqual([]);
+    await unlink(path.join(local.assetsDir, item.key));
+    expect(await local.host.needs()).toEqual([item.key]);
+    expect(local.sqlite.prepare('SELECT hash, available FROM framed_sync_resource_availability').all())
+      .toEqual([{ hash: item.key.slice(0, 64), available: 0 }]);
+    local.sqlite.prepare("UPDATE nodes SET deleted_at = '2026-10-14T00:00:00.000Z' WHERE id = 'topic'").run();
+    expect(await local.host.needs()).toEqual([]);
+    expect(local.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
+  } finally { await local.close(); await directory.remove(); }
+});
+
+it('keeps availability and original facts unchanged when a file check fails and succeeds on retry', async () => {
+  const directory = await attachmentHttpDirectory();
+  const items = [attachment('First original'), attachment('Second original')];
+  const local = await attachmentHttpSource(items.map(item => item.key), directory.root);
+  const db = createBetterSqliteDbPort(local.sqlite);
+  const host = { readSnapshot: async <T>(read: (port: typeof db) => Promise<T>) => read(db),
+    write: async <T>(write: (port: typeof db) => Promise<T>) => db.transaction(write) };
+  const before = local.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  const availability = () => local.sqlite.prepare('SELECT * FROM framed_sync_resource_availability ORDER BY hash').all();
+  try {
+    for (const item of items) await writeFile(path.join(local.assetsDir, item.key), item.bytes);
+    const initial = availability();
+    let checks = 0;
+    await expect(readRequestSyncAttachmentNeeds(host, async key => {
+      if (++checks === 2) throw new Error('fixture_file_check_failed');
+      return isDesktopAttachmentPresent(local.assetsDir, key);
+    })).rejects.toThrow('fixture_file_check_failed');
+    expect(checks).toBe(2);
+    expect(availability()).toEqual(initial);
+    expect(local.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
+    expect(await local.host.needs()).toEqual([]);
+    expect(availability()).toEqual(items.map(item => ({ hash: item.key.slice(0, 64), available: 1 }))
+      .sort((a, b) => a.hash.localeCompare(b.hash)));
+  } finally { await local.close(); await directory.remove(); }
 });
