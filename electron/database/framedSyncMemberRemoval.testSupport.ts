@@ -1,15 +1,13 @@
-import { createHash } from 'node:crypto';
-
 import Database from 'better-sqlite3';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { canonicalContentId, canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { type FramedSyncContext, FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { createFramedSyncOutboundStaging } from '../../lib/core/sync/framedSyncOutboundStaging.js';
+import { nodePositionWriteStatements } from '../../lib/core/sync/nodeVersionMemberPositionFact.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { createDesktopSyncGroup, registerSyncGroupDevice } from './syncGroupStore.js';
+import { textBranch } from './topicTextState.testSupport.js';
 
 export const identities = [1, 2, 3].map((index) => createSyncGroupDeviceIdentity({
   device_anchor: `${index.toString().repeat(8)}-1111-4111-8111-111111111111`,
@@ -29,27 +27,32 @@ export function openMemberDatabase(file: string, index: number, bind: (db: Datab
   return db;
 }
 
-export async function publishMemberDelivery(db: Database.Database, receiverIndex: number,
-  groupId = 'group-removal', senderId = identities[0]!.identity_key, receiverEpoch = 'receiver-epoch') {
-  const hash = new Uint8Array(createHash('sha256').update('protected-content').digest());
-  const manifest = { blobs: [], facts: [{ blobs: [], body: [], factId: 'original-fact',
-    globalId: 'original-object', kind: 1, objectType: 'node', sharedStateHash: hash }] };
-  const context: FramedSyncContext = { groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-    senderDeviceId: senderId, senderLibraryEpoch: 'sender-epoch',
-    receiverDeviceId: identities[receiverIndex]!.identity_key, receiverLibraryEpoch: receiverEpoch };
-  const contentId = await canonicalContentId(manifest);
-  const transferId = await canonicalTransferId(context, contentId);
-  await createFramedSyncOutboundStaging(createBetterSqliteDbPort(db)).publishOutbound({
-    contentId, context, manifest, manifestHash: contentId, transferId });
-  return Buffer.from(transferId).toString('hex');
+export async function seedMemberFacts(db: Database.Database) {
+  const port = createBetterSqliteDbPort(db);
+  const base = textBranch('original-base', '\ufeffOriginal 中文😀\0\r\n');
+  const head = textBranch('current-head', 'Current complete body', base);
+  await applyConvergentSyncNodesWithDbPort(port, [base, head]);
+  for (const groupId of ['group-removal', 'another-group']) for (const identity of identities) {
+    for (const statement of nodePositionWriteStatements({ group_id: groupId,
+      device_identity_key: identity.identity_key, object_id: 'topic', library_epoch: 'original-epoch',
+      adopted_version_id: 'original-base', pending_version_ids_json: '["current-head"]',
+      proof_revision: 1, updated_at: '2026-10-14T00:00:00.000Z' })) {
+      await port.run(statement.sql, statement.params);
+    }
+  }
+  return originalFacts(db);
 }
 
-export function heldTransfers(db: Database.Database) {
-  return db.prepare('SELECT lower(hex(transfer_id)) AS id FROM framed_sync_outbound_holds ORDER BY id')
-    .all().map((row) => {
-      if (!row || typeof row !== 'object' || !('id' in row) || typeof row.id !== 'string') {
-        throw new Error('fixture_hold_invalid');
-      }
-      return row.id;
-    });
+export function originalFacts(db: Database.Database) {
+  return {
+    nodes: db.prepare('SELECT * FROM nodes ORDER BY id').all(),
+    versions: db.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all(),
+    parents: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all(),
+    positions: db.prepare('SELECT * FROM node_version_member_positions ORDER BY fact_id').all()
+  };
+}
+
+export function memberState(db: Database.Database, index: number) {
+  return db.prepare('SELECT state FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?')
+    .pluck().get('group-removal', identities[index]!.identity_key);
 }

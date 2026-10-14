@@ -6,7 +6,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { heldTransfers, identities, openMemberDatabase, publishMemberDelivery } from '../../../../../electron/database/framedSyncMemberRemoval.testSupport.js';
+import { identities, memberState, openMemberDatabase, originalFacts, seedMemberFacts } from '../../../../../electron/database/framedSyncMemberRemoval.testSupport.js';
 import { applyDesktopSyncGroupMemberState, initiateDesktopSyncGroupDeviceRemoval,
   loadDesktopSyncGroupMemberState } from '../../../../../electron/database/syncGroupMemberStateStore.js';
 import { leaveDesktopSyncGroupDevice, registerSyncGroupDevice } from '../../../../../electron/database/syncGroupStore.js';
@@ -48,96 +48,110 @@ function device(index: number) {
 }
 const wire = () => parseSyncGroupMemberState(JSON.parse(JSON.stringify(loadDesktopSyncGroupMemberState())));
 
-it.each(['desktop', 'companion'])('releases only the confirmed target deliveries through %s member apply', async (host) => {
+it.each(['desktop', 'companion'])('removes only the confirmed target through %s apply and preserves original facts', async host => {
   const a = device(0), b = device(1), c = device(2);
-  const removed = await publishMemberDelivery(a, 2);
-  const kept = [await publishMemberDelivery(a, 1), await publishMemberDelivery(a, 2, 'another-group'),
-    await publishMemberDelivery(a, 2, 'group-removal', identities[1]!.identity_key)].sort();
+  const facts = await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
-  expect(heldTransfers(a)).toEqual([...kept, removed].sort());
+  expect(memberState(a, 2)).toBe('active');
   const decision = wire();
   bind(c);
   const exited = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
   bind(a);
   if (host === 'desktop') applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key);
   else await applyCompanionSyncGroupMemberState(exited, identities[2]!.identity_key);
-  expect(heldTransfers(a)).toEqual(kept);
-  expect(a.prepare('SELECT state FROM framed_sync_outbound_publications WHERE hex(transfer_id) = ?')
-    .get(removed.toUpperCase())).toEqual({ state: 'terminated' });
-  expect(a.prepare('SELECT COUNT(*) AS count FROM framed_sync_outbound_fact_refs').get()).toEqual({ count: 4 });
+  expect(memberState(a, 2)).toBe('left');
+  expect(memberState(a, 0)).toBe('active');
+  expect(memberState(a, 1)).toBe('active');
+  expect(originalFacts(a)).toEqual(facts);
   a.close();
   const reopened = new Database(path.join(root, '0.db'));
-  databases.push(reopened);
-  bind(reopened);
+  databases.push(reopened); bind(reopened);
   applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key);
-  expect(heldTransfers(reopened)).toEqual(kept);
+  expect(memberState(reopened, 2)).toBe('left');
+  expect(originalFacts(reopened)).toEqual(facts);
   bind(b);
-  expect(wire().devices.find((value) => value.device_identity_key === identities[2]!.identity_key)?.state)
-    .toBe('active');
+  expect(memberState(b, 2)).toBe('active');
 });
 
 it('retains an offline target until every remaining member confirms', async () => {
   const a = device(0), b = device(1);
-  const transfer = await publishMemberDelivery(a, 2);
+  const facts = await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
-  expect(heldTransfers(a)).toEqual([transfer]);
+  expect(memberState(a, 2)).toBe('active');
+  expect(originalFacts(a)).toEqual(facts);
   const decision = wire();
   bind(b);
   const confirmed = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
-  expect(heldTransfers(a)).toEqual([transfer]);
+  expect(memberState(a, 2)).toBe('active');
   bind(a);
   applyDesktopSyncGroupMemberState(confirmed, identities[1]!.identity_key);
-  expect(heldTransfers(a)).toEqual([]);
+  expect(memberState(a, 2)).toBe('left');
+  expect(originalFacts(a)).toEqual(facts);
 });
 
-it('does not use ordinary local leave as permission to release other members deliveries', async () => {
+it('preserves member positions, current text and version identity after ordinary local leave', async () => {
   const a = device(0);
-  const transfer = await publishMemberDelivery(a, 2);
+  const facts = await seedMemberFacts(a);
   bind(a);
+  const versionIdentitySql = 'SELECT version_id, object_id, content_hash, parent_version_id, created_at, host_name FROM node_sync_versions ORDER BY version_id';
+  const versionIdentities = a.prepare(versionIdentitySql).all();
   leaveDesktopSyncGroupDevice(identities[0]!.identity_key);
-  expect(heldTransfers(a)).toEqual([transfer]);
+  expect(memberState(a, 0)).toBe('left');
+  expect(memberState(a, 1)).toBe('active');
+  expect(memberState(a, 2)).toBe('active');
+  const after = originalFacts(a);
+  expect(after.nodes).toEqual(facts.nodes);
+  expect(after.parents).toEqual(facts.parents);
+  expect(after.positions).toEqual(facts.positions);
+  expect(a.prepare(versionIdentitySql).all()).toEqual(versionIdentities);
+  expect(a.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
+    .toEqual([{ version_id: 'current-head', body_text: 'Current complete body' },
+      { version_id: 'original-base', body_text: null }]);
 });
 
-it.each(['desktop', 'companion'])('rolls back membership completion when %s hold release fails', async (host) => {
+it.each(['desktop', 'companion'])('rolls back membership and confirmation when %s completion fails', async host => {
   const a = device(0), c = device(2);
-  const transfer = await publishMemberDelivery(a, 2);
+  const facts = await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
   const decision = wire();
   bind(c);
   const exited = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
   bind(a);
-  a.exec(`CREATE TRIGGER reject_hold_release BEFORE DELETE ON framed_sync_outbound_holds
-    BEGIN SELECT RAISE(ABORT, 'fixture_release_failure'); END`);
+  const before = wire();
+  a.exec(`CREATE TRIGGER reject_completion BEFORE UPDATE OF completed_at ON sync_group_removal_decisions
+    WHEN NEW.completed_at IS NOT NULL BEGIN SELECT RAISE(ABORT, 'fixture_completion_failure'); END`);
   const apply = async () => host === 'desktop'
     ? applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key)
     : applyCompanionSyncGroupMemberState(exited, identities[2]!.identity_key);
-  await expect(apply()).rejects.toThrow('fixture_release_failure');
-  expect(heldTransfers(a)).toEqual([transfer]);
-  expect(wire().removals[0]?.completed_at).toBeNull();
-  expect(a.prepare('SELECT state FROM framed_sync_outbound_publications').get()).toEqual({ state: 'published' });
-  a.exec('DROP TRIGGER reject_hold_release');
+  await expect(apply()).rejects.toThrow('fixture_completion_failure');
+  expect(wire()).toEqual(before);
+  expect(memberState(a, 2)).toBe('active');
+  expect(originalFacts(a)).toEqual(facts);
+  a.exec('DROP TRIGGER reject_completion');
   await apply();
-  expect(heldTransfers(a)).toEqual([]);
+  expect(memberState(a, 2)).toBe('left');
+  expect(originalFacts(a)).toEqual(facts);
 });
 
 it('does not treat a peer supplied completed flag as a confirmed permanent removal', async () => {
   const a = device(0);
-  const transfer = await publishMemberDelivery(a, 2);
+  const facts = await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
   const unconfirmed = wire();
   for (const removal of unconfirmed.removals) removal.completed_at = '2026-10-06T00:00:00.000Z';
   applyDesktopSyncGroupMemberState(unconfirmed, identities[0]!.identity_key);
-  expect(heldTransfers(a)).toEqual([transfer]);
+  expect(memberState(a, 2)).toBe('active');
+  expect(originalFacts(a)).toEqual(facts);
   expect(wire().removals[0]?.completed_at).toBeNull();
 });
 
-it('keeps a new delivery protected after an approved rejoin supersedes the old removal', async () => {
+it('preserves approved rejoin and current positions when the superseded removal is replayed', async () => {
   const a = device(0), c = device(2);
-  await publishMemberDelivery(a, 2);
+  await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
   const decision = wire();
@@ -145,10 +159,14 @@ it('keeps a new delivery protected after an approved rejoin supersedes the old r
   const exited = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
   bind(a);
   applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key);
-  expect(heldTransfers(a)).toEqual([]);
+  expect(memberState(a, 2)).toBe('left');
   registerSyncGroupDevice({ device: identities[2]!, deviceName: 'Approved rejoin', platform: 'desktop' });
-  const newTransfer = await publishMemberDelivery(a, 2, 'group-removal', identities[0]!.identity_key, 'rejoined-epoch');
+  a.prepare(`UPDATE node_version_member_positions SET library_epoch = 'rejoined-epoch', proof_revision = 2
+    WHERE group_id = 'group-removal' AND device_identity_key = ?`).run(identities[2]!.identity_key);
+  const facts = originalFacts(a);
   const current = wire();
+  expect(current.removals[0]?.superseded_at).not.toBeNull();
   applyDesktopSyncGroupMemberState(current, identities[0]!.identity_key);
-  expect(heldTransfers(a)).toEqual([newTransfer]);
+  expect(memberState(a, 2)).toBe('active');
+  expect(originalFacts(a)).toEqual(facts);
 });

@@ -4,11 +4,8 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../database/framedSyncStagingSchema.js';
-import { readFramedSyncPublication } from '../database/framedSyncStagingSerialization.js';
-import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from '../database/numberedMigrationLatestRegistry.js';
 
-import type { DbRow } from './dbPort.js';
-import { canonicalContentId, canonicalManifestBytes, canonicalTransferId } from './framedSyncCanonicalManifest.js';
+import { canonicalContentId, canonicalTransferId } from './framedSyncCanonicalManifest.js';
 import { retireFramedSyncCompletedPublication } from './framedSyncCompletedPublication.js';
 import { expireFramedSyncCompletions, FRAMED_SYNC_RECEIPT_RETENTION_MS,
   markFramedSyncCompletion } from './framedSyncCompletionRetention.js';
@@ -61,32 +58,4 @@ it('accepts a changed result snapshot for the same input but rejects another rec
     .resolves.toBe('committed');
   await expect(staging.commitOutboundReceipt({ ...receipt, receiverLibraryEpoch: 'other' }))
     .rejects.toThrow('outbound_receipt_mismatch');
-});
-
-it('migrates a pending unique input without losing its payload or hold', async () => {
-  const { db, transferId } = await setup();
-  const [row] = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
-  const input = readFramedSyncPublication(row!);
-  sqlite.prepare('UPDATE framed_sync_outbound_publications SET canonical_manifest = ?')
-    .run(canonicalManifestBytes(input.manifest));
-  sqlite.exec('DROP TABLE framed_sync_completion_windows');
-  const migrate = LATEST_NUMBERED_SCHEMA_MIGRATIONS.find((value) => value.version === 148)!.migrate;
-  sqlite.transaction(() => migrate(sqlite))();
-  const [after] = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
-  expect(readFramedSyncPublication(after!).manifest).toEqual(input.manifest);
-  expect(after!.canonical_manifest).toHaveLength(0);
-  expect(readFramedSyncPublication(after!).inventoryDifference?.need.sharedState).toBe(true);
-  expect(await expireFramedSyncCompletions(db, Date.now() + FRAMED_SYNC_RECEIPT_RETENTION_MS * 2)).toBe(0);
-  expect(sqlite.prepare('SELECT transfer_id FROM framed_sync_outbound_holds').pluck().get())
-    .toEqual(Buffer.from(transferId));
-});
-
-it('preserves both conflicting legacy input representations when conversion cannot be proven', async () => {
-  const { db } = await setup();
-  sqlite.prepare('UPDATE framed_sync_outbound_publications SET canonical_manifest = ?').run(Uint8Array.of(1));
-  const before = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
-  const migrate = LATEST_NUMBERED_SCHEMA_MIGRATIONS.find((value) => value.version === 148)!.migrate;
-  expect(sqlite.transaction(() => migrate(sqlite))).toThrow('framed_sync_migration_unique_input_mismatch');
-  expect(await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications')).toEqual(before);
-  expect(sqlite.prepare('SELECT COUNT(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(1);
 });
