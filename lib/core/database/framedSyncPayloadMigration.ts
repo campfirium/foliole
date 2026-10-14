@@ -3,20 +3,21 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 import { canonicalManifestBytes } from '../sync/framedSyncCanonicalManifest.js';
 import { recoverLegacyPublicationInventory } from '../sync/framedSyncLegacyPublicationInventory.js';
-import { encodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
+import { decodePublicationInventory, encodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
 import { FRAMED_SYNC_READY_BLOB_FRAMES, FRAMED_SYNC_READY_COPY_RETIREMENT } from '../sync/framedSyncReadyPayloadCleanup.js';
 
-import { framedSyncBytes, readFramedSyncPublication, sameFramedSyncBytes } from './framedSyncStagingSerialization.js';
+import { decodeFramedSyncManifest, framedSyncBytes, framedSyncText, sameFramedSyncBytes } from './framedSyncStagingSerialization.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
 function publicationPayload(row: DbRow) {
-  const input = readFramedSyncPublication(row);
+  const storedManifest = framedSyncText(row, 'manifest_json');
+  const manifest = decodeFramedSyncManifest(storedManifest);
   const old = framedSyncBytes(row, 'canonical_manifest');
-  if (old.length && !sameFramedSyncBytes(old, canonicalManifestBytes(input.manifest))) {
+  if (old.length && !sameFramedSyncBytes(old, canonicalManifestBytes(manifest))) {
     throw new Error('framed_sync_migration_unique_input_mismatch');
   }
-  return encodePublicationInventory(input.manifest,
-    input.inventoryDifference ?? recoverLegacyPublicationInventory(input.manifest));
+  return encodePublicationInventory(manifest,
+    decodePublicationInventory(storedManifest) ?? recoverLegacyPublicationInventory(manifest));
 }
 
 const publications = "SELECT * FROM framed_sync_outbound_publications WHERE state = 'published'";

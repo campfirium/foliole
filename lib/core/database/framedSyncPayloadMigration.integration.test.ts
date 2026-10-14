@@ -4,35 +4,35 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import type { DbRow } from '../sync/dbPort.js';
-import { canonicalContentId, canonicalManifestBytes, canonicalTransferId,
+import { canonicalContentId, canonicalManifestBytes, canonicalTransferIdSync,
   type CanonicalManifest } from '../sync/framedSyncCanonicalManifest.js';
-import type { FramedSyncContext } from '../sync/framedSyncContract.js';
+import { decodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
 
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
-import { encodeFramedSyncManifest, readFramedSyncPublication } from './framedSyncStagingSerialization.js';
+import { decodeFramedSyncManifest, encodeFramedSyncManifest, readFramedSyncPublication } from './framedSyncStagingSerialization.js';
 import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from './numberedMigrationLatestRegistry.js';
 
 let sqlite: Database.Database;
 afterEach(() => sqlite?.close());
 
-async function setup() {
+async function setup(protocolVersion = 24) {
   sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
-  const context = { groupId: 'g', protocolVersion: 24, senderDeviceId: 'A',
-    senderLibraryEpoch: 'a', receiverDeviceId: 'B', receiverLibraryEpoch: 'b' } satisfies FramedSyncContext;
+  const context = { groupId: 'g', protocolVersion, senderDeviceId: 'A',
+    senderLibraryEpoch: 'a', receiverDeviceId: 'B', receiverLibraryEpoch: 'b' };
   const manifest = { blobs: [], facts: [{ blobs: [], body: [
     { name: 'payload_json', value: { kind: 'string', value: 'Only surviving original setting' } }
   ], kind: 1, objectType: 'setting', globalId: 's', factId: 'state',
   sharedStateHash: new Uint8Array(32) }] } satisfies CanonicalManifest;
   const contentId = await canonicalContentId(manifest);
-  const transferId = await canonicalTransferId(context, contentId);
+  const transferId = canonicalTransferIdSync(context, contentId);
   sqlite.prepare(`INSERT INTO framed_sync_outbound_publications
     (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
       group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
       fact_count, blob_count, total_blob_bytes, state)
-    VALUES (?, ?, ?, ?, ?, 24, 'g', 'A', 'a', 'B', 'b', 1, 0, 0, 'published')`)
-    .run(transferId, contentId, contentId, canonicalManifestBytes(manifest), encodeFramedSyncManifest(manifest));
+    VALUES (?, ?, ?, ?, ?, ?, 'g', 'A', 'a', 'B', 'b', 1, 0, 0, 'published')`)
+    .run(transferId, contentId, contentId, canonicalManifestBytes(manifest), encodeFramedSyncManifest(manifest), protocolVersion);
   sqlite.prepare('INSERT INTO framed_sync_outbound_fact_refs VALUES (?, 1, ?, ?, ?)')
     .run(transferId, 'setting', 's', 'state');
   sqlite.prepare('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)').run(transferId, 'B');
@@ -64,6 +64,19 @@ it('preserves both conflicting legacy input representations when conversion cann
   const before = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
   expect(migrate).toThrow('framed_sync_migration_unique_input_mismatch');
   expect(await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications')).toEqual(before);
+  expect(sqlite.prepare('SELECT transfer_id, member_id FROM framed_sync_outbound_holds').all())
+    .toEqual([{ transfer_id: Buffer.from(transferId), member_id: 'B' }]);
+});
+
+it.each([22, 23])('upgrades protocol %s publication payloads from schema 147', async protocolVersion => {
+  const { db, manifest, transferId } = await setup(protocolVersion);
+  sqlite.pragma('user_version = 147');
+  migrate();
+  const [after] = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
+  expect(after!.protocol_version).toBe(protocolVersion);
+  expect(decodeFramedSyncManifest(String(after!.manifest_json))).toEqual(manifest);
+  expect(decodePublicationInventory(String(after!.manifest_json))?.need.sharedState).toBe(true);
+  expect(after!.canonical_manifest).toHaveLength(0);
   expect(sqlite.prepare('SELECT transfer_id, member_id FROM framed_sync_outbound_holds').all())
     .toEqual([{ transfer_id: Buffer.from(transferId), member_id: 'B' }]);
 });
