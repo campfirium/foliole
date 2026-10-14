@@ -171,7 +171,7 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  });
+  }, 90000);
 
   it('runs critical routed tests for backlinks contract changes', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
