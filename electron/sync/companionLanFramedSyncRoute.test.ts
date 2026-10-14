@@ -22,9 +22,6 @@ vi.mock('./workspaceSyncAppliedEvents.js', () => ({
 vi.mock('../database/desktopFramedSyncSessionStaging.js', () => ({
   createDesktopFramedSyncSessionNoncePort: vi.fn(() => ({}))
 }));
-vi.mock('../database/desktopFramedSyncStaging.js', () => ({
-  createDesktopFramedSyncStaging: vi.fn(() => ({}))
-}));
 vi.mock('../database/nodeVersionPeerProof.js', () => ({
   loadDesktopLocalNodeProof: vi.fn(() => ({ library_epoch: 'desktop-epoch' }))
 }));
