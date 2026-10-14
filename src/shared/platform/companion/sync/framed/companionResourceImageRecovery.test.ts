@@ -84,7 +84,7 @@ afterEach(async () => {
 });
 
 it('shows an already missing image after current attachment completion without changing its body', async () => {
-  if (!widget || !sqlite) throw new Error('image_recovery_fixture_missing');
+  if (!widget || !sqlite || !native.files) throw new Error('image_recovery_fixture_missing');
   const image = widget;
   document.body.append(image);
   await waitFor(() => expect(image.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());

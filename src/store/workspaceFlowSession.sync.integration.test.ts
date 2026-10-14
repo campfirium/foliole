@@ -10,23 +10,28 @@ import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/
 
 import { reconcileFlowSession, resumeFlowSession } from './workspaceFlowSession';
 
-beforeEach(startLibraries);
-afterEach(closeLibraries);
+let desktop: ReturnType<typeof createPeer>;
+let mobile: ReturnType<typeof createPeer>;
+const review = { due: '2026-09-29T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
+  state: 2, stability: 3, difficulty: 4, elapsedDays: 1, scheduledDays: 1, reps: 2, lapses: 0 };
 
-it('keeps the same Flow material after a peer edit and skips its remotely handled grade after production sync', async () => {
-  const desktop = createPeer('desktop');
-  const mobile = createPeer('mobile');
+beforeEach(async () => {
+  await startLibraries();
+  desktop = createPeer('desktop');
+  mobile = createPeer('mobile');
   joinPeers(desktop, mobile);
   for (const peer of [desktop, mobile]) {
     peer.db.exec('CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
     peer.db.prepare("INSERT INTO companion_meta VALUES ('host_name', ?, 'now')").run(peer.name);
   }
   edit(desktop, 'Question', 'Card', null, 'item');
-  const review = { due: '2026-09-29T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
-    state: 2, stability: 3, difficulty: 4, elapsedDays: 1, scheduledDays: 1, reps: 2, lapses: 0 };
   saveNodeReviewStateWithSync(desktop.driver, { nodeId: 'topic', hostName: desktop.name,
     review, updatedAt: '2026-09-30T00:00:00.000Z' });
   await sync(desktop, mobile);
+}, 20000);
+afterEach(closeLibraries);
+
+it('keeps the same Flow material after a peer edit and skips its remotely handled grade after production sync', async () => {
   const initial = (await loadIosCompanionWorkspaceSnapshot(mobile.port)) as WorkspaceSnapshot;
   const now = '2026-10-03T00:00:00.000Z';
   const session = resumeFlowSession(initial, 'review-first', null, now);
