@@ -3,11 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
-const iosSyncbackStoreMock = vi.hoisted(() => ({
-  loadNodeVersions: vi.fn(async () => [{ object_id: 'node-1' }]),
-  loadReviewLog: vi.fn(async () => [{ op_id: 'op-1' }]),
-  savePushAcks: vi.fn(async () => ['ios-review-op'])
-}));
 const iosReadsMock = vi.hoisted(() => ({
   conflicts: vi.fn(async () => [
     { conflict_version_id: 'phone#1', object_id: 'node-1', snapshot: { title: 'Remote' } }
@@ -35,9 +30,6 @@ const iosWritesMock = vi.hoisted(() => ({
 
 vi.mock('./companionSyncWriterQueue', () => ({
   runCompanionSyncWriterTask: writerQueueMock.run
-}));
-vi.mock('./companion/sync/syncback/iosCompanionSyncbackStore', () => ({
-  getIosCompanionSyncbackStore: vi.fn(() => iosSyncbackStoreMock)
 }));
 vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
   loadIosMissingAttachments: iosReadsMock.missingAttachments,
@@ -110,8 +102,6 @@ async function testNativePluginBridge() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   expect(iosReadsMock.missingAttachments).toHaveBeenCalledWith(4);
-  await expect(api.loadCompanionSyncNodeVersions('desktop-peer', null)).resolves.toEqual([{ object_id: 'node-1' }]);
-  await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([{ op_id: 'op-1' }]);
   await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([
     { page: 1, page_height: 200, page_width: 100, text: 'indexed pdf text' }
   ]);
@@ -164,13 +154,7 @@ async function expectNativeSaveBridge(api: typeof import('./companionSyncObjects
     scroll_top: 42.8
   });
   await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
-  await expect(api.saveCompanionSyncPushAcks('desktop-peer', [{
-    clientOpId: 'client-op-1',
-    identity: { objectId: 'one', objectType: 'setting', scope: 'device' },
-    stateSeq: 4,
-    status: 'accepted'
-  }])).resolves.toEqual(['ios-review-op']);
-  expect(writerQueueMock.run).toHaveBeenCalledTimes(6);
+  expect(writerQueueMock.run).toHaveBeenCalledTimes(5);
 }
 
 describe('companion sync objects bridge', () => {
@@ -194,19 +178,4 @@ describe('companion sync objects bridge', () => {
     expect(iosReadsMock.objects).toHaveBeenCalledWith(['one'], ['setting']);
   });
 
-  it('saves iOS push acknowledgements through the SQLite store', async () => {
-    capacitorMock.platform.mockReturnValue('ios');
-    capacitorMock.plugin.saveSyncPushAcks.mockClear();
-    const api = await import('./companionSyncObjects');
-    const ack = {
-      clientOpId: 'ios-review-op',
-      identity: { objectId: 'node-1', objectType: 'node_review' as const, scope: 'workspace' },
-      stateSeq: 7,
-      status: 'accepted' as const
-    };
-
-    await expect(api.saveCompanionSyncPushAcks('desktop-peer', [ack])).resolves.toEqual(['ios-review-op']);
-    expect(iosSyncbackStoreMock.savePushAcks).toHaveBeenCalledWith('desktop-peer', [ack]);
-    expect(capacitorMock.plugin.saveSyncPushAcks).not.toHaveBeenCalled();
-  });
 });

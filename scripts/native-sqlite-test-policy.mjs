@@ -151,7 +151,6 @@ const controlledElectronSqliteTests = [
   'electron/database/syncStateBaseContentHashMigration.test.ts',
   'electron/database/syncStateEntityDeletion.test.ts',
   'electron/database/syncStateEntityRepair.test.ts',
-  'electron/database/syncStateReceiptLifecycle.test.ts',
   'electron/database/watchedFolderConflictMigration.test.ts',
   'electron/database/watchedGroupOwnershipTransition.test.ts',
   'electron/database/watchedSourceIdentityMigration.test.ts',

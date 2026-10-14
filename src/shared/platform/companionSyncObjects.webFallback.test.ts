@@ -44,21 +44,6 @@ function createReviewProfile() {
   };
 }
 
-async function expectWebCursorFallback(api: typeof import('./companionSyncObjects')) {
-  const cursor = { change_id: 'one', created_at: '2026-04-25T00:00:00.000Z' };
-  await expect(api.loadCompanionSyncStateCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncStatePushCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncNodeVersionCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncNodeVersionPushCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncReviewLogCursor()).resolves.toBeNull();
-  await expect(api.loadCompanionSyncReviewLogPushCursor()).resolves.toBeNull();
-  await expect(api.saveCompanionSyncStateCursor(7)).resolves.toBe(7);
-  await expect(api.saveCompanionSyncStatePushCursor(7)).resolves.toBe(7);
-  await expect(api.saveCompanionSyncNodeVersionCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncNodeVersionPushCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncReviewLogCursor(cursor)).resolves.toEqual(cursor);
-  await expect(api.saveCompanionSyncReviewLogPushCursor(cursor)).resolves.toEqual(cursor);
-}
 
 describe('companion sync objects web fallback', () => {
   beforeEach(() => {
@@ -71,12 +56,8 @@ describe('companion sync objects web fallback', () => {
     await expect(api.loadCompanionSyncIndex()).resolves.toEqual([]);
     await expect(api.loadCompanionSyncNodeConflicts()).resolves.toEqual([]);
     await expect(api.loadCompanionSyncObjects(['one'], ['setting'])).resolves.toEqual([]);
-    await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([]);
-    await expect(api.loadCompanionSyncNodeVersions('desktop-peer', null)).resolves.toEqual([]);
-    await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([]);
     await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
     await expect(api.searchCompanionPdfPageText('pdf')).resolves.toEqual([]);
-    await expectWebCursorFallback(api);
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();
     await expect(api.saveCompanionSyncActiveViewState('node-1')).resolves.toBeNull();
     await expect(api.saveCompanionSyncNodeReadingRecord({
@@ -92,6 +73,5 @@ describe('companion sync objects web fallback', () => {
     expect(api).not.toHaveProperty('applyCompanionDesktopSyncPack');
     await expect(api.applyCompanionSyncNodeVersions([])).resolves.toEqual([]);
     await expect(api.applyCompanionSyncReviewLog([])).resolves.toEqual([]);
-    await expect(api.saveCompanionSyncPushAcks('desktop-peer', [])).resolves.toEqual([]);
   });
 });

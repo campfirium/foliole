@@ -95,13 +95,6 @@ export function isNativeCompanionNodeVersionWriteRuntime() {
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
 }
 
-export function getNativeCompanionSyncbackPlatform() {
-  const runtime = requireAvailableCompanionRuntime('syncback');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
-    ? runtime.platform
-    : null;
-}
-
 export function getNativeCompanionSettingWritePlatform() {
   const runtime = requireAvailableCompanionRuntime('setting-write');
   return runtime.kind === 'android-native' || runtime.kind === 'ios-native'

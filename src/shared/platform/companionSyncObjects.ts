@@ -11,16 +11,12 @@ import {
   loadIosSyncObjects,
   searchIosPdfPageText
 } from './companion/runtime/iosCompanionActiveDatabaseReads';
-import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
 import { resolveCompanionSyncSettingRecord } from './companionSyncStateWriters';
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
-  getNativeCompanionSyncbackPlatform,
   isNativeCompanionPdfPageTextRuntime,
   isNativeCompanionSyncObjectReadRuntime
 } from './companionWorkspaceRuntimeRepository';
 
-type SyncPushAck = import('./companionSyncPushProtocol').SyncPushAck;
 
 export interface CompanionPdfPageTextEntry {
   page: number;
@@ -97,23 +93,6 @@ export {
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
 export {
-  loadCompanionSyncNodeVersionCursor,
-  loadCompanionSyncNodeVersionPushCursor,
-  loadCompanionSyncNodeVersions,
-  loadCompanionSyncReviewLog,
-  loadCompanionSyncReviewLogCursor,
-  loadCompanionSyncReviewLogPushCursor,
-  loadCompanionSyncStateChanges,
-  loadCompanionSyncStateCursor,
-  loadCompanionSyncStatePushCursor,
-  saveCompanionSyncNodeVersionCursor,
-  saveCompanionSyncNodeVersionPushCursor,
-  saveCompanionSyncReviewLogCursor,
-  saveCompanionSyncReviewLogPushCursor,
-  saveCompanionSyncStateCursor,
-  saveCompanionSyncStatePushCursor
-} from './companionSyncCursors';
-export {
   applyCompanionLocalNodeVersions,
   applyCompanionSyncNodeVersions,
   applyCompanionSyncNodeVersionsWithinWriterTask,
@@ -132,21 +111,4 @@ export async function searchCompanionPdfPageText(query: string, limit?: number, 
     return [] as CompanionPdfPageTextSearchResult[];
   }
   return searchIosPdfPageText(query, limit, offset);
-}
-
-export async function saveCompanionSyncPushAcks(peerId: string, acks: SyncPushAck[]) {
-  if (getNativeCompanionSyncbackPlatform() === null) return [] as string[];
-  return runCompanionSyncWriterTask(() =>
-    getIosCompanionSyncbackStore().savePushAcks(peerId, acks)
-  );
-}
-
-export async function stageCompanionSyncPushItems(
-  peerId: string,
-  items: import('./companionSyncPushProtocol').SyncPushPayload[]
-) {
-  if (getNativeCompanionSyncbackPlatform() === null) return;
-  return runCompanionSyncWriterTask(() =>
-    getIosCompanionSyncbackStore().stagePushItems(peerId, items)
-  );
 }

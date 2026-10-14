@@ -112,7 +112,6 @@ export const controlledSyncSqliteTests = [
   'electron/database/externalResourceCanonicalHashMigration.test.ts',
   'electron/database/framedSyncStagingMigration.test.ts',
   'electron/database/framedSyncResourceDemandMigration.integration.test.ts',
-  'electron/database/nodeVersionPushHistory.retired.test.ts',
   'electron/database/nodeVersionRetentionIndexMigration.test.ts',
   'electron/database/syncGroupRestoreState.test.ts',
   'electron/database/syncStateIdentityConflict.test.ts',
