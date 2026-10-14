@@ -17,7 +17,6 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
     private static final String ASSET_RUNTIME_QUERIES = "runtimeQueries";
     private static final String ASSET_SYNC_CONFLICT_READ = "syncConflictRead";
     private static final String ASSET_SYNC_OBJECT_READ = "syncObjectRead";
-    private static final String ASSET_SYNC_STREAM_READ = "syncStreamRead";
     private static final String ASSET_SYNC_PAYLOAD_ROUTING = "syncPayloadRouting";
     private static final String ASSET_WORKSPACE_READ = "workspaceRead";
 
@@ -73,7 +72,6 @@ final class FolioleCompanionQueryDefinitionShapeKeys {
             case "runtimeQueries": return ASSET_RUNTIME_QUERIES;
             case "syncConflictRead": return ASSET_SYNC_CONFLICT_READ;
             case "syncObjectRead": return ASSET_SYNC_OBJECT_READ;
-            case "syncStreamRead": return ASSET_SYNC_STREAM_READ;
             case "syncPayloadRouting": return ASSET_SYNC_PAYLOAD_ROUTING;
             case "workspaceRead": return ASSET_WORKSPACE_READ;
             default: throw new IllegalStateException("Companion query descriptor is missing asset key: " + key);

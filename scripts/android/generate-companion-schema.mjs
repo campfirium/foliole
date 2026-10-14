@@ -51,7 +51,6 @@ import {
   ANDROID_COMPANION_RUNTIME_QUERY_RULES,
   ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
   ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
-  ANDROID_COMPANION_SYNC_STREAM_READ_RULES
 } from '../../lib/core/database/androidCompanionSyncQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 
@@ -132,7 +131,6 @@ const buildQueryDefinitions = (platform) =>
       runtimeQueries: ANDROID_COMPANION_RUNTIME_QUERY_RULES,
       syncConflictRead: ANDROID_COMPANION_SYNC_CONFLICT_READ_RULES,
       syncObjectRead: ANDROID_COMPANION_SYNC_OBJECT_READ_RULES,
-      syncStreamRead: ANDROID_COMPANION_SYNC_STREAM_READ_RULES,
       syncPayloadRouting: {
         ...ANDROID_COMPANION_SYNC_PAYLOAD_ROUTING,
         routes: syncPayloadRoutes(buildCompanionPayloadQueryDefinitions(platform))

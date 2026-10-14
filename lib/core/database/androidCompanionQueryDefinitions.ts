@@ -23,7 +23,6 @@ export const ANDROID_COMPANION_QUERY_ASSET_KEYS = {
   runtimeQueries: 'runtimeQueries',
   syncConflictRead: 'syncConflictRead',
   syncObjectRead: 'syncObjectRead',
-  syncStreamRead: 'syncStreamRead',
   syncPayloadRouting: 'syncPayloadRouting',
   workspaceRead: 'workspaceRead'
 } as const;

@@ -12,8 +12,7 @@ export const TEXT_BODY_HOLDERS = [
   ['nodes', 'image_sources', 'json'], ['external_documents', 'reference_json', 'json'],
   ['import_sources', 'remote_import_state_json', 'json'], ['import_sources', 'remote_annotations_json', 'json'],
   ['sync_change_log', 'payload_json', 'json'], ['editor_operation_history', 'payload_json', 'json'],
-  ['sync_pack_dependency_rows', 'payload_json', 'json'], ['sync_pack_known_fact_claims', 'fact_json', 'json'],
-  ['sync_group_restore_page_rows', 'payload_json', 'json'], ['readwise_api_import_stage', 'payload_json', 'json'],
+  ['readwise_api_import_stage', 'payload_json', 'json'],
   ['readwise_api_reconcile_stage', 'payload_json', 'json']
 ] as const;
 
@@ -38,10 +37,5 @@ export function bodyHolderQueries(tables: Set<string>, hash: string) {
       ? ` AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text')` : '';
     return { sql: `SELECT 1 AS held FROM ${table} WHERE ${column} IS NOT NULL${payload} AND (${condition}) LIMIT 1`, params };
   });
-  if (tables.has('framed_sync_outbound_holds') && tables.has('framed_sync_outbound_blob_refs')) {
-    queries.push({ sql: `SELECT 1 AS held FROM framed_sync_outbound_blob_refs ref
-      JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
-      WHERE ref.role IN (1, 5) AND lower(hex(ref.sha256)) = ? LIMIT 1`, params: [hash] });
-  }
   return queries;
 }
