@@ -81,7 +81,7 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
       'desktop-runtime-repository'
     );
     expect(resolvePlatformSubdomain('src/shared/platform/updateTarget.ts')).toBe('runtime-core');
-    expect(resolvePlatformSubdomain('src/shared/platform/companionSyncCursors.ts')).toBe('companion-sync-reader');
+    expect(resolvePlatformSubdomain('src/shared/platform/companionSyncStateObjects.ts')).toBe('companion-sync-reader');
     expect(resolvePlatformSubdomain('src/shared/platform/companionSyncNodeVersionsTestSupport.ts')).toBe(
       'companion-sync-reader'
     );
@@ -151,7 +151,7 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
 
   it('blocks forbidden companion sync dependency directions', async () => {
     const repoRoot = await createFixtureRoot();
-    await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncCursors.ts', `
+    await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncStateObjects.ts', `
       import { applyCompanionSyncPack } from './companionSyncPackApply';
       export const cursor = applyCompanionSyncPack;
     `);
@@ -161,10 +161,11 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
 
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
-    expect(result.violations).toEqual([
-      { file: 'src/shared/platform/companionSyncCursors.ts', line: 1, kind: 'platform-subdomain-import' },
+    expect(result.violations).toHaveLength(2);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      { file: 'src/shared/platform/companionSyncStateObjects.ts', line: 1, kind: 'platform-subdomain-import' },
       { file: 'src/shared/platform/companionSyncPackApply.ts', line: 1, kind: 'platform-flat-root-file' }
-    ]);
+    ]));
   });
 
   it('allows facade and writer queue dependency directions', async () => {
@@ -175,7 +176,7 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     await writeFixtureFile(repoRoot, 'src/shared/platform/nodeBacklinksRuntimeRepository.ts', `
       export function loadRuntimeNodeBacklinks() {}
     `);
-    await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncCursors.ts', `
+    await writeFixtureFile(repoRoot, 'src/shared/platform/companionSyncStateObjects.ts', `
       import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
       export const queue = runCompanionSyncWriterTask;
     `);

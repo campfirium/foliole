@@ -33,9 +33,6 @@ const contentBlobMock = vi.hoisted(() => ({
     status: 'ready'
   }))
 }));
-const syncPushMock = vi.hoisted(() => ({
-  handleCompanionSyncPush: vi.fn()
-}));
 const memberStateMock = vi.hoisted(() => ({
   accept: vi.fn(() => ({ localExited: false, state: { contract_version: 1 } }))
 }));
@@ -62,10 +59,6 @@ vi.mock('./companionLanContentBlobs.js', () => ({
 }));
 vi.mock('./companionLanSyncObjects.js', () => ({
   isRetiredSyncJsonEndpoint: vi.fn(() => false)
-}));
-vi.mock('./companionLanSyncPush.js', () => ({
-  SYNC_PUSH_PATH: '/companion/sync-push',
-  handleCompanionSyncPush: syncPushMock.handleCompanionSyncPush
 }));
 vi.mock('./desktopSyncGroupMemberState.js', () => ({
   SYNC_GROUP_MEMBER_STATE_PATH: '/sync-group/member-state',
@@ -122,7 +115,6 @@ it('retires the legacy sync push before authentication', async () => {
 
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
-  expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
   expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
   expect(writeJson).toHaveBeenCalledWith(request, response, 410,
     { error: 'framed_sync_required' }, 'POST, OPTIONS');
@@ -201,7 +193,6 @@ it('returns unknown post paths before reading oversized bodies', async () => {
   expect(writeJson).toHaveBeenCalledWith(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
   expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
   expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
-  expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
 });
 
 it('retires legacy post paths before reading their bodies', async () => {

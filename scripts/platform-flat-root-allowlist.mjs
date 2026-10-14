@@ -25,7 +25,6 @@ export const LEGACY_FLAT_PLATFORM_BASENAMES = new Set([
   'companionDesktopSyncHttp.ts',
   'companionDesktopSyncObjects.testFixtures.ts',
   'companionDesktopSyncObjects.ts',
-  'companionDesktopSyncObjectsPushAckTestSupport.ts',
   'companionDesktopSyncTypes.ts',
   'companionExternalDocuments.ts',
   'companionFullTextSearch.ts',
