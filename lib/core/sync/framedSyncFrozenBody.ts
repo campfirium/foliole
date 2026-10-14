@@ -34,15 +34,3 @@ async function readFrozenBody(db: DbPort, blob: CanonicalBlob) {
   if (row.data === null) throw new Error('framed_sync_published_body_unavailable');
   return row.data;
 }
-
-export const UNOWNED_FRAMED_BODY = `NOT EXISTS (SELECT 1 FROM framed_sync_blob_pins pin
-  WHERE pin.sha256 = framed_sync_available_blobs.sha256) AND NOT EXISTS (
-  SELECT 1 FROM framed_sync_outbound_blob_refs ref JOIN framed_sync_outbound_holds owner
-    ON owner.transfer_id = ref.transfer_id WHERE ref.sha256 = framed_sync_available_blobs.sha256)`;
-
-/** Caller releases the owner's holds before retiring its now unowned temporary bytes. */
-export async function retireFramedSyncFrozenBodies(db: DbPort, transferId: Uint8Array) {
-  await db.run(`DELETE FROM framed_sync_available_blobs WHERE sha256 IN (
-    SELECT sha256 FROM framed_sync_outbound_blob_refs WHERE transfer_id = ?) AND ${UNOWNED_FRAMED_BODY}`,
-  [transferId]);
-}
