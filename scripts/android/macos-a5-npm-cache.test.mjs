@@ -66,21 +66,23 @@ function commitLock(repo, url, version, integrity) {
   return git(repo, ['rev-parse', 'HEAD']);
 }
 
-function install(repo, revision, offline = false) {
-  const context = createMacosA5ExecutionContext({ repoRoot: repo, action: 'build',
-    acceptedRevision: revision, formalSourceClass: 'frozen-build' });
-  return openMacosA5BuildCapsule(context, { run(command, args, options) {
-    if (command === 'git') {
-      const { cwd, ...gitOptions } = options;
-      execFileSync(command, ['-C', cwd, ...args], gitOptions);
-      return;
-    }
-    const effectiveArgs = command === 'npm'
-      ? [...args, '--fetch-retries=0', ...(offline ? ['--offline'] : [])] : args;
-    const portable = resolvePortableCommand(command, effectiveArgs);
-    execFileSync(portable.command, portable.args, { ...options, encoding: 'utf8', stdio: 'pipe',
-      timeout: 15000, env: { ...process.env, npm_config_update_notifier: 'false' } });
-  } });
+function createInstaller(repo, deadline) {
+  return (revision, offline = false) => {
+    const context = createMacosA5ExecutionContext({ repoRoot: repo, action: 'build',
+      acceptedRevision: revision, formalSourceClass: 'frozen-build' });
+    return openMacosA5BuildCapsule(context, { run(command, args, options) {
+      if (command === 'git') {
+        const { cwd, ...gitOptions } = options;
+        execFileSync(command, ['-C', cwd, ...args], gitOptions);
+        return;
+      }
+      const effectiveArgs = command === 'npm'
+        ? [...args, '--fetch-retries=0', ...(offline ? ['--offline'] : [])] : args;
+      const portable = resolvePortableCommand(command, effectiveArgs);
+      execFileSync(portable.command, portable.args, { ...options, encoding: 'utf8', stdio: 'pipe',
+        timeout: Math.max(1, deadline - Date.now()), env: { ...process.env, npm_config_update_notifier: 'false' } });
+    } });
+  };
 }
 
 function assertInstalled(capsule, version) {
@@ -97,14 +99,14 @@ function corruptArchive(cache, integrity) {
   fs.writeFileSync(content, 'corrupt archive');
 }
 
-function verifyReuse(repo, revision, requests) {
-  const cold = install(repo, revision);
+function verifyReuse(install, revision, requests) {
+  const cold = install(revision);
   assertInstalled(cold, '1.0.0');
   expect(requests()).toEqual(['/1.0.0.tgz']);
   const lock = fs.readFileSync(path.join(cold.buildRoot, 'package-lock.json'), 'utf8');
   closeMacosA5BuildCapsule(cold);
   expect(fs.existsSync(cold.capsuleRoot)).toBe(false);
-  const warm = install(repo, revision, true);
+  const warm = install(revision, true);
   assertInstalled(warm, '1.0.0');
   expect(warm.buildRoot).not.toBe(cold.buildRoot);
   expect(fs.readFileSync(path.join(warm.buildRoot, 'package-lock.json'), 'utf8')).toBe(lock);
@@ -112,14 +114,14 @@ function verifyReuse(repo, revision, requests) {
   closeMacosA5BuildCapsule(warm);
 }
 
-function verifyRecovery(repo, revision, cache, integrity, requests) {
+function verifyRecovery(repo, install, revision, cache, integrity, requests) {
   corruptArchive(cache, integrity);
-  const recovered = install(repo, revision);
+  const recovered = install(revision);
   assertInstalled(recovered, '2.0.0');
   expect(requests()).toEqual(['/1.0.0.tgz', '/2.0.0.tgz', '/2.0.0.tgz']);
   closeMacosA5BuildCapsule(recovered);
   corruptArchive(cache, integrity);
-  expect(() => install(repo, revision, true)).toThrow();
+  expect(() => install(revision, true)).toThrow();
   expect(fs.readdirSync(path.join(repo, '.lab/internal/macos-a5-controller/capsules'))).toEqual([]);
   expect(fs.existsSync(cache)).toBe(true);
   const evidence = path.join(repo, '.tmp/artifacts/macos-a5-formal');
@@ -130,6 +132,7 @@ function verifyRecovery(repo, revision, cache, integrity, requests) {
 }
 
 it('reuses verified downloads across frozen capsules and repairs corrupt cache without sharing installs', async () => {
+  const deadline = Date.now() + 60000;
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-npm-cache-'));
   let server;
   try {
@@ -143,16 +146,17 @@ it('reuses verified downloads across frozen capsules and repairs corrupt cache w
     git(repo, ['config', 'user.name', 'Cache Test']);
     fs.writeFileSync(path.join(repo, '.npmrc'), 'cache=.tmp/npm-cache\naudit=false\nfund=false\n');
     const cache = path.join(repo, '.cache/npm-downloads');
+    const install = createInstaller(repo, deadline);
     const requests = () => fs.readFileSync(path.join(root, 'requests.txt'), 'utf8').trim().split('\n');
     const revision1 = commitLock(repo, server.url, '1.0.0', integrity1);
-    verifyReuse(repo, revision1, requests);
+    verifyReuse(install, revision1, requests);
     expect(fs.existsSync(cache)).toBe(true);
     const revision2 = commitLock(repo, server.url, '2.0.0', integrity2);
-    const changed = install(repo, revision2);
+    const changed = install(revision2);
     assertInstalled(changed, '2.0.0');
     closeMacosA5BuildCapsule(changed);
     expect(requests()).toEqual(['/1.0.0.tgz', '/2.0.0.tgz']);
-    verifyRecovery(repo, revision2, cache, integrity2, requests);
+    verifyRecovery(repo, install, revision2, cache, integrity2, requests);
     expect(fs.existsSync(path.join(repo, 'node_modules'))).toBe(false);
   } finally {
     await server?.worker.terminate();

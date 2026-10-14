@@ -74,17 +74,18 @@ describe('iOS active companion sync schema retirement', () => {
   it('upgrades a version 70 active database without losing business rows', async () => {
 
     const fixture = databaseFixture(true);
+    fixture.sqlite.transaction(() => {
+      fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.filter((sql) => !sql.includes('framed_sync_')).join(';\n'));
 
-    fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.filter((sql) => !sql.includes('framed_sync_')).join(';\n'));
+      fixture.sqlite.prepare('INSERT INTO companion_meta VALUES (?, ?, ?)')
+        .run('device_id', 'ios-device', '2026-10-05T00:00:00Z');
+      fixture.sqlite.prepare(`INSERT INTO nodes
+        (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
+         created_at, updated_at, deleted_at) VALUES (?, NULL, 'topic', 'Kept', 1, 0, '', 0, ?, ?, NULL)`)
+        .run('kept-node', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
 
-    fixture.sqlite.prepare('INSERT INTO companion_meta VALUES (?, ?, ?)')
-      .run('device_id', 'ios-device', '2026-10-05T00:00:00Z');
-    fixture.sqlite.prepare(`INSERT INTO nodes
-      (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
-       created_at, updated_at, deleted_at) VALUES (?, NULL, 'topic', 'Kept', 1, 0, '', 0, ?, ?, NULL)`)
-      .run('kept-node', '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
-
-    fixture.sqlite.pragma('user_version = 70');
+      fixture.sqlite.pragma('user_version = 70');
+    })();
 
     await initializeIosCompanionDatabase(nativeState(), fixture.manager);
 
