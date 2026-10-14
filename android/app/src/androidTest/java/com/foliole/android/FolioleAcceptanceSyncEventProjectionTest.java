@@ -1,7 +1,11 @@
 package com.foliole.android;
 
+import android.app.Activity;
 import android.app.Instrumentation;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.webkit.WebView;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -14,6 +18,25 @@ import org.junit.runner.RunWith;
 public class FolioleAcceptanceSyncEventProjectionTest {
     @Test public void projectsSyncEventsForAcceptance() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Activity activity = start(instrumentation);
+        try {
+            WebView webView = activity.findViewById(R.id.webview);
+            FolioleCompanionCaptureNavigation.enterBrowseSurface(instrumentation, webView, 30_000);
+            project(instrumentation);
+        } finally {
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
+    private static Activity start(Instrumentation instrumentation) {
+        Context context = instrumentation.getTargetContext();
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (intent == null) throw new IllegalStateException("Main launch intent is missing.");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        return instrumentation.startActivitySync(intent);
+    }
+
+    private static void project(Instrumentation instrumentation) throws Exception {
         Bundle evidence = new Bundle();
         evidence.putString("folioleAfterSemantic", new JSONObject().toString());
         evidence.putString("folioleActionReceipt", FolioleAcceptanceSyncEventProjection.read(
