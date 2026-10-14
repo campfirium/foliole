@@ -20,14 +20,24 @@ interface InventoryRow extends DbRow {
   resources_json: string;
   reviews_json: string;
   states_json: string;
+  version_body_hashes_json: string;
 }
 const ids = z.array(z.string().min(1));
 const hashes = z.array(z.string().regex(/^[a-f0-9]{64}$/u));
+const versionBodyHashes = z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/u).nullable());
+const inventoryColumns = `inventory.*, (SELECT json_group_object(version_id, body_hash)
+  FROM framed_sync_version_summary WHERE object_id = inventory.object_id) AS version_body_hashes_json`;
 
 function entry(row: InventoryRow): FramedSyncInventoryEntry {
   const state = row.content_hash.startsWith('[') ? z.tuple([z.string(), z.string().nullable(),
     z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
       z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]).parse(JSON.parse(row.content_hash)) : null;
+  if (state) {
+    const bodies = versionBodyHashes.parse(JSON.parse(row.version_body_hashes_json));
+    for (const version of state[2]) {
+      if (version[5] === 'available') version[4] = bodies[version[0]] ?? null;
+    }
+  }
   const versionStates = state?.[2].map(value => JSON.stringify(value));
   const unready = state?.[2].some(value => value[5] === 'missing') ?? false;
   const hash = state ? sha256(new TextEncoder().encode(JSON.stringify([
@@ -55,12 +65,12 @@ async function read(port: DbPort, key: InventoryKey | undefined) {
 }
 
 async function readNodes(port: DbPort, key: InventoryKey | undefined) {
-  if (key) return (await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
+  if (key) return (await port.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
     WHERE object_type = 'node' AND object_id = ?`, [key.globalId])).map(entry);
   const nodes: FramedSyncInventoryEntry[] = [];
   let after: string | undefined;
   for (;;) {
-    const rows = await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
+    const rows = await port.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
       WHERE object_type = 'node' ${after === undefined ? '' : 'AND object_id > ?'} ORDER BY object_id LIMIT ?`,
     [...(after === undefined ? [] : [after]), FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame]);
     for (const row of rows) nodes.push(entry(row));
