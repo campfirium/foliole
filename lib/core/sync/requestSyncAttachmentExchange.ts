@@ -66,11 +66,12 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
     if (message.state !== 'partial' && message.state !== 'end') throw new Error('attachment_needs_invalid');
     for (const key of message.storageKeys) remoteNeeds.add(key);
   });
-  const result = { pending: 0, transferred: 0 };
+  const result = { transferred: 0 };
+  const pendingKeys = new Set<string>();
   const attempt = async (key: string, execute: () => Promise<unknown>) => {
     exchange.signal?.throwIfAborted();
     try { await execute(); result.transferred++; }
-    catch (error) { exchange.signal?.throwIfAborted(); result.pending++; report(key, error); }
+    catch (error) { exchange.signal?.throwIfAborted(); pendingKeys.add(key); report(key, error); }
   };
   for (const key of await host.needs()) await attempt(key, () => pullRequestSyncAttachment(host, exchange, key));
   for (const key of remoteNeeds) await attempt(key, () => transferAttachmentBlocks({ storageKey: key, source: host,
@@ -84,5 +85,5 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
         return receiveResult(await single(exchange, { ...resource, operation: 'push', offset, data }));
       }
     } }));
-  return result;
+  return { ...result, pending: pendingKeys.size };
 }

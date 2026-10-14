@@ -1,11 +1,14 @@
 // @vitest-environment node
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import { hostedLegalVersion } from '../../../../../../scripts/ios/ios-hosted-request-seed-data.js';
+import { hostedAttachments, hostedLegalVersion } from '../../../../../../scripts/ios/ios-hosted-request-seed-data.js';
 import { seedIosHostedRequestLibrary } from '../../../../../../scripts/ios/ios-hosted-request-seed.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 
@@ -31,6 +34,26 @@ it('finishes first adoption into an empty companion and sends a later local capt
       expect.objectContaining({ id: 't326-first-adoption-source', content: 'Provider body' })
     ]);
   }
+}, 20000);
+
+it('leaves only the three unavailable attachments pending in the iOS content corpus', async () => {
+  host = await createCompanionRequestFixture();
+  const { fixture } = host;
+  const provider = new Database(fixture.rightSnapshot.databasePath);
+  try { await seedIosHostedRequestLibrary(createBetterSqliteDbPort(provider), 'contentResource'); }
+  finally { provider.close(); }
+  const assets = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets');
+  await mkdir(assets, { recursive: true });
+  await writeFile(path.join(assets, `${hostedAttachments.valid.hash}.pdf`), Buffer.from(hostedAttachments.valid.base64, 'base64'));
+  await writeFile(path.join(assets, `${hostedAttachments.corrupt.hash}.png`), 'corrupt-delivery');
+  const localAssets = path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets');
+  await mkdir(localAssets, { recursive: true });
+  await writeFile(path.join(localAssets, `${hostedAttachments.valid.hash}.pdf`), Buffer.from(hostedAttachments.valid.base64, 'base64'));
+  await beginSyncGroupLocalAdoption(host.db, { endpointUrl: fixture.rightSnapshot.origin,
+    groupId: 't326-group', libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
+    providerDeviceId: fixture.rightSnapshot.deviceId, providerDeviceName: 'Provider', providerPlatform: 'darwin' });
+  expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 3 });
+  expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
 }, 20000);
 
 it('finishes first adoption from the historical iOS acceptance corpus', async () => {

@@ -125,11 +125,11 @@ it('keeps missing attachments pending without retransmitting converged database 
   const seeded = await fixture.right.seedResource({ bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]),
     nodeId: 't326-resource-only', includeImageInBody: true });
   await fs.rm(path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey));
-  expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 2 });
+  expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 1 });
   const before = host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   native.post.mockClear();
   expect(await host.sync()).toMatchObject({ appliedNodeIds: [], pushedNodeIds: [],
-    remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 2 });
+    remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 1 });
   expect(native.post.mock.calls.filter(([input]) => ['objects', 'pulls'].includes(new URL(input.url).searchParams.get('request') ?? '')))
     .toEqual([]);
   await expect(fs.stat(path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey)))
