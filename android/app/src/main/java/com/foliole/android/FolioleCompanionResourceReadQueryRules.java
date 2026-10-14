@@ -20,10 +20,6 @@ final class FolioleCompanionResourceReadQueryRules {
         return group(context, "attachmentResources").getJSONObject(key);
     }
 
-    static String attachmentBatchResponseKey(Context context, String key) throws Exception {
-        return nestedStringValue("attachmentResources", "batchResponseKeys", key);
-    }
-
     static String attachmentResolveResponseKey(Context context, String key) throws Exception {
         return nestedStringValue("attachmentResources", "resolveResponseKeys", key);
     }

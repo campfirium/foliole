@@ -17,7 +17,7 @@ const TEST_APP_ID = `${APP_ID}.test`;
 const RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
 const TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabasePerformanceGateTest`;
 const LIFECYCLE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
-const BATCH_DATA_PLANE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionBatchDataPlaneTest`;
+const RESOURCE_PROVIDER_TEST_CLASS = `${TEST_NAMESPACE}.FolioleResourceProviderTest`;
 const WORKSPACE_CAPACITY_TEST_CLASS = `${TEST_NAMESPACE}.FolioleLibraryWorkspaceCapacityTest`;
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, captured, paths, serial }) {
@@ -97,7 +97,7 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       execute, paths, serial, options });
     if (workspaceCapacity) return await saveWorkspaceCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options, resetFixture, workspaceMemory });
-    for (const testClass of [LIFECYCLE_TEST_CLASS, BATCH_DATA_PLANE_TEST_CLASS]) {
+    for (const testClass of [LIFECYCLE_TEST_CLASS, RESOURCE_PROVIDER_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
       ], options);
@@ -168,7 +168,7 @@ async function saveCapacityEvidence({ evidenceRoot, identities, result, output, 
 }
 
 function assertInstrumentationPassed(output, testClass) {
-  const expectedTests = testClass === BATCH_DATA_PLANE_TEST_CLASS ? 3 : 2;
+  const expectedTests = testClass === RESOURCE_PROVIDER_TEST_CLASS ? 4 : 2;
   if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output)
     || !output.includes(`OK (${expectedTests} tests)`)) {
     throw new Error(`Android lifecycle plugin contract failed: ${testClass}`);

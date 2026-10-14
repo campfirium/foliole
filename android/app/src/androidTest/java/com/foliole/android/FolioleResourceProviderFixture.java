@@ -2,131 +2,132 @@ package com.foliole.android;
 
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.content.SharedPreferences;
-import android.database.sqlite.SQLiteDatabase;
-import org.json.JSONObject;
+import android.util.Base64;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.PluginCall;
 import java.io.File;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 final class FolioleResourceProviderFixture implements AutoCloseable {
-    static final String KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+    static final int BLOCK_BYTES = 524288;
     final File root;
-    final File database;
     final Context context;
-    final String preferences = "t203-" + UUID.randomUUID();
-    final Context target;
-    private ServerSocket server;
-    private ExecutorService workers;
-    interface Responder { Reply respond(FolioleCompanionHttpRequest request) throws Exception; }
-    static final class Reply {
-        final int status;
-        final String type;
-        final byte[] body;
-        final boolean encrypted;
-        final long totalBytes;
-        Reply(int status, String type, byte[] body, boolean encrypted) {
-            this(status, type, body, encrypted, -1);
-        }
-        Reply(int status, String type, byte[] body, boolean encrypted, long totalBytes) {
-            this.status = status; this.type = type; this.body = body; this.encrypted = encrypted;
-            this.totalBytes = totalBytes;
-        }
-    }
+    FramedSyncPayloadBudget owner;
+
     FolioleResourceProviderFixture(Context target) throws Exception {
-        this.target = target;
-        root = Files.createTempDirectory(target.getCacheDir().toPath(), "t203-provider-").toFile();
-        database = new File(root, "fixture.db");
+        root = Files.createTempDirectory(target.getCacheDir().toPath(), "current-attachment-")
+            .toFile().getCanonicalFile();
         context = new ContextWrapper(target) {
             @Override public File getFilesDir() { return root; }
             @Override public File getCacheDir() { return root; }
-            @Override public SharedPreferences getSharedPreferences(String name, int mode) {
-                return target.getSharedPreferences(preferences, mode);
-            }
         };
-        try (SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(database, null)) {
-            db.execSQL("CREATE TABLE attachment_receive_checkpoints (content_hash TEXT, temporary_path TEXT, total_bytes INTEGER, confirmed_bytes INTEGER, PRIMARY KEY(content_hash,temporary_path))");
-            db.execSQL("CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, mime_type TEXT, stored_sha256 TEXT, stored_size_bytes INTEGER)");
-            db.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB)");
-        }
+        Files.createDirectory(new File(root, "attachments").toPath());
+        owner = newOwner();
     }
-    void installCredentials() {
-        FolioleCompanionSyncGroupDataBridge.install(context, this, event -> {
-            if (event.getString("operation").equals("attachment_checkpoint")) {
-                FolioleCompanionSyncGroupDataBridge.current().resolve(new JSONObject()
-                    .put("request_id", event.getString("request_id")).put("result", checkpoint(event.getJSONObject("payload"))));
-                return;
-            }
-            if (!event.getString("operation").equals("load_current_credential")) throw new IllegalStateException("unexpected operation");
-            FolioleCompanionSyncGroupDataBridge.current().resolve(new JSONObject()
-                .put("request_id", event.getString("request_id"))
-                .put("result", new JSONObject().put("device_id", "fixture").put("workgroup_key", KEY)));
-        });
+
+    private FramedSyncPayloadBudget newOwner() {
+        return new FramedSyncPayloadBudget(new File(root, "fixture.db").getPath(), UUID.randomUUID().toString());
     }
-    JSONObject headers() throws Exception {
-        return new JSONObject().put("X-Sync-Group-Id", "fixture-group").put("X-Device-Id", "fixture");
+
+    void reopen() {
+        owner.cancel();
+        owner = newOwner();
     }
-    private JSONObject checkpoint(JSONObject payload) throws Exception {
-        if (!database.getAbsolutePath().equals(payload.getString("database_path"))) throw new IllegalArgumentException("wrong database");
-        String action = payload.getString("action");
-        String[] identity = { payload.getString("content_hash"), payload.getString("temporary_path") };
-        String key = action.equals("load") ? "checkpointLoad" : action.equals("save") ? "checkpointSave" : "checkpointClear";
-        String sql = FolioleCompanionBridgeContractDefinitions.hostApiString(context, "attachmentResourceSync", "sql", key);
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(database.getPath(), null, SQLiteDatabase.OPEN_READWRITE)) {
-            if (action.equals("load")) {
-                try (android.database.Cursor row = db.rawQuery(sql, identity)) {
-                    long confirmed = row.moveToFirst() && row.getLong(0) == payload.getLong("total_bytes") ? row.getLong(1) : 0;
-                    return new JSONObject().put("confirmed_bytes", confirmed);
-                }
-            }
-            if (action.equals("save")) db.execSQL(sql, new Object[] { identity[0], identity[1], payload.getLong("total_bytes"), payload.getLong("confirmed_bytes") });
-            else db.execSQL(sql, identity);
-            return new JSONObject();
+
+    JSObject access(String action, String key) throws Exception {
+        return access(action, key, new JSObject());
+    }
+
+    JSObject access(String action, String key, JSObject data) throws Exception {
+        return access(owner, action, key, data);
+    }
+
+    JSObject access(FramedSyncPayloadBudget selected, String action, String key, JSObject data) throws Exception {
+        data.put("action", action).put("key", key);
+        PluginCall call = new PluginCall(null, "FolioleCompanionSync", "current-attachment",
+            "accessFramedSyncFile", data);
+        return FolioleAttachmentBlockFiles.access(context, selected, call);
+    }
+
+    void truncate(String key, long length) throws Exception {
+        access("truncate", key, new JSObject().put("length", (double) length));
+    }
+
+    void append(String key, long offset, byte[] bytes) throws Exception {
+        appendEncoded(key, offset, Base64.encodeToString(bytes, Base64.NO_WRAP));
+    }
+
+    void appendEncoded(String key, long offset, String encoded) throws Exception {
+        access("append", key, new JSObject().put("offset", (double) offset).put("base64", encoded));
+    }
+
+    JSObject read(String key, double offset, double length) throws Exception {
+        return access("source-read", key, new JSObject().put("offset", offset).put("length", length));
+    }
+
+    byte[] readBytes(String key, long offset, int length) throws Exception {
+        return Base64.decode(read(key, offset, length).getString("base64"), Base64.NO_WRAP);
+    }
+
+    void appendRange(String key, byte[] bytes, int start, int end) throws Exception {
+        for (int offset = start; offset < end; offset += BLOCK_BYTES) {
+            append(key, offset, Arrays.copyOfRange(bytes, offset, Math.min(end, offset + BLOCK_BYTES)));
         }
     }
 
-    String start(Responder responder) throws Exception {
-        server = new ServerSocket(0, 8, java.net.InetAddress.getByName("127.0.0.1"));
-        workers = Executors.newFixedThreadPool(5);
-        workers.submit(() -> {
-            while (!server.isClosed()) {
-                try { Socket socket = server.accept(); workers.submit(() -> respond(socket, responder)); }
-                catch (Exception error) { if (!server.isClosed()) throw new RuntimeException(error); }
+    void replacePartial(String key, byte[] bytes) throws Exception {
+        truncate(key, 0);
+        appendRange(key, bytes, 0, bytes.length);
+    }
+
+    File published(String key) { return new File(root, "attachments/" + key); }
+    File partial(String key) { return new File(root, "attachments/.attachment-" + key.substring(0, 64) + ".partial"); }
+
+    String createLargeSource(int blockCount) throws Exception {
+        File source = new File(root, "source");
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] block = new byte[BLOCK_BYTES];
+        try (FileOutputStream output = new FileOutputStream(source)) {
+            for (int index = 0; index < blockCount; index++) {
+                Arrays.fill(block, (byte) index);
+                for (int shift = 0; shift < 4; shift++) block[shift] = (byte) (index >>> (shift * 8));
+                digest.update(block);
+                output.write(block);
             }
-        });
-        return "http://127.0.0.1:" + server.getLocalPort();
-    }
-    private void respond(Socket socket, Responder responder) {
-        try (Socket owned = socket) {
-            FolioleCompanionHttpRequest request = FolioleCompanionHttpRequest.read(owned.getInputStream());
-            Reply reply = responder.respond(request);
-            byte[] body = reply.encrypted ? FolioleCompanionSyncGroupCrypto.encrypt(KEY,
-                FolioleCompanionSyncGroupCrypto.groupTag(KEY), request.method, request.path, "response", reply.type, reply.body)
-                .toString().getBytes(StandardCharsets.UTF_8) : reply.body;
-            FolioleCompanionHttpResponse.bytes(owned.getOutputStream(), reply.status,
-                reply.encrypted ? FolioleCompanionWorkgroupHttp.ENVELOPE_CONTENT_TYPE : reply.type,
-                reply.type, body, reply.totalBytes);
-        } catch (Exception error) { throw new RuntimeException(error); }
-    }
-    void blob(String hash, byte[] expected, byte[] actual) throws Exception {
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(database.getPath(), null, SQLiteDatabase.OPEN_READWRITE)) {
-            db.execSQL("INSERT INTO content_blobs VALUES (?, 'text/plain', ?, ?)",
-                new Object[] { hash, FolioleCompanionResourceAvailability.digest(expected), expected.length });
-            if (actual != null) db.execSQL("INSERT INTO content_blob_data VALUES (?, ?)", new Object[] { hash, actual });
         }
+        String key = hex(digest.digest()) + ".pdf";
+        Files.move(source.toPath(), published(key).toPath());
+        return key;
     }
+
+    static String key(byte[] bytes) throws Exception {
+        return hex(MessageDigest.getInstance("SHA-256").digest(bytes)) + ".pdf";
+    }
+
+    static byte[] sample(int length) {
+        byte[] bytes = new byte[length];
+        for (int index = 0; index < length; index++) bytes[index] = (byte) (index * 31 + index / BLOCK_BYTES);
+        return bytes;
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte value : bytes) result.append(String.format("%02x", value));
+        return result.toString();
+    }
+
     @Override public void close() throws Exception {
-        if (server != null) server.close();
-        if (workers != null) { workers.shutdownNow(); workers.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS); }
-        FolioleCompanionSyncGroupDataBridge.uninstall(this);
-        target.deleteSharedPreferences(preferences);
+        owner.cancel();
         try (var entries = Files.walk(root.toPath())) {
-            for (var entry : entries.sorted(java.util.Comparator.reverseOrder()).toArray(java.nio.file.Path[]::new)) Files.delete(entry);
+            for (var entry : entries.sorted(Comparator.reverseOrder()).toArray(java.nio.file.Path[]::new)) {
+                Files.delete(entry);
+            }
         }
     }
 }

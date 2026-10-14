@@ -28,13 +28,13 @@ describe('fixed A5 database performance action', () => {
     const execute = async (command, args) => {
       calls.push([command, args]);
       const isLifecycleContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest');
-      const isBatchContract = args.includes('com.foliole.android.FolioleCompanionBatchDataPlaneTest');
+      const isResourceProviderContract = args.includes('com.foliole.android.FolioleResourceProviderTest');
       const isInstrumentation = args.includes('instrument');
       let output = 'Success\n';
       if (args.includes('dumpsys')) {
         output = 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}';
-      } else if (isBatchContract) {
-        output = 'OK (3 tests)\n';
+      } else if (isResourceProviderContract) {
+        output = 'OK (4 tests)\n';
       } else if (isLifecycleContract) {
         output = 'OK (2 tests)\n';
       } else if (isInstrumentation) {
@@ -62,7 +62,7 @@ describe('fixed A5 database performance action', () => {
       'com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest'
     );
     expect(instrumentation[2]).toContain(
-      'com.foliole.android.FolioleCompanionBatchDataPlaneTest'
+      'com.foliole.android.FolioleResourceProviderTest'
     );
     expect(calls.at(-3)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.campfirium.foliole.android.acceptance.test']);
     expect(calls.at(-2)?.[1]).toContain('com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
