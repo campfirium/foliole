@@ -162,7 +162,8 @@ describe('check-layer-dependency-boundary platform subdomains', () => {
     const result = inspectLayerDependencyBoundary({ repoRoot });
 
     expect(result.violations).toEqual([
-      { file: 'src/shared/platform/companionSyncCursors.ts', line: 1, kind: 'platform-subdomain-import' }
+      { file: 'src/shared/platform/companionSyncCursors.ts', line: 1, kind: 'platform-subdomain-import' },
+      { file: 'src/shared/platform/companionSyncPackApply.ts', line: 1, kind: 'platform-flat-root-file' }
     ]);
   });
 

@@ -6,7 +6,10 @@ import { expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
@@ -20,6 +23,8 @@ function oldDatabase(host: string) {
       ? statement.replace('object_id TEXT NOT NULL', 'object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE')
       : statement);
   removeCurrentInventoryFixtureTriggers(db);
+  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) db.exec(sql);
   db.pragma(`user_version = ${host === 'desktop' ? 121 : 58}`);
   db.exec(`INSERT INTO nodes (id, kind, title, created_at, updated_at, current_version_id)
       VALUES ('node', 'topic', 'Node', 'now', 'now', 'head');

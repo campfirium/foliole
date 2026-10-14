@@ -3,10 +3,6 @@
 import { expect, it } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import {
-  confirmOutboundNodeVersionPack,
-  stageOutboundNodeVersionHolds
-} from '../../lib/core/sync/nodeVersionDeliveryProof.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
@@ -15,16 +11,6 @@ import { port, proveBase, setupVersionCollectionFixture,
   sqlite } from './nodeVersionPayloadCollector.testSupport.js';
 
 setupVersionCollectionFixture();
-
-async function stagePackAtA() {
-  sqlite.prepare("UPDATE nodes SET current_version_id = 'A' WHERE id = 'node'").run();
-  try {
-    await stageOutboundNodeVersionHolds(port, { createdAt: 'now', deviceId: 'remote', groupId: 'group',
-      heads: [{ objectId: 'node', versionId: 'A' }], packId: 'pack-1' });
-  } finally {
-    sqlite.prepare("UPDATE nodes SET current_version_id = 'E' WHERE id = 'node'").run();
-  }
-}
 
 function payloads() {
   return sqlite.prepare(`SELECT version_id, body_text,
@@ -84,35 +70,6 @@ it('keeps an unabsorbed sibling and its base without a direct member declaration
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('hidden'))
     .toEqual({ body_text: 'hidden-body' });
   expect((await loadMergeBase(port, 'hidden', 'E'))?.version_id).toBe('B');
-});
-
-it('ignores obsolete outbound holds when all active member positions are known', async () => {
-  proveBase('A');
-  sqlite.prepare(`INSERT INTO node_version_outbound_holds VALUES
-    ('pack-2', 'group', 'remote', 'node', 'C', 'now')`).run();
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
-  expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'E']);
-});
-
-it('does not make obsolete pack receipts a prerequisite for body collection', async () => {
-  proveBase('A');
-  await stageOutboundNodeVersionHolds(port, {
-    createdAt: 'now', deviceId: 'remote', groupId: 'group',
-    heads: [{ objectId: 'node', versionId: 'E' }],
-    packId: 'pack-2', payloads: [{ objectId: 'node', versionId: 'C' }]
-  });
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C'))
-    .toEqual({ body_text: null });
-
-  await confirmOutboundNodeVersionPack(port, {
-    confirmedAt: 'later', deviceId: 'remote', groupId: 'group', libraryEpoch: 'epoch',
-    packId: 'pack-2', proofRevision: 2,
-    results: [{ baseVersionId: 'A', objectId: 'node', result: 'applied', sentVersionId: 'E' }]
-  });
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toEqual({ body_text: null });
 });
 
 it('keeps the editor base, conflict and its parent bodies', async () => {
@@ -181,37 +138,4 @@ it('rolls the entire node back when an update fails', async () => {
     })) };
   await expect(collectNodeVersionPayloads(failingPort, 'node')).rejects.toThrow('injected_failure');
   expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
-});
-
-it('advances a peer base only from an exact applied pack receipt', async () => {
-  await stagePackAtA();
-  const ack = { confirmedAt: 'later', deviceId: 'remote', groupId: 'group',
-    libraryEpoch: 'epoch', packId: 'pack-1', proofRevision: 1,
-    results: [{ baseVersionId: 'A', objectId: 'node', result: 'applied' as const, sentVersionId: 'A' }] };
-  await confirmOutboundNodeVersionPack(port, ack);
-  await confirmOutboundNodeVersionPack(port, ack);
-
-  expect(sqlite.prepare(`SELECT version_id, pack_id FROM node_version_device_bases`).all())
-    .toEqual([{ version_id: 'A', pack_id: 'pack-1' }]);
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
-});
-
-it('does not infer a peer base from a tombstone-blocked node in an acknowledged pack', async () => {
-  await stagePackAtA();
-  await confirmOutboundNodeVersionPack(port, { confirmedAt: 'later', deviceId: 'remote',
-    groupId: 'group', libraryEpoch: 'epoch', packId: 'pack-1', proofRevision: 1,
-    results: [{ baseVersionId: null, objectId: 'node', result: 'blocked', sentVersionId: 'A' }] });
-
-  expect(sqlite.prepare('SELECT * FROM node_version_device_bases').all()).toEqual([]);
-  expect(sqlite.prepare('SELECT version_id FROM node_version_outbound_holds').all()).toEqual([{ version_id: 'A' }]);
-});
-
-it('keeps an unconfirmed hold after an ack names the wrong version', async () => {
-  await stagePackAtA();
-  await expect(confirmOutboundNodeVersionPack(port, { confirmedAt: 'later', deviceId: 'remote',
-    groupId: 'group', libraryEpoch: 'epoch', packId: 'pack-1', proofRevision: 1,
-    results: [{ baseVersionId: 'B', objectId: 'node', result: 'applied', sentVersionId: 'B' }] }))
-    .rejects.toThrow('node_version_pack_hold_missing');
-  expect(sqlite.prepare('SELECT version_id FROM node_version_outbound_holds').all())
-    .toEqual([{ version_id: 'A' }]);
 });

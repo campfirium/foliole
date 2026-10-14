@@ -6,9 +6,12 @@ import { bodyPartNodeId } from '../../lib/core/database/bodyPartitionIdentity.js
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { projectNodeInlineContent } from '../../lib/core/database/nodeInlineProjection.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
@@ -31,9 +34,13 @@ async function fixture(companion: boolean, inline = false) {
   const host = companion ? companionDevice() : textDevice();
   devices.push(host);
   await applyConvergentSyncNodesWithDbPort(host.db, [textBranch('original-head', 'Original version', undefined, NOW)]);
+  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(sql);
   const driver = createBetterSqlite3Driver(host.sqlite);
   host.sqlite.exec('ALTER TABLE framed_sync_outbound_publications DROP COLUMN retirement_reason');
   const hash = upsertTextBodyBlob(driver, BODY, NOW);
+  host.sqlite.prepare('INSERT INTO framed_sync_available_blobs VALUES (?, ?, ?)')
+    .run(Buffer.from(hash, 'hex'), Buffer.byteLength(BODY), Buffer.from(BODY));
   host.sqlite.prepare(`UPDATE nodes SET content = ?, body_blob_hash = ?, resource_references = ?,
     image_sources = ? WHERE id = 'topic'`).run(inline ? BODY : projectNodeInlineContent(BODY), hash,
   '[{"storage_key":"original.pdf","role":"reference"}]', '{"image":"original.png"}');
@@ -57,6 +64,7 @@ async function fixture(companion: boolean, inline = false) {
     .run(Buffer.byteLength(BODY));
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   const original = {
+    blobs: host.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all(),
     versions: host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all(),
     publications: host.sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all(),
     holds: host.sqlite.prepare('SELECT * FROM node_version_local_holds').all(),
@@ -133,7 +141,7 @@ it.each([false, true])('rolls back all parts and schema version on failure, then
   expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 78 : 149);
   expect(host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(before);
   expect(host.sqlite.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(host.original.orders);
-  expect(host.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all()).toEqual([]);
+  expect(host.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all()).toEqual(host.original.blobs);
   host.sqlite.exec('DROP TRIGGER reject_part');
   await upgrade(host, companion);
   assertPreserved(host);

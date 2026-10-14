@@ -5,8 +5,11 @@ import { expect, it } from 'vitest';
 
 
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 
 import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
@@ -20,7 +23,7 @@ it('starts normally while discarding retired desktop Sync Group state', () => {
   expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_group_members'").get()).toBeUndefined();
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_groups').pluck().get()).toBe(0);
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_devices').pluck().get()).toBe(0);
-  expect(sqlite.prepare('SELECT COUNT(*) FROM sync_delivery_receipts').pluck().get()).toBe(0);
+  expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_delivery_receipts'").get()).toBeUndefined();
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_peers').pluck().get()).toBe(0);
   expect(sqlite.prepare("SELECT value FROM workspace_meta WHERE key = 'cleanup_fixture'").pluck().get())
     .toBe('business-data');
@@ -48,19 +51,21 @@ function retiredDesktopSyncGroupFixture() {
   const sqlite = new Database(':memory:');
   initializeDatabaseSchema(sqlite);
   removeCurrentInventoryFixtureTriggers(sqlite);
+  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);
   for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) sqlite.exec(statement);
   sqlite.exec(`
     CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
-    DROP TRIGGER trg_sync_delivery_state_insert;
-    DROP TRIGGER trg_sync_delivery_state_update;
-    DROP TRIGGER trg_sync_delivery_device_leave;
-    DROP TRIGGER trg_sync_delivery_review_insert;
+    DROP TRIGGER IF EXISTS trg_sync_delivery_state_insert;
+    DROP TRIGGER IF EXISTS trg_sync_delivery_state_update;
+    DROP TRIGGER IF EXISTS trg_sync_delivery_device_leave;
+    DROP TRIGGER IF EXISTS trg_sync_delivery_review_insert;
     DROP TABLE sync_group_local_state;
     DROP TABLE sync_group_nonce_ledger;
     DROP TABLE sync_group_devices;
     DROP TABLE sync_groups;
     DROP TABLE sync_delivery_receipts;
-    DROP TABLE sync_peer_cursors;
+    DROP TABLE IF EXISTS sync_peer_cursors;
     CREATE TABLE sync_groups (group_id TEXT PRIMARY KEY, display_name TEXT NOT NULL,
       timeline_id TEXT NOT NULL, created_by_host_name TEXT NOT NULL, created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL, workgroup_key TEXT);

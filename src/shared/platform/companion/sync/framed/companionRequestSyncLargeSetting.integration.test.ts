@@ -2,13 +2,13 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
+import { materializeDesktopSettingRecord } from '../../../../../../electron/database/desktopSettingMaterializer.js';
 import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
 import { buildCanonicalSettingSyncPayload } from '../../../../../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
-import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { materializeDesktopSettingRecord } from '../../../../../../electron/database/desktopSettingMaterializer.js';
 
 let receiver: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 afterEach(async () => { await receiver?.close(); receiver = undefined; });

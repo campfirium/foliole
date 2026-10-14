@@ -2,9 +2,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -18,9 +20,11 @@ function fixture() {
   databases.push(db);
   initializeDatabaseSchema(db);
   removeCurrentInventoryFixtureTriggers(db);
-  db.exec(`DROP TRIGGER trg_sync_state_receipt_insert;
-    DROP TRIGGER trg_sync_state_receipt_replace;
-    DROP TRIGGER trg_sync_state_receipt_delete;
+  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) db.exec(sql);
+  db.exec(`DROP TRIGGER IF EXISTS trg_sync_state_receipt_insert;
+    DROP TRIGGER IF EXISTS trg_sync_state_receipt_replace;
+    DROP TRIGGER IF EXISTS trg_sync_state_receipt_delete;
     PRAGMA user_version = 120;
     INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('live', 'Live', 'now', 'now');
     INSERT INTO node_sync_tombstones
@@ -54,9 +58,13 @@ function assertRepaired(db: Database.Database) {
   expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE deleted_at IS NOT NULL").pluck().get()).toBe(4);
   expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id IN ('live', 'known-deletion')")
     .pluck().get()).toBe(2);
-  expect(db.prepare('SELECT operation_id FROM sync_delivery_receipts ORDER BY operation_id').all()).toEqual([
-    { operation_id: 'node:sent-version' }, { operation_id: 'node_reading:unsent:5' }
-  ]);
+  const receipts = db.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_delivery_receipts'").get();
+  if (db.pragma('user_version', { simple: true }) === 58) {
+    expect(db.prepare('SELECT operation_id FROM sync_delivery_receipts ORDER BY operation_id').all()).toEqual([
+      { operation_id: 'node:sent-version' }, { operation_id: 'node_reading:unsent:2' },
+      { operation_id: 'node_reading:unsent:5' }
+    ]);
+  } else expect(receipts).toBeUndefined();
 }
 
 it('upgrades once without removing deleted states, tombstones, unsent states or version evidence', () => {
