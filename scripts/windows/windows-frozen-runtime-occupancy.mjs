@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const READY_TIMEOUT_MS = 15_000;
@@ -14,14 +15,19 @@ function digestFile(filePath, fsApi = fs) {
 }
 
 export function frozenRuntimeFingerprint(sourceRoot, fsApi = fs) {
-  const nativeModule = path.join(sourceRoot, 'node_modules', 'better-sqlite3',
-    'build', 'Release', 'better_sqlite3.node');
+  const require = createRequire(path.join(sourceRoot, 'package.json'));
+  const packageRoot = path.join(sourceRoot, 'node_modules', 'better-sqlite3');
+  const { getPrebuildPath } = require(path.join(packageRoot, 'lib', 'binding.js'));
+  const debugModule = path.join(packageRoot, 'build', 'Debug', 'better_sqlite3.node');
+  const nativeModule = getPrebuildPath() ?? (fsApi.existsSync(debugModule)
+    ? debugModule : path.join(packageRoot, 'build', 'Release', 'better_sqlite3.node'));
   if (!fsApi.existsSync(nativeModule)) {
     throw new Error('Frozen Windows runtime native module is missing.');
   }
   return {
     lockfileDigest: digestFile(path.join(sourceRoot, 'package-lock.json'), fsApi),
     nativeModuleDigest: digestFile(nativeModule, fsApi),
+    nativeModulePath: nativeModule,
     sourceRoot
   };
 }
@@ -29,6 +35,7 @@ export function frozenRuntimeFingerprint(sourceRoot, fsApi = fs) {
 function fingerprintsMatch(left, right) {
   return left?.lockfileDigest === right?.lockfileDigest
     && left?.nativeModuleDigest === right?.nativeModuleDigest
+    && left?.nativeModulePath === right?.nativeModulePath
     && left?.sourceRoot === right?.sourceRoot;
 }
 
