@@ -35,26 +35,18 @@ it('authenticates provider reads with the group key and an active Device fact', 
   expect(auth).not.toMatch(/Pairing|Member|authorization_id/u);
 });
 
-it('routes inventory and transfers through the framed session boundary', async () => {
-  const server = await readJava('FolioleCompanionSyncGroupServer.java');
+it('routes inventory and objects through the authenticated request boundary', async () => {
   const route = await readJava('FolioleCompanionFramedSyncRoute.java');
-  const apply = await readJava('FolioleCompanionFramedSyncApply.java');
-  expect(server).toContain('new FramedSyncSessionNonceFiles(this.context)');
-  expect(server).toContain('new FramedSyncTransferFiles(this.context)');
-  expect(server).not.toMatch(/FramedSyncSessionNonceSQLite|FramedSyncTransferSQLite/u);
-  expect(route).toContain('FramedSyncSessionRequest.read(');
-  const session = await readJava('framed/FramedSyncSessionRequest.java');
-  expect(session).toContain('FramedSyncSessionReader.readEachEncoded(');
-  expect(route).toContain('FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget)');
-  const inventory = await readJava('FolioleCompanionFramedSyncInventory.java');
-  expect(inventory).toContain('bridge.request("read_framed_inventory"');
-  expect(inventory).toContain('budget.acquire(');
-  expect(inventory).toContain('description(loan)), budget)');
-  expect(route).toContain('FramedSyncTransferReader.Result received = store.receive(');
-  expect(route).toMatch(/FolioleCompanionFramedSyncApply\.apply[\s\S]*store\.receipt/u);
-  expect(apply).toContain('bridge.request("apply_framed_transfer"');
-  expect(apply).toMatch(/staging\.publishResources[\s\S]*resources\.commit\(\)/u);
-  expect(server).not.toMatch(/SyncPackRoutes|SyncGroupSnapshot|contentBlobs/u);
+  const respond = await readJava('FolioleRequestSyncRoute.java');
+  expect(route).toContain('authenticatedPeer.equals(identity.get("initiator_device_id"))');
+  expect(route).toContain('framed_sync_responder_identity_mismatch');
+  expect(route).toContain('request_sync_required');
+  expect(route).toContain('request.signatureBodySha256()');
+  expect(route).toContain('FolioleRequestSyncRoute.respond(');
+  expect(respond).toContain('bridge.request("respond_request_sync", payload, owner)');
+  expect(respond).toContain('FolioleRequestSyncHttpChunks.read(');
+  expect(respond).toContain('FolioleRequestSyncHttpChunks.write(');
+  expect(respond).toContain('finally {\n            try { files.remove(directory); }');
 });
 
 it('publishes Device discovery facts and waits for NSD retirement', async () => {

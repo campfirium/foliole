@@ -22,8 +22,7 @@ describe('sync object policy', () => {
       'setting.workspace',
       'setting.host',
       'view_state.active_node',
-      'view_state.node',
-      'sync_delivery_receipts'
+      'view_state.node'
     ]));
   });
 
