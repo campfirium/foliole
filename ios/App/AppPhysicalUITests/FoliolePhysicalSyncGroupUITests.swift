@@ -122,6 +122,8 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         let app = acceptanceApplication()
         app.launch()
         openSyncSettings(in: app)
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "handoff")).firstMatch.exists)
+        attachScreenshot(named: "Fri-sync-settings-without-handoff-reminders")
         tapButton(named: "Details", in: app, timeout: 30)
         waitForDeviceNames(requestedDeviceNames(), in: app)
         attachScreenshot(named: "Fri-sync-group-devices")
