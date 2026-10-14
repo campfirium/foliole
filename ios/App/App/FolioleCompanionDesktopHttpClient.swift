@@ -30,10 +30,6 @@ enum FolioleCompanionDesktopHttpTransport {
     static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         return try await session.data(for: request, delegate: FolioleCompanionRedirectBlocker())
     }
-
-    static func download(for request: URLRequest) async throws -> (URL, URLResponse) {
-        return try await session.download(for: request, delegate: FolioleCompanionRedirectBlocker())
-    }
 }
 
 enum FolioleCompanionDesktopHttpClient {

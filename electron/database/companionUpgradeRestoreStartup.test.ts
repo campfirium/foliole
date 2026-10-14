@@ -8,6 +8,7 @@ import { expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from '../../lib/core/database/syncPackProgressSchemaStatements.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -31,7 +32,7 @@ it('upgrades the previous mobile library and retains pending restore state acros
       expect(db.prepare('SELECT restore_id, applied_at FROM sync_group_restore_events').get())
         .toEqual({ restore_id: 'pending', applied_at: null });
       expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_receive_checkpoints'").get())
-        .toEqual({ name: 'attachment_receive_checkpoints' });
+        .toBeUndefined();
     }
   } finally { db.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
@@ -45,14 +46,18 @@ it('rolls back a failed upgrade and leaves the prior library ready for a clean r
     })).rejects.toThrow('upgrade interrupted');
     expect(db.pragma('user_version', { simple: true })).toBe(54);
     expect(db.prepare('SELECT content FROM nodes').get()).toEqual({ content: 'Protected body' });
-    expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_receive_checkpoints'").get()).toBeUndefined();
+    expect(db.prepare('SELECT * FROM attachment_receive_checkpoints').all()).toEqual([{
+      content_hash: 'historical-hash', temporary_path: '/partial', total_bytes: 100, confirmed_bytes: 50
+    }]);
   } finally { db.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 function previousLibrary(databasePath: string) {
   const db = new Database(databasePath);
   db.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  db.exec(`DROP TABLE attachment_receive_checkpoints; PRAGMA user_version = 54;
+  db.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[3]);
+  db.exec(`PRAGMA user_version = 54;
+    INSERT INTO attachment_receive_checkpoints VALUES ('historical-hash', '/partial', 100, 50);
     INSERT INTO companion_meta VALUES ('device_id', 'mobile-id', '${now}');
     INSERT INTO companion_meta VALUES ('host_name', 'Mobile', '${now}');
     INSERT INTO sync_groups VALUES ('group', 'Group', 'protected-key', '${now}', '${now}');

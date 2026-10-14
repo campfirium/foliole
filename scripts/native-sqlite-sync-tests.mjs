@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopFramedSyncRelationReviewProcess.integration.test.ts',
   'electron/database/requestSyncPreparedBody.integration.test.ts',
   'electron/database/requestSyncSnapshotOwnership.integration.test.ts',
   'electron/database/requestSyncDatabaseUnits.integration.test.ts',
@@ -108,7 +109,6 @@ export const controlledSyncSqliteTests = [
   'electron/database/hashSqliteByteChunks.test.ts',
   'electron/database/desktopFramedSyncRelationReviewApply.test.ts',
   'electron/database/desktopFramedSyncRelationReviewSelection.test.ts',
-  'electron/database/desktopFramedSyncSessionStaging.test.ts',
   'electron/database/externalResourceCanonicalHashMigration.test.ts',
   'electron/database/framedSyncStagingMigration.test.ts',
   'electron/database/framedSyncResourceDemandMigration.integration.test.ts',

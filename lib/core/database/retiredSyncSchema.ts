@@ -1,5 +1,6 @@
 /** Retired delivery state is removed only at the schema boundary. */
 export const RETIRED_SYNC_TABLES = [
+  'attachment_receive_checkpoints',
   'framed_sync_available_blobs',
   'framed_sync_available_resources',
   'framed_sync_blob_chunks',

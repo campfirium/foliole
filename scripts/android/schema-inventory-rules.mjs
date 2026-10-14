@@ -1,5 +1,4 @@
 export const CORE_TABLES = [
-  'attachment_receive_checkpoints',
   'content_blobs',
   'content_blob_data',
   'external_documents',

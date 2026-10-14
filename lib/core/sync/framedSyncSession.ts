@@ -77,22 +77,3 @@ export async function assertAuthenticatedSessionBootstrap(
   if (!sameBytes(expected, preamble.contextId)) throw new Error('session_context_mismatch');
   return { ...authenticatedHttpContext, sessionId: preamble.sessionId };
 }
-
-export type PersistedSessionSendState = Readonly<{
-  contextId: Uint8Array;
-  noncePrefix: Uint8Array;
-  sessionId: Uint8Array;
-  startingSequence: 0n;
-}>;
-
-export interface FramedSyncSessionNoncePort {
-  persistBeforeEncryption(state: PersistedSessionSendState): Promise<'created' | 'identical'>;
-  abandon(sessionId: Uint8Array): Promise<void>;
-}
-
-export const FRAMED_SYNC_SESSION_INVARIANTS = Object.freeze([
-  'authenticated_http_binds_group_and_both_device_and_library_epoch_identities_before_handshake_decrypt',
-  'session_id_and_nonce_prefix_are_random_and_persisted_before_first_encryption',
-  'same_session_id_nonce_prefix_and_sequence_may_only_replay_identical_ciphertext',
-  'reconnect_never_resumes_session_sequences_and_persists_a_new_session_id_and_nonce_prefix'
-] as const);

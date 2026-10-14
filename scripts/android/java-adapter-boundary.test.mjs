@@ -51,9 +51,7 @@ describe('Android Java adapter boundary', () => {
       { kind: 'asset_support', hasResponsibility: true },
       { kind: 'bridge_contract_metadata', hasResponsibility: true },
       { kind: 'bridge_plugin_adapter', hasResponsibility: true },
-      { kind: 'host_platform_adapter', hasResponsibility: true },
-      { kind: 'active_library_sqlite_adapter', hasResponsibility: true },
-      { kind: 'isolated_pack_sqlite', hasResponsibility: true }
+      { kind: 'host_platform_adapter', hasResponsibility: true }
     ]);
   });
 

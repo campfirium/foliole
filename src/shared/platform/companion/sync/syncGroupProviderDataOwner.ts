@@ -8,7 +8,6 @@ import { parseSyncGroupMemberState } from '../../../../../lib/platform/syncGroup
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
-import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { rememberCompanionRequestSyncProviderState } from './framed/companionRequestSyncPeerState';
@@ -56,8 +55,6 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     await assertSyncGroupJoinAdmission(db, payload);
     return { allowed: true };
   });
-  if (operation === CONTRACT.operations.attachmentCheckpoint)
-    return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);
   if (operation === CONTRACT.operations.applyMemberState) {
     const state = parseSyncGroupMemberState(payload.state);
     return applyCompanionSyncGroupMemberState(state, requiredText(payload.authenticated_device_id)).then(result => {

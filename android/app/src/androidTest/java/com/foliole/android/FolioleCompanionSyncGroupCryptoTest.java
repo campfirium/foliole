@@ -1,9 +1,13 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+
+import android.util.Base64;
 
 import org.json.JSONObject;
 import org.junit.Test;
@@ -29,6 +33,29 @@ public final class FolioleCompanionSyncGroupCryptoTest {
     }
 
     @Test
+    public void decryptsLargeResponseAndRejectsTamperedAuthenticationTag() throws Exception {
+        String key = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+        String tag = FolioleCompanionSyncGroupCrypto.groupTag(key);
+        String path = "/sync-group/member-state";
+        String contentType = "application/json";
+        byte[] original = new byte[2 * 1024 * 1024 + 7];
+        for (int index = 0; index < original.length; index++) original[index] = (byte) index;
+        JSONObject envelope = FolioleCompanionSyncGroupCrypto.encrypt(
+            key, tag, "POST", path, "response", contentType, original);
+        assertArrayEquals(original, FolioleCompanionSyncGroupCrypto.decrypt(
+            key, tag, "POST", path, "response", contentType, envelope));
+
+        int flags = Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING;
+        byte[] tampered = Base64.decode(envelope.getString("ciphertext"), flags);
+        tampered[tampered.length - 1] ^= 1;
+        envelope.put("ciphertext", Base64.encodeToString(tampered, flags));
+        SecurityException error = assertThrows(SecurityException.class, () ->
+            FolioleCompanionSyncGroupCrypto.decrypt(
+                key, tag, "POST", path, "response", contentType, envelope));
+        assertEquals("workgroup_aead_authentication_failed", error.getMessage());
+    }
+
+    @Test
     public void rejectsNonStandardNonceLength() throws Exception {
         try {
             FolioleCompanionSyncGroupCrypto.encryptAt(
@@ -46,7 +73,7 @@ public final class FolioleCompanionSyncGroupCryptoTest {
     public void keepsAuthenticatedGetBodylessWhileEncryptingPostBodies() throws Exception {
         String key = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
         JSONObject headers = new JSONObject().put("X-Sync-Group-Id", "group-1")
-            .put("X-Authorization-Id", "Android");
+            .put("X-Device-Id", "Android");
         FolioleCompanionWorkgroupHttp.PreparedRequest get =
             FolioleCompanionWorkgroupHttp.prepareWithKey(
                 null, "http://127.0.0.1:38641/companion/sync-pack?after_state_seq=0",

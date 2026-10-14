@@ -13,14 +13,3 @@ export function framedSyncFileKey(...parts: readonly string[]) {
   }
   return parts.join('/');
 }
-
-export function encodeFramedSyncFileJson(value: unknown) {
-  return new TextEncoder().encode(JSON.stringify(value, (_key, item: unknown) => {
-    if (typeof item === 'bigint') return item.toString();
-    return item instanceof Uint8Array ? [...item] : item;
-  }));
-}
-
-export function decodeFramedSyncFileJson(bytes: Uint8Array): unknown {
-  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-}

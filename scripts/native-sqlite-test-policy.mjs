@@ -161,7 +161,6 @@ const controlledElectronSqliteTests = [
   'electron/database/workspaceSearchSidecar.test.ts',
   'electron/ipc/backupSearchWorker.test.ts',
   'electron/ipc/storageEditorHoldCommands.test.ts',
-  'electron/sync/companionAttachmentCheckpoint.test.ts',
   'electron/sync/syncPackHeldParentApply.test.ts',
   'electron/sync/syncPackLearningReplay.test.ts',
   'electron/sync/syncPackLearningDependencyApply.test.ts',

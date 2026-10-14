@@ -14,6 +14,7 @@ import { REQUEST_SYNC_MEMORY_BYTES } from '../../lib/core/sync/requestSyncFiles.
 
 import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
 import { encodeFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
+import { retainDesktopFramedSyncSealedBody } from './desktopFramedSyncSealedBody.js';
 import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 
 it.each([1, 10])('preserves signed bytes and bounded scratch use for %i frames', async count => {
@@ -37,4 +38,34 @@ it.each([1, 10])('preserves signed bytes and bounded scratch use for %i frames',
     expect(createHash('sha256').update(Buffer.concat(actual)).digest('hex')).toBe(body.bodySha256);
     expect(spoolDesktopFramedSyncBody).toHaveBeenCalledTimes(exact.length > REQUEST_SYNC_MEMORY_BYTES ? 1 : 0);
   } finally { await body.dispose?.(); }
+});
+
+it.each([1, 10])('releases a prepared body when its HTTP consumer stops early (%i frames)', async count => {
+  vi.mocked(spoolDesktopFramedSyncBody).mockClear();
+  const preamble = encodeFramedSyncPreamble({ compression: 'none', contextKind: 'session',
+    contextId: new Uint8Array(32), noncePrefix: new Uint8Array(4), sessionId: new Uint8Array(16), startingSequence: 0n });
+  let producerClosed = false;
+  const body = await prepareDesktopRequestSyncBody({ preamble, frames: (async function* () {
+    try {
+      for (let index = 0; index < count; index++) yield {
+        headerBytes: encodeFrameHeader({ frameType: 3, flags: 0, sequence: BigInt(index), ciphertextBytes: 512 * 1024 }),
+        ciphertext: new Uint8Array(512 * 1024).fill(index + 1)
+      };
+    } finally { producerClosed = true; }
+  })() });
+  const iterator = encodeFramedSyncHttpBody(body)[Symbol.asyncIterator]();
+  try {
+    expect(producerClosed).toBe(true);
+    expect((await iterator.next()).done).toBe(false);
+    await iterator.return?.();
+    const spilled = body.contentLength > REQUEST_SYNC_MEMORY_BYTES;
+    expect(spoolDesktopFramedSyncBody).toHaveBeenCalledTimes(spilled ? 1 : 0);
+    const remaining = body.frames[Symbol.asyncIterator]();
+    if (spilled) {
+      expect(() => retainDesktopFramedSyncSealedBody(body)).toThrow('framed_sync_sealed_body_released');
+      await expect(remaining.next()).rejects.toMatchObject({ code: 'ENOENT' });
+    } else {
+      expect(await remaining.next()).toEqual({ done: true, value: undefined });
+    }
+  } finally { await iterator.return?.(); await body.dispose?.(); }
 });

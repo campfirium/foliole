@@ -5,7 +5,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionAssetReader.java',
       'FolioleCompanionAttachmentResourceHash.java',
       'FolioleCompanionCanonicalAttachmentKey.java',
-      'FolioleCompanionJsonAssetCache.java'
+      'FolioleCompanionJsonAssetCache.java',
+      'FolioleCompanionResourceAvailability.java'
     ]
   },
   bridge_contract_metadata: {
@@ -23,7 +24,7 @@ export const CLASSIFICATIONS = {
     ]
   },
   bridge_plugin_adapter: {
-    responsibility: 'Land Capacitor calls into Android network, credentials, file, and isolated-pack services.',
+    responsibility: 'Land Capacitor calls into Android network, credentials, file, and request-transfer services.',
     files: [
       'FolioleCompanionAppDataPlugin.java',
       'FolioleCompanionBootstrapPlugin.java',
@@ -83,32 +84,13 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncGroupHttpError.java',
       'FolioleCompanionSyncGroupSessionAuth.java',
-      'FolioleCompanionIdentityPageContract.java',
       'FolioleCompanionSyncParticipationStore.java',
-      'FolioleCompanionWorkgroupEnvelopeStream.java',
-      'FolioleCompanionWorkgroupFileDecrypt.java',
-      'FolioleCompanionWorkgroupGHash.java',
       'FolioleCompanionWorkgroupHttp.java',
       'FolioleCompanionWebView.java',
       'FolioleRemoteImageFiles.java',
       'FolioleAttachmentMaintenanceFiles.java',
       'FolioleAttachmentBlockFiles.java',
       'MainActivity.java'
-    ]
-  },
-  active_library_sqlite_adapter: {
-    responsibility: 'Read provider facts and membership from the active library through fixed shared SQL definitions.',
-    files: [
-      'FolioleCompanionSyncGroupDatabase.java',
-      'FolioleCompanionSyncGroupResources.java'
-    ]
-  },
-  isolated_pack_sqlite: {
-    responsibility: 'Create or validate isolated temporary SQLite packs without opening the active library.',
-    files: [
-      'FolioleCompanionIdentityFactChunkWriter.java',
-      'FolioleCompanionResourceAvailability.java',
-      'FolioleCompanionSyncGroupContentBlobBatch.java',
     ]
   }
 };

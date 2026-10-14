@@ -121,22 +121,6 @@ final class FolioleFramedSyncPayloadBudgetTests: XCTestCase {
         XCTAssertEqual(state.values, [1])
     }
 
-    func testReceiptRejectsOversizedCiphertextBeforeReadingBody() throws {
-        var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
-        bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8))
-        bytes[9] = 96; bytes[11] = 24; bytes[12] = 2
-        bytes.replaceSubrange(16..<48, with: Data(repeating: 1, count: 32))
-        bytes.replaceSubrange(48..<64, with: Data(repeating: 2, count: 16))
-        bytes.replaceSubrange(64..<68, with: Data(repeating: 3, count: 4))
-        let preamble = try FolioleFramedSyncPreamble(decoding: bytes)
-        let header = try FolioleFramedSyncWireHeader(ciphertextBytes: 1_048_577, sequence: 0, frameType: .transferReceipt).encode()
-        XCTAssertThrowsError(try FolioleFramedSyncReceiptReader.read(preamble.encoded + header,
-            groupKey: Data(repeating: 0, count: 32), transferID: preamble.contextID,
-            contentID: Data(repeating: 4, count: 32), receiverDeviceID: "receiver", receiverLibraryEpoch: "epoch")) { error in
-            XCTAssertEqual(error.localizedDescription, "framed_sync_frame_ciphertext_limit_exceeded")
-        }
-    }
-
     private func acquire(_ owner: FolioleFramedSyncPayloadBudget, _ direction: FolioleFramedSyncPayloadBudget.Direction,
                          lane: FolioleFramedSyncPayloadBudget.Lane = .payload) async throws -> FolioleFramedSyncPayloadBudget.Loan {
         try await withCheckedThrowingContinuation { continuation in owner.acquire(direction, lane: lane) { continuation.resume(with: $0) } }

@@ -6,13 +6,6 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const JAVA_ROOT = path.join(ROOT, 'android/app/src/main/java/com/foliole/android');
-const ISOLATED_SQLITE = new Set([
-  'FolioleCompanionIdentityFactChunkWriter.java',
-  'FolioleCompanionResourceAvailability.java',
-  'FolioleCompanionSyncGroupDatabase.java',
-  'FolioleCompanionSyncGroupContentBlobBatch.java',
-  'FolioleCompanionSyncGroupResources.java',
-]);
 
 function javaFiles() {
   return fs.readdirSync(JAVA_ROOT).filter((name) => name.endsWith('.java')).sort();
@@ -23,8 +16,8 @@ function source(name) {
 }
 
 describe('Android Java SQL surface', () => {
-  it('keeps SQLite limited to isolated temporary pack creation and validation', () => {
-    const formalSource = javaFiles().filter((name) => !ISOLATED_SQLITE.has(name)).map(source).join('\n');
+  it('keeps SQLite access in the shared database owner', () => {
+    const formalSource = javaFiles().map(source).join('\n');
     expect(formalSource).not.toContain('SQLiteOpenHelper');
     expect(formalSource).not.toContain('android.database.sqlite.SQLiteDatabase');
     expect(formalSource).not.toContain('getReadableDatabase(');

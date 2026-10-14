@@ -21,8 +21,3 @@ export function readFramedSyncRequestedResources(value: unknown): readonly Frame
   unique(resources.map((resource) => resource.demandId), 'resource_demand_id');
   return resources;
 }
-
-export function projectFramedSyncResourceRequest(resources: readonly FramedSyncRequestedResource[], roundId: Uint8Array) {
-  if (!resources.length) throw new Error('framed_sync_resource_request_empty');
-  return { blobHashes: [], facts: [], resources, roundId };
-}
