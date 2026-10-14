@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
+
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
@@ -37,6 +39,23 @@ it('creates a companion schema without retired transmission tables', () => {
   try {
     for (const sql of ANDROID_COMPANION_SCHEMA_STATEMENTS) db.exec(sql);
     expect(names(db).filter(name => retired.includes(name))).toEqual([]);
+  } finally { db.close(); }
+});
+
+it.each(['android', 'ios'])('reads %s acceptance facts after transmission retirement', host => {
+  const db = new Database(':memory:');
+  try {
+    for (const sql of ANDROID_COMPANION_SCHEMA_STATEMENTS) db.exec(sql);
+    const source = readFileSync(host === 'android'
+      ? 'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceSyncEventProjection.java'
+      : 'ios/App/AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests.swift', 'utf8');
+    const queries = host === 'ios'
+      ? [...source.matchAll(/"""([\s\S]*?)"""/gu)].map(match => match[1]!)
+      : [...source.split('private static JSONObject denseFacts')[0]!
+        .matchAll(/"SELECT[^"\n]*"(?:\s*\+\s*"[^"\n]*")*/gu)]
+        .map(match => [...match[0].matchAll(/"([^"\n]*)"/gu)].map(part => part[1]).join(''));
+    expect(queries.length).toBeGreaterThan(0);
+    for (const sql of queries) expect(() => db.prepare(sql).all(), sql).not.toThrow();
   } finally { db.close(); }
 });
 

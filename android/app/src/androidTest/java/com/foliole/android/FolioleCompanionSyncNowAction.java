@@ -40,8 +40,6 @@ final class FolioleCompanionSyncNowAction {
             .put("projectedResult", projectedRun.optString("result"))
             .put("projectedMessage", projectedRun.optString("message"))
             .put("dirtyObjects", projection.getJSONArray("dirty_objects"))
-            .put("unconfirmedDeliveries", projection.getJSONArray("unconfirmed_deliveries"))
-            .put("pushIssues", projection.getJSONArray("push_issues"))
             .put("errorText", terminal.optString("errorText"));
     }
 
@@ -60,7 +58,6 @@ final class FolioleCompanionSyncNowAction {
         throw new IllegalStateException(
             "Sync Now failed before projection: " + terminal
                 + "; dirty=" + projection.optJSONArray("dirty_objects")
-                + "; pushIssues=" + projection.optJSONArray("push_issues")
                 + "; discovery=" + diagnoseDiscovery(instrumentation)
         );
     }
@@ -168,10 +165,6 @@ final class FolioleCompanionSyncNowAction {
                     if (runId.equals(event.optString("run_id"))) {
                         return new JSONObject().put("run", event).put(
                             "dirty_objects", latestProjection.getJSONArray("dirty_objects")
-                        ).put(
-                            "unconfirmed_deliveries", latestProjection.getJSONArray("unconfirmed_deliveries")
-                        ).put(
-                            "push_issues", latestProjection.getJSONArray("push_issues")
                         );
                     }
                 }
