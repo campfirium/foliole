@@ -1,6 +1,6 @@
 // @vitest-environment node
 import Database from 'better-sqlite3';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { compareFramedSyncInventories } from '../../../../../../lib/core/sync/framedSyncInventory.js';
@@ -12,10 +12,11 @@ import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncD
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
+beforeEach(async () => { host = await createCompanionRequestFixture(); }, 20000);
 afterEach(async () => { await host?.close(); host = undefined; });
 
 it('retains a review with a missing receiver node, delivers independent work and retries after reopening', async () => {
-  host = await createCompanionRequestFixture();
+  if (!host) throw new Error('companion_request_fixture_not_initialized');
   const { fixture } = host;
   await fixture.left.seedRelationReview('sender');
   await host.sync();
