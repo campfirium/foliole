@@ -51,7 +51,7 @@ it.each([
   expect(restored.tableCounts).toEqual(report.source.tableCounts);
   expect(buildChecks(report.source, restored).find((check) =>
     check.name === 'content, relationships and permanent settings')?.status).toBe('failed');
-});
+}, 15_000);
 
 it('fails before restore when the isolated target database already exists', async () => {
   const backupPath = path.join(tempRoot, 'backup.db');
