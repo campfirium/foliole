@@ -79,7 +79,7 @@ it('runs the registered desktop upgrade and preserves mounted references and PDF
       hostName: 'source', updatedAt: 'later' }, undefined, { enqueueSearchInvalidations: false });
     expectRetired(db);
     expect(JSON.parse(db.prepare("SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'legacy-head'").pluck().get() as string))
-      .toEqual({ ...JSON.parse(oldSnapshot), content: null, body_deleted: true });
+      .toEqual(JSON.parse(oldSnapshot));
     initializeDatabaseSchema(db);
     expectRetired(db);
   } finally { db.close(); }

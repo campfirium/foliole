@@ -6,32 +6,9 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 const EXPECTED_STAGING_TABLES = [
-  'framed_sync_available_blobs',
-  'framed_sync_available_resources',
-  'framed_sync_blob_chunks',
-  'framed_sync_blob_offers',
-  'framed_sync_blob_pins',
-  'framed_sync_completion_windows',
   'framed_sync_fact_summary',
-  'framed_sync_inbound_attempts',
-  'framed_sync_inbound_facts',
-  'framed_sync_inbound_frames',
-  'framed_sync_inbound_transfers',
   'framed_sync_inventory',
-  'framed_sync_outbound_attempts',
-  'framed_sync_outbound_blob_refs',
-  'framed_sync_outbound_fact_refs',
-  'framed_sync_outbound_frames',
-  'framed_sync_outbound_holds',
-  'framed_sync_outbound_publications',
-  'framed_sync_receipts',
   'framed_sync_resource_availability',
-  'framed_sync_resource_blob_chunks',
-  'framed_sync_resource_demands',
-  'framed_sync_resource_pins',
-  'framed_sync_session_send_states',
-  'framed_sync_termination_acks',
-  'framed_sync_termination_requests',
   'framed_sync_version_summary'
 ] as const;
 
@@ -44,7 +21,7 @@ beforeEach(() => {
 
 afterEach(() => sqlite.close());
 
-it('installs framed sync staging in a fresh production database', () => {
+it('keeps reconciliation indexes without transport staging in a fresh production database', () => {
   initializeDatabaseSchema(sqlite);
 
   expect(readStagingTables()).toEqual(EXPECTED_STAGING_TABLES.map((name) => ({ name })));

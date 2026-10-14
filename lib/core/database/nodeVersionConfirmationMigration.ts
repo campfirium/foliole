@@ -1,6 +1,5 @@
 import type { DbPort } from '../sync/dbPort.js';
-import { nodeVersionConfirmationDigest } from '../sync/nodeVersionConfirmationState.js';
-import type { NodeVersionPackResult } from '../sync/nodeVersionDeliveryProof.js';
+import { hashText } from '../sync/syncNodeResolution.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { NODE_VERSION_CONFIRMATION_SCHEMA } from './nodeVersionConfirmationSchema.js';
@@ -19,7 +18,7 @@ interface ReceiptRow {
   [key: string]: unknown;
   group_id: string; device_identity_key: string; library_epoch: string;
   proof_revision: number; pack_id: string; object_id: string;
-  sent_version_id: string; result: NodeVersionPackResult['result']; base_version_id: string | null;
+  sent_version_id: string; result: 'applied' | 'blocked' | 'not_applied'; base_version_id: string | null;
 }
 
 function checkpoints(rows: ReceiptRow[]) {
@@ -30,10 +29,11 @@ function checkpoints(rows: ReceiptRow[]) {
   }
   return [...groups.values()].map((receipts) => {
     const row = receipts[0]!;
-    const results = receipts.map((receipt) => ({ objectId: receipt.object_id,
-      sentVersionId: receipt.sent_version_id, result: receipt.result, baseVersionId: receipt.base_version_id }));
+    const digest = hashText(JSON.stringify([...receipts]
+      .sort((a, b) => a.object_id.localeCompare(b.object_id))
+      .map((receipt) => [receipt.object_id, receipt.sent_version_id, receipt.result, receipt.base_version_id])));
     return [row.group_id, row.device_identity_key, row.library_epoch,
-      row.proof_revision, row.pack_id, nodeVersionConfirmationDigest(results)];
+      row.proof_revision, row.pack_id, digest];
   });
 }
 const INSERT_CHECKPOINT_SQL = `INSERT OR IGNORE INTO node_version_confirmation_state

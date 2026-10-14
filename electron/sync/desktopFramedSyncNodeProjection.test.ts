@@ -17,7 +17,7 @@ import {
 
 function record(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSyncNodeRecord {
   return {
-    ancestor_version_ids: ['version-root', 'version-parent'],
+    ancestor_version_ids: [],
     body_text: 'Body with Unicode: 叶',
     content_hash: '1'.repeat(64),
     host_name: 'Mac Studio',
@@ -106,9 +106,7 @@ function expectRoundTripProjection(
     { kind: 'string', value: 'version-parent' },
     { kind: 'string', value: 'version-merge' }
   ] });
-  expect(body.ancestor_version_ids).toEqual({ kind: 'list', value: [
-    { kind: 'string', value: 'version-root' }, { kind: 'string', value: 'version-parent' }
-  ] });
+  expect(body).not.toHaveProperty('ancestor_version_ids');
 
   const [blob] = projection.manifest.blobs;
   if (!blob) throw new Error('blob_missing');

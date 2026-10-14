@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
+
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
@@ -8,6 +10,8 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateCompanionNodeVersionConfirmations, migrateNodeVersionConfirmations } from '../../lib/core/database/nodeVersionConfirmationMigration.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
 import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
@@ -28,6 +32,36 @@ function expectTables(sqlite: Database.Database) {
     AND name LIKE 'node_version_%' ORDER BY name`).all() as Array<{ name: string }>;
   expect(names.map((row) => row.name)).toEqual(TABLES.filter(name => !isRetiredSyncSchema(name)).sort());
 }
+
+it.each(['desktop', 'companion'] as const)('preserves historical confirmation digests during %s retirement', async (host) => {
+  const sqlite = new Database(':memory:');
+  try {
+    for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    sqlite.exec(`INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'epoch', 7, 'pack', NULL, 'now');
+      INSERT INTO node_version_pack_receipts VALUES
+        ('pack', 'z', 'group', 'peer', 'vz', 'blocked', NULL, 'epoch', 7, 'now'),
+        ('pack', 'a', 'group', 'peer', 'va', 'applied', 'base', 'epoch', 7, 'now'),
+        ('old', 'a', 'group', 'peer', 'old-v', 'not_applied', NULL, 'epoch', 6, 'now');
+      INSERT INTO node_version_outbound_holds VALUES ('pack', 'group', 'peer', 'a', 'va', 'now');
+      INSERT INTO node_version_inbound_receipts VALUES
+        ('delivered', 'group', 'peer', 'local', 'epoch', 7, '[]', 'now', 'now'),
+        ('pending', 'group', 'peer', 'local', 'epoch', 8, '[]', 'now', NULL);`);
+    if (host === 'desktop') migrateNodeVersionConfirmations(sqlite);
+    else await migrateCompanionNodeVersionConfirmations(createBetterSqliteDbPort(sqlite));
+
+    const digest = createHash('sha256').update('[["a","va","applied","base"],["z","vz","blocked",null]]').digest('hex');
+    expect(sqlite.prepare('SELECT * FROM node_version_confirmation_state').all()).toEqual([{
+      group_id: 'group', device_identity_key: 'peer', library_epoch: 'epoch',
+      proof_revision: 7, pack_id: 'pack', receipt_digest: digest
+    }]);
+    expect(sqlite.prepare('SELECT pack_id, object_id FROM node_version_pack_receipts').all())
+      .toEqual([{ pack_id: 'pack', object_id: 'a' }]);
+    expect(sqlite.prepare('SELECT pack_id FROM node_version_inbound_receipts').all())
+      .toEqual([{ pack_id: 'pending' }]);
+  } finally {
+    sqlite.close();
+  }
+});
 
 it('adds retention state and a stable library epoch without touching desktop versions', () => {
   const sqlite = new Database(':memory:');

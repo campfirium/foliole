@@ -6,12 +6,14 @@ import { expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 function oldChain(db: Database.Database, group: boolean) {
   removeCurrentInventoryFixtureTriggers(db);
+  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) db.exec(statement);
   db.exec(`INSERT INTO nodes (id, kind, title, content, current_version_id, sync_dirty, created_at, updated_at)
     VALUES ('node', 'topic', 'Node', 'current', 'head', 0, 'now', 'now');
     INSERT INTO node_sync_versions VALUES
@@ -28,10 +30,10 @@ function oldChain(db: Database.Database, group: boolean) {
   db.exec('DROP TABLE node_version_local_origins');
 }
 
-function expectChain(db: Database.Database, group: boolean) {
+function expectChain(db: Database.Database) {
   expect(db.prepare('SELECT version_id, body_text, parent_version_id FROM node_sync_versions ORDER BY created_at').all())
     .toEqual([
-      { version_id: 'base', body_text: group ? 'base' : null, parent_version_id: null },
+      { version_id: 'base', body_text: 'base', parent_version_id: null },
       { version_id: 'shell', body_text: null, parent_version_id: 'base' },
       { version_id: 'head', body_text: 'current', parent_version_id: 'shell' }
     ]);
@@ -51,9 +53,9 @@ it.each([false, true])('upgrades desktop history and old empty shells once (grou
     db.exec('DROP TABLE node_version_member_positions');
     db.pragma('user_version = 119');
     initializeDatabaseSchema(db);
-    expectChain(db, group);
+    expectChain(db);
     initializeDatabaseSchema(db);
-    expectChain(db, group);
+    expectChain(db);
   } finally { db.close(); }
 });
 
@@ -64,11 +66,11 @@ it.each([false, true])('upgrades companion history with the same complete chain 
     db.exec("INSERT INTO companion_meta VALUES ('host_name', 'local', 'now')");
     oldChain(db, group);
     await migrateCompanionDatabase(createBetterSqliteDbPort(db), 56, 57);
-    expectChain(db, group);
+    expectChain(db);
   } finally { db.close(); }
 });
 
-it.each(['desktop', 'companion'])('retires unproven legacy history even with an unknown peer (%s)', async (host) => {
+it.each(['desktop', 'companion'])('preserves legacy history with an unknown peer (%s)', async (host) => {
   const db = new Database(':memory:');
   try {
     if (host === 'desktop') initializeDatabaseSchema(db);
@@ -79,7 +81,7 @@ it.each(['desktop', 'companion'])('retires unproven legacy history even with an 
       db.pragma('user_version = 119');
       initializeDatabaseSchema(db);
     } else await migrateCompanionDatabase(createBetterSqliteDbPort(db), 56, 57);
-    expectChain(db, false);
+    expectChain(db);
   } finally { db.close(); }
 });
 
