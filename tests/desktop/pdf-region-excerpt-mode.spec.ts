@@ -5,14 +5,25 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { createVisualPdfFixture, importPdf } from './pdf-image-excerpt-test-support';
 
+async function fitVisualFixture(desktopWindow: Page) {
+  await desktopWindow.getByRole('button', { name: /^(Custom fit|自定义适配)$/ }).click();
+  await desktopWindow.getByRole('button', { name: /^(Confirm|确认)$/ }).click();
+  await desktopWindow.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
+  await desktopWindow.getByRole('menuitem', { name: '100%' }).click();
+  await expect.poll(() => desktopWindow.locator('.react-pdf__Page canvas').first().evaluate(canvas => canvas.getBoundingClientRect().width)).toBe(200);
+  await desktopWindow.getByTestId('pdf-scroll-container').hover({ position: { x: 300, y: 300 } });
+  await desktopWindow.mouse.wheel(0, -2000);
+  await expect.poll(() => desktopWindow.getByTestId('pdf-scroll-container').evaluate(container => container.scrollTop)).toBe(0);
+}
+
 async function dragPageRegion(desktopWindow: Page, withModifier = false) {
   const page = desktopWindow.locator('.pdf-visual-excerpt-page').first();
   const bounds = await page.boundingBox();
   if (!bounds) throw new Error('PDF page has no bounds');
   if (withModifier) await desktopWindow.keyboard.down('Alt');
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.35);
+  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.2, bounds.y + bounds.height * 0.85);
   await desktopWindow.mouse.down();
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.75);
+  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.7, bounds.y + bounds.height * 0.97);
   await desktopWindow.mouse.up();
   if (withModifier) await desktopWindow.keyboard.up('Alt');
 }
@@ -23,7 +34,7 @@ async function dragFromTextToVisualArea(desktopWindow: Page) {
   if (!textBounds || !pageBounds) throw new Error('PDF mixed page has no drag bounds');
   await desktopWindow.mouse.move(textBounds.x + 2, textBounds.y + textBounds.height / 2);
   await desktopWindow.mouse.down();
-  await desktopWindow.mouse.move(pageBounds.x + pageBounds.width * 0.82, pageBounds.y + pageBounds.height * 0.72);
+  await desktopWindow.mouse.move(pageBounds.x + pageBounds.width * 0.82, pageBounds.y + pageBounds.height * 0.98);
   await desktopWindow.mouse.up();
 }
 
@@ -42,8 +53,9 @@ for (const scenario of [
     desktopWindow
   }) => {
     const fixturePath = path.resolve(`.tmp/artifacts/pdf-region-excerpt-${scenario.name}.pdf`);
-    createVisualPdfFixture(fixturePath, scenario.text);
+    createVisualPdfFixture(fixturePath, scenario.text, 60);
     await importPdf(desktopApp, desktopWindow, fixturePath);
+    await fitVisualFixture(desktopWindow);
     const toggle = desktopWindow.getByRole('button', { name: /Region excerpt|区域摘录/ });
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await toggle.focus();

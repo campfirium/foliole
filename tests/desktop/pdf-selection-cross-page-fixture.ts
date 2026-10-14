@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export function createCrossPagePdf(filePath: string, texts = ['First page ending', 'Second page beginning']) {
+export function createCrossPagePdf(filePath: string, texts = ['First page ending', 'Second page beginning'], size = { width: 600, height: 800 }) {
   const objects = ['<< /Type /Catalog /Pages 2 0 R >>',
     `<< /Type /Pages /Count ${texts.length} /Kids [${texts.map((_, index) => `${4 + index * 2} 0 R`).join(' ')}] >>`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
   texts.forEach((text, index) => {
-    const stream = text ? `BT /F1 14 Tf 40 ${index === 0 ? 30 : 170} Td (${text}) Tj ET\n` : '';
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 200] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + index * 2} 0 R >>`,
+    const stream = text ? `BT /F1 14 Tf 40 ${index === 0 ? 30 : size.height - 30} Td (${text}) Tj ET\n` : '';
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${size.width} ${size.height}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + index * 2} 0 R >>`,
       `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`);
   });
   let pdf = '%PDF-1.4\n';

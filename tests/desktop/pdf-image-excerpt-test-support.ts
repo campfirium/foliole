@@ -10,9 +10,9 @@ function pdfObject(number: number, body: Buffer | string) {
   return Buffer.concat([Buffer.from(`${number} 0 obj\n`), Buffer.from(body), Buffer.from('\nendobj\n')]);
 }
 
-export function createVisualPdfFixture(filePath: string, text: string | null) {
+export function createVisualPdfFixture(filePath: string, text: string | null, textY = 175) {
   const pixels = deflateSync(Buffer.from([220, 60, 60, 60, 130, 220, 80, 180, 90, 230, 190, 70]));
-  const content = Buffer.from(`q\n160 0 0 160 20 20 cm\n/Im0 Do\nQ\n${text ? `BT /F1 14 Tf 24 175 Td (${text}) Tj ET\n` : ''}`);
+  const content = Buffer.from(`q\n160 0 0 160 20 20 cm\n/Im0 Do\nQ\n${text ? `BT /F1 14 Tf 24 ${textY} Td (${text}) Tj ET\n` : ''}`);
   const resources = text ? '/XObject << /Im0 4 0 R >> /Font << /F1 6 0 R >>' : '/XObject << /Im0 4 0 R >>';
   const objects = [
     pdfObject(1, '<< /Type /Catalog /Pages 2 0 R >>'),
