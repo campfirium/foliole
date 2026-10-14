@@ -51,7 +51,7 @@ function rendererNode(versionId: string, content: string, updatedAt: string): No
 
 it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
   'preserves both whole bodies and the real edit basis: %s', async (timing) => {
-    const fixture = await createDesktopFramedSyncTwoProcessFixture();
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     let succeeded = false;
     try {
       await fixture.left.seed({ nodeId, content: baseBody, title: 'Concurrent article' });
@@ -105,7 +105,7 @@ function assertVersionBody(databasePath: string, versionId: string, body: string
 }
 
 it('returns a saved edit based on the received version without introducing a text alternative', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
     await fixture.left.seed({ nodeId, content: baseBody, title: 'Sequential article' });
@@ -132,8 +132,8 @@ it('returns a saved edit based on the received version without introducing a tex
   }
 }, 60_000);
 
-it('continues newer input from its acknowledged branch while independent edit holds survive sync receipts', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('continues newer input from its acknowledged branch while independent edit holds survive synchronization', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
     await fixture.left.seed({ nodeId, content: baseBody, title: 'Concurrent article' });

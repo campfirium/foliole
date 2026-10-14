@@ -2,6 +2,7 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { retainLocalEditBase, releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
@@ -16,6 +17,7 @@ afterEach(() => { devices.splice(0).forEach((value) => value.sqlite.close()); })
 
 async function legacyDevice() {
   const host = device(); await host.receive([textBranch('base', 'Main body')]);
+  for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   const now = new Date().toISOString();
   await host.db.run(`INSERT INTO node_text_alternatives VALUES
     ('legacy', 'topic', 'old-branch', 'Legacy alternative', 'Host', ?, 'available', ?)`, [now, now]);

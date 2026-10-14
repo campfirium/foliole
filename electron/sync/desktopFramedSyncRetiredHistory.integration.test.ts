@@ -4,10 +4,12 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it.each([false, true])('synchronizes retired history after restart with receiver body present=%s', async (receivedOriginal) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  const third = await fixture.startThird();
   try {
     await fixture.left.seed({ content: 'Original body', nodeId: 'retired-history', title: 'History' });
     if (receivedOriginal) await fixture.left.invoke('round', { input: { kind: 'request_reconcile',
@@ -17,6 +19,9 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     await fixture.left.invoke('round', { input: { kind: 'request_reconcile',
       peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin } });
+    await reconnectFixturePeer(fixture.left, third.snapshot);
+    await reconnectFixturePeer(fixture.right, third.snapshot);
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.left.invoke('collect_content');
     const db = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     try {
@@ -47,7 +52,7 @@ it.each([false, true])('synchronizes retired history after restart with receiver
       peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true });
   } finally {
-    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 60_000);

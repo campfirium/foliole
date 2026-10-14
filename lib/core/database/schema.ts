@@ -205,8 +205,7 @@ export {
   pdfPageText,
   settingRecords,
   syncChangeLog,
-  syncObjectState,
-  syncPeerCursors
+  syncObjectState
 } from './schemaSyncExtras.js';
 
 export { desktopSources, importSources } from './schemaSources.js';

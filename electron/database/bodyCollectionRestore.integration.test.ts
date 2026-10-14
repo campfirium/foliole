@@ -46,8 +46,9 @@ it.each([false, true])('restores and explicitly collects retired cache with prio
     connection.sqlite.prepare('DELETE FROM legacy_body_migration_progress WHERE migration_id=?').run(BODY_COLLECTION_ID);
   }
   saveBodyMigrationProgress(connection, initialBodyMigrationProgress('released-body-collection-v2', 'done'), true);
-  connection.sqlite.prepare(`INSERT INTO sync_pack_dependency_rows VALUES
-    ('group','peer','view','node','object',0,'nodes','{}',?,'digest')`)
+  connection.sqlite.prepare(`INSERT INTO sync_change_log
+    (change_id, object_type, object_id, change_type, host_name, content_hash, payload_json, created_at)
+    VALUES ('pending', 'node', 'object', 'update', 'peer', 'digest', ?, 'now')`)
     .run(JSON.stringify({ list: Array.from({ length: 13 }, () => null) }));
   const backup = path.join(root, 'old.db');
   await connection.sqlite.backup(backup);

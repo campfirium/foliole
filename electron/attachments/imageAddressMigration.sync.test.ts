@@ -26,7 +26,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 
 import { runImageAddressMigration } from './imageAddressMigration.js';
 import { migrationContext, migrationFixture, initializeMigrationFixture,
-  imageBytes, oldKey, newKey, migrationNode, seedMigrationNode, stageMigrationSend } from './imageAddressMigrationTestSupport.js';
+  imageBytes, oldKey, newKey, migrationNode, seedMigrationNode, registerMigrationReceiver } from './imageAddressMigrationTestSupport.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
 
 function record(versionId: string): NativeSyncNodeRecord {
@@ -58,7 +58,7 @@ it('sends the repair as a normal descendant version to an independent replica wi
     await upsertTextBodyBlob(port, original.body_text!, original.updated_at,
       await hashTextBodyContent(original.body_text!, {}));
     expect((await applySyncNodesWithDbPort(port, [original])).appliedIds).toEqual(['article']);
-    await stageMigrationSend(original.version_id!);
+    registerMigrationReceiver();
     await fs.writeFile(path.join(migrationFixture.assetsDir, oldKey), imageBytes);
     expect(await runImageAddressMigration(migrationContext())).toEqual({ changed: 1, completed: true });
     const repaired = record(migrationNode().current_version_id);

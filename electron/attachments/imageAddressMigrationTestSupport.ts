@@ -7,9 +7,7 @@ import { vi } from 'vitest';
 
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
-import { stageNodeVersionPush } from '../../lib/core/sync/nodeVersionPushRetention.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -36,7 +34,7 @@ export async function initializeMigrationFixture() {
   initializeDatabase();
 }
 
-export async function stageMigrationSend(versionId: string) {
+export function registerMigrationReceiver() {
   const connection = openDatabaseConnection();
   const pathFlavor = process.platform === 'win32' ? 'windows' : 'posix';
   const local = createSyncGroupDeviceIdentity({ device_anchor: randomUUID(), group_id: 'group',
@@ -45,8 +43,6 @@ export async function stageMigrationSend(versionId: string) {
     library_path: path.join(migrationFixture.root, 'receiver.db'), path_flavor: pathFlavor });
   createDesktopSyncGroup({ device: local, deviceName: 'Source', platform: 'mac', now: 'now' });
   registerSyncGroupDevice({ device: receiver, deviceName: 'Receiver', platform: 'mac', now: 'now' });
-  await stageNodeVersionPush(createBetterSqliteDbPort(connection.sqlite), receiver.identity_key,
-    'migration-send', 'article', versionId, 'now');
 }
 
 export function seedMigrationNode(id: string, content: string, parentId: string | null = null, anchor: unknown = null) {

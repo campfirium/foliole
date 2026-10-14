@@ -10,7 +10,10 @@ import {
   checkpointCompanionDatabase
 } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
+import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -30,6 +33,8 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   const databasePath = path.join(root, 'fixture.db');
   const sqlite = new Database(databasePath);
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  if (version < 82) for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);
   if (version < 40) sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   if (version < 56) sqlite.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema).join(';'));
   if (version < 30) installLegacySyncGroupSchema(sqlite);
@@ -176,7 +181,7 @@ describe('shared companion delivery migration', () => {
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_group_members'").get()).toBeUndefined();
     expect(sqlite.prepare('SELECT COUNT(*) FROM sync_groups').pluck().get()).toBe(0);
     expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_devices').pluck().get()).toBe(0);
-    expect(sqlite.prepare('SELECT COUNT(*) FROM sync_delivery_receipts').pluck().get()).toBe(0);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_delivery_receipts'").all()).toEqual([]);
     expect(sqlite.prepare("SELECT content_hash FROM sync_object_state WHERE object_id = 'user_space:*:*:*:setting-a'").pluck().get())
       .toBe('hash-a');
     sqlite.close();

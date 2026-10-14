@@ -112,8 +112,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   const versions = openDatabaseConnection().sqlite.prepare(
     'SELECT body_text FROM node_sync_versions WHERE object_id = ?').all('node-legacy') as Array<{ body_text: string }>;
   expect(versions.some((row) => row.body_text?.includes(`asset://${hash}.jpg`))).toBe(true);
-  expect(openDatabaseConnection().sqlite.prepare("SELECT count(*) FROM node_sync_versions WHERE object_id = ? AND json_extract(snapshot_json, '$.body_deleted') = 1")
-    .pluck().get('node-legacy')).toBeGreaterThan(0);
+  expect(versions.some((row) => row.body_text === `![legacy](asset://${storageKey})`)).toBe(true);
   const head = openDatabaseConnection().sqlite.prepare(
     'SELECT v.body_text FROM node_sync_versions v JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = ?'
   ).get('node-legacy') as { body_text: string };

@@ -26,12 +26,19 @@ function readBodies(databasePath: string) {
 
 it('releases replaced bytes across real processes, preserves another node holder and survives restart', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  const third = await fixture.startThird();
   try {
     await fixture.left.seed({ content: SHARED, nodeId: 'article', title: 'Article' });
     await fixture.left.seed({ content: SHARED, nodeId: 'holder', title: 'Holder' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.left.seed({ content: INTERMEDIATE, nodeId: 'article', title: 'Article' });
     await fixture.left.seed({ content: 'Current body', nodeId: 'article', title: 'Article' });
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
+    expect(readBodies(fixture.leftSnapshot.databasePath).versions)
+      .toContainEqual(expect.objectContaining({ body_text: INTERMEDIATE }));
+    await reconnectFixturePeer(fixture.left, third.snapshot);
+    await reconnectFixturePeer(fixture.right, third.snapshot);
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
@@ -45,6 +52,9 @@ it('releases replaced bytes across real processes, preserves another node holder
       expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null, body_deleted: 1 }));
     }
     await fixture.left.seed({ content: 'Holder replaced', nodeId: 'holder', title: 'Holder' });
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    await reconnectFixturePeer(fixture.left, third.snapshot);
+    await reconnectFixturePeer(fixture.right, third.snapshot);
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
     const before = [readBodies(fixture.leftSnapshot.databasePath), readBodies(fixture.rightSnapshot.databasePath)];
@@ -62,7 +72,7 @@ it('releases replaced bytes across real processes, preserves another node holder
     expect(readBodies(right.snapshot.databasePath)).toEqual(before[1]);
     await expect(reconnectFixturePeer(left.process, right.snapshot)).resolves.toMatchObject({ complete: true });
   } finally {
-    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
 }, 60_000);

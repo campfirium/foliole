@@ -24,7 +24,6 @@ export type SyncObjectType =
   | 'view_state';
 
 export type StateSyncObjectType = Exclude<SyncObjectType, 'import_run'>;
-export type SyncStreamName = 'node_versions' | 'review_log' | 'state';
 
 export interface SyncObjectStateInput {
   objectType: StateSyncObjectType;
@@ -56,9 +55,7 @@ interface SyncObjectStateRow extends DatabaseRow {
   sync_dirty: number;
 }
 
-interface SyncPeerCursorRow extends DatabaseRow {
-  cursor_value: string;
-}
+
 
 type JsonValue = boolean | null | number | string | JsonValue[] | { [key: string]: JsonValue | undefined };
 
@@ -149,28 +146,4 @@ export function selectSyncStateChangesSince(driver: DatabaseDriver, cursor: numb
     [Math.max(0, Math.trunc(cursor)), Math.max(1, Math.min(1000, Math.trunc(limit)))]
   );
   return rows.map(toSyncObjectStateRecord);
-}
-
-export function getPeerCursor(driver: DatabaseDriver, peerId: string, streamName: SyncStreamName): string | null {
-  return driver.queryOne<SyncPeerCursorRow>(
-    'SELECT cursor_value FROM sync_peer_cursors WHERE peer_id = ? AND stream_name = ?',
-    [peerId, streamName]
-  )?.cursor_value ?? null;
-}
-
-export function setPeerCursor(
-  driver: DatabaseDriver,
-  peerId: string,
-  streamName: SyncStreamName,
-  cursorValue: string,
-  updatedAt: string
-): void {
-  driver.execute(
-    `INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(peer_id, stream_name) DO UPDATE SET
-       cursor_value = excluded.cursor_value,
-       updated_at = excluded.updated_at`,
-    [peerId, streamName, cursorValue, updatedAt]
-  );
 }

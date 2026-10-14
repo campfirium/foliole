@@ -16,12 +16,13 @@ it.each([['android', ANDROID_COMPANION_SCHEMA_STATEMENTS], ['ios', COMPANION_SCH
     for (const sql of schema) db.exec(sql);
     const driver = createBetterSqlite3Driver(db);
     const current = upsertTextBodyBlob(driver, 'Current companion body', 'now');
-    const frozen = upsertTextBodyBlob(driver, 'In-flight companion body', 'now');
+    const frozen = upsertTextBodyBlob(driver, 'Unapplied companion body', 'now');
     const garbage = upsertTextBodyBlob(driver, 'Unused companion body', 'now');
     db.prepare(`INSERT INTO nodes (id,kind,title,body_blob_hash,created_at,updated_at)
       VALUES ('topic','topic','Article',?,'now','now')`).run(current);
-    db.prepare(`INSERT INTO sync_pack_dependency_rows VALUES
-      ('group','peer','view','node','object',0,'nodes','{}',?,'digest')`)
+    db.prepare(`INSERT INTO sync_change_log
+      (change_id, object_type, object_id, change_type, host_name, content_hash, payload_json, created_at)
+      VALUES ('pending', 'node', 'object', 'update', 'peer', 'digest', ?, 'now')`)
       .run(JSON.stringify({ keyed: { [frozen]: { status: 'pending' } } }));
     expect(await collectTextBodyBlobCandidatesWithPort(createBetterSqliteDbPort(db), [current, frozen, garbage]))
       .toEqual({ deletedHashes: [garbage], deletedBytes: Buffer.byteLength('Unused companion body') });
@@ -38,8 +39,9 @@ it('ignores numeric array indexes while preserving actual string keys and values
     const indexOnly = upsertTextBodyBlob(driver, '12', 'now');
     const stringKey = upsertTextBodyBlob(driver, '13', 'now');
     const stringValue = upsertTextBodyBlob(driver, '14', 'now');
-    db.prepare(`INSERT INTO sync_pack_dependency_rows VALUES
-      ('group','peer','view','node','object',0,'nodes','{}',?,'digest')`)
+    db.prepare(`INSERT INTO sync_change_log
+      (change_id, object_type, object_id, change_type, host_name, content_hash, payload_json, created_at)
+      VALUES ('pending', 'node', 'object', 'update', 'peer', 'digest', ?, 'now')`)
       .run(JSON.stringify({ list: Array.from({ length: 15 }, () => null), keyed: { '13': null }, value: '14' }));
     expect(await collectTextBodyBlobCandidatesWithPort(createBetterSqliteDbPort(db), [indexOnly, stringKey, stringValue]))
       .toEqual({ deletedHashes: [indexOnly], deletedBytes: 2 });

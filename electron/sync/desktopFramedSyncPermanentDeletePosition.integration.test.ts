@@ -48,7 +48,7 @@ it.each([false, true])('synchronizes production permanent deletion and member po
         WHERE version.object_id = ? ORDER BY edge.version_id, edge.ordinal`;
       expect(right.prepare(parents).all(nodeId)).toEqual(left.prepare(parents).all(nodeId));
       expect(right.prepare('SELECT id FROM nodes WHERE id = ?').all(nodeId)).toEqual([]);
-      expect(left.prepare('SELECT * FROM framed_sync_outbound_holds').all()).toEqual([]);
+      expect(left.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_outbound_holds'").all()).toEqual([]);
     } finally { left.close(); right.close(); }
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();

@@ -17,7 +17,7 @@ vi.mock('../ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceConte
 
 import { IMAGE_ADDRESS_MIGRATION_ID, runImageAddressMigration } from './imageAddressMigration.js';
 import { migrationContext, migrationFixture, initializeMigrationFixture,
-  imageBytes, oldKey, newKey, migrationNode, seedMigrationNode, stageMigrationSend } from './imageAddressMigrationTestSupport.js';
+  imageBytes, oldKey, newKey, migrationNode, seedMigrationNode, registerMigrationReceiver } from './imageAddressMigrationTestSupport.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
 
 beforeEach(initializeMigrationFixture);
@@ -34,7 +34,7 @@ it('repairs verified images and references, preserves originals and text example
   await fs.writeFile(path.join(migrationFixture.assetsDir, oldKey), imageBytes);
   expect(resolveAttachmentFile(oldKey, migrationFixture.assetsDir).status).toBe('missing_file');
   const originalVersion = migrationNode().current_version_id;
-  await stageMigrationSend(originalVersion);
+  registerMigrationReceiver();
   const childVersion = migrationNode('child').current_version_id;
   const context = migrationContext();
   expect(await runImageAddressMigration(context)).toEqual({ changed: 1, completed: true });

@@ -19,10 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
 
 import {
   computeSyncContentHash,
-  getPeerCursor,
   initializeDatabaseConnection,
   selectSyncStateChangesSince,
-  setPeerCursor,
   upsertSyncObjectState
 } from '../../lib/core/database/index.js';
 
@@ -147,20 +145,6 @@ it('does not reuse a committed state position after its row is deleted', () => {
   });
 
   expect(selectSyncStateChangesSince(driver, 2, 10).map((row) => row.objectId)).toEqual(['later']);
-});
-
-it('stores independent peer cursors per stream', () => {
-  const driver = openInitializedDriver();
-
-  setPeerCursor(driver, 'peer-1', 'state', '12', '2026-04-24T00:00:00.000Z');
-  setPeerCursor(driver, 'peer-1', 'review_log', 'op-1', '2026-04-24T00:01:00.000Z');
-  setPeerCursor(driver, 'peer-1', 'node_versions', 'version-1', '2026-04-24T00:02:00.000Z');
-  setPeerCursor(driver, 'peer-1', 'state', '13', '2026-04-24T00:03:00.000Z');
-
-  expect(getPeerCursor(driver, 'peer-1', 'state')).toBe('13');
-  expect(getPeerCursor(driver, 'peer-1', 'review_log')).toBe('op-1');
-  expect(getPeerCursor(driver, 'peer-1', 'node_versions')).toBe('version-1');
-  expect(getPeerCursor(driver, 'peer-2', 'state')).toBeNull();
 });
 
 it('stores node resource references and settings without retired attachment registries', () => {

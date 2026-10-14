@@ -86,17 +86,6 @@ export const nodeSyncTombstones = sqliteTable('node_sync_tombstones', {
   createdAt: text('created_at').notNull()
 });
 
-export const syncPeerCursors = sqliteTable(
-  'sync_peer_cursors',
-  {
-    peerId: text('peer_id').notNull(),
-    streamName: text('stream_name').notNull(),
-    cursorValue: text('cursor_value').notNull(),
-    updatedAt: text('updated_at').notNull()
-  },
-  (table) => [primaryKey({ columns: [table.peerId, table.streamName] })]
-);
-
 export const contentBlobs = sqliteTable('content_blobs', {
   hash: text('hash').primaryKey(),
   storageKey: text('storage_key').notNull(),
