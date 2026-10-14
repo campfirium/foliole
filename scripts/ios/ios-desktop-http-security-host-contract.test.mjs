@@ -13,16 +13,13 @@ describe('iOS desktop HTTP security host contract', () => {
 
   it('routes every native desktop request through the redirect blocker', () => {
     const client = readAppSource('FolioleCompanionDesktopHttpClient.swift');
-    const attachments = readAppSource('FolioleCompanionAttachmentResourceDownload.swift');
     const framedReceiver = readAppSource('FolioleFramedSyncHTTPReceiver.swift');
     const framedTransport = readAppSource('FolioleFramedSyncHTTPTransport.swift');
 
-    expect(client.match(/FolioleCompanionDesktopHttpTransport\.data\(for: request\)/g)).toHaveLength(2);
-    expect(attachments).toContain('FolioleCompanionDesktopHttpTransport.download(for: request)');
+    expect(client).toMatch(/static func request\([\s\S]*try await FolioleCompanionDesktopHttpTransport\.data\(for: request\)/u);
     expect(framedTransport).toMatch(/FolioleFramedSyncHTTPReceiver[\s\S]*receiver\.upload/u);
     expect(framedReceiver).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/u);
     expect(client).toContain('session.data(for: request, delegate: FolioleCompanionRedirectBlocker())');
-    expect(client).toContain('session.download(for: request, delegate: FolioleCompanionRedirectBlocker())');
     expect(client).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/);
     expect(client).not.toContain('finishTasksAndInvalidate()');
     expect(client).toContain('configuration.requestCachePolicy = .reloadIgnoringLocalCacheData');

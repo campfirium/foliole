@@ -11,7 +11,7 @@ describe('iOS Sync Group host contract', () => {
     const controller = read('ios/App/App/FolioleBridgeViewController.swift');
     const plugin = read('ios/App/App/FolioleCompanionSyncPlugin.swift');
 
-    expect(controller).toContain('registerPluginInstance(FolioleCompanionSyncPlugin())');
+    expect(controller).toMatch(/let (\w+) = FolioleCompanionSyncPlugin\(\)[\s\S]*registerPluginInstance\(\1\)/u);
     expect(plugin).toContain('public let jsName = "FolioleCompanionSync"');
     for (const method of [
       'acceptSyncGroupJoinRequest', 'loadDiscoveryCandidates', 'loadSyncGroupProviderState',
