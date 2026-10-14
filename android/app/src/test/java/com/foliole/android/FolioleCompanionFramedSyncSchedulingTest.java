@@ -1,17 +1,25 @@
 package com.foliole.android;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
+import android.content.Context;
+import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.getcapacitor.PluginCall;
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 public final class FolioleCompanionFramedSyncSchedulingTest {
     @Test public void startsFramedDeliveryWhileTheInventoryExecutorIsWaiting() throws Exception {
-        FolioleCompanionSyncPlugin plugin = new FolioleCompanionSyncPlugin();
+        FolioleCompanionSyncPlugin plugin = new FolioleCompanionSyncPlugin() {
+            @Override public Context getContext() { return null; }
+        };
+        Thread caller = Thread.currentThread();
+        AtomicReference<Thread> rejectionThread = new AtomicReference<>();
         CountDownLatch blocked = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         CountDownLatch completed = new CountDownLatch(1);
@@ -25,12 +33,25 @@ public final class FolioleCompanionFramedSyncSchedulingTest {
         });
         try {
             assertTrue(blocked.await(2, TimeUnit.SECONDS));
-            PluginCall call = new PluginCall(null, "FolioleCompanionSync", "test", "send", null) {
-                @Override public void reject(String message, Exception error) { completed.countDown(); }
+            FramedSyncPayloadBudgetRegistry.configure("scheduling-test", "generation");
+            PluginCall call = new PluginCall(null, "FolioleCompanionSync", "test", "postRequestSyncHttp", null) {
+                @Override public String getString(String name) {
+                    if (name.equals("library_key")) return "scheduling-test";
+                    if (name.equals("generation_id")) return "generation";
+                    if (name.equals("request_id")) return "00000000-0000-0000-0000-000000000001";
+                    return null;
+                }
+                @Override public Integer getInt(String name) { return null; }
+                @Override public com.getcapacitor.JSObject getObject(String name) { return null; }
+                @Override public void reject(String message, Exception error) {
+                    rejectionThread.set(Thread.currentThread());
+                    completed.countDown();
+                }
             };
-            plugin.sendFramedSyncTransfer(call);
+            plugin.postRequestSyncHttp(call);
             assertTrue("The native call must report its missing host context without waiting for inventory",
                 completed.await(2, TimeUnit.SECONDS));
+            assertNotEquals("Validation must run on the delivery executor", caller, rejectionThread.get());
         } finally {
             release.countDown();
             for (Field field : FolioleCompanionSyncPlugin.class.getDeclaredFields()) {
@@ -38,6 +59,7 @@ public final class FolioleCompanionFramedSyncSchedulingTest {
                 field.setAccessible(true);
                 ((ExecutorService) field.get(plugin)).shutdownNow();
             }
+            FramedSyncPayloadBudgetRegistry.close("scheduling-test", "generation");
         }
     }
 }
