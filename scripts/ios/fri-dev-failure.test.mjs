@@ -14,6 +14,8 @@ vi.mock('node:child_process', async (importOriginal) => ({
 
 it('stops development workflow with current diagnosis without starting a recovery process', async () => {
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/t337-dev-failure-'));
+  const runnerPath = path.join(root, 'runner.sh');
+  fs.writeFileSync(runnerPath, '#!/bin/sh\n');
   const stdout = [
     JSON.stringify({ event: 'fri-run-started', invocationId: 'current' }),
     JSON.stringify({ event: 'fri-run-completed', invocationId: 'current',
@@ -32,7 +34,7 @@ it('stops development workflow with current diagnosis without starting a recover
   });
   const written = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
   try {
-    const running = runFriDevWorkflow({ evidenceRoot: root,
+    const running = runFriDevWorkflow({ evidenceRoot: root, runnerPath,
       readiness: async () => {}, retention: async () => {} });
     await vi.waitFor(() => expect(children).toHaveLength(1));
     children[0].emit('close', 0, null);
