@@ -9,7 +9,7 @@ export const RELATION_REVIEW_SCENARIO = Object.freeze({
   reviewOpId: 't326-review-op'
 });
 
-type Role = 'receiver' | 'receiver_conflict' | 'sender';
+type Role = 'receiver' | 'receiver_conflict' | 'sender' | 'review_only';
 
 function writeNode(content: string, updatedAt: string) {
   upsertNodeSnapshot({
@@ -39,6 +39,7 @@ function insertReview(grade: number) {
 }
 
 export function seedDesktopFramedSyncRelationReviewScenario(role: Role) {
+  if (role === 'review_only') { insertReview(3); return; }
   const driver = openDatabaseConnection().driver;
   writeNode('Shared base body', '2026-10-05T00:00:00.000Z');
   flushNodeSyncVersionWithDriver(

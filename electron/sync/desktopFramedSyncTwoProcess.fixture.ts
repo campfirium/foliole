@@ -160,7 +160,7 @@ function snapshot() {
 
 function seedRelationReview(args: Readonly<Record<string, unknown>>) {
   const role = args.role;
-  if (role !== 'sender' && role !== 'receiver' && role !== 'receiver_conflict') {
+  if (role !== 'sender' && role !== 'receiver' && role !== 'receiver_conflict' && role !== 'review_only') {
     throw new Error('fixture_relation_review_role_invalid');
   }
   seedDesktopFramedSyncRelationReviewScenario(role);

@@ -20,9 +20,9 @@ import { closeLibraries, createPeer, root, startLibraries } from './syncLibrary.
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-it('keeps each request snapshot readable after the external folder and source body are removed', async () => {
+it.each(['Original published external body', '', '\ufeff中文😀\0\r\n', '中😀'.repeat(149_796) + 'abcd'])(
+  'keeps each request snapshot readable after the external folder and source body are removed (%#)', async body => {
   const peer = createPeer('external-holder');
-  const body = 'Original published external body';
   const hash = hashTextBody(body);
   const now = '2026-10-06T00:00:00.000Z';
   const payload = { body_blob_hash: hash, content_hash: hash, document_id: 'document',
@@ -59,5 +59,6 @@ async function expectSnapshotBody(request: RequestSyncFiles, body: string, hash:
   const blob = facts.flatMap(fact => fact.blobs).find(value => value.role === 5);
   if (!blob) throw new Error('expected external body');
   expect(Buffer.from(blob.sha256).toString('hex')).toBe(hash);
-  expect(new TextDecoder().decode(await request.loadBody(blob))).toBe(body);
+  expect(blob.byteLength).toBe(BigInt(Buffer.byteLength(body)));
+  expect(Buffer.from(await request.loadBody(blob))).toEqual(Buffer.from(body));
 }

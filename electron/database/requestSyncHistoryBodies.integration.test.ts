@@ -72,9 +72,9 @@ function assertHistory(host: Awaited<ReturnType<typeof fixture>>) {
   expect(host.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_receipts'").get()).toBeUndefined();
 }
 
-it.each(['ordered', 'child-first', 'corrupt-final'] as const)(
+it.each(['ordered', 'child-first', 'corrupt-final', 'missing-final', 'short-final'] as const)(
   'preserves twenty-three complete large bodies across reopening: %s', async order => {
-  const corrupt = order === 'corrupt-final';
+  const fault = order === 'corrupt-final' || order === 'missing-final' || order === 'short-final';
   const host = await fixture();
   try {
     const entry = await readFramedSyncInventoryEntry(host.source.db, { objectType: 'node', globalId: 'topic' });
@@ -93,15 +93,18 @@ it.each(['ordered', 'child-first', 'corrupt-final'] as const)(
       const key = `${request.directory}/body-${bytesToHex(finalBlob.sha256)}-0`;
       const original = await host.files.read(key);
       if (!original) throw new Error('final_history_chunk_not_spooled');
-      if (corrupt) await host.files.write(key, new Uint8Array(original.length).fill(120));
+      if (order === 'corrupt-final') await host.files.write(key, new Uint8Array(original.length).fill(120));
+      if (order === 'missing-final') await host.files.remove(key);
+      if (order === 'short-final') await host.files.write(key, original.subarray(0, original.length - 1));
       let readBytes = 0;
       const apply = () => applyFramedFactSources(createBetterSqliteDbPort(host.sqlite), [async function* () {
         yield* facts;
       }], { requireCompleteVersionGraph: true, loadBody: async (_db, blob) => {
         const body = await request.loadBody(blob); readBytes += body.byteLength; return body;
       } });
-      if (corrupt) {
-        await expect(apply()).rejects.toThrow('request_sync_body_digest_mismatch');
+      if (fault) {
+        await expect(apply()).rejects.toThrow(order === 'corrupt-final'
+          ? 'request_sync_body_digest_mismatch' : 'request_sync_body_chunk_missing');
         expect(readBytes).toBeGreaterThan(0);
         expect(versions(host.sqlite)).toEqual([]);
         expect(host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(originalNodes);

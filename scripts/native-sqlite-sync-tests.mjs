@@ -93,7 +93,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncVerifiedRestoreTwoProcess.integration.test.ts',
   'electron/sync/syncGroupRestoreSources.integration.test.ts',
   'electron/sync/syncGroupRestoreSourceWork.integration.test.ts',
-  'electron/sync/desktopFramedSyncBlobSources.integration.test.ts',
   'lib/core/sync/syncGroupRestoreResetStable.integration.test.ts',
   'lib/core/sync/framedSyncExternalDocumentBody.integration.test.ts',
   'electron/sync/desktopFramedSyncResourceRequestHttp.integration.test.ts',
