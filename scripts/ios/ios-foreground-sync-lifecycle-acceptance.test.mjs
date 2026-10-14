@@ -72,7 +72,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     expect(shell).toContain("postProgress('shell-state'");
     expect(shell).toContain('participation_hydrated: workspaceSync.syncParticipation.hydrated');
     expect(shell).not.toContain('workspaceSync.pullFromDesktop(');
-    expect(runner).toContain("waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 1)");
+    expect(runner).toContain("waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 2)");
     expect(runner).toContain('waitForForegroundSyncLifecycleRunCompletion');
     expect(state).toContain('RUN_SETTLEMENT_TIMEOUT_MS = 120_000');
     expect(shell).toContain("App.addListener('pause'");
@@ -165,10 +165,11 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     const phase_requests = Object.fromEntries([
       'endpoint-ready', 'resume-single-flight', 'failed-resume', 'recovered-resume', 'restart'
     ].map((phase) => [phase, 1]));
+    phase_requests['endpoint-ready'] = 2;
     const registration = hostedProviderRegistrationEvidence();
     const observations = { registration, foreground_sync_lifecycle: {
-      active_requests: 0, completed_requests: 4, failed_requests: 1, max_concurrency: 1,
-      phase_requests, request_count: 5, requests: []
+      active_requests: 0, completed_requests: 5, failed_requests: 1, max_concurrency: 1,
+      phase_requests, request_count: 6, requests: []
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
@@ -178,7 +179,7 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       ...observations.foreground_sync_lifecycle,
       failed_requests: 2,
       phase_requests: { ...phase_requests, 'failed-resume': 2 },
-      request_count: 6
+      request_count: 7
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
@@ -186,14 +187,24 @@ describe('iOS foreground sync lifecycle acceptance', () => {
     })).toMatchObject({ background_retry_request_count: 1 });
     const restartDoubleActive = { registration, foreground_sync_lifecycle: {
       ...observations.foreground_sync_lifecycle,
-      completed_requests: 5,
+      completed_requests: 6,
       phase_requests: { ...phase_requests, restart: 2 },
-      request_count: 6
+      request_count: 7
     } };
     expect(verifyForegroundSyncLifecycleAcceptance({
       afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
       lifecycle: { active_count: 3, pause_count: 3, resume_count: 3 }, observations: restartDoubleActive
     })).toMatchObject({ restart_extra_request_count: 1 });
+    for (const count of [1, 3]) {
+      expect(() => verifyForegroundSyncLifecycleAcceptance({
+        afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+        lifecycle: { active_count: 2, pause_count: 2, resume_count: 2 },
+        observations: { registration, foreground_sync_lifecycle: {
+          ...observations.foreground_sync_lifecycle, phase_requests: { ...phase_requests, 'endpoint-ready': count },
+          completed_requests: count + 3, request_count: count + 4
+        } }
+      })).toThrow('evidence is incomplete');
+    }
     const partialFinished = { result: 'partial', runId: 'run-2', status: 'skipped' };
     const partialSnapshot = { ...snapshot, finishedRuns: [partialFinished], latestFinished: partialFinished };
     expect(verifyForegroundSyncLifecycleAcceptance({

@@ -74,7 +74,7 @@ export async function runIosForegroundSyncLifecycleAcceptance(
 
     launch(options, udid, true);
     await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
-    await waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 1);
+    await waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 2);
     let previousRun = await waitForForegroundSyncLifecycleSnapshot({ databasePath, repoRoot: options.repoRoot });
 
     const backgroundDeltas = [];

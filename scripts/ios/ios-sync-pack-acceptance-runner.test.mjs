@@ -28,6 +28,16 @@ it('accepts persisted capture, restore, parent history and unchanged restart res
   expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, observations))
     .toMatchObject({ first_snapshot: snapshot, second_snapshot: snapshot });
 });
+it('accepts required business objects together with their parent order facts', () => {
+  const { first, second, snapshot, observations } = evidence();
+  first.roundtrip.push.pushedObjectIds.push('pos_parent-order');
+  expect(verifySyncPackAcceptance(first, second, snapshot, snapshot, observations)).toBeTruthy();
+});
+it.each(['capture', 'ios-acceptance-restore'])('rejects a missing %s even when two objects were pushed', missing => {
+  const { first, second, snapshot, observations } = evidence();
+  first.roundtrip.push.pushedObjectIds = first.roundtrip.push.pushedObjectIds.map(id => id === missing ? 'pos_parent-order' : id);
+  expect(() => verifySyncPackAcceptance(first, second, snapshot, snapshot, observations)).toThrow('evidence is incomplete');
+});
 it.each(['capture_body', 'capture_parent', 'restore_body', 'restore_parent', 'capture_current', 'restore_current'])(
   'rejects changed %s even when both snapshots have the same counts', field => {
     const { first, second, snapshot, observations } = evidence();

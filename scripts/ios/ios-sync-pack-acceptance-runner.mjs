@@ -43,8 +43,10 @@ export function readSyncPackSnapshot(options) {
 export function verifySyncPackAcceptance(
   firstBridge, secondBridge, firstSnapshot, secondSnapshot, observations = {}
 ) {
+  const service = observations.sync_pack ?? {};
+  const pushed = new Set(firstBridge.roundtrip?.push?.pushedObjectIds ?? []);
   const firstPassed = firstBridge.phase === 'applied' && firstBridge.apply?.remainingStructureChangeCount === 0 &&
-    firstBridge.roundtrip?.push?.pushedObjectIds?.length === 2 && gatesOpen(firstBridge.roundtrip?.gates);
+    pushed.has(service.capture_node_id) && pushed.has('ios-acceptance-restore') && gatesOpen(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesOpen(secondBridge.roundtrip?.gates);
   const version = suffix => `ver_00000000-0000-4000-8000-000000000${suffix}`;
@@ -53,7 +55,6 @@ export function verifySyncPackAcceptance(
     firstSnapshot?.capture_body === 'Mac successor body' && firstSnapshot?.restore_body === 'Restore body' &&
     firstSnapshot?.restore_current === version('147') && firstSnapshot?.restore_parent === version('145') &&
     firstSnapshot?.restore_deleted_at === null && firstSnapshot?.tombstone_count === 0;
-  const service = observations.sync_pack ?? {};
   const serviceObserved = hostedProviderLifecyclePassed(observations) && Boolean(service.capture_node_id) &&
     service.received_version_ids?.includes(version('146')) && service.received_version_ids?.includes(version('147')) &&
     service.successor_version_id === version('148');
