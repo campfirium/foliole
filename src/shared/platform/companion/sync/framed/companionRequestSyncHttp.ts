@@ -25,7 +25,7 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
 }, consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
   return withRequestSyncFiles(files, async temporary => {
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
-    const prepared = await spoolCompanionRequestSyncHttp(files, temporary.directory, { ...input.body,
+    const prepared = await spoolCompanionRequestSyncHttp({ write: (key, bytes) => temporary.writeScratchFile(key, bytes) }, temporary.directory, { ...input.body,
       frames: touchRequestSyncStream(input.body.frames, input.peerRound?.lease) }, input.signal);
     const requestId = crypto.randomUUID();
     const pathWithQuery = framedSyncPathWithIdentity({ ...input.context,
@@ -68,7 +68,7 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
   }, input.signal);
 }
 
-export async function spoolCompanionRequestSyncHttp(files: RequestSyncFilePort, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
+export async function spoolCompanionRequestSyncHttp(files: Pick<RequestSyncFilePort, 'write'>, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
   const digest = sha256.create();
   let count = 0;
   for await (const bytes of encodeFramedSyncStream(body)) {
