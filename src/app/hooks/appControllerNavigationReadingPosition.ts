@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { resolveTextAnchorLinkInContent } from '../../features/nodes/model/textAnchorResolution';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
@@ -35,7 +35,7 @@ export function useNavigationReadingPosition(
       if (!result) {
         return false;
       }
-      if (result.focusAnchor && isPdfAnchorLocator(result.focusAnchor.locator)) {
+      if (result.focusAnchor && (getPdfAnchorLocators(result.focusAnchor.locator).length > 0)) {
         return false;
       }
       const targetNode = nodesById[result.nodeId];

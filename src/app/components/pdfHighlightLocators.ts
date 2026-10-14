@@ -1,5 +1,5 @@
 import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
-import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 export interface PdfHighlightLocator {
@@ -61,37 +61,25 @@ export function collectPdfHighlightLocators(
     }
     const node = nodesById[nodeId];
     const anchor = node?.anchorLink;
-    if (!node || (anchor?.kind !== 'highlight' && anchor?.kind !== 'image-excerpt') || !anchor.id || !isPdfAnchorLocator(anchor.locator)) {
+    if (!node || (anchor?.kind !== 'highlight' && anchor?.kind !== 'image-excerpt') || !anchor.id || getPdfAnchorLocators(anchor.locator).length === 0) {
       continue;
     }
     if (seenLocatorIds.has(anchor.id)) {
       continue;
     }
     seenLocatorIds.add(anchor.id);
-    locators.push({
-      id: anchor.id,
-      label: node.title,
-      nodeId: node.id,
-      kind: anchor.kind,
-      page: anchor.locator.page,
-      rects: Array.isArray(anchor.locator.rects)
-        ? anchor.locator.rects.filter(
-            (rect): rect is { x: number; y: number; width: number; height: number } =>
-              typeof rect?.x === 'number' &&
-              Number.isFinite(rect.x) &&
-              typeof rect.y === 'number' &&
-              Number.isFinite(rect.y) &&
-              typeof rect.width === 'number' &&
-              Number.isFinite(rect.width) &&
-              rect.width > 0 &&
-              typeof rect.height === 'number' &&
-              Number.isFinite(rect.height) &&
-              rect.height > 0
-          )
-        : [],
-      x: typeof anchor.locator.x === 'number' ? anchor.locator.x : null,
-      y: typeof anchor.locator.y === 'number' ? anchor.locator.y : null
-    });
+    for (const fragment of getPdfAnchorLocators(anchor.locator)) {
+      locators.push({
+        id: anchor.id,
+        label: node.title,
+        nodeId: node.id,
+        kind: anchor.kind,
+        page: fragment.page,
+        rects: fragment.rects ?? [],
+        x: fragment.x,
+        y: fragment.y
+      });
+    }
   }
 
   return locators;

@@ -1,7 +1,9 @@
-import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 
+import { resolvePdfCrossPageSelection } from './pdfCrossPageSelection';
 import { resolvePdfSelectionClientRects } from './pdfSelectionClientRects';
+import { resolvePdfSelectedPageNumbers } from './pdfSelectionPages';
 import { resolvePdfRangeText } from './pdfSelectionRangeText';
 
 function isSelectionNodeInside(container: HTMLElement, node: Node | null) {
@@ -24,6 +26,9 @@ export function resolvePdfSelectionText(container: HTMLElement | null, selection
     return '';
   }
 
+  if (resolvePdfSelectedPageNumbers(container, selection).length > 1) {
+    return resolvePdfCrossPageSelection(container, selection)?.selectionText ?? '';
+  }
   return resolvePdfRangeText(selection.getRangeAt(0));
 }
 
@@ -121,12 +126,15 @@ function resolveRangeBoundingRect(range: Range): DOMRect | null {
   return new DOMRect(firstRect.x, firstRect.y, firstRect.width, firstRect.height);
 }
 
-export function resolvePdfSelectionLocator(container: HTMLElement | null, selection: Selection | null): PdfAnchorLocator | undefined {
+export function resolvePdfSelectionLocator(container: HTMLElement | null, selection: Selection | null): PdfSelectionLocator | undefined {
   if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
     return undefined;
   }
   if (!isSelectionNodeInside(container, selection.anchorNode) || !isSelectionNodeInside(container, selection.focusNode)) {
     return undefined;
+  }
+  if (resolvePdfSelectedPageNumbers(container, selection).length > 1) {
+    return resolvePdfCrossPageSelection(container, selection)?.locator;
   }
   const pageShell = resolveSelectionPageShell(selection);
   const pageFromData = pageShell?.dataset.pdfPageNumber;

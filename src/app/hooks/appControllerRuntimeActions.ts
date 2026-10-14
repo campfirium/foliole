@@ -1,6 +1,6 @@
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
-import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemRegistry';
 import { definedProps } from '../../shared/lib/definedProps';
 import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT } from '../../store/workspaceLayoutDomain';
@@ -120,8 +120,9 @@ export function createRevealAnchorInDocument(args: BuildControllerLayoutPropsArg
     if (!activeNode) {
       return;
     }
-    if (!adapter && (anchor.kind === 'highlight' || anchor.kind === 'image-excerpt') && isPdfAnchorLocator(anchor.locator)) {
-      requestPdfAnchorJump(args.ws.activeNodeId, anchor.locator);
+    const pdfLocator = getPdfAnchorLocators(anchor.locator)[0];
+    if (!adapter && (anchor.kind === 'highlight' || anchor.kind === 'image-excerpt') && pdfLocator) {
+      requestPdfAnchorJump(args.ws.activeNodeId, pdfLocator);
       return;
     }
     if (!adapter) {

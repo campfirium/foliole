@@ -15,6 +15,7 @@ export function PdfOfficialTextLayer() {
     const container = host.current;
     if (!container || !page || rotate === undefined || scale === undefined) return;
     let cancelled = false;
+    container.dataset.pdfTextLayerState = 'loading';
     const layer = new TextLayerBuilder({
       pdfPage: page,
       onAppend: (element: HTMLDivElement) => {
@@ -29,10 +30,13 @@ export function PdfOfficialTextLayer() {
       })
     ]).then(([textContent]) => {
       if (cancelled) return;
+      container.dataset.pdfTextLayerState = 'ready';
+      container.dispatchEvent(new Event('pdftextlayerready', { bubbles: true }));
       callbacks.current?.onGetTextSuccess?.(textContent);
       callbacks.current?.onRenderTextLayerSuccess?.();
     }).catch((error: unknown) => {
       if (!cancelled && error instanceof Error && error.name !== 'AbortException') {
+        container.dataset.pdfTextLayerState = 'failed';
         callbacks.current?.onRenderTextLayerError?.(error);
         console.error('PDF text layer rendering failed', error);
       }

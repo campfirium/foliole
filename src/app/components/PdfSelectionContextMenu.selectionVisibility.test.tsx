@@ -1,6 +1,8 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
+
 import { renderSelectionOverlay } from './PdfPageOverlays';
 import { usePdfSelectionContextMenu } from './PdfSelectionContextMenu';
 
@@ -10,7 +12,7 @@ function SelectionSurface() {
   return (
     <div data-pdf-page-number="1" data-testid="selection-surface" ref={(element) => { menu.surfaceRef.current = element; }}>
       <span>Both selected columns</span>
-      {renderSelectionOverlay(locator ? { ...locator, id: 'selection', x: locator.x ?? 0.5, y: locator.y ?? 0.5 } : null, 12)}
+      {renderSelectionOverlay(getPdfAnchorLocators(locator)[0] ? { ...getPdfAnchorLocators(locator)[0]!, id: 'selection' } : null, 12)}
     </div>
   );
 }

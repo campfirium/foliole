@@ -1,6 +1,7 @@
 import { renderHook, fireEvent } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
 import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
@@ -37,7 +38,7 @@ it('captures both columns on release without rewriting the native selection duri
   fireEvent.mouseUp(document, { button: 0 });
   expect(changeSelection).not.toHaveBeenCalled();
   expect(snapshot.current?.selectionText).toBe('Both selected columns');
-  expect(snapshot.current?.locator.rects).toHaveLength(2);
+  expect(getPdfAnchorLocators(snapshot.current?.locator)[0]?.rects).toHaveLength(2);
   unmount();
   snapshot.current = null;
   fireEvent.mouseUp(document, { button: 0 });

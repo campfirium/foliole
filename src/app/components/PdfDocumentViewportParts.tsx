@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
+import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchStatus, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
@@ -131,7 +132,7 @@ interface PdfDocumentViewportContentProps {
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
+  pdfSelectionLocator: PdfSelectionLocator | undefined;
   pdfSource: string;
   pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   rotation: number;

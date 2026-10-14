@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
@@ -129,7 +130,7 @@ function runResolveLocatorInPageShellTest() {
       ])
   });
 
-  const locator = resolvePdfSelectionLocator(container, selection);
+  const locator = getPdfAnchorLocators(resolvePdfSelectionLocator(container, selection))[0];
   expect(locator?.page).toBe(3);
   expect(locator?.x).toBe(0.45);
   expect(locator?.y).toBe(0.3);
@@ -178,7 +179,7 @@ function runResolveLocatorWithPageFrameTest() {
       ])
   });
 
-  const locator = resolvePdfSelectionLocator(container, selection);
+  const locator = getPdfAnchorLocators(resolvePdfSelectionLocator(container, selection))[0];
   expect(locator?.page).toBe(4);
   expect(locator?.x).toBe(0.4);
   expect(locator?.y).toBe(0.2916666666666667);

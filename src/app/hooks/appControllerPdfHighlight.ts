@@ -3,7 +3,7 @@ import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 
 export function createPdfHighlightHandler(args: BuildControllerLayoutPropsArgs) {
-  return (selectionText: string, locator: NodeAnchorLink['locator']) => {
+  return async (selectionText: string, locator: NodeAnchorLink['locator']) => {
     if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
       return false;
     }
@@ -15,6 +15,6 @@ export function createPdfHighlightHandler(args: BuildControllerLayoutPropsArgs) 
           locator
         }
       : undefined;
-    return Boolean(args.ws.createHighlightNodeFromSelection(args.ws.activeNodeId, selectionText, anchorId, anchorLink));
+    return Boolean(await args.ws.createHighlightNodeFromSelection(args.ws.activeNodeId, selectionText, anchorId, anchorLink));
   };
 }

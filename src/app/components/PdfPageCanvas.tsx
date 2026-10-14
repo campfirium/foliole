@@ -18,6 +18,7 @@ export const PdfPageCanvas = memo(
     pageDimensions?: PdfPageDimensions | null;
     pageRef?: (element: HTMLDivElement | null) => void;
     pageNumber: number;
+    renderCanvas?: boolean;
     rotate: number;
     zoomMode: 'custom' | 'fit-width';
     zoom?: number;
@@ -25,7 +26,7 @@ export const PdfPageCanvas = memo(
     const visualExcerpt = useOptionalPdfVisualExcerptRuntime();
     return (
       <Page
-        className="mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-page"
+        className={`mx-auto overflow-hidden rounded-sm bg-bg-panel shadow-page ${props.renderCanvas === false ? 'h-full w-full' : ''}`}
         {...definedProps({ inputRef: props.pageRef })}
         onLoadSuccess={(page: unknown) => {
           visualExcerpt?.registerPage(props.pageNumber, page as Parameters<NonNullable<typeof visualExcerpt>['registerPage']>[1]);
@@ -46,6 +47,7 @@ export const PdfPageCanvas = memo(
           props.onTextLayerRender();
         }}
         pageNumber={props.pageNumber}
+        renderMode={props.renderCanvas === false ? 'none' : 'canvas'}
         renderAnnotationLayer
         renderTextLayer={false}
         rotate={props.rotate}
@@ -62,6 +64,7 @@ export const PdfPageCanvas = memo(
     previous.fitWidthTargetWidth === next.fitWidthTargetWidth &&
     previous.pageNumber === next.pageNumber &&
     previous.rotate === next.rotate &&
+    previous.renderCanvas === next.renderCanvas &&
     previous.zoom === next.zoom &&
     previous.zoomMode === next.zoomMode
 );

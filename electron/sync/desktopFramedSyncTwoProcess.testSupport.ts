@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 import { build } from 'vite';
 
+import type { NativeWorkspaceAnchorLink } from '../../lib/platform/nativeWorkspaceNodeContract.js';
+
 export { readDesktopFramedSyncLibraryEvidence } from './desktopFramedSyncTwoProcessEvidence.js';
 
 export type DesktopFramedSyncFixtureSnapshot = Readonly<{
@@ -155,7 +157,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
     diagnostics: () => diagnostics, invoke: send,
     init: async () => parseSnapshot(await send('init')),
     seed: async (args: Readonly<{
-      content: string; nodeId: string; parentNodeId?: string; title: string
+      anchorLink?: NativeWorkspaceAnchorLink; content: string; nodeId: string; parentNodeId?: string; title: string
     }>) =>
       parseSnapshot(await send('seed', args)),
     seedResource: (args: Readonly<{ bytes: Uint8Array; includeImageInBody?: boolean; nodeId: string }>) => seedResource(send, args),

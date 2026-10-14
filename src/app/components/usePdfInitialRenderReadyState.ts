@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
+
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { resolveInitialReadyPageNumbers } from './pdfViewportPageNumbers';
 
@@ -13,7 +15,7 @@ interface UsePdfInitialRenderReadyStateArgs {
   }>;
   onInitialRenderReadyChange: (ready: boolean) => void;
   page: number;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
+  pdfSelectionLocator: PdfSelectionLocator | undefined;
   pdfSource: string;
   searchHighlights: PdfSearchVisualHighlight[];
   searchQuery: string;

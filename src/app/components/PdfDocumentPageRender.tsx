@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { getPdfAnchorLocators, type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
@@ -22,7 +23,8 @@ interface RenderPdfPageArgs {
   pageElementsRef: PdfPageElementsRef;
   pageNumber: number;
   pageDimensions?: PdfPageDimensions | null;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
+  pdfSelectionLocator: PdfSelectionLocator | undefined;
+  renderCanvas?: boolean;
   rotation: number;
   searchHighlights: PdfSearchVisualHighlight[];
   zoomMode: 'custom' | 'fit-width';
@@ -43,6 +45,7 @@ interface PdfPageContentProps {
   pageSearchHighlights: PdfSearchVisualHighlight[];
   pdfSelectionLocator: { id: string; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | null;
   placeholderDimensions?: PdfPageDimensions;
+  renderCanvas?: boolean;
   rotation: number;
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
@@ -57,7 +60,8 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
     return highlight.fragments?.some((fragment) => fragment.page === args.pageNumber) ?? false;
   });
   const markerSize = resolvePdfOverlayMarkerSize(args.zoom);
-  const selectionLocator = args.pdfSelectionLocator?.page === args.pageNumber ? { ...args.pdfSelectionLocator, id: 'pdf-selection-overlay' } : null;
+  const fragment = getPdfAnchorLocators(args.pdfSelectionLocator).find(locator => locator.page === args.pageNumber);
+  const selectionLocator = fragment ? { ...fragment, id: 'pdf-selection-overlay' } : null;
   return (
     <PdfPageShell
       fitWidthTargetWidth={args.fitWidthTargetWidth}
@@ -73,6 +77,7 @@ export function renderPdfPage(args: RenderPdfPageArgs) {
       pageNumber={args.pageNumber}
       pageSearchHighlights={pageSearchHighlights}
       pdfSelectionLocator={selectionLocator}
+      {...definedProps({ renderCanvas: args.renderCanvas })}
       rotation={args.rotation}
       zoomMode={args.zoomMode}
       zoom={args.zoom}
@@ -93,6 +98,7 @@ function PdfPageShell(props: {
   pageNumber: number;
   pageSearchHighlights: PdfSearchVisualHighlight[];
   pdfSelectionLocator: { id: string; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | null;
+  renderCanvas?: boolean;
   rotation: number;
   zoomMode: 'custom' | 'fit-width';
   zoom: number;
@@ -149,7 +155,8 @@ function renderLoadingPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRende
 
 function renderPdfPageContent(props: PdfPageContentProps) {
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block" style={props.renderCanvas === false
+      ? resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom) : undefined}>
       {props.placeholderDimensions ? (
         <div
           aria-hidden="true"
@@ -165,6 +172,7 @@ function renderPdfPageContent(props: PdfPageContentProps) {
         onTextLayerRender={props.onTextLayerRender}
         {...definedProps({ pageDimensions: props.pageDimensions, pageRef: props.pageRef })}
         pageNumber={props.pageNumber}
+        {...definedProps({ renderCanvas: props.renderCanvas })}
         rotate={props.rotation}
         zoomMode={props.zoomMode}
         zoom={props.zoom}

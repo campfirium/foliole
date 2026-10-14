@@ -1,8 +1,8 @@
-import { getTextAnchorLocators, isPdfAnchorLocator, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, getPdfAnchorLocators, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 function resolveAnchorSelection(anchor: NodeAnchorLink) {
-  if (isPdfAnchorLocator(anchor.locator)) {
+  if ((getPdfAnchorLocators(anchor.locator).length > 0)) {
     return null;
   }
   const firstLocator = getTextAnchorLocators(anchor.locator)[0];

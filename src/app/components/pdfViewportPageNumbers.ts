@@ -1,3 +1,5 @@
+import { getPdfAnchorLocators, type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
+
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 
 const PDF_PAGE_MIN = 1;
@@ -7,7 +9,8 @@ interface ResolvePageNumberArgs {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   page: number;
   pendingPage?: number | undefined;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
+  pdfSelectionLocator: PdfSelectionLocator | undefined;
+  retainedPageNumbers?: number[];
   searchHighlights: PdfSearchVisualHighlight[];
   searchQuery: string;
   totalPages: number;
@@ -21,7 +24,7 @@ function addRenderablePage(pageNumbers: Set<number>, pageNumber: number | undefi
 export function resolveInitialReadyPageNumbers(args: ResolvePageNumberArgs) {
   if (args.searchQuery.trim()) return [args.page];
   const pageNumbers = new Set<number>([args.page]);
-  addRenderablePage(pageNumbers, args.pdfSelectionLocator?.page, args.totalPages);
+  getPdfAnchorLocators(args.pdfSelectionLocator).forEach(fragment => addRenderablePage(pageNumbers, fragment.page, args.totalPages));
   return Array.from(pageNumbers);
 }
 
@@ -31,7 +34,8 @@ export function resolveRenderablePageNumbers(args: ResolvePageNumberArgs) {
   const pageNumbers = new Set<number>();
   for (let pageNumber = firstPage; pageNumber <= lastPage; pageNumber += 1) pageNumbers.add(pageNumber);
   addRenderablePage(pageNumbers, args.pendingPage, args.totalPages);
-  addRenderablePage(pageNumbers, args.pdfSelectionLocator?.page, args.totalPages);
+  getPdfAnchorLocators(args.pdfSelectionLocator).forEach(fragment => addRenderablePage(pageNumbers, fragment.page, args.totalPages));
+  args.retainedPageNumbers?.forEach(page => addRenderablePage(pageNumbers, page, args.totalPages));
   args.searchHighlights.filter((highlight) => highlight.isActive).forEach((highlight) => {
     addRenderablePage(pageNumbers, highlight.page, args.totalPages);
     highlight.fragments?.forEach((fragment) => addRenderablePage(pageNumbers, fragment.page, args.totalPages));

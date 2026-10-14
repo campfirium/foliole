@@ -1,3 +1,4 @@
+import type { PdfMultiPageAnchorLocator } from '../anchors/pdfAnchorLocator.js';
 import type { NodeKind } from '../nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
@@ -19,7 +20,7 @@ export interface NodeReviewPayload {
 export interface NodeAnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze' | 'image-excerpt';
-  locator?: {
+  locator?: PdfMultiPageAnchorLocator | {
     attachmentId?: string;
     from?: number;
     height?: number;

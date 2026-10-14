@@ -1,7 +1,9 @@
+import type { PdfMultiPageAnchorLocator } from '../core/anchors/pdfAnchorLocator.js';
+
 export interface NativeWorkspaceAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze' | 'image-excerpt';
-  locator?: {
+  locator?: PdfMultiPageAnchorLocator | {
     attachmentId?: string;
     from?: number;
     height?: number;

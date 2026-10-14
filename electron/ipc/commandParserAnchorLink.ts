@@ -1,3 +1,4 @@
+import { parsePdfMultiPageAnchorLocator, type PdfMultiPageAnchorLocator } from '../../lib/core/anchors/pdfAnchorLocator.js';
 import { parseFormulaLocator, type FormulaStoredAnchorLocator } from '../../lib/core/database/anchorLinkFormulaCodec.js';
 
 import { parseAnchorLinkLocatorRects } from './anchorLinkLocatorRects.js';
@@ -5,7 +6,7 @@ import { parseAnchorLinkLocatorRects } from './anchorLinkLocatorRects.js';
 interface AnchorLinkPayload {
   id: string;
   kind: 'highlight' | 'cloze' | 'image-excerpt';
-  locator?: {
+  locator?: PdfMultiPageAnchorLocator | {
     attachmentId?: string;
     from?: number;
     height?: number;
@@ -45,6 +46,7 @@ interface RawAnchorLocator {
   occurrenceKey?: unknown;
   originalText?: unknown;
   page?: unknown;
+        pages?: unknown;
   ranges?: unknown;
   rects?: unknown;
   selection?: unknown;
@@ -130,6 +132,11 @@ export function asAnchorLink(value: unknown, field: string): AnchorLinkPayload |
   if (payload.locator === undefined) return anchorLink;
   const locator = payload.locator;
   if (!locator || typeof locator !== 'object' || Array.isArray(locator)) throw new Error(`invalid argument: ${field}.locator`);
+  if ('pages' in locator) {
+    const multiPage = parsePdfMultiPageAnchorLocator(locator);
+    if (!multiPage) throw new Error(`invalid argument: ${field}.locator.pages`);
+    return { ...anchorLink, locator: multiPage };
+  }
   if (Array.isArray(locator.ranges)) return { ...anchorLink, locator: parseTextAnchorLocatorGroup(locator, field) };
   if (typeof locator.from === 'number' || typeof locator.to === 'number' || typeof locator.originalText === 'string') {
     return { ...anchorLink, locator: parseTextAnchorLocator(locator, field) };

@@ -1,18 +1,18 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 
-import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
 
 const CONTEXT_MENU_SELECTION_FALLBACK_WINDOW_MS = 1000;
 export interface PdfSelectionSnapshot {
   capturedAt: number;
-  locator: PdfAnchorLocator;
+  locator: PdfSelectionLocator;
   selectionText: string;
 }
 
-type PdfSelectionChangeHandler = (locator: PdfAnchorLocator | undefined) => void;
+type PdfSelectionChangeHandler = (locator: PdfSelectionLocator | undefined) => void;
 
 export function resolvePdfSelectionSnapshot(surface: HTMLElement | null): PdfSelectionSnapshot | null {
   const selection = window.getSelection();
@@ -42,7 +42,10 @@ function resolveFallbackSelection(snapshot: PdfSelectionSnapshot | null) {
 }
 
 export function resolveContextMenuSelection(surface: HTMLElement | null, preservedSelection: PdfSelectionSnapshot | null) {
-  return resolvePdfSelectionSnapshot(surface) ?? resolveFallbackSelection(preservedSelection);
+  const snapshot = resolvePdfSelectionSnapshot(surface);
+  if (snapshot) return snapshot;
+  if (window.getSelection()?.isCollapsed === false) return null;
+  return resolveFallbackSelection(preservedSelection);
 }
 
 function createSelectionTrackingHandlers(
@@ -52,7 +55,7 @@ function createSelectionTrackingHandlers(
 ) {
   const syncSelectionSnapshot = () => {
     const snapshot = resolvePdfSelectionSnapshot(surface);
-    if (snapshot) {
+    if (snapshot || window.getSelection()?.isCollapsed === false) {
       preservedSelectionRef.current = snapshot;
     }
     onSelectionChange?.(snapshot?.locator);
@@ -89,11 +92,13 @@ export function useTrackPdfSelection(
 
     document.addEventListener('selectionchange', handlers.syncSelectionSnapshot);
     document.addEventListener('mouseup', handlers.handleMouseUp, true);
+    surface.addEventListener('pdftextlayerready', handlers.syncSelectionSnapshot);
     surface.addEventListener('keyup', handlers.syncSelectionSnapshot, true);
     surface.addEventListener('mousedown', handlers.handleMouseDown, true);
     return () => {
       document.removeEventListener('selectionchange', handlers.syncSelectionSnapshot);
       document.removeEventListener('mouseup', handlers.handleMouseUp, true);
+      surface.removeEventListener('pdftextlayerready', handlers.syncSelectionSnapshot);
       surface.removeEventListener('keyup', handlers.syncSelectionSnapshot, true);
       surface.removeEventListener('mousedown', handlers.handleMouseDown, true);
     };

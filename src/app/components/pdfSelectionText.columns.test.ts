@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { getPdfAnchorLocators } from '../../features/nodes/model/nodeTypes';
 import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
 import { resolvePdfSelectionLocator, resolvePdfSelectionText } from './pdfSelectionText';
@@ -43,7 +44,7 @@ function selectAcrossFragments(rects: DOMRect[], reverse: boolean) {
 function covers(rects: ReturnType<typeof resolvePdfSelectionLocator>, box: DOMRect) {
   const x = (box.x + box.width / 2) / 600;
   const y = (box.y + box.height / 2) / 800;
-  return rects?.rects?.some(rect => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height);
+  return getPdfAnchorLocators(rects)[0]?.rects?.some(rect => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height);
 }
 
 it.each([false, true])('preserves both selected columns with reverse=%s', reverse => {

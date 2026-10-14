@@ -74,7 +74,7 @@ export interface DocumentPanelSectionProps {
   onAdjustExistingHighlightRange: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onCreateCloze: (options?: LongClozeGuardOptions) => void;
   onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;

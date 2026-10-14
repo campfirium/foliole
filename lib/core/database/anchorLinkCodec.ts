@@ -1,9 +1,13 @@
+import { parsePdfMultiPageAnchorLocator, type PdfMultiPageAnchorLocator } from '../anchors/pdfAnchorLocator.js';
+
 import { parseFormulaLocator, type FormulaStoredAnchorLocator } from './anchorLinkFormulaCodec.js';
+
+class InvalidStoredPdfAnchorError extends Error {}
 
 export interface StoredAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze' | 'image-excerpt';
-  locator?: {
+  locator?: PdfMultiPageAnchorLocator | {
     attachmentId?: string;
     from?: number;
     height?: number;
@@ -128,6 +132,7 @@ function parseVisualLocator(
         attachmentId?: unknown;
         height?: unknown;
         page?: unknown;
+        pages?: unknown;
         rects?: unknown;
         width?: unknown;
         x?: unknown;
@@ -180,6 +185,7 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
         height?: unknown;
         originalText?: unknown;
         page?: unknown;
+        pages?: unknown;
         ranges?: unknown;
         rects?: unknown;
         selection?: unknown;
@@ -197,27 +203,21 @@ export function parseStoredAnchorLink(value: string | null): StoredAnchorLink | 
     }
     const base: StoredAnchorLink = { id: parsed.id, kind: parsed.kind };
     const locator = parsed.locator;
-    const textLocatorGroup = parseTextLocatorGroup(locator);
-    if (textLocatorGroup) {
-      base.locator = textLocatorGroup;
-      return base;
+    if (locator && 'pages' in locator) {
+      const multiPage = parsePdfMultiPageAnchorLocator(locator);
+      if (!multiPage) throw new InvalidStoredPdfAnchorError('Invalid stored PDF anchor locator');
+      return { ...base, locator: multiPage };
     }
-    const textLocator = parseTextLocator(locator);
-    if (textLocator) {
-      base.locator = textLocator;
-      return base;
-    }
-    const formulaLocator = parseFormulaLocator(locator);
-    if (formulaLocator) {
-      base.locator = formulaLocator;
-      return base;
-    }
+    const structuredLocator = parseTextLocatorGroup(locator) ?? parseTextLocator(locator) ?? parseFormulaLocator(locator);
+    if (structuredLocator) return { ...base, locator: structuredLocator };
     const visualLocator = parseVisualLocator(locator);
     if (visualLocator) {
       base.locator = visualLocator;
     }
+    if (locator && 'page' in locator && !visualLocator) throw new InvalidStoredPdfAnchorError('Invalid stored PDF anchor locator');
     return base;
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidStoredPdfAnchorError) throw error;
     return null;
   }
 }

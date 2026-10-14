@@ -33,7 +33,7 @@ interface DocumentPanelContentProps {
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;

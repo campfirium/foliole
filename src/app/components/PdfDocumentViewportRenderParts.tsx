@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
+import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
 import { PDF_DOCUMENT_OPTIONS } from '../../features/pdf/model/pdfDocumentOptions';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
+import { PdfDocumentPages } from './PdfDocumentPages';
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfReadingViewDocument } from './PdfReadingViewDocument';
-import { collectPdfPageDimensions, renderDocumentPages } from './pdfViewportPageLayout';
-import { resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
+import { collectPdfPageDimensions } from './pdfViewportPageLayout';
 import { PdfViewportPlaceholderStack } from './pdfViewportPlaceholderStack';
 import { usePdfInitialRenderReadyState } from './usePdfInitialRenderReadyState';
 
@@ -38,7 +39,7 @@ interface PdfViewportDocumentProps {
   pageElementsRef: PdfPageElementsRef;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
+  pdfSelectionLocator: PdfSelectionLocator | undefined;
   pdfSource: string;
   rotation: number;
   searchQuery: string;
@@ -183,76 +184,4 @@ function createPageLoadSuccessHandler(
         : { ...current, [pageNumber]: dimensions }
     );
   };
-}
-function PdfDocumentPages({
-  fitWidthTargetWidth,
-  highlightLocators,
-  onPageRenderReady,
-  onTextContentLoad,
-  onTextLayerRender,
-  onPageLoadSuccess,
-  pageJumpRequest,
-  pageDimensionsByNumber,
-  pageElementsRef,
-  pdfSelectionLocator,
-  rotation,
-  searchQuery,
-  searchHighlights,
-  totalPages,
-  visiblePage,
-  zoomMode,
-  zoom
-}: PdfDocumentPagesProps) {
-  if (!totalPages) {
-    return null;
-  }
-  const pageNumbers = resolveRenderablePageNumbers({
-    highlightLocators,
-    page: visiblePage,
-    pendingPage: pageJumpRequest?.page,
-    pdfSelectionLocator,
-    searchHighlights,
-    searchQuery,
-    totalPages
-  });
-  return renderDocumentPages(totalPages, pageNumbers, {
-    fitWidthTargetWidth,
-    highlightLocators,
-    onPageRenderReady,
-    onPageLoadSuccess,
-    onTextContentLoad,
-    onTextLayerRender,
-    pageDimensionsByNumber,
-    pageElementsRef,
-    pdfSelectionLocator,
-    rotation,
-    searchHighlights,
-    zoomMode,
-    zoom
-  });
-}
-interface PdfDocumentPagesProps {
-  fitWidthTargetWidth: number | null;
-  highlightLocators: Array<{
-    id: string;
-    page: number;
-    rects?: Array<{ height: number; width: number; x: number; y: number }>;
-    x: number | null;
-    y: number | null;
-  }>;
-  onPageRenderReady: (pageNumber: number) => void;
-  onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
-  onTextLayerRender: (pageNumber: number) => void;
-  onPageLoadSuccess: (pageNumber: number, dimensions: PdfPageDimensions) => void;
-  pageJumpRequest: PdfJumpRequest | null;
-  pageDimensionsByNumber: Record<number, PdfPageDimensions>;
-  pageElementsRef: PdfPageElementsRef;
-  pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
-  rotation: number;
-  searchQuery: string;
-  searchHighlights: PdfSearchVisualHighlight[];
-  totalPages: number | null;
-  visiblePage: number;
-  zoomMode: 'custom' | 'fit-width';
-  zoom: number;
 }

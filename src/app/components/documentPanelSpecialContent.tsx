@@ -35,7 +35,7 @@ export function resolveDocumentPanelContentBody(args: {
   linkPanels: LinkPanelRecord[];
   nodeOrder: string[];
   nodesById: Record<string, Node>;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onCloseExternalLink: (panelId: string) => void;
   onLinkPanelStateChange: (
     panelId: string,

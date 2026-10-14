@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { createMockEditorAdapter } from '../../test/editorAdapterTestSupport';
 
@@ -34,11 +35,11 @@ vi.mock('../../shared/platform/performanceDiagnosticsProbe', () => ({
 function createPdfBreadcrumbHarness(args: {
   activeNodeContent: string;
   editorRef: { current: unknown };
-  locator: { page: number; x: number; y: number };
+  locator: PdfSelectionLocator;
 }) {
   const jumpToAncestorNode = vi.fn(() => ({
     focusAnchor: {
-      id: `pdf-hl-${args.locator.page}`,
+      id: 'pdf-anchor',
       kind: 'highlight' as const,
       locator: args.locator
     },
@@ -109,4 +110,14 @@ describe('useWorkspaceNavigation pdf breadcrumb jumps', () => {
     expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', { page: 9, x: 0.1, y: 0.25 });
     expect(revealSelection).not.toHaveBeenCalled();
   });
+  it('returns to the first document fragment for a cross-page excerpt', async () => {
+    const pages = [2, 5].map(page => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] }));
+    const view = createPdfBreadcrumbHarness({ activeNodeContent: '', editorRef: { current: null }, locator: { pages } });
+    await act(async () => {
+      await view.result.current.handleSelectBreadcrumbNode('pdf-parent');
+      view.rerender({ activeNodeId: 'pdf-parent' });
+    });
+    expect(requestPdfAnchorJump).toHaveBeenCalledWith('pdf-parent', pages[0]);
+  });
+
 });

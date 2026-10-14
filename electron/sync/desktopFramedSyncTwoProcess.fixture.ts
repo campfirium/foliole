@@ -1,9 +1,11 @@
+
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { asAnchorLink } from '../ipc/commandParserAnchorLink.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
 import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInventory.fixture.js';
@@ -104,7 +106,7 @@ async function loadProcessPort() {
 function seed(args: Readonly<Record<string, unknown>>) {
   const now = '2026-10-05T00:00:00.000Z';
   upsertNodeSnapshot({
-    anchorLink: null,
+    anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
     content: String(args.content),
     createdAt: now,
     isTitleManual: true,

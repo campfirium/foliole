@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
-import { isPdfAnchorLocator, type NodeAnchorLink } from '../../nodes/model/nodeTypes';
+import { getPdfAnchorLocators, type NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfJumpRequest } from './pdfSystemApi';
 import { clampInteger, createJumpRequest, PDF_PAGE_MIN, PDF_ZOOM_MAX, PDF_ZOOM_MIN, PDF_ZOOM_MODE_CUSTOM, PDF_ZOOM_MODE_FIT_WIDTH, PDF_ZOOM_STEP } from './pdfSystemStateUtils';
@@ -45,13 +45,14 @@ function createPdfSystemActions(args: CreatePdfSystemActionArgs) {
   return {
     ...createPdfCoreActions(args),
     requestAnchorJump: (locator: NonNullable<NodeAnchorLink['locator']>) => {
-      if (!isPdfAnchorLocator(locator)) {
+      const firstLocator = getPdfAnchorLocators(locator)[0];
+      if (!firstLocator) {
         return;
       }
-      const nextPage = clampInteger(locator.page, PDF_PAGE_MIN, args.maxPage);
+      const nextPage = clampInteger(firstLocator.page, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);
-      args.setPositionY(Math.max(0, Math.min(1, locator.y ?? 0)));
-      queuePageJump(nextPage, locator.y);
+      args.setPositionY(Math.max(0, Math.min(1, firstLocator.y ?? 0)));
+      queuePageJump(nextPage, firstLocator.y);
     },
     requestPageChange: (value: number) => {
       const nextPage = clampInteger(value, PDF_PAGE_MIN, args.maxPage);

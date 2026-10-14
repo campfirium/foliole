@@ -1,7 +1,7 @@
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { sortFolderListNodes } from '../../features/nodes/model/folderListOrdering';
-import { getTextAnchorLocators, isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
@@ -72,12 +72,12 @@ function resolveAnchorContext(
   nodesById: Record<string, Node>
 ): NonNullable<NativeAssistantWorkspaceContext['anchor']> {
   const parent = node.parentNodeId ? nodesById[node.parentNodeId] : null;
+  const pdfPage = getPdfAnchorLocators(node.anchorLink?.locator)[0];
   const text = getTextAnchorLocators(node.anchorLink?.locator).map((locator) => locator.originalText).join('\n');
-  const locator = node.anchorLink?.locator;
   return {
     id: node.anchorLink?.id ?? node.id,
     kind: node.anchorLink?.kind ?? 'highlight',
-    ...(isPdfAnchorLocator(locator) ? { page: locator.page } : {}),
+    ...(pdfPage ? { page: pdfPage.page } : {}),
     ...(parent ? { parentNodeId: parent.id, parentTitle: displayTitle(parent) } : {}),
     ...(text ? { text: truncateText(text, CHILD_PREVIEW_LIMIT).text } : {})
   };

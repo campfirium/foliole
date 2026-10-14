@@ -2,7 +2,7 @@ import { useEffect, type ComponentProps, type RefObject } from 'react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { PdfReadingViewProvider } from '../../features/pdf/components/PdfReadingViewContext';
 import { PdfTopBarsDocument } from '../../features/pdf/components/PdfTopBarsDocument';
 import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
@@ -39,7 +39,7 @@ interface PdfDocumentSurfaceProps {
   highlightLocators: PdfHighlightLocator[];
   isVisible?: boolean;
   nodeId: string | null;
-  onCreateHighlightFromSelection?: (selectionText: string, locator: PdfAnchorLocator) => boolean;
+  onCreateHighlightFromSelection?: (selectionText: string, locator: PdfSelectionLocator) => boolean | Promise<boolean>;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onPersistViewState: (viewState: NodeViewState) => void;
   persistedPageCount: number | null;

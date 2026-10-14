@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  isPdfAnchorLocator,
+  getPdfAnchorLocators,
   type NodeAnchorLink
 } from '../../features/nodes/model/nodeTypes';
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemRegistry';
@@ -16,8 +16,9 @@ function revealPendingAnchor(args: {
   pendingAnchor: PendingAnchor;
   scheduleRestoreSuppressionRelease: (nodeId: string) => void;
 }) {
-  if ((args.pendingAnchor.kind === 'highlight' || args.pendingAnchor.kind === 'image-excerpt') && isPdfAnchorLocator(args.pendingAnchor.locator)) {
-    requestPdfAnchorJump(args.activeNodeId, args.pendingAnchor.locator);
+  const pdfLocator = getPdfAnchorLocators(args.pendingAnchor.locator)[0];
+  if ((args.pendingAnchor.kind === 'highlight' || args.pendingAnchor.kind === 'image-excerpt') && pdfLocator) {
+    requestPdfAnchorJump(args.activeNodeId, pdfLocator);
     args.scheduleRestoreSuppressionRelease(args.activeNodeId);
     args.clearPendingAnchor();
     return true;

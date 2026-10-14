@@ -120,7 +120,7 @@ export function renderPdfDocumentSurface(
     editorNodeViewState: ComponentProps<typeof DocumentPanelBody>['editorNodeViewState'];
   },
   highlightLocators: PdfHighlightLocator[],
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean,
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>,
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void,
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void,
   t: Translate

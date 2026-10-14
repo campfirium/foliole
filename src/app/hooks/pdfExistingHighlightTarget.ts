@@ -1,4 +1,4 @@
-import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 
 import { resolveExistingExcerptNode } from './existingExcerptTarget';
 
@@ -43,7 +43,7 @@ export function resolvePdfExistingHighlightNode(input: {
     node.parentNodeId !== input.activeNodeId ||
     input.trashedNodeIds.includes(node.id) ||
     (anchor?.kind !== 'highlight' && anchor?.kind !== 'image-excerpt') ||
-    !isPdfAnchorLocator(anchor.locator)
+    !(getPdfAnchorLocators(anchor.locator).length > 0)
   ) {
     return null;
   }

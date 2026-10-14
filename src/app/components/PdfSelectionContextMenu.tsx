@@ -1,11 +1,11 @@
 import { Highlighter, MessageSquare, SquaresSubtract } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 import { formatHighlightCardContent } from '../../../lib/core/annotations/textAnnotationContent';
 import { getHighlightAnnotationPrefix } from '../../features/editor/model/highlightAnnotationPrefixSetting';
-import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
+import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName } from '../../shared/ui';
@@ -23,19 +23,33 @@ import {
 import { setPdfVisualSelectionKind, type PdfSelectionAnnotationKind } from './pdfSurfaceRegistration';
 import { usePdfSelectionToolbar } from './usePdfSelectionToolbar';
 
-function usePdfSelectionMenuState() {
+type PdfSelectionMenu = Pick<PdfSelectionSnapshot, 'locator' | 'selectionText'> & { left: number; top: number };
+
+function usePdfSelectionDocumentReset(nodeId: string | null, reset: () => void) {
+  const currentReset = useRef(reset);
+  currentReset.current = reset;
+  useEffect(() => {
+    currentReset.current();
+    window.getSelection()?.removeAllRanges();
+    return () => { window.getSelection()?.removeAllRanges(); };
+  }, [nodeId]);
+}
+
+function usePdfSelectionMenuState(nodeId: string | null) {
   const [noteDraft, setNoteDraft] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
-  const [selectionMenuState, setSelectionMenuState] = useState<{
-    left: number;
-    locator: PdfAnchorLocator;
-    selectionText: string;
-    top: number;
-  } | null>(null);
-  const [liveSelectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfAnchorLocator | undefined>(undefined);
+  const [selectionMenuState, setSelectionMenuState] = useState<PdfSelectionMenu | null>(null);
+  const [liveSelectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfSelectionLocator | undefined>(undefined);
   const selectionOverlayLocator = liveSelectionOverlayLocator ?? selectionMenuState?.locator;
   const surfaceRef = useRef<HTMLElement | null>(null);
   const preservedSelectionRef = useRef<PdfSelectionSnapshot | null>(null);
+  usePdfSelectionDocumentReset(nodeId, () => {
+    preservedSelectionRef.current = null;
+    setSelectionMenuState(null);
+    setSelectionOverlayLocator(undefined);
+    setNoteOpen(false);
+    setNoteDraft('');
+  });
   const closeSelectionMenu = () => {
     setSelectionMenuState(null);
     setSelectionOverlayLocator(resolvePdfSelectionSnapshot(surfaceRef.current)?.locator);
@@ -81,48 +95,50 @@ function usePdfSelectionMenuState() {
   };
 }
 
-function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdfSelectionMenuState>; nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined }) {
+function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdfSelectionMenuState>; nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfSelectionLocator) => boolean | Promise<boolean>) | undefined }) {
   const createHighlight = useWorkspaceStore((state) => state.createHighlightNodeFromSelection);
   const createCloze = useWorkspaceStore((state) => state.createQANodeFromSelection);
   const { menu } = args;
+  const savingRef = useRef(false);
   const finishCreation = (created: boolean) => {
     if (created) {
       window.getSelection()?.removeAllRanges();
       menu.preservedSelectionRef.current = null;
     }
-    menu.closeSelectionMenu();
+    if (created) menu.closeSelectionMenu();
   };
-  const applySelectionAnnotation = (kind: PdfSelectionAnnotationKind, note = '') => {
+  const applySelectionAnnotation = async (kind: PdfSelectionAnnotationKind, note = '') => {
     const selection = menu.selectionMenuState ?? resolveContextMenuSelection(menu.surfaceRef.current, menu.preservedSelectionRef.current);
-    if (!selection?.selectionText || !args.nodeId) return false;
+    if (!selection?.selectionText || !args.nodeId || savingRef.current) return false;
+    savingRef.current = true;
     const anchorId = `pdf-${crypto.randomUUID()}`;
     const anchorLink = {
       id: anchorId,
       kind: kind === 'cloze' ? ('cloze' as const) : ('highlight' as const),
       locator: selection.locator
     };
-    if (kind === 'highlight') {
-      finishCreation(args.onCreateHighlightFromSelection?.(selection.selectionText, selection.locator) ?? false);
-    } else if (kind === 'cloze') {
-      void createCloze(args.nodeId, '[...]', selection.selectionText, anchorId, anchorLink);
-      finishCreation(true);
-    } else {
-      const content = formatHighlightCardContent({
-        note,
-        notePrefix: getHighlightAnnotationPrefix(),
-        text: selection.selectionText
-      });
-      void createHighlight(args.nodeId, content, anchorId, anchorLink);
-      finishCreation(true);
-    }
-    return true;
+    try {
+      if (kind === 'highlight') {
+        finishCreation(await args.onCreateHighlightFromSelection?.(selection.selectionText, selection.locator) ?? false);
+      } else if (kind === 'cloze') {
+        finishCreation(Boolean(await createCloze(args.nodeId, '[...]', selection.selectionText, anchorId, anchorLink)));
+      } else {
+        const content = formatHighlightCardContent({
+          note,
+          notePrefix: getHighlightAnnotationPrefix(),
+          text: selection.selectionText
+        });
+        finishCreation(Boolean(await createHighlight(args.nodeId, content, anchorId, anchorLink)));
+      }
+      return true;
+    } finally { savingRef.current = false; }
   };
   const requestAnnotation = (kind: PdfSelectionAnnotationKind) => {
     const selection = resolvePdfSelectionSnapshot(menu.surfaceRef.current) ?? menu.selectionMenuState;
     if (selection) {
       menu.openSelectionToolbar(selection, normalizeContextMenuPosition(window.innerWidth / 2, window.innerHeight / 3));
       if (kind === 'note') menu.setNoteOpen(true);
-      else applySelectionAnnotation(kind);
+      else void applySelectionAnnotation(kind);
       return true;
     }
     setPdfVisualSelectionKind(kind);
@@ -131,8 +147,8 @@ function usePdfSelectionAnnotationActions(args: { menu: ReturnType<typeof usePdf
   return { applySelectionAnnotation, requestAnnotation };
 }
 
-export function usePdfSelectionContextMenu(args: { nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfAnchorLocator) => boolean) | undefined }) {
-  const menu = usePdfSelectionMenuState();
+export function usePdfSelectionContextMenu(args: { nodeId: string | null; onCreateHighlightFromSelection: ((selectionText: string, locator: PdfSelectionLocator) => boolean | Promise<boolean>) | undefined }) {
+  const menu = usePdfSelectionMenuState(args.nodeId);
   const annotations = usePdfSelectionAnnotationActions({ ...args, menu });
 
   return {

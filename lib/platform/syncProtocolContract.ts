@@ -16,6 +16,7 @@ export const WORKGROUP_RESTORE_CAPABILITY = 'workgroup-restore-v1';
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
+    'pdf-cross-page-anchors-v1',
     'article-image-sources-v1',
     'node-owned-resource-references-v1',
     'global-object-identity-v2',

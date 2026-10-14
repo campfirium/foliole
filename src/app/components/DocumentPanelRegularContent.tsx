@@ -57,7 +57,7 @@ export function renderPdfOrBodyContent(args: {
   isActivePdfCachedVisible: boolean;
   isTrashViewOpen: boolean;
   linkPanels: LinkPanelRecord[];
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onCloseExternalLink: (panelId: string) => void;
   onLinkPanelStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;

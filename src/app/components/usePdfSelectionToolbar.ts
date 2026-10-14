@@ -54,6 +54,7 @@ function createToolbarHandlers(input: MutableRefObject<PdfSelectionToolbarInput>
     key: (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         blur();
+        window.getSelection()?.removeAllRanges();
         input.current.onClose();
       } else open(event);
     }

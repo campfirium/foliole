@@ -11,7 +11,7 @@ import type { collectPdfHighlightLocators } from './pdfHighlightLocators';
 export function createDocumentPanelPdfCache(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: ReturnType<typeof collectPdfHighlightLocators>;

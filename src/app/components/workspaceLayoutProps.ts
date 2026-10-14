@@ -200,7 +200,7 @@ export interface WorkspaceLayoutFieldTypes {
   onRunDocumentCommand?: (commandId: string) => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   onCreateSelectionNote: (payload: SelectionCommandPayload, note?: string) => string | null;
-  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean;
+  onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onCreateCloze: (options?: LongClozeGuardOptions) => void;
   onCreateClozeFromPayload?: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlightFromPayload?: (payload: SelectionCommandPayload) => string | null;

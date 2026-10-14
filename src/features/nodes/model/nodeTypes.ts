@@ -1,3 +1,6 @@
+import type { PdfAnchorLocator, PdfMultiPageAnchorLocator } from '../../../../lib/core/anchors/pdfAnchorLocator';
+export { getPdfAnchorLocators } from '../../../../lib/core/anchors/pdfAnchorLocator';
+export type { PdfAnchorLocator, PdfSelectionLocator } from '../../../../lib/core/anchors/pdfAnchorLocator';
 import type { NodeResourceReference } from '../../../../lib/core/database/nodeResourceReferences';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
@@ -24,18 +27,6 @@ export interface NodeReadingProfile {
   readingPosition: number;
   repetitionCount: number;
   state: ReadingState;
-}
-
-export interface PdfAnchorLocator {
-  page: number;
-  rects?: Array<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }>;
-  x: number;
-  y: number;
 }
 
 export interface ImageAnchorLocator {
@@ -100,7 +91,7 @@ export interface NodeImageRegionGroup {
 export interface NodeAnchorLink {
   id: string;
   kind: 'highlight' | 'cloze' | 'image-excerpt';
-  locator?: PdfAnchorLocator | ImageAnchorLocator | FormulaAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
+  locator?: PdfMultiPageAnchorLocator | PdfAnchorLocator | ImageAnchorLocator | FormulaAnchorLocator | TextAnchorLocator | TextAnchorLocatorGroup;
 }
 
 export type NodeSpecialKind = 'home' | 'inbox' | 'trash' | 'virtual-root' | 'virtual';
@@ -147,10 +138,6 @@ export interface Node {
   createdAt: string;
   deletedAt?: string | null;
   updatedAt: string;
-}
-
-export function isPdfAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is PdfAnchorLocator {
-  return Boolean(locator && 'page' in locator && typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0);
 }
 
 export function isTextAnchorLocator(locator: unknown): locator is TextAnchorLocator {

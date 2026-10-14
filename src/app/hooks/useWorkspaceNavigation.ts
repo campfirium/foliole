@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import { getTextAnchorLocators, isPdfAnchorLocator, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { getTextAnchorLocators, getPdfAnchorLocators, type Node, type NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
@@ -68,7 +68,7 @@ function createNavigationReadingPositionCompat(args: {
     if (args.applyNavigationReadingPosition) {
       return args.applyNavigationReadingPosition(result);
     }
-    if (!result?.focusAnchor || isPdfAnchorLocator(result.focusAnchor.locator)) {
+    if (!result?.focusAnchor || (getPdfAnchorLocators(result.focusAnchor.locator).length > 0)) {
       return false;
     }
     const firstLocator = getTextAnchorLocators(result.focusAnchor.locator)[0];

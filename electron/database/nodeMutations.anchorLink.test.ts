@@ -22,6 +22,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { updateNodeAnchorLinks, upsertNodeSnapshot } from './nodeMutations.js';
+import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
 
@@ -94,4 +95,14 @@ it('updates only anchor locator fields without rewriting child content', () => {
     anchor_link: '{"id":"hl-1","kind":"highlight","locator":{"from":6,"originalText":"Better","to":12}}',
     image_regions: '[{"attachmentId":"asset-1","regions":[{"height":1,"id":"hl-1-image-0","width":1,"x":0,"y":0}]}]'
   });
+});
+
+it('stops hydrate on malformed PDF pages instead of preparing a node that can erase its locator', () => {
+  upsertNodeSnapshot({ nodeId: 'invalid-pdf-excerpt', parentNodeId: null, kind: 'item',
+    title: 'Excerpt', isTitleManual: true, content: 'Original excerpt', reveal: null,
+    anchorLink: null, position: 0, createdAt: '2026-10-15T00:00:00.000Z', updatedAt: '2026-10-15T00:00:00.000Z' });
+  const invalid = JSON.stringify({ id: 'pdf-anchor', kind: 'highlight', locator: { pages: [{ page: 1 }] } });
+  openDatabaseConnection().sqlite.prepare('UPDATE nodes SET anchor_link = ? WHERE id = ?').run(invalid, 'invalid-pdf-excerpt');
+  expect(() => loadWorkspaceSnapshot({ includeBody: true })).toThrow('Invalid stored PDF anchor locator');
+  expect(getNodeRow('invalid-pdf-excerpt')?.anchor_link).toBe(invalid);
 });

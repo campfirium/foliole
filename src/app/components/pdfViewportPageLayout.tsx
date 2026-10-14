@@ -2,6 +2,7 @@ import { renderPdfPage, renderPdfPagePlaceholder } from './PdfDocumentPageRender
 import type { PdfPageDimensions } from './pdfPageDimensions';
 
 export function renderDocumentPages(totalPages: number, renderedPageNumbers: number[], args: Omit<Parameters<typeof renderPdfPage>[0], 'pageNumber'> & {
+  canvasPageNumbers?: number[];
   pageDimensionsByNumber: Record<number, PdfPageDimensions>;
 }) {
   const renderedPageNumberSet = new Set(renderedPageNumbers);
@@ -10,7 +11,8 @@ export function renderDocumentPages(totalPages: number, renderedPageNumbers: num
       return renderPdfPage({
         ...args,
         pageDimensions: args.pageDimensionsByNumber[pageNumber] ?? null,
-        pageNumber
+        pageNumber,
+        renderCanvas: args.canvasPageNumbers?.includes(pageNumber) ?? true
       });
     }
     return renderPdfPagePlaceholder({
