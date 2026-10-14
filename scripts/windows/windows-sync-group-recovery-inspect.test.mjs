@@ -30,16 +30,22 @@ it('reads the current node-owned dataset and verifies complete, corrupt and abse
       fs.writeFileSync(file, bytes); return { bytes, file, id };
     });
     const nodeIds = [];
+    const records = [];
     for (let index = 0; index < 40; index++) {
       const id = `sync-from-zero-a-${String(index).padStart(3, '0')}`;
       const record = textBranch(`${id}-version`, `Original body ${index}中文😀`);
       record.object_id = id; record.snapshot.id = id;
-      await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record]);
-      const references = resources.filter((_resource, offset) => offset % 40 === index)
-        .map(resource => ({ storage_key: `${resource.id}.png`, role: 'image', original_name: null }));
-      db.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?').run(JSON.stringify(references), id);
+      records.push(record);
       nodeIds.push(id);
     }
+    await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), records);
+    db.transaction(() => {
+      for (let index = 0; index < nodeIds.length; index++) {
+        const references = resources.filter((_resource, offset) => offset % 40 === index)
+          .map(resource => ({ storage_key: `${resource.id}.png`, role: 'image', original_name: null }));
+        db.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?').run(JSON.stringify(references), nodeIds[index]);
+      }
+    })();
     const complete = inspectSyncGroupRecoveryDatabase(file);
     expect(assertSyncFromZeroDatasetFacts(complete)).toBe(complete);
     expect(complete).toMatchObject({ attachmentCount: 65, missingAttachmentCount: 0, integrity: 'ok' });

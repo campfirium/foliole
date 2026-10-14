@@ -1,14 +1,15 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { vi } from 'vitest';
+import { afterAll, beforeAll, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort.js';
 import { postCompanionRequestFixture } from '../../electron/sync/companionRequestSyncHttp.testSupport.js';
 import { createDesktopFramedSyncFiles } from '../../electron/sync/desktopFramedSyncFiles.js';
-import { createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
+import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
@@ -40,8 +41,19 @@ vi.mock('../shared/platform/appLifecycle.js', () => ({ readNativeAppActiveState:
 
 export { native };
 
+let compiledDirectory: string;
+let compiledScript: string;
+beforeAll(async () => {
+  compiledDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-request-script-'));
+  compiledScript = path.join(compiledDirectory, 'fixture.mjs');
+  await buildDesktopFramedSyncFixture(compiledScript);
+}, 20000);
+afterAll(async () => {
+  if (compiledDirectory) await fs.rm(compiledDirectory, { recursive: true, force: true });
+});
+
 export async function createCompanionRequestFixture() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(compiledScript, true, true);
   await fixture.left.synchronize(fixture.rightSnapshot.origin);
   let sqlite = open();
   function open() {
