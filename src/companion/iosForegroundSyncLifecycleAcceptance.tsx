@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
 import { saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
@@ -92,7 +93,9 @@ export async function runIosForegroundSyncLifecycleAcceptance(rootElement: HTMLE
     postProgress('group-prepared');
     await installLifecycleEvidence();
     postProgress('listeners-installed');
-    ReactDOM.createRoot(rootElement).render(<ForegroundSyncLifecycleShell bootstrap={bootstrap} />);
+    ReactDOM.createRoot(rootElement).render(<LocalizationProvider>
+      <ForegroundSyncLifecycleShell bootstrap={bootstrap} />
+    </LocalizationProvider>);
   } catch (error) {
     postResult({
       error: error instanceof Error ? error.message : String(error),
