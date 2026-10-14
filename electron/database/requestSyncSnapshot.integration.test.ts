@@ -86,7 +86,7 @@ it('cleans request files when preparation is cancelled', async () => {
   const files = createDesktopFramedSyncFiles(root);
   const controller = new AbortController();
   await expect(withRequestSyncFiles(files, async request => {
-    await files.write(`${request.directory}/owned`, new Uint8Array([1]));
+    await request.writeScratchFile(`${request.directory}/owned`, new Uint8Array([1]));
     controller.abort(new Error('request_cancelled'));
     await request.readFacts()[Symbol.asyncIterator]().next();
     controller.signal.throwIfAborted();

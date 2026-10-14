@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort';
 import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles';
@@ -53,55 +53,65 @@ function seed(sqlite: Database.Database) {
     .run('version', 'article', 'c'.repeat(64), JSON.stringify({ body_blob_hash: bodyHash }));
 }
 
-it('shows an already missing image after current attachment completion without changing its body', async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-resource-image-'));
-  const sqlite = new Database(path.join(root, 'library.db'));
-  const attachment = path.join(root, key);
+let root = '';
+let sqlite: Database.Database | undefined;
+let widget: HTMLElement | undefined;
+let attachment = '';
+
+beforeEach(async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), 'foliole-resource-image-'));
+  sqlite = new Database(path.join(root, 'library.db'));
+  attachment = path.join(root, key);
   native.resolve.mockImplementation(async () => {
     try { await readFile(attachment); return { status: 'ready', resource_url: `file://${attachment}`, mime_type: 'image/png' }; }
     catch { return { status: 'missing_file' }; }
   });
-  const widget = createMarkdownImageWidgetDom({ alt: 'restored', attachmentId: hash, display: 'block',
+  widget = createMarkdownImageWidgetDom({ alt: 'restored', attachmentId: hash, display: 'block',
     from: 0, source: `asset://${key}`, to: body.length });
-  try {
-    seed(sqlite);
-    native.db = createBetterSqliteDbPort(sqlite);
-    native.files = createDesktopFramedSyncFiles(path.join(root, 'transport'));
-    document.body.append(widget);
-    await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
-    const partial = path.join(root, 'partial');
-    native.access.mockImplementation(async (input: { action: string; partial?: boolean; base64?: string; length?: number }) => {
-      const file = input.partial ? partial : attachment;
-      if (input.action === 'acquire') return {};
-      if (input.action === 'stat') {
-        const data = await readFile(file).catch(() => null);
-        return { present: data !== null, length: data?.length ?? 0,
-          hash: data ? createHash('sha256').update(data).digest('hex') : '' };
-      }
-      if (input.action === 'truncate') { await writeFile(partial, Buffer.alloc(input.length!)); return {}; }
-      if (input.action === 'append') { await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {}; }
-      if (input.action === 'hash') return { hash: createHash('sha256').update(await readFile(partial)).digest('hex') };
-      if (input.action === 'publish') { await rename(partial, attachment); return {}; }
-      throw new Error('unexpected_attachment_operation');
-    });
-    const db = { files: native.files, readSnapshot: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!),
-      write: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!) };
-    const receiver = await createCompanionAttachmentHost(db, { library_key: '/fixture', generation_id: 'generation' });
-    const resource = { storageKey: key, byteLength: bytes.length };
-    expect(await receiver.status(resource)).toEqual({ kind: 'partial', offset: 0 });
-    expect(widget.querySelector('img')).toBeNull();
-    expect(await receiver.receive(resource, 0, bytes)).toEqual({ kind: 'complete', offset: bytes.length });
-    expect(await readFile(attachment, 'utf8')).toBe('verified native bytes');
-    expect(sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe(body);
-    await waitFor(() => expect(widget.querySelector('.cm-md-image-element'))
-      .toHaveAttribute('src', `file://${attachment}`));
-  } finally {
-    disposeMarkdownImageWidgetDom(widget);
-    widget.remove();
-    resetAttachmentResourceResolutionCacheForTest();
-    sqlite.close();
-    native.db = null;
-    native.files = null;
-    await rm(root, { recursive: true, force: true });
-  }
+  seed(sqlite);
+  native.db = createBetterSqliteDbPort(sqlite);
+  native.files = createDesktopFramedSyncFiles(path.join(root, 'transport'));
+}, 20000);
+
+afterEach(async () => {
+  if (widget) { disposeMarkdownImageWidgetDom(widget); widget.remove(); }
+  resetAttachmentResourceResolutionCacheForTest();
+  sqlite?.close();
+  native.db = null;
+  native.files = null;
+  if (root) await rm(root, { recursive: true, force: true });
+  root = ''; sqlite = undefined; widget = undefined;
+});
+
+it('shows an already missing image after current attachment completion without changing its body', async () => {
+  if (!widget || !sqlite) throw new Error('image_recovery_fixture_missing');
+  const image = widget;
+  document.body.append(image);
+  await waitFor(() => expect(image.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
+  const partial = path.join(root, 'partial');
+  native.access.mockImplementation(async (input: { action: string; partial?: boolean; base64?: string; length?: number }) => {
+    const file = input.partial ? partial : attachment;
+    if (input.action === 'acquire') return {};
+    if (input.action === 'stat') {
+      const data = await readFile(file).catch(() => null);
+      return { present: data !== null, length: data?.length ?? 0,
+        hash: data ? createHash('sha256').update(data).digest('hex') : '' };
+    }
+    if (input.action === 'truncate') { await writeFile(partial, Buffer.alloc(input.length!)); return {}; }
+    if (input.action === 'append') { await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {}; }
+    if (input.action === 'hash') return { hash: createHash('sha256').update(await readFile(partial)).digest('hex') };
+    if (input.action === 'publish') { await rename(partial, attachment); return {}; }
+    throw new Error('unexpected_attachment_operation');
+  });
+  const db = { files: native.files, readSnapshot: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!),
+    write: <T>(run: (port: DbPort) => Promise<T>) => run(native.db!) };
+  const receiver = await createCompanionAttachmentHost(db, { library_key: '/fixture', generation_id: 'generation' });
+  const resource = { storageKey: key, byteLength: bytes.length };
+  expect(await receiver.status(resource)).toEqual({ kind: 'partial', offset: 0 });
+  expect(image.querySelector('img')).toBeNull();
+  expect(await receiver.receive(resource, 0, bytes)).toEqual({ kind: 'complete', offset: bytes.length });
+  expect(await readFile(attachment, 'utf8')).toBe('verified native bytes');
+  expect(sqlite.prepare('SELECT content FROM nodes').pluck().get()).toBe(body);
+  await waitFor(() => expect(image.querySelector('.cm-md-image-element'))
+    .toHaveAttribute('src', `file://${attachment}`));
 });
