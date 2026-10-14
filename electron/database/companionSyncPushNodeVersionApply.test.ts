@@ -140,7 +140,7 @@ function seedDeletedNode() {
 
 describe('companion sync node version push apply', () => {
   it('accepts Android-created node versions into desktop nodes and version history', async () => {
-    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()], 'android-device');
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
 
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
@@ -161,7 +161,7 @@ describe('companion sync node version push apply', () => {
   });
 
   it('accepts node versions through the async companion push entry', async () => {
-    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()], 'android-device');
+    const result = await applyCompanionSyncPushAsync([createNodeVersionPush()]);
 
     expect(result.appliedNodeIds).toEqual(['node-highlight']);
     expect(result.acks).toMatchObject([{
@@ -176,7 +176,7 @@ describe('companion sync node version push apply', () => {
   it('accepts only a direct child version as an intentional companion restore', async () => {
     seedDeletedNode();
 
-    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()], 'android-device');
+    const result = await applyCompanionSyncPushAsync([createRestoreNodeVersionPush()]);
 
     expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'ver_restore' }]);
     expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string; deleted_at: null }>(
@@ -188,7 +188,7 @@ describe('companion sync node version push apply', () => {
     seedDeletedNode();
 
     const result = await applyCompanionSyncPushAsync(
-      [createRestoreNodeVersionPush('ver_stale')], 'android-device'
+      [createRestoreNodeVersionPush('ver_stale')]
     );
 
     expect(result.acks).toMatchObject([{ status: 'conflict' }]);

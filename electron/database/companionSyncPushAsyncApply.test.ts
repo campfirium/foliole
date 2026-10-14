@@ -110,7 +110,7 @@ async function verifyDesktopWorkspaceSettingPush() {
       host_name: '*', form_factor: 'desktop', key: 'review_scheduler_settings', platform: 'windows',
       scope: 'user_space', value_json: '{"theme":"dark"}'
     })
-  })], 'android-device');
+  })]);
 
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
   expect(loadJsonSetting('review_scheduler_settings')).toEqual({ theme: 'dark' });
@@ -118,7 +118,7 @@ async function verifyDesktopWorkspaceSettingPush() {
 
 describe('companion sync push async apply', () => {
   it('accepts state object pushes through the shared async executor', async () => {
-    const result = await applyCompanionSyncPushAsync([createSettingPush()], 'android-device');
+    const result = await applyCompanionSyncPushAsync([createSettingPush()]);
 
     expect(result.appliedObjectIds).toEqual(['setting:device:android:phone:android-device:app_settings']);
     expect(result.acks).toMatchObject([{ stateSeq: 2, status: 'accepted' }]);
@@ -133,7 +133,7 @@ describe('companion sync push async apply', () => {
   it('reports content-hash conflicts without applying state object pushes', async () => {
     const result = await applyCompanionSyncPushAsync([createSettingPush({
       base: { baseContentHash: 'stale-base', kind: 'content_hash' }
-    })], 'android-device');
+    })]);
 
     expect(result.appliedObjectIds).toEqual([]);
     expect(result.acks).toMatchObject([{ conflictReason: 'base_content_hash_mismatch', status: 'conflict' }]);
@@ -146,11 +146,11 @@ describe('companion sync push async apply', () => {
     const first = createReviewLogPush('op-async-1');
     const duplicate = createReviewLogPush('op-async-1');
 
-    await expect(applyCompanionSyncPushAsync([first], 'android-device')).resolves.toMatchObject({
+    await expect(applyCompanionSyncPushAsync([first])).resolves.toMatchObject({
       acks: [{ status: 'accepted' }],
       appliedReviewOpIds: ['op-async-1']
     });
-    await expect(applyCompanionSyncPushAsync([duplicate], 'android-device')).resolves.toMatchObject({
+    await expect(applyCompanionSyncPushAsync([duplicate])).resolves.toMatchObject({
       acks: [{ status: 'already_applied' }],
       appliedReviewOpIds: []
     });
@@ -168,7 +168,7 @@ describe('companion sync push async apply', () => {
       identity: { objectId: 'att-1', objectType: 'attachment', scope: 'workspace' },
       payloadJson: '{}',
       updatedAt: '2026-04-30T01:00:00.000Z'
-    }], 'android-device')).resolves.toMatchObject({
+    }])).resolves.toMatchObject({
       acks: [{ conflictReason: 'unsupported_object_type', status: 'rejected' }]
     });
   });

@@ -14,9 +14,6 @@ const NODE_REFERENCES: Array<readonly [string, string]> = [
   ['node_sync_conflicts', 'object_id'],
   ['node_text_alternatives', 'node_id'],
   ['node_view_state', 'node_id'],
-  ['node_version_device_bases', 'object_id'],
-  ['node_version_outbound_holds', 'object_id'],
-  ['node_version_outbound_payload_holds', 'object_id'],
   ['node_version_local_holds', 'object_id']
 ];
 
@@ -63,10 +60,6 @@ export async function rekeyNodeObject(
     `UPDATE sync_object_state SET current_version_id = ?
      WHERE object_type = 'node' AND object_id = ?`,
     [head, canonicalId]
-  );
-  await port.run(
-    `UPDATE sync_delivery_receipts SET object_id = ? WHERE object_id = ? AND object_type = 'node'`,
-    [canonicalId, sourceId]
   );
   await port.run('DELETE FROM nodes WHERE id = ?', [sourceId]);
 }

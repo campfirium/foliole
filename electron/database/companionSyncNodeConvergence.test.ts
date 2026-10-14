@@ -105,7 +105,7 @@ function currentBodies() {
 it('preserves both complete non-overlapping edits in one multi-parent resolution', async () => {
   seedDivergedTopic('A1\nB\nC\n');
 
-  const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')], 'android-device');
+  const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')]);
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string; updated_at: string }>(
     `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id, updated_at FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = 'topic-1'`
   );
@@ -126,14 +126,14 @@ it('preserves both complete non-overlapping edits in one multi-parent resolution
 it('keeps one simple alternative when overlapping text edits cannot merge', async () => {
   seedDivergedTopic('banana\nB\nC\n');
 
-  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
+  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')]);
 
   expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
 });
 
 it('publishes alternatives as part of the current node version', async () => {
   seedDivergedTopic('banana\nB\nC\n');
-  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
+  await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')]);
   expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
   const driver = openDatabaseConnection().driver;
   expect(driver.queryAll("SELECT * FROM sync_object_state WHERE object_type = 'node_text_alternative'")).toEqual([]);
@@ -148,7 +148,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
     createDivergedTopicPush('A\nB\nC1\n', 'android#branch-c')
   ];
 
-  const first = await applyCompanionSyncPushAsync(pushes, 'android-device');
+  const first = await applyCompanionSyncPushAsync(pushes);
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string }>(
     `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = 'topic-1'`
   );
@@ -163,7 +163,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
     { parent_version_id: 'desktop#local' }
   ]);
 
-  await applyCompanionSyncPushAsync(pushes, 'android-device');
+  await applyCompanionSyncPushAsync(pushes);
   expect(node?.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
   expect(openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
     `SELECT current_version_id FROM nodes WHERE id = 'topic-1'`

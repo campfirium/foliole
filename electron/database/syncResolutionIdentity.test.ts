@@ -62,7 +62,7 @@ async function push(record: NativeSyncNodeRecord) {
     clientOpId: `node:${record.version_id}`, contentHash: record.content_hash!,
     identity: { objectId: record.object_id, objectType: 'node', scope: 'workspace' },
     payloadJson: JSON.stringify(record), updatedAt: record.updated_at
-  }], record.host_name!);
+  }]);
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
   return (await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(openDatabaseConnection().sqlite), 'topic'))!;
 }

@@ -11,6 +11,7 @@ function createFixture() {
     body_text TEXT, snapshot_json TEXT);
     CREATE TABLE node_sync_version_parents (
       version_id TEXT, parent_version_id TEXT, ordinal INTEGER);
+    CREATE TABLE node_sync_tombstones (node_id TEXT, version_id TEXT, parent_version_id TEXT);
     INSERT INTO node_sync_versions VALUES
       ('base-left', 'topic', NULL, 'Left', '{}'),
       ('base-right', 'topic', NULL, 'Right', '{}'),

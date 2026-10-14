@@ -19,7 +19,8 @@ import { syncCompanionIdentityObjects } from '../shared/platform/companion/sync/
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null,
   files: null as FramedSyncFilePort | null, post: vi.fn(), sign: vi.fn(), accessFile: vi.fn() }));
-vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original => ({
+  ...await original<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(), FolioleCompanionSync: {
   postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, accessFramedSyncFile: native.accessFile
 } }));
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({

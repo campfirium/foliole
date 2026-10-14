@@ -91,9 +91,9 @@ function createHighlightPush(anchorId: string, versionId: string): CompanionSync
 }
 
 it('deduplicates an exact additive object collision', async () => {
-  await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'android#local')], 'android');
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'android#local')]);
 
-  const result = await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'ios#remote')], 'ios');
+  const result = await applyCompanionSyncPushAsync([createHighlightPush('anchor-shared', 'ios#remote')]);
 
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
   expect(result.acks[0]?.canonicalObjectId).toBeUndefined();
@@ -103,10 +103,10 @@ it('deduplicates an exact additive object collision', async () => {
 });
 
 it('preserves both additive objects under a stable canonical id', async () => {
-  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')], 'android');
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')]);
   const incoming = createHighlightPush('anchor-remote', 'ios#remote');
 
-  const first = await applyCompanionSyncPushAsync([incoming], 'ios');
+  const first = await applyCompanionSyncPushAsync([incoming]);
   const canonicalId = first.acks[0]?.canonicalObjectId;
 
   expect(canonicalId).toMatch(/^highlight-1~[0-9a-f]{12}$/u);
@@ -123,7 +123,7 @@ it('preserves both additive objects under a stable canonical id', async () => {
   ]);
 
   closeDatabaseConnection();
-  const replay = await applyCompanionSyncPushAsync([incoming], 'ios');
+  const replay = await applyCompanionSyncPushAsync([incoming]);
   expect(replay.acks[0]?.canonicalObjectId).toBe(canonicalId);
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'highlight-1%'`
@@ -131,9 +131,9 @@ it('preserves both additive objects under a stable canonical id', async () => {
 });
 
 it('rejects a changed immutable identity on a canonical additive replay without mutation', async () => {
-  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')], 'android');
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')]);
   const incoming = createHighlightPush('anchor-remote', 'ios#remote');
-  await applyCompanionSyncPushAsync([incoming], 'ios');
+  await applyCompanionSyncPushAsync([incoming]);
   const readFacts = () => {
     const sqlite = openDatabaseConnection().sqlite;
     return {
@@ -146,7 +146,7 @@ it('rejects a changed immutable identity on a canonical additive replay without 
   const record = JSON.parse(incoming.payloadJson!) as NativeSyncNodeRecord;
   const changed = { ...incoming, contentHash: 'changed-hash',
     payloadJson: JSON.stringify({ ...record, content_hash: 'changed-hash' }) };
-  await expect(applyCompanionSyncPushAsync([changed], 'ios'))
+  await expect(applyCompanionSyncPushAsync([changed]))
     .rejects.toThrow('sync_pack_node_version_immutable_mismatch:ios#remote');
   expect(readFacts()).toEqual(before);
 });

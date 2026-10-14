@@ -109,7 +109,6 @@ const controlledElectronSqliteTests = [
   'electron/database/independentNodeVersionMigration.test.ts',
   'src/shared/platform/companionSyncCrisscrossRetry.integration.test.ts',
   'electron/database/nodeVersionPayloadCollector.test.ts',
-  'electron/database/nodeVersionInboundPeerBase.test.ts',
   'electron/database/nodeVersionRetentionMigration.test.ts',
   'electron/database/singlePrincipalSyncGroupCleanup.test.ts',
   'electron/database/nodeSyncFieldCoverage.contract.test.ts',

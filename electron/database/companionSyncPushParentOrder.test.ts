@@ -70,8 +70,8 @@ it('pushes the conflict copy order while retaining the original branch and confi
     state_seq: 2, updated_at: '2026-09-28T00:01:00.000Z'
   });
 
-  const first = await applyCompanionSyncPushAsync([item], 'android');
-  const replay = await applyCompanionSyncPushAsync([item], 'android');
+  const first = await applyCompanionSyncPushAsync([item]);
+  const replay = await applyCompanionSyncPushAsync([item]);
 
   expect(first.appliedObjectIds).toEqual([`parent_child_order:${parentId}`]);
   expect(first.acks).toMatchObject([{ status: 'accepted' }]);
