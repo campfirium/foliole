@@ -11,6 +11,7 @@ import com.foliole.sync.v22.BlobReference;
 import com.foliole.sync.v22.ProtocolMessage;
 import com.google.protobuf.ByteString;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Map;
 import org.junit.Test;
 
@@ -73,14 +74,16 @@ public class FramedSyncCodecTest {
 
     @Test
     public void runtimeCodecValidatesAndReencodesAllGoldenMessages() throws Exception {
-        assertEquals(18, FramedSyncContractSource.messages().size());
+        EnumSet<FramedSyncPayload.Case> covered = EnumSet.noneOf(FramedSyncPayload.Case.class);
         for (FramedSyncContractSource.MessageVector vector : FramedSyncContractSource.messages()) {
             int frameType = frameType(vector.payloadCase).wireValue();
             FramedSyncValidatedMessage validated = FramedSyncCodec.decode(vector.bytes, frameType);
+            covered.add(validated.payload().payloadCase());
             assertEquals(vector.name, vector.payloadCase,
                 CORPUS_NAMES.get(validated.payload().payloadCase()));
             assertArrayEquals(vector.name, vector.bytes, FramedSyncCodec.encode(validated));
         }
+        assertEquals(EnumSet.allOf(FramedSyncPayload.Case.class), covered);
     }
 
     @Test
