@@ -41,7 +41,6 @@ resolve_vitest_json_report_file() {
     test:release:desktop-src) printf '.tmp/vitest/release-desktop-src.json' ;;
     test:release:android) printf '.tmp/vitest/release-android.json' ;;
     test:release:shared) printf '.tmp/vitest/release-shared.json' ;;
-    test:sync-pack) printf '.tmp/vitest/sync-pack.json' ;;
     test:quality) printf '.tmp/vitest/quality.json' ;;
     test:quality:core) printf '.tmp/vitest/quality-core.json' ;;
     test:quality:gate) printf '.tmp/vitest/quality-gate.json' ;;

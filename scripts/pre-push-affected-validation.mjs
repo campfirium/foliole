@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { findFirstParentRemoteBase } from './git/remote-commit.mjs';
-import { isAndroidSyncBoundaryPath, isSyncPackPath } from './lib/path-domains.mjs';
+import { isAndroidSyncBoundaryPath } from './lib/path-domains.mjs';
 
 const ZERO_SHA = /^0{40}$/u;
 function run(command, args, options = {}) {
@@ -77,14 +77,6 @@ function runReleaseCandidateCheckIfNeeded(updates) {
   });
 }
 
-function runSyncPackCheckIfNeeded(files) {
-  if (!files.some(isSyncPackPath)) {
-    return;
-  }
-  console.log('[pre-push-affected-validation] sync-pack changes detected; running test:sync-pack');
-  run(npmCommand(), ['run', 'test:sync-pack'], { shell: process.platform === 'win32', stdio: 'inherit' });
-}
-
 function runAndroidSyncBoundaryCheckIfNeeded(files) {
   if (!files.some(isAndroidSyncBoundaryPath)) {
     return;
@@ -98,7 +90,6 @@ function main() {
   const updates = parsePrePushInput(input);
   runReleaseCandidateCheckIfNeeded(updates);
   const files = affectedFiles(input);
-  runSyncPackCheckIfNeeded(files);
   runAndroidSyncBoundaryCheckIfNeeded(files);
 }
 

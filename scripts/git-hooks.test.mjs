@@ -1,7 +1,7 @@
 // @vitest-environment node
 /* global process */
 
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -217,34 +217,5 @@ describe('git hooks', () => {
     expect(result.stderr).not.toContain('BAD_CAT_USED');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
 
-  it('routes sync-pack affected checks through pre-push', async () => {
-    const repoDir = await createRepo();
-    await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
-      scripts: {
-        'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
-      }
-    }), 'utf8');
-    await writeFile(
-      path.join(repoDir, 'scripts', 'mock-sync-pack.mjs'),
-      'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "sync-pack\\n");\n',
-      'utf8'
-    );
-    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
-    await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
-    await expect(commitFile(
-      repoDir,
-      'electron/database/syncPackBuilder.ts',
-      'export const value = 1;\n',
-      '000002 sync pack'
-    )).resolves.toMatchObject({ code: 0 });
 
-    const head = (await runCommand('git', ['rev-parse', 'HEAD'], repoDir)).stdout.trim();
-    const hook = path.join(repoDir, '.githooks', 'pre-push');
-    const result = await runCommand('bash', [hook], repoDir, {
-      input: `refs/heads/main ${head} refs/heads/main ${'0'.repeat(40)}\n`
-    });
-
-    expect(result.code).toBe(0);
-    expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
 });

@@ -11,7 +11,6 @@ import {
   LINTABLE_FILE_PATTERN,
   LINT_SCOPE_PATHS,
   PREVIEW_TARGET_PATHS,
-  SYNC_PACK_PATH_PATTERN,
   TEST_FILE_PATTERN,
   pathMatchesPrefix
 } from './path-domain-registry.mjs';
@@ -24,10 +23,6 @@ function normalizePath(filePath) {
 
 function splitInput(input) {
   return input.split(/\r?\n/u).map(normalizePath).filter(Boolean);
-}
-
-export function isSyncPackPath(filePath) {
-  return SYNC_PACK_PATH_PATTERN.test(normalizePath(filePath));
 }
 
 export function isAndroidContractPath(filePath) {

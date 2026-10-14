@@ -69,7 +69,7 @@
 - 真机发现非平台专属 bug，先补本地失败回归、修复并通过上述门槛，再继续验收；不得以“预览、试跑、探索”名义重放产品场景验证修复。现场取证可先行，但限于取得构造复现或区分根因所需的证据，不替代修复后的本地验证。仅真实 OS、硬件、权限或网络栈才能验证的部分，以及无稳定自动化断言的纯视觉检查，可说明具体依赖与本地无法证明的原因后按宿主规则验证；未写测试、搭建困难或根因未知不构成平台专属证据。例外只豁免该部分，仍须完成可本地覆盖部分；取得本地可复现证据后转回本地。
 - 运行时或用户可见行为改动按上述测试前置要求及局部规则完成受影响宿主的可见验收。文档、agent 规则、只读诊断、测试或脚本内部改动且不改变运行时行为时可跳过宿主验收，并在最终汇报说明。
 - 本机开发、诊断和提交前宿主试跑可消费当前工作区。最终验收若方案或宿主入口要求冻结候选，必须绑定精确 revision；候选 revision 是验证输入，整体 accepted revision 是本轮适用的产品行为、质量检查与必要人工确认通过后的结论。单入口报告的 accepted tip 只证明该入口的验收范围。最终多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据；此要求不构成开始产品验证前等待 hosted quality 完成的条件。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
-- 改 sync-pack 相关 manifest/schema/apply 或登记路径时先跑 `npm run test:sync-pack`。新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
+- 新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`，超过 30 天复查。E2E 不进入质量闸，按宿主局部规则单独执行。
 - 长命令返回非终态、heartbeat 或仍在运行时使用 `quiet-wait`，不得用 agent 回合轮询。
 - 用户明确要求某宿主预览或“阶段验收”时，验证通过后按局部规则执行；Demo 可见改动刷新已打开的 Demo，无法控制时明确报告，不用 Hidden Native 替代。普通情况不读取持久 preview flag 自动开窗。

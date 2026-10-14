@@ -122,7 +122,8 @@ describe('quality-gate-lib.sh', () => {
     );
 
     expect(result.code).toBe(0);
-    expect(toNodePath(result.stdout.trim())).toBe(path.join(REPO_ROOT, '.tmp', 'logs', 'quality-gate'));
+    expect(await realpath(toNodePath(result.stdout.trim())))
+      .toBe(await realpath(path.join(REPO_ROOT, '.tmp', 'logs', 'quality-gate')));
   });
 
   it('does not apply default outer timeouts to large test buckets', async () => {
@@ -137,7 +138,6 @@ describe('quality-gate-lib.sh', () => {
         'printf "%s\\n" "$(resolve_quality_gate_limit test:desktop timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test:android timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test:shared timeout_seconds)"',
-        'printf "%s\\n" "$(resolve_quality_gate_limit test:sync-pack timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test:quality timeout_seconds)"',
         'printf "%s\\n" "$(resolve_quality_gate_limit test:full timeout_seconds)"'
       ].join('\n'),
@@ -149,7 +149,6 @@ describe('quality-gate-lib.sh', () => {
       '1200',
       '1200',
       '1200',
-      '0',
       '0',
       '0',
       '0',

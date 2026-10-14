@@ -4,7 +4,7 @@ export const LOCAL_QUICK_PACKAGES = [
   ['scripts:domains:check', 'fixed script-domain inventory check'],
   ['windows:console:guard', 'fixed Windows console policy check'],
   ['check:layer-boundary', 'fixed layer boundary check'],
-  ['check:affected', 'affected sync-pack or Android boundary pre-push checks'],
+  ['check:affected', 'affected Android boundary and release identity pre-push checks'],
   ['check:release-candidate', 'fixed repository-only release identity and host version checks'],
   ['check:settings-classification', 'fixed settings classification check'],
   ['check:reading-typography', 'fixed reading typography token check'],
@@ -27,7 +27,6 @@ export const LOCAL_QUICK_PACKAGES = [
   ['deps:scan', 'fixed repository dependency and binary declaration scan'],
   ['test:files', 'explicit ordinary test file arguments'],
   ['test:sqlite:electron', 'explicit Electron ABI test file arguments'],
-  ['test:sync-pack', 'fixed sync-pack contract suite'],
   ['check:android-boundary', 'fixed Android boundary contract suite'],
   ['quality:fast', 'changed-file guards, scoped lint, fixed typechecks, and related tests']
 ];

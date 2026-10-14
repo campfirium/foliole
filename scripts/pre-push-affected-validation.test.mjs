@@ -43,8 +43,7 @@ async function createRepo() {
   await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({
     scripts: {
       'check:android-boundary': 'node scripts/mock-android-boundary.mjs',
-      'check:release-candidate': 'node scripts/mock-release-candidate.mjs',
-      'test:sync-pack': 'node scripts/mock-sync-pack.mjs'
+      'check:release-candidate': 'node scripts/mock-release-candidate.mjs'
     }
   }), 'utf8');
   await writeFile(
@@ -55,11 +54,6 @@ async function createRepo() {
   await writeFile(
     path.join(repoDir, 'scripts', 'mock-android-boundary.mjs'),
     'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "android-boundary\\n");\n',
-    'utf8'
-  );
-  await writeFile(
-    path.join(repoDir, 'scripts', 'mock-sync-pack.mjs'),
-    'import { appendFileSync } from "node:fs"; appendFileSync("calls.log", "sync-pack\\n");\n',
     'utf8'
   );
   return repoDir;
@@ -112,7 +106,7 @@ describe('pre-push affected validation', () => {
     }
   }, AFFECTED_VALIDATION_TIMEOUT_MS);
 
-  it('runs sync-pack tests when pushed commits affect sync-pack files', async () => {
+  it('accepts historical sync paths without a retired test command', async () => {
     const repoDir = await createRepo();
     try {
       await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
@@ -128,7 +122,7 @@ describe('pre-push affected validation', () => {
       });
 
       expect(result.code).toBe(0);
-      expect(await readFile(path.join(repoDir, 'calls.log'), 'utf8')).toContain('sync-pack');
+      await expect(readFile(path.join(repoDir, 'calls.log'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }

@@ -14,7 +14,6 @@ const PREVIEW_SHARED_PATHS = [
 export const DEPENDENCY_ROOT_PATTERN = /^(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?)$/u;
 export const TEST_FILE_PATTERN = /\.(test|spec)\.[^.]+$/u;
 export const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|cjs|mjs)$/u;
-export const SYNC_PACK_PATH_PATTERN = /^(lib\/core\/sync\/syncPack|electron\/database\/syncPack|electron\/sync\/syncPack|src\/shared\/platform\/companionSyncPack)/u;
 export const ANDROID_CONTRACT_PATH_PATTERN = /^lib\/core\/database\/androidCompanion.*\.ts$/u;
 export const ANDROID_SYNC_BOUNDARY_PATH_PATTERN =
   /^(lib\/core\/database\/androidCompanion.*\.ts|android\/app\/src\/main\/assets\/companion-.*\.json|android\/app\/src\/main\/java\/com\/foliole\/android\/FolioleCompanionSync.*\.java)/u;

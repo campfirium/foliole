@@ -70,7 +70,6 @@
     "test:quality:gate-integration:release-tail": "node scripts/quality/quality-command-contracts.mjs allow test:quality:gate-integration:release-tail && node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs gate-integration-release-tail .tmp/vitest/quality-gate-integration-release-tail.json",
     "test:quality:node": "node scripts/quality/quality-command-contracts.mjs allow test:quality:node && node scripts/run-script-test-bucket.mjs node .tmp/vitest/quality-node.json",
     "test:quality:preview": "node scripts/quality/quality-command-contracts.mjs allow test:quality:preview && node scripts/electron-sqlite-runner.mjs scripts/run-script-test-bucket.mjs preview .tmp/vitest/quality-preview.json",
-    "test:sync-pack": "node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/sync-pack.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism lib/core/sync electron/database/syncPackBuilder.test.ts electron/database/syncPackBuilder.genericObjects.test.ts electron/database/syncPackBuilder.contract.test.ts electron/database/syncPackExternalDocumentTombstoneScenario.test.ts electron/sync/syncPackNodeFullProjection.test.ts",
     "test:full": "node scripts/quality/quality-command-contracts.mjs allow test:full && node scripts/run-vitest-with-summary.mjs .tmp/vitest/full.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism",
     "test:files": "node scripts/test-files.mjs",
     "integration:maintain": "node scripts/system-integration-maintenance.mjs",

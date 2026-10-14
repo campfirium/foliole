@@ -10,7 +10,6 @@ import {
   inferPreviewTargetsFromFiles,
   isAndroidContractPath,
   isAndroidSyncBoundaryPath,
-  isSyncPackPath,
   pathMatchesLintScope,
   resolveStaticQualityRoute
 } from './path-domains.mjs';
@@ -97,8 +96,6 @@ describe('path-domains', () => {
   });
 
   it('exposes pre-push specialty checks without broadening them', () => {
-    expect(isSyncPackPath('electron/database/syncPackBuilder.ts')).toBe(true);
-    expect(isSyncPackPath('electron/database/other.ts')).toBe(false);
     expect(isAndroidSyncBoundaryPath('android/app/src/main/assets/companion-schema.json')).toBe(true);
     expect(isAndroidContractPath('lib/core/database/androidCompanionBridgeContractDefinitions.ts')).toBe(true);
     expect(isAndroidSyncBoundaryPath('lib/core/database/androidCompanionDerivedReadSql.ts')).toBe(true);
