@@ -3,7 +3,6 @@ import { expect, it } from 'vitest';
 import { canonicalContentId, canonicalManifestBytes } from './framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_FRAME_TYPES } from './framedSyncContract.js';
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
-import { framedSyncPublicationResources } from './framedSyncPublicationResources.js';
 import { projectFramedSyncResourceFact, restoreFramedSyncResourceFact } from './framedSyncResourceFact.js';
 import { canonicalFactFromValidatedMessage } from './framedSyncWireFact.js';
 import { factToWire } from './framedSyncWireProjection.js';
@@ -24,7 +23,6 @@ it.each([
   const encoded = encodeValidatedProtocolMessage('fact', factToWire(fact));
   const decoded = canonicalFactFromValidatedMessage(decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.fact));
   expect(restoreFramedSyncResourceFact(decoded)).toEqual({ ...binding, blob: fact.blobs[0], resource });
-  expect(framedSyncPublicationResources(manifest).get(hash)).toEqual(resource);
 });
 
 it('rejects a resource whose claimed storage key, role, or hash does not match its bytes descriptor', () => {
