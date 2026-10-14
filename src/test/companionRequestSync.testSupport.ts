@@ -12,7 +12,7 @@ import { createDesktopFramedSyncFiles } from '../../electron/sync/desktopFramedS
 import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
 import { syncCompanionIdentityObjects } from '../shared/platform/companion/sync/syncGroupIdentityCompanionResult.js';
@@ -63,7 +63,18 @@ export async function createCompanionRequestFixture() {
     native.db = createBetterSqliteDbPort(database);
     return database;
   }
-  native.files = createDesktopFramedSyncFiles(path.join(fixture.root, 'mobile-files'));
+  const fileRoot = path.join(fixture.root, 'mobile-files');
+  const durableFiles = createDesktopFramedSyncFiles(fileRoot);
+  native.files = {
+    ...durableFiles,
+    async write(key, bytes) {
+      if (!key.startsWith('requests/')) return durableFiles.write(key, bytes);
+      // Match Android FramedSyncFiles: HTTP request chunks are transient scratch files.
+      const file = path.join(fileRoot, framedSyncFileKey(...key.split('/')));
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, bytes);
+    }
+  };
   const post = (input: NativeRequestSyncHttpRequest) => postCompanionRequestFixture(native.files!, input);
   native.post.mockImplementation(post);
   native.accessFile.mockImplementation(async (input: { action: string; key: string }) => {
