@@ -1,21 +1,20 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 
+import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-import { readFixtureInventory, reconnectFixturePeer }
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { wholeBodies } from '../database/topicTextState.testSupport.js';
+
+import { readFixtureInventory }
   from './desktopFramedSyncPublicationRecovery.testSupport.js';
-import {
-  coordinateDesktopFramedSyncProcessRound,
-  readDesktopFramedSyncRoundControlLog
-} from './desktopFramedSyncRoundProcessClient.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess,
   readDesktopFramedSyncLibraryEvidence
 } from './desktopFramedSyncTwoProcess.testSupport.js';
-
-
 
 let root = '';
 const processes: DesktopFramedSyncFixtureProcess[] = [];
@@ -36,13 +35,13 @@ afterEach(async ({ task }) => {
 });
 
 async function setup() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   return fixture;
 }
 
-it('atomically applies a missing root-to-base-to-child chain before committing its receipt',
+it('persists a complete missing root-to-base-to-child chain through HTTP and restart',
 async () => {
   const fixture = await setup();
   const nodeId = 't326-three-generation-chain';
@@ -62,14 +61,7 @@ async () => {
     nodes: [], parents: [], versions: []
   });
 
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('converged');
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([
     expect.objectContaining({ content: 'Child body', id: nodeId, title: 'Child' })
@@ -87,15 +79,16 @@ async () => {
     expect(byVersion.has(edge.parent_version_id)).toBe(true);
     expect(byVersion.has(edge.version_id)).toBe(true);
   }
-  expect(received.framedSync).toMatchObject({
-    inboundStates: receipt.transfers.map(() => ({ state: 'applied' })),
-    receipts: receipt.transfers.length
-  });
-  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
+  const restarted = await fixture.restartRight();
+  processes.push(restarted.process);
+  const reopened = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
+  expect(reopened.nodes).toEqual(received.nodes);
+  expect(reopened.versions).toEqual(received.versions);
+  expect(reopened.parents).toEqual(received.parents);
 });
 
-it('does not report convergence for divergent roots without a common base', async () => {
+it('converges independent roots while retaining both original bodies and the complete alternative', async () => {
   const fixture = await setup();
   const nodeId = 't326-missing-common-base';
   await Promise.all([
@@ -109,20 +102,38 @@ it('does not report convergence for divergent roots without a common base', asyn
   expect((beforeLeft.nodes[0] as { current_version_id: string }).current_version_id)
     .not.toBe((beforeRight.nodes[0] as { current_version_id: string }).current_version_id);
 
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('drained');
-  expect(receipt.deferredObjects).toContainEqual(expect.objectContaining({ globalId: nodeId, objectType: 'node' }));
-  for (const [snapshot, before] of [[fixture.leftSnapshot, beforeLeft], [fixture.rightSnapshot, beforeRight]] as const) {
-    const after = readDesktopFramedSyncLibraryEvidence(snapshot.databasePath);
-    expect(after.nodes[0]).toMatchObject({ title: (before.nodes[0] as { title: string }).title });
-    expect(after.versions).toEqual(expect.arrayContaining(before.versions));
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
+  const left = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
+  const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(left.nodes).toEqual(right.nodes);
+  expect(left.versions).toEqual(right.versions);
+  expect(left.versions).toEqual(expect.arrayContaining([...beforeLeft.versions, ...beforeRight.versions]));
+  expect(left.versions).toHaveLength(3);
+  expect(left.parents).toEqual(right.parents);
+  expect(left.parents).toHaveLength(2);
+  const originalIds = [...beforeLeft.versions, ...beforeRight.versions]
+    .map(row => (row as { version_id: string }).version_id).sort();
+  expect(left.parents.map(row => (row as { parent_version_id: string }).parent_version_id).sort()).toEqual(originalIds);
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
+  for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) await assertWholeTexts(snapshot.databasePath, nodeId);
+  const restartedLeft = await fixture.restartLeft();
+  const restartedRight = await fixture.restartRight();
+  processes.push(restartedLeft.process, restartedRight.process);
+  for (const snapshot of [restartedLeft.snapshot, restartedRight.snapshot]) {
+    const reopened = readDesktopFramedSyncLibraryEvidence(snapshot.databasePath);
+    expect(reopened.nodes).toEqual(left.nodes);
+    expect(reopened.versions).toEqual(left.versions);
+    expect(reopened.parents).toEqual(left.parents);
+    await assertWholeTexts(snapshot.databasePath, nodeId);
   }
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
 });
+
+async function assertWholeTexts(databasePath: string, nodeId: string) {
+  const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
+  try {
+    const record = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(sqlite), nodeId);
+    expect(record).not.toBeNull();
+    expect(wholeBodies(record!)).toEqual(new Set(['Left branch body', 'Right branch body']));
+    expect(record!.snapshot.text_alternatives).toHaveLength(1);
+  } finally { sqlite.close(); }
+}

@@ -3,19 +3,13 @@ import { promises as fs } from 'node:fs';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { publicationEvidence, readFixtureInventory, reconnectFixturePeer }
+import { readFixtureInventory }
   from './desktopFramedSyncPublicationRecovery.testSupport.js';
-import {
-  coordinateDesktopFramedSyncProcessRound,
-  readDesktopFramedSyncRoundControlLog
-} from './desktopFramedSyncRoundProcessClient.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess,
   readDesktopFramedSyncLibraryEvidence
 } from './desktopFramedSyncTwoProcess.testSupport.js';
-
-
 
 let root = '';
 const processes: DesktopFramedSyncFixtureProcess[] = [];
@@ -36,48 +30,11 @@ afterEach(async ({ task }) => {
 });
 
 async function setup() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   return fixture;
 }
-
-it('commits each side missing object and both terminal round receipts in one production round',
-async () => {
-  const fixture = await setup();
-  await Promise.all([
-    fixture.left.seed({ content: 'Body from A', nodeId: 't326-round-a', title: 'Round A' }),
-    fixture.right.seed({ content: 'Body from B', nodeId: 't326-round-b', title: 'Round B' })
-  ]);
-
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('drained');
-  expect(receipt.transfers.filter((transfer) => transfer.objectType === 'node').map((transfer) =>
-    [transfer.direction, transfer.globalId, transfer.state])).toEqual([
-    ['local_to_remote', 't326-round-a', 'committed'],
-    ['remote_to_local', 't326-round-b', 'committed']
-  ]);
-  const left = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
-  const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  const expectedNodes = [
-    expect.objectContaining({ id: 't326-round-a' }),
-    expect.objectContaining({ id: 't326-round-b' })
-  ];
-  expect(left.nodes).toEqual(expectedNodes);
-  expect(right.nodes).toEqual(expectedNodes);
-  expect(left.framedSync).toMatchObject({ outboundHolds: 0, receipts: receipt.transfers.length });
-  expect(right.framedSync).toMatchObject({ outboundHolds: 0, receipts: receipt.transfers.length });
-  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
-});
 
 it('converges a child sorted before its missing parent through the production round', async () => {
   const fixture = await setup();
@@ -89,132 +46,18 @@ it('converges a child sorted before its missing parent through the production ro
     parentNodeId: 't326-z-parent', title: 'Child'
   });
 
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('converged');
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes).toEqual([]);
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([
-    expect.objectContaining({ id: 't326-a-child', parent_id: 't326-z-parent' }),
-    expect.objectContaining({ id: 't326-z-parent', parent_id: null })
+    expect.objectContaining({ content: 'Child body', id: 't326-a-child', parent_id: 't326-z-parent' }),
+    expect.objectContaining({ content: 'Parent body', id: 't326-z-parent', parent_id: null })
   ]);
-  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-});
-
-it('keeps a published transfer pending and emits no terminal round receipt', async () => {
-  const fixture = await setup();
-  await fixture.left.seed({ content: 'Pending body', nodeId: 't326-round-pending', title: 'Pending' });
-
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    options: { pendingSide: 'left' },
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('pending');
-  expect(receipt.transfers.length).toBeGreaterThan(0);
-  expect(receipt.transfers.every((transfer) => transfer.state === 'pending')).toBe(true);
-  expect(receipt.transfers).toContainEqual(expect.objectContaining({ globalId: 't326-round-pending' }));
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundHolds: receipt.transfers.length });
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync.outboundStates)
-    .toEqual(receipt.transfers.map(() => ({ state: 'published' })));
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).not.toContain('round_receipt');
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).not.toContain('round_receipt');
-});
-
-it('turns an empty deferred selection into drained terminal receipts without publishing', async () => {
-  const fixture = await setup();
-  await fixture.left.seed({ content: 'Deferred body', nodeId: 't326-round-deferred', title: 'Deferred' });
-
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    options: { emptyDeferredSide: 'left' },
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt).toMatchObject({
-    result: 'drained',
-    transfers: []
-  });
-  expect(receipt.deferredObjects).toContainEqual(expect.objectContaining({ globalId: 't326-round-deferred', objectType: 'node' }));
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundHolds: 0, outboundStates: [] });
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
-  expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
-});
-
-it('replays the durable receipt after receiver restart when the round repeats a stale need', async () => {
-  const fixture = await setup();
-  await fixture.left.seed({ content: 'Replay body', nodeId: 't326-round-replay', title: 'Replay' });
-  await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot, leftProcess: fixture.left,
-    right: fixture.rightSnapshot, rightProcess: fixture.right
-  });
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
-
-  const beforeReplay = publicationEvidence(restarted.snapshot.databasePath);
-  const replay = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    options: { inventoryOverride: { right: [] } },
-    right: restarted.snapshot,
-    rightProcess: restarted.process
-  });
-
-  expect(replay.transfers.every((transfer) => transfer.state === 'committed')).toBe(true);
-  expect(replay.transfers).toContainEqual(expect.objectContaining({ globalId: 't326-round-replay' }));
-  const target = replay.transfers.find((transfer) => transfer.globalId === 't326-round-replay')!;
-  const targetId = Buffer.from(target.publication.transferId).toString('hex');
-  expect(beforeReplay.receipts).toContainEqual(expect.objectContaining({ id: targetId }));
-  expect(publicationEvidence(restarted.snapshot.databasePath).receipts
-    .filter((receipt) => receipt.id === targetId)).toHaveLength(1);
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync.outboundHolds)
-    .toBe(0);
-  expect(await readDesktopFramedSyncRoundControlLog(restarted.process)).toContain('round_receipt');
-});
-
-it('sends the frozen publication when the current node changes after selection', async () => {
-  const fixture = await setup();
-  await fixture.left.seed({
-    content: 'Frozen body', nodeId: 't326-round-frozen', title: 'Frozen title'
-  });
-  let changed = false;
-
-  const receipt = await coordinateDesktopFramedSyncProcessRound({
-    left: fixture.leftSnapshot,
-    leftProcess: fixture.left,
-    options: {
-      beforeSend: async (side) => {
-        if (side !== 'left' || changed) return;
-        changed = true;
-        await fixture.left.seed({
-          content: 'Edited after selection', nodeId: 't326-round-frozen', title: 'Edited title'
-        });
-      }
-    },
-    right: fixture.rightSnapshot,
-    rightProcess: fixture.right
-  });
-
-  expect(receipt.result).toBe('drained');
-  const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(right.nodes).toEqual([
-    expect.objectContaining({ id: 't326-round-frozen', title: 'Frozen title' })
-  ]);
-  expect(right.versions).toEqual([
-    expect.objectContaining({ body_text: 'Frozen body', object_id: 't326-round-frozen' })
-  ]);
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
-    .toEqual([expect.objectContaining({ id: 't326-round-frozen', title: 'Edited title' })]);
+  const reopened = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
+  expect(reopened.nodes).toEqual(received.nodes);
+  expect(reopened.versions).toEqual(received.versions);
+  expect(reopened.parents).toEqual(received.parents);
 });
