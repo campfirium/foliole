@@ -14,8 +14,7 @@ export type CompanionSettingsPage =
   | 'tabs'
   | 'syncGroup'
   | 'syncActivity'
-  | 'syncConnection'
-  | 'syncHandoff';
+  | 'syncConnection';
 
 export function useCompanionSyncSettingsPage(args: {
   activeAction: CompanionTabAction;

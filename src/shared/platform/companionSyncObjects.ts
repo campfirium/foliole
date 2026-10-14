@@ -97,7 +97,6 @@ export {
   loadCompanionMissingAttachmentResources
 } from './companionAttachmentResourceSync';
 export {
-  loadCompanionPendingSyncSummary,
   loadCompanionSyncNodeVersionCursor,
   loadCompanionSyncNodeVersionPushCursor,
   loadCompanionSyncNodeVersions,

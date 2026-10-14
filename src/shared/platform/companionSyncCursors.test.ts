@@ -10,7 +10,6 @@ const sharedCursorMock = vi.hoisted(() => ({
   saveNumber: vi.fn(async (_kind: string, cursor) => cursor)
 }));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
-  loadPendingCount: vi.fn(async () => 3),
   loadNodeVersions: vi.fn(async () => [{ object_id: 'ios-created-node', version_id: 'ios-device#1' }]),
   loadNodeVersionPushCursor: vi.fn(async () => null),
   loadReviewLog: vi.fn(async () => [{ op_id: 'ios-op-1' }]),
@@ -85,7 +84,7 @@ beforeEach(() => {
   capacitorMock.platform.mockReturnValue('android');
 });
 
-it('bridges native sync cursors and pending summary', async () => {
+it('bridges native sync cursors', async () => {
   const api = await import('./companionSyncCursors');
   const cursor = { change_id: 'change-2', created_at: '2026-04-25T00:01:00.000Z' };
 
@@ -99,9 +98,6 @@ it('bridges native sync cursors and pending summary', async () => {
   await expect(api.loadCompanionSyncStateChanges('desktop-peer', null)).resolves.toEqual([
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
-  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
-  expect(iosSyncbackStoreMock.loadPendingCount).toHaveBeenCalledWith('desktop-peer',
-    { state: 6, node: null, review: null });
   expect(iosSyncbackStoreMock.loadNodeVersions).not.toHaveBeenCalled();
   expect(iosSyncbackStoreMock.loadReviewLog).not.toHaveBeenCalled();
   expect(writerQueueMock.run).toHaveBeenCalledTimes(1);
@@ -125,7 +121,6 @@ it('routes iOS syncback cursors and rows through the SQLite store', async () => 
   await expect(api.saveCompanionSyncNodeVersionPushCursor({
     change_id: 'ios-device#1', created_at: '2026-07-21T00:00:00.000Z'
   })).resolves.toEqual({ change_id: 'ios-device#1', created_at: '2026-07-21T00:00:00.000Z' });
-  await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
   expect(getItem).not.toHaveBeenCalled();
   expect(sharedCursorMock.loadNumber).toHaveBeenCalledWith('state');
 });

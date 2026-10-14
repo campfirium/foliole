@@ -5,8 +5,6 @@ import { useTranslation, type Translate } from '../shared/localization/Localizat
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
-import type { CompanionHandoffReminderSettings } from './companionHandoffReminderSettings';
-import { CompanionHandoffReminderSettingsPanel } from './CompanionHandoffReminderSettingsPanel';
 import type { CompanionManualSyncAction } from './companionManualSyncAction';
 import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
 import type { CompanionSyncGroupDiscovery, PendingSyncGroupJoinRequest } from './companionSyncGroupJoinModel';
@@ -23,7 +21,6 @@ type CompanionSyncPanelProps = {
   discoveries: CompanionSyncGroupDiscovery[];
   endpointUrl: string | null;
   error: string | null;
-  handoffReminderSettings: CompanionHandoffReminderSettings;
   joinRequest: PendingSyncGroupJoinRequest | null;
   joinStatus: CompanionSyncGroupJoinStatus;
   lastSyncedAt: string | null;
@@ -34,7 +31,6 @@ type CompanionSyncPanelProps = {
   syncProgress: CompanionDesktopSyncProgress | null;
   syncGroup: SyncGroupPayload | null;
   onCancelJoin(): void;
-  onChangeHandoffReminderSettings(settings: CompanionHandoffReminderSettings): void;
   onClearError(): void;
   onDiscover(): Promise<unknown>;
   onLeaveSyncGroup(): Promise<unknown>;
@@ -76,7 +72,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   endpointUrl: string;
   manualSyncFailureDetail: string;
 }) {
-  if (!props.syncGroup || props.page === 'syncHandoff') return null;
+  if (!props.syncGroup) return null;
   const syncAction = props.page === 'sync' ? (
     <CompanionSyncNowButton failureDetail={props.manualSyncFailureDetail}
       isSyncing={props.status === 'syncing'}
@@ -119,10 +115,6 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
             : searching ? null : <EmptyDiscoveryState disabled={busy} onTryAgain={() => void props.onDiscover()} />}
         {props.error && !manualSyncFailed ? <p className="text-sm text-error" data-error-code={props.error}
           data-testid="companion-sync-error">{formatSyncPanelError(props.error, t)}</p> : null}
-        {props.syncGroup && (props.page === 'sync' || props.page === 'syncHandoff') ? (
-          <CompanionHandoffReminderSettingsPanel page={props.page} settings={props.handoffReminderSettings}
-            onChange={props.onChangeHandoffReminderSettings} onOpenPage={props.onOpenSettingsPage} />
-        ) : null}
         <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
           onJoin={(url) => {

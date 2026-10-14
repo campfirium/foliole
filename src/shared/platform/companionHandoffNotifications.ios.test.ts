@@ -1,34 +1,42 @@
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-const capacitorState = vi.hoisted(() => ({
-  getPlatform: vi.fn(() => 'ios'),
-  isNativePlatform: vi.fn(() => true)
-}));
-const localNotifications = vi.hoisted(() => ({
+const native = vi.hoisted(() => ({ platform: 'ios', enabled: true }));
+const notifications = vi.hoisted(() => ({
   cancel: vi.fn(async () => undefined),
-  checkPermissions: vi.fn(async () => ({ display: 'granted' })),
-  requestPermissions: vi.fn(async () => ({ display: 'granted' })),
-  schedule: vi.fn(async () => undefined)
+  checkPermissions: vi.fn(),
+  requestPermissions: vi.fn(),
+  schedule: vi.fn()
 }));
-
 vi.mock('@capacitor/core', () => ({
-  Capacitor: capacitorState,
+  Capacitor: { getPlatform: () => native.platform, isNativePlatform: () => native.enabled },
   registerPlugin: () => ({})
 }));
-vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: localNotifications }));
+vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: notifications }));
 
-it('schedules handoff reminders through Local Notifications on iOS', async () => {
-  const { scheduleCompanionHandoffReminders } = await import('./companionHandoffNotifications');
+beforeEach(() => {
+  vi.clearAllMocks();
+  native.enabled = true;
+});
 
-  await expect(scheduleCompanionHandoffReminders({
-    dirtyCount: 1,
-    now: new Date('2026-07-21T08:00:00.000Z'),
-    settings: { fixedTime: null, shortDelay: '5' }
-  })).resolves.toEqual({ scheduled: 1, status: 'scheduled' });
+it.each(['ios', 'android'])('cancels both retired notifications on %s without requesting permission or scheduling replacements', async (platform) => {
+  native.platform = platform;
+  const { cancelRetiredHandoffNotifications } = await import('./companionHandoffNotifications');
+  await cancelRetiredHandoffNotifications();
+  expect(notifications.cancel).toHaveBeenCalledWith({ notifications: [{ id: 420101 }, { id: 420102 }] });
+  expect(notifications.schedule).not.toHaveBeenCalled();
+  expect(notifications.checkPermissions).not.toHaveBeenCalled();
+  expect(notifications.requestPermissions).not.toHaveBeenCalled();
+});
 
-  expect(capacitorState.getPlatform).toHaveReturnedWith('ios');
-  expect(localNotifications.cancel).toHaveBeenCalledTimes(1);
-  expect(localNotifications.schedule).toHaveBeenCalledWith({
-    notifications: [expect.objectContaining({ id: 420101 })]
-  });
+it('does not call native notifications from the web shell', async () => {
+  native.enabled = false;
+  const { cancelRetiredHandoffNotifications } = await import('./companionHandoffNotifications');
+  await cancelRetiredHandoffNotifications();
+  expect(notifications.cancel).not.toHaveBeenCalled();
+});
+
+it('reports cancellation failure so the shell can record it and retry on the next start', async () => {
+  notifications.cancel.mockRejectedValueOnce(new Error('native unavailable'));
+  const { cancelRetiredHandoffNotifications } = await import('./companionHandoffNotifications');
+  await expect(cancelRetiredHandoffNotifications()).rejects.toThrow('native unavailable');
 });

@@ -76,7 +76,6 @@ describe('companion sync objects web fallback', () => {
     await expect(api.loadCompanionSyncReviewLog('desktop-peer', null)).resolves.toEqual([]);
     await expect(api.loadCompanionPdfPageText('att-1')).resolves.toEqual([]);
     await expect(api.searchCompanionPdfPageText('pdf')).resolves.toEqual([]);
-    await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 0 });
     await expectWebCursorFallback(api);
     await expect(api.saveCompanionSyncSettingRecord({ key: 'one', valueJson: '{}' })).resolves.toBeNull();
     await expect(api.saveCompanionSyncActiveViewState('node-1')).resolves.toBeNull();

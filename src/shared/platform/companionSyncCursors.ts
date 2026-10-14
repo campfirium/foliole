@@ -4,7 +4,6 @@ import type {
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
-import { resolveRemoteSyncGroupDevices } from '../../../lib/platform/syncGroupContract';
 
 import {
   loadIosCompanionChangeCursor,
@@ -13,7 +12,6 @@ import {
   saveIosCompanionNumberCursor
 } from './companion/runtime/iosCompanionSyncCursorStore';
 import { getIosCompanionSyncbackStore } from './companion/sync/syncback/iosCompanionSyncbackStore';
-import { loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   readWebCursor,
@@ -131,21 +129,6 @@ export async function loadCompanionSyncStateChanges(peerId: string, cursor: numb
   return [] as NativeSyncStateObjectRecord[];
 }
 
-export async function loadCompanionPendingSyncSummary() {
-  const group = await loadCompanionSyncGroup();
-  if (!group) return { pendingCount: 0 };
-  const peerId = resolveRemoteSyncGroupDevices(group)[0]?.device_identity_key;
-  if (!peerId) return { pendingCount: 0 };
-  const [stateCursor, nodeCursor, reviewCursor] = await Promise.all([
-    loadCompanionSyncStatePushCursor(),
-    loadCompanionSyncNodeVersionPushCursor(),
-    loadCompanionSyncReviewLogPushCursor()
-  ]);
-  const pendingCount = getNativeCompanionSyncbackPlatform() === null ? 0
-    : await getIosCompanionSyncbackStore().loadPendingCount(peerId,
-      { state: stateCursor, node: nodeCursor, review: reviewCursor });
-  return { pendingCount };
-}
 
 function usesSharedOwner() {
   const kind = getCompanionRuntimeCapability().kind;

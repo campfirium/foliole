@@ -79,7 +79,6 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/syncNodeLifecycle.integration.test.ts',
   'electron/database/topicTextBodyOwnershipMigration.integration.test.ts',
   'electron/sync/desktopFramedSyncMissingSourceResource.integration.test.ts',
-  'src/shared/platform/companion/sync/syncback/companionSyncbackPendingCount.sqlite.test.ts',
   'electron/database/searchIndexChunkedWorker.integration.test.ts',
   'src/shared/platform/companionContentBlobStable.integration.test.ts',
   'lib/core/sync/storedContentBlobIntegrity.integration.test.ts',

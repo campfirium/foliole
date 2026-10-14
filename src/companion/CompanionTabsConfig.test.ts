@@ -25,7 +25,6 @@ describe('CompanionTabsConfig', () => {
       'tabs',
       'syncActivity',
       'syncConnection',
-      'syncHandoff'
     ]);
     expect(DEFAULT_COMPANION_TAB_CONFIG.shortcut).toEqual({
       destinationId: 'directory',

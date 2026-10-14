@@ -31,7 +31,6 @@ export function createIosCompanionSyncbackStore(
     return next;
   };
   return {
-    loadPendingCount: (peerId, cursors) => run((store) => store.loadPendingCount(peerId, cursors)),
     loadNodeVersions: (peerId, cursor, limit) => run((store) => store.loadNodeVersions(peerId, cursor, limit)),
     loadNodeVersionPushCursor: () => run((store) => store.loadNodeVersionPushCursor()),
     loadReviewLog: (peerId, cursor, limit) => run((store) => store.loadReviewLog(peerId, cursor, limit)),

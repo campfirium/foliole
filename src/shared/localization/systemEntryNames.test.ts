@@ -43,7 +43,6 @@ const FIXED_NAVIGATION_KEYS = {
     'companion.tabs.shortcut.tabs',
     'companion.tabs.shortcut.syncActivity',
     'companion.tabs.shortcut.syncConnection',
-    'companion.tabs.shortcut.syncHandoff'
   ],
   groups: [
     'companion.directory.section.external',

@@ -16,7 +16,6 @@ it('uses the action-local terminal result instead of a waiting discovery message
       discoveries={[]}
       endpointUrl="http://desktop:38641"
       error="discovery_no_devices"
-      handoffReminderSettings={{ fixedTime: null, shortDelay: 'off' }}
       joinRequest={null}
       joinStatus="idle"
       lastSyncedAt={null}
@@ -32,7 +31,6 @@ it('uses the action-local terminal result instead of a waiting discovery message
         local_device_identity_key: 'device-1'
       }}
       onCancelJoin={vi.fn()}
-      onChangeHandoffReminderSettings={vi.fn()}
       onClearError={vi.fn()}
       onDiscover={vi.fn()}
       onLeaveSyncGroup={vi.fn()}
@@ -46,6 +44,7 @@ it('uses the action-local terminal result instead of a waiting discovery message
     />
   );
 
+  expect(screen.queryByRole('button', { name: /handoff/i })).not.toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Sync failed.');
   expect(screen.queryByText('Waiting for a desktop Sync anchor.')).not.toBeInTheDocument();
   expect(screen.queryByTestId('companion-sync-error')).not.toBeInTheDocument();
@@ -59,7 +58,6 @@ it('shows an independent protocol notice while keeping the sync failure', () => 
       discoveries={[]}
       endpointUrl="http://desktop:38641"
       error="protocol_incompatible"
-      handoffReminderSettings={{ fixedTime: null, shortDelay: 'off' }}
       joinRequest={null}
       joinStatus="idle"
       lastSyncedAt={null}
@@ -69,7 +67,6 @@ it('shows an independent protocol notice while keeping the sync failure', () => 
       syncProgress={null}
       syncGroup={null}
       onCancelJoin={vi.fn()}
-      onChangeHandoffReminderSettings={vi.fn()}
       onClearError={vi.fn()}
       onDiscover={vi.fn()}
       onLeaveSyncGroup={vi.fn()}

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import { cancelRetiredHandoffNotifications } from '../shared/platform/companionHandoffNotifications';
+import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import { CompanionDraftProvider } from './CompanionDraftProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
-import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
@@ -203,6 +204,11 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
 export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;
 
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
+  useEffect(() => {
+    void cancelRetiredHandoffNotifications().catch((error) => {
+      logRuntimeError('Retired reminder cancellation failed', { area: 'native', action: 'cancel-retired-reminders', error });
+    });
+  }, []);
   const model = useCompanionShellModel(props.bootstrapState);
   useCompanionAndroidBack(model);
 
@@ -212,17 +218,15 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
       runtimeKind={props.bootstrapState.runtime_kind}
     >
       <CompanionSyncGroupRuntime bootstrapState={props.bootstrapState} workspaceSync={model.workspaceSync}>
-        <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
-          <CompanionNodeLinkRuntime model={model}>
-            <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
-              <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
-                <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
-                  <CompanionShellView model={model} />
-                </CompanionDraftProvider>
-              </CompanionShareInboxNotice>
-            </CompanionSyncProtocolNotice>
-          </CompanionNodeLinkRuntime>
-        </CompanionHandoffReminderRuntime>
+        <CompanionNodeLinkRuntime model={model}>
+          <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
+            <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
+              <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
+                <CompanionShellView model={model} />
+              </CompanionDraftProvider>
+            </CompanionShareInboxNotice>
+          </CompanionSyncProtocolNotice>
+        </CompanionNodeLinkRuntime>
       </CompanionSyncGroupRuntime>
     </CompanionCustomCssProvider>
   );

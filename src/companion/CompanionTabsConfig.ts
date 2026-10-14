@@ -21,8 +21,7 @@ export type CompanionSecondaryDestinationId =
   | 'sync'
   | 'tabs'
   | 'syncActivity'
-  | 'syncConnection'
-  | 'syncHandoff';
+  | 'syncConnection';
 
 export type CompanionTabSlotId = CompanionPrimaryTabId | 'shortcut';
 
@@ -71,7 +70,6 @@ export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] =
   { icon: SlidersHorizontal, id: 'tabs', labelKey: 'companion.tabs.shortcut.tabs', parentTab: 'settings' },
   { icon: Activity, id: 'syncActivity', labelKey: 'companion.tabs.shortcut.syncActivity', parentTab: 'settings' },
   { icon: Unplug, id: 'syncConnection', labelKey: 'companion.tabs.shortcut.syncConnection', parentTab: 'settings' },
-  { icon: Activity, id: 'syncHandoff', labelKey: 'companion.tabs.shortcut.syncHandoff', parentTab: 'settings' }
 ];
 
 export const DEFAULT_COMPANION_TAB_CONFIG: CompanionTabConfig = {
