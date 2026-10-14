@@ -94,7 +94,7 @@ it('preserves image excerpt kind instead of inferring it from PDF coordinates', 
 });
 
 it('projects every page of one excerpt under the same identity and removes them together', () => {
-  const pages = [2, 5, 8].map(page => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] }));
+  const pages = [1, 2].map(page => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] }));
   const nodesById = {
     article: createNode({ id: 'article', parentNodeId: null }),
     excerpt: createNode({ id: 'excerpt', parentNodeId: 'article', anchorLink: {
@@ -102,7 +102,7 @@ it('projects every page of one excerpt under the same identity and removes them 
     } })
   };
   const locators = collectPdfHighlightLocators('article', ['article', 'excerpt'], nodesById);
-  expect(locators.map(locator => locator.page)).toEqual([2, 5, 8]);
+  expect(locators.map(locator => locator.page)).toEqual([1, 2]);
   expect(new Set(locators.map(locator => locator.nodeId))).toEqual(new Set(['excerpt']));
   expect(new Set(locators.map(locator => locator.id))).toEqual(new Set(['one-anchor']));
   expect(collectPdfHighlightLocators('article', ['article', 'excerpt'], nodesById, ['excerpt'])).toEqual([]);

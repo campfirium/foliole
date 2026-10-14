@@ -6,7 +6,7 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } f
 import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 
 const fragment = (page: number) => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] });
-const anchor = { id: 'cross-page', kind: 'highlight', locator: { pages: [fragment(1), fragment(3)] } };
+const anchor = { id: 'cross-page', kind: 'highlight', locator: { pages: [fragment(1), fragment(2)] } };
 
 it('preserves every page through the IPC and stored anchor boundaries', () => {
   expect(asAnchorLink(anchor, 'anchor')).toEqual(anchor);

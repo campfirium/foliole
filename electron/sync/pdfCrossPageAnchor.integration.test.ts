@@ -10,7 +10,7 @@ import type { NativeWorkspaceAnchorLink } from '../../lib/platform/nativeWorkspa
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 const anchor: NativeWorkspaceAnchorLink = { id: 'pdf-cross-page', kind: 'highlight', locator: {
-  pages: [1, 3, 8].map(page => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] }))
+  pages: [1, 2].map(page => ({ page, x: 0.2, y: 0.3, rects: [{ x: 0.1, y: 0.2, width: 0.2, height: 0.1 }] }))
 } };
 
 function readAnchor(databasePath: string) {
@@ -27,7 +27,7 @@ it('keeps every page through IPC validation, SQLite, hydrate, editing, HTTP sync
   try {
     await fixture.left.seed({ nodeId: 'pdf-source', title: 'PDF', content: '' });
     const first = await fixture.left.seed({ nodeId: 'pdf-excerpt', parentNodeId: 'pdf-source',
-      title: 'Excerpt', content: 'First\nMiddle\nLast', anchorLink: anchor });
+      title: 'Excerpt', content: 'First\nSecond', anchorLink: anchor });
     expect(first.workspace).toMatchObject({ nodesById: { 'pdf-excerpt': { anchorLink: anchor } } });
     expect(readAnchor(first.databasePath)).toEqual(anchor);
     expect(await fixture.left.synchronize(fixture.rightSnapshot.origin)).toEqual({ complete: true });

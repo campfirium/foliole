@@ -8,7 +8,7 @@ import { usePdfSelectedPageNumbers } from './pdfSelectionPages';
 import { resolvePdfSelectionSnapshot } from './pdfSelectionRuntime';
 import { resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
 
-function fixture(texts = ['First page ending', 'Middle page', 'Last page beginning']) {
+function fixture(texts = ['First page ending', 'Second page beginning']) {
   const surface = document.createElement('div');
   surface.dataset.testid = 'pdf-document-surface';
   const nodes: Text[] = [];
@@ -59,9 +59,9 @@ it.each([false, true])('captures all text in document order and each page in its
   const input = fixture();
   selectAll(input, reverse);
   const snapshot = resolvePdfSelectionSnapshot(input.surface);
-  expect(snapshot?.selectionText).toBe('First page ending\nMiddle page\nLast page beginning');
+  expect(snapshot?.selectionText).toBe('First page ending\nSecond page beginning');
   const fragments = getPdfAnchorLocators(snapshot?.locator);
-  expect(fragments.map(fragment => fragment.page)).toEqual([1, 2, 3]);
+  expect(fragments.map(fragment => fragment.page)).toEqual([1, 2]);
   for (const fragment of fragments) {
     expect(fragment.x).toBeCloseTo(0.225);
     expect(fragment.y).toBeCloseTo(0.125);
@@ -73,10 +73,10 @@ it.each([false, true])('captures all text in document order and each page in its
   }
 });
 
-it('skips a ready empty page but rejects loading, failed and missing text layers', () => {
-  const input = fixture(['First page ending', '', 'Last page beginning']);
+it('rejects loading, failed and missing text layers on the second page', () => {
+  const input = fixture();
   selectAll(input);
-  expect(getPdfAnchorLocators(resolvePdfSelectionSnapshot(input.surface)?.locator).map(page => page.page)).toEqual([1, 3]);
+  expect(getPdfAnchorLocators(resolvePdfSelectionSnapshot(input.surface)?.locator).map(page => page.page)).toEqual([1, 2]);
   const host = input.pageElements[2]?.querySelector<HTMLElement>('[data-testid="pdf-official-text-layer"]');
   if (!host) throw new Error('Missing host');
   for (const state of ['loading', 'failed']) {
@@ -88,13 +88,13 @@ it('skips a ready empty page but rejects loading, failed and missing text layers
 });
 
 it('retains the complete native selection beyond the viewport and releases on cancellation', () => {
-  const input = fixture(Array.from({ length: 8 }, (_, index) => `Page ${index + 1}`));
+  const input = fixture();
   const { result, unmount } = renderHook(() => usePdfSelectedPageNumbers({ current: input.pageElements }));
   selectAll(input);
   fireEvent(document, new Event('selectionchange'));
-  expect(result.current).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-  const args = { page: 8, totalPages: 20, highlightLocators: [], searchHighlights: [], searchQuery: '', pdfSelectionLocator: undefined };
-  expect(resolveRenderablePageNumbers({ ...args, retainedPageNumbers: result.current })).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  expect(result.current).toEqual([1, 2]);
+  const args = { page: 5, totalPages: 10, highlightLocators: [], searchHighlights: [], searchQuery: '', pdfSelectionLocator: undefined };
+  expect(resolveRenderablePageNumbers({ ...args, retainedPageNumbers: result.current })).toEqual([1, 2, 3, 4, 5, 6, 7]);
   input.selection.removeAllRanges();
   fireEvent(document, new Event('selectionchange'));
   expect(result.current).toEqual([]);

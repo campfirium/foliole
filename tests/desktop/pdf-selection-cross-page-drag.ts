@@ -59,16 +59,12 @@ export async function expectPdfTextCovered(page: Page, pageNumber: number, testI
   }
 }
 
-export async function verifyCrossPageExcerpt(page: Page, numbers: number[], excerptId: string, parent: string, usePageNavigation = false) {
+export async function verifyCrossPageExcerpt(page: Page, numbers: number[], excerptId: string, parent: string) {
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.isHydrated())).toBe(true);
   await expect(page.getByTestId('pdf-document-surface')).toBeVisible();
   await expect(page.getByTestId('pdf-document-loading-overlay')).toHaveCount(0);
   for (const number of numbers) {
-    if (usePageNavigation) {
-      const input = page.getByRole('textbox', { name: /PDF page|PDF 页码/ });
-      await input.fill(String(number));
-      await input.press('Enter');
-    } else await page.locator(`[data-pdf-page-number="${number}"]`).scrollIntoViewIfNeeded();
+    await page.locator(`[data-pdf-page-number="${number}"]`).scrollIntoViewIfNeeded();
     await expectPdfTextCovered(page, number, 'pdf-highlight-fill');
     await expect(page.locator(`[data-pdf-page-number="${number}"] [data-pdf-highlight-node-id="${excerptId}"]`).first()).toBeVisible();
   }

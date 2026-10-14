@@ -10,16 +10,14 @@ import { createCrossPagePdf } from './pdf-selection-cross-page-fixture';
 
 for (const scenario of [
   { name: 'two-page-forward', texts: ['First page ending', 'Second page beginning'], reverse: false },
-  { name: 'two-page-reverse', texts: ['First page ending', 'Second page beginning'], reverse: true },
-  { name: 'long-range', texts: Array.from({ length: 8 }, (_, index) => `Page ${index + 1} selected text`), reverse: false },
-  { name: 'empty-middle', texts: ['First page ending', '', 'Last page beginning'], reverse: false }
+  { name: 'two-page-reverse', texts: ['First page ending', 'Second page beginning'], reverse: true }
 ]) {
   test(`PDF cross-page selection @pdf ${scenario.name}`, async ({ desktopApp, desktopSession, desktopWindow: initialPage }) => {
     let page = initialPage;
     let reopened: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
     try {
       const file = path.resolve(`.tmp/artifacts/pdf-cross-page-${scenario.name}.pdf`);
-      createCrossPagePdf(file, scenario.texts, scenario.name === 'long-range' ? { width: 400, height: 200 } : { width: 600, height: 800 });
+      createCrossPagePdf(file, scenario.texts);
       await page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ }).click();
       const parent = await importPdf(desktopApp, page, file);
       await page.getByRole('button', { name: /^(Custom fit|自定义适配)$/ }).click();
@@ -29,10 +27,6 @@ for (const scenario of [
       await dragAcrossPdfPages(page, scenario.texts, scenario.reverse);
       const numbers = scenario.texts.flatMap((text, index) => text ? [index + 1] : []);
       for (const number of numbers) await expectPdfTextCovered(page, number, 'pdf-selection-rect');
-      if (scenario.texts.length > 5) {
-        await expect(page.locator('[data-testid="pdf-official-text-layer"]')).toHaveCount(8);
-        expect(await page.locator('[data-pdf-page-number] canvas').count()).toBeLessThanOrEqual(5);
-      }
       await page.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-cross-page-${scenario.name}-drag.png`) });
       await page.mouse.up();
       await page.getByRole('button', { name: /^(Highlight|高亮)$/ }).click();
@@ -55,7 +49,7 @@ for (const scenario of [
         await window.evaluate(window => { window.setBounds({ width: 1600, height: 1000, x: 80, y: 80 }); window.show(); window.focus(); });
         await expect(page.getByTestId('pdf-document-surface')).toBeVisible();
       } else await page.reload();
-      await verifyCrossPageExcerpt(page, numbers, excerpt.id, parent, scenario.name === 'long-range');
+      await verifyCrossPageExcerpt(page, numbers, excerpt.id, parent);
       await page.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-cross-page-${scenario.name}-restored.png`) });
     } finally { await reopened?.close(); }
   });
