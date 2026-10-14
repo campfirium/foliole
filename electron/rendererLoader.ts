@@ -2,6 +2,9 @@ import fs from 'node:fs';
 
 import { app, type BrowserWindow } from 'electron';
 
+import { isOriginalDataProtectionError, ORIGINAL_DATA_PROTECTION_COPY } from '../lib/core/localization/startupOriginalDataProtection.js';
+import { isExplicitSimplifiedChineseLanguageTag } from '../lib/core/localization/systemLanguage.js';
+
 import { formatRuntimeDiagnosticsSnapshot, resolveRendererTargetUrl, type RuntimeDiagnosticsSnapshot } from './runtimeIdentity.js';
 import { resolveRendererFilePath, resolveSourceRendererIndexPath } from './runtimeRendererHtml.js';
 import { resolveUsableRuntimeRendererIndex } from './runtimeRendererIndexCache.js';
@@ -89,6 +92,9 @@ function createLocalStartupErrorLogPathMarkup(logPath: string | null) {
 }
 
 function createLocalStartupErrorHtml(startupView: StartupErrorRendererView) {
+  const explanation = isOriginalDataProtectionError(startupView.errorSummary)
+    ? ORIGINAL_DATA_PROTECTION_COPY[isExplicitSimplifiedChineseLanguageTag(app.getLocale()) ? 'zh-Hans' : 'en']
+    : null;
   return `<!doctype html>
 <html>
   <head>
@@ -100,6 +106,7 @@ function createLocalStartupErrorHtml(startupView: StartupErrorRendererView) {
     <div id="root">
       <main class="startup-error" role="alert">
         <h1 class="startup-error__title">${escapeHtml(startupView.moduleLabel)}</h1>
+        ${explanation ? `<p>${escapeHtml(explanation)}</p>` : ''}
         <p class="startup-error__message">${escapeHtml(startupView.errorSummary)}</p>
         ${createLocalStartupErrorLogPathMarkup(startupView.logPath)}
       </main>

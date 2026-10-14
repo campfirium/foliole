@@ -1,3 +1,5 @@
+import { ORIGINAL_DATA_PROTECTION_COPY } from '../../../lib/core/localization/startupOriginalDataProtection';
+
 import type { AppLocale } from './appLanguage';
 import type { TranslationCatalog } from './locales/catalogTypes';
 import { EN_TRANSLATIONS } from './locales/en';
@@ -14,6 +16,7 @@ const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalo
     'shared.startup.bootTitle': 'Starting Foliole',
     'shared.startup.copyDiagnostics': 'Copy diagnostics',
     'shared.startup.errorTitle': 'Foliole startup encountered a problem',
+    'shared.startup.originalDataProtection': ORIGINAL_DATA_PROTECTION_COPY.en,
     'shared.startup.exit': 'Exit',
     'shared.startup.eyebrow': 'Startup',
     'shared.startup.failedModule': 'Failed module: {module}',
@@ -28,6 +31,7 @@ const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalo
     'shared.startup.bootTitle': '正在启动 Foliole',
     'shared.startup.copyDiagnostics': '复制诊断信息',
     'shared.startup.errorTitle': 'Foliole 启动遇到问题',
+    'shared.startup.originalDataProtection': ORIGINAL_DATA_PROTECTION_COPY['zh-Hans'],
     'shared.startup.exit': '退出',
     'shared.startup.eyebrow': '启动',
     'shared.startup.failedModule': '失败模块：{module}',

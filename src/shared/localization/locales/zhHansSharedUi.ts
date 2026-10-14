@@ -1,3 +1,4 @@
+import { ORIGINAL_DATA_PROTECTION_COPY } from '../../../../lib/core/localization/startupOriginalDataProtection';
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
@@ -7,6 +8,7 @@ export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'shared.confirm.confirm': '确认',
   'shared.close': '关闭',
   'shared.selection.commands': '选择操作',
+  'shared.startup.originalDataProtection': ORIGINAL_DATA_PROTECTION_COPY['zh-Hans'],
   'shared.startup.errorTitle': 'Foliole 启动遇到问题',
   'shared.startup.bootTitle': '正在启动 Foliole',
   'shared.startup.bootHelp': '正在准备工作区服务...',

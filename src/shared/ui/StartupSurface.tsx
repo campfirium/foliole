@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { isOriginalDataProtectionError } from '../../../lib/core/localization/startupOriginalDataProtection';
 import { getStoredAppLocale } from '../localization/appLanguage';
 import { translate, type TranslationKey, type TranslationParams } from '../localization/translations';
 
@@ -64,10 +65,13 @@ export function createStartupBootSurfaceModel(): StartupSurfaceModel {
 
 export function createStartupErrorSurfaceModel(input: string | StartupErrorViewModel): StartupSurfaceModel {
   const model = typeof input === 'string' ? { message: input } : input;
+  const protectsOriginalData = isOriginalDataProtectionError(model.message);
   return {
     eyebrow: t('shared.startup.problemEyebrow'),
     ...(model.logPath !== undefined ? { logPath: model.logPath } : {}),
-    message: model.message,
+    message: protectsOriginalData
+      ? `${t('shared.startup.originalDataProtection')}\n\n${model.message}`
+      : model.message,
     ...(model.moduleLabel !== undefined ? { moduleLabel: model.moduleLabel } : {}),
     title: model.title ?? t('shared.startup.errorTitle'),
     tone: 'critical'

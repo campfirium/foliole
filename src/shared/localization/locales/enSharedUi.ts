@@ -1,3 +1,5 @@
+import { ORIGINAL_DATA_PROTECTION_COPY } from '../../../../lib/core/localization/startupOriginalDataProtection';
+
 export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.breadcrumb.aria': 'Breadcrumb',
   'shared.breadcrumb.expand': 'Expand breadcrumb path',
@@ -5,6 +7,7 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.confirm.confirm': 'Confirm',
   'shared.close': 'Close',
   'shared.selection.commands': 'Selection commands',
+  'shared.startup.originalDataProtection': ORIGINAL_DATA_PROTECTION_COPY.en,
   'shared.startup.errorTitle': 'Foliole startup encountered a problem',
   'shared.startup.bootTitle': 'Starting Foliole',
   'shared.startup.bootHelp': 'Preparing the workspace services...',
