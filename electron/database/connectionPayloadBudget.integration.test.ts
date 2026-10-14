@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { encodeFrameHeader } from '../../lib/core/sync/framedSyncFraming.js';
 import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES } from '../../lib/core/sync/framedSyncPayloadBudget.js';
-import { processFrameStream } from '../sync/desktopFramedSyncProcessWire.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -46,7 +46,7 @@ it('shares capacity across database ports before SQL reads, cancels on close and
     yield { ciphertext: row.data,
       headerBytes: encodeFrameHeader({ ciphertextBytes: 4, flags: 0, frameType: 1, sequence: 0n }) };
   }
-  const iterator = processFrameStream(source(), readFramedSyncPayloadBudget(second))[Symbol.asyncIterator]();
+  const iterator = leaseFramedSyncPayloads(source(), readFramedSyncPayloadBudget(second), 'outbound')[Symbol.asyncIterator]();
   const waiting = iterator.next();
   const cancelled = expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
   await setImmediate();

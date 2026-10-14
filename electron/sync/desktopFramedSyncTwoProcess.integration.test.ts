@@ -4,16 +4,6 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
-import {
-  encryptProtocolFrame,
-  manifestToWire,
-  newTransferAttempt,
-  processFrameStream,
-  TRANSFER_FRAME_TYPES
-} from './desktopFramedSyncProcessWire.js';
-import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
-import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess
@@ -39,7 +29,7 @@ afterEach(async ({ task }) => {
 });
 
 async function setup() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
   return fixture;
@@ -55,8 +45,8 @@ it('owns two independent Electron Node processes, HTTP ports, and SQLite librari
     fetch(`${fixture.rightSnapshot.origin}/health`).then((response) => response.json())
   ]);
   expect(health).toEqual([
-    { deviceId: 'desktop-a', pid: fixture.leftSnapshot.pid },
-    { deviceId: 'desktop-b', pid: fixture.rightSnapshot.pid }
+    { deviceId: fixture.leftSnapshot.deviceId, pid: fixture.leftSnapshot.pid },
+    { deviceId: fixture.rightSnapshot.deviceId, pid: fixture.rightSnapshot.pid }
   ]);
   await fixture.left.seed({
     content: 'Body from desktop A',
@@ -77,7 +67,7 @@ it('owns two independent Electron Node processes, HTTP ports, and SQLite librari
   });
 });
 
-it('moves one object and version body through the production framed-sync process port', async () => {
+it('moves exact full body bytes through a request round and preserves them after restart', async () => {
   const fixture = await setup();
   const prefix = '\uFEFFBody from desktop A 🌿\r\n';
   const content = prefix + 'a'.repeat(1_048_576 - Buffer.byteLength(prefix));
@@ -89,30 +79,6 @@ it('moves one object and version body through the production framed-sync process
   await fixture.left.synchronize(fixture.rightSnapshot.origin);
   const sent = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(sent.framedSync).toEqual({
-    availableBlobs: 0,
-    availableResources: 0,
-    inboundFacts: 0,
-    inboundFrames: 0,
-    inboundStates: [],
-    outboundFrames: 0,
-    outboundHolds: 0,
-    outboundStates: [{ state: 'receipt_committed' }],
-    receipts: 1,
-    resourceChunks: 0
-  });
-  expect(received.framedSync).toEqual({
-    availableBlobs: 0,
-    availableResources: 0,
-    inboundFacts: 0,
-    inboundFrames: 0,
-    inboundStates: [{ state: 'applied' }],
-    outboundFrames: 1,
-    outboundHolds: 0,
-    outboundStates: [],
-    receipts: 1,
-    resourceChunks: 0
-  });
   expect(received.nodes).toEqual([
     expect.objectContaining({ content, id: 't326-one-object', title: 'One object' })
   ]);
@@ -126,10 +92,7 @@ it('moves one object and version body through the production framed-sync process
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
   await fixture.left.synchronize(restarted.snapshot.origin);
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundFrames: 0, outboundHolds: 0, receipts: 1 });
   const reopened = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
-  expect(reopened.framedSync).toMatchObject({ inboundFrames: 0, outboundFrames: 1, receipts: 1 });
   expect(reopened.nodes).toEqual(received.nodes);
   expect(reopened.versions).toEqual(received.versions);
 });
@@ -146,7 +109,10 @@ it('commits the Node independently and fills its image in the ordinary resource 
     nodeId: 't326-binary-resource'
   });
 
-  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-binary-resource');
+  const source = path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
+  const unavailable = path.join(root, 'unavailable-image');
+  await fs.rename(source, unavailable);
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toMatchObject({ complete: false });
 
   const target = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets',
     seeded.storageKey);
@@ -156,16 +122,9 @@ it('commits the Node independently and fills its image in the ordinary resource 
     id: 't326-binary-resource',
     resource_references: expect.stringContaining(seeded.storageKey)
   })]);
-  expect(received.framedSync).toMatchObject({
-    availableResources: 0,
-    receipts: 1,
-    resourceChunks: 0
-  });
-  expect(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot)).toMatchObject({ complete: true });
+  await fs.rename(unavailable, source);
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toMatchObject({ complete: true });
   await expect(fs.readFile(target)).resolves.toEqual(bytes);
-  const completed = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
-  expect(completed.framedSync).toMatchObject({ availableResources: 0, resourceChunks: 0 });
-  expect(completed.framedSync.receipts).toBeGreaterThan(received.framedSync.receipts);
   expect(await fs.readdir(path.dirname(target))).toEqual([seeded.storageKey]);
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
@@ -173,13 +132,14 @@ it('commits the Node independently and fills its image in the ordinary resource 
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual(received.nodes);
 }, 60_000);
 
-it('rejects an unauthenticated framed-sync request before staging any bytes', async () => {
+it('rejects an unauthenticated current request without changing business state', async () => {
   const fixture = await setup();
-  const url = new URL('/companion/framed-sync', fixture.rightSnapshot.origin);
-  url.searchParams.set('initiator_device_id', 'desktop-a');
-  url.searchParams.set('initiator_library_epoch', 'desktop-a-epoch');
-  url.searchParams.set('responder_device_id', 'desktop-b');
-  url.searchParams.set('responder_library_epoch', 'desktop-b-epoch');
+  const before = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  const url = new URL('/companion/framed-sync?request=inventory&peer_round_id=12345678-1234-4234-8234-123456789abc&peer_round_mode=single', fixture.rightSnapshot.origin);
+  url.searchParams.set('initiator_device_id', fixture.leftSnapshot.deviceId);
+  url.searchParams.set('initiator_library_epoch', `${fixture.leftSnapshot.deviceId}-epoch`);
+  url.searchParams.set('responder_device_id', fixture.rightSnapshot.deviceId);
+  url.searchParams.set('responder_library_epoch', `${fixture.rightSnapshot.deviceId}-epoch`);
   const response = await fetch(url, {
     body: new Uint8Array(),
     headers: {
@@ -190,52 +150,5 @@ it('rejects an unauthenticated framed-sync request before staging any bytes', as
   });
   expect(response.status).toBe(401);
   expect(await response.json()).toEqual({ error: 'missing_headers' });
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).framedSync)
-    .toMatchObject({ inboundFacts: 0, inboundFrames: 0, inboundStates: [], receipts: 0 });
-});
-
-it('rejects a non-canonical transfer identity before staging its authenticated header', async () => {
-  const fixture = await setup();
-  const tamperedTransferId = new Uint8Array(32).fill(1);
-  const contentId = new Uint8Array(32).fill(3);
-  const attempt = newTransferAttempt(tamperedTransferId);
-  const secret = Buffer.alloc(32, 7).toString('base64url');
-  const frame = await encryptProtocolFrame({
-    attempt,
-    frameType: TRANSFER_FRAME_TYPES.transferHeader,
-    groupKey: new Uint8Array(Buffer.from(secret, 'base64url')),
-    payload: {
-      attemptId: attempt.attemptId,
-      manifest: manifestToWire({ blobs: [], facts: [] }, 't326-group', contentId),
-      transferId: tamperedTransferId
-    },
-    payloadCase: 'transfer_header',
-    sequence: 0n,
-    transferId: tamperedTransferId
-  });
-  await expect(postDesktopFramedSync({
-    body: {
-      bodySha256: framedSyncEncodedSha256(attempt.preamble, [frame]),
-      contentLength: framedSyncEncodedLength(attempt.preamble, [frame]),
-      frames: processFrameStream([frame]),
-      preamble: attempt.preamble
-    },
-    endpointUrl: fixture.rightSnapshot.origin,
-    groupId: 't326-group',
-    localDeviceId: 'desktop-a',
-    localLibraryEpoch: 'desktop-a-epoch',
-    pathWithQuery: '/companion/framed-sync',
-    remoteDeviceId: 'desktop-b',
-    remoteLibraryEpoch: 'desktop-b-epoch',
-    secret
-  })).rejects.toThrow('framed_sync_http_400');
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).framedSync)
-    .toMatchObject({
-      availableBlobs: 0,
-      inboundFacts: 0,
-      inboundFrames: 0,
-      inboundStates: [],
-      outboundFrames: 0,
-      receipts: 0
-    });
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath)).toEqual(before);
 });

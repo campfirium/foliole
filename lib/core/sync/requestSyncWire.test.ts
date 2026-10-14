@@ -47,3 +47,23 @@ it.each(['ciphertext', 'sequence'] as const)('rejects a request with invalid %s 
   })()).rejects.toThrow(fault === 'ciphertext' ? 'frame_authentication_failed' : 'frame_sequence_not_contiguous');
   expect(received).toEqual([]);
 });
+
+
+it.each(['groupId', 'initiatorDeviceId', 'initiatorLibraryEpoch', 'responderDeviceId',
+  'responderLibraryEpoch'] as const)('rejects a request bound to a different %s before reading frames', async field => {
+  const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: 'a', initiatorLibraryEpoch: 'a-epoch', responderDeviceId: 'b', responderLibraryEpoch: 'b-epoch' } as const;
+  const groupKey = new Uint8Array(32).fill(7);
+  let reads = 0;
+  const stream = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
+    reads += 1;
+    yield { payloadCase: 'round_receipt', payload: { roundId: new Uint8Array(16), result: 1, deferredFacts: [] } };
+  } });
+  const received: unknown[] = [];
+  await expect((async () => {
+    for await (const decoded of readRequestSyncWire({ ...stream, groupKey,
+      context: { ...context, [field]: 'different' } })) received.push(decoded);
+  })()).rejects.toThrow('session_context_mismatch');
+  expect(reads).toBe(0);
+  expect(received).toEqual([]);
+});

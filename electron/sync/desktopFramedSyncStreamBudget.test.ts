@@ -6,8 +6,8 @@ import { expect, it } from 'vitest';
 import { encodeFrameHeader, encodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES,
   FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
 
-import { processFrameStream } from './desktopFramedSyncProcessWire.js';
 import { readFramedSyncStream } from './desktopFramedSyncStream.js';
 
 const preamble = encodeFramedSyncPreamble({ compression: 'none', contextId: new Uint8Array(32),
@@ -29,7 +29,7 @@ it('allows a bounded receipt through full bidirectional data lanes and serialize
     .then(lease => { competingGranted = true; return lease; });
   await setImmediate();
   expect(competingGranted).toBe(false);
-  await iterator.return?.();
+  await iterator.return?.(undefined);
   (await competing).release();
   inbound.release(); outbound.release(); budget.close();
   await budget.drained;
@@ -52,7 +52,7 @@ it('reserves shared inbound capacity before reading a body and retains it until 
     .then(lease => { granted = true; return lease; });
   await setImmediate();
   const beforeProcessingFinishes = granted;
-  await iterator.return?.();
+  await iterator.return?.(undefined);
   (await competing).release();
   budget.close();
   await budget.drained;
@@ -60,7 +60,7 @@ it('reserves shared inbound capacity before reading a body and retains it until 
   expect(beforeProcessingFinishes).toBe(false);
 });
 
-it('reserves outbound capacity before a durable frame read and releases it on consumer exit', async () => {
+it('reserves outbound capacity before a frame read and releases it on consumer exit', async () => {
   const budget = new FramedSyncPayloadBudget();
   const held = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
   let reads = 0;
@@ -69,13 +69,13 @@ it('reserves outbound capacity before a durable frame read and releases it on co
     try { reads += 1; yield { headerBytes, ciphertext }; }
     finally { closed = true; }
   }
-  const iterator = processFrameStream(frames(), budget)[Symbol.asyncIterator]();
+  const iterator = leaseFramedSyncPayloads(frames(), budget, 'outbound')[Symbol.asyncIterator]();
   const sending = iterator.next();
   await setImmediate();
   const beforeRelease = reads;
   held.release();
   expect((await sending).value).toEqual({ headerBytes, ciphertext });
-  await iterator.return?.();
+  await iterator.return?.(undefined);
   const reusable = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
   reusable.release();
   budget.close();
