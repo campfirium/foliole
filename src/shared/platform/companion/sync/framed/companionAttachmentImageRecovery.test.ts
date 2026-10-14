@@ -87,6 +87,7 @@ function fileOperations(root: string) {
       case 'truncate': await appendFile(partial, ''); await truncate(partial, input.length); return {};
       case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
       case 'hash': return { hash: digest(await readFile(file)) };
+      case 'discard': await rm(partial, { force: true }); return {};
       case 'publish': await rename(partial, file); return {};
       default: throw new Error(`Unexpected attachment action: ${input.action}`);
     }
@@ -114,5 +115,33 @@ it('recomputes needs using metadata without opening or hashing present attachmen
     expect(await host.needs()).toEqual([]);
     await rm(path.join(root, key));
     expect(await host.needs()).toEqual([key]);
+  } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+it('retains corrupt published bytes through failed replacement and marks only verified bytes available', async () => {
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-corrupt-'));
+  const sqlite = new Database(path.join(root, 'library.db'));
+  sqlite.exec('CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER)');
+  const port = createBetterSqliteDbPort(sqlite);
+  const bytes = Buffer.alloc(BLOCK + 19, 0x63), corrupt = Buffer.alloc(bytes.length, 0x64);
+  const key = `${digest(bytes)}.png`, final = path.join(root, key);
+  const resource = { storageKey: key, byteLength: bytes.length };
+  native.access.mockImplementation(fileOperations(root));
+  try {
+    await writeFile(final, corrupt);
+    const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
+      readSnapshot: read => read(port), write: write => write(port)
+    }, { library_key: root, generation_id: 'generation' });
+    expect(await host.status(resource)).toEqual({ kind: 'partial', offset: 0 });
+    await host.receive(resource, 0, corrupt.subarray(0, BLOCK));
+    expect(await readFile(final)).toEqual(corrupt);
+    await expect(host.receive(resource, BLOCK, bytes.subarray(BLOCK))).rejects.toThrow('attachment_checksum_mismatch');
+    expect(await readFile(final)).toEqual(corrupt);
+    expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().get()).toBe(0);
+    await host.receive(resource, 0, bytes.subarray(0, BLOCK));
+    expect(await readFile(final)).toEqual(corrupt);
+    await host.receive(resource, BLOCK, bytes.subarray(BLOCK));
+    expect(await readFile(final)).toEqual(bytes);
+    expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().get()).toBe(1);
   } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });

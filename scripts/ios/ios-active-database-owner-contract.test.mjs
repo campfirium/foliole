@@ -32,30 +32,31 @@ describe('iOS active database ownership', () => {
       'accessFramedSyncFile', 'cancelRequestSyncHttp', 'postRequestSyncHttp',
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'releaseFramedSyncPayloadLoan', 'validateFramedSyncPayloadLoan',
-      'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
-      'finishAttachmentResourceBatch',
+      'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
       'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
       'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
+      'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());
   });
 
-  it('routes iOS reads, writes, sync apply, and batch commits through the shared owner', async () => {
+  it('routes iOS reads, writes, sync apply, and attachment availability through the shared owner', async () => {
     const files = [
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabase.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseReads.ts',
       'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.ts',
-      'src/shared/platform/companionDesktopAttachmentResources.ts'
+      'src/shared/platform/companion/sync/framed/companionAttachmentBlockFiles.ts',
+      'src/shared/platform/companion/sync/framed/companionRequestSyncDatabaseHost.ts'
     ];
     const source = (await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')))).join('\n');
 
     expect(source).toContain('getIosCompanionDatabaseOwner');
     expect(source).toContain('readIosCompanionDatabase');
     expect(source).toContain('writeIosCompanionDatabase');
-    expect(source).toContain('commitStagedCompanionAttachmentBatch');
+    expect(source).toContain('recordFramedSyncResourceAvailability');
+    expect(source).toContain('owner.runWriter');
   });
 });

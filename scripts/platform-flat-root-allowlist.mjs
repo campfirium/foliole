@@ -18,7 +18,6 @@ export const LEGACY_FLAT_PLATFORM_BASENAMES = new Set([
   'companionAppData.ts',
   'companionAppDataRuntimeRepository.ts',
   'companionAttachmentResourceSync.ts',
-  'companionAttachmentResourceSyncPluginTypes.ts',
   'companionBootstrap.ts',
   'companionBrowseLists.ts',
   'companionBrowseOrdering.ts',

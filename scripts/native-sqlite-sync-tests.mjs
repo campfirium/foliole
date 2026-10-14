@@ -104,7 +104,6 @@ export const controlledSyncSqliteTests = [
   'electron/database/nodeBodyMutationStable.integration.test.ts',
   'electron/database/nodeSyncVersionStable.integration.test.ts',
   'electron/sync/desktopFramedSyncReadyApplyRollback.integration.test.ts',
-  'electron/sync/framedSyncReadyFactFrames.integration.test.ts',
   'electron/sync/desktopFramedSyncResourceNeedScan.integration.test.ts',
   'electron/sync/desktopFramedSyncResourceRound.integration.test.ts',
   'lib/core/database/storedSourceSearchBodyIndex.integration.test.ts',

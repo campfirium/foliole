@@ -42,6 +42,9 @@ it('queries acknowledged length after a lost response and rejects duplicate offs
   expect(await receiver.status(f.resource)).toEqual({ kind: 'partial', offset: BLOCK });
   expect(await receiver.receive(f.resource, 0, bytes.subarray(0, BLOCK)))
     .toEqual({ kind: 'offset', offset: BLOCK });
+  expect(await receiver.receive(f.resource, 0, Buffer.alloc(BLOCK, 0xff)))
+    .toEqual({ kind: 'offset', offset: BLOCK });
+  expect(await fs.readFile(f.partial)).toEqual(bytes.subarray(0, BLOCK));
   await deliverBlocks(receiver, f.resource, bytes, BLOCK);
   expect(await receiver.status(f.resource)).toEqual({ kind: 'complete', offset: bytes.length });
   expect(await fs.readFile(f.final)).toEqual(bytes);
@@ -133,14 +136,24 @@ it('writes availability only at transitions, including deletion after completion
   expect(f.writes).toEqual([false, true, false, true]);
 });
 
-it('rejects an existing file with the wrong identity without marking it available or overwriting it', async () => {
-  const bytes = Buffer.from('correct attachment');
+it('keeps a corrupt published file until a complete verified replacement is ready', async () => {
+  const bytes = Buffer.alloc(BLOCK + 19, 0x53);
   const f = await setup(bytes);
   const receiver = await f.open();
   const corrupted = Buffer.alloc(bytes.length, 0x52);
   await fs.writeFile(f.final, corrupted);
-  await expect(receiver.status(f.resource)).rejects.toThrow('attachment_published_file_invalid');
-  await expect(receiver.receive(f.resource, 0, bytes)).rejects.toThrow('attachment_published_file_invalid');
-  expect(f.available()).not.toBe(1);
+  expect(await receiver.status(f.resource)).toEqual({ kind: 'partial', offset: 0 });
+  expect(f.available()).toBe(0);
+  await receiver.receive(f.resource, 0, corrupted.subarray(0, BLOCK));
   expect(await fs.readFile(f.final)).toEqual(corrupted);
+  await expect(receiver.receive(f.resource, BLOCK, bytes.subarray(BLOCK)))
+    .rejects.toThrow('attachment_checksum_mismatch');
+  expect(await fs.readFile(f.final)).toEqual(corrupted);
+  expect(f.available()).toBe(0);
+  await expect(fs.stat(f.partial)).rejects.toMatchObject({ code: 'ENOENT' });
+  await receiver.receive(f.resource, 0, bytes.subarray(0, BLOCK));
+  expect(await fs.readFile(f.final)).toEqual(corrupted);
+  await receiver.receive(f.resource, BLOCK, bytes.subarray(BLOCK));
+  expect(await fs.readFile(f.final)).toEqual(bytes);
+  expect(f.available()).toBe(1);
 });

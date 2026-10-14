@@ -13,8 +13,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "maintainAttachmentFiles", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "beginSyncRun", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadDiscoveryCandidates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadSyncGroupDeviceIdentity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startDiscoverySession", returnType: CAPPluginReturnPromise),
@@ -36,7 +34,6 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stageAttachmentResourceBatch", returnType: CAPPluginReturnPromise)
     ]
 
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()

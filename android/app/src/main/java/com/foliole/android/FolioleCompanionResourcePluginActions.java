@@ -8,29 +8,6 @@ import com.getcapacitor.PluginCall;
 final class FolioleCompanionResourcePluginActions {
     private FolioleCompanionResourcePluginActions() {}
 
-    static JSObject downloadAttachmentResourceBatch(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionAttachmentResourceBatchStore.downloadResources(
-            context, call.getString(FolioleCompanionBridgeContractDefinitions.hostApiString(
-                context, "attachmentResourceSync", "requestKeys", "databasePath")), call.getData().optJSONArray(
-                FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context)
-            )
-        );
-    }
-
-    static JSObject stageAttachmentResourceBatch(Context context, PluginCall call) throws Exception {
-        return FolioleCompanionAttachmentFileStage.stage(
-            context, call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(context))
-        );
-    }
-
-    static JSObject finishAttachmentResourceBatch(Context context, PluginCall call) throws Exception {
-        FolioleCompanionAttachmentFileStage.finish(
-            call.getString(FolioleCompanionBridgeContractDefinitions.resourceBatchTokenRequestKey(context)),
-            call.getBoolean(FolioleCompanionBridgeContractDefinitions.resourceCommittedRequestKey(context), false)
-        );
-        return new JSObject();
-    }
-
     static JSObject resolveAttachmentResource(Context context, PluginCall call) throws Exception {
         return FolioleCompanionAttachmentFileResolver.resolve(
             context,

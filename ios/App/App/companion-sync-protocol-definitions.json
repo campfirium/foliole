@@ -599,20 +599,6 @@
         "userVisible": true,
         "ownership": "device",
         "recovery": "saved"
-      },
-      {
-        "category": "diagnostic",
-        "conflict": "device_private",
-        "scope": "device",
-        "key": "sync_delivery_receipts",
-        "objectType": null,
-        "pushIssue": "diagnostic",
-        "storage": [
-          "sync_delivery_receipts"
-        ],
-        "userVisible": false,
-        "ownership": "device",
-        "recovery": "regenerated"
       }
     ],
     "reviewRequiredPushIssueObjectTypes": [

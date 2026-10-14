@@ -23,11 +23,9 @@ async function openPartial(file: string) {
 async function verifyComplete(file: string, resource: AttachmentBlockResource) {
   try {
     const stat = await fs.stat(file);
-    if (!stat.isFile() || stat.size !== resource.byteLength ||
-      await hashResourceFile(file) !== resource.storageKey.slice(0, 64)) {
-      throw new Error('attachment_published_file_invalid');
-    }
-    return true;
+    if (!stat.isFile()) throw new Error('attachment_published_file_invalid');
+    return stat.size === resource.byteLength &&
+      await hashResourceFile(file) === resource.storageKey.slice(0, 64);
   } catch (error) {
     if (missing(error)) return false;
     throw error;

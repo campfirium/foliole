@@ -66,11 +66,18 @@ public final class FolioleCompanionAttachmentCommitRecoveryTest {
             Files.write(source.toPath(), new byte[] {1});
             assertThrows(Exception.class, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
             assertArrayEquals(bytes, Files.readAllBytes(target.toPath()));
-            Files.write(source.toPath(), bytes);
+            assertArrayEquals(new byte[] {1}, Files.readAllBytes(source.toPath()));
             Files.write(target.toPath(), new byte[] {2});
             assertThrows(Exception.class, () -> FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
-            assertArrayEquals(bytes, Files.readAllBytes(source.toPath()));
+            assertArrayEquals(new byte[] {1}, Files.readAllBytes(source.toPath()));
             assertArrayEquals(new byte[] {2}, Files.readAllBytes(target.toPath()));
+            assertEquals(identity, Files.getAttribute(target.toPath(), "unix:ino"));
+            Files.write(source.toPath(), bytes);
+            Object replacementIdentity = Files.getAttribute(source.toPath(), "unix:ino");
+            assertTrue(FolioleCompanionAttachmentFileStage.publishVerified(source, target, hash));
+            assertFalse(source.exists());
+            assertArrayEquals(bytes, Files.readAllBytes(target.toPath()));
+            assertEquals(replacementIdentity, Files.getAttribute(target.toPath(), "unix:ino"));
         } finally { source.delete(); target.delete(); root.delete(); }
     }
 

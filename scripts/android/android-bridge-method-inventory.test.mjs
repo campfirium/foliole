@@ -14,7 +14,6 @@ const TYPES_FILES = [
   '../../../lib/platform/nativeCompanionFramedFilesContract.ts',
   '../../../lib/platform/nativeRequestSyncHttpContract.ts',
   'companionWorkspaceSyncPluginTypes.ts',
-  'companionAttachmentResourceSyncPluginTypes.ts',
 ];
 
 function sortedUnique(values) {

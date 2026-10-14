@@ -7,8 +7,6 @@ import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImag
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
-import type { CompanionAttachmentResourceSyncPlugin } from './companionAttachmentResourceSyncPluginTypes';
-
 export interface CompanionDiscoveryCandidate {
   endpoint_url: string;
   protocol_txt?: Record<string, string>;
@@ -39,7 +37,7 @@ export interface CompanionSyncGroupProviderState {
 export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
-  extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin,
+  extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin,
   NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
   desktopHttpRequest(args: {
     body?: string;

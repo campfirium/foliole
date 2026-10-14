@@ -162,21 +162,6 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionSyncGroupSigning.sign(getContext(), call));
     }
 
-    @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
-        async(call, "Failed to download companion attachment resources.", () ->
-            FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));
-    }
-
-    @PluginMethod public void stageAttachmentResourceBatch(PluginCall call) {
-        async(call, "Failed to stage companion attachment resources.", () ->
-            FolioleCompanionResourcePluginActions.stageAttachmentResourceBatch(getContext(), call));
-    }
-
-    @PluginMethod public void finishAttachmentResourceBatch(PluginCall call) {
-        async(call, "Failed to finish companion attachment resources.", () ->
-            FolioleCompanionResourcePluginActions.finishAttachmentResourceBatch(getContext(), call));
-    }
-
     @PluginMethod public void readRemoteImageResponse(PluginCall call) {
         async(call, "Failed to read image response.", () -> FolioleRemoteImageFiles.read(call));
     }

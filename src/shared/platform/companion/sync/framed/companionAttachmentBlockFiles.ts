@@ -43,8 +43,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     async complete(resource) {
       const info = await stat(resource.storageKey);
       if (!info.present) return false;
-      if (info.length !== resource.byteLength || info.hash !== resource.storageKey.slice(0, 64)) throw new Error('attachment_published_file_invalid');
-      return true;
+      return info.length === resource.byteLength && info.hash === resource.storageKey.slice(0, 64);
     },
     partialLength: async hash => (await stat(hash, true)).length,
     truncate: async (key, length) => { await call({ key, length, action: 'truncate' }); },
