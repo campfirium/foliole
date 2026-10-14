@@ -44,6 +44,36 @@ it('does not write small facts to scratch storage', async () => {
   await request.close();
 });
 
+it('completes an in-memory request when scratch storage is unavailable', async () => {
+  const unavailable = async () => { throw new Error('scratch_storage_unavailable'); };
+  const request = new RequestSyncFiles({ read: unavailable, write: unavailable, remove: unavailable }, 'requests/memory');
+  const fact = { factId: 'v1', globalId: 'node', objectType: 'node', kind: 2,
+    sharedStateHash: new Uint8Array(32), body: [], blobs: [] };
+  await request.writeFact(fact);
+  const facts = [];
+  for await (const value of request.readFacts()) facts.push(value);
+  expect(facts).toEqual([fact]);
+  await expect(request.close()).resolves.toBeUndefined();
+});
+
+it('cleans partially written spill files after the storage write rejects', async () => {
+  const stored = storage();
+  const request = new RequestSyncFiles({ ...stored.port, async write(key, bytes) {
+    await stored.port.write(key, bytes.subarray(0, 1));
+    throw new Error('scratch_write_failed');
+  } }, 'requests/partial');
+  for (let index = 0; index < REQUEST_SYNC_MEMORY_BYTES / (1024 * 1024); index++) {
+    const bytes = new Uint8Array(1024 * 1024).fill(index);
+    await request.writeBody({ byteLength: BigInt(bytes.length), role: 1, required: true, sha256: sha256(bytes) }, bytes);
+  }
+  const bytes = new Uint8Array(512 * 1024).fill(255);
+  await expect(request.writeBody({ byteLength: BigInt(bytes.length), role: 1, required: true, sha256: sha256(bytes) }, bytes))
+    .rejects.toThrow('scratch_write_failed');
+  expect(stored.disk.size).toBe(1);
+  await request.close();
+  expect(stored.disk.size).toBe(0);
+});
+
 
 async function spilledFacts() {
   const stored = storage();

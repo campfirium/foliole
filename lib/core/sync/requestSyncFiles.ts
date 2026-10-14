@@ -20,6 +20,7 @@ export class RequestSyncFiles {
   private readonly memory = new Map<string, Uint8Array>();
   private memoryBytes = 0;
   private writtenBytes = 0;
+  private spilled = false;
 
   get byteLength() { return this.writtenBytes; }
   private nextFrame = 0;
@@ -41,6 +42,7 @@ export class RequestSyncFiles {
       this.memory.set(key, Uint8Array.from(bytes));
       this.memoryBytes += bytes.byteLength;
     } else {
+      this.spilled = true;
       await this.files.write(key, bytes);
     }
   }
@@ -121,7 +123,7 @@ export class RequestSyncFiles {
     this.facts.length = 0;
     this.memory.clear();
     this.memoryBytes = 0;
-    await this.files.remove(this.directory);
+    if (this.spilled) await this.files.remove(this.directory);
   }
 }
 
