@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { receiveMemberPositionFixture } from '../../../../../electron/database/nodeVersionMemberPosition.testSupport';
+import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { NODE_TEXT_MAX_BYTES } from '../../../../../lib/core/nodes/nodeTextBudget';
@@ -92,15 +93,15 @@ it('replays an uncertain acknowledgement without creating another input version'
   await readCompanionContentSource('topic', 'unacknowledged-input');
   const request = edit('Apples tea\nBread\nMilk\n');
   const first = await saveCompanionContentEdit(request);
-  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id = 'base'")
-    .get()).toEqual({ body_text: baseline, deleted: null });
+  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted, json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = 'base'")
+    .get()).toEqual({ body_text: null, deleted: 1, hash: hashTextBody(baseline) });
   const replay = await saveCompanionContentEdit(request);
   expect(replay).toEqual(first);
   expect(database.prepare('SELECT COUNT(*) AS n FROM node_sync_versions WHERE object_id = ?').get('topic')).toEqual({ n: 2 });
   await expect(saveCompanionContentEdit({ ...request, content: 'Different input' })).rejects.toThrow('content_edit_version_mismatch');
   await releaseCompanionContentBase('topic', 'unacknowledged-input');
-  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id = 'base'")
-    .get()).toEqual({ body_text: null, deleted: 1 });
+  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted, json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = 'base'")
+    .get()).toEqual({ body_text: null, deleted: 1, hash: hashTextBody(baseline) });
 });
 
 it('retains the opened base through remote advancement and atomically advances it on save', async () => {
@@ -145,7 +146,10 @@ it('reclaims middle bodies during continued editing against an offline device ba
   const rows = database.prepare('SELECT version_id, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id')
     .all('topic') as { version_id: string; body_text: string | null }[];
   expect(rows.filter((row) => row.body_text !== null).map((row) => row.version_id))
-    .toEqual(['E', 'base']);
+    .toEqual(['E']);
+  expect(rows.map(row => row.version_id)).toEqual(['B', 'C', 'D', 'E', 'base']);
+  expect(database.prepare("SELECT adopted_version_id FROM node_version_member_positions WHERE device_identity_key = 'offline'").get())
+    .toEqual({ adopted_version_id: 'base' });
 });
 
 it('drops an orphaned companion editor hold when its database owner reopens', async () => {

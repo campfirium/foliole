@@ -2,6 +2,7 @@
 
 import { expect, it } from 'vitest';
 
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
@@ -18,11 +19,35 @@ function payloads() {
     FROM node_sync_versions ORDER BY version_id`).all();
 }
 
-it('keeps offline and current bodies while preserving original intermediate identities and edges', async () => {
+function facts() {
+  return { versions: sqlite.prepare(`SELECT version_id, object_id, parent_version_id, host_name, created_at,
+    content_hash, json_remove(snapshot_json, '$.content', '$.body_deleted', '$.body_blob_hash',
+      '$.text_alternative_bodies') AS metadata FROM node_sync_versions ORDER BY version_id`).all(),
+  parents: sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all() };
+}
+
+async function collect(db: DbPort = port) {
+  const before = facts();
+  const bodies = sqlite.prepare<[], { version_id: string; body_text: string | null }>(
+    'SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all();
+  const result = await collectNodeVersionPayloads(db, 'node');
+  expect(facts()).toEqual(before);
+  for (const row of bodies) {
+    const after = sqlite.prepare<[string], { body_text: string | null; hash: string | null; retired: number }>(
+      `SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash,
+        json_extract(snapshot_json, '$.body_deleted') AS retired FROM node_sync_versions WHERE version_id = ?`).get(row.version_id);
+    if (row.body_text !== null && after?.body_text === null) {
+      expect(after).toEqual({ body_text: null, hash: hashTextBody(row.body_text), retired: 1 });
+    }
+  }
+  return result;
+}
+
+it('retires offline ancestor copies while preserving current text, identities and edges', async () => {
   proveBase('A');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(payloads()).toEqual([
-    { version_id: 'A', body_text: 'body-A', snapshot_content: 'body-A', parent_version_id: null },
+    { version_id: 'A', body_text: null, snapshot_content: null, parent_version_id: null },
     { version_id: 'B', body_text: null, snapshot_content: null, parent_version_id: 'A' },
     { version_id: 'C', body_text: null, snapshot_content: null, parent_version_id: 'B' },
     { version_id: 'D', body_text: null, snapshot_content: null, parent_version_id: 'C' },
@@ -32,10 +57,10 @@ it('keeps offline and current bodies while preserving original intermediate iden
   expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all())
     .toEqual(['B', 'C', 'D', 'E'].map((id, index) => ({ version_id: id,
       parent_version_id: ['A', 'B', 'C', 'D'][index], ordinal: 0 })));
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collect()).toEqual({ released: 0, skipped: null });
 });
 
-it('keeps the common merge base when a peer base is on a sibling branch', async () => {
+it('keeps sibling branch text and common ancestor identity without retaining its body', async () => {
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at,
      content_hash, body_text, snapshot_json)
@@ -45,18 +70,18 @@ it('keeps the common merge base when a peer base is on a sibling branch', async 
   proveBase('F');
 
   expect((await loadMergeBase(port, 'F', 'E'))?.version_id).toBe('B');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['B', 'E', 'F']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['E', 'F']);
 });
 
-it('keeps the inherited complete chain until direct device dependencies are known', async () => {
+it('retires unused ancestor copies without waiting for direct device declarations', async () => {
   sqlite.exec('DELETE FROM node_version_local_origins');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
-  expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
+  expect(await collect()).toEqual({ released: 4, skipped: null });
+  expect(sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL').pluck().all()).toEqual(['E']);
 });
 
-it('keeps an unabsorbed sibling and its base without a direct member declaration', async () => {
+it('keeps an unabsorbed sibling body and its ancestor identity without a member declaration', async () => {
   proveBase('A');
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at,
@@ -64,54 +89,60 @@ it('keeps an unabsorbed sibling and its base without a direct member declaration
     VALUES ('hidden', 'node', 'B', 'remote', 'later', 'hidden-hash', 'hidden-body',
       '{"id":"node","content":"hidden-body"}');
     INSERT INTO node_sync_version_parents VALUES ('hidden', 'B', 0);`);
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
-    .toEqual({ body_text: 'body-B' });
+    .toEqual({ body_text: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('hidden'))
     .toEqual({ body_text: 'hidden-body' });
   expect((await loadMergeBase(port, 'hidden', 'E'))?.version_id).toBe('B');
 });
 
-it('keeps the editor base, conflict and its parent bodies', async () => {
+it('preserves editor and legacy conflict references while retiring unused topic body copies', async () => {
   proveBase('A');
   sqlite.prepare(`INSERT INTO node_version_local_holds VALUES ('editor-1', 'node', 'B', 'now')`).run();
   sqlite.prepare(`INSERT INTO node_sync_conflicts
     (conflict_version_id, object_id, snapshot_json, detected_at)
     VALUES ('D', 'node', '{}', 'now')`).run();
 
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'C', 'D', 'E']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['E']);
+  expect(sqlite.prepare('SELECT hold_id, version_id FROM node_version_local_holds').all())
+    .toEqual([{ hold_id: 'editor-1', version_id: 'B' }]);
+  expect(sqlite.prepare('SELECT conflict_version_id, snapshot_json FROM node_sync_conflicts').all())
+    .toEqual([{ conflict_version_id: 'D', snapshot_json: '{}' }]);
 });
 
-it('keeps an editor base body until its hold is released', async () => {
+it('keeps an editor base identity usable after retirement and releases its hold', async () => {
   proveBase('A');
   await port.transaction((tx) => retainLocalEditBase(tx, {
     holdId: 'editor-1', nodeId: 'node', versionId: 'B'
   }));
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
-    .toEqual({ body_text: 'body-B' });
+    .toEqual({ body_text: null });
   await releaseLocalEditBase(port, 'editor-1', 'node');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collect()).toEqual({ released: 0, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B')).toEqual({ body_text: null });
   await retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' });
 });
 
-it('protects a version referenced by another node anchor', async () => {
+it('preserves an anchor source identity without retaining its obsolete body copy', async () => {
   proveBase('A');
   sqlite.prepare(`INSERT INTO nodes
     (id, kind, title, anchor_source_version_id, created_at, updated_at)
     VALUES ('child', 'topic', 'Child', 'C', 'now', 'now')`).run();
 
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C'))
-    .toEqual({ body_text: 'body-C' });
+    .toEqual({ body_text: null });
+  expect(sqlite.prepare("SELECT anchor_source_version_id FROM nodes WHERE id = 'child'").get())
+    .toEqual({ anchor_source_version_id: 'C' });
 });
 
 it('still selects a newer protected merge base across stripped intermediates', async () => {
   proveBase('B');
-  await collectNodeVersionPayloads(port, 'node');
+  await collect();
   sqlite.prepare(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at,
      content_hash, body_text, snapshot_json)
@@ -124,6 +155,7 @@ it('still selects a newer protected merge base across stripped intermediates', a
 
 it('rolls the entire node back when an update fails', async () => {
   proveBase('A');
+  const before = sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   let updates = 0;
   const failingPort: DbPort = {
     query: (sql, params) => port.query(sql, params),
@@ -136,6 +168,6 @@ it('rolls the entire node back when an update fails', async () => {
         return tx.run(sql, params);
       }
     })) };
-  await expect(collectNodeVersionPayloads(failingPort, 'node')).rejects.toThrow('injected_failure');
-  expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
+  await expect(collect(failingPort)).rejects.toThrow('injected_failure');
+  expect(sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
 });

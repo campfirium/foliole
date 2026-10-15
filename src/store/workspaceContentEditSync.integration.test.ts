@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { readFixtureInventory, reconnectFixturePeer } from '../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport';
 import { createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport';
+import { hashTextBody } from '../../lib/core/database/textBodyHash';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
@@ -37,8 +38,9 @@ function persisted(databasePath: string) {
       `SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
         JOIN node_sync_versions v ON v.version_id = n.current_version_id,
         json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).all(nodeId);
-    const versions = db.prepare<[string], { version_id: string; body_text: string | null }>(
-      'SELECT version_id, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId);
+    const versions = db.prepare<[string], { version_id: string; body_text: string | null; retired: number | null; hash: string | null }>(
+      `SELECT version_id, body_text, json_extract(snapshot_json, '$.body_deleted') AS retired,
+       json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all(nodeId);
     const parents = db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all();
     return { node, bodies: new Set([node.content, ...bodies.map((body) => body.body_text)]), versions, parents };
   } finally { db.close(); }
@@ -77,7 +79,8 @@ it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
         expect(hydrated.content).toBe(localBody);
         expect(hydrated.currentVersionId).toBe(baseId);
         expect(edit.baseVersionId).toBe(baseId);
-        expect(received.versions.find((version) => version.version_id === baseId)?.body_text).toBe(baseBody);
+        expect(received.versions.find((version) => version.version_id === baseId))
+          .toMatchObject({ body_text: null, retired: 1, hash: hashTextBody(baseBody) });
         await save();
       }
       await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
@@ -100,8 +103,16 @@ it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
     }
   }, 60_000);
 
-function assertVersionBody(databasePath: string, versionId: string, body: string) {
-  expect(persisted(databasePath).versions.find((version) => version.version_id === versionId)?.body_text).toBe(body);
+function assertRetiredVersion(databasePath: string, versionId: string, body: string) {
+  expect(persisted(databasePath).versions.find((version) => version.version_id === versionId))
+    .toMatchObject({ body_text: null, retired: 1, hash: hashTextBody(body) });
+}
+
+function editorHolds(databasePath: string) {
+  const db = new Database(databasePath, { readonly: true, fileMustExist: true });
+  try { return db.prepare(`SELECT hold_id, version_id FROM node_version_local_holds
+    WHERE object_id = ? AND hold_id IN ('editor', 'other-editor') ORDER BY hold_id`).all(nodeId); }
+  finally { db.close(); }
 }
 
 it('returns a saved edit based on the received version without introducing a text alternative', async () => {
@@ -131,6 +142,14 @@ it('returns a saved edit based on the received version without introducing a tex
     else console.info('Sequential editor fixture:', fixture.root);
   }
 }, 60_000);
+
+function assertIndependentEditorState(databasePath: string, baseId: string, inputId: string) {
+  expect(editorHolds(databasePath)).toEqual([{ hold_id: 'editor', version_id: inputId },
+    { hold_id: 'other-editor', version_id: baseId }]);
+  expect(persisted(databasePath).bodies).toEqual(new Set([localBody, remoteBody]));
+  assertRetiredVersion(databasePath, baseId, baseBody);
+  assertRetiredVersion(databasePath, inputId, localBody);
+}
 
 it('continues newer input from its acknowledged branch while independent edit holds survive synchronization', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
@@ -167,15 +186,16 @@ it('continues newer input from its acknowledged branch while independent edit ho
     await fixture.right.invoke('retain_edit', { nodeId, holdId: 'editor', versionId: next.baseVersionId });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.right.invoke('collect_content');
-    assertVersionBody(databasePath, baseId, baseBody);
-    assertVersionBody(databasePath, edit.versionId, localBody);
+    assertIndependentEditorState(databasePath, baseId, edit.versionId);
     await fixture.right.invoke('release_edit', { nodeId, holdId: 'other-editor' });
-    assertVersionBody(databasePath, edit.versionId, localBody);
+    expect(editorHolds(databasePath)).toEqual([{ hold_id: 'editor', version_id: edit.versionId }]);
+    assertRetiredVersion(databasePath, edit.versionId, localBody);
     const continued = localBody.replace('Last', 'Continued last');
     await fixture.right.invoke('local_content_edit', { ...next, nodeId,
       content: continued, hostName: 'desktop-b', updatedAt: timestamp(3) });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.right.invoke('release_edit', { nodeId, holdId: 'editor' });
+    expect(editorHolds(databasePath)).toEqual([]);
     await fixture.right.invoke('collect_content');
     const right = persisted(databasePath);
     expect([...right.bodies]).toEqual(expect.arrayContaining([continued, remoteBody]));

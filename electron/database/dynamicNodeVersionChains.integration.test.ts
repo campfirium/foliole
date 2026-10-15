@@ -10,7 +10,7 @@ import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js'
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-it('retires only unsent intermediate bodies while preserving original facts and an offline base', async () => {
+it('retires ancestor body copies while preserving original facts and the offline current version', async () => {
   const a = createPeer('a');
   const b = createPeer('b');
   joinPeers(a, b);
@@ -20,7 +20,8 @@ it('retires only unsent intermediate bodies while preserving original facts and 
   const head = edit(a, 'head');
   await collectNodeVersionPayloads(a.port, 'topic');
   expect(history(a).map((row) => row.version_id)).toEqual([base, middle, head]);
-  expect(history(a).map((row) => row.body_text)).toEqual(['base', null, 'head']);
+  expect(history(a).map((row) => row.body_text)).toEqual([null, null, 'head']);
+  expect(history(b).map(row => row.body_text)).toEqual(['base']);
   expect(history(a).map((row) => row.parent_version_id)).toEqual([null, base, middle]);
 });
 
@@ -32,7 +33,7 @@ it('retains original metadata outside a group without accumulating intermediate 
   expect(history(a).map((row) => row.parent_version_id)).toEqual([null, ...versions.slice(0, -1)]);
 });
 
-it('forwards the complete retained old base and merges a third offline device', async () => {
+it('forwards original lineage and merges complete input from a third offline device', async () => {
   const a = createPeer('a');
   const b = createPeer('b');
   const c = createPeer('c');
@@ -79,10 +80,12 @@ it('keeps distinct member positions until each lagging device advances', async (
   await sync(a, b);
   const third = edit(a, 'c');
   const head = edit(a, 'd');
-  expect(history(a).map((row) => row.body_text)).toEqual(['a', 'b', null, 'd']);
+  expect(history(a).map((row) => row.body_text)).toEqual([null, null, null, 'd']);
   expect(history(a).map((row) => row.version_id)).toEqual([first, second, third, head]);
+  expect(history(b).at(-1)?.version_id).toBe(second);
+  expect(history(c).at(-1)?.version_id).toBe(first);
   await sync(a, b);
-  expect(history(a).map((row) => row.body_text)).toEqual(['a', null, null, 'd']);
+  expect(history(a).map((row) => row.body_text)).toEqual([null, null, null, 'd']);
   await sync(a, c);
   expect(history(a).map((row) => row.body_text)).toEqual([null, null, null, 'd']);
   expect(history(a).map((row) => row.parent_version_id)).toEqual([null, first, second, third]);

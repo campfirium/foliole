@@ -39,20 +39,28 @@ it('converges a fork after the shared ancestor body was deleted', async () => {
   const nodeId = 't326-ancestor-fork';
   await fixture.left.seed({ content: 'Shared original', nodeId, title: 'Shared' });
   await host.sync();
+  const base = host.sqlite.prepare<[string], { current_version_id: string }>(
+    'SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId);
+  if (!base) throw new Error('fixture_base_missing');
   await fixture.left.seed({ content: 'Companion complete input', nodeId, title: 'Shared' });
   await fixture.right.seed({ content: 'Desktop advanced input', nodeId, title: 'Shared' });
   const source = new Database(fixture.rightSnapshot.databasePath);
   try {
-    expect(source.prepare(`UPDATE node_sync_versions SET body_text = NULL,
-      snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true'))
-      WHERE object_id = ? AND body_text = 'Shared original'`).run(nodeId).changes).toBe(1);
+    expect(source.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS retired
+      FROM node_sync_versions WHERE version_id = ?`).get(base.current_version_id))
+      .toEqual({ body_text: null, retired: 1 });
   } finally { source.close(); }
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
   const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
   try {
     const versions = 'SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id';
     expect(right.prepare(versions).all(nodeId)).toEqual(host.sqlite.prepare(versions).all(nodeId));
-    expect(host.sqlite.prepare(versions).all(nodeId)).toContainEqual(expect.objectContaining({ body_text: 'Companion complete input' }));
+    const currentBodies = host.sqlite.prepare<[string, string], { body: string }>(`SELECT content AS body FROM nodes WHERE id = ?
+      UNION ALL SELECT json_extract(body.value, '$.text') AS body FROM nodes n
+      JOIN node_sync_versions v ON v.version_id = n.current_version_id,
+      json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).all(nodeId, nodeId);
+    expect(new Set(currentBodies.map(row => row.body)))
+      .toEqual(new Set(['Companion complete input', 'Desktop advanced input']));
     expect(host.sqlite.prepare(versions).all(nodeId)).toContainEqual(expect.objectContaining({ body_text: null }));
     expect(right.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId))
       .toEqual(host.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId));

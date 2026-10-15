@@ -32,7 +32,7 @@ it('restores chosen facts, retains local settings, and continues ordinary reques
     expect(target.sqlite.prepare("SELECT key FROM settings WHERE key = 'search_aliases_document'").get()).toBeUndefined();
     expect(target.sqlite.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get()).toBeUndefined();
     expect(await collectNodeVersionPayloads(target.db, 'backup-node'))
-      .toEqual({ released: 0, skipped: 'active_member_position_unknown' });
+      .toEqual({ released: 0, skipped: null });
     await source.seed('after-restore-node');
     const differences = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(source.db),
       remote: await readRequestSyncInventorySnapshot(target.db) });
