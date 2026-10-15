@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -31,31 +32,36 @@ export function largeOverwriteAttachmentIdentity(index: number) {
   return { hash, storageKey };
 }
 
-/** Disposable fixed workload, using the same upsert/flush path as seedBatch. */
+/** Real complete edits keep the same 24 MiB of text as current bodies and active alternatives. */
 export async function seedLargeOverwriteFixture() {
   const connection = openDatabaseConnection(), db = createBetterSqliteDbPort(connection.sqlite);
   await db.transaction(async () => {
-    for (let pass = 0; pass < 3; pass++) {
-      const now = new Date().toISOString();
-      for (let index = 0; index < 1000; index++) {
-        const nodeId = largeOverwriteNodeId(index);
-        upsertNodeSnapshot({ anchorLink: null, content: largeOverwriteBody(index, pass), createdAt: now,
-          isTitleManual: true, kind: 'topic', nodeId, parentNodeId: null, position: index,
-          reveal: null, title: `Large overwrite ${index}`, updatedAt: now });
-        if (pass === 0 && index < 100) await seedAttachment(index);
-      }
-      flushDirtyNodeSyncVersions(now);
-      if (pass < 2) for (let index = 0; index < 1000; index++) {
-        const nodeId = largeOverwriteNodeId(index);
-        const row = connection.driver.queryOne<{ current_version_id: string }>(
-          'SELECT current_version_id FROM nodes WHERE id = ?', [nodeId]);
-        if (!row) throw new Error('fixture_node_missing');
-        await retainLocalEditBase(db, { nodeId, versionId: row.current_version_id, holdId: `large:${index}:${pass}` });
-      }
+    const now = new Date().toISOString();
+    for (let index = 0; index < 1000; index++) {
+      upsertNodeSnapshot({ anchorLink: null, content: '', createdAt: now,
+        isTitleManual: true, kind: 'topic', nodeId: largeOverwriteNodeId(index), parentNodeId: null,
+        position: index, reveal: null, title: `Large overwrite ${index}`, updatedAt: now });
+      if (index < 100) await seedAttachment(index);
     }
+    flushDirtyNodeSyncVersions(now);
+    for (let index = 0; index < 1000; index++) await seedIndependentInputs(db, index);
   });
   assertLargeSeed();
-  return { nodeCount: 1000, readableVersions: 3000, bodyBytes: 8192, attachmentCount: 100, attachmentBytes: 65536 };
+  return { nodeCount: 1000, versionFacts: 6000, liveBodies: 3000,
+    bodyBytes: 8192, attachmentCount: 100, attachmentBytes: 65536 };
+}
+
+async function seedIndependentInputs(db: DbPort, index: number) {
+  const nodeId = largeOverwriteNodeId(index);
+  const row = openDatabaseConnection().driver.queryOne<{ current_version_id: string }>(
+    'SELECT current_version_id FROM nodes WHERE id = ?', [nodeId]);
+  if (!row) throw new Error('fixture_node_missing');
+  for (let pass = 0; pass < 3; pass++) {
+    await applyLocalContentEdit(db, { nodeId, baseVersionId: row.current_version_id,
+      versionId: `${nodeId}-input-${pass}`, content: largeOverwriteBody(index, pass),
+      title: `Large overwrite ${index}`, hideTitleHeading: false, hostName: 'Large overwrite',
+      updatedAt: new Date(Date.now() + pass + 1).toISOString() });
+  }
 }
 
 async function seedAttachment(index: number) {
@@ -70,9 +76,14 @@ async function seedAttachment(index: number) {
 function assertLargeSeed() {
   const driver = openDatabaseConnection().driver;
   const rows = driver.queryAll<{ object_id: string; count: number; smallest: number; largest: number }>(
-    `SELECT object_id, count(*) AS count, min(length(CAST(body_text AS BLOB))) AS smallest,
-      max(length(CAST(body_text AS BLOB))) AS largest FROM node_sync_versions
-      WHERE object_id LIKE ? AND body_text IS NOT NULL GROUP BY object_id`, [`${LARGE_OVERWRITE_PREFIX}%`]);
+    `WITH payloads AS (
+      SELECT object_id, body_text AS text FROM node_sync_versions WHERE object_id LIKE ? AND body_text IS NOT NULL
+      UNION ALL SELECT version.object_id, json_extract(body.value, '$.text') AS text
+      FROM node_sync_versions version, json_each(version.snapshot_json, '$.text_alternative_bodies') body
+      WHERE version.object_id LIKE ?)
+    SELECT object_id, count(*) AS count, min(length(CAST(text AS BLOB))) AS smallest,
+      max(length(CAST(text AS BLOB))) AS largest FROM payloads GROUP BY object_id`,
+    [`${LARGE_OVERWRITE_PREFIX}%`, `${LARGE_OVERWRITE_PREFIX}%`]);
   if (rows.length !== 1000 || rows.some((row) => row.count !== 3 || row.smallest !== 8192 || row.largest !== 8192)) {
     throw new Error('fixture_large_body_contract_invalid');
   }

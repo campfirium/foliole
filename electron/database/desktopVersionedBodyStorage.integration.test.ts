@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -59,7 +60,10 @@ it.each([false, true])('writes, versions and remaps an opened article without sh
   const sqlite = openDatabaseConnection().sqlite;
   expect(sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(sqlite.prepare("SELECT content FROM nodes WHERE id = 'parent'").get()).toEqual({ content: next });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBe(original);
+  expect(sqlite.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+    FROM node_sync_versions WHERE version_id = ?`).get(first))
+    .toEqual({ body_text: null, hash: createHash('sha256').update(original).digest('hex') });
+  expect(sqlite.prepare("SELECT version_id FROM node_version_local_holds WHERE hold_id = 'editor'").pluck().get()).toBe(first);
   await releaseLocalEditBase(createBetterSqliteDbPort(sqlite), 'editor', 'parent');
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBeNull();
   expect(sqlite.prepare("SELECT json_extract(snapshot_json, '$.body_deleted') FROM node_sync_versions WHERE version_id = ?")

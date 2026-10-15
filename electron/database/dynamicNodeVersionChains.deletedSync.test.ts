@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { collectAllNodeVersionChains } from '../../lib/core/database/dynamicNodeVersionChainMigration.js';
@@ -44,13 +46,16 @@ function originalFacts(peer: Peer) {
 function expectBody(peer: Peer, versionId: string, body: string | null) {
   const row = peer.db.prepare(`SELECT body_text,
     json_extract(snapshot_json, '$.content') AS snapshot_body,
+    json_extract(snapshot_json, '$.body_deleted') AS retired,
+    json_extract(snapshot_json, '$.body_blob_hash') AS hash,
     json_type(snapshot_json, '$.content') AS snapshot_type
     FROM node_sync_versions WHERE version_id = ?`).get(versionId);
   expect(row).toMatchObject({ body_text: body });
-  if (body === null) expect(row).toMatchObject({ snapshot_body: null, snapshot_type: 'null' });
+  if (body === null) expect(row).toMatchObject({ snapshot_body: null, snapshot_type: 'null', retired: 1,
+    hash: createHash('sha256').update('body').digest('hex') });
 }
 
-it('keeps a sent version through deletion and database reopen, then advances to the received deletion fact', async () => {
+it('keeps frozen sent text and original identities through deletion and database reopen', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -60,12 +65,13 @@ it('keeps a sent version through deletion and database reopen, then advances to 
     const original = originalFacts(source);
     expect(tomb.parent_version_id).toBe(old);
     restartDeletedPeer(source);
-    expectBody(source, old, 'body');
+    expectBody(source, old, null);
     expect(history(source).map(row => row.version_id)).toContain(old);
     await replayLive();
+    expectBody(target, old, 'body');
     await advancePosition(source, target);
     expect(history(source).map(row => row.version_id)).toContain(old);
-    expectBody(source, old, 'body');
+    expectBody(source, old, null);
     await withLibraryRequestSnapshot(source, target, async replayDeleted => { await replayDeleted(); });
     expect(target.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
     await advancePosition(source, target);
@@ -82,7 +88,7 @@ it('keeps a sent version through deletion and database reopen, then advances to 
   });
 });
 
-it('releases a persisted editor base after the node entity has been permanently deleted', async () => {
+it('releases a persisted editor identity after its unused body and node entity are deleted', async () => {
   const peer = createPeer('local');
   const base = edit(peer, 'body');
   await retainLocalEditBase(peer.port, { holdId: 'draft', nodeId: 'topic', versionId: base });
@@ -90,7 +96,8 @@ it('releases a persisted editor base after the node entity has been permanently 
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
+  expect(peer.db.prepare("SELECT version_id FROM node_version_local_holds WHERE hold_id = 'draft'").pluck().get()).toBe(base);
   expect(history(peer)).toHaveLength(2);
   await releaseLocalEditBase(peer.port, 'draft', 'topic');
   expect(originalFacts(peer)).toEqual(original);
@@ -98,7 +105,7 @@ it('releases a persisted editor base after the node entity has been permanently 
   expectBody(peer, tomb.version_id, 'body');
 });
 
-it('releases a surviving anchor dependency only when its actual reference is removed', async () => {
+it('preserves the surviving anchor identity independently of retired main text', async () => {
   const peer = createPeer('local');
   const base = edit(peer, 'body');
   peer.db.prepare(`INSERT INTO nodes (id, title, kind, anchor_source_version_id, created_at, updated_at)
@@ -107,10 +114,11 @@ it('releases a surviving anchor dependency only when its actual reference is rem
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(history(peer)).toHaveLength(2);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
+  expect(peer.db.prepare("SELECT anchor_source_version_id FROM nodes WHERE id = 'anchor'").pluck().get()).toBe(base);
   peer.db.prepare("UPDATE nodes SET anchor_source_version_id = NULL WHERE id = 'anchor'").run();
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(originalFacts(peer)).toEqual(original);
@@ -127,11 +135,11 @@ it('keeps an unresolved conflict through physical deletion and database reopen u
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(peer.db.prepare('SELECT conflict_version_id FROM node_sync_conflicts').pluck().all()).toEqual([base]);
   expect(history(peer)).toHaveLength(2);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
   peer.db.prepare('DELETE FROM node_sync_conflicts WHERE conflict_version_id = ?').run(base);
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(originalFacts(peer)).toEqual(original);
@@ -139,7 +147,7 @@ it('keeps an unresolved conflict through physical deletion and database reopen u
   expectBody(peer, tomb.version_id, 'body');
 });
 
-it.each(['driver', 'port'])('releases replaceable deleted-object bodies when its unknown active peer leaves (%s)', async host => {
+it.each(['driver', 'port'])('preserves deleted-object identities and tombstone text when its unknown peer leaves (%s)', async host => {
   const peer = createPeer('local');
   const remote = createPeer('remote');
   joinPeers(peer, remote);
@@ -148,7 +156,7 @@ it.each(['driver', 'port'])('releases replaceable deleted-object bodies when its
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
   expect(history(peer)).toHaveLength(2);
   peer.db.prepare("UPDATE sync_group_devices SET state = 'left' WHERE device_identity_key = ?").run(remote.id);
   if (host === 'driver') collectAllNodeVersionChainsWithDriver(peer.driver);

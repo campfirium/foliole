@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
@@ -79,7 +81,10 @@ it('runs the registered desktop upgrade and preserves mounted references and PDF
       hostName: 'source', updatedAt: 'later' }, undefined, { enqueueSearchInvalidations: false });
     expectRetired(db);
     expect(JSON.parse(db.prepare("SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'legacy-head'").pluck().get() as string))
-      .toEqual(JSON.parse(oldSnapshot));
+      .toEqual({ ...JSON.parse(oldSnapshot), content: null, body_deleted: true,
+        body_blob_hash: createHash('sha256').update('Body').digest('hex') });
+    expect(db.prepare("SELECT object_id, content_hash, body_text FROM node_sync_versions WHERE version_id = 'legacy-head'").get())
+      .toEqual({ object_id: 'article', content_hash: 'legacy-hash', body_text: null });
     initializeDatabaseSchema(db);
     expectRetired(db);
   } finally { db.close(); }

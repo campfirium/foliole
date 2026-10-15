@@ -19,13 +19,13 @@ beforeEach(startLibraries);
 afterEach(closeLibraries);
 const NOW = '2026-10-01T01:00:00.000Z';
 
-it('publishes a body writer change after reopening and preserves a confirmed peer base', async () => {
+it('publishes a body writer change after reopening and preserves the peer base identity', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   const first = edit(source, 'Original body.');
   await sync(source, target);
-  const old = source.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(first);
+  const old = source.db.prepare<[string], { snapshot_json: string }>('SELECT * FROM node_sync_versions WHERE version_id = ?').get(first)!;
   source.driver.transaction((driver) => writeNodeBody({
     driver, nodeId: 'topic', title: 'Topic', content: 'Changed 正文.\r\n', updatedAt: NOW
   }));
@@ -38,7 +38,10 @@ it('publishes a body writer change after reopening and preserves a confirmed pee
   expect(next).not.toBeNull();
   expect(next).not.toBe(first);
   expect((await loadCurrentSyncNodeRecord(source.port, 'topic'))?.body_text).toBe('Changed 正文.\r\n');
-  expect(source.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(first)).toEqual(old);
+  expect(source.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(first))
+    .toEqual({ ...old, body_text: null,
+      snapshot_json: JSON.stringify({ ...JSON.parse(old.snapshot_json), content: null, body_deleted: true }) });
+  expect((await loadCurrentSyncNodeRecord(target.port, 'topic'))?.body_text).toBe('Original body.');
   await sync(source, target);
   assertPersisted(source, 'Changed 正文.\r\n', next!);
   assertPersisted(target, 'Changed 正文.\r\n', next!);

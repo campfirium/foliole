@@ -19,7 +19,7 @@ function restart(peer: Peer) {
   peer.port = createBetterSqliteDbPort(peer.db);
 }
 
-it('preserves a request snapshot through source database reopen while collection follows member positions', async () => {
+it('preserves a frozen request body through source reopen and retirement of its live database copy', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -32,11 +32,11 @@ it('preserves a request snapshot through source database reopen while collection
     restart(source);
     const originals = [base, sent, unsent, head];
     expect(history(source).map((row) => row.version_id)).toEqual(originals);
-    expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
+    expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
     await replay();
     assertPersisted(target, 'sent', sent);
     expect(history(source).map((row) => row.version_id)).toEqual(originals);
-    expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
+    expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
     await sync(source, target);
     expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
     await replay();

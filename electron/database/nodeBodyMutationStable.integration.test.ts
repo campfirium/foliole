@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import { expect, it } from 'vitest';
 
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
@@ -36,7 +38,10 @@ it('creates roots and preserves complete edited text and original version relati
     expect(loadNodeBodyResolution(driver, 'article')?.status).toBe('resolved');
     expect(host.sqlite.prepare("SELECT content = ? AS exact FROM nodes WHERE id='article'").get(content)).toEqual({ exact: 1 });
     expect(flushNodeSyncVersionWithDriver(driver, 'article', 'host', '2026-10-07T01:00:00.000Z', 'second')).toBe('second');
-    expect(host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='first'").pluck().get()).toBe(original);
+    expect(host.sqlite.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+      FROM node_sync_versions WHERE version_id='first'`).get())
+      .toEqual({ body_text: null, hash: createHash('sha256').update(original).digest('hex') });
+    expect(host.sqlite.prepare("SELECT version_id FROM node_version_local_holds WHERE hold_id='editor'").pluck().get()).toBe('first');
     await releaseLocalEditBase(host.db, 'editor', 'article');
     expect(host.sqlite.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id='first'").get())
       .toEqual({ body_text: null, deleted: 1 });

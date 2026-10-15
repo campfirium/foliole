@@ -5,7 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect } from 'vitest';
 
-import { loadStoredSyncNodeVersionRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { LARGE_OVERWRITE_PREFIX, largeOverwriteAttachment, largeOverwriteAttachmentIdentity,
@@ -21,6 +21,12 @@ export function largeOverwriteState(databasePath: string) {
         body_blob_hash: string; parent_version_id: string | null }>(
         `SELECT object_id, version_id, content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash, parent_version_id
           FROM node_sync_versions WHERE object_id LIKE ? ORDER BY object_id, version_id`).all(`${LARGE_OVERWRITE_PREFIX}%`),
+      parents: sqlite.prepare<[string], { version_id: string; parent_version_id: string; ordinal: number }>(
+        `SELECT edge.version_id, edge.parent_version_id, edge.ordinal FROM node_sync_version_parents edge
+          JOIN node_sync_versions version ON version.version_id = edge.version_id
+          WHERE version.object_id LIKE ? ORDER BY version.object_id, edge.version_id, edge.ordinal`).all(`${LARGE_OVERWRITE_PREFIX}%`),
+      retiredCount: sqlite.prepare<[string], { count: number }>(`SELECT count(*) AS count FROM node_sync_versions
+        WHERE object_id LIKE ? AND json_extract(snapshot_json, '$.body_deleted') = 1`).get(`${LARGE_OVERWRITE_PREFIX}%`)?.count,
       retiredTables: sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").all(),
       inlineCount: sqlite.prepare<[string], { count: number }>(`SELECT count(*) AS count FROM node_sync_versions
         WHERE object_id LIKE ? AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text')`)
@@ -33,24 +39,27 @@ export function largeOverwriteState(databasePath: string) {
 export async function verifyLargeOverwriteBodies(databasePath: string) {
   const state = largeOverwriteState(databasePath);
   expect(state.nodes).toHaveLength(1000);
-  expect(state.versions).toHaveLength(3000);
-  expect(state.inlineCount).toBe(3000);
+  expect(state.versions).toHaveLength(6000);
+  expect(state.parents).toHaveLength(7000);
+  expect(state.retiredCount).toBe(5000);
+  expect(state.inlineCount).toBe(1000);
   const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
   try {
     const db = createBetterSqliteDbPort(sqlite);
     for (let index = 0; index < 1000; index++) {
       const versions = state.versions.filter((row) => row.object_id === largeOverwriteNodeId(index));
-      expect(versions).toHaveLength(3);
-      const expected = new Set([0, 1, 2].map((pass) => createHash('sha256')
+      expect(versions).toHaveLength(6);
+      expect(versions.every(version => /^[a-f0-9]{64}$/u.test(version.body_blob_hash))).toBe(true);
+      const current = await loadCurrentSyncNodeRecord(db, largeOverwriteNodeId(index), false);
+      if (!current || typeof current.body_text !== 'string') throw new Error('large_overwrite_body_missing');
+      const texts = [current.body_text, ...(current.alternative_bodies ?? []).map(body => body.text)];
+      expect(texts).toHaveLength(3);
+      const expected = new Set([0, 1, 2].map(pass => createHash('sha256')
         .update(largeOverwriteBody(index, pass)).digest('hex')));
-      for (const version of versions) {
-        const record = await loadStoredSyncNodeVersionRecord(db, version.version_id);
-        if (!record || typeof record.body_text !== 'string') throw new Error('large_overwrite_body_missing');
-        const bytes = Buffer.from(record.body_text, 'utf8');
+      for (const text of texts) {
+        const bytes = Buffer.from(text, 'utf8');
         expect(bytes.length).toBe(8192);
-        const hash = createHash('sha256').update(bytes).digest('hex');
-        expect(hash).toBe(version.body_blob_hash);
-        expect(expected.delete(hash)).toBe(true);
+        expect(expected.delete(createHash('sha256').update(bytes).digest('hex'))).toBe(true);
       }
       expect(expected.size).toBe(0);
       const content = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(largeOverwriteNodeId(index));

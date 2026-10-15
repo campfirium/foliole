@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import Database from 'better-sqlite3';
@@ -12,6 +13,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { projectFramedSyncParentRelation, projectFramedSyncReview, restoreFramedSyncReview } from '../../lib/core/sync/framedSyncRelationReviewFact.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
@@ -59,14 +61,20 @@ it.each(['android', 'ios'])('reads %s acceptance facts after transmission retire
   } finally { db.close(); }
 });
 
-it.each([147, 152])('upgrades schema %s while preserving business versions, full text, edges and current state', async version => {
+it.each([147, 152])('upgrades schema %s preserving original identities, body hashes, edges and current text', async version => {
   const host = textDevice(); hosts.push(host);
   const base = textBranch('base', 'Original body');
   const next = textBranch('next', 'Current body', base);
-  await host.receive([base, next]);
+  // Historical releases retained both bodies before freezing their publication.
+  await applyConvergentSyncNodesWithDbPort(host.db, [base, next], { collectVersionPayloads: false });
+  expect(host.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get('base'))
+    .toBe('Original body');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   await publication(host, base);
   const before = businessRows(host.sqlite);
+  before[1] = before[1]!.map(row => row.version_id === 'base' ? { ...row, body_text: null,
+    snapshot_json: JSON.stringify({ ...JSON.parse(String(row.snapshot_json)), content: null,
+      body_blob_hash: createHash('sha256').update('Original body').digest('hex'), body_deleted: true }) } : row);
   host.sqlite.exec('UPDATE framed_sync_outbound_publications SET protocol_version = 22');
   host.sqlite.pragma(`user_version = ${version}`);
   initializeDatabaseSchema(host.sqlite);
@@ -171,7 +179,7 @@ it.each([false, true])('protects standalone original parent relations, backed=%s
 
 function businessRows(db: Database.Database) {
   return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_change_log', 'node_text_alternatives']
-    .map(table => db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
+    .map(table => db.prepare<[], Record<string, unknown>>(`SELECT * FROM ${table} ORDER BY rowid`).all());
 }
 
 async function publication(host: ReturnType<typeof textDevice>, record: ReturnType<typeof textBranch>) {

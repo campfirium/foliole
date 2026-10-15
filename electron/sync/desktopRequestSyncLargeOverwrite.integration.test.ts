@@ -25,7 +25,8 @@ it.each(modes)(
       installObjectCommitFailure(fixture.rightSnapshot.databasePath, 400);
       await expect(fixture.right.invoke('round', request)).rejects.toThrow('identity_restore_object_rejected');
       const failed = largeOverwriteState(fixture.rightSnapshot.databasePath);
-      expect(failed.nodes).toHaveLength(400); expect(failed.versions).toHaveLength(1200);
+      expect(failed.nodes).toHaveLength(400); expect(failed.versions).toHaveLength(2400);
+      expect(failed.parents).toHaveLength(2800);
       expect(failed.retiredTables).toEqual([]);
       const progress = overwriteProgressRow(fixture.rightSnapshot.databasePath);
       expect(progress).toBeDefined();
@@ -45,8 +46,10 @@ it.each(modes)(
       const transferMs = performance.now() - transferStarted;
       const completed = await verifyLargeOverwriteBodies(restarted.snapshot.databasePath);
       expect(completed.nodes).toEqual(source.nodes); expect(completed.versions).toEqual(source.versions);
+      expect(completed.parents).toEqual(source.parents);
       expect(completed.nodes.slice(0, 400)).toEqual(failed.nodes);
-      expect(completed.versions.slice(0, 1200)).toEqual(failed.versions);
+      expect(completed.versions.slice(0, 2400)).toEqual(failed.versions);
+      expect(completed.parents.slice(0, 2800)).toEqual(failed.parents);
       await verifyLargeOverwriteAttachments(restarted.snapshot.stateRoot);
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toBeUndefined();
       assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, mode);

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -47,7 +48,13 @@ it('repairs verified images and references, preserves originals and text example
   expect(resolveAttachmentFile(newKey, migrationFixture.assetsDir).status).toBe('ready');
   expect(await fs.readFile(path.join(migrationFixture.assetsDir, oldKey))).toEqual(imageBytes);
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ body_text: string }>('SELECT body_text FROM node_sync_versions WHERE version_id = ?', [originalVersion])?.body_text).toBe(body);
+  expect(driver.queryOne(`SELECT version_id, object_id, body_text,
+    json_extract(snapshot_json, '$.body_deleted') AS retired,
+    json_extract(snapshot_json, '$.body_blob_hash') AS hash
+    FROM node_sync_versions WHERE version_id = ?`, [originalVersion])).toEqual({
+    version_id: originalVersion, object_id: 'article', body_text: null, retired: 1,
+    hash: createHash('sha256').update(body).digest('hex')
+  });
   const versions = driver.queryAll('SELECT * FROM node_sync_versions');
   const completedContext = migrationContext();
   expect(await runImageAddressMigration(completedContext)).toEqual({ changed: 0, completed: true });

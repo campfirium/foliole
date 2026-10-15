@@ -13,7 +13,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { receiveMemberPositionFixture } from './nodeVersionMemberPosition.testSupport.js';
 
-it('preserves bodies after restart until an active member publishes its business position', async () => {
+it('retires unused topic bodies after restart independently of member positions', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-version-restart-'));
   const databasePath = path.join(root, 'library.db');
   let sqlite = new Database(databasePath);
@@ -23,7 +23,7 @@ it('preserves bodies after restart until an active member publishes its business
       INSERT INTO node_sync_versions
         (version_id, object_id, parent_version_id, host_name, created_at,
          content_hash, body_text, snapshot_json)
-        VALUES ('D', 'node', 'C', 'source', '4', 'hash-d', 'body-d', '{"content":"body-d"}');
+        VALUES ('D', 'node', 'C', 'source', '4', 'hash-d', 'body-d', '{"id":"node","kind":"topic","content":"body-d"}');
       INSERT INTO node_sync_version_parents VALUES ('D', 'C', 0);
       UPDATE nodes SET current_version_id = 'D' WHERE id = 'node';
       UPDATE sync_object_state SET current_version_id = 'D', state_seq = 2 WHERE object_id = 'node';
@@ -31,14 +31,17 @@ it('preserves bodies after restart until an active member publishes its business
     sqlite.close();
     sqlite = new Database(databasePath);
     const port = createBetterSqliteDbPort(sqlite);
-    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
+    const parents = sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
     await receiveMemberPositionFixture(port, { group_id: 'group', device_identity_key: 'target',
       object_id: 'node', library_epoch: 'epoch', proof_revision: 2, adopted_version_id: 'C',
       pending_version_ids_json: '[]', updated_at: 'later' });
-    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
     expect(sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
       .toEqual([{ version_id: 'A', body_text: null }, { version_id: 'B', body_text: null },
-        { version_id: 'C', body_text: 'body-c' }, { version_id: 'D', body_text: 'body-d' }]);
+        { version_id: 'C', body_text: null }, { version_id: 'D', body_text: 'body-d' }]);
+    expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(parents);
+    expect(sqlite.prepare("SELECT adopted_version_id FROM node_version_member_positions WHERE device_identity_key = 'target'").pluck().get()).toBe('C');
     expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions ORDER BY version_id`).all())
       .toEqual(['A', 'B', 'C', 'D'].map((version_id) => ({ version_id })));
   } finally {
@@ -62,9 +65,9 @@ function seedRestartLibrary(sqlite: Database.Database) {
     INSERT INTO node_sync_versions
       (version_id, object_id, parent_version_id, host_name, created_at,
        content_hash, body_text, snapshot_json)
-      VALUES ('A', 'node', NULL, 'source', '1', 'hash-a', 'body-a', '{"content":"body-a"}'),
-        ('B', 'node', 'A', 'source', '2', 'hash-b', 'body-b', '{"content":"body-b"}'),
-        ('C', 'node', 'B', 'source', '3', 'hash-c', 'body-c', '{"content":"body-c"}');
+      VALUES ('A', 'node', NULL, 'source', '1', 'hash-a', 'body-a', '{"id":"node","kind":"topic","content":"body-a"}'),
+        ('B', 'node', 'A', 'source', '2', 'hash-b', 'body-b', '{"id":"node","kind":"topic","content":"body-b"}'),
+        ('C', 'node', 'B', 'source', '3', 'hash-c', 'body-c', '{"id":"node","kind":"topic","content":"body-c"}');
     INSERT INTO node_sync_version_parents VALUES ('B', 'A', 0), ('C', 'B', 0);
     INSERT INTO sync_object_state
       (object_type, object_id, state_seq, current_version_id, content_hash,

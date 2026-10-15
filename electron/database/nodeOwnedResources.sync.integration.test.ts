@@ -106,8 +106,11 @@ it.each([{ operation: 'import', initial: '[]', current: references },
       updatedAt: new Date(Date.now() + 1000).toISOString() };
     const result = await applyLocalContentEdit(source.port, edit);
     expect(source.db.prepare("SELECT resource_references FROM nodes WHERE id = 'article'").pluck().get()).toBe(current);
-    expect(source.db.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'delayed-edit'").pluck().get())
-      .toBe('Edited body');
+    expect(result.current.body_text).toBe('Edited body');
+    expect(source.db.prepare("SELECT content FROM nodes WHERE id = 'article'").pluck().get()).toBe('Edited body');
+    expect(source.db.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS retired,
+      json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = 'delayed-edit'`).get())
+      .toEqual({ body_text: null, retired: 1, hash: await hashTextBodyContent('Edited body', {}) });
     expect((await applyLocalContentEdit(source.port, edit)).current.version_id).toBe(result.current.version_id);
   } finally { source.db.close(); }
 });

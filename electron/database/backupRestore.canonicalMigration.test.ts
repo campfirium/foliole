@@ -91,7 +91,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   const storageKey = legacyName === 'bare-hash' ? hash : `${hash}.${legacyName === 'jpeg' ? 'jpeg' : 'jpg'}`;
   const existingName = canonicalFile ? `${hash}.jpg` : storageKey;
   await fs.writeFile(path.join(assetsDir, existingName), bytes);
-  seedLegacyAttachment(hash, bytes.length, storageKey);
+  const originalVersion = seedLegacyAttachment(hash, bytes.length, storageKey);
   prepareLegacyOrder();
   const backupPath = path.join(tempRoot, 'pre-retirement.db');
   await connection.sqlite.backup(backupPath);
@@ -112,7 +112,13 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   const versions = openDatabaseConnection().sqlite.prepare(
     'SELECT body_text FROM node_sync_versions WHERE object_id = ?').all('node-legacy') as Array<{ body_text: string }>;
   expect(versions.some((row) => row.body_text?.includes(`asset://${hash}.jpg`))).toBe(true);
-  expect(versions.some((row) => row.body_text === `![legacy](asset://${storageKey})`)).toBe(true);
+  const original = openDatabaseConnection().sqlite.prepare(`SELECT version_id, body_text,
+    json_extract(snapshot_json, '$.body_deleted') AS retired,
+    json_extract(snapshot_json, '$.body_blob_hash') AS hash
+    FROM node_sync_versions WHERE version_id = ?`).get(originalVersion);
+  const originalBody = `![legacy](asset://${storageKey})`;
+  expect(original).toEqual({ version_id: originalVersion, body_text: null, retired: 1,
+    hash: createHash('sha256').update(originalBody).digest('hex') });
   const head = openDatabaseConnection().sqlite.prepare(
     'SELECT v.body_text FROM node_sync_versions v JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = ?'
   ).get('node-legacy') as { body_text: string };
@@ -157,6 +163,7 @@ function seedLegacyAttachment(hash: string, sizeBytes: number, storageKey: strin
   sqlite.prepare(`INSERT INTO node_attachments
     (node_id, attachment_id, role) VALUES (?, ?, ?)`)
     .run('node-legacy', hash, 'image');
+  return originalVersion;
 }
 
 function readRetiredTable() {
