@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.companionSync.group.removing.title': '移除中',
+  'settings.companionSync.group.removing.confirmed': '已确认设备',
   'settings.companionSync.group.title': '同步组',
   'settings.companionSync.group.named': '{name} 的同步组',
   'settings.companionSync.group.description': '组名会在创建时保存。',

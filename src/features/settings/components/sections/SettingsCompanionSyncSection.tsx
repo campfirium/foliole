@@ -133,7 +133,7 @@ export function SettingsCompanionSyncSection() {
         syncEnabled={state.overview.sync_enabled}
         discoveryError={state.overview.discovery_error}
         syncPaused={state.overview.sync_paused}
-        removingDeviceIds={state.overview.removing_device_ids}
+        removingDevices={state.overview.removing_devices}
       />
       {state.error ? (
         <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />

@@ -4,9 +4,12 @@ import { beginSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGr
 import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
+import { syncGroupRemovingEntries } from '../../../../../lib/platform/syncGroupRemovalModel';
 import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { createCompanionUuid } from '../../companionUuid';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
+
+import { loadDevices, loadRemovals } from './syncGroupMemberStateReads';
 
 function owner() { return getIosCompanionDatabaseOwner(); }
 
@@ -115,22 +118,12 @@ async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {
      WHERE l.singleton_id = 1 AND l.state = 'active' LIMIT 1`
   ))[0];
   if (!text(row?.group_id)) return null;
-  const devices = await db.query<DbRow>(
-    `SELECT device_identity_key, device_anchor, canonical_library_path, device_name,
-            platform, state, joined_at, left_at, last_seen_at, updated_at
-     FROM sync_group_devices WHERE group_id = ? AND state = 'active'
-     ORDER BY joined_at, device_identity_key`, [String(row!.group_id)]
-  );
+  const devices = await loadDevices(db, String(row!.group_id));
   return {
+    removing_devices: syncGroupRemovingEntries(devices,
+      await loadRemovals(db, String(row!.group_id))),
     created_at: String(row!.created_at),
-    devices: devices.map((device) => ({
-      canonical_library_path: String(device.canonical_library_path), contract_version: 1,
-      device_anchor: String(device.device_anchor), device_identity_key: String(device.device_identity_key),
-      device_name: String(device.device_name), joined_at: String(device.joined_at),
-      last_seen_at: text(device.last_seen_at), left_at: text(device.left_at),
-      platform: String(device.platform), state: device.state === 'left' ? 'left' : 'active',
-      updated_at: String(device.updated_at)
-    })),
+    devices: devices.filter(device => device.state === 'active'),
     display_name: String(row!.display_name),
     group_id: String(row!.group_id),
     local_device_identity_key: String(row!.local_device_identity_key)

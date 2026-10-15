@@ -167,3 +167,19 @@ it('shows the persisted overwrite notice while restored sync is paused', () => {
   expect(screen.getByText('Sync paused after restore')).toBeVisible();
   expect(screen.getByText(/including later edits/)).toBeVisible();
 });
+
+it('keeps removing targets out of normal devices and displays all remaining confirmers', () => {
+  const devices: SyncGroupDevicePayload[] = ['Mac', 'Phone'].map(device_name => ({
+    device_name, device_identity_key: device_name, canonical_library_path: `/private/${device_name}`,
+    device_anchor: device_name, contract_version: 1, joined_at: 'now', last_seen_at: null,
+    left_at: null, platform: 'darwin', state: 'active', updated_at: 'now'
+  }));
+  renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, { devices, group_id: 'group-1',
+    created_at: 'now', display_name: 'Mac', local_device_identity_key: 'Mac' }, {
+    removing_devices: [{ target: { device_identity_key: 'Phone', device_name: 'Phone' },
+      confirmed_devices: [{ device_identity_key: 'Mac', device_name: 'Mac' }] }]
+  });
+  expect(screen.getAllByText('Phone')).toHaveLength(1);
+  expect(screen.queryByRole('button', { name: 'Remove from Sync Group' })).not.toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Mac');
+});

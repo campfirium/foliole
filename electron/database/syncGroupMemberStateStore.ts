@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-
 import type { SyncGroupDevicePayload } from '../../lib/platform/syncGroupContract.js';
 import type {
   SyncGroupMemberStatePayload,
@@ -18,6 +17,7 @@ import {
   loadDesktopLocalNodeProof
 } from './nodeVersionPeerProof.js';
 import { applyDesktopSyncGroupAdoptionPeerProof, loadDesktopCompletedAdoptionSource, loadDesktopSyncGroupLocalAdoption, saveDesktopSyncGroupPeerAdoption } from './syncGroupLocalAdoptionStore.js';
+import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads.js';
 import {
   loadDesktopSyncGroupRestoreState,
   receiveDesktopSyncGroupRestoreState,
@@ -28,8 +28,6 @@ import {
   applyWatchedFolderGroupMemberState,
   loadWatchedFolderGroupMemberState
 } from './watchedFolderGroupMemberState.js';
-
-export { loadPendingDesktopSyncGroupRemovalDeviceIds } from './syncGroupPendingRemovalReads.js';
 
 type Row = Record<string, null | number | string>;
 
@@ -84,7 +82,7 @@ export function initiateDesktopSyncGroupDeviceRemoval(targetDeviceId: string, no
     confirm(state.group_id, decisionId, state.sender_device_identity_key, 'enforced', now);
 
 
-    completeEligibleRemovals(state.group_id, state.sender_device_identity_key, now);
+    completeEligibleRemovals(state.group_id, now);
   });
   return decisionId;
 }
@@ -118,10 +116,10 @@ export function applyDesktopSyncGroupMemberState(
     }
     applyDesktopSyncGroupAdoptionPeerProof(incoming, local);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
-    for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
+    for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key, incoming.removals);
     if (!local.adopting_from) applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);
     for (const removal of loadRemovals(incoming.group_id)) {
-      if (removal.superseded_at || removal.completed_at) continue;
+      if (removal.superseded_at) continue;
       const targetsLocal = removal.target_device_identity_key === local.sender_device_identity_key;
       confirm(incoming.group_id, removal.decision_id, local.sender_device_identity_key,
         targetsLocal ? 'target_exit' : 'enforced', now);
@@ -132,7 +130,7 @@ export function applyDesktopSyncGroupMemberState(
         localExited = true;
       }
     }
-    completeEligibleRemovals(incoming.group_id, local.sender_device_identity_key, now);
+    completeEligibleRemovals(incoming.group_id, now);
   });
   return {
     localExited,
@@ -149,26 +147,6 @@ export function isDesktopSyncGroupDeviceBlocked(groupId: string, deviceId: strin
     FROM sync_group_removal_decisions
     WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL LIMIT 1`,
   [groupId, deviceId]));
-}
-
-function loadDevices(groupId: string): SyncGroupDevicePayload[] {
-  return openDatabaseConnection().driver.queryAll<Row>(`SELECT canonical_library_path, device_anchor,
-    device_identity_key, device_name, joined_at, last_seen_at, left_at, platform, state, updated_at
-    FROM sync_group_devices WHERE group_id = ? ORDER BY joined_at, device_identity_key`, [groupId])
-    .map((row) => ({ ...row, contract_version: 1 } as unknown as SyncGroupDevicePayload));
-}
-
-function loadRemovals(groupId: string): SyncGroupRemovalDecisionPayload[] {
-  const driver = openDatabaseConnection().driver;
-  return driver.queryAll<Row>(`SELECT decision_id, target_device_identity_key,
-    initiated_by_device_identity_key, created_at, completed_at, superseded_at
-    FROM sync_group_removal_decisions WHERE group_id = ? ORDER BY created_at, decision_id`, [groupId])
-    .map((row) => ({
-      ...row,
-      confirmations: driver.queryAll<Row>(`SELECT confirming_device_identity_key, kind, confirmed_at
-        FROM sync_group_removal_confirmations WHERE group_id = ? AND decision_id = ?
-        ORDER BY confirming_device_identity_key`, [groupId, String(row.decision_id)])
-    } as unknown as SyncGroupRemovalDecisionPayload));
 }
 
 function mergeRemoval(groupId: string, removal: SyncGroupRemovalDecisionPayload) {
@@ -195,7 +173,8 @@ function mergeRemoval(groupId: string, removal: SyncGroupRemovalDecisionPayload)
     confirmation.confirming_device_identity_key, confirmation.kind, confirmation.confirmed_at);
 }
 
-function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDeviceId: string) {
+function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDeviceId: string,
+  incomingRemovals: SyncGroupRemovalDecisionPayload[] = []) {
   if (!device || device.contract_version !== 1 || typeof device.device_identity_key !== 'string') {
     throw new Error('sync_group_member_state_invalid');
   }
@@ -214,9 +193,12 @@ function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDevic
       existing.canonical_library_path !== device.canonical_library_path)) {
     throw new Error('sync_group_device_identity_mismatch');
   }
-  const canRevive = device.state === 'active' && hasSupersededRemoval(groupId, device.device_identity_key)
-    && !isDesktopSyncGroupDeviceBlocked(groupId, device.device_identity_key);
+  const blocked = isDesktopSyncGroupDeviceBlocked(groupId, device.device_identity_key);
+  const canRevive = device.state === 'active' && hasSupersededRemoval(groupId, device.device_identity_key) && !blocked;
+  const staleRemoval = !blocked && incomingRemovals.some(removal => !removal.superseded_at &&
+    removal.target_device_identity_key === device.device_identity_key);
   const state = device.device_identity_key === localDeviceId ? 'active'
+    : existing?.state === 'active' && staleRemoval ? 'active'
     : existing?.state === 'left' && !canRevive ? 'left' : device.state;
   driver.execute(`INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor,
     canonical_library_path, device_name, platform, state, joined_at, left_at, last_seen_at, updated_at)
@@ -224,7 +206,8 @@ function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDevic
     ON CONFLICT(group_id, device_identity_key) DO UPDATE SET
       device_name = excluded.device_name, platform = excluded.platform,
       state = excluded.state,
-      left_at = COALESCE(sync_group_devices.left_at, excluded.left_at),
+      left_at = CASE WHEN excluded.state = 'active' THEN NULL
+        ELSE COALESCE(sync_group_devices.left_at, excluded.left_at) END,
       last_seen_at = COALESCE(excluded.last_seen_at, sync_group_devices.last_seen_at)`,
   [groupId, device.device_identity_key, device.device_anchor, device.canonical_library_path,
     device.device_name, device.platform, state, device.joined_at, device.left_at,
@@ -243,24 +226,4 @@ function confirm(groupId: string, decisionId: string, deviceId: string,
   openDatabaseConnection().driver.execute(`INSERT OR IGNORE INTO sync_group_removal_confirmations
     (group_id, decision_id, confirming_device_identity_key, kind, confirmed_at) VALUES (?, ?, ?, ?, ?)`,
   [groupId, decisionId, deviceId, kind, confirmedAt]);
-}
-
-function completeEligibleRemovals(groupId: string, localDeviceId: string, now: string) {
-  const driver = openDatabaseConnection().driver;
-  for (const removal of loadRemovals(groupId)) {
-    if (removal.completed_at || removal.superseded_at) continue;
-    const targetConfirmed = removal.confirmations.some((item) => item.kind === 'target_exit' &&
-      item.confirming_device_identity_key === removal.target_device_identity_key);
-    const activeOthers = loadDevices(groupId).filter((device) => device.state === 'active' &&
-      device.device_identity_key !== removal.target_device_identity_key);
-    const allCurrentConfirmed = removal.initiated_by_device_identity_key === localDeviceId &&
-      activeOthers.every((device) => removal.confirmations.some((item) =>
-        item.confirming_device_identity_key === device.device_identity_key));
-    if (!targetConfirmed && !allCurrentConfirmed) continue;
-    driver.execute(`UPDATE sync_group_removal_decisions SET completed_at = ?
-      WHERE group_id = ? AND decision_id = ? AND completed_at IS NULL`, [now, groupId, removal.decision_id]);
-    driver.execute(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
-      WHERE group_id = ? AND device_identity_key = ?`,
-    [now, now, groupId, removal.target_device_identity_key]);
-  }
 }

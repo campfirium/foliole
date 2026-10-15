@@ -8,9 +8,9 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import {
   applyDesktopSyncGroupMemberState,
   initiateDesktopSyncGroupDeviceRemoval,
-  loadDesktopSyncGroupMemberState,
-  loadPendingDesktopSyncGroupRemovalDeviceIds
+  loadDesktopSyncGroupMemberState
 } from './syncGroupMemberStateStore.js';
+import { loadDesktopSyncGroupRemovingEntries } from './syncGroupPendingRemovalReads.js';
 import {
   createDesktopSyncGroup,
   leaveDesktopSyncGroupDevice,
@@ -62,7 +62,7 @@ it('completes an offline target removal after every Device in the initiator list
   use(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key, '2026-09-15T01:00:00.000Z');
   const decision = loadDesktopSyncGroupMemberState();
-  expect(loadPendingDesktopSyncGroupRemovalDeviceIds('group-1')).toEqual([identities[2]!.identity_key]);
+  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
 
   use(b);
   const fromB = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key,
@@ -70,7 +70,7 @@ it('completes an offline target removal after every Device in the initiator list
 
   use(a);
   applyDesktopSyncGroupMemberState(fromB, identities[1]!.identity_key, '2026-09-15T01:02:00.000Z');
-  expect(loadPendingDesktopSyncGroupRemovalDeviceIds('group-1')).toEqual([]);
+  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([]);
   expect(loadDesktopSyncGroupMemberState().devices.find((device) =>
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('left');
   applyDesktopSyncGroupMemberState(fromB, identities[1]!.identity_key, '2026-09-15T01:03:00.000Z');
@@ -149,7 +149,7 @@ it.each([true, false])('learns only a receiver negotiating the same explicit res
   expect(devices.some((device) => device.device_identity_key === identities[2]!.identity_key)).toBe(false);
 });
 
-it('completes immediately when the target confirms its own exit', () => {
+it('keeps removal pending when only the target confirms its own exit', () => {
   const a = deviceDatabase(0, [1, 2]);
   const c = deviceDatabase(2, [0, 1]);
   use(a);
@@ -164,7 +164,7 @@ it('completes immediately when the target confirms its own exit', () => {
   use(a);
   applyDesktopSyncGroupMemberState(exited.state, identities[2]!.identity_key,
     '2026-09-15T02:02:00.000Z');
-  expect(loadPendingDesktopSyncGroupRemovalDeviceIds('group-1')).toEqual([]);
+  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
 });
 
 it('learns unknown members independently and never revives a removed Device from an old active snapshot', () => {
@@ -181,7 +181,7 @@ it('learns unknown members independently and never revives a removed Device from
   const oldActive = loadDesktopSyncGroupMemberState();
   oldActive.devices.find((device) => device.device_identity_key === identities[2]!.identity_key)!.state = 'active';
   applyDesktopSyncGroupMemberState(oldActive, identities[0]!.identity_key);
-  expect(loadPendingDesktopSyncGroupRemovalDeviceIds('group-1')).toContain(identities[2]!.identity_key);
+  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toContain(identities[2]!.identity_key);
 });
 
 it('retains a publishable member snapshot after the local Device leaves', () => {

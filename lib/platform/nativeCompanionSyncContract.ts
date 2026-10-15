@@ -248,5 +248,5 @@ export interface DesktopSyncGroupOverviewPayload {
   sync_enabled: boolean;
   sync_paused: boolean;
   participating: boolean;
-  removing_device_ids: string[];
+  removing_devices: import('./syncGroupRemovalModel.js').SyncGroupRemovingEntry[];
 }

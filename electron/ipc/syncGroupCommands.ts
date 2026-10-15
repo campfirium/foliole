@@ -6,9 +6,9 @@ import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
-  initiateDesktopSyncGroupDeviceRemoval,
-  loadPendingDesktopSyncGroupRemovalDeviceIds
+  initiateDesktopSyncGroupDeviceRemoval
 } from '../database/syncGroupMemberStateStore.js';
+import { loadDesktopSyncGroupRemovingEntries } from '../database/syncGroupPendingRemovalReads.js';
 import {
   createDesktopSyncGroup,
   leaveDesktopSyncGroupDevice,
@@ -97,7 +97,7 @@ function overview() {
     server_status: getLanWorkspaceSyncServerStatus(),
     sync_group: group,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
-    removing_device_ids: group ? loadPendingDesktopSyncGroupRemovalDeviceIds(group.group_id) : [],
+    removing_devices: group ? loadDesktopSyncGroupRemovingEntries(group.group_id) : [],
     ...loadDesktopCompanionSyncParticipation()
   };
 }

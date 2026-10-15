@@ -122,12 +122,12 @@ it('merges a Windows display platform using its canonical path flavor', async ()
   );
 });
 
-it('persists a target exit and returns its confirmation before the provider stops', async () => {
+it.each([null, '2026-09-15T02:00:01.000Z'])('persists target exit even when the received decision is completed at %s', async completedAt => {
   const state = await loadCompanionSyncGroupMemberState();
   const result = await applyCompanionSyncGroupMemberState({
     ...state,
     removals: [{
-      completed_at: null,
+      completed_at: completedAt,
       confirmations: [{
         confirmed_at: '2026-09-15T02:00:00.000Z',
         confirming_device_identity_key: provider.identity_key,
@@ -167,4 +167,28 @@ it('receives source members needed by a pending restore without opening ordinary
   expect(result.local_exited).toBe(false);
   expect(result.state.restore).toEqual({ event, applied: false });
   expect(result.state.devices).toContainEqual(expect.objectContaining({ device_identity_key: windows.identity_key }));
+});
+
+it('finishes on a receiving companion while excluding another pending target and retaining per-decision confirmations', async () => {
+  const state = await loadCompanionSyncGroupMemberState();
+  const extra = { ...state.devices[0]!, device_identity_key: 'unused' };
+  const identity = createSyncGroupDeviceIdentity({
+    device_anchor: 'c3333333-3333-4333-8333-333333333333', group_id: 'group-1',
+    library_path: '/other/foliole.db', path_flavor: 'posix'
+  });
+  Object.assign(extra, { device_identity_key: identity.identity_key,
+    device_anchor: identity.device_anchor, canonical_library_path: identity.canonical_library_path });
+  const decision = (id: string, target: string) => ({
+    decision_id: id, target_device_identity_key: target, initiated_by_device_identity_key: provider.identity_key,
+    completed_at: null, superseded_at: null, created_at: 'now',
+    confirmations: [{ confirming_device_identity_key: local.identity_key, kind: 'enforced' as const, confirmed_at: 'now' }]
+  });
+  const applied = await applyCompanionSyncGroupMemberState({ ...state, devices: [...state.devices, extra],
+    removals: [decision('one', provider.identity_key), decision('two', extra.device_identity_key)],
+    sender_device_identity_key: provider.identity_key }, provider.identity_key);
+  expect(applied.local_exited).toBe(false);
+  expect(applied.state.removals.every(item => item.completed_at !== null)).toBe(true);
+  expect(applied.state.devices.filter(device => device.state === 'active').map(device => device.device_identity_key))
+    .toEqual([local.identity_key]);
+  expect((await loadCompanionSyncGroup())?.removing_devices).toEqual([]);
 });

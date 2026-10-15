@@ -11,6 +11,7 @@ import {
 import type { SyncGroupDiscoverySnapshot } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { displaySyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
+import type { SyncGroupRemovingEntry } from '../../../../../lib/platform/syncGroupRemovalModel';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -18,6 +19,7 @@ import {
   SettingsControlSlot,
   SettingsRow
 } from '../../../../shared/ui';
+import { SyncGroupRemovingDevices } from '../../../../shared/ui/SyncGroupRemovingDevices';
 
 import { SettingsSyncGroupDeviceRow } from './SettingsSyncGroupDeviceRow';
 import { ActiveDiscoveryErrorRow, DiscoveryStatusRow } from './SettingsSyncGroupDiscoveryStatus';
@@ -134,7 +136,7 @@ type SettingsSyncGroupRowsProps = {
   joinRequests: DesktopSyncGroupJoinRequestSummaryPayload[];
   syncEnabled: boolean;
   syncPaused: boolean;
-  removingDeviceIds: string[];
+  removingDevices: SyncGroupRemovingEntry[];
 };
 
 export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
@@ -161,14 +163,16 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
           </div>
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
-            {group.devices.filter((device) => device.state === 'active').map((device) => (
+            {group.devices.filter((device) => device.state === 'active' &&
+              !props.removingDevices.some(entry => entry.target.device_identity_key === device.device_identity_key)).map((device) => (
               <SettingsSyncGroupDeviceRow device={device} disabled={props.isBusy} group={group}
                 key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
                 syncEnabled={props.syncEnabled}
-                removing={props.removingDeviceIds.includes(device.device_identity_key)} />
+                removing={false} />
             ))}
           </div>
+          <SyncGroupRemovingDevices entries={props.removingDevices} />
         </section>
       </div>
       {props.joinRequests.length > 0 ? (

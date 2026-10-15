@@ -71,7 +71,7 @@ it('copies a report with stable device aliases while keeping library identities 
   });
   const report = buildDesktopSyncDiagnostics({
     discovery_error: null, host_platform: 'mac', join_requests: [], sync_enabled: false,
-    sync_paused: false, participating: false, removing_device_ids: [],
+    sync_paused: false, participating: false, removing_devices: [],
     server_status: { active_device_count: 0, advertised_urls: ['http://private-host:1234'], last_error: null,
       pending_join_request_count: 0, port: null, state: 'stopped', topology_role: null, topology_status: 'observing' }
   }, 'test-version');

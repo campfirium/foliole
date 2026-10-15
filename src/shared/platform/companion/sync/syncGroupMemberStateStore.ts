@@ -21,6 +21,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 
 import { assertCompanionPeerProofFresh, loadCompanionLocalNodeProof } from './nodeVersionCompanionPeerProof';
 import { assertIncomingProtocolCompatible, canMergeRestoreSourceMembers, companionMemberStateReady } from './syncGroupMemberStateGuards.js';
+import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads';
 
 type Context = { groupId: string; localDeviceId: string };
 
@@ -74,7 +75,7 @@ export async function applyCompanionSyncGroupMemberState(
       const now = new Date().toISOString();
       let localExited = false;
       for (const removal of await loadRemovals(tx, incoming.group_id)) {
-        if (removal.superseded_at || removal.completed_at) continue;
+        if (removal.superseded_at) continue;
         const targetsLocal = removal.target_device_identity_key === context.localDeviceId;
         await persistRemovalConfirmation(tx, incoming.group_id, removal.decision_id, context.localDeviceId,
           targetsLocal ? 'target_exit' : 'enforced', now);
@@ -85,7 +86,7 @@ export async function applyCompanionSyncGroupMemberState(
           localExited = true;
         }
       }
-      await completeEligibleRemovals(tx, context, now);
+      await completeEligibleRemovals(tx, context.groupId, now);
       return { local_exited: localExited, normal_sync_ready: true, state: await loadState(tx, context) };
     })
   ));
@@ -101,7 +102,7 @@ export async function isCompanionSyncGroupDeviceBlocked(groupId: string, deviceI
 
 async function mergeMemberMetadata(db: DbPort, incoming: SyncGroupMemberStatePayload, localId: string) {
   for (const removal of incoming.removals) await mergeRemoval(db, incoming.group_id, removal);
-  for (const device of incoming.devices) await mergeDevice(db, incoming.group_id, device, localId);
+  for (const device of incoming.devices) await mergeDevice(db, incoming.group_id, device, localId, incoming.removals);
 }
 
 async function loadContext(db: DbPort): Promise<Context | null> {
@@ -132,24 +133,6 @@ async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberS
   };
 }
 
-async function loadDevices(db: DbPort, groupId: string): Promise<SyncGroupDevicePayload[]> {
-  const rows = await db.query<DbRow>(`SELECT canonical_library_path, device_anchor,
-    device_identity_key, device_name, joined_at, last_seen_at, left_at, platform, state, updated_at
-    FROM sync_group_devices WHERE group_id = ? ORDER BY joined_at, device_identity_key`, [groupId]);
-  return rows.map((row) => ({ ...row, contract_version: 1 } as unknown as SyncGroupDevicePayload));
-}
-
-async function loadRemovals(db: DbPort, groupId: string): Promise<SyncGroupRemovalDecisionPayload[]> {
-  const rows = await db.query<DbRow>(`SELECT decision_id, target_device_identity_key,
-    initiated_by_device_identity_key, created_at, completed_at, superseded_at
-    FROM sync_group_removal_decisions WHERE group_id = ? ORDER BY created_at, decision_id`, [groupId]);
-  return Promise.all(rows.map(async (row) => ({ ...row, confirmations: await db.query<DbRow>(
-    `SELECT confirming_device_identity_key, kind, confirmed_at
-     FROM sync_group_removal_confirmations WHERE group_id = ? AND decision_id = ?
-     ORDER BY confirming_device_identity_key`, [groupId, String(row.decision_id)]
-  ) } as unknown as SyncGroupRemovalDecisionPayload)));
-}
-
 async function mergeRemoval(db: DbPort, groupId: string, removal: SyncGroupRemovalDecisionPayload) {
   if (!removal || typeof removal.decision_id !== 'string' ||
       typeof removal.target_device_identity_key !== 'string' ||
@@ -176,7 +159,8 @@ async function mergeRemoval(db: DbPort, groupId: string, removal: SyncGroupRemov
   }
 }
 
-async function mergeDevice(db: DbPort, groupId: string, device: SyncGroupDevicePayload, localId: string) {
+async function mergeDevice(db: DbPort, groupId: string, device: SyncGroupDevicePayload, localId: string,
+  incomingRemovals: SyncGroupRemovalDecisionPayload[]) {
   if (!device || device.contract_version !== 1 || typeof device.device_identity_key !== 'string') {
     throw new Error('sync_group_member_state_invalid');
   }
@@ -198,14 +182,18 @@ async function mergeDevice(db: DbPort, groupId: string, device: SyncGroupDeviceP
   const deviceBlocked = await hasActiveRemoval(db, groupId, device.device_identity_key);
   const removalSuperseded = await hasSupersededRemoval(db, groupId, device.device_identity_key);
   const canRevive = device.state === 'active' && removalSuperseded && !deviceBlocked;
+  const staleRemoval = !deviceBlocked && incomingRemovals.some(removal => !removal.superseded_at &&
+    removal.target_device_identity_key === device.device_identity_key);
   const state = device.device_identity_key === localId ? 'active'
+    : existing?.state === 'active' && staleRemoval ? 'active'
     : existing?.state === 'left' && !canRevive ? 'left' : device.state;
   await db.run(`INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor,
     canonical_library_path, device_name, platform, state, joined_at, left_at, last_seen_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(group_id, device_identity_key) DO UPDATE SET
       device_name = excluded.device_name, platform = excluded.platform, state = excluded.state,
-      left_at = COALESCE(sync_group_devices.left_at, excluded.left_at),
+      left_at = CASE WHEN excluded.state = 'active' THEN NULL
+        ELSE COALESCE(sync_group_devices.left_at, excluded.left_at) END,
       last_seen_at = COALESCE(excluded.last_seen_at, sync_group_devices.last_seen_at)`,
   [groupId, device.device_identity_key, device.device_anchor, device.canonical_library_path,
     device.device_name, device.platform, state, device.joined_at, device.left_at,
@@ -217,27 +205,6 @@ async function persistRemovalConfirmation(db: DbPort, groupId: string, decisionI
   await db.run(`INSERT OR IGNORE INTO sync_group_removal_confirmations
     (group_id, decision_id, confirming_device_identity_key, kind, confirmed_at) VALUES (?, ?, ?, ?, ?)`,
   [groupId, decisionId, deviceId, kind, confirmedAt]);
-}
-
-async function completeEligibleRemovals(db: DbPort, context: Context, now: string) {
-  const devices = await loadDevices(db, context.groupId);
-  for (const removal of await loadRemovals(db, context.groupId)) {
-    if (removal.completed_at || removal.superseded_at) continue;
-    const targetConfirmed = removal.confirmations.some((item) => item.kind === 'target_exit' &&
-      item.confirming_device_identity_key === removal.target_device_identity_key);
-    const activeOthers = devices.filter((device) => device.state === 'active' &&
-      device.device_identity_key !== removal.target_device_identity_key);
-    const allConfirmed = removal.initiated_by_device_identity_key === context.localDeviceId &&
-      activeOthers.every((device) => removal.confirmations.some((item) =>
-        item.confirming_device_identity_key === device.device_identity_key));
-    if (!targetConfirmed && !allConfirmed) continue;
-    await db.run(`UPDATE sync_group_removal_decisions SET completed_at = ?
-      WHERE group_id = ? AND decision_id = ? AND completed_at IS NULL`,
-    [now, context.groupId, removal.decision_id]);
-    await db.run(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
-      WHERE group_id = ? AND device_identity_key = ?`,
-    [now, now, context.groupId, removal.target_device_identity_key]);
-  }
 }
 
 async function persistLocalExit(db: DbPort, context: Context, now: string) {

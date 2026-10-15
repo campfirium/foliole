@@ -5,6 +5,7 @@ import type {
 } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroupDiscoveryContract';
 import type { SyncGroupJoinMode } from '../../../lib/platform/syncGroupJoinMode';
+import { parseSyncGroupRemovingEntries } from '../../../lib/platform/syncGroupRemovalModel';
 import type { WatchedFolderConflict } from '../../../lib/platform/watchedFolderConflictContract';
 
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/syncGroupJoinNormalization';
@@ -50,8 +51,7 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     sync_paused: raw.sync_paused === true,
     pending_backup_restore: typeof raw.pending_backup_restore === 'string' ? raw.pending_backup_restore : null,
     participating: raw.participating === true,
-    removing_device_ids: Array.isArray(raw.removing_device_ids)
-      ? raw.removing_device_ids.filter((item): item is string => typeof item === 'string') : []
+    removing_devices: parseSyncGroupRemovingEntries(raw.removing_devices)
   };
 }
 

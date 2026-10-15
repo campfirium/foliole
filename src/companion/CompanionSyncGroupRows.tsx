@@ -2,9 +2,11 @@ import { useState } from 'react';
 
 import { resolveSyncGroupDisplayDeviceName, type SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { displaySyncGroupPlatform } from '../../lib/platform/syncGroupPlatform';
+import { syncGroupDeviceDisplayName } from '../../lib/platform/syncGroupRemovalModel';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { setCompanionSyncPaused } from '../shared/platform/companion/sync/syncGroupProvider';
 import type { CompanionSyncGroupProviderState } from '../shared/platform/companionWorkspaceSyncPluginTypes';
+import { SyncGroupRemovingDevices } from '../shared/ui/SyncGroupRemovingDevices';
 
 import {
   CompanionSyncGroupJoinApproval,
@@ -62,12 +64,13 @@ function SyncGroupDevices(props: {
   const t = useTranslation();
   return (
     <div aria-label={t('companion.sync.devices')} className="ml-4 divide-y divide-companion-divider border-t border-companion-divider pl-4" role="list">
-      {props.group.devices.filter((device) => device.state === 'active').map((device) => {
+      {props.group.devices.filter((device) => device.state === 'active' &&
+        !props.group.removing_devices?.some(entry => entry.target.device_identity_key === device.device_identity_key)).map((device) => {
         const isLocal = device.device_identity_key === props.group.local_device_identity_key;
         return (
           <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={device.device_identity_key} role="listitem">
             <span className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate text-sm font-semibold text-foreground">{device.device_name}</span>
+              <span className="truncate text-sm font-semibold text-foreground">{syncGroupDeviceDisplayName(device, props.group.devices)}</span>
               <span className="shrink-0 text-xs text-companion-text-tertiary">
                 {displaySyncGroupPlatform(device.platform)}
               </span>
@@ -109,6 +112,7 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload; onLeave
       <CompanionSyncGroupJoinApproval provider={provider} />
       <SyncGroupDevices group={props.group} onTogglePause={togglePause}
         paused={participation.sync_paused} providerState={provider.state} />
+      <SyncGroupRemovingDevices entries={props.group.removing_devices ?? []} />
     </section>
   );
 }

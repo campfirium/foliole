@@ -67,3 +67,19 @@ it('shows persistent membership and keeps Leave independent from participation c
   fireEvent.click(screen.getByTestId('companion-sync-group-leave-confirm'));
   await waitFor(() => expect(onLeave).toHaveBeenCalledOnce());
 });
+
+it('keeps pending targets out of normal members and shows the same confirmation section', async () => {
+  renderWithLocalization(<CompanionSyncGroupRows onLeave={async () => undefined} group={{
+    created_at: 'now', display_name: 'Studio', group_id: 'group-1', local_device_identity_key: 'local',
+    devices: ['Local', 'Old phone'].map(device_name => ({
+      device_name, device_identity_key: device_name, contract_version: 1, device_anchor: device_name,
+      canonical_library_path: `/private/${device_name}`, joined_at: 'now', last_seen_at: null,
+      left_at: null, platform: 'ios-capacitor', state: 'active', updated_at: 'now'
+    })),
+    removing_devices: [{ target: { device_identity_key: 'Old phone', device_name: 'Old phone' },
+      confirmed_devices: [{ device_identity_key: 'Local', device_name: 'Local' }] }]
+  }} />);
+  expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Local');
+  expect(screen.getAllByText('Old phone')).toHaveLength(1);
+  expect(await screen.findByText('Waiting client')).toBeInTheDocument();
+});

@@ -1,4 +1,6 @@
 export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
+  'settings.companionSync.group.removing.title': 'Removing',
+  'settings.companionSync.group.removing.confirmed': 'Confirmed devices',
   'settings.companionSync.group.title': 'Sync Groups',
   'settings.companionSync.group.named': "{name}'s Sync Group",
   'settings.companionSync.group.description': 'This name is saved when the group is created.',

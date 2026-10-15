@@ -1,5 +1,6 @@
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { displaySyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
+import { syncGroupDeviceDisplayName } from '../../../../../lib/platform/syncGroupRemovalModel';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 
 export function SettingsSyncGroupDeviceRow(props: {
@@ -18,7 +19,7 @@ export function SettingsSyncGroupDeviceRow(props: {
     return (
       <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
         <div className="flex min-w-0 items-baseline gap-2">
-          <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
+          <span className="truncate text-ui-md font-normal text-foreground">{syncGroupDeviceDisplayName(props.device, props.group.devices)}</span>
           <span className="shrink-0 text-ui-sm text-muted-foreground">{displaySyncGroupPlatform(props.device.platform)}</span>
         </div>
         <span className="shrink-0 text-ui-sm text-muted-foreground">
@@ -33,7 +34,7 @@ export function SettingsSyncGroupDeviceRow(props: {
   return (
     <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
+        <span className="truncate text-ui-md font-normal text-foreground">{syncGroupDeviceDisplayName(props.device, props.group.devices)}</span>
         <span className="shrink-0 text-ui-sm text-muted-foreground">
           {displaySyncGroupPlatform(props.device.platform)}
         </span>

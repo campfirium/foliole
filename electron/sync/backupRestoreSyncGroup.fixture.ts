@@ -13,8 +13,9 @@ import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { captureBackupRestoreHostSettings } from '../database/syncGroupBackupRestore.js';
+import { loadDesktopSyncGroupMemberState, initiateDesktopSyncGroupDeviceRemoval } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
-import { createDesktopSyncGroup, loadDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
+import { createDesktopSyncGroup, loadDesktopSyncGroup, registerSyncGroupDevice, leaveDesktopSyncGroupDevice } from '../database/syncGroupStore.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
@@ -26,6 +27,7 @@ import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPre
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
+import { exchangeDesktopSyncGroupMemberState, publishDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
@@ -102,10 +104,39 @@ async function restoreBackup(args: Record<string, unknown>, localOnly: boolean) 
     choice: { source: 'current', action: localOnly ? 'local' : args.pause ? 'pause' : 'overwrite', revision: preview.revision } });
 }
 
+async function runRemovalFixture(action: string, args: Record<string, unknown>) {
+  if (action === 'pauseMember') return handleSyncGroupCommand(NATIVE_COMMANDS.pauseCompanionSync, {});
+  if (action === 'departTo') {
+    const group = loadDesktopSyncGroup()!;
+    leaveDesktopSyncGroupDevice(group.local_device_identity_key);
+    return publishDesktopSyncGroupMemberState({ endpoint_url: String(args.origin),
+      group_id: group.group_id, local_device_id: group.local_device_identity_key,
+      peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' },
+    loadDesktopSyncGroupMemberState({ groupId: group.group_id, senderDeviceId: group.local_device_identity_key }));
+  }
+  if (action === 'memberState') return loadDesktopSyncGroupMemberState();
+  if (action === 'removeMember') return initiateDesktopSyncGroupDeviceRemoval(String(args.identity));
+  if (action === 'memberExchange') {
+    const group = loadDesktopSyncGroup();
+    if (!group) throw new Error('fixture_group_missing');
+    return exchangeDesktopSyncGroupMemberState({ endpoint_url: String(args.origin),
+      group_id: group.group_id, local_device_id: group.local_device_identity_key,
+      peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });
+  }
+  if (action === 'reopen') {
+    closeDatabaseConnection(); initializeDatabase();
+    return loadDesktopSyncGroupMemberState();
+  }
+  throw new Error('unknown removal fixture action');
+}
+
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
     'joinProviderEnable', 'joinOverview', 'joinInterrupt'].includes(action)) {
     return runJoinFixture(action, args);
+  }
+  if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopen'].includes(action)) {
+    return runRemovalFixture(action, args);
   }
   if (action === 'init') return initializeGroup(args);
   if (action === 'register') {
