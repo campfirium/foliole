@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort.js';
 import { textBranch } from '../../../../../electron/database/topicTextState.testSupport.js';
@@ -37,6 +37,21 @@ const source = identities[0]!, receiver = identities[1]!, windows = identities[2
 const event = { group_id: groupId, restore_id: 'restore-round', restored_at: '2030-01-01T00:00:00.000Z',
   source_device_identity_key: source.identity_key };
 
+let initializedDatabase: Buffer;
+beforeAll(async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-restore-members-schema-'));
+  const main = new Database(path.join(root, 'schema.sqlite'));
+  try {
+    await bootstrapCompanionDatabase(createBetterSqliteDbPort(main), {
+      allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06'
+    });
+    initializedDatabase = main.serialize();
+  } finally {
+    main.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 async function joined(db: DbPort, local: typeof source, peer: typeof source) {
   owner.db = db;
   await joinCompanionSyncGroup({ mode: 'use-group', endpointUrl: 'http://fixture', device: local, deviceName: 'Fixture', displayName: 'Fixture',
@@ -52,8 +67,8 @@ async function pending(db: DbPort, applied: boolean) {
 }
 
 it('receives a third member version declaration from the restore source and keeps restore pending after reopening', async () => {
-  const sender = await currentCompanionFixture();
-  const target = await currentCompanionFixture();
+  const sender = currentCompanionFixture();
+  const target = currentCompanionFixture();
   try {
     await joined(sender.port(), source, windows);
     await pending(sender.port(), true);
@@ -85,7 +100,7 @@ it('receives a third member version declaration from the restore source and keep
 
 it.each(['source', 'event', 'timestamp', 'applied', 'adoption', 'epoch'] as const)(
   'does not import restore member dependencies across a mismatched %s', async mismatch => {
-    const target = await currentCompanionFixture();
+    const target = currentCompanionFixture();
     try {
       await joined(target.port(), receiver, source);
       await pending(target.port(), false);
@@ -110,8 +125,8 @@ it.each(['source', 'event', 'timestamp', 'applied', 'adoption', 'epoch'] as cons
   });
 
 it('rolls back source membership metadata when a relayed device identity is invalid', async () => {
-  const sender = await currentCompanionFixture();
-  const target = await currentCompanionFixture();
+  const sender = currentCompanionFixture();
+  const target = currentCompanionFixture();
   try {
     await joined(sender.port(), source, windows);
     await pending(sender.port(), true);
@@ -127,13 +142,11 @@ it('rolls back source membership metadata when a relayed device identity is inva
   } finally { owner.db = null; sender.close(); target.close(); }
 });
 
-async function currentCompanionFixture() {
+function currentCompanionFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-restore-members-'));
   const file = path.join(root, 'main.sqlite');
+  fs.writeFileSync(file, initializedDatabase);
   let main = new Database(file);
-  await bootstrapCompanionDatabase(createBetterSqliteDbPort(main), {
-    allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06'
-  });
   return { get main() { return main; }, port: () => createBetterSqliteDbPort(main),
     reopen() { main.close(); main = new Database(file); },
     close() { main.close(); fs.rmSync(root, { recursive: true, force: true }); } };
