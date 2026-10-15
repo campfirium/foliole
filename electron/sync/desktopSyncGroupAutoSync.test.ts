@@ -166,3 +166,11 @@ it('queues recovery eligibility behind an existing database owner', async () => 
   await held;
   await vi.waitFor(() => expect(runtime.recoverMembers).toHaveBeenCalledOnce());
 });
+
+it('keeps manual synchronization available when automatic participation is disabled', async () => {
+  runtime.participating = false;
+  runtime.memberEndpoints = [desktop];
+  await runDesktopManualSyncWithDiscovery();
+  expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+  expect(runtime.freshness).toHaveBeenCalledWith(false);
+});

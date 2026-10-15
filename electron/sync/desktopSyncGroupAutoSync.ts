@@ -157,8 +157,9 @@ function refreshEligibility(groupId: string, isCurrent: () => boolean) {
 }
 
 function updateEligibility(groupId: string) {
-  const participating = loadDesktopSyncGroup()?.group_id === groupId && isDesktopCompanionSyncParticipating();
+  const currentGroup = loadDesktopSyncGroup()?.group_id === groupId;
+  const participating = currentGroup && isDesktopCompanionSyncParticipating();
   updateDesktopSyncFreshness(participating && loadDesktopSyncGroupRoutes(groupId).length > 0);
   notifyDesktopSyncGroupOverviewChanged();
-  return participating;
+  return currentGroup;
 }
