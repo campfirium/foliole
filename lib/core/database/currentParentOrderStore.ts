@@ -16,7 +16,7 @@ export function readCurrentParentOrderSources(driver: DatabaseDriver, parentId: 
 
 export function projectStoredParentOrder(driver: DatabaseDriver, parentId: string, now: string) {
   const sources = readCurrentParentOrderSources(driver, parentId);
-  const members = driver.queryAll<CurrentOrderMember & DatabaseRow>(PARENT_ORDER_MEMBERS_SQL, [parentId]);
+  const members = driver.queryAll<CurrentOrderMember & DatabaseRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
   const order = projectCurrentParentOrder(sources, members);
   driver.execute(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
   driver.execute('DELETE FROM parent_order_projection_pending WHERE parent_id = ?', [parentId]);

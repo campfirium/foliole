@@ -25,13 +25,14 @@ interface InventoryRow extends DbRow {
 const ids = z.array(z.string().min(1));
 const hashes = z.array(z.string().regex(/^[a-f0-9]{64}$/u));
 const versionBodyHashes = z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/u).nullable());
+const inventoryState = z.tuple([z.string(), z.string().nullable(),
+  z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
+    z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]);
 const inventoryColumns = `inventory.*, (SELECT json_group_object(version_id, body_hash)
   FROM framed_sync_version_summary WHERE object_id = inventory.object_id) AS version_body_hashes_json`;
 
 function entry(row: InventoryRow): FramedSyncInventoryEntry {
-  const state = row.content_hash.startsWith('[') ? z.tuple([z.string(), z.string().nullable(),
-    z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
-      z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]).parse(JSON.parse(row.content_hash)) : null;
+  const state = row.content_hash.startsWith('[') ? inventoryState.parse(JSON.parse(row.content_hash)) : null;
   if (state) {
     const bodies = versionBodyHashes.parse(JSON.parse(row.version_body_hashes_json));
     for (const version of state[2]) {

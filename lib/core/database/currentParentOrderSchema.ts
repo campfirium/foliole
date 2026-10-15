@@ -23,7 +23,7 @@ export const CURRENT_PARENT_ORDER_SCHEMA = [
 export const PARENT_ORDER_SOURCES_SQL = `SELECT author_id AS authorId, counter, child_ids_json
   FROM parent_order_sources WHERE parent_id = ? ORDER BY author_id`;
 export const PARENT_ORDER_MEMBERS_SQL = `SELECT id, title, created_at AS createdAt FROM nodes
-  WHERE COALESCE(parent_id, 'parent-child-order:root') = ?`;
+  WHERE parent_id = ? OR (parent_id IS NULL AND ? = 'parent-child-order:root')`;
 export const PARENT_ORDER_SOURCE_WRITE_SQL = `INSERT INTO parent_order_sources
   (parent_id, author_id, counter, child_ids_json) VALUES (?, ?, ?, ?)
   ON CONFLICT(parent_id, author_id) DO UPDATE SET counter = excluded.counter,

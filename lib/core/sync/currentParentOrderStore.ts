@@ -20,7 +20,7 @@ export async function loadCurrentParentOrderSources(port: DbPort, parentId: stri
 
 export async function projectCurrentParentOrderWithDbPort(port: DbPort, parentId: string, now: string) {
   const sources = await loadCurrentParentOrderSources(port, parentId);
-  const members = await port.query<CurrentOrderMember & DbRow>(PARENT_ORDER_MEMBERS_SQL, [parentId]);
+  const members = await port.query<CurrentOrderMember & DbRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
   const order = projectCurrentParentOrder(sources, members);
   await port.run(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
   await port.run('DELETE FROM parent_order_projection_pending WHERE parent_id = ?', [parentId]);

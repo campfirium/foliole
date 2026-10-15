@@ -9,7 +9,8 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { bindParentOrderWriter, requireParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
-import { applyCurrentParentOrderRecord, saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
+import { applyCurrentParentOrderRecord, flushCurrentParentOrderProjectionsWithDbPort,
+  saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
 import { bindParentOrderWriterWithDbPort } from '../../lib/core/sync/parentOrderWriter.js';
 
 import { finishLocalOnlyBackupRestore } from './backupRestoreSyncSelection.js';
@@ -48,6 +49,19 @@ function record(sources: ParentOrderSource[]) {
     payload_json: JSON.stringify(currentParentOrderPayload('parent', sources)), updated_at: now,
     content_hash: currentParentOrderHash('parent', sources) };
 }
+
+it('preserves root membership when a child moves out of a folder through either storage adapter', async () => {
+  const host = fixture();
+  host.node('a');
+  const rootOrder = () => JSON.parse(String(host.db.prepare(
+    "SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent-child-order:root'").pluck().get()));
+  await flushCurrentParentOrderProjectionsWithDbPort(host.port);
+  expect(rootOrder()).toEqual(['other', 'parent']);
+  host.db.prepare("UPDATE nodes SET parent_id = NULL WHERE id = 'a'").run();
+  flushCurrentParentOrderProjections(host.driver);
+  expect(rootOrder()).toEqual(['a', 'other', 'parent']);
+  expect(host.order()).toEqual([]);
+});
 
 it('uses the same persistent writer and logical ordering through the async Companion port', async () => {
   const host = fixture();
