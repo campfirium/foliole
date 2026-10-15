@@ -39,7 +39,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     initiatorDeviceId: group.local_device_identity_key, initiatorLibraryEpoch: local.library_epoch,
     responderDeviceId: options.framedPeer.deviceId, responderLibraryEpoch: options.framedPeer.libraryEpoch } as const;
   return withCompanionRequestSyncPeerRound(context, endpointUrl, peerRound, async () => {
-  const round = options.resourcesOnly && !options.restoreId ? { pending: 0, received: [], sent: [] } : await runCompanionRequestSyncDatabaseRound({ endpointUrl, groupId: group.group_id,
+  const round = options.resourcesOnly && !options.restoreId ? { pending: 0, received: [], sent: [], madeProgress: false } : await runCompanionRequestSyncDatabaseRound({ endpointUrl, groupId: group.group_id,
     peerRound, signal,
     localLibraryEpoch: local.library_epoch, peerState,
     ...(options.restoreId ? { restoreId: options.restoreId } : {}),
@@ -56,6 +56,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const receivedIds = round.received;
   const sentIds = round.sent;
   return {
+    madeDatabaseProgress: round.madeProgress,
     appliedNodeIds: receivedIds,
     appliedObjectIds: receivedIds,
     appliedPackBlobCount: 0,
@@ -71,6 +72,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     // Bodies commit with their database objects; no separate body download stage remains.
     remainingContentBlobCount: 0,
     remainingAttachmentResourceCount: resources.pending,
+    transferredAttachmentCount: resources.transferred,
     localDirtyCount: round.pending,
     pushConflictCount: 0,
     pushError: null,

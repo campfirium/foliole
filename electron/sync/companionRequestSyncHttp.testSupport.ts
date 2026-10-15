@@ -12,7 +12,17 @@ export async function postCompanionRequestFixture(files: FramedSyncFilePort, inp
   }
   const response = await fetch(input.url, { method: 'POST', body: Buffer.concat(chunks),
     headers: { ...input.headers, 'Content-Type': FRAMED_SYNC_CONTENT_TYPE } });
-  if (!response.ok) throw new Error(`request_sync_http_${response.status}:${await response.text()}`);
+  if (!response.ok) {
+    const body = await response.text();
+    // Match native transports' explicit round-contention error codes.
+    let detail: unknown;
+    try { detail = JSON.parse(body); } catch { detail = null; }
+    if (typeof detail === 'object' && detail !== null && 'error' in detail
+      && (detail.error === 'sync_round_busy' || detail.error === 'sync_round_expired')) {
+      throw new Error(`framed_sync_http_${response.status}:${detail.error}`);
+    }
+    throw new Error(`request_sync_http_${response.status}:${body}`);
+  }
   const bytes = new Uint8Array(await response.arrayBuffer());
   const size = 512 * 1024;
   for (let offset = 0; offset < bytes.length; offset += size) {

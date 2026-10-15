@@ -26,7 +26,7 @@ it.each(['node_version_missing_parents:lost', 'node_version_graph_cycle',
     }),
     reportObjectError: difference => { errors.push(difference.globalId); }
   });
-  expect(result).toEqual({ complete: false, pending: 1, transferred: 1 });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 1, madeProgress: true });
   expect(remote.map(value => value.globalId)).toEqual(['good']);
   expect(new Set(errors)).toEqual(new Set(['bad']));
   expect(requests).toBe(3);
@@ -98,7 +98,7 @@ it.each([
     },
     reportObjectError: () => { throw new Error('source_change_reported_as_invalid_object'); }
   });
-  expect(result).toEqual({ complete: false, pending: withChild ? 2 : 1, transferred: 1 });
+  expect(result).toEqual({ complete: false, pending: withChild ? 2 : 1, transferred: 1, madeProgress: true });
   expect([...accepted.keys()]).toEqual(['c-healthy']);
   expect(inventories).toBe(3);
   expect(transfers).toBeLessThanOrEqual(4);
@@ -149,10 +149,19 @@ it('retries a missing dependency after its batched parent succeeds and isolates 
     },
     reportObjectError: difference => { errors.push(difference.globalId); }
   });
-  expect(result).toEqual({ complete: false, pending: 1, transferred: 3 });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 3, madeProgress: true });
   expect([...accepted.keys()].sort()).toEqual(['a-child', 'b-parent', 'd-healthy']);
   expect(calls[0]).toEqual(['a-child', 'b-parent', 'c-broken', 'd-healthy']);
   expect(calls).toContainEqual(['a-child']);
   expect(calls.filter(batch => batch.includes('b-parent'))).toHaveLength(1);
   expect(new Set(errors)).toEqual(new Set(['c-broken']));
+});
+
+it('does not count accepted transfers as progress when inventories remain unchanged', async () => {
+  const result = await runRequestSyncDatabaseRound({
+    exchangeInventory: async () => ({ local: [entry('unchanged')], remote: [] }),
+    transferObjects: async differences => differences.map(difference => outcome(difference)),
+    reportObjectError: () => { throw new Error('unexpected_error'); }
+  });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 1, madeProgress: false });
 });

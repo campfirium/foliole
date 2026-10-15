@@ -76,7 +76,8 @@ async function runRound(input: RoundInput) {
   if (result.complete && adoption) {
     receivingOverwrite = false;
     const continuation = await runRequestSyncDatabaseRound(port, input.signal);
-    result = { ...continuation, transferred: result.transferred + continuation.transferred };
+    result = { ...continuation, transferred: result.transferred + continuation.transferred,
+      madeProgress: result.madeProgress || continuation.madeProgress };
   }
   return { ...result, received: [...received], sent: [...sent] };
 }

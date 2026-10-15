@@ -79,7 +79,7 @@ it('keeps a timed-out foreground round pending for retry without reporting succe
   await expect(tryForegroundAutoSyncTarget({ cancelled: () => false, setError, setSyncProgress,
     setState: vi.fn(), setStatus: vi.fn(), state: { endpoint_url: 'http://peer:38641', last_synced_at: null,
       remembered_targets: [], sync_events: [], sync_onboarding_status: 'completed', workspace_snapshot: null }
-  }, { endpointUrl: 'http://peer:38641' }, runStreamSync)).resolves.toBe('backlog');
+  }, { endpointUrl: 'http://peer:38641' }, runStreamSync)).resolves.toBe('pending');
   expect(runStreamSync).not.toHaveBeenCalled();
   expect(setError.mock.calls.every(([error]) => error === null)).toBe(true);
   expect(setSyncProgress).toHaveBeenLastCalledWith(null);

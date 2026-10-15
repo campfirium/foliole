@@ -26,7 +26,7 @@ async function testRecordsBacklogBytesWithoutFastRetry() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('pending');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'Resource downloads are still pending.',
     status: 'skipped'
@@ -154,7 +154,7 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('pending');
   expect(setSyncProgress).not.toHaveBeenCalledWith(null);
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,

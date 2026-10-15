@@ -20,10 +20,11 @@ export const REQUEST_SYNC_MAX_PASSES = 4;
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
   let inventories = await port.exchangeInventory();
   let transferred = 0;
+  let madeProgress = false;
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const differences = compareFramedSyncDatabaseInventories(inventories);
-    if (!differences.length) return { complete: true, pending: 0, transferred };
+    if (!differences.length) return { complete: true, pending: 0, transferred, madeProgress };
     const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal);
     transferred += round.delivered.length;
     const next = await port.exchangeInventory();
@@ -31,12 +32,13 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
         JSON.stringify(next.remote) === JSON.stringify(inventories.remote)) {
       const pending = compareFramedSyncDatabaseInventories(next).length;
       return { complete: pending === 0 && round.deferred.length === 0,
-        pending: Math.max(pending, round.deferred.length), transferred };
+        pending: Math.max(pending, round.deferred.length), transferred, madeProgress };
     }
+    madeProgress = true;
     inventories = next;
   }
   const pending = compareFramedSyncDatabaseInventories(inventories).length;
-  return { complete: pending === 0, pending, transferred };
+  return { complete: pending === 0, pending, transferred, madeProgress };
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,

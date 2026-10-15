@@ -159,7 +159,7 @@ async function testRecordsStructureLagWithoutCompleting() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('pending');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Topic list confirmation is still pending.',
@@ -213,7 +213,7 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('backlog');
+  expect(outcome).toBe('pending');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'stage_finished',
     message: 'Device changes are waiting for desktop confirmation; 1 change pending.',

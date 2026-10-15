@@ -50,6 +50,7 @@ export interface CompanionContentBlobNativeTiming {
 }
 
 export interface CompanionDesktopSyncResult {
+  madeDatabaseProgress?: boolean;
   appliedNodeIds: string[];
   appliedPackBlobCount: number;
   appliedPackObjectCount: number;
@@ -62,6 +63,7 @@ export interface CompanionDesktopSyncResult {
   pushError: string | null;
   requestedObjectIds: string[];
   syncedAttachmentIds: string[];
+  transferredAttachmentCount?: number;
   syncedAttachmentResourceBytes: number;
   syncedAttachmentResourceElapsedMs?: number;
   syncedContentBlobElapsedMs?: number;

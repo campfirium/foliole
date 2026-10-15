@@ -13,10 +13,12 @@ import {
   resolveReachableCompanionWorkspaceSyncEndpoints
 } from '../shared/platform/companionWorkspaceSync';
 
+import type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
 import {
   hasFastRetryWork,
+  hasRetryWork,
   resolveCompanionSyncContinuationMode,
   type CompanionSyncContinuationMode
 } from './companionSyncContinuation';
@@ -32,7 +34,7 @@ import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryD
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
-export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
+export type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
 
 export interface RunCompanionStreamSyncArgs {
   cancelled: () => boolean;
@@ -146,14 +148,15 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
   await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
-  if (passResult.outcome === 'skipped' && hasFastRetryWork(result)) {
-    return 'backlog';
+  if (passResult.outcome === 'skipped' && hasRetryWork(result)) {
+    return hasFastRetryWork(result) ? 'backlog' : 'pending';
   }
   return passResult.outcome;
 }
 
 function combineForegroundSyncOutcomes(outcomes: ForegroundAutoSyncOutcome[]) {
   if (outcomes.includes('failed')) return 'failed';
+  if (outcomes.includes('pending')) return 'pending';
   if (outcomes.includes('backlog')) return 'backlog';
   if (outcomes.includes('completed')) return 'completed';
   return 'skipped';

@@ -9,7 +9,7 @@ import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
-export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'skipped';
+export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'pending' | 'skipped';
 export type ForegroundSyncReason =
   | 'endpoint-ready' | 'foreground' | 'freshness' | 'mutation' | 'retry';
 export type CompanionSyncContinuationMode = 'full' | 'resources-only';
@@ -142,7 +142,7 @@ function startForegroundSync(
         args.retryAttemptRef.current = 0;
         args.resourceContinuationModeRef.current = 'full';
         clearRetryTimer(args.retryTimerRef);
-      } else if (outcome === 'backlog' || outcome === 'failed') {
+      } else if (outcome === 'backlog' || outcome === 'failed' || outcome === 'pending') {
         if (!args.isSyncGroupReadyRef.current) {
           args.retryAttemptRef.current = 0;
           args.resourceContinuationModeRef.current = 'full';
@@ -170,9 +170,10 @@ function startForegroundSync(
 export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   const runForegroundSyncCheck = (reason: ForegroundSyncReason) => {
     if (args.inFlightRef.current) {
-      if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'backlog');
+      if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'pending');
       return null;
     }
+    if (args.retryTimerRef.current && (reason === 'freshness' || reason === 'endpoint-ready')) return null;
     const now = Date.now();
     if (!shouldStartForegroundSync(args, reason, now)) return null;
     if (reason !== 'retry') clearRetryTimer(args.retryTimerRef);

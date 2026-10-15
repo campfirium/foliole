@@ -76,6 +76,8 @@ async function testRecordsPushConflictWithoutCompleting() {
 
 async function testContinuesAfterPullResolvesPushConflict() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    madeDatabaseProgress: true,
+    appliedObjectIds: ['resolved-conflict'],
     localDirtyCount: 1,
     pushConflictCount: 1,
     pushIssueCount: 0

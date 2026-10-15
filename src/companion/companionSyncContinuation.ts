@@ -7,7 +7,7 @@ function isKnownBacklog(count: number | null) {
 }
 
 function madeResourceProgress(result: CompanionDesktopSyncResult) {
-  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+  return (result.transferredAttachmentCount ?? 0) > 0 || (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
 }
 
 function hasResourceBacklog(result: CompanionDesktopSyncResult) {
@@ -36,9 +36,14 @@ export function resolveCompanionSyncContinuationMode(result: CompanionDesktopSyn
   return 'resources-only';
 }
 
-export function hasFastRetryWork(result: CompanionDesktopSyncResult) {
+export function hasRetryWork(result: CompanionDesktopSyncResult) {
   if (result.attachmentResourceError || result.contentBlobError) {
     return false;
   }
-  return madeResourceProgress(result) || (result.remainingStructureChangeCount ?? 0) > 0 || hasWaitingLocalChanges(result);
+  return madeResourceProgress(result) || hasResourceBacklog(result) || (result.remainingStructureChangeCount ?? 0) > 0 || hasWaitingLocalChanges(result);
+}
+
+export function hasFastRetryWork(result: CompanionDesktopSyncResult) {
+  return hasRetryWork(result) && (madeResourceProgress(result)
+    || result.madeDatabaseProgress === true);
 }

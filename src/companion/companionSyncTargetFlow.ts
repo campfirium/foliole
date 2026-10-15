@@ -100,7 +100,7 @@ async function runOwnedTarget(args: {
         runId, startedAt, status: 'skipped', triggerReason
       });
       if (pending) args.syncArgs.setState(pending);
-      return 'backlog';
+      return 'pending';
     }
     return recordTargetFailure({
       endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason

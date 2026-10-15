@@ -23,7 +23,7 @@ import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult
 const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 24 };
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'] });
+  runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'], madeProgress: true });
   runtime.resources.mockResolvedValue({ pending: 3, transferred: 1 });
 });
 
@@ -34,7 +34,8 @@ it('reports request-scoped database changes and keeps attachment progress separa
     localLibraryEpoch: 'local-epoch', peerState: { sender_device_identity_key: 'desktop', library_epoch: 'desktop-epoch' } }));
   expect(refreshed).toHaveBeenCalledOnce();
   expect(result).toMatchObject({ appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
-    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: 3 });
+    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: 3,
+    transferredAttachmentCount: 1, madeDatabaseProgress: true });
 });
 
 it('rejects missing negotiation and the incompatible previous protocol', async () => {

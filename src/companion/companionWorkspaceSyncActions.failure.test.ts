@@ -49,3 +49,12 @@ describe('companion workspace manual sync failures', () => {
     expect(callbacks.setSyncProgress).toHaveBeenCalledWith(null);
   });
 });
+
+it('does not report a busy manual round as completed and can complete after contention ends', async () => {
+  resetSyncActionMocks();
+  const { actions } = createActions();
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new Error('sync_round_busy'))
+    .mockResolvedValueOnce(createSyncResult());
+  await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).rejects.toThrow('Manual sync did not complete');
+  await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+});
