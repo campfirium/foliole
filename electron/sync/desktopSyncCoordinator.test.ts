@@ -68,6 +68,22 @@ it('queues a different preferred Device behind the active run', async () => {
   expect(transport.continueDesktopSyncGroupSync).toHaveBeenNthCalledWith(2, peerB, expect.any(Object));
 });
 
+it('checks every available device when manual sync arrives during a single-device automatic round', async () => {
+  const work = deferred<{ complete: boolean; cursor: number }>();
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([peer, peerB]);
+  transport.continueDesktopSyncGroupSync.mockReturnValueOnce(work.promise);
+  const automatic = runDesktopSyncCoordinator('automatic', peer);
+  const manual = runDesktopSyncCoordinator('manual');
+  const repeatedManual = runDesktopSyncCoordinator('manual');
+  work.resolve({ complete: true, cursor: 9 });
+  await automatic;
+  await manual;
+  expect(repeatedManual).toBe(manual);
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledWith(peerB,
+    expect.objectContaining({ reason: 'manual' }));
+  await expect(manual).resolves.toMatchObject({ reason: 'manual', status: 'completed' });
+});
+
 it('persists a manual failure while leaving transport cursor ownership unchanged', async () => {
   transport.continueDesktopSyncGroupSync.mockRejectedValueOnce(new Error('sync_pack_apply_failed'));
 

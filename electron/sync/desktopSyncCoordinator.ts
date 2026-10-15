@@ -46,8 +46,9 @@ export function runDesktopSyncCoordinator(
   reason: SyncTriggerReason,
   preferredPeer?: DesktopSyncGroupPeer
 ): Promise<SyncTriggerResult> {
-  if (activeRun && (!preferredPeer || activePeerId === preferredPeer.peer_device_id)) return activeRun;
-  const queued = preferredPeer && queuedRuns.get(preferredPeer.peer_device_id);
+  if (activeRun && activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
+  const queued = preferredPeer ? queuedRuns.get(preferredPeer.peer_device_id)
+    : pendingRuns.find(request => !request.peer)?.promise;
   if (queued) return queued;
   let resolve!: SyncRequest['resolve'];
   let reject!: SyncRequest['reject'];
