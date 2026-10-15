@@ -19,10 +19,10 @@ const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities]
 
 it('rejects a same-version peer lacking the current request transport', () => {
   const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-    .filter(value => value !== 'framed-sync-v24') });
+    .filter(value => value !== 'framed-sync-v25') });
   expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
     status: 'incompatible', reason: 'required_capability_missing',
-    missing_capabilities: ['framed-sync-v24']
+    missing_capabilities: ['framed-sync-v25']
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).status).toBe('compatible');
 });
@@ -37,10 +37,10 @@ it('rejects peers that cannot retain the whole body and its alternatives', () =>
 });
 
 describe('syncProtocolContract', () => {
-  it('accepts the exact v24 descriptor and returns a negotiated version', () => {
+  it('accepts the exact v25 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({
       missing_capabilities: [],
-      negotiated_version: 24,
+      negotiated_version: 25,
       reason: null,
       status: 'compatible'
     });
@@ -54,11 +54,21 @@ describe('syncProtocolContract', () => {
     [descriptor({ max_supported_version: 11, min_supported_version: 11, version: 11 }), 'protocol_version_unsupported'],
     [descriptor({ max_supported_version: 15, min_supported_version: 15, version: 15 }), 'protocol_version_unsupported'],
     [descriptor({ max_supported_version: 22, min_supported_version: 22, version: 22 }), 'protocol_version_unsupported'],
+    [descriptor({ max_supported_version: 24, min_supported_version: 24, version: 24 }), 'protocol_version_unsupported'],
     [descriptor({ version: 2 }), 'protocol_version_unsupported'],
-    [descriptor({ min_supported_version: 25 }), 'protocol_metadata_invalid'],
+    [descriptor({ min_supported_version: 26 }), 'protocol_metadata_invalid'],
     [descriptor({ max_supported_version: 5, min_supported_version: 5, version: 5 }), 'protocol_version_unsupported']
   ])('rejects %j as %s', (remote, reason) => {
     expect(evaluateSyncProtocolCompatibility(remote)).toMatchObject({ reason, status: 'incompatible' });
+  });
+
+  it('rejects old and new generations in both directions before accepting the upgraded peer', () => {
+    const old = descriptor({ version: 24, min_supported_version: 24, max_supported_version: 24 });
+    expect(evaluateSyncProtocolCompatibility(old)).toMatchObject({ status: 'incompatible' });
+    expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR, old))
+      .toMatchObject({ status: 'incompatible' });
+    expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
+      .toMatchObject({ status: 'compatible', negotiated_version: 25 });
   });
 
   it('reports missing required capabilities', () => {
@@ -75,7 +85,7 @@ describe('syncProtocolContract', () => {
     const hint = parseSyncProtocolTxt(txt);
     expect(txt).not.toHaveProperty('protocol_capabilities');
     expect(Object.entries(txt).every(([key, value]) => Buffer.byteLength(`${key}=${value}`) <= 255)).toBe(true);
-    expect(hint).toEqual({ max_supported_version: 24, min_supported_version: 24, version: 24 });
+    expect(hint).toEqual({ max_supported_version: 25, min_supported_version: 25, version: 25 });
     expect(evaluateSyncProtocolVersionHint(hint)).toMatchObject({ status: 'compatible' });
     expect(syncProtocolVersionHintMatchesDescriptor(hint, CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
   });
@@ -90,7 +100,7 @@ describe('syncProtocolContract', () => {
   });
 });
 
-it('requires the display-name contract as part of the exact v24 generation', () => {
+it('requires the display-name contract as part of the exact v25 generation', () => {
   const legacyV2 = descriptor({
     max_supported_version: 2,
     min_supported_version: 2,
@@ -105,7 +115,7 @@ it('requires the display-name contract as part of the exact v24 generation', () 
     status: 'incompatible'
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
-    .toMatchObject({ negotiated_version: 24, status: 'compatible' });
+    .toMatchObject({ negotiated_version: 25, status: 'compatible' });
 });
 
 it('rejects peers that cannot preserve article image sources', () => {

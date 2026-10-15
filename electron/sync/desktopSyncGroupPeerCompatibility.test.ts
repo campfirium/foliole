@@ -48,7 +48,7 @@ it('rejects a provider missing the current request transport', async () => {
   const protocol = {
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-      .filter((capability) => capability !== 'framed-sync-v24')
+      .filter((capability) => capability !== 'framed-sync-v25')
   };
   await expect(assertDesktopSyncGroupPeerCompatible(
     peer, vi.fn(async () => response(protocol)) as typeof fetch

@@ -51,7 +51,7 @@ function encodeCase(protocolMessage, input) {
 function handshake(capabilities) {
   return {
     capabilities, deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a',
-    protocolVersion: 24, sessionId: bytes(3, 16)
+    protocolVersion: 25, sessionId: bytes(3, 16)
   };
 }
 
@@ -160,6 +160,6 @@ export function maliciousCorpusDocument(protocolMessage, frameTypes) {
     accepted_messages: acceptedBoundaryCases(protocolMessage, frameTypes),
     corpus_version: 1,
     messages: maliciousProtocolCases(protocolMessage, frameTypes),
-    protocol_version: 24
+    protocol_version: 25
   }, null, 2)}\n`;
 }

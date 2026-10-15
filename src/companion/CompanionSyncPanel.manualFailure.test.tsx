@@ -50,9 +50,10 @@ it('uses the action-local terminal result instead of a waiting discovery message
   expect(screen.queryByTestId('companion-sync-error')).not.toBeInTheDocument();
 });
 
-it('shows an independent protocol notice while keeping the sync failure', () => {
+it.each(['protocol_incompatible', 'framed_sync_http_400:framed_sync_protocol_version_unsupported'])(
+  'shows an independent protocol notice while keeping the sync failure: %s', error => {
   renderWithLocalization(
-    <CompanionSyncProtocolNotice error="protocol_incompatible"><CompanionSyncPanel
+    <CompanionSyncProtocolNotice error={error}><CompanionSyncPanel
       bootstrapState={{ booted_at: '', database_path: null, database_ready: true,
         device_id: 'device-1', runtime_kind: 'ios-capacitor' }}
       discoveries={[]}
@@ -81,7 +82,7 @@ it('shows an independent protocol notice while keeping the sync failure', () => 
   );
 
   expect(screen.getByRole('dialog', { name: 'Cannot sync' }))
-    .toHaveTextContent('The syncing devices have different database versions.');
+    .toHaveTextContent('The devices use incompatible sync versions.');
   fireEvent.keyDown(document, { key: 'Escape' });
   expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();
   expect(screen.getByTestId('companion-sync-error')).toHaveTextContent('Update Foliole');

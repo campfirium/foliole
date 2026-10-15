@@ -37,6 +37,7 @@ function entry(row: InventoryRow): FramedSyncInventoryEntry {
     const bodies = versionBodyHashes.parse(JSON.parse(row.version_body_hashes_json));
     for (const version of state[2]) {
       if (version[5] === 'available') version[4] = bodies[version[0]] ?? null;
+      else if (version[5] === 'deleted') version[4] = null;
     }
   }
   const versionStates = state?.[2].map(value => JSON.stringify(value));

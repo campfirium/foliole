@@ -1,7 +1,7 @@
 package com.foliole.android.framed;
 
 public final class FramedSyncContract {
-    public static final int PROTOCOL_VERSION = 24;
+    public static final int PROTOCOL_VERSION = 25;
     public static final int DIGEST_BYTES = 32;
     public static final int IDENTIFIER_BYTES = 16;
     public static final int BLOB_CHUNK_BYTES = 512 * 1024;

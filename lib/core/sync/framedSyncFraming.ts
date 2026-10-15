@@ -55,8 +55,10 @@ export function decodeFramedSyncPreamble(value: Uint8Array): FramedSyncPreamble 
       !magic.every((byte, index) => value[index] === byte)) throw new Error('framed_sync_preamble_invalid');
   const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
   if (view.getUint16(8) !== FRAMED_SYNC_LIMITS.preambleBytes ||
-      view.getUint16(10) !== FRAMED_SYNC_PROTOCOL_VERSION ||
       !value.slice(76).every((byte) => byte === 0)) throw new Error('framed_sync_preamble_invalid');
+  if (view.getUint16(10) !== FRAMED_SYNC_PROTOCOL_VERSION) {
+    throw new Error('framed_sync_protocol_version_unsupported');
+  }
   const kind = view.getUint8(12);
   const compression = view.getUint8(13);
   if ((kind !== 1 && kind !== 2) || (compression !== 0 && compression !== 1) ||

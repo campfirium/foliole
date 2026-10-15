@@ -53,11 +53,13 @@ public final class FramedSyncPreamble {
         int compression = Byte.toUnsignedInt(input.get());
         int reserved = Short.toUnsignedInt(input.getShort());
         if (!Arrays.equals(magic, MAGIC) || length != BYTES ||
-            version != FramedSyncContract.PROTOCOL_VERSION ||
             (contextKind != 1 && contextKind != 2) ||
             (compression != 0 && compression != 1) || reserved != 0) throw invalid();
         for (int index = 76; index < encoded.length; index++) {
             if (encoded[index] != 0) throw invalid();
+        }
+        if (version != FramedSyncContract.PROTOCOL_VERSION) {
+            throw new IllegalArgumentException("framed_sync_protocol_version_unsupported");
         }
         return new FramedSyncPreamble(encoded.clone());
     }

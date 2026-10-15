@@ -16,6 +16,7 @@ export interface CompanionWorkspaceSyncTarget {
   endpointUrl: string;
   groupId?: string;
   protocolVersion?: number;
+  protocolIncompatible?: boolean;
 }
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
@@ -26,7 +27,7 @@ export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspac
 export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   endpointUrl: string,
   options: CompanionDiscoveryOptions = {}
-) {
+): Promise<CompanionWorkspaceSyncTarget[]> {
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
@@ -43,13 +44,17 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
       && candidate.discovery.group_id === group.group_id);
     throw new Error(incompatible ? 'discovery_incompatible' : 'discovery_no_devices');
   }
-  return matches.map((match) => {
+  const incompatiblePeers = discovered.filter(candidate => candidate.compatibility.status === 'incompatible'
+    && candidate.discovery.group_id === group.group_id
+    && candidate.discovery.provider_device_id !== group.local_device_identity_key);
+  return [...matches, ...incompatiblePeers].map((match) => {
     const known = group.devices.find((device) =>
       device.device_identity_key === match.discovery.provider_device_id);
     return { deviceId: match.discovery.provider_device_id,
       deviceName: match.discovery.provider_device_name ?? known?.device_name
         ?? match.discovery.provider_device_id,
       endpointUrl: match.endpointUrl, groupId: group.group_id,
+      ...(match.compatibility.status === 'incompatible' ? { protocolIncompatible: true } : {}),
       ...(match.compatibility.negotiated_version
         ? { protocolVersion: match.compatibility.negotiated_version }
         : {}) };

@@ -20,7 +20,7 @@ vi.mock('./framed/companionSyncPeerRounds.js', () => ({
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 
-const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 24 };
+const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 25 };
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'], madeProgress: true });

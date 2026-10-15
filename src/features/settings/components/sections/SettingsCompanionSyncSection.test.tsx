@@ -136,8 +136,8 @@ it('opens a separate notice for a rejected sync protocol', () => {
   });
 
   const dialog = screen.getByRole('dialog', { name: 'Cannot sync' });
-  expect(dialog).toHaveTextContent('The syncing devices have different database versions.');
-  expect(dialog).toHaveTextContent('Update the app first.');
+  expect(dialog).toHaveTextContent('The devices use incompatible sync versions.');
+  expect(dialog).toHaveTextContent('Update Foliole on all devices, then retry.');
   fireEvent.keyDown(document, { key: 'Escape' });
   expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();
 });

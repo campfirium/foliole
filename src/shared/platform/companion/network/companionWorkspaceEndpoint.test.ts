@@ -64,14 +64,14 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
 
 it('keeps the protocol version negotiated with each discovered desktop', async () => {
   runtime.discover.mockResolvedValue([{
-    compatibility: { negotiated_version: 24, status: 'compatible' }, endpointUrl: 'http://mac:38641',
+    compatibility: { negotiated_version: 25, status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac',
       provider_device_name: 'Mac', provider_platform: 'darwin' }
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641',
-    groupId: 'group-1', protocolVersion: 24
+    groupId: 'group-1', protocolVersion: 25
   }]);
 });
 
@@ -147,4 +147,18 @@ it('surfaces a same-group incompatible desktop instead of waiting indefinitely',
 it('rejects a target from another Sync Group', async () => {
   await expect(bindCompanionWorkspaceSyncTarget({ endpointUrl: 'http://mac:38641', groupId: 'group-2' }))
     .rejects.toThrow('sync_group_identity_mismatch');
+});
+
+it('keeps incompatible members visible after compatible targets in a mixed group', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'incompatible' }, endpointUrl: 'http://old-phone:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-old-phone' }
+  }, {
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
+  }]);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://mac:38641');
+  expect(targets.map(target => [target.endpointUrl, target.protocolIncompatible])).toEqual([
+    ['http://mac:38641', undefined], ['http://old-phone:38641', true]
+  ]);
 });

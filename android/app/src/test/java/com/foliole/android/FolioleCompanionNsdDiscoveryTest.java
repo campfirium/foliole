@@ -94,9 +94,9 @@ public class FolioleCompanionNsdDiscoveryTest {
     private static Path sharedFixturePath() {
         Path root = Path.of(System.getProperty("user.dir")).toAbsolutePath();
         return firstExistingPath(
-            root.resolve("lib/platform/fixtures/sync-group-discovery-v24.json"),
-            root.resolve("../lib/platform/fixtures/sync-group-discovery-v24.json").normalize(),
-            root.resolve("../../lib/platform/fixtures/sync-group-discovery-v24.json").normalize()
+            root.resolve("lib/platform/fixtures/sync-group-discovery-v25.json"),
+            root.resolve("../lib/platform/fixtures/sync-group-discovery-v25.json").normalize(),
+            root.resolve("../../lib/platform/fixtures/sync-group-discovery-v25.json").normalize()
         );
     }
 

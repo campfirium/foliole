@@ -107,7 +107,7 @@ function installUnbackedPublication(sqlite: Database.Database) {
     (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
      group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
      fact_count, blob_count, total_blob_bytes, state)
-    VALUES (x'01', x'02', x'03', x'04', ?, 24, 'group', 'a', 'a-epoch', 'b', 'b-epoch', 1, 0, 0, 'published')`)
+    VALUES (x'01', x'02', x'03', x'04', ?, 25, 'group', 'a', 'a-epoch', 'b', 'b-epoch', 1, 0, 0, 'published')`)
     .run(encodeFramedSyncManifest({ facts: [fact], blobs: [] }));
 }
 

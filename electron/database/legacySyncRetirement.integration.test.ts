@@ -193,13 +193,13 @@ async function publication(host: ReturnType<typeof textDevice>, record: ReturnTy
 
 async function publishManifest(host: ReturnType<typeof textDevice>, manifest: CanonicalManifest, byteLength: number) {
   const contentId = await canonicalContentId(manifest);
-  const context = { protocolVersion: 24, groupId: 'group', senderDeviceId: 'a', senderLibraryEpoch: 'a-epoch',
+  const context = { protocolVersion: 25, groupId: 'group', senderDeviceId: 'a', senderLibraryEpoch: 'a-epoch',
     receiverDeviceId: 'b', receiverLibraryEpoch: 'b-epoch' };
   const transferId = canonicalTransferIdSync(context, contentId);
   host.sqlite.prepare(`INSERT INTO framed_sync_outbound_publications
     (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
     group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,
     fact_count, blob_count, total_blob_bytes, state)
-    VALUES (?, ?, ?, ?, ?, 24, 'group', 'a', 'a-epoch', 'b', 'b-epoch', ?, ?, ?, 'published')`)
+    VALUES (?, ?, ?, ?, ?, 25, 'group', 'a', 'a-epoch', 'b', 'b-epoch', ?, ?, ?, 'published')`)
     .run(transferId, contentId, contentId, new Uint8Array(), encodeFramedSyncManifest(manifest), manifest.facts.length, manifest.blobs.length, byteLength);
 }

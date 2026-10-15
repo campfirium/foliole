@@ -10,12 +10,14 @@ public struct FolioleFramedSyncPreamble: Sendable, Equatable {
         guard encoded.count == Self.byteCount,
               encoded.prefix(Self.magic.count) == Self.magic,
               encoded.uint16BE(at: 8) == UInt16(Self.byteCount),
-              encoded.uint16BE(at: 10) == UInt16(FolioleFramedSyncLimits.protocolVersion),
               [1, 2].contains(encoded[12]),
               [0, 1].contains(encoded[13]),
               encoded.uint16BE(at: 14) == 0,
               encoded[76..<Self.byteCount].allSatisfy({ $0 == 0 }) else {
             throw FolioleFramedSyncValidationError("framed_sync_preamble_invalid")
+        }
+        guard encoded.uint16BE(at: 10) == UInt16(FolioleFramedSyncLimits.protocolVersion) else {
+            throw FolioleFramedSyncValidationError("framed_sync_protocol_version_unsupported")
         }
         self.encoded = encoded
     }

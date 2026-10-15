@@ -7,6 +7,7 @@ import type {
   CanonicalManifest,
   CanonicalValue
 } from './framedSyncCanonicalManifest.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 
 type Row = Record<string, unknown>;
 type LongFactory = Readonly<{
@@ -93,6 +94,6 @@ export function manifestToWire(manifest: CanonicalManifest, groupId: string, con
       requiredBlobHashes: fact.blobs.filter((blob) => blob.required).map((blob) => blob.sha256),
       sharedStateHash: fact.sharedStateHash
     })),
-    groupId, protocolVersion: 24
+    groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION
   };
 }

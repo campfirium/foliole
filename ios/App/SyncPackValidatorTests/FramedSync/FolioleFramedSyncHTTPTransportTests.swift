@@ -85,7 +85,7 @@ final class FolioleFramedSyncHTTPTransportTests: XCTestCase {
             statusCode: 200,
             httpVersion: nil,
             headerFields: [
-                "Content-Type": "application/vnd.foliole.framed-sync; version=24",
+                "Content-Type": "application/vnd.foliole.framed-sync; version=25",
                 "X-Foliole-Device-Id": "desktop-b",
                 "X-Foliole-Library-Epoch": "epoch-b"
             ]

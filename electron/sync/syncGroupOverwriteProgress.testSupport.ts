@@ -18,7 +18,7 @@ export const adoption = { endpointUrl: 'http://localhost:38641', groupId: 'group
 export const progress: SyncGroupOverwriteProgress = { groupId: adoption.groupId, overwriteId: adoption.libraryEpoch,
   providerDeviceId: adoption.providerDeviceId, providerLibraryEpoch: 'sender-epoch',
   receiverDeviceId: 'receiver', receiverLibraryEpoch: adoption.libraryEpoch };
-export const context = { groupId: progress.groupId, protocolVersion: 24,
+export const context = { groupId: progress.groupId, protocolVersion: 25,
   receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch,
   senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch } as const;
 const body = '\ufeffOld library 中文😀\0';

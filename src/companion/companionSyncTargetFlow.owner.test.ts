@@ -60,11 +60,11 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
     }
   }, {
     deviceId: 'desktop-1', endpointUrl: 'http://desktop:38641', groupId: 'group-1',
-    protocolVersion: 24
+    protocolVersion: 25
   }, runStreamSync);
 
   expect(runStreamSync).toHaveBeenCalledWith(expect.objectContaining({ framedPeer: {
-    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 24
+    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 25
   } }));
 });
 
@@ -85,4 +85,21 @@ it('keeps a timed-out foreground round pending for retry without reporting succe
   expect(setSyncProgress).toHaveBeenLastCalledWith(null);
   expect(mocks.recordEvent).toHaveBeenCalledWith(expect.objectContaining({ kind: 'run_finished',
     result: 'partial', status: 'skipped' }));
+});
+
+it('fails an incompatible target before exchanging or applying data', async () => {
+  mocks.exchangeMemberState.mockClear();
+  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work(), mode: 'started', runId }));
+  const setError = vi.fn();
+  const runStreamSync = vi.fn();
+  const { tryForegroundAutoSyncTarget } = await import('./companionSyncTargetFlow');
+  await expect(tryForegroundAutoSyncTarget({ cancelled: () => false, setError,
+    setSyncProgress: vi.fn(), setState: vi.fn(), setStatus: vi.fn(), state: {
+      endpoint_url: 'http://old:38641', last_synced_at: null, remembered_targets: [],
+      sync_events: [], sync_onboarding_status: 'completed', workspace_snapshot: null
+    }
+  }, { endpointUrl: 'http://old:38641', protocolIncompatible: true }, runStreamSync)).resolves.toBe('failed');
+  expect(setError).toHaveBeenLastCalledWith('sync_group_peer_incompatible');
+  expect(mocks.exchangeMemberState).not.toHaveBeenCalled();
+  expect(runStreamSync).not.toHaveBeenCalled();
 });

@@ -20,6 +20,12 @@ const preamble = (): FramedSyncPreamble => ({
   startingSequence: 0n
 });
 
+it('rejects the previous summary generation with an explicit version error', () => {
+  const encoded = encodeFramedSyncPreamble(preamble());
+  new DataView(encoded.buffer).setUint16(10, 24);
+  expect(() => decodeFramedSyncPreamble(encoded)).toThrow('framed_sync_protocol_version_unsupported');
+});
+
 it('round-trips the fixed preamble and authenticated frame header', () => {
   const encodedPreamble = encodeFramedSyncPreamble(preamble());
   const encodedHeader = encodeFrameHeader({ ciphertextBytes: 512, flags: 0, frameType: 3, sequence: 9n });

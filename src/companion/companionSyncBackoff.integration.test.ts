@@ -43,7 +43,7 @@ it('releases a busy automatic round and lets a manual production round persist b
     vi.spyOn(runtime, 'isAvailableNativeCompanionRuntime').mockReturnValue(true);
     view.epoch = `${fixture.rightSnapshot.deviceId}-epoch`;
     const target = { endpointUrl: fixture.rightSnapshot.origin, deviceId: fixture.rightSnapshot.deviceId,
-      groupId: 't326-group', protocolVersion: 24 };
+      groupId: 't326-group', protocolVersion: 25 };
     view.state.endpoint_url = target.endpointUrl;
     await fixture.left.seed({ nodeId: 't326-backoff-mobile-edit', title: 'Mobile', content: 'Saved on mobile' });
     await fixture.right.seed({ nodeId: 't326-backoff-desktop-edit', title: 'Desktop', content: 'Saved on desktop' });
@@ -86,7 +86,7 @@ it('distinguishes a committed neighbor from repeated unchanged pending and resum
   const { fixture } = host;
   const sync = () => runCompanionStreamSync({ cancelled: () => false,
     endpointUrl: fixture.rightSnapshot.origin, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 24 },
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 },
     runId: crypto.randomUUID(), startedAt: new Date().toISOString(), triggerReason: 'automatic',
     workspaceSnapshot: null, setState: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() });
   try {
@@ -126,7 +126,7 @@ it('backs off real transfers when concurrent edits keep differences from shrinki
   let editing = true;
   const sync = () => runCompanionStreamSync({ cancelled: () => false,
     endpointUrl: fixture.rightSnapshot.origin, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 24 },
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 },
     runId: crypto.randomUUID(), startedAt: new Date().toISOString(), triggerReason: 'automatic',
     workspaceSnapshot: null, setState: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() });
   try {

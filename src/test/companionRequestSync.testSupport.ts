@@ -91,7 +91,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
     pathWithQuery: input.path_with_query, bodySha256: input.body_hash, secret: Buffer.alloc(32, 7).toString('base64url')
   }) }));
   const peer = { deviceId: fixture.rightSnapshot.deviceId,
-    libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 24 };
+    libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 };
   rememberCompanionRequestSyncPeerState({ contract_version: 3, group_id: 't326-group',
     sender_device_identity_key: peer.deviceId, library_epoch: peer.libraryEpoch,
     proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null }, true);

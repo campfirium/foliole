@@ -82,6 +82,7 @@ async function runOwnedTarget(args: {
     args.syncArgs.setStatus('syncing');
     args.syncArgs.setError(null);
     args.syncArgs.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
+    if (args.target.protocolIncompatible) throw new Error('sync_group_peer_incompatible');
     await bindCompanionWorkspaceSyncTarget(args.target);
     const memberState = await exchangeCompanionSyncGroupMemberState(args.target);
     if (memberState.localExited) throw new Error('sync_group_local_device_removed');

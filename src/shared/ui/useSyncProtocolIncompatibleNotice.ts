@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 export function isSyncProtocolIncompatibleError(error: string | null) {
-  return Boolean(error && /(?:^|\W)(?:protocol_incompatible|discovery_incompatible|sync_group_peer_incompatible)(?:\W|$)/.test(error));
+  return Boolean(error && /(?:^|\W)(?:protocol_incompatible|discovery_incompatible|sync_group_peer_incompatible|framed_sync_protocol_version_unsupported|protocol_version_invalid|session_protocol_version_invalid)(?:\W|$)/.test(error));
 }
 
 export function useSyncProtocolIncompatibleNotice(incompatible: boolean) {

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 import type { CanonicalManifest, CanonicalValue } from '../sync/framedSyncCanonicalManifest.js';
-import type { FramedSyncContext } from '../sync/framedSyncContract.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../sync/framedSyncContract.js';
 import { decodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
 import type { OutboundPublishInput } from '../sync/framedSyncStagingContract.js';
 
@@ -55,8 +55,8 @@ export async function readFramedSyncRow<T extends DbRow = DbRow>(
   db: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []
 ) { return (await db.query<T>(sql, params))[0] ?? null; }
 export function readFramedSyncContext(row: DbRow): FramedSyncContext {
-  if (row.protocol_version !== 24) throw new Error('framed_sync_protocol_version_unsupported');
-  return { groupId: framedSyncText(row, 'group_id'), protocolVersion: 24,
+  if (row.protocol_version !== FRAMED_SYNC_PROTOCOL_VERSION) throw new Error('framed_sync_protocol_version_unsupported');
+  return { groupId: framedSyncText(row, 'group_id'), protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     receiverDeviceId: framedSyncText(row, 'receiver_device_id'),
     receiverLibraryEpoch: framedSyncText(row, 'receiver_library_epoch'),
     senderDeviceId: framedSyncText(row, 'sender_device_id'),

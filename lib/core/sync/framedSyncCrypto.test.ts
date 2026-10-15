@@ -20,25 +20,25 @@ it('matches the frozen transfer KDF and AES-GCM vector', async () => {
     frameType: 2, sequence: 0n });
   const ciphertext = await encryptFrame({ aad: frameAad(preamble, header), key,
     nonce: frameNonce(noncePrefix, 0n), plaintext });
-  expect(hex(key)).toBe('afff2861db8ed4d503fc1e9f5a3ddc5e29d049d085a13ad7ffce3f3151c58624');
-  expect(hex(ciphertext)).toBe('fc62f3054f7447986181aba2eeccc0d71c948ab7e3ac611bedc9ea57');
+  expect(hex(key)).toBe('a5036acbbb0fd0f277f19adbf2e13641dcf9abcf25764d3f58dbd41dbd56b9ee');
+  expect(hex(ciphertext)).toBe('831f888bba22f9818e019be89acb0506514350da14273f26cead239e');
 });
 
 it('matches the frozen session context and KDF vector', async () => {
   const sessionId = fromHex('00112233445566778899aabbccddeeff');
   const sessionContextId = await deriveSessionContextId({
     groupId: 'group-a', initiatorDeviceId: 'device-a', initiatorLibraryEpoch: 'epoch-a',
-    protocolVersion: 24, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b', sessionId
+    protocolVersion: 25, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b', sessionId
   });
   const key = await deriveSessionFrameKey({
     groupKey: fromHex('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'),
     sessionContextId, sessionId
   });
-  expect(hex(sessionContextId)).toBe('f554ef43cd78aa425c355712432d4e8b5145bf1549832b9f5fc06672a2160933');
-  expect(hex(key)).toBe('31a6b4f56d45cff41955f52b850dfb1aca4e590194c6a41640e5edc7db0f44e9');
+  expect(hex(sessionContextId)).toBe('285da57a1b205b932847e209b450c6f5e7f9afbdc6ef7ef7e203f6f77f2c9075');
+  expect(hex(key)).toBe('a97bdafdd6bdf190e3c5c97b39ecc65edef53b9689ffda5d886f220b596bb53b');
   const httpContext = {
     groupId: 'group-a', initiatorDeviceId: 'device-a', initiatorLibraryEpoch: 'epoch-a',
-    protocolVersion: 24 as const, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b'
+    protocolVersion: 25 as const, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b'
   };
   await expect(assertAuthenticatedSessionBootstrap(httpContext, {
     compression: 'none', contextId: sessionContextId, contextKind: 'session',

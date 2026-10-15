@@ -15,7 +15,7 @@ import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from './numberedMigrationLatestRegi
 let sqlite: Database.Database;
 afterEach(() => sqlite?.close());
 
-async function setup(protocolVersion = 24) {
+async function setup(protocolVersion = 25) {
   sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
