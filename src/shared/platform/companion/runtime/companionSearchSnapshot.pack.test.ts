@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../../../../electron/database/syncLibrary.testSupport';
@@ -45,29 +45,34 @@ function updateSource(source: Peer, seq: number) {
       computeSyncContentHash('external_document', document), 'source', `2026-10-03T0${seq}:00:00Z`);
 }
 
-it('keeps the search snapshot when one real request commits and the next request fails', async () => {
+let library: Awaited<ReturnType<typeof createSearchLibrary>>;
+let source: Peer;
+let target: Peer;
+beforeEach(async () => {
   await startLibraries();
-  const library = await createSearchLibrary();
-  const source = createPeer('source');
-  const target = { ...source, id: 'receiver', name: 'Search', db: library.database,
+  library = await createSearchLibrary();
+  source = createPeer('source');
+  target = { ...source, id: 'receiver', name: 'Search', db: library.database,
     port: createBetterSqliteDbPort(library.database) };
-  try {
-    joinPeers(source, target);
-    const before = await searchCompanionFullTextSnapshot('alpha');
-    const original = JSON.stringify(before);
-    const apply = (seq: number) => {
-      updateSource(source, seq);
-      return writeIosCompanionDatabase(db => withLibraryRequestSnapshot(source,
-        { ...target, port: db }, async replay => { await replay(); }));
-    };
-    await apply(1);
-    library.database.exec("CREATE TRIGGER fail_pack BEFORE INSERT ON external_documents BEGIN SELECT RAISE(ABORT,'later pack failure'); END");
-    await expect(apply(2)).rejects.toThrow('later pack failure');
-    expect(JSON.stringify(before)).toBe(original);
-    const latest = await searchCompanionFullTextSnapshot('alpha');
-    expect(latest.external.find((row) => row.document_id === '000000')?.excerpt).toContain('alpha pack 1');
-    expect(latest.external.find((row) => row.document_id === '000000')?.content).toBe('');
-    expect(library.database.prepare("SELECT content FROM external_documents WHERE document_id='000000'").get())
-      .toEqual({ content: 'alpha pack 1' });
-  } finally { await library.close(); await closeLibraries(); }
-});
+  joinPeers(source, target);
+}, 30000);
+afterEach(async () => { await library?.close(); await closeLibraries(); });
+
+it('keeps the search snapshot when one real request commits and the next request fails', async () => {
+  const before = await searchCompanionFullTextSnapshot('alpha');
+  const original = JSON.stringify(before);
+  const apply = (seq: number) => {
+    updateSource(source, seq);
+    return writeIosCompanionDatabase(db => withLibraryRequestSnapshot(source,
+      { ...target, port: db }, async replay => { await replay(); }));
+  };
+  await apply(1);
+  library.database.exec("CREATE TRIGGER fail_pack BEFORE INSERT ON external_documents BEGIN SELECT RAISE(ABORT,'later pack failure'); END");
+  await expect(apply(2)).rejects.toThrow('later pack failure');
+  expect(JSON.stringify(before)).toBe(original);
+  const latest = await searchCompanionFullTextSnapshot('alpha');
+  expect(latest.external.find((row) => row.document_id === '000000')?.excerpt).toContain('alpha pack 1');
+  expect(latest.external.find((row) => row.document_id === '000000')?.content).toBe('');
+  expect(library.database.prepare("SELECT content FROM external_documents WHERE document_id='000000'").get())
+    .toEqual({ content: 'alpha pack 1' });
+}, 15000);

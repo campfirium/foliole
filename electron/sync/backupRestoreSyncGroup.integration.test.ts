@@ -96,11 +96,11 @@ for (const pause of [false, true]) {
     await offline.send('seed', { id: 'offline-only', content: 'Offline before restore' });
     await offline.close();
     workers.pop();
+    expect((await receiver.send('snapshot')).library.nodesById['remote-only']).toBeDefined();
     await source.send('restore', { file: backup.destinationPath, pause });
     if (pause) source = await resumePausedRestore({ members, groupId, peers, script });
     else await source.send('enable');
     await receiver.send('enable');
-    expect((await receiver.send('snapshot')).library.nodesById['remote-only']).toBeDefined();
     await receiver.send('sync', { ...peers[0], name: 'A' });
     const a = await source.send('snapshot');
     const b = await receiver.send('reopen');

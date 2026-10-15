@@ -70,7 +70,7 @@ it('waits for an offline remaining member, excludes both removal targets, persis
     expect(before.removals.every(item => item.completed_at !== null)).toBe(true);
     for (const target of [d!, e!]) expect(before.devices.find(device =>
       device.device_identity_key === target.peer.identity)?.state).toBe('left');
-    expect(await member.worker.send('reopen')).toEqual(before);
+    expect(await member.worker.send('reopenMemberState')).toEqual(before);
   }
   expect(await a!.worker.send('readFacts')).toEqual(facts);
   expect(await Promise.all([a!, b!, c!, d!, e!].map(member => member.worker.send('readFacts')))).toEqual(protectedFacts);

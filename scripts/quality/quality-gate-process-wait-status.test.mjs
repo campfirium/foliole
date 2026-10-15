@@ -16,7 +16,7 @@ function runWaitFallbackProbe(tempRoot) {
   const script = [
     `source "${PROCESS_SCRIPT.replaceAll('\\', '/')}"`,
     'resolve_quality_gate_heartbeat_seconds() { printf "1"; }',
-    'wait() { return 127; }',
+    'wait() { builtin wait "$@"; return 127; }',
     `run_command_with_limits "quality-gate-test" "${outputFile}" 0 0 "wait fallback" bash -lc "printf probe-ok"`,
     'printf "exit=%s\\n" "$?"',
     `printf "log=%s\\n" "$(cat "${outputFile}")"`

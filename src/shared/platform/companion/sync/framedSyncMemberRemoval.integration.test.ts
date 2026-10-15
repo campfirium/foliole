@@ -112,20 +112,20 @@ it('preserves member positions, current text and version identity after ordinary
 });
 
 it.each(['desktop', 'companion'])('rolls back membership and confirmation when %s completion fails', async host => {
-  const a = device(0), c = device(2);
+  const a = device(0), b = device(1);
   const facts = await seedMemberFacts(a);
   bind(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key);
   const decision = wire();
-  bind(c);
-  const exited = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
+  bind(b);
+  const confirmed = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key).state;
   bind(a);
   const before = wire();
   a.exec(`CREATE TRIGGER reject_completion BEFORE UPDATE OF completed_at ON sync_group_removal_decisions
     WHEN NEW.completed_at IS NOT NULL BEGIN SELECT RAISE(ABORT, 'fixture_completion_failure'); END`);
   const apply = async () => host === 'desktop'
-    ? applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key)
-    : applyCompanionSyncGroupMemberState(exited, identities[2]!.identity_key);
+    ? applyDesktopSyncGroupMemberState(confirmed, identities[1]!.identity_key)
+    : applyCompanionSyncGroupMemberState(confirmed, identities[1]!.identity_key);
   await expect(apply()).rejects.toThrow('fixture_completion_failure');
   expect(wire()).toEqual(before);
   expect(memberState(a, 2)).toBe('active');

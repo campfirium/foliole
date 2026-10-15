@@ -123,7 +123,7 @@ async function runRemovalFixture(action: string, args: Record<string, unknown>) 
       group_id: group.group_id, local_device_id: group.local_device_identity_key,
       peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });
   }
-  if (action === 'reopen') {
+  if (action === 'reopenMemberState') {
     closeDatabaseConnection(); initializeDatabase();
     return loadDesktopSyncGroupMemberState();
   }
@@ -135,7 +135,7 @@ async function run(action: string, args: Record<string, unknown>) {
     'joinProviderEnable', 'joinOverview', 'joinInterrupt'].includes(action)) {
     return runJoinFixture(action, args);
   }
-  if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopen'].includes(action)) {
+  if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopenMemberState'].includes(action)) {
     return runRemovalFixture(action, args);
   }
   if (action === 'init') return initializeGroup(args);

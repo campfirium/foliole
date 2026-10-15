@@ -1,4 +1,7 @@
 export const controlledSyncSqliteTests = [
+  'electron/database/syncGroupRemovalRollback.test.ts',
+  'electron/sync/buildCompanionSyncDiagnostics.test.ts',
+  'electron/sync/desktopSyncGroupActivation.integration.test.ts',
   'electron/sync/pdfCrossPageAnchor.integration.test.ts',
   'electron/sync/desktopFramedSyncVersionChainRegression.integration.test.ts',
   'electron/sync/desktopFramedSyncRelationReviewProcess.integration.test.ts',
