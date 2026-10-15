@@ -17,7 +17,7 @@ import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalida
 import { isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
-import { applyStoredNodeVersionBodyState } from './syncNodeVersionBodyState.js';
+import { applyStoredNodeVersionBodyState, repairStoredRetiredNodeBodyHash } from './syncNodeVersionBodyState.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
@@ -48,6 +48,7 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
         !isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot)) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
+    await repairStoredRetiredNodeBodyHash(port, record);
     if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) await applyStoredNodeVersionBodyState(port, record);
     await retainVersionParents(port, record);
     return;

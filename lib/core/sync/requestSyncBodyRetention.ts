@@ -1,4 +1,4 @@
-import { releasedVersionBodyHashesWithPort } from '../database/releasedVersionBodyHashes.js';
+import { PRESERVE_RELEASED_MAIN_HASH_SQL, releasedVersionBodyHashesWithPort } from '../database/releasedVersionBodyHashes.js';
 import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobCollection.js';
 
 
@@ -45,7 +45,9 @@ export async function collectRequestSyncBodies(port: DbPort, nodeId: string, lim
     const plan = await planStoredTopicBodies(tx, nodeId, node.current_version_id, limit);
     const hashes = new Set<string>();
     for (const id of plan.removed ?? []) {
-      for (const hash of await releasedVersionBodyHashesWithPort(tx, id)) hashes.add(hash);
+      const released = await releasedVersionBodyHashesWithPort(tx, id);
+      for (const hash of released.hashes) hashes.add(hash);
+      if (released.mainBodyHash) await tx.run(PRESERVE_RELEASED_MAIN_HASH_SQL, [released.mainBodyHash, id]);
     }
     for (const statement of chainMutationStatements(plan)) await tx.run(statement.sql, statement.params);
     if (hashes.size) await collectTextBodyBlobCandidatesWithPort(tx, [...hashes]);

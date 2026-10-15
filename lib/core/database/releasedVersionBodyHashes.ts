@@ -19,6 +19,10 @@ type Descriptor = { body_length: number | null; snapshot_length: number | null;
   body_hash: string | null; alternative_type: string | null };
 type Source = 'body' | 'snapshot';
 
+export const PRESERVE_RELEASED_MAIN_HASH_SQL = `UPDATE node_sync_versions
+  SET snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?)
+  WHERE version_id = ? AND json_extract(snapshot_json, '$.body_blob_hash') IS NULL`;
+
 function rangeSql(source: Source) {
   return `SELECT substr(CAST(${source === 'body' ? 'body_text' : SNAPSHOT_BODY} AS BLOB), ?, ?) AS data
     FROM node_sync_versions WHERE version_id = ?`;
@@ -41,9 +45,10 @@ function sources(row: Descriptor) {
 /** Discover release candidates before stripping the version, without returning historical text. */
 export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, versionId: string) {
   const row = driver.queryOne<Descriptor>(DESCRIPTOR_SQL, [versionId]);
-  if (!row) return [];
+  if (!row) return { hashes: new Array<string>(), mainBodyHash: null };
   const hashes = new Set<string>();
   let snapshotHash: string | null = null;
+  let mainBodyHash: string | null = null;
   for (const [source, size] of sources(row)) {
     if (size === null) continue;
     const digest = sha256.create();
@@ -54,21 +59,24 @@ export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, vers
           [offset + 1, length, versionId]), length));
       }
       const hash = bytesToHex(digest.digest());
-      if (source === 'body') hashes.add(hash);
-      else snapshotHash = hash;
+      if (source === 'body') {
+        hashes.add(hash);
+        mainBodyHash = hash;
+      } else snapshotHash = hash;
     } finally { digest.destroy(); }
   }
   for (const alternative of driver.queryAll<{ hash: string }>(ALTERNATIVES_SQL, [versionId])) hashes.add(alternative.hash);
   if (row.body_hash) hashes.add(row.body_hash);
   if (snapshotHash !== null) hashes.add(snapshotHash);
-  return [...hashes];
+  return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash };
 }
 
 export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId: string) {
   const [row] = await port.query<Descriptor>(DESCRIPTOR_SQL, [versionId]);
-  if (!row) return [];
+  if (!row) return { hashes: new Array<string>(), mainBodyHash: null };
   const hashes = new Set<string>();
   let snapshotHash: string | null = null;
+  let mainBodyHash: string | null = null;
   for (const [source, size] of sources(row)) {
     if (size === null) continue;
     const digest = sha256.create();
@@ -79,12 +87,14 @@ export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId:
         digest.update(checkedBytes(chunk, length));
       }
       const hash = bytesToHex(digest.digest());
-      if (source === 'body') hashes.add(hash);
-      else snapshotHash = hash;
+      if (source === 'body') {
+        hashes.add(hash);
+        mainBodyHash = hash;
+      } else snapshotHash = hash;
     } finally { digest.destroy(); }
   }
   for (const alternative of await port.query<{ hash: string }>(ALTERNATIVES_SQL, [versionId])) hashes.add(alternative.hash);
   if (row.body_hash) hashes.add(row.body_hash);
   if (snapshotHash !== null) hashes.add(snapshotHash);
-  return [...hashes];
+  return { hashes: [...hashes], mainBodyHash: mainBodyHash ?? snapshotHash };
 }

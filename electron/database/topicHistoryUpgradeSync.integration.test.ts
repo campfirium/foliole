@@ -2,13 +2,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
-import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { legacyHistoryRuntime } from './legacyHistoryRuntime.testSupport.js';
 import { assertPersisted, closeLibraries, createPeer, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
@@ -74,6 +75,23 @@ it('keeps two preexisting complete equal-body heads and their adopted pointer wh
       .toEqual([{ version_id: 'extra-head' }, { version_id: 'v3' }]);
     expect((await loadCurrentSyncNodeRecord(peer.port, 'topic'))!.snapshot.text_alternatives).toEqual([]);
   }
+});
+
+it('converges an unknown retired hash after rolling through the old receiver', async () => {
+  const { a, b } = await oldPeers();
+  for (const peer of [a, b]) peer.db.exec(`UPDATE node_sync_versions SET body_text = 'Original',
+    snapshot_json = json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = 'v1'`);
+  initializeDatabaseSchema(a.db);
+  await withLibraryRequestSnapshot(a, b, replay => replay(), legacy.runtime);
+  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_deleted).toBe(true);
+  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_blob_hash ?? null).toBeNull();
+  initializeDatabaseSchema(b.db);
+  await withLibraryRequestSnapshot(a, b, replay => replay());
+  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!).toMatchObject({ body_text: null,
+    snapshot: { body_deleted: true, body_blob_hash: hashTextBody('Original') } });
+  const entries = await Promise.all([a, b].map(peer => readFramedSyncInventoryEntry(peer.port, key)));
+  expect(compareFramedSyncInventories({ local: [entries[0]!], remote: [entries[1]!] })).toEqual([]);
+  assertPersisted(b, 'Current complete body', 'v3');
 });
 
 it('protects a still-current old version until the complete descendant is adopted', async () => {

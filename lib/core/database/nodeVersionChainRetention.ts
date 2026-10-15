@@ -5,7 +5,7 @@ import { planTopicBodyRetention, TOPIC_BODY_VERSIONS_SQL, TOPIC_EDIT_BASES_SQL,
   type TopicBodyVersion } from '../sync/topicBodyRetentionPlan.js';
 
 import type { DatabaseDriver } from './driver.js';
-import { releasedVersionBodyHashesWithDriver } from './releasedVersionBodyHashes.js';
+import { PRESERVE_RELEASED_MAIN_HASH_SQL, releasedVersionBodyHashesWithDriver } from './releasedVersionBodyHashes.js';
 import { collectTextBodyBlobCandidates } from './textBodyBlobCollection.js';
 
 /** Synchronous host adapter for the same chain planner used by DbPort hosts. */
@@ -17,8 +17,12 @@ export function collectNodeVersionChainWithDriver(driver: DatabaseDriver, nodeId
     const plan = planTopicBodyRetention(driver.queryAll<TopicBodyVersion>(TOPIC_BODY_VERSIONS_SQL, [nodeId]),
       driver.queryAll<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), node.current_version_id,
       driver.queryAll<{ version_id: string }>(TOPIC_EDIT_BASES_SQL, [nodeId]), Number.MAX_SAFE_INTEGER);
-    const releasedHashes = new Set((plan.removed ?? []).flatMap((id) =>
-      releasedVersionBodyHashesWithDriver(driver, id)));
+    const releasedHashes = new Set<string>();
+    for (const id of plan.removed) {
+      const released = releasedVersionBodyHashesWithDriver(driver, id);
+      for (const hash of released.hashes) releasedHashes.add(hash);
+      if (released.mainBodyHash) driver.execute(PRESERVE_RELEASED_MAIN_HASH_SQL, [released.mainBodyHash, id]);
+    }
     for (const statement of chainMutationStatements(plan)) driver.execute(statement.sql, statement.params);
     if (releasedHashes.size) {
       collectTextBodyBlobCandidates(driver, [...releasedHashes]);
