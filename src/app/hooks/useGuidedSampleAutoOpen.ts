@@ -20,6 +20,6 @@ export function useGuidedSampleAutoOpen(
       openNotesView: actions.openNotesView,
       startReviewSession: useWorkspaceStore.getState().startReviewSession,
       startStudyMode: actions.startStudyMode
-    });
+    }, 'startup');
   }, [actions, isWorkspaceHydrated]);
 }

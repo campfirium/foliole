@@ -31,7 +31,8 @@ function startGuidedSampleReviewSession(queueNodeIds: string[]) {
   return true;
 }
 
-export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandActions) {
+export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandActions,
+  intent: 'user' | 'startup' = 'user') {
   const result = await ensureGuidedSampleTopicTree(
     () => useWorkspaceStore.getState(),
     undefined,
@@ -40,9 +41,15 @@ export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandAc
   if (!result.rootNodeId) {
     return false;
   }
+  const mayOpen = () => {
+    const active = useWorkspaceStore.getState().activeNodeId;
+    return intent === 'user' || active === null || result.queueNodeIds.includes(active);
+  };
+  if (!mayOpen()) return false;
 
   actions.closeTrashView();
-  await openWorkspaceNodeWithPreparedDocument(result.rootNodeId, { forceLoad: true });
+  const opened = await openWorkspaceNodeWithPreparedDocument(result.rootNodeId, { forceLoad: true, shouldApply: mayOpen });
+  if (!opened) return false;
 
   if (!result.wasWorkspaceEmpty) {
     actions.openNotesView();
