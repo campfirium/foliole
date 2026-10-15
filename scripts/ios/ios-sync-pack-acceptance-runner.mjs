@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mjs';
@@ -44,9 +45,11 @@ export function verifySyncPackAcceptance(
   firstBridge, secondBridge, firstSnapshot, secondSnapshot, observations = {}
 ) {
   const service = observations.sync_pack ?? {};
-  const pushed = new Set(firstBridge.roundtrip?.push?.pushedObjectIds ?? []);
+  const pushed = firstBridge.roundtrip?.push?.pushedObjectIds;
+  const expected = expectedPushedObjects(observations);
   const firstPassed = firstBridge.phase === 'applied' && firstBridge.apply?.remainingStructureChangeCount === 0 &&
-    pushed.has(service.capture_node_id) && pushed.has('ios-acceptance-restore') && gatesOpen(firstBridge.roundtrip?.gates);
+    expected !== null && Array.isArray(pushed) && JSON.stringify([...pushed].sort()) === JSON.stringify(expected) &&
+    gatesOpen(firstBridge.roundtrip?.gates);
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesOpen(secondBridge.roundtrip?.gates);
   const version = suffix => `ver_00000000-0000-4000-8000-000000000${suffix}`;
@@ -63,6 +66,18 @@ export function verifySyncPackAcceptance(
     throw new Error('iOS request sync acceptance evidence is incomplete.');
   }
   return { first: firstBridge, first_snapshot: firstSnapshot, second: secondBridge, second_snapshot: secondSnapshot };
+}
+
+function expectedPushedObjects(observations) {
+  const deviceId = observations.accepted_device_id;
+  const captureId = observations.sync_pack?.capture_node_id;
+  if (typeof deviceId !== 'string' || typeof captureId !== 'string' || !captureId) return null;
+  let identity;
+  try { identity = JSON.parse(deviceId); } catch { return null; }
+  if (!Array.isArray(identity) || identity.length !== 4 || identity[0] !== 1 ||
+      identity.slice(1).some(value => typeof value !== 'string' || !value)) return null;
+  const positionId = `pos_${createHash('sha256').update(JSON.stringify([identity[1], deviceId, captureId])).digest('hex')}`;
+  return [captureId, 'ios-acceptance-restore', positionId].sort();
 }
 
 function gatesOpen(gates) {
