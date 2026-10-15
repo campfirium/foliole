@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -66,7 +67,10 @@ it.each(['node-random-capture-a', 'node-random-capture-b'])('continues actual ca
       .toEqual([{ parent_version_id: captureVersion }]);
     expect(sqlite.prepare('SELECT title,parent_id FROM nodes WHERE id=?').get(nodeId))
       .toEqual({ title: 'Mac successor acceptance', parent_id: 'special-inbox' });
-    expect(sqlite.prepare('SELECT * FROM node_sync_versions WHERE version_id<>? ORDER BY version_id').all(IOS_HOSTED_SUCCESSOR_VERSION_ID)).toEqual(before);
+    const retained = before.map(row => row.version_id === captureVersion ? { ...row, body_text: null,
+      snapshot_json: JSON.stringify({ ...JSON.parse(row.snapshot_json), content: null, body_deleted: true,
+        body_blob_hash: createHash('sha256').update('iOS quick capture acceptance').digest('hex') }) } : row);
+    expect(sqlite.prepare('SELECT * FROM node_sync_versions WHERE version_id<>? ORDER BY version_id').all(IOS_HOSTED_SUCCESSOR_VERSION_ID)).toEqual(retained);
     const after = sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
     expect(advanceIosHostedRequestSuccessor()).toMatchObject({ ready: true, created: false, captureNodeId: nodeId });
     expect(sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(after);
