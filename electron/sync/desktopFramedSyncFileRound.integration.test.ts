@@ -78,3 +78,41 @@ it('delivers the same requested content again after file retirement and process 
   assertNoTransportRows(restarted.snapshot.databasePath);
   assertNoTransportRows(fixture.rightSnapshot.databasePath);
 }, 120_000);
+
+it('versions remapped child anchors and converges both durable libraries after a remote parent edit', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  root = fixture.root;
+  processes.push(fixture.left, fixture.right);
+  await fixture.left.seed({ content: 'Alpha Beta Gamma', nodeId: 'anchor-parent', title: 'Parent' });
+  await fixture.left.seed({ content: 'Child body', nodeId: 'anchor-child', title: 'Child',
+    parentNodeId: 'anchor-parent', anchorLink: { id: 'anchor', kind: 'highlight',
+      locator: { from: 6, to: 10, originalText: 'Beta' } } });
+  expect(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot)).toMatchObject({ complete: true });
+  await fixture.left.seed({ content: 'Prefix Alpha Beta Gamma', nodeId: 'anchor-parent', title: 'Parent' });
+  expect(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot)).toMatchObject({ complete: true });
+  const read = (file: string) => {
+    const db = new Database(file, { readonly: true });
+    try {
+      return { nodes: db.prepare(`SELECT id,parent_id,content,deleted_at,current_version_id,sync_dirty,anchor_link,
+        anchor_resolution_status,anchor_source_version_id FROM nodes
+        WHERE id IN ('anchor-child','anchor-parent') ORDER BY id`).all(),
+      versions: db.prepare(`SELECT version_id,parent_version_id,content_hash,body_text,
+        json_extract(snapshot_json,'$.parent_id') AS parent_id,
+        json_extract(snapshot_json,'$.deleted_at') AS deleted_at,
+        json_extract(snapshot_json,'$.anchor_link') AS anchor_link,
+        json_extract(snapshot_json,'$.anchor_resolution_status') AS anchor_resolution_status,
+        json_extract(snapshot_json,'$.anchor_source_version_id') AS anchor_source_version_id
+        FROM node_sync_versions WHERE object_id IN ('anchor-child','anchor-parent') ORDER BY version_id`).all() };
+    } finally { db.close(); }
+  };
+  const settled = read(fixture.rightSnapshot.databasePath);
+  expect(settled).toEqual(read(fixture.leftSnapshot.databasePath));
+  expect(settled.nodes).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'anchor-child',
+    sync_dirty: 0, anchor_resolution_status: 'resolved', anchor_source_version_id: expect.any(String),
+    anchor_link: expect.stringContaining('"from":13') })]));
+  const restarted = await fixture.restartRight();
+  processes.push(restarted.process);
+  expect(await reconnectFixturePeer(restarted.process, fixture.leftSnapshot)).toMatchObject({ complete: true });
+  expect(read(restarted.snapshot.databasePath)).toEqual(settled);
+  expect(read(fixture.leftSnapshot.databasePath)).toEqual(settled);
+}, 120_000);
