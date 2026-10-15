@@ -1,10 +1,10 @@
 import { deriveSessionFrameKey, encryptFrame } from './framedSyncCrypto.js';
 import { decodeFramedSyncPreamble, encodeFrameHeader, encodeFramedSyncPreamble, frameAad, frameNonce } from './framedSyncFraming.js';
-import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
+import { decodeAndValidateProtocolMessage } from './framedSyncProtocolCodec.js';
 import { assertFramePayloadBudget, frameTypeForPayload, receiveFramedSyncRequestFrame } from './framedSyncReceiver.js';
 import { assertAuthenticatedSessionBootstrap, deriveSessionContextId,
   type FramedSyncSessionContext } from './framedSyncSession.js';
-import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
+import { encodeRequestSyncMessage, type RequestSyncMessage } from './requestSyncObjectMessages.js';
 import type { RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
 
 export type RequestSyncAuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
@@ -29,7 +29,7 @@ export async function prepareRequestSyncWire(input: {
     for await (const message of input.messages(contextId)) {
       input.signal?.throwIfAborted();
       if (sequence === 0xffff_ffff_ffff_ffffn) throw new Error('frame_sequence_exhausted');
-      const plaintext = encodeValidatedProtocolMessage(message.payloadCase, message.payload);
+      const plaintext = encodeRequestSyncMessage(message);
       const frameType = frameTypeForPayload(message.payloadCase);
       assertFramePayloadBudget(frameType, plaintext.length);
       const headerBytes = encodeFrameHeader({ frameType, flags: 0, sequence, ciphertextBytes: plaintext.length + 16 });

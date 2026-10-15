@@ -17,7 +17,7 @@ import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
-export type FramedFactSource = (db: DbPort) => AsyncIterable<CanonicalFact>;
+export type FramedFactSource = (db: DbPort, kinds?: readonly number[]) => AsyncIterable<CanonicalFact>;
 
 /** The ready owner fixes metadata and body bytes throughout the existing business transaction. */
 export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: {
@@ -52,10 +52,10 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         }
       }
     }
-    for (const source of sources) for await (const fact of source(tx)) {
+    for (const source of sources) for await (const fact of source(tx, [3, 4])) {
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
     }
-    for (const source of sources) for await (const fact of source(tx)) {
+    for (const source of sources) for await (const fact of source(tx, [1])) {
       if (fact.kind === 1) await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions);
     }
     await flushCurrentParentOrderProjectionsWithDbPort(tx);

@@ -8,7 +8,7 @@ import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContrac
 import { FramedSyncFactFragmentDecoder } from './framedSyncFactFrameReader.js';
 import { iterateFramedSyncFactPayloads } from './framedSyncFactPayloads.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from './framedSyncFilePort.js';
-import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
+import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage, type ValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { canonicalFactFromValidatedMessage } from './framedSyncWireFact.js';
 
 export type RequestSyncFilePort = Pick<FramedSyncFilePort, 'read' | 'write' | 'remove'>;
@@ -16,7 +16,7 @@ export const REQUEST_SYNC_MEMORY_BYTES = 4 * 1024 * 1024;
 
 /** Request-local plaintext facts and bodies. No publication, attempt, receipt or encrypted frame is stored. */
 export class RequestSyncFiles {
-  private readonly facts: Array<{ first: number; end: number }> = [];
+  private readonly facts: Array<{ first: number; end: number; kind: number }> = [];
   private readonly memory = new Map<string, Uint8Array>();
   private memoryBytes = 0;
   private writtenBytes = 0;
@@ -63,12 +63,19 @@ export class RequestSyncFiles {
       this.check();
       await this.write(`${this.directory}/fact-${this.nextFrame++}`, encodeValidatedProtocolMessage(payload.payloadCase, payload.payload));
     }
-    this.facts.push({ first, end: this.nextFrame });
+    this.facts.push({ first, end: this.nextFrame, kind: fact.kind });
   }
 
-  async *readFacts(): AsyncIterable<CanonicalFact> {
+  async *readFacts(kinds?: readonly number[]): AsyncIterable<CanonicalFact> {
+    for await (const record of this.readFactRecords(kinds)) yield record.fact;
+  }
+
+  async *readFactRecords(kinds?: readonly number[]): AsyncIterable<{
+    fact: CanonicalFact; wire: { message: ValidatedProtocolMessage; encoded: Uint8Array } | null;
+  }> {
     this.check();
     for (const range of this.facts) {
+      if (kinds && !kinds.includes(range.kind)) continue;
       const decoder = new FramedSyncFactFragmentDecoder();
       let complete = false;
       for (let index = range.first; index < range.end; index++) {
@@ -82,7 +89,11 @@ export class RequestSyncFiles {
         if (!fact) continue;
         if (index !== range.end - 1) throw new Error('request_sync_fact_trailing_frame');
         complete = true;
-        yield canonicalFactFromValidatedMessage(fact);
+        const canonical = canonicalFactFromValidatedMessage(fact);
+        if (canonical.kind !== range.kind) throw new Error('request_sync_fact_kind_mismatch');
+        yield { fact: canonical,
+          wire: range.end === range.first + 1 && message.payloadCase === 'fact'
+            ? { message, encoded: bytes.slice() } : null };
       }
       if (!complete) throw new Error('request_sync_fact_incomplete');
     }

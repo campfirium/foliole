@@ -56,8 +56,8 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     const overwriting = await assertSyncGroupOverwriteInbound(tx, input.context);
     await assertPeer(tx, input, overwriting);
     if (!overwriting) await assertSyncGroupLocalPublicationAllowed(tx);
-    const source: FramedFactSource = async function* (port) {
-      for await (const fact of input.facts(port)) {
+    const source: FramedFactSource = async function* (port, kinds) {
+      for await (const fact of input.facts(port, kinds)) {
         if (fact.globalId !== input.globalId || fact.objectType !== input.objectType) {
           throw new Error('request_sync_object_identity_mismatch');
         }

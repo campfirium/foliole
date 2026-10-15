@@ -121,3 +121,18 @@ it('reads all fact descriptors without preloading their body bytes', async () =>
       .toEqual([...fixture.disk.keys()].filter(key => key.includes('/body-')));
   } finally { await fixture.request.close(); }
 });
+
+it('reads only the requested fact kinds without reopening unrelated spilled snapshots', async () => {
+  const fixture = await spilledFacts();
+  try {
+    const reading = { ...fixture.first, factId: 'reading', kind: 1, blobs: [] };
+    await fixture.request.writeFact(reading);
+    const facts = [];
+    for await (const fact of fixture.request.readFacts([1])) facts.push(fact);
+    expect(facts).toEqual([reading]);
+    expect(fixture.reads).toHaveLength(1);
+    const all = [];
+    for await (const fact of fixture.request.readFacts()) all.push(fact);
+    expect(all).toEqual([fixture.first, fixture.second, reading]);
+  } finally { await fixture.request.close(); }
+});

@@ -16,6 +16,12 @@ export interface RequestSyncObjectHeader {
 }
 
 export type RequestSyncMessage = Readonly<{ payloadCase: ProtocolPayloadCase; payload: unknown }>;
+const objectMessageBytes = new WeakMap<RequestSyncMessage, Uint8Array>();
+
+/** Object digest and encryption consume the same owned, validated encoding. */
+export function encodeRequestSyncMessage(message: RequestSyncMessage) {
+  return objectMessageBytes.get(message) ?? encodeValidatedProtocolMessage(message.payloadCase, message.payload);
+}
 
 /** Facts precede their bodies; a complete end record is required before any business apply. */
 export async function* requestSyncObjectMessages(header: RequestSyncObjectHeader,
@@ -23,16 +29,20 @@ export async function* requestSyncObjectMessages(header: RequestSyncObjectHeader
   const digest = sha256.create();
   const bodyHashes = new Set<string>();
   let factCount = 0n;
-  const account = (message: RequestSyncMessage) => {
-    digest.update(encodeValidatedProtocolMessage(message.payloadCase, message.payload));
+  const account = (message: RequestSyncMessage,
+    encoded = encodeValidatedProtocolMessage(message.payloadCase, message.payload)) => {
+    objectMessageBytes.set(message, encoded);
+    digest.update(encoded);
     return message;
   };
   yield account({ payloadCase: 'request_object_header', payload: header });
-  for await (const fact of files.readFacts()) {
+  for await (const record of files.readFactRecords()) {
+    const { fact } = record;
     if (fact.objectType !== header.objectType || fact.globalId !== header.globalId) {
       throw new Error('request_sync_object_identity_mismatch');
     }
-    for (const message of iterateFramedSyncFactPayloads(fact)) yield account(message);
+    if (record.wire) yield account(record.wire.message, record.wire.encoded);
+    else for (const message of iterateFramedSyncFactPayloads(fact)) yield account(message);
     factCount++;
     for (const blob of fact.blobs) {
       const key = bytesToHex(blob.sha256);

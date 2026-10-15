@@ -70,7 +70,7 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
   const result = await host.write(async db => applyRequestSyncObject(db, {
     context: objectContext(input.context, input.author), globalId: header.globalId, objectType: header.objectType,
     requestId: header.requestId, peerState: input.peerState,
-    facts: async function* () { yield* files.readFacts(); }, loadBody: (_db, blob) => files.loadBody(blob),
+    facts: async function* (_db, kinds) { yield* files.readFacts(kinds); }, loadBody: (_db, blob) => files.loadBody(blob),
     enqueueSearchInvalidations: host.enqueueSearchInvalidations ?? true,
     ...(input.signal ? { signal: input.signal } : {}),
     objectOptions: { ...await host.objectOptions?.(db), ...input.objectOptions }
