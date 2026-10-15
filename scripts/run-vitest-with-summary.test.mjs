@@ -100,9 +100,12 @@ describe('run-vitest-with-summary', () => {
         })
       );
 
-      const result = await runSummary(tempRoot, reportPath, 1);
+      const failingVitest = path.join(tempRoot, 'failing-vitest.mjs');
+      await writeFile(failingVitest, 'process.exit(17);\n');
+      const result = await runSummary(tempRoot, reportPath, 17, { VITEST_BIN: failingVitest });
 
       expect(result.code).toBe(1);
+      expect(result.stderr).toContain('[vitest-summary] child exited: code=17 signal=none');
       expect(result.stdout).toContain(`[vitest-summary] report unavailable: ${reportPath}`);
       await expect(readFile(reportPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     } finally {

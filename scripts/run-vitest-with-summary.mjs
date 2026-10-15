@@ -236,7 +236,10 @@ function runVitest(vitestCommand, args, env) {
       console.error(`[vitest-summary] failed to start vitest: ${error.message}`);
       finish(1);
     });
-    child.on('close', (code) => finish(code ?? 1));
+    child.on('close', (code, signal) => {
+      if (code !== 0) console.error(`[vitest-summary] child exited: code=${code ?? 'null'} signal=${signal ?? 'none'}`);
+      finish(code ?? 1);
+    });
   });
 }
 
