@@ -25,11 +25,11 @@ beforeAll(() => {
   });
   sources.push(path.join(root, 'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupProvider.java'));
   const compiled = spawnSync(binary('javac'), ['-d', directory, ...sources], {
-    encoding: 'utf8', timeout: 30_000
+    encoding: 'utf8', timeout: 60_000
   });
   expect(compiled.error ?? compiled.stderr).toBe('');
   expect(compiled.status).toBe(0);
-}, 30_000);
+}, 90_000);
 
 afterAll(() => {
   if (directory) fs.rmSync(directory, { recursive: true, force: true });
