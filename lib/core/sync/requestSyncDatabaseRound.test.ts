@@ -165,3 +165,23 @@ it('does not count accepted transfers as progress when inventories remain unchan
   });
   expect(result).toEqual({ complete: false, pending: 1, transferred: 1, madeProgress: false });
 });
+
+
+it.each([
+  [2, 2, 2, 2, 2],
+  [2, 1, 2, 1, 2],
+  [2, 3, 3, 3, 3]
+])('does not count changing inventories without a net reduction as progress: %j', async (...counts) => {
+  let exchange = 0;
+  const result = await runRequestSyncDatabaseRound({
+    exchangeInventory: async () => {
+      const revision = exchange++;
+      return { local: Array.from({ length: counts[revision] ?? 0 }, (_, index) => entry(`${revision}-${index}`)), remote: [] };
+    },
+    transferObjects: async differences => differences.map(difference => outcome(difference)),
+    reportObjectError: () => { throw new Error('unexpected_error'); }
+  });
+  expect(result.transferred).toBeGreaterThan(0);
+  expect(result.pending).toBe(counts.at(-1));
+  expect(result.madeProgress).toBe(false);
+});

@@ -28,10 +28,10 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
     { local: [], remote: inventories.remote }, differences, signal);
   const confirmed = await port.exchangeInventory();
   const transferred = round.delivered.length;
-  const madeProgress = JSON.stringify(inventories.local) !== JSON.stringify(confirmed.local)
-    || JSON.stringify(inventories.remote) !== JSON.stringify(confirmed.remote);
-  const pending = pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences: round.delivered }).length;
-  if (pending || round.deferred.length) return { complete: false, pending: Math.max(pending, round.deferred.length), transferred, madeProgress };
+  const pending = Math.max(round.deferred.length,
+    pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences: round.delivered }).length);
+  const madeProgress = pending < differences.length;
+  if (pending) return { complete: false, pending, transferred, madeProgress };
   const complete = await host.write(db => db.transaction(async tx => {
     signal?.throwIfAborted();
     const local = await readFramedSyncOverwriteInventory(tx, context);

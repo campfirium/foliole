@@ -7,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 
 import { buildDesktopFramedSyncFixture, readDesktopFramedSyncLibraryEvidence } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { createCompanionRequestFixture } from '../test/companionRequestSync.testSupport';
+import { createCompanionRequestFixture, native } from '../test/companionRequestSync.testSupport';
 
 import { clearRetryTimer, createForegroundSyncRunner } from './companionForegroundSyncRunner';
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
@@ -113,6 +113,43 @@ it('distinguishes a committed neighbor from repeated unchanged pending and resum
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
       expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes)
         .toContainEqual(expect.objectContaining({ id: 't326-backoff-unavailable', content: 'Saved edit' }));
+    }
+  } finally { await host.close(); }
+}, 30_000);
+
+
+it('backs off real transfers when concurrent edits keep differences from shrinking, then persists convergence', async () => {
+  const host = await createCompanionRequestFixture();
+  const { fixture } = host;
+  const nodeId = 't326-backoff-changing-source';
+  let revision = 0;
+  let editing = true;
+  const sync = () => runCompanionStreamSync({ cancelled: () => false,
+    endpointUrl: fixture.rightSnapshot.origin, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 24 },
+    runId: crypto.randomUUID(), startedAt: new Date().toISOString(), triggerReason: 'automatic',
+    workspaceSnapshot: null, setState: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() });
+  try {
+    await fixture.right.seed({ nodeId, title: 'Changing source', content: `Revision ${revision}` });
+    native.post.mockImplementation(async input => {
+      const response = await host.post(input);
+      if (editing && new URL(input.url).searchParams.get('request') === 'pulls') {
+        await fixture.right.seed({ nodeId, title: 'Changing source', content: `Revision ${++revision}` });
+      }
+      return response;
+    });
+    for (let round = 0; round < 3; round++) {
+      const before = revision;
+      expect(await sync()).toBe('pending');
+      expect(revision).toBeGreaterThan(before);
+      expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
+        .toContainEqual(expect.objectContaining({ id: nodeId, content: `Revision ${revision - 1}` }));
+    }
+    editing = false;
+    expect(await sync()).toBe('completed');
+    for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+      expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes)
+        .toContainEqual(expect.objectContaining({ id: nodeId, content: `Revision ${revision}` }));
     }
   } finally { await host.close(); }
 }, 30_000);

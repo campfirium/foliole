@@ -31,6 +31,7 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => syncPlatformMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => syncObjectsMock);
 vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => memberStateMock);
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
+  isAvailableNativeCompanionRuntime: () => true,
   beginNativeCompanionSyncRun: vi.fn(async (reason: string, runId: string) => ({ reason, run_id: runId, runtime: 'android' }))
 }));
 
