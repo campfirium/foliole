@@ -98,7 +98,8 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
         const identity = `${fact.kind}:${fact.factId}`;
         if (facts.has(identity)) throw new Error('request_sync_fact_duplicate');
         facts.add(identity);
-        await files.writeFact(fact);
+        if (message.payloadCase === 'fact') await files.writeDecodedFact(message);
+        else await files.writeFact(fact);
         await bodies.declare(fact.blobs);
         fragment = undefined;
       }

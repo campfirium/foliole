@@ -1,6 +1,9 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { expect, it } from 'vitest';
 
+import { FRAMED_SYNC_FRAME_TYPES } from './framedSyncContract.js';
+import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
+import { factToWire } from './framedSyncWireProjection.js';
 import { RequestSyncFiles, REQUEST_SYNC_MEMORY_BYTES, type RequestSyncFilePort } from './requestSyncFiles.js';
 
 function storage() {
@@ -135,4 +138,27 @@ it('reads only the requested fact kinds without reopening unrelated spilled snap
     for await (const fact of fixture.request.readFacts()) all.push(fact);
     expect(all).toEqual([fixture.first, fixture.second, reading]);
   } finally { await fixture.request.close(); }
+});
+
+it('retains the validated received fact independently of input buffers and returned byte copies', async () => {
+  const stored = storage();
+  const request = new RequestSyncFiles(stored.port, 'requests/decoded');
+  const fact = { factId: 'received', globalId: 'node', objectType: 'node', kind: 2,
+    sharedStateHash: new Uint8Array(32), body: [], blobs: [] };
+  const encoded = encodeValidatedProtocolMessage('fact', factToWire(fact));
+  const expected = Uint8Array.from(encoded);
+  const message = decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.fact);
+  encoded.fill(255);
+  try {
+    await request.writeDecodedFact(message);
+    const records = [];
+    for await (const record of request.readFactRecords()) records.push(record);
+    expect(records.map(record => record.fact)).toEqual([fact]);
+    expect(records[0]?.wire?.encoded).toEqual(expected);
+    records[0]!.wire!.encoded.fill(0);
+    const reread = [];
+    for await (const record of request.readFactRecords()) reread.push(record);
+    expect(reread[0]?.wire?.encoded).toEqual(expected);
+    expect(reread[0]?.fact).toEqual(fact);
+  } finally { await request.close(); }
 });

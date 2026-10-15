@@ -8,7 +8,7 @@ import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContrac
 import { FramedSyncFactFragmentDecoder } from './framedSyncFactFrameReader.js';
 import { iterateFramedSyncFactPayloads } from './framedSyncFactPayloads.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from './framedSyncFilePort.js';
-import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage, type ValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
+import { decodeAndValidateProtocolMessage, decodedFactEncoding, encodeValidatedProtocolMessage, type ValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { canonicalFactFromValidatedMessage } from './framedSyncWireFact.js';
 
 export type RequestSyncFilePort = Pick<FramedSyncFilePort, 'read' | 'write' | 'remove'>;
@@ -63,6 +63,16 @@ export class RequestSyncFiles {
       this.check();
       await this.write(`${this.directory}/fact-${this.nextFrame++}`, encodeValidatedProtocolMessage(payload.payloadCase, payload.payload));
     }
+    this.facts.push({ first, end: this.nextFrame, kind: fact.kind });
+  }
+
+  async writeDecodedFact(message: ValidatedProtocolMessage) {
+    this.check();
+    if (message.payloadCase !== 'fact') throw new Error('request_sync_fact_required');
+    const encoded = decodedFactEncoding(message);
+    const fact = canonicalFactFromValidatedMessage(message);
+    const first = this.nextFrame;
+    await this.write(`${this.directory}/fact-${this.nextFrame++}`, encoded);
     this.facts.push({ first, end: this.nextFrame, kind: fact.kind });
   }
 

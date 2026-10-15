@@ -1,6 +1,10 @@
 // @vitest-environment node
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -167,4 +171,36 @@ describe('T7 release workflow contract', () => {
     expect(assemblySource).not.toContain('gh release delete "$tag"');
     expect(assemblySource).not.toContain('releases/github/${tag}.md');
   });
+});
+
+it('requires both SHA-bound responsiveness modes and rejects incomplete or failing evidence', () => {
+  const run = linuxResponsiveness.jobs['linux-responsiveness'].steps
+    .find(step => step.name === 'Verify SHA-bound responsiveness evidence').run;
+  const script = run.split("<<'NODE'\n")[1].split('\nNODE')[0];
+  const receipt = mode => ({ targetSha: 'candidate', failures: [], overlappingSampleCount: 8,
+    limits: { minimumOverlappingSamples: 8 }, workload: { result: { mode } } });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'responsiveness-evidence-'));
+  const output = path.join(root, '.tmp/playwright-results/desktop');
+  try {
+    const cases = [
+      { values: [receipt('new'), receipt('existing')], passes: true },
+      { values: [receipt('new')], passes: false },
+      { values: [receipt('new'), receipt('new')], passes: false },
+      { values: [receipt('new'), { ...receipt('existing'), targetSha: 'other' }], passes: false },
+      { values: [receipt('new'), { ...receipt('existing'), failures: ['workload exceeded'] }], passes: false },
+      { values: [{ ...receipt('new'), overlappingSampleCount: 7 }, receipt('existing')], passes: false }
+    ];
+    for (const { values, passes } of cases) {
+      fs.rmSync(output, { recursive: true, force: true });
+      for (const [index, value] of values.entries()) {
+        const directory = path.join(output, String(index));
+        fs.mkdirSync(directory, { recursive: true });
+        fs.writeFileSync(path.join(directory, 'sync-pack-load-responsiveness.json'), JSON.stringify(value));
+      }
+      const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, TARGET_SHA: 'candidate' }
+      });
+      expect(result.status === 0, result.stderr).toBe(passes);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

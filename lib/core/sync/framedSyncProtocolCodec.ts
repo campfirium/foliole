@@ -1,5 +1,6 @@
 import protobuf from 'protobufjs';
 
+import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { assertDecodedProtocolPayload } from './framedSyncDecodedContract.js';
 import { factProtocolByteLength, streamFactProtocolEncoding } from './framedSyncFactEncoding.js';
 import {
@@ -45,6 +46,15 @@ export type ValidatedProtocolMessage<C extends ProtocolPayloadCase = ProtocolPay
   payloadCase: C;
 }>;
 
+const decodedFactEncodings = new WeakMap<ValidatedProtocolMessage, Uint8Array>();
+
+/** Return owned bytes from the successful fact decode, independently of its caller's buffer. */
+export function decodedFactEncoding(message: ValidatedProtocolMessage) {
+  const encoded = decodedFactEncodings.get(message);
+  if (!encoded) throw new Error('protocol_decoded_fact_encoding_missing');
+  return Uint8Array.from(encoded);
+}
+
 function validated<C extends ProtocolPayloadCase>(
   payloadCase: C,
   payload: unknown
@@ -71,7 +81,11 @@ export function decodeAndValidateProtocolMessage(
   if (selected.length !== 1) throw new Error('protocol_payload_case_invalid');
   const [payloadCase, property] = selected[0]!;
   assertDecodedPayloadType(authenticatedFrameType, payloadCase);
-  return validated(payloadCase, decoded[property]);
+  const message = validated(payloadCase, decoded[property]);
+  if (payloadCase === 'fact' && encoded.byteLength <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
+    decodedFactEncodings.set(message, Uint8Array.from(encoded));
+  }
+  return message;
 }
 
 export function encodeValidatedProtocolMessage(

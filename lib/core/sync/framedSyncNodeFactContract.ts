@@ -1,3 +1,4 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
 import type {
@@ -83,10 +84,6 @@ function attachments(value: CanonicalValue) {
   }
 }
 
-function hex(value: Uint8Array) {
-  return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: string | null) {
   if (value.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
   const fields = exactFields(
@@ -160,11 +157,11 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
   if (retired && tombstone.kind === 'bool' && tombstone.value) throw new Error('node_version_retired_tombstone_invalid');
   const contentHash = stringValue(get('content_hash'));
   if (contentHash === null || !/^[a-f0-9]{64}$/u.test(contentHash) ||
-      contentHash !== hex(fact.sharedStateHash)) {
+      contentHash !== bytesToHex(fact.sharedStateHash)) {
     throw new Error('node_version_fact_shared_state_hash_mismatch');
   }
   const references = readFramedSyncNodeResources(
-    assertSnapshot(get('snapshot'), fact.globalId, retired ? null : hex(bodyBlobs[0]!.sha256))
+    assertSnapshot(get('snapshot'), fact.globalId, retired ? null : bytesToHex(bodyBlobs[0]!.sha256))
   );
   const resources = fact.blobs.filter((blob) => blob.role !== 1);
   const snapshotValue = get('snapshot');
@@ -174,12 +171,12 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
   const alternatives = textAlternativesSchema.parse(JSON.parse(alternativesText ?? '[]'));
   const alternativeBlobs = fact.blobs.filter((blob) => blob.role === 1 && blob !== mainBody);
   if (!retired && (alternativeBlobs.length !== alternatives.length || alternatives.some((entry) =>
-    !alternativeBlobs.some((blob) => hex(blob.sha256) === entry.body_blob_hash)))) {
+    !alternativeBlobs.some((blob) => bytesToHex(blob.sha256) === entry.body_blob_hash)))) {
     throw new Error('node_version_fact_body_blob_invalid');
   }
   if (retired) return;
   if (resources.length > 0 && (resources.length !== references.length || references.some((reference) =>
-    !resources.some((blob) => hex(blob.sha256) === reference.contentHash &&
+    !resources.some((blob) => bytesToHex(blob.sha256) === reference.contentHash &&
       blob.role === reference.role)))) {
     throw new Error('node_version_fact_resource_blobs_invalid');
   }
@@ -190,5 +187,5 @@ export function framedSyncMainBodyBlob(fact: CanonicalFact) {
   const snapshot = fact.body.find((field) => field.name === 'snapshot')?.value;
   if (snapshot?.kind !== 'object') return undefined;
   const hash = snapshot.value.find((field) => field.name === 'body_blob_hash')?.value;
-  return hash?.kind === 'string' ? fact.blobs.find((blob) => blob.role === 1 && hex(blob.sha256) === hash.value) : undefined;
+  return hash?.kind === 'string' ? fact.blobs.find((blob) => blob.role === 1 && bytesToHex(blob.sha256) === hash.value) : undefined;
 }

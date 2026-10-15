@@ -81,11 +81,15 @@ jobs:
           const root = '.tmp/playwright-results/desktop';
           const files = readdirSync(root, { recursive: true })
             .filter((file) => file.endsWith('sync-pack-load-responsiveness.json'));
-          if (files.length !== 1) throw new Error(`Expected one responsiveness receipt, got ${files.length}`);
-          const evidence = JSON.parse(readFileSync(path.join(root, files[0]), 'utf8'));
-          if (evidence.targetSha !== process.env.TARGET_SHA || evidence.failures?.length ||
-              evidence.overlappingSampleCount < evidence.limits?.minimumOverlappingSamples) {
-            throw new Error('Responsiveness evidence does not admit the target SHA');
+          if (files.length !== 2) throw new Error(`Expected two responsiveness receipts, got ${files.length}`);
+          const modes = new Set(['new', 'existing']);
+          for (const file of files) {
+            const evidence = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
+            if (evidence.targetSha !== process.env.TARGET_SHA || evidence.failures?.length ||
+                evidence.overlappingSampleCount < evidence.limits?.minimumOverlappingSamples ||
+                !modes.delete(evidence.workload?.result?.mode)) {
+              throw new Error('Responsiveness evidence does not admit the target SHA');
+            }
           }
           NODE
       - name: Upload SHA-bound responsiveness evidence
