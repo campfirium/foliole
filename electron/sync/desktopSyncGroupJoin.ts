@@ -89,8 +89,11 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
   const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
   if (!pending) {
     const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
-    if (!adoption) throw new Error('sync_group_join_not_pending');
     const group = loadDesktopSyncGroup();
+    if (!adoption) {
+      if (group) return group;
+      throw new Error('sync_group_join_not_pending');
+    }
     if (!group || group.group_id !== adoption.groupId) {
       throw new Error('sync_group_local_adoption_source_unavailable');
     }

@@ -139,6 +139,30 @@ for (const mode of ['use-group']) {
   }, 90000);
 }
 
+it('accepts repeated completion after a background round has already completed local adoption', async () => {
+  const peers = await setup();
+  const [applicant, provider] = workers;
+  await expect(applicant!.send('joinComplete')).rejects.toThrow('sync_group_join_not_pending');
+  await applicant!.send('seed', { id: 'local-before', content: 'Local data' });
+  await provider!.send('seed', { id: 'group-source', content: 'Group data' });
+  const request = await applicant!.send('joinRequest', { origin: peers[1]!.origin, mode: 'use-group' }) as unknown as {
+    join_request: { request_id: string }
+  };
+  await provider!.send('joinAccept', { requestId: request.join_request.request_id });
+  await expect(applicant!.send('joinInterrupt')).rejects.toThrow('test_join_interrupted_after_membership');
+  await sync(applicant!, peers[1]!);
+  const before = await applicant!.send('snapshot');
+  expect(before.library.nodesById['group-source']?.content).toBe('Group data');
+  expect(before.library.nodesById['local-before']).toBeUndefined();
+  await expect(applicant!.send('joinComplete')).resolves.toMatchObject({
+    sync_group: { group_id: peers[1]!.device.group_id }
+  });
+  const reopened = await applicant!.send('reopen');
+  expect(reopened.library.nodesById).toEqual(before.library.nodesById);
+  expect(reopened.restore).toBeNull();
+  expect((await provider!.send('snapshot')).library.nodesById['local-before']).toBeUndefined();
+}, 90000);
+
 it('resumes local adoption after interruption and database reopening without publishing old data', async () => {
   const peers = await setup();
   const [applicant, provider] = workers;
