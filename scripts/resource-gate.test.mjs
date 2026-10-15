@@ -1,5 +1,5 @@
 // @vitest-environment node
-/* global process */
+/* global console, process */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFailed } from 'vitest';
 
 import { assertAgentCompletionMessage } from './codex/codex-task-completion.mjs';
 import { formatGateQueueMessage } from './lib/resource-gate.mjs';
@@ -32,6 +32,12 @@ function runGate({ className, command, env = {}, runtimeDir }) {
     });
     let stdout = '';
     let stderr = '';
+    onTestFailed(() => {
+      console.info(JSON.stringify({
+        event: 'resource_gate_test_failure', className, command, pid: child.pid,
+        exitCode: child.exitCode, signalCode: child.signalCode, stdout, stderr
+      }));
+    });
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
     });
