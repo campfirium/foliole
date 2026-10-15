@@ -2,9 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 
 import { resolvePdfSelectionSnapshot, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
-
-const TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET = 22;
-const TOOLBAR_WIDTH = 48;
+import { resolvePdfSelectionToolbarPosition } from './pdfSelectionToolbarPosition';
 
 type PdfSelectionInteraction = { kind: 'idle' } | { kind: 'dragging' } | { kind: 'completed'; event: MouseEvent };
 interface PdfSelectionToolbarInput {
@@ -13,22 +11,10 @@ interface PdfSelectionToolbarInput {
   surfaceRef: MutableRefObject<HTMLElement | null>;
 }
 
-function resolveToolbarPosition(event: MouseEvent | KeyboardEvent) {
-  const selection = window.getSelection();
-  const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-  const rect = range && typeof range.getBoundingClientRect === 'function' ? range.getBoundingClientRect() : null;
-  const pointerX = event instanceof MouseEvent ? event.clientX : null;
-  const anchorX = pointerX && pointerX > 0 ? pointerX : (rect?.left ?? 8) + (rect?.width ?? 0) / 2;
-  return {
-    left: Math.max(8, Math.min(anchorX - TOOLBAR_PRIMARY_ACTION_CENTER_OFFSET, window.innerWidth - TOOLBAR_WIDTH - 8)),
-    top: Math.max(8, (rect?.top ?? 54) - 46)
-  };
-}
-
 function createToolbarHandlers(input: MutableRefObject<PdfSelectionToolbarInput>, surface: HTMLElement, interaction: MutableRefObject<PdfSelectionInteraction>) {
   const open = (event: MouseEvent | KeyboardEvent) => {
     const snapshot = resolvePdfSelectionSnapshot(surface);
-    if (snapshot) input.current.onOpen(snapshot, resolveToolbarPosition(event));
+    if (snapshot) input.current.onOpen(snapshot, resolvePdfSelectionToolbarPosition(event));
   };
   const blur = () => { interaction.current = { kind: 'idle' }; };
   return {

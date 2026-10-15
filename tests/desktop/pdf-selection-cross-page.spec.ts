@@ -29,6 +29,17 @@ for (const scenario of [
       for (const number of numbers) await expectPdfTextCovered(page, number, 'pdf-selection-rect');
       await page.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-cross-page-${scenario.name}-drag.png`) });
       await page.mouse.up();
+      const toolbar = page.locator('[data-annotation-toolbar="true"]');
+      await expect(toolbar).toBeVisible();
+      const endpoint = page.locator('.textLayer span').filter({ hasText: scenario.reverse ? scenario.texts[0] : scenario.texts[1] });
+      await expect.poll(async () => {
+        const actions = await toolbar.boundingBox();
+        const text = await endpoint.boundingBox();
+        if (!actions || !text) return false;
+        const distance = Math.max(text.y - actions.y - actions.height, actions.y - text.y - text.height, 0);
+        return distance < 20;
+      }, { message: 'Selection actions stay beside the text where the drag ends' }).toBe(true);
+      await page.screenshot({ path: path.resolve(`.tmp/artifacts/pdf-cross-page-${scenario.name}-toolbar.png`) });
       await page.getByRole('button', { name: /^(Highlight|高亮)$/ }).click();
       await expect(page.locator('[data-annotation-toolbar="true"]')).toHaveCount(0);
       const excerpts = await page.evaluate(parentId => {
