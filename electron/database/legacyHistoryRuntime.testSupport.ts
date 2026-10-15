@@ -10,6 +10,7 @@ import type * as Inventory from '../../lib/core/sync/framedSyncInventoryRead.js'
 import type * as Edit from '../../lib/core/sync/localContentEdit.js';
 import type * as Apply from '../../lib/core/sync/requestSyncObjectApply.js';
 import type * as Snapshot from '../../lib/core/sync/requestSyncSnapshot.js';
+import type * as Protocol from '../../lib/platform/syncProtocolContract.js';
 
 /** The actually installed pre-retirement revision, compiled as a test fixture with its own imports. */
 export async function legacyHistoryRuntime() {
@@ -20,7 +21,8 @@ export async function legacyHistoryRuntime() {
   execFileSync('tar', ['-xf', '-', '-C', root], { input: archive });
   const entry = ['database/migrations', 'sync/framedSyncInventoryRead',
     'sync/requestSyncObjectApply', 'sync/requestSyncSnapshot', 'sync/localContentEdit']
-    .map(file => `export * from './lib/core/${file}.ts';`).join('\n');
+    .map(file => `export * from './lib/core/${file}.ts';`).join('\n') +
+    "\nexport * from './lib/platform/syncProtocolContract.ts';";
   const outfile = path.join(root, 'runtime.mjs');
   const input = path.join(root, 'entry.ts');
   await writeFile(input, entry);
@@ -30,7 +32,9 @@ export async function legacyHistoryRuntime() {
   const runtime: Pick<typeof Migrations, 'initializeDatabaseSchema'> &
     Pick<typeof Inventory, 'readFramedSyncInventory' | 'readFramedSyncInventoryEntry'> &
     Pick<typeof Apply, 'applyRequestSyncObject'> & Pick<typeof Snapshot, 'writeRequestSyncSnapshot'> &
-    Pick<typeof Edit, 'applyLocalContentEdit'> =
+    Pick<typeof Edit, 'applyLocalContentEdit'> &
+    Pick<typeof Protocol, 'evaluateSyncProtocolCompatibility'> &
+    { CURRENT_SYNC_PROTOCOL_DESCRIPTOR: Protocol.SyncProtocolDescriptor } =
     await import(pathToFileURL(outfile).href);
   return { runtime, close: () => rm(root, { recursive: true, force: true }) };
 }

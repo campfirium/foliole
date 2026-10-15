@@ -67,7 +67,11 @@ it('preserves original offline positions without requiring their old ancestor te
     content_hash: hashText(JSON.stringify(payload)), payload_json: JSON.stringify(payload),
     deleted_at: null, updated_at: payload.updated_at });
   expect(compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
-    remote: await readFramedSyncInventory(target.port) }).some(value => value.globalId === 'topic')).toBe(true);
+    remote: await readFramedSyncInventory(target.port) }).some(value => value.globalId === 'topic')).toBe(false);
+  expect(nodePositionPayloadSchema.parse(target.db.prepare(`SELECT adopted_version_id,
+    device_identity_key, group_id, library_epoch, object_id, pending_version_ids_json,
+    proof_revision, updated_at FROM node_version_member_positions WHERE device_identity_key = ?`)
+    .get(offline.id))).toEqual(payload);
   const before = target.db.prepare('SELECT * FROM node_version_member_positions WHERE device_identity_key = ?').get(target.id);
   await target.port.transaction((tx) => publishLocalNodePosition(tx, 'topic'));
   expect(target.db.prepare('SELECT * FROM node_version_member_positions WHERE device_identity_key = ?').get(target.id))

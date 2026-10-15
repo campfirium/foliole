@@ -138,6 +138,7 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/nodeVersionMemberPositionPage.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionSyncGroupLocalAdoption.sqlite.test.ts',
+  'src/shared/platform/companion/sync/framed/companionRetiredHash.integration.test.ts',
   'src/shared/platform/companion/sync/completeCompanionSyncGroupAdoption.sqlite.test.ts',
   'electron/database/bodyPartAnchorMigration.integration.test.ts',
   'electron/database/externalFolderRetirementCompanion.test.ts',

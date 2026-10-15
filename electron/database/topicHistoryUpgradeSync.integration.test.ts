@@ -10,6 +10,7 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
 import { legacyHistoryRuntime } from './legacyHistoryRuntime.testSupport.js';
 import { assertPersisted, closeLibraries, createPeer, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
@@ -38,13 +39,16 @@ async function oldPeers() {
   return { a, b };
 }
 
-it('supports rolling upgrades through the installed old receiver and completes after both upgrade', async () => {
+it('rejects mixed summary protocols during rolling upgrades and completes after both upgrade', async () => {
   const { a, b } = await oldPeers();
   expect((await readFramedSyncInventoryEntry(b.port, key))!.unready).toBe(true);
   initializeDatabaseSchema(a.db);
-  await withLibraryRequestSnapshot(a, b, replay => replay(), legacy.runtime);
+  expect(evaluateSyncProtocolCompatibility(legacy.runtime.CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
+    .toMatchObject({ status: 'incompatible', reason: 'protocol_version_unsupported' });
+  expect(legacy.runtime.evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
+    .toMatchObject({ status: 'incompatible', reason: 'protocol_version_unsupported' });
   assertPersisted(b, 'Current complete body', 'v3');
-  expect((await readFramedSyncInventoryEntry(b.port, key))!.unready).toBe(false);
+  expect((await readFramedSyncInventoryEntry(b.port, key))!.unready).toBe(true);
   initializeDatabaseSchema(b.db);
   for (const [source, target] of [[b, a], [a, b]] as const) {
     await withLibraryRequestSnapshot(source, target, replay => replay());
@@ -77,15 +81,14 @@ it('keeps two preexisting complete equal-body heads and their adopted pointer wh
   }
 });
 
-it('converges an unknown retired hash after rolling through the old receiver', async () => {
+it('preserves original body hashes when both old libraries upgrade before exchanging current requests', async () => {
   const { a, b } = await oldPeers();
   for (const peer of [a, b]) peer.db.exec(`UPDATE node_sync_versions SET body_text = 'Original',
     snapshot_json = json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = 'v1'`);
   initializeDatabaseSchema(a.db);
-  await withLibraryRequestSnapshot(a, b, replay => replay(), legacy.runtime);
-  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_deleted).toBe(true);
-  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_blob_hash ?? null).toBeNull();
   initializeDatabaseSchema(b.db);
+  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_deleted).toBe(true);
+  expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!.snapshot.body_blob_hash).toBe(hashTextBody('Original'));
   await withLibraryRequestSnapshot(a, b, replay => replay());
   expect((await loadRetainedSyncNodeVersionFact(b.port, 'v1'))!).toMatchObject({ body_text: null,
     snapshot: { body_deleted: true, body_blob_hash: hashTextBody('Original') } });

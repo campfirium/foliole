@@ -28,7 +28,7 @@ const errors: Record<Fault, string | typeof TypeError> = {
   truncated: 'request_sync_object_incomplete', 'missing-body': 'request_sync_object_incomplete',
   'corrupt-body': 'request_sync_body_identity_mismatch', 'duplicate-fact': 'request_sync_body_incomplete',
   'missing-parent': 'node_version_missing_parents:missing', 'wrong-peer': 'session_context_mismatch',
-  'wrong-protocol': 'framed_sync_preamble_invalid',
+  'wrong-protocol': 'framed_sync_protocol_version_unsupported',
   'corrupt-ciphertext': 'frame_authentication_failed', 'missing-frame': 'frame_sequence_not_contiguous',
   'utf8-truncated': TypeError, 'utf8-bad-continuation': TypeError,
   'body-gap': 'request_sync_body_chunk_invalid', 'body-oversized': 'request_sync_body_chunk_invalid',
