@@ -10,9 +10,16 @@ import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGro
 
 let root = '';
 const workers: ReturnType<typeof startRestoreFixture>[] = [];
-afterEach(async () => {
-  await Promise.allSettled(workers.splice(0).map((worker) => worker.close()));
-  if (root) await fs.rm(root, { recursive: true, force: true });
+afterEach(async ({ task }) => {
+  const active = workers.splice(0);
+  await Promise.allSettled(active.map((worker) => worker.close()));
+  if (!root) return;
+  if (task.result?.state === 'fail') {
+    const diagnostics = active.map((worker, index) =>
+      `Process ${index + 1}\n${worker.diagnostics()}`).join('\n');
+    await fs.writeFile(path.join(root, 'processes.log'), diagnostics);
+    console.info('Failed local adoption fixture:', root, diagnostics);
+  } else await fs.rm(root, { recursive: true, force: true });
 });
 
 async function freePort() {
