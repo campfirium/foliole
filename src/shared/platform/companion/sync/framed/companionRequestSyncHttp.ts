@@ -71,13 +71,29 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
 export async function spoolCompanionRequestSyncHttp(files: Pick<RequestSyncFilePort, 'write'>, directory: string, body: FramedSyncStreamBody, signal?: AbortSignal) {
   const digest = sha256.create();
   let count = 0;
+  let pending = new Uint8Array(CHUNK_BYTES);
+  let used = 0;
   for await (const bytes of encodeFramedSyncStream(body)) {
-    for (let offset = 0; offset < bytes.length; offset += CHUNK_BYTES) {
+    let offset = 0;
+    while (offset < bytes.length) {
       signal?.throwIfAborted();
-      const chunk = bytes.subarray(offset, offset + CHUNK_BYTES);
-      await files.write(chunkKey(directory, 'out', count++), chunk);
-      digest.update(chunk);
+      const size = Math.min(CHUNK_BYTES - used, bytes.length - offset);
+      pending.set(bytes.subarray(offset, offset + size), used);
+      used += size;
+      offset += size;
+      if (used === CHUNK_BYTES) {
+        await files.write(chunkKey(directory, 'out', count++), pending);
+        digest.update(pending);
+        pending = new Uint8Array(CHUNK_BYTES);
+        used = 0;
+      }
     }
+  }
+  signal?.throwIfAborted();
+  if (used) {
+    const tail = pending.subarray(0, used);
+    await files.write(chunkKey(directory, 'out', count++), tail);
+    digest.update(tail);
   }
   return { count, hash: bytesToHex(digest.digest()) };
 }

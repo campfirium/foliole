@@ -3,8 +3,10 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { decodeRequestSyncInventory, iterateRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncInventoryWire.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 
@@ -17,7 +19,7 @@ vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompanionDatabaseOwner: () => ({}) }));
 
-import { withCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
+import { companionRequestSyncHttpChunks, spoolCompanionRequestSyncHttp, withCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
 
 const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
   initiatorDeviceId: 'local', initiatorLibraryEpoch: 'local-epoch', responderDeviceId: 'peer', responderLibraryEpoch: 'peer-epoch' } as const;
@@ -87,4 +89,27 @@ it('waits for native cancellation before deleting files owned by the request', a
   async () => { throw new Error('unexpected_response'); })).rejects.toThrow('request_sync_http_cancelled');
   expect(native.cancel).toHaveBeenCalledOnce();
   expect([...values.keys()].filter(key => key.startsWith('requests/'))).toEqual([]);
+});
+
+it.each([0, 1, 3793, 8000])('round-trips an inventory of %i entries through the native HTTP chunk contract', async count => {
+  const { files, values } = storage();
+  const entries = Array.from({ length: count }, (_, index) => ({
+    globalId: `node-${index}`, objectType: 'node', sharedStateHash: new Uint8Array(32).fill(7),
+    frontierFactIds: [], requiredRelationIds: [], resourceHashes: [], reviewFactIds: [], stateFactIds: []
+  }));
+  const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
+    yield* iterateRequestSyncInventory({ entries, roundId: new Uint8Array(16).fill(3) });
+  } });
+  const directory = 'requests/inventory';
+  const result = await spoolCompanionRequestSyncHttp(files, directory, wire);
+  const byteLength = [...values.values()].reduce((sum, bytes) => sum + bytes.length, 0);
+  const response = await readFramedSyncStream(companionRequestSyncHttpChunks({
+    ...files, read: key => files.read(key.replace('/http-in-', '/http-out-'))
+  }, directory, { response_chunk_count: result.count, response_byte_length: byteLength }));
+  const received = await decodeRequestSyncInventory((async function* () {
+    for await (const item of readRequestSyncWire({ context, groupKey, ...response })) yield item.message;
+  })());
+  expect(received.entries.map(entry => entry.globalId)).toEqual(entries.map(entry => entry.globalId));
+  const bytes = Buffer.concat([...values.values()]);
+  expect(result.hash).toBe(bytesToHex(sha256(bytes)));
 });

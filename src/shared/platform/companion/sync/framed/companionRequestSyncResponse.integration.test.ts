@@ -37,9 +37,10 @@ vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () 
   subscribeNativeAppBackground: async () => () => undefined }));
 
 
+import { companionRequestSyncHttpChunks } from './companionRequestSyncHttp.js';
 import { rememberCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 import { respondCompanionRequestSync } from './companionRequestSyncResponse.js';
-import { closeCompanionSyncPeerRounds } from './companionSyncPeerRounds.js';
+import { closeCompanionSyncPeerRounds, touchCompanionSyncPeerRound } from './companionSyncPeerRounds.js';
 
 beforeEach(() => {
   vi.stubGlobal('AbortSignal', new Proxy(AbortSignal, {
@@ -216,17 +217,27 @@ function nativeBatchExchange(modes: string[], loseResponse = false): RequestSync
     for await (const chunk of encodeFramedSyncStream(body)) chunks.push(chunk);
     const bytes = Buffer.concat(chunks);
     await runtime.files!.write(`${directory}/http-in-0`, bytes);
-    const response = await respondCompanionRequestSync({ peer_round_id: crypto.randomUUID(), peer_round_mode: 'single', directory, mode,
+    const roundId = crypto.randomUUID();
+    const response = await respondCompanionRequestSync({ peer_round_id: roundId, peer_round_mode: 'single', directory, mode,
       library_key: '/test-library', generation_id: 'generation', group_id: 'group',
       initiator_device_id: 'peer', initiator_library_epoch: 'peer-epoch', responder_device_id: 'local',
       responder_library_epoch: 'local-epoch', request_chunk_count: 1, request_byte_length: bytes.length });
-    const stream = await readFramedSyncStream((async function* () {
-      for (let index = 0; index < response.response_chunk_count; index++) yield (await runtime.files!.read(`${directory}/http-out-${index}`))!;
-    })());
+    let responseBytes = 0;
+    for (let index = 0; index < response.response_chunk_count; index++) {
+      responseBytes += (await runtime.files!.read(`${directory}/http-out-${index}`))!.length;
+    }
+    const stream = await readFramedSyncStream(companionRequestSyncHttpChunks({ ...runtime.files!,
+      read: key => runtime.files!.read(key.replace('/http-in-', '/http-out-'))
+    }, directory, { response_chunk_count: response.response_chunk_count, response_byte_length: responseBytes }));
     try {
       if (loseResponse) throw new Error('test_response_lost');
       return await consume(stream);
     }
-    finally { closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner()); await stream.frames[Symbol.asyncIterator]().return?.(); await runtime.files!.remove(directory); }
+    finally {
+      await touchCompanionSyncPeerRound({ library_key: '/test-library', generation_id: 'generation',
+        peer_device_id: 'peer', peer_round_id: roundId, direction: 'inbound', finish_round: true });
+      await stream.frames[Symbol.asyncIterator]().return?.();
+      await runtime.files!.remove(directory);
+    }
   };
 }
