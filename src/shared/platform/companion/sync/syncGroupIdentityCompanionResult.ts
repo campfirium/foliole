@@ -24,7 +24,7 @@ export async function syncCompanionIdentityObjects(
   }
   return withCompanionSyncPeerRound(options.framedPeer.deviceId,
     (peerRound, signal) => syncObjectsInRound(endpointUrl, options, peerRound, signal), {
-      waitForInbound: options.waitForInbound === true,
+      waitForInbound: () => options.waitForInbound?.() === true,
       ...(options.signal ? { signal: options.signal } : {}),
       onWaiting: waiting => options.onProgress?.({ completed: 0, total: null,
         phase: waiting ? 'waiting' : 'structure' })

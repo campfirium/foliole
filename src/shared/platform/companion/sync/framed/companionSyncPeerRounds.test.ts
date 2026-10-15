@@ -61,7 +61,7 @@ it.each(['background', 'cancel'])('cancels a queued manual round on %s without e
   let notify!: () => void;
   const waiting = new Promise<void>(resolve => { notify = resolve; });
   const work = withCompanionSyncPeerRound('peer', execute, {
-    waitForInbound: true, signal: controller.signal,
+    waitForInbound: () => true, signal: controller.signal,
     onWaiting: active => { if (active) notify(); }
   });
   const outcome = work.catch(error => String(error));

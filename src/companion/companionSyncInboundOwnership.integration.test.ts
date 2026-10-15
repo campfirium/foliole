@@ -48,7 +48,7 @@ it.each([false, true])('prioritizes the waiting manual round over an immediate n
     let notified!: () => void;
     const waiting = new Promise<void>(resolve => { notified = resolve; });
     const phases: string[] = [];
-    const manual = host.sync({ waitForInbound: true, onProgress: progress => {
+    const manual = host.sync({ waitForInbound: () => true, onProgress: progress => {
       phases.push(progress.phase);
       if (progress.phase === 'waiting') notified();
     } });

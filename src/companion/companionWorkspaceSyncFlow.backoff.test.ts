@@ -66,6 +66,37 @@ it.each(['manual', 'automatic'] as const)('only waits for inbound ownership when
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({}));
   await tryForegroundAutoSync({ cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
     setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState(), triggerReason });
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(expect.any(String),
-    expect.objectContaining({ waitForInbound: triggerReason === 'manual' }));
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls[0]?.[1].waitForInbound()).toBe(triggerReason === 'manual');
+});
+
+
+it('retains manual intent when a click joins an automatic round still preparing its peer', async () => {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  const runtime = await import('../shared/platform/companionWorkspaceRuntimeRepository');
+  let release!: () => void;
+  let entered!: () => void;
+  const preparing = new Promise<void>(resolve => { entered = resolve; });
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  vi.mocked(runtime.beginNativeCompanionSyncRun).mockImplementationOnce(async () => {
+    entered(); await gate;
+    return { reason: 'automatic', run_id: 'preparing', runtime: 'android' };
+  });
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async (_endpoint, options) => {
+    const waits = typeof options.waitForInbound === 'function' ? options.waitForInbound() : options.waitForInbound;
+    if (!waits) throw new Error('sync_round_busy');
+    return createSyncObjectsResult({});
+  });
+  const args = { cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState() };
+  const automatic = tryForegroundAutoSync({ ...args, triggerReason: 'automatic' });
+  await preparing;
+  let joined!: () => void;
+  const identified = new Promise<void>(resolve => { joined = resolve; });
+  const manual = tryForegroundAutoSync({ ...args, triggerReason: 'manual',
+    onRunIdentified: () => joined() });
+  await identified;
+  release();
+  expect(await manual).toBe('completed');
+  expect(await automatic).toBe('completed');
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
 });

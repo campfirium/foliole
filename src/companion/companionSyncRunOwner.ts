@@ -1,4 +1,7 @@
+type SyncRunIntent = { manualRequested: boolean };
+
 type ActiveSyncRun = {
+  intent: SyncRunIntent;
   completion: Promise<unknown>;
   runId: string;
 };
@@ -22,10 +25,12 @@ export function loadActiveCompanionSyncRun() {
 export function runCompanionSyncAsOwner<T>(
   _endpointUrl: string,
   runId: string,
-  work: () => Promise<T>
+  work: (intent: SyncRunIntent) => Promise<T>,
+  manualRequested = false
 ): CompanionSyncRunHandle<T> {
   const activeRun = activeSyncRun;
   if (activeRun) {
+    if (manualRequested) activeRun.intent.manualRequested = true;
     return { completion: activeRun.completion, mode: 'joined', runId: activeRun.runId };
   }
   let resolveRun: (result: T) => void = () => undefined;
@@ -34,12 +39,12 @@ export function runCompanionSyncAsOwner<T>(
     resolveRun = resolve;
     rejectRun = reject;
   });
-  const active: ActiveSyncRun = { completion, runId };
+  const active: ActiveSyncRun = { completion, runId, intent: { manualRequested } };
   activeSyncRun = active;
   const release = () => {
     if (activeSyncRun === active) activeSyncRun = null;
   };
-  void Promise.resolve().then(work).then(resolveRun, rejectRun);
+  void Promise.resolve().then(() => work(active.intent)).then(resolveRun, rejectRun);
   void completion.then(release, release);
   return { completion, mode: 'owned', runId };
 }

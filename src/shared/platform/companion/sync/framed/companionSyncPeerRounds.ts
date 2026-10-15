@@ -21,7 +21,7 @@ const states = new WeakMap<CapacitorCompanionDatabaseOwner, State>();
 
 export function withCompanionSyncPeerRound<T>(peerId: string,
   run: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<T>,
-  options: { waitForInbound?: boolean; onWaiting?(waiting: boolean): void; signal?: AbortSignal } = {}) {
+  options: { waitForInbound?: () => boolean; onWaiting?(waiting: boolean): void; signal?: AbortSignal } = {}) {
   return withCompanionRequestSyncLifecycle(async signal => runSyncPeerRound({
     owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
     execute: (id, lease) => run({ id, lease, admitted: false }, lease.signal)

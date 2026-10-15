@@ -153,3 +153,50 @@ it('backs off real transfers when concurrent edits keep differences from shrinki
     }
   } finally { await host.close(); }
 }, 30_000);
+
+it('preserves a manual click joined during automatic preparation through peer waiting and durable exchange', async () => {
+  const host = await createCompanionRequestFixture();
+  const { fixture } = host;
+  try {
+    const runtime = await import('../shared/platform/companionWorkspaceRuntimeRepository');
+    const { companionSyncPeerRoundOwner } = await import('../shared/platform/companion/sync/framed/companionSyncPeerRounds');
+    view.epoch = `${fixture.rightSnapshot.deviceId}-epoch`;
+    const target = { endpointUrl: fixture.rightSnapshot.origin, deviceId: fixture.rightSnapshot.deviceId,
+      groupId: 't326-group', protocolVersion: 25 };
+    await fixture.left.seed({ nodeId: 't326-promoted-mobile', title: 'Mobile', content: 'Mobile edit' });
+    await fixture.right.seed({ nodeId: 't326-promoted-desktop', title: 'Desktop', content: 'Desktop edit' });
+    const owner = await companionSyncPeerRoundOwner();
+    owner.acceptInbound(target.deviceId, 'incoming', true);
+    let release!: () => void;
+    let entered!: () => void;
+    let joined!: () => void;
+    let queued!: () => void;
+    const preparing = new Promise<void>(resolve => { entered = resolve; });
+    const identified = new Promise<void>(resolve => { joined = resolve; });
+    const waiting = new Promise<void>(resolve => { queued = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    vi.spyOn(runtime, 'beginNativeCompanionSyncRun').mockImplementationOnce(async () => {
+      entered(); await gate;
+      return { reason: 'automatic', run_id: 'preparing', runtime: 'ios' };
+    });
+    const callbacks = { cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
+      setSyncProgress: (progress: { phase: string } | null) => { if (progress?.phase === 'waiting') queued(); },
+      setStatus: vi.fn(), state: view.state };
+    const automatic = tryForegroundAutoSyncTarget({ ...callbacks, triggerReason: 'automatic' }, target, runCompanionStreamSync);
+    await preparing;
+    const manual = tryForegroundAutoSyncTarget({ ...callbacks, triggerReason: 'manual',
+      onRunIdentified: () => joined() }, target, runCompanionStreamSync);
+    await identified;
+    release();
+    await waiting;
+    owner.finishInbound(target.deviceId, 'incoming');
+    expect(await manual).toBe('completed');
+    expect(await automatic).toBe('completed');
+    for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+      expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 't326-promoted-mobile', content: 'Mobile edit' }),
+        expect.objectContaining({ id: 't326-promoted-desktop', content: 'Desktop edit' })
+      ]));
+    }
+  } finally { vi.restoreAllMocks(); await host.close(); }
+}, 60_000);

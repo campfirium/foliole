@@ -37,6 +37,7 @@ export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
 
 export interface RunCompanionStreamSyncArgs {
+  isManualRequested?(): boolean;
   cancelled: () => boolean;
   signal?: AbortSignal;
   endpointUrl: string;
@@ -118,7 +119,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
     runId: args.runId,
     ...(args.signal ? { signal: args.signal } : {}),
-    waitForInbound: args.triggerReason === 'manual',
+    waitForInbound: () => args.triggerReason === 'manual' || args.isManualRequested?.() === true,
     onProgress: args.setSyncProgress,
     onStructureSynced: refreshAfterStructureSync,
     resourcesOnly: args.continuationMode === 'resources-only'

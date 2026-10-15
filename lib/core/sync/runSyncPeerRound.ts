@@ -7,7 +7,7 @@ export async function runSyncPeerRound<T>(input: {
   owner: RoundOwner;
   peerId: string;
   signal?: AbortSignal;
-  waitForInbound?: boolean;
+  waitForInbound?: () => boolean;
   onWaiting?(waiting: boolean): void;
   execute(roundId: string, lease: SyncPeerRoundLease): Promise<T>;
 }) {
@@ -27,12 +27,12 @@ async function attemptRound<T>(input: {
   owner: RoundOwner;
   peerId: string;
   signal?: AbortSignal;
-  waitForInbound?: boolean;
+  waitForInbound?: () => boolean;
   onWaiting?(waiting: boolean): void;
   execute(roundId: string, lease: SyncPeerRoundLease): Promise<T>;
 }) {
   const roundId = crypto.randomUUID();
-  const lease = input.waitForInbound
+  const lease = input.waitForInbound?.()
     ? await input.owner.waitForInbound(input.peerId, roundId, input.signal, input.onWaiting)
     : input.owner.acquireOutbound(input.peerId, roundId);
   if (!lease) throw new Error('sync_round_busy');

@@ -71,15 +71,16 @@ async function runOwnedTarget(args: {
   target: CompanionWorkspaceSyncTarget;
   runStreamSync: RunCompanionStreamSync;
   syncArgs: TryForegroundAutoSyncArgs;
+  isManualRequested(): boolean;
 }): Promise<ForegroundAutoSyncOutcome> {
   const endpointUrl = args.target.endpointUrl;
   const runId = args.runId;
-  const triggerReason = args.syncArgs.triggerReason
+  let triggerReason = args.syncArgs.triggerReason
     ?? (args.syncArgs.state.last_synced_at ? 'automatic' : 'initial');
   const startedAt = new Date().toISOString();
   try {
-    await beginNativeCompanionSyncRun(triggerReason, runId);
     args.syncArgs.setStatus('syncing');
+    await beginNativeCompanionSyncRun(triggerReason, runId);
     args.syncArgs.setError(null);
     args.syncArgs.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     if (args.target.protocolIncompatible) throw new Error('sync_group_peer_incompatible');
@@ -89,12 +90,14 @@ async function runOwnedTarget(args: {
     if (memberState.peerRemoved) return 'skipped';
     if (memberState.normalSyncReady === false && !memberState.restoreFromPeer) return 'skipped';
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
+    if (args.isManualRequested()) triggerReason = 'manual';
     await recordCompanionWorkspaceSyncEvent({
       endpointUrl, kind: 'run_started', message: 'Sync started.',
       runId, startedAt, status: 'started', triggerReason
     });
     return await args.runStreamSync({
       ...args.syncArgs,
+      isManualRequested: args.isManualRequested,
       endpointUrl,
       ...(args.target.deviceId && memberState.peerLibraryEpoch && args.target.protocolVersion ? { framedPeer: {
         deviceId: args.target.deviceId,
@@ -127,9 +130,9 @@ export async function tryForegroundAutoSyncTarget(
 ) {
   const runId = syncArgs.runId ?? createCompanionSyncRunId();
   if (syncArgs.cancelled()) return 'skipped';
-  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, () => runOwnedTarget({
-    runId, target, runStreamSync, syncArgs
-  }));
+  const run = runCompanionSyncAsOwner(target.endpointUrl, runId, intent => runOwnedTarget({
+    runId, target, runStreamSync, syncArgs, isManualRequested: () => intent.manualRequested
+  }), syncArgs.triggerReason === 'manual');
   syncArgs.onRunIdentified?.(run.runId, run.mode);
   return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
 }

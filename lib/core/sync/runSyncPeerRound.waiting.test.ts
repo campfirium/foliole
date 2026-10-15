@@ -11,7 +11,7 @@ it('hands the released peer to the waiting manual round before a new inbound sta
   const inbound = owner.acceptInbound('desktop', 'incoming', true);
   const execute = vi.fn(async () => 'complete');
   const onWaiting = vi.fn();
-  const input = { owner, peerId: 'desktop', execute, waitForInbound: true, onWaiting };
+  const input = { owner, peerId: 'desktop', execute, waitForInbound: () => true, onWaiting };
   const work = runSyncPeerRound(input);
   const outcome = work.then(value => value, error => String(error));
   await vi.advanceTimersByTimeAsync(2000);
@@ -33,7 +33,7 @@ it('ends waiting at the existing deadline even when the inbound keeps renewing, 
   const owner = createSyncPeerRoundOwnership(5000);
   const inbound = owner.acceptInbound('desktop', 'incoming', true);
   const execute = vi.fn();
-  const input = { owner, peerId: 'desktop', execute, waitForInbound: true };
+  const input = { owner, peerId: 'desktop', execute, waitForInbound: () => true };
   const outcome = runSyncPeerRound(input).catch(error => String(error));
   await vi.advanceTimersByTimeAsync(4000);
   inbound.touch();
@@ -52,7 +52,7 @@ it.each(['cancel', 'close', 'cancel-after-grant', 'close-after-grant'])('does no
   const inbound = owner.acceptInbound('desktop', 'incoming', true);
   const controller = new AbortController();
   const execute = vi.fn();
-  const input = { owner, peerId: 'desktop', execute, waitForInbound: true, signal: controller.signal };
+  const input = { owner, peerId: 'desktop', execute, waitForInbound: () => true, signal: controller.signal };
   const outcome = runSyncPeerRound(input).catch(error => String(error));
   if (mode === 'close' || mode === 'close-after-grant') {
     if (mode === 'close-after-grant') owner.finishInbound('desktop', 'incoming');
@@ -67,5 +67,22 @@ it.each(['cancel', 'close', 'cancel-after-grant', 'close-after-grant'])('does no
   expect(execute).not.toHaveBeenCalled();
   if (!mode.startsWith('close')) expect(owner.acquireOutbound('desktop', 'after-cancel')).not.toBeNull();
   expect(inbound.signal.aborted).toBe(true);
+  owner.close();
+});
+
+it('uses manual intent received during an automatic busy retry without dropping the click', async () => {
+  vi.spyOn(Math, 'random').mockReturnValue(0);
+  const owner = createSyncPeerRoundOwnership(5000);
+  owner.acceptInbound('desktop', 'incoming', true);
+  let manualRequested = false;
+  const onWaiting = vi.fn();
+  const work = runSyncPeerRound({ owner, peerId: 'desktop',
+    waitForInbound: () => manualRequested, onWaiting, execute: async () => 'complete' });
+  await vi.advanceTimersByTimeAsync(0);
+  manualRequested = true;
+  await vi.advanceTimersByTimeAsync(100);
+  expect(onWaiting).toHaveBeenCalledWith(true);
+  owner.finishInbound('desktop', 'incoming');
+  expect(await work).toBe('complete');
   owner.close();
 });

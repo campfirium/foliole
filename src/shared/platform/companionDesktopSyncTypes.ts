@@ -5,7 +5,7 @@ export interface CompanionDesktopSyncOptions {
     protocolVersion: number;
   };
   includeResources?: boolean;
-  waitForInbound?: boolean;
+  waitForInbound?: () => boolean;
   signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;
