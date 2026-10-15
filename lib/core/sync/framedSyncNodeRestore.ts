@@ -20,6 +20,8 @@ import { readNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { restoreTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 import { textAlternativesSchema, type TopicTextBody } from './topicTextState.js';
 
+const textSelectionSchema = z.object({ version_id: z.string().min(1), created_at: z.string().datetime() });
+
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 function fieldsByName(fields: readonly CanonicalField[], expected: readonly string[], error: string) {
@@ -94,8 +96,7 @@ function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
       text_alternatives: textAlternativesSchema.parse(JSON.parse(readString(get('text_alternatives'))!))
     }),
     ...(readString(get('text_selection'), true) === null ? {} : {
-      text_selection: z.object({ version_id: z.string().min(1), created_at: z.string().datetime() })
-        .parse(JSON.parse(readString(get('text_selection'))!))
+      text_selection: textSelectionSchema.parse(JSON.parse(readString(get('text_selection'))!))
     }),
     created_at: readString(get('created_at'))!,
     deleted_at: readString(get('deleted_at'), true),

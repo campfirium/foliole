@@ -9,6 +9,8 @@ import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
 import { readNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
+const textSelectionSchema = z.object({ version_id: z.string().min(1), created_at: z.string().datetime() });
+
 export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyFields: [
     'content_hash', 'host_name', 'is_tombstone',
@@ -107,8 +109,7 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
   const alternativesText = stringValue(get('text_alternatives'), true);
   if (alternativesText !== null) textAlternativesSchema.parse(JSON.parse(alternativesText));
   const selection = stringValue(get('text_selection'), true);
-  if (selection !== null) z.object({ version_id: z.string().min(1), created_at: z.string().datetime() })
-    .parse(JSON.parse(selection));
+  if (selection !== null) textSelectionSchema.parse(JSON.parse(selection));
   const resolution = stringValue(get('anchor_resolution_status'), true);
   if (resolution !== null && resolution !== 'resolved' &&
       resolution !== 'unmapped_ambiguous' && resolution !== 'unmapped_missing') {

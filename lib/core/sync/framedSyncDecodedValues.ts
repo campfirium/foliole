@@ -11,6 +11,8 @@ import {
 
 type Row = Record<string, unknown>;
 type Budget = { fields: number };
+const CANONICAL_VALUE_CASES = ['boolValue', 'signedValue', 'unsignedValue', 'stringValue', 'bytesValue',
+  'listValue', 'objectValue', 'nullValue'];
 // One canonical object level expands into four decoded protobuf containers. The extra
 // envelope allows canonical validation to own both the exact limit and its +1 case.
 const MAX_PROTOBUF_CONTAINER_DEPTH = FRAMED_SYNC_LIMITS.maxCanonicalDepth * 4 + 8;
@@ -103,10 +105,10 @@ export function walk(value: unknown, depth: number, budget: Budget): void {
     return;
   }
   const object = value as Row;
-  for (const key in object) if (Object.hasOwn(object, key)) budget.fields += 1;
+  const keys = Object.keys(object);
+  budget.fields += keys.length;
   if (budget.fields > FRAMED_SYNC_LIMITS.maxDecodedFields) throw new Error('protocol_field_limit_exceeded');
-  for (const key in object) {
-    if (!Object.hasOwn(object, key)) continue;
+  for (const key of keys) {
     const item = object[key];
     if (key === 'stringValue') {
       boundedString(item, FRAMED_SYNC_LIMITS.maxCanonicalStringBytes, 'canonical_string_limit_exceeded');
@@ -139,10 +141,13 @@ export function blobReference(value: unknown) {
 function canonicalValue(value: unknown, depth: number): void {
   if (depth > FRAMED_SYNC_LIMITS.maxCanonicalDepth) throw new Error('canonical_depth_limit_exceeded');
   const item = row(value);
-  const cases = ['boolValue', 'signedValue', 'unsignedValue', 'stringValue', 'bytesValue',
-    'listValue', 'objectValue', 'nullValue'].filter((key) => item[key] !== undefined && item[key] !== null);
-  if (cases.length !== 1) throw new Error('canonical_value_case_invalid');
-  const selected = cases[0]!;
+  let selected: string | undefined;
+  for (const key of CANONICAL_VALUE_CASES) {
+    if (item[key] === undefined || item[key] === null) continue;
+    if (selected !== undefined) throw new Error('canonical_value_case_invalid');
+    selected = key;
+  }
+  if (selected === undefined) throw new Error('canonical_value_case_invalid');
   if (selected === 'nullValue' && item.nullValue !== true) throw new Error('canonical_null_invalid');
   if (selected === 'listValue') {
     for (const child of list(row(item.listValue).values)) canonicalValue(child, depth + 1);

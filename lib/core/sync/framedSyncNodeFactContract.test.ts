@@ -5,6 +5,7 @@ import {
   assertNodeVersionFactShape,
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
+import { restoreFramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
 
 const digest = (value: number) => new Uint8Array(32).fill(value);
 const string = (value: string) => ({ kind: 'string' as const, value });
@@ -145,4 +146,28 @@ it('rejects an external document body attached to an unrelated node fact', () =>
   expect(() => assertNodeVersionFactShape({ ...value, blobs: [
     ...value.blobs, { byteLength: 4n, required: true, role: 5, sha256: digest(3) }
   ] })).toThrow('node_version_fact_resource_blobs_invalid');
+});
+
+it.each([
+  { version_id: 'version-1', created_at: '2026-10-05T00:00:00.000Z' },
+  { version_id: 'version-2', created_at: '2026-10-06T00:00:00.000Z' }
+])('preserves each validated text selection through node metadata restore: $version_id', selection => {
+  const value = fact();
+  const record = replaceBodyField(value, 'snapshot', { kind: 'object', value:
+    snapshot('02'.repeat(32)).map(field => field.name === 'text_selection'
+      ? { ...field, value: string(JSON.stringify(selection)) } : field) });
+  expect(() => assertNodeVersionFactShape(record)).not.toThrow();
+  expect(restoreFramedSyncNodeMetadata(record).snapshot.text_selection).toEqual(selection);
+});
+
+it.each([
+  { version_id: '', created_at: '2026-10-05T00:00:00.000Z' },
+  { version_id: 'version-1', created_at: 'invalid' },
+  { version_id: 'version-1' }
+])('rejects malformed text selections at validation and restore: %j', selection => {
+  const record = replaceBodyField(fact(), 'snapshot', { kind: 'object', value:
+    snapshot('02'.repeat(32)).map(field => field.name === 'text_selection'
+      ? { ...field, value: string(JSON.stringify(selection)) } : field) });
+  expect(() => assertNodeVersionFactShape(record)).toThrow();
+  expect(() => restoreFramedSyncNodeMetadata(record)).toThrow();
 });
