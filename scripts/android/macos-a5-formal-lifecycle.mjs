@@ -28,14 +28,14 @@ function runEvidenceReplacement(options) {
   }
 }
 
-export function openMacosA5Lifecycle({ action, actionContract, formal, repoRoot }) {
+export function openMacosA5Lifecycle({ action, actionContract, formal, repoRoot, revision }) {
   const taskId = formalEvidenceRetentionTaskId(actionContract, { formal });
   const sharedCacheRoot = path.join(path.resolve(repoRoot), '.cache');
   if (actionContract.requiresHiddenDesktopRuntime) {
     prepareCacheEntry({ entryName: 'native-hidden-electron', rootDir: repoRoot });
   }
   const candidate = formal && actionContract.formalSourceClass === 'frozen-build'
-    ? beginFormalA5Candidate(repoRoot) : null;
+    ? beginFormalA5Candidate(repoRoot, undefined, revision) : null;
   const context = createMacosA5ExecutionContext({
     acceptedRevision: candidate?.revision, acceptedTree: candidate?.tree, action,
     formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot,

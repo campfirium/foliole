@@ -18,15 +18,23 @@ export function parseMacosA5Invocation(argv) {
   const formalIndex = args.indexOf('--formal');
   const formal = formalIndex >= 0;
   if (formal) args.splice(formalIndex, 1);
-  if (args.length !== 1) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action> [--formal]');
+  const revisionIndex = args.indexOf('--revision');
+  const revision = revisionIndex >= 0 ? args[revisionIndex + 1] : undefined;
+  if (revisionIndex >= 0) {
+    if (!formal || !/^[0-9a-f]{40}$/u.test(revision ?? '')) {
+      throw new Error('--revision requires --formal and a full Git commit SHA.');
+    }
+    args.splice(revisionIndex, 2);
   }
-  return { action: args[0], formal };
+  if (args.length !== 1) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action> [--formal [--revision <sha>]]');
+  }
+  return { action: args[0], formal, ...(revision ? { revision } : {}) };
 }
 
-export function beginFormalA5Candidate(repoRoot, execute) {
+export function beginFormalA5Candidate(repoRoot, execute, requestedRevision = 'HEAD') {
   const revision = git(repoRoot, [
-    'rev-parse', '--verify', 'HEAD^{commit}'
+    'rev-parse', '--verify', `${requestedRevision}^{commit}`
   ], execute);
   const candidate = {
     revision,

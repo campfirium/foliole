@@ -82,6 +82,23 @@ afterEach(async () => {
   }
 });
 
+it('builds the requested older commit while preserving the current checkout', () => {
+  const root = fixture();
+  const requested = git(root, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(path.join(root, 'tracked.txt'), 'newer commit\n');
+  git(root, ['commit', '-am', 'newer']);
+  const current = git(root, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(path.join(root, 'tracked.txt'), 'ongoing work\n');
+  const candidate = beginFormalA5Candidate(root, undefined, requested);
+  const capsule = openMacosA5BuildCapsule(context(root, candidate), { run: runner([]) });
+  try {
+    expect(candidate.revision).toBe(requested);
+    expect(canonicalText(path.join(capsule.buildRoot, 'tracked.txt'))).toBe('committed\n');
+    expect(git(root, ['rev-parse', 'HEAD'])).toBe(current);
+    expect(canonicalText(path.join(root, 'tracked.txt'))).toBe('ongoing work\n');
+  } finally { closeMacosA5BuildCapsule(capsule); }
+});
+
 it('materializes the locked Electron runtime only for hidden desktop actions', () => {
   const root = fixture();
   const events = []; const stages = [];

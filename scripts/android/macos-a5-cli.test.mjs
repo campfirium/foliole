@@ -23,3 +23,13 @@ it('returns CLI failures without running an invalid action', async () => {
   expect(error).toHaveBeenCalledWith(expect.stringContaining('Usage'));
   expect(process.exitCode).toBe(1);
 });
+
+it('passes an explicit committed revision to the formal runner', async () => {
+  const run = vi.fn();
+  const revision = 'a'.repeat(40);
+  await runMacosA5Cli({
+    argv: ['deploy', '--formal', '--revision', revision],
+    errorEvidence: vi.fn(), repoRoot: '/repo', run
+  });
+  expect(run).toHaveBeenCalledWith('deploy', '/repo', { formal: true, revision });
+});

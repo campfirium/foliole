@@ -142,10 +142,15 @@ export async function captureAnnotation(
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
 
-export async function runMacosA5Action(action, repoRoot = process.cwd(), { formal = false } = {}) {
+export async function runMacosA5Action(
+  action, repoRoot = process.cwd(), { formal = false, revision } = {}
+) {
   const actionContract = assertRegisteredMacosA5Action(action);
   if (formal) assertFormalMacosA5Action(actionContract);
-  const lifecycle = openMacosA5Lifecycle({ action, actionContract, formal, repoRoot });
+  if (revision && (!formal || actionContract.formalSourceClass !== 'frozen-build')) {
+    throw new Error('--revision is only supported for formal build actions.');
+  }
+  const lifecycle = openMacosA5Lifecycle({ action, actionContract, formal, repoRoot, revision });
   let { context } = lifecycle;
   const { receipt, sharedCacheRoot, taskId } = lifecycle;
   let lease;

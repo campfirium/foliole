@@ -38,3 +38,13 @@ it('rejects incomplete Git object identities', () => {
   expect(() => beginFormalA5Candidate('/repo', gitResults(['short', TREE])))
     .toThrow('full Git revision');
 });
+
+it('requires formal mode and a full revision for explicit candidates', () => {
+  expect(parseMacosA5Invocation(['deploy', '--formal', '--revision', REVISION]))
+    .toEqual({ action: 'deploy', formal: true, revision: REVISION });
+  for (const args of [
+    ['deploy', '--revision', REVISION],
+    ['deploy', '--formal', '--revision'],
+    ['deploy', '--formal', '--revision', 'HEAD']
+  ]) expect(() => parseMacosA5Invocation(args)).toThrow('--revision requires');
+});

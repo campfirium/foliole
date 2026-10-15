@@ -5,7 +5,8 @@ import { parseMacosA5Invocation } from './macos-a5-formal-candidate.mjs';
 export async function runMacosA5Cli({ argv, errorEvidence, repoRoot, run }) {
   try {
     const invocation = parseMacosA5Invocation(argv);
-    await run(invocation.action, repoRoot, { formal: invocation.formal });
+    const { action, ...options } = invocation;
+    await run(action, repoRoot, options);
   } catch (error) {
     const evidence = errorEvidence(error);
     if (evidence) process.stderr.write(evidence.endsWith('\n') ? evidence : `${evidence}\n`);
