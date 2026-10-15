@@ -77,3 +77,9 @@ describe('formatCompanionSyncProgressSummary', () => {
 
   it('labels idle remaining body backlog as left to download', expectRemainingBodyBacklogLabel);
 });
+
+it('shows an explicit waiting status instead of transfer progress while a peer finishes syncing', () => {
+  expect(formatCompanionSyncProgressSummary({ phase: 'waiting', completed: 0, total: null }, t)).toEqual({
+    title: 'Waiting for the other device to finish syncing', status: 'Waiting', detail: null
+  });
+});

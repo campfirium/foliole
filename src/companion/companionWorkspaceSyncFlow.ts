@@ -38,6 +38,7 @@ export type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner'
 
 export interface RunCompanionStreamSyncArgs {
   cancelled: () => boolean;
+  signal?: AbortSignal;
   endpointUrl: string;
   framedPeer?: NonNullable<CompanionDesktopSyncOptions['framedPeer']>;
   runId: string;
@@ -54,6 +55,7 @@ export interface RunCompanionStreamSyncArgs {
 
 export interface TryForegroundAutoSyncArgs {
   cancelled: () => boolean;
+  signal?: AbortSignal;
   setError(error: string | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
@@ -88,6 +90,7 @@ function applyRemainingProgress(args: {
 
 async function refreshVisibleStructure(args: {
   cancelled: () => boolean;
+  signal?: AbortSignal;
   fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
   setState(state: NativeCompanionWorkspaceSyncState): void;
 }) {
@@ -114,6 +117,8 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     ...(args.framedPeer ? { framedPeer: args.framedPeer } : {}),
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
     runId: args.runId,
+    ...(args.signal ? { signal: args.signal } : {}),
+    waitForInbound: args.triggerReason === 'manual',
     onProgress: args.setSyncProgress,
     onStructureSynced: refreshAfterStructureSync,
     resourcesOnly: args.continuationMode === 'resources-only'

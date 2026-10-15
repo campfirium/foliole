@@ -52,3 +52,26 @@ it('rejects background work before its sync operation begins', async () => {
   await expect(withCompanionSyncPeerRound('peer', execute)).rejects.toThrow('request_sync_foreground_ended');
   expect(execute).not.toHaveBeenCalled();
 });
+
+it.each(['background', 'cancel'])('cancels a queued manual round on %s without executing after inbound release', async mode => {
+  const owner = await companionSyncPeerRoundOwner();
+  const inbound = owner.acceptInbound('peer', 'incoming', true);
+  const controller = new AbortController();
+  const execute = vi.fn(async () => 'unexpected');
+  let notify!: () => void;
+  const waiting = new Promise<void>(resolve => { notify = resolve; });
+  const work = withCompanionSyncPeerRound('peer', execute, {
+    waitForInbound: true, signal: controller.signal,
+    onWaiting: active => { if (active) notify(); }
+  });
+  const outcome = work.catch(error => String(error));
+  await waiting;
+  if (mode === 'background') {
+    runtime.active = false;
+    for (const listener of [...runtime.listeners]) listener();
+  } else controller.abort(new Error('cancelled'));
+  owner.finishInbound('peer', 'incoming');
+  expect(await outcome).toContain(mode === 'background' ? 'foreground_ended' : 'cancelled');
+  expect(execute).not.toHaveBeenCalled();
+  expect(inbound.signal.aborted).toBe(true);
+});

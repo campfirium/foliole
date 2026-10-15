@@ -23,7 +23,12 @@ export async function syncCompanionIdentityObjects(
     throw new Error('framed_sync_peer_required');
   }
   return withCompanionSyncPeerRound(options.framedPeer.deviceId,
-    (peerRound, signal) => syncObjectsInRound(endpointUrl, options, peerRound, signal));
+    (peerRound, signal) => syncObjectsInRound(endpointUrl, options, peerRound, signal), {
+      waitForInbound: options.waitForInbound === true,
+      ...(options.signal ? { signal: options.signal } : {}),
+      onWaiting: waiting => options.onProgress?.({ completed: 0, total: null,
+        phase: waiting ? 'waiting' : 'structure' })
+    });
 }
 
 async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktopSyncOptions,

@@ -14,8 +14,11 @@ import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktop
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
+import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
+import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
 import { syncCompanionIdentityObjects } from '../shared/platform/companion/sync/syncGroupIdentityCompanionResult.js';
+import type { CompanionDesktopSyncOptions } from '../shared/platform/companionDesktopSyncTypes.js';
 
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null,
@@ -24,12 +27,15 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original
   ...await original<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(), FolioleCompanionSync: {
   postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, accessFramedSyncFile: native.accessFile
 } }));
-vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
-  databasePath: '/fixture',
-  read: (task: (db: DbPort) => unknown) => task(native.db!),
-  readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
-  runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
-}) }));
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => {
+  const owner = {
+    databasePath: '/fixture',
+    read: (task: (db: DbPort) => unknown) => task(native.db!),
+    readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
+    runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
+  };
+  return { getIosCompanionDatabaseOwner: () => owner };
+});
 vi.mock('../shared/platform/companion/runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({
   library_key: '/fixture', generation_id: 'generation'
 }) }));
@@ -97,9 +103,14 @@ export async function createCompanionRequestFixture(script = compiledScript) {
     proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null }, true);
   return {
     fixture, post, get sqlite() { return sqlite; }, get db() { return native.db!; },
-    sync: () => syncCompanionIdentityObjects(fixture.rightSnapshot.origin, { framedPeer: peer }),
-    async restart() { sqlite.close(); await fixture.restartLeft(); sqlite = open(); },
+    sync: (options: Pick<CompanionDesktopSyncOptions, 'waitForInbound' | 'onProgress' | 'signal'> = {}) =>
+      syncCompanionIdentityObjects(fixture.rightSnapshot.origin, { ...options, framedPeer: peer }),
+    async restart() {
+      closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
+      sqlite.close(); await fixture.restartLeft(); sqlite = open();
+    },
     async close() {
+      closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
       sqlite.close(); native.db = null; native.files = null;
       await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
       await fs.rm(fixture.root, { recursive: true, force: true });

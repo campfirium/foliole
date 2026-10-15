@@ -90,6 +90,8 @@ export const EN_COMPANION_SYNC_TRANSLATIONS = {
   'companion.sync.remembered.current': 'This device uses it',
   'companion.sync.remembered.forget': 'Forget',
   'companion.sync.remembered.forgetTarget': 'Forget {target}',
+  'companion.sync.progress.waiting': 'Waiting',
+  'companion.sync.progress.waitingForDevice': 'Waiting for the other device to finish syncing',
   'companion.sync.progress.libraryIndex': 'Library index',
   'companion.sync.progress.currentTopic': 'Current topic',
   'companion.sync.progress.reviewResources': 'Review resources',

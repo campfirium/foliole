@@ -41,7 +41,7 @@ it.each(['completed', 'progress'] as const)('does not hide a busy peer behind an
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
 });
 
-it.each(['sync_round_busy', 'sync_round_expired', 'TimeoutError'])('retains the retryable cause: %s', async message => {
+it.each(['sync_round_busy', 'sync_round_expired', 'sync_round_wait_expired', 'TimeoutError'])('retains the retryable cause: %s', async message => {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new Error(message));
   expect(await sync()).toBe('pending');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -58,4 +58,14 @@ it('retains nested network codes and timeout names in diagnostics', async () => 
   const events = syncPlatformMock.recordCompanionWorkspaceSyncEvent.mock.calls.map(([event]) => event);
   expect(events).toContainEqual(expect.objectContaining({ kind: 'diagnostic', message: expect.stringContaining('ECONNRESET') }));
   expect(events).toContainEqual(expect.objectContaining({ kind: 'diagnostic', message: expect.stringContaining('TimeoutError') }));
+});
+
+
+it.each(['manual', 'automatic'] as const)('only waits for inbound ownership when triggered by %s', async triggerReason => {
+  const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({}));
+  await tryForegroundAutoSync({ cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState(), triggerReason });
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(expect.any(String),
+    expect.objectContaining({ waitForInbound: triggerReason === 'manual' }));
 });

@@ -124,6 +124,10 @@ function progressCountLabel(progress: CompanionDesktopSyncProgress, completed: n
 }
 
 export function formatCompanionSyncProgressSummary(progress: CompanionDesktopSyncProgress, t: Translate): CompanionSyncProgressSummary {
+  if (progress.phase === 'waiting') return {
+    title: t('companion.sync.progress.waitingForDevice'),
+    status: t('companion.sync.progress.waiting'), detail: null
+  };
   const total = displayTotal(progress);
   const completed = visibleCompleted(progress, total);
   const count = progressCountLabel(progress, completed, total, t);

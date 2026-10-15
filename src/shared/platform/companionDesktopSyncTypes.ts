@@ -5,6 +5,8 @@ export interface CompanionDesktopSyncOptions {
     protocolVersion: number;
   };
   includeResources?: boolean;
+  waitForInbound?: boolean;
+  signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;
   resourcesOnly?: boolean;
@@ -37,7 +39,7 @@ export interface CompanionDesktopSyncProgress {
     topicBodies?: number;
   };
   mode?: 'active' | 'remaining';
-  phase: 'attachment' | 'content' | 'structure';
+  phase: 'attachment' | 'content' | 'structure' | 'waiting';
   total: number | null;
   totalBytes?: number | null;
 }
