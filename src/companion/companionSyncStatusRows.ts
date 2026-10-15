@@ -40,7 +40,7 @@ export function resolveLastSyncRow(props: {
 function progressRow(syncProgress: CompanionDesktopSyncProgress, t: Translate) {
   const progress = formatCompanionSyncProgressSummary(syncProgress, t);
   return {
-    detail: progress.detail ?? t('companion.sync.pullingChanges'),
+    detail: syncProgress.phase === 'waiting' ? '' : progress.detail ?? t('companion.sync.pullingChanges'),
     label: progress.title,
     value: progress.status,
     valueTone: 'default' as const
