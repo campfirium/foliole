@@ -2,6 +2,7 @@
 import { expect, it } from 'vitest';
 
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -48,6 +49,8 @@ it('moves an existing child beneath a new parent through normal request dependen
     const parent = record('z-parent', 'parent-original', null);
     const moved = record('a-child', 'child-moved', parent.object_id, initial);
     await applySyncNodesWithDbPort(source.db, [parent, moved]);
+    // The real round starts after production convergence has retired unused topic ancestors.
+    expect(await collectNodeVersionPayloads(source.db, 'a-child')).toEqual({ released: 1, skipped: null });
     expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
     target.reopen();
     expect(target.sqlite.prepare("SELECT parent_id, content, current_version_id FROM nodes WHERE id = 'a-child'").get())

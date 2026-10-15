@@ -11,11 +11,13 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import { applyFramedFactSources } from '../../lib/core/sync/framedSyncFactApply.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { REQUEST_SYNC_MEMORY_BYTES, withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { requestSyncObjectMessages } from '../../lib/core/sync/requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages } from '../../lib/core/sync/requestSyncObjectReceiver.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 import { encodeFramedSyncHttpBody } from '../sync/desktopFramedSyncHttpWriter.js';
 import { prepareDesktopRequestSyncBody } from '../sync/desktopRequestSyncBody.js';
@@ -37,7 +39,8 @@ it.each([1, 6])('keeps an independent prepared request intact after source closu
     const records = [textBranch('version-0', 'Original正文'.repeat(count === 1 ? 10 : 65_000))];
     for (let index = 1; index < count; index++) records.push(textBranch(`version-${index}`,
       `${index}正文`.repeat(120_000), records.at(-1)));
-    await source.receive(records);
+    // Freeze a complete pending batch before its unused live copies are collected.
+    await applyConvergentSyncNodesWithDbPort(source.db, records, { collectVersionPayloads: false });
     const expectedVersions = await source.db.query('SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id');
     const expectedParents = await source.db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, parent_version_id');
     const entry = await readFramedSyncInventoryEntry(source.db, { objectType: 'node', globalId: 'topic' });
@@ -58,6 +61,8 @@ it.each([1, 6])('keeps an independent prepared request intact after source closu
     expect(await files.list('requests')).toEqual([]);
     expect(prepared[0]!.body.bodySha256).not.toBe(prepared[1]!.body.bodySha256);
     await prepared[0]!.body.dispose?.();
+    expect(await collectNodeVersionPayloads(source.db, 'topic')).toEqual({ released: count - 1, skipped: null });
+    expect(source.sqlite.prepare('SELECT count(*) FROM node_sync_versions WHERE body_text IS NOT NULL').pluck().get()).toBe(1);
     source.sqlite.close(); sourceClosed = true;
     const remaining = prepared[1]!;
     expect(remaining.body.contentLength > REQUEST_SYNC_MEMORY_BYTES).toBe(count === 6);

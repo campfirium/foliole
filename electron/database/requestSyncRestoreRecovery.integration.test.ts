@@ -11,9 +11,12 @@ import { event, ids, originals, prepare, restoreFixture, round, time, transfer,
   type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 
 function expectFacts(target: RestorePeer, source: RestorePeer) {
-  const fields = 'version_id, object_id, content_hash, body_text, parent_version_id';
+  const fields = `version_id, object_id, content_hash, body_text, parent_version_id,
+    json_extract(snapshot_json, '$.body_blob_hash') AS body_hash`;
   expect(target.sqlite.prepare(`SELECT ${fields} FROM node_sync_versions ORDER BY version_id`).all())
-    .toEqual(source.sqlite.prepare(`SELECT ${fields} FROM node_sync_versions ORDER BY version_id`).all());
+    .toEqual(source.sqlite.prepare<[], { version_id: string; body_text: string | null }>(
+      `SELECT ${fields} FROM node_sync_versions ORDER BY version_id`).all()
+      .map(row => row.version_id.endsWith('-base') ? { ...row, body_text: null } : row));
   expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all())
     .toEqual(source.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all());
   expect(target.sqlite.prepare("SELECT id, content FROM nodes WHERE id NOT LIKE 'special-%' ORDER BY id").all())

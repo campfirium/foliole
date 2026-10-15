@@ -94,8 +94,12 @@ it('omits a state-only live node while retaining recoverable original versions a
     target.reopen();
     expect(target.sqlite.prepare('SELECT id, content FROM nodes').all())
       .toEqual([{ id: 'recoverable', content: 'Current recoverable中文\0' }]);
-    expect(target.sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
-      .toEqual(source.sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all());
+    expect(target.sqlite.prepare(`SELECT version_id, content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+      FROM node_sync_versions ORDER BY version_id`).all()).toEqual(source.sqlite.prepare(`SELECT version_id, content_hash,
+        json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions ORDER BY version_id`).all());
+    expect(target.sqlite.prepare(`SELECT version_id, body_text FROM node_sync_versions
+      WHERE body_text IS NOT NULL ORDER BY version_id`).all())
+      .toEqual([{ version_id: 'recoverable-head', body_text: 'Current recoverable中文\0' }]);
     expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()).toEqual(parents);
   } finally { await fixture.close(); }
 });

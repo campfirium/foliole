@@ -31,7 +31,8 @@ function graph(peer: RestorePeer) {
 }
 
 function bodies(peer: RestorePeer) {
-  return peer.sqlite.prepare("SELECT version_id, body_text FROM node_sync_versions WHERE object_id = 'topic' ORDER BY version_id").all();
+  return peer.sqlite.prepare<[], { version_id: string; body_text: string | null }>(
+    "SELECT version_id, body_text FROM node_sync_versions WHERE object_id = 'topic' ORDER BY version_id").all();
 }
 
 async function differences(source: RestorePeer, target: RestorePeer) {
@@ -56,7 +57,7 @@ it.each([{ count: 24, known: 23, retired: true }, { count: 130, known: 128, reti
       await applySyncNodesWithDbPort(source.db, records);
       await applySyncNodesWithDbPort(target.db, records.slice(0, known));
       const expectedGraph = graph(source);
-      const expectedBodies = bodies(source);
+      const expectedBodies = bodies(source).map(row => row.version_id === `v${count}` ? row : { ...row, body_text: null });
       if (retired) source.sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL,
         snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL)
         WHERE object_id = 'topic' AND version_id <> 'v24'`);
@@ -148,7 +149,8 @@ it('restores a receiver body reclaimed after inventory comparison through the fr
     const records = history(3);
     await applySyncNodesWithDbPort(source.db, records);
     await applySyncNodesWithDbPort(target.db, records.slice(0, 2));
-    const expectedGraph = graph(source); const expectedBodies = bodies(source);
+    const expectedGraph = graph(source); const sourceBodies = bodies(source);
+    const expectedBodies = sourceBodies.map(row => row.version_id === 'v3' ? row : { ...row, body_text: null });
     const heldGraph = graph(target);
     const difference = (await differences(source, target))
       .find(value => value.objectType === 'node' && value.globalId === 'topic');
@@ -167,7 +169,7 @@ it('restores a receiver body reclaimed after inventory comparison through the fr
     for (let replay = 0; replay < 2; replay++) {
       await transfer(source, target, progress, difference, false); target.reopen();
       expect(graph(target)).toEqual(expectedGraph); expect(bodies(target)).toEqual(expectedBodies);
-      expect(graph(source)).toEqual(expectedGraph); expect(bodies(source)).toEqual(expectedBodies);
+      expect(graph(source)).toEqual(expectedGraph); expect(bodies(source)).toEqual(sourceBodies);
       expect(target.sqlite.prepare("SELECT current_version_id, content FROM nodes WHERE id = 'topic'").get())
         .toEqual({ current_version_id: 'v3', content: records[2]?.body_text });
     }

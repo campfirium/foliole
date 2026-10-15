@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
@@ -26,6 +28,11 @@ function assertBody(peer: Peer, body: string) {
     .pluck().get(body);
   expect(stored).toBe(body);
 }
+function assertRetiredBase(peer: Peer, base: string, body: string) {
+  expect(peer.db.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS retired,
+    json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE version_id = ?`).get(base))
+    .toEqual({ body_text: null, retired: 1, hash: createHash('sha256').update(body).digest('hex') });
+}
 
 it('preserves offline bases and branches, merges across three production libraries and restarts durably', async () => {
   const a = createPeer('a');
@@ -41,13 +48,14 @@ it('preserves offline bases and branches, merges across three production librari
   await sync(a, c);
   const online = edit(a, onlineBody);
   await sync(a, b);
-  assertBody(a, baseBody);
-  expect(history(b).find((row) => row.version_id === base)?.body_text).toBe(baseBody);
-  const offline = edit(c, offlineBody);
+  assertRetiredBase(a, base, baseBody);
+  assertRetiredBase(b, base, baseBody);
   assertBody(c, baseBody);
+  const offline = edit(c, offlineBody);
+  assertRetiredBase(c, base, baseBody);
   assertBody(c, offlineBody);
   for (const peer of [a, b, c]) restart(peer);
-  assertBody(a, baseBody);
+  assertRetiredBase(a, base, baseBody);
   assertBody(c, offlineBody);
   await sync(b, c);
   const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
@@ -66,6 +74,9 @@ it('preserves offline bases and branches, merges across three production librari
     restart(peer);
     assertPersisted(peer, mergedBody);
     assertBody(peer, mergedBody);
+    const current = (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
+    expect(new Set([current.body_text, ...(current.alternative_bodies ?? []).map(entry => entry.text)]))
+      .toEqual(new Set([onlineBody, offlineBody]));
     expect(history(peer)).toEqual(before);
     expect(before.map((row) => row.version_id)).toEqual(expect.arrayContaining([base, online, offline]));
     expect(before.find((row) => row.version_id === online)?.parent_version_id).toBe(base);

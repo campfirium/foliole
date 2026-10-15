@@ -5,6 +5,7 @@ import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 
 import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
@@ -37,6 +38,7 @@ it('retains a created article and its subsequent soft deletion through request r
     deleted.host_name = 'desktop-source';
     deleted.content_hash = computeNodeSyncHash({ ...nodeSyncSnapshotHashMetadata(deleted.snapshot), content: '' });
     await applySyncNodesWithDbPort(source.db, [deleted]);
+    expect(await collectNodeVersionPayloads(source.db, 'node-delete')).toEqual({ released: 1, skipped: null });
     const versions = source.sqlite.prepare(`SELECT version_id, object_id, parent_version_id, content_hash, body_text
       FROM node_sync_versions ORDER BY version_id`).all();
     const parents = source.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all();

@@ -98,9 +98,9 @@ it('spools and applies original bodies using the real desktop FilePort beneath a
     });
     expect(await files.list('requests')).toEqual([]);
     target.reopen();
-    const scalarRows = (peer: RestorePeer) => peer.sqlite.prepare(`SELECT version_id, object_id,
+    const scalarRows = (peer: RestorePeer) => peer.sqlite.prepare<[], { version_id: string; body_text: string | null }>(`SELECT version_id, object_id,
       parent_version_id, host_name, created_at, content_hash, body_text FROM node_sync_versions ORDER BY version_id`).all();
-    expect(scalarRows(target)).toEqual(scalarRows(source));
+    expect(scalarRows(target)).toEqual(scalarRows(source).map(row => row.version_id === 'head' ? row : { ...row, body_text: null }));
     expect(history(target)[1]).toEqual(original[1]);
     const snapshots = (peer: RestorePeer) => peer.db.query<{ version_id: string; snapshot_json: string }>(
       'SELECT version_id, snapshot_json FROM node_sync_versions ORDER BY version_id');

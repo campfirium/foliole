@@ -5,6 +5,7 @@ import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -40,6 +41,7 @@ it('applies an initial node, repeated request and later version through the shar
     expect(target.sqlite.prepare('SELECT current_version_id, content FROM nodes').all())
       .toEqual([{ current_version_id: first.version_id, content: first.body_text }]);
     await applySyncNodesWithDbPort(source.db, [second]);
+    expect(await collectNodeVersionPayloads(source.db, 'node-1')).toEqual({ released: 1, skipped: null });
     for (let replay = 0; replay < 2; replay++) {
       await send(source, target); target.reopen();
       expect(target.sqlite.prepare('SELECT title, content, body_blob_hash, current_version_id, sync_dirty FROM nodes').all())

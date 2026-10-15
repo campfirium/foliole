@@ -41,7 +41,8 @@ async function richNode(peer: RestorePeer, id: string) {
 function business(peer: RestorePeer) {
   return {
     nodes: peer.sqlite.prepare('SELECT id, content, current_version_id FROM nodes ORDER BY id').all(),
-    versions: peer.sqlite.prepare(`SELECT object_id, version_id, content_hash, parent_version_id, body_text
+    versions: peer.sqlite.prepare<[], { version_id: string; body_text: string | null }>(`SELECT object_id, version_id, content_hash, parent_version_id, body_text,
+      json_extract(snapshot_json, '$.body_blob_hash') AS body_hash
       FROM node_sync_versions ORDER BY version_id`).all(),
     parents: peer.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all(),
     reviews: peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all(),
@@ -64,6 +65,7 @@ it('preserves two full node histories with reading and review facts across curre
     expect(original.parents).toHaveLength(2);
     expect(original.reviews).toHaveLength(2);
     expect(original.reading).toHaveLength(2);
+    original.versions = original.versions.map(row => row.version_id.endsWith('-base') ? { ...row, body_text: null } : row);
     for (let replay = 0; replay < 2; replay++) {
       await send(source, target, 'node');
       target.reopen();

@@ -24,7 +24,9 @@ const hosts: ReturnType<typeof textDevice>[] = [];
 beforeEach(startLibraries);
 afterEach(async () => { hosts.splice(0).forEach(host => host.sqlite.close()); await closeLibraries(); });
 function device() { const host = textDevice(); hosts.push(host); return host; }
-const versions = (db: DbPort) => db.query('SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id');
+const versions = (db: DbPort) => db.query<{ version_id: string; parent_version_id: string | null;
+  content_hash: string; body_text: string | null; body_hash: string }>(`SELECT version_id, parent_version_id, content_hash, body_text,
+  json_extract(snapshot_json, '$.body_blob_hash') AS body_hash FROM node_sync_versions ORDER BY version_id`);
 const parents = (db: DbPort) => db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal');
 async function difference(db: DbPort) {
   const entry = await readFramedSyncInventoryEntry(db, { objectType: 'node', globalId: 'topic' });
@@ -134,7 +136,8 @@ it('keeps the receiver edit and both original branches when a previously fixed r
     expect(current.body_text).toBe('Receiver branch');
     expect(wholeBodies(current)).toEqual(new Set(['Receiver branch', 'Sender branch']));
     expect((await versions(db)).filter(row => row.version_id === sender || row.version_id === receiver))
-      .toEqual(expect.arrayContaining(originals));
+      .toEqual(originals.map(row => ({ ...row, body_text: null }))
+        .sort((a, b) => String(a.version_id).localeCompare(String(b.version_id))));
     expect(current.parent_version_ids?.slice().sort()).toEqual([sender, receiver].sort());
   } finally { reopened.close(); }
 });

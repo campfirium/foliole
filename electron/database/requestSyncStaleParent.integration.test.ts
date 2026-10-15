@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import { expect, it } from 'vitest';
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
@@ -20,7 +22,7 @@ function record(id: string, version: string, parentId: string | null, prior?: Na
   return result;
 }
 
-it('fills a stale version body without requiring its deleted structural parent or replacing the current projection', async () => {
+it('accepts stale identity and original body hash without requiring its deleted parent or replacing current text', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
@@ -55,9 +57,11 @@ it('fills a stale version body without requiring its deleted structural parent o
     expect(projection()).toEqual(before);
     expect(parents()).toEqual(beforeParents);
     expect(target.sqlite.prepare("SELECT id FROM nodes WHERE id = 'old-parent'").get()).toBeUndefined();
-    expect(target.sqlite.prepare(`SELECT version_id, parent_version_id, content_hash, body_text
+    expect(target.sqlite.prepare(`SELECT version_id, parent_version_id, content_hash, body_text,
+      json_extract(snapshot_json, '$.body_blob_hash') AS hash, json_extract(snapshot_json, '$.body_deleted') AS retired
       FROM node_sync_versions WHERE version_id = ?`).get(old.version_id)).toEqual({ version_id: old.version_id,
-      parent_version_id: old.parent_version_id, content_hash: old.content_hash, body_text: old.body_text });
+      parent_version_id: old.parent_version_id, content_hash: old.content_hash, body_text: null,
+      hash: createHash('sha256').update(old.body_text!).digest('hex'), retired: 1 });
     expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
   } finally { await fixture.close(); }
 });

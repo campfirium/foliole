@@ -6,6 +6,7 @@ import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSn
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -43,6 +44,7 @@ it('does not resurrect a locally deleted node when a peer sends its old active v
   try {
     for (const peer of [source, target]) await applySyncNodesWithDbPort(peer.db, [base]);
     await remove(target);
+    expect(await collectNodeVersionPayloads(target.db, 'topic')).toEqual({ released: 1, skipped: null });
     const before = facts(target);
     await send(source, target);
     await send(source, target);

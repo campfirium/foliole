@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { withRequestSyncFiles, type RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
@@ -72,7 +73,7 @@ it('rejects changed snapshot metadata with the same original version, hash and b
   } finally { await fixture.close(); }
 });
 
-it('accepts canonical optional fields and identity-only replay without losing the complete original body or metadata', async () => {
+it('accepts canonical optional fields and retired identity replay without losing original metadata', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
@@ -82,17 +83,18 @@ it('accepts canonical optional fields and identity-only replay without losing th
     // The direct fixture omits optional fields that the wire snapshot represents as null.
     expect(original.snapshot).not.toHaveProperty('image_sources');
     await snapshot(source, async (request, facts) => { await apply(source, target, request, facts); });
-    const retained = target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'original'").get();
+    const retained = target.sqlite.prepare<[], Record<string, unknown> & { snapshot_json: string }>(
+      "SELECT * FROM node_sync_versions WHERE version_id = 'original'").get()!;
+    const retired = { ...retained, body_text: null,
+      snapshot_json: JSON.stringify({ ...JSON.parse(retained.snapshot_json), content: null, body_deleted: true }) };
     await applySyncNodesWithDbPort(source.db, [textBranch('head', 'Current body', original)]);
-    source.sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL,
-      snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL)
-      WHERE version_id = 'original'`);
+    expect(await collectNodeVersionPayloads(source.db, 'topic')).toEqual({ released: 1, skipped: null });
     await snapshot(source, async (request, facts) => {
       const identity = facts.find(fact => fact.kind === 2 && fact.factId === 'original');
       expect(identity).toBeDefined(); expect(identity!.blobs).toEqual([]);
       for (let replay = 0; replay < 2; replay++) {
         await apply(source, target, request, facts); target.reopen();
-        expect(target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'original'").get()).toEqual(retained);
+        expect(target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'original'").get()).toEqual(retired);
         expect(target.sqlite.prepare('SELECT version_id, parent_version_id FROM node_sync_version_parents').all())
           .toEqual([{ version_id: 'head', parent_version_id: 'original' }]);
         expect(target.sqlite.prepare("SELECT content, current_version_id FROM nodes WHERE id = 'topic'").get())

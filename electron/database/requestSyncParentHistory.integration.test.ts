@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
@@ -27,11 +28,16 @@ function histories() {
   return { parent, child };
 }
 function originalRows(peer: RestorePeer, nodeId: string) {
-  return peer.sqlite.prepare('SELECT * FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId);
+  return peer.sqlite.prepare<[string], Record<string, unknown> & { version_id: string; snapshot_json: string }>(
+    'SELECT * FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId);
+}
+function retiredRows(rows: ReturnType<typeof originalRows>, head: string | null) {
+  return rows.map(row => row.version_id === head ? row : { ...row, body_text: null,
+    snapshot_json: JSON.stringify({ ...JSON.parse(row.snapshot_json), content: null, body_deleted: true }) });
 }
 function graph(peer: RestorePeer, nodeId: string) {
   return {
-    versions: peer.sqlite.prepare(`SELECT version_id, object_id, parent_version_id, host_name,
+    versions: peer.sqlite.prepare<[string], { version_id: string; body_text: string | null }>(`SELECT version_id, object_id, parent_version_id, host_name,
       created_at, content_hash, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all(nodeId),
     parents: peer.sqlite.prepare(`SELECT edge.version_id, edge.parent_version_id, edge.ordinal
       FROM node_sync_version_parents edge JOIN node_sync_versions version ON version.version_id = edge.version_id
@@ -53,8 +59,8 @@ it('fills the last two parent versions without changing the already known child 
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     const records = histories();
-    await applySyncNodesWithDbPort(source.db, records.parent);
-    await applySyncNodesWithDbPort(target.db, records.parent.slice(0, 127));
+    await applyConvergentSyncNodesWithDbPort(source.db, records.parent);
+    await applyConvergentSyncNodesWithDbPort(target.db, records.parent.slice(0, 127));
     await applySyncNodesWithDbPort(source.db, records.child);
     await applySyncNodesWithDbPort(target.db, records.child);
     const beforeChild = childState(target);
@@ -66,18 +72,20 @@ it('fills the last two parent versions without changing the already known child 
     expect(expected.parents).toHaveLength(128);
     expect(knownParent).toHaveLength(127);
     expect(beforeChild.versions).toHaveLength(130);
+    expected.versions = expected.versions.map(row => row.version_id === 'p0129' ? row : { ...row, body_text: null });
     const changes = await differences(source, target);
     expect(changes.map(value => ({ objectType: value.objectType, globalId: value.globalId })))
       .toEqual([{ objectType: 'node', globalId: 'parent' }]);
     const difference = changes[0]!;
-    expect([...difference.need.frontierFactIds].sort()).toEqual(['p0128', 'p0129']);
+    // Two new identities plus the sender's retirement declaration for the previously current parent.
+    expect([...difference.need.frontierFactIds].sort()).toEqual(['p0127', 'p0128', 'p0129']);
     const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
-    // Current snapshots also carry ancestor facts; only the requested deficit and receiver growth are two versions.
+    // The retirement declaration updates a known identity; receiver growth remains exactly two versions.
     for (let replay = 0; replay < 2; replay++) {
       await transfer(source, target, progress, difference, false); target.reopen();
       expect(graph(target, 'parent')).toEqual(expected);
-      expect(originalRows(target, 'parent').slice(0, 127)).toEqual(knownParent);
+      expect(originalRows(target, 'parent').slice(0, 127)).toEqual(retiredRows(knownParent, null));
       expect(originalRows(target, 'parent')).toHaveLength(knownParent.length + 2);
       expect(target.sqlite.prepare("SELECT current_version_id, content FROM nodes WHERE id = 'parent'").get())
         .toEqual({ current_version_id: 'p0129', content: 'body' });
