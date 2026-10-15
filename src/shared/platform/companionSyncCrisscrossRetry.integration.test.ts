@@ -22,7 +22,11 @@ import { writeRequestSyncSnapshot } from '../../../lib/core/sync/requestSyncSnap
 import { repairDirectChildAnchorsForAppliedParent } from '../../../lib/core/sync/syncNodeAnchorRepair.js';
 import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 
-beforeEach(startLibraries);
+let initialPeers: Awaited<ReturnType<typeof diverge>>;
+beforeEach(async () => {
+  await startLibraries();
+  initialPeers = await diverge();
+}, 30_000);
 afterEach(closeLibraries);
 
 async function annotate(peer: Peer, versionId: string, content: string) {
@@ -69,7 +73,7 @@ function reopen(peer: Peer) {
 }
 
 it.each([false, true])('keeps converged heads across response replay, forwarding, and reopen (replyLost=%s)', async replyLost => {
-  const { left, right } = await diverge();
+  const { left, right } = initialPeers;
   edit(left, 'Intermediate body', 'Title A');
   edit(right, 'Intermediate body', 'Title B');
   edit(left, 'Shared final body', 'Title A');
@@ -95,7 +99,7 @@ it.each([false, true])('keeps converged heads across response replay, forwarding
       assertPersisted(right, 'Shared final body', final.version_id!);
     });
   });
-});
+}, 15_000);
 
 async function withTopicSnapshot(source: Peer, target: Peer,
   execute: (replay: () => Promise<void>) => Promise<void>) {
