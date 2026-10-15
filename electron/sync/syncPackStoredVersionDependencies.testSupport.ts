@@ -49,3 +49,8 @@ export function business(peer: RestorePeer) {
     'node_version_member_positions', 'node_version_local_source_revisions', 'node_version_device_revisions']
     .map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
+
+export function retiredVersionRow(row: Record<string, unknown> & { snapshot_json: string }) {
+  return { ...row, body_text: null,
+    snapshot_json: JSON.stringify({ ...JSON.parse(row.snapshot_json), content: null, body_deleted: true }) };
+}

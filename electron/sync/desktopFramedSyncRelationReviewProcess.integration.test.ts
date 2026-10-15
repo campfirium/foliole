@@ -79,7 +79,7 @@ it('applies a node, parent relation and review through a production request', as
     current_version_id: 't326-child-version', id: 't326-relation-review'
   })]);
   expect(received.versions).toEqual([
-    { version_id: 't326-base-version', object_id: 't326-relation-review', body_text: 'Shared base body' },
+    { version_id: 't326-base-version', object_id: 't326-relation-review', body_text: null },
     { version_id: 't326-child-version', object_id: 't326-relation-review', body_text: 'Incoming child body' }
   ]);
   expect(received.parents).toEqual([{

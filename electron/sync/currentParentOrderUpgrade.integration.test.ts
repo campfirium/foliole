@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -29,7 +30,7 @@ it('retires a mixed legacy publication and delivers its original business facts 
     expect(business(fixture.leftSnapshot.databasePath)).toEqual(original);
     const db = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     try {
-      expect(db.pragma('user_version', { simple: true })).toBe(153);
+      expect(db.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
       expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_outbound_publications'").get()).toBeUndefined();
     } finally { db.close(); }
     await fixture.left.invoke('collect_content');

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 
@@ -50,14 +51,21 @@ it('completes real sync when a legacy historical version has text but lacks its 
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Original historical body' });
+    const original = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
+    let base: string;
+    try { base = original.prepare<[], { current_version_id: string }>(
+      "SELECT current_version_id FROM nodes WHERE id = 'legacy-topic'").get()!.current_version_id; }
+    finally { original.close(); }
     await fixture.left.invoke('round', { input: peerCommand('remember_peer', fixture.rightSnapshot) });
     await fixture.left.invoke('round', { input: { kind: 'trigger_sync' } });
     await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Current body' });
     await fixture.left.invoke('round', { input: { kind: 'trigger_sync' } });
     const sqlite = new Database(fixture.leftSnapshot.databasePath);
     try {
-      sqlite.prepare(`UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_blob_hash')
-        WHERE object_id = ? AND body_text = ?`).run('legacy-topic', 'Original historical body');
+      // Represent a legacy source that still owns the original bytes but has no hash metadata.
+      expect(sqlite.prepare(`UPDATE node_sync_versions SET body_text = ?,
+        snapshot_json = json_remove(snapshot_json, '$.body_blob_hash', '$.body_deleted')
+        WHERE version_id = ?`).run('Original historical body', base).changes).toBe(1);
     } finally { sqlite.close(); }
     await expect(fixture.left.invoke('round', { input: { kind: 'trigger_sync' } }))
       .resolves.toMatchObject({ status: 'completed' });
@@ -66,8 +74,8 @@ it('completes real sync when a legacy historical version has text but lacks its 
     const stored = new Database(restarted.snapshot.databasePath, { readonly: true });
     try {
       expect(stored.prepare(`SELECT json_extract(snapshot_json, '$.body_blob_hash') FROM node_sync_versions
-        WHERE object_id = ? AND body_text = ?`).pluck().get('legacy-topic', 'Original historical body'))
-        .toMatch(/^[a-f0-9]{64}$/u);
+        WHERE version_id = ?`).pluck().get(base))
+        .toBe(createHash('sha256').update('Original historical body').digest('hex'));
     } finally { stored.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import { expect, it } from 'vitest';
 
 import { buildResolutionRecord } from '../../lib/core/sync/syncNodeResolution.js';
@@ -50,7 +52,9 @@ it.each(['changed-parents', 'missing-parent', 'wrong-object', 'changed-snapshot'
       }
       await expect(receive(source, target, [record])).rejects.toThrow(error);
       target.reopen(); expect(business(target)).toEqual(before);
-      expect(target.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'base'").pluck().get()).toBe('Base');
+      expect(target.sqlite.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+        FROM node_sync_versions WHERE version_id = 'base'`).get())
+        .toEqual({ body_text: null, hash: createHash('sha256').update('Base').digest('hex') });
     } finally { await fixture.close(); }
   });
 

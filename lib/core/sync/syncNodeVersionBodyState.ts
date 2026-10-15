@@ -36,6 +36,8 @@ export async function applyStoredNodeVersionBodyState(port: DbPort, record: Nati
     throw new Error('sync_node_version_body_hash_mismatch');
   }
   const alternatives = validateTopicTextBodies(record.snapshot.text_alternatives ?? [], record.alternative_bodies ?? []);
+  if (record.snapshot.kind === 'topic') await port.run(`${PRESERVE_RELEASED_MAIN_HASH_SQL}
+    AND body_text IS NULL AND json_extract(snapshot_json, '$.body_deleted') = 1`, [bodyHash, record.version_id!]);
   await port.run(`UPDATE node_sync_versions SET body_text = ?,
     snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?, '$.text_alternative_bodies', json(?))
     WHERE version_id = ? AND (body_text IS NULL OR json_extract(snapshot_json, '$.body_blob_hash') IS NULL OR

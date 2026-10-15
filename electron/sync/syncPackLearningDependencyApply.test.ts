@@ -46,7 +46,7 @@ it('preserves reading progress and removes review scheduling when a current requ
       expect(target.sqlite.prepare("SELECT * FROM node_reading WHERE node_id = 'topic'").get()).toEqual(progress);
       expect(target.sqlite.prepare("SELECT node_id FROM node_review WHERE node_id = 'topic'").get()).toBeUndefined();
       expect(target.sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
-        .toEqual([{ version_id: 'base', body_text: 'Original body' }, { version_id: 'deleted', body_text: 'Original body' }]);
+        .toEqual([{ version_id: 'base', body_text: null }, { version_id: 'deleted', body_text: 'Original body' }]);
     }
   } finally { await fixture.close(); }
 });

@@ -57,6 +57,8 @@ async () => {
     parents: [expect.any(Object), expect.any(Object)],
     versions: [expect.any(Object), expect.any(Object), expect.any(Object)]
   });
+  const source = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
+  const original = versionFacts(fixture.leftSnapshot.databasePath);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
     nodes: [], parents: [], versions: []
   });
@@ -67,9 +69,8 @@ async () => {
     expect.objectContaining({ content: 'Child body', id: nodeId, title: 'Child' })
   ]);
   expect(received.versions).toHaveLength(3);
-  expect(received.versions).toEqual(expect.arrayContaining(
-    edits.map(([, body_text]) => expect.objectContaining({ body_text }))
-  ));
+  expect(received.versions).toEqual(source.versions);
+  expect(versionFacts(fixture.rightSnapshot.databasePath)).toEqual(original);
   expect(received.parents).toHaveLength(2);
   const byVersion = new Map(received.versions.map((version) => [
     (version as { version_id: string }).version_id,
@@ -97,6 +98,8 @@ it('converges independent roots while retaining both original bodies and the com
   ]);
   const beforeLeft = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
   const beforeRight = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  const originalFacts = [...versionFacts(fixture.leftSnapshot.databasePath), ...versionFacts(fixture.rightSnapshot.databasePath)]
+    .sort((a, b) => a.version_id.localeCompare(b.version_id));
   expect(beforeLeft.parents).toEqual([]);
   expect(beforeRight.parents).toEqual([]);
   expect((beforeLeft.nodes[0] as { current_version_id: string }).current_version_id)
@@ -107,7 +110,8 @@ it('converges independent roots while retaining both original bodies and the com
   const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(left.nodes).toEqual(right.nodes);
   expect(left.versions).toEqual(right.versions);
-  expect(left.versions).toEqual(expect.arrayContaining([...beforeLeft.versions, ...beforeRight.versions]));
+  expect(versionFacts(fixture.leftSnapshot.databasePath).filter(row => originalFacts.some(original => original.version_id === row.version_id)))
+    .toEqual(originalFacts);
   expect(left.versions).toHaveLength(3);
   expect(left.parents).toEqual(right.parents);
   expect(left.parents).toHaveLength(2);
@@ -136,4 +140,12 @@ async function assertWholeTexts(databasePath: string, nodeId: string) {
     expect(wholeBodies(record!)).toEqual(new Set(['Left branch body', 'Right branch body']));
     expect(record!.snapshot.text_alternatives).toHaveLength(1);
   } finally { sqlite.close(); }
+}
+
+function versionFacts(databasePath: string) {
+  const db = new Database(databasePath, { readonly: true });
+  try { return db.prepare<[], { version_id: string; object_id: string; content_hash: string; body_hash: string }>(
+    `SELECT version_id, object_id, content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_hash
+      FROM node_sync_versions WHERE object_id LIKE 't326-%' ORDER BY version_id`).all(); }
+  finally { db.close(); }
 }

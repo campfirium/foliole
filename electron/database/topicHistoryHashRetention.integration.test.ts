@@ -45,11 +45,15 @@ it.each(['driver', 'port'])('preserves a complete historical body hash before %s
   }
 });
 
-it('fills an unknown retired hash from a matching received retirement without resurrecting text', async () => {
+it.each(['retired', 'complete'])('fills an unknown retired hash from a matching %s fact without resurrecting text', async form => {
   const { a, b } = await peers();
-  for (const peer of [a, b]) await collectNodeVersionPayloads(peer.port, 'topic');
+  await collectNodeVersionPayloads(a.port, 'topic');
+  if (form === 'retired') await collectNodeVersionPayloads(b.port, 'topic');
   a.db.exec("UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = 'base'");
   await withLibraryRequestSnapshot(b, a, replay => replay());
+  expect((await loadRetainedSyncNodeVersionFact(a.port, 'base'))!).toMatchObject({ body_text: null,
+    snapshot: { body_deleted: true, body_blob_hash: hashTextBody(original) } });
+  await withLibraryRequestSnapshot(a, b, replay => replay());
   const entries = await Promise.all([a, b].map(peer => readFramedSyncInventoryEntry(peer.port, key)));
   expect(compareFramedSyncDatabaseInventories({ local: [entries[0]!], remote: [entries[1]!] })).toEqual([]);
   expect((await loadRetainedSyncNodeVersionFact(a.port, 'base'))!).toMatchObject({ body_text: null,

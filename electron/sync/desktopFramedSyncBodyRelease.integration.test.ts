@@ -16,7 +16,9 @@ function readBodies(databasePath: string) {
     return {
       blobs: db.prepare<[], { hash: string }>('SELECT hash FROM content_blob_data').all().map((row) => row.hash),
       nodes: db.prepare(`SELECT id, current_version_id, content FROM nodes ORDER BY id`).all(),
-      versions: db.prepare(`SELECT version_id, parent_version_id, body_text,
+      versions: db.prepare<[], { version_id: string; parent_version_id: string | null; body_text: string | null;
+        body_deleted: number | null; body_hash: string; content_hash: string }>(`SELECT version_id, parent_version_id, body_text,
+        content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_hash,
         json_extract(snapshot_json, '$.body_deleted') AS body_deleted
         FROM node_sync_versions ORDER BY version_id`).all(),
       edges: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()
@@ -32,11 +34,12 @@ it('releases replaced bytes across real processes, preserves another node holder
     await fixture.left.seed({ content: SHARED, nodeId: 'holder', title: 'Holder' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.left.seed({ content: INTERMEDIATE, nodeId: 'article', title: 'Article' });
+    const intermediate = readBodies(fixture.leftSnapshot.databasePath).versions.find(version => version.body_text === INTERMEDIATE)!;
     await fixture.left.seed({ content: 'Current body', nodeId: 'article', title: 'Article' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
     expect(readBodies(fixture.leftSnapshot.databasePath).versions)
-      .toContainEqual(expect.objectContaining({ body_text: INTERMEDIATE }));
+      .toContainEqual({ ...intermediate, body_text: null, body_deleted: 1 });
     await reconnectFixturePeer(fixture.left, third.snapshot);
     await reconnectFixturePeer(fixture.right, third.snapshot);
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
@@ -50,6 +53,8 @@ it('releases replaced bytes across real processes, preserves another node holder
       ]));
       expect(retained.versions).not.toContainEqual(expect.objectContaining({ body_text: INTERMEDIATE }));
       expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null, body_deleted: 1 }));
+      expect(retained.versions).toEqual(readBodies(fixture.leftSnapshot.databasePath).versions);
+      expect(retained.edges).toEqual(readBodies(fixture.leftSnapshot.databasePath).edges);
     }
     await fixture.left.seed({ content: 'Holder replaced', nodeId: 'holder', title: 'Holder' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);

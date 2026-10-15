@@ -11,6 +11,7 @@ import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
@@ -52,6 +53,7 @@ it('notifies committed node and tombstone identities once across normal repeated
       await upsertRemoteVersion(tx, record);
       await applyRemoteNodeTombstone(tx, record, false);
     });
+    expect(await collectNodeVersionPayloads(source.db, 'topic')).toEqual({ released: 1, skipped: null });
     deleted = true;
     expect(await round(source, target, targetHost)).toMatchObject({ complete: true, pending: 0 });
     expect(events.filter(event => event.appliedNodeIds.length > 0)).toEqual([notification(), notification()]);
@@ -78,6 +80,9 @@ it('waits after a durable object commit and resumes remaining objects after reop
     } };
   try {
     await source.seed('sync-from-zero-a-first'); await source.seed('sync-from-zero-a-second');
+    for (const id of ['sync-from-zero-a-first', 'sync-from-zero-a-second']) {
+      expect(await collectNodeVersionPayloads(source.db, id)).toEqual({ released: 1, skipped: null });
+    }
     const running = round(source, target, host, controller.signal);
     const interrupted = expect(running).rejects.toThrow('acceptance_process_interrupted');
     await committed;

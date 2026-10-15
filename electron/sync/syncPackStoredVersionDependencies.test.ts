@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 
-import { branch, business, identity, receive } from './syncPackStoredVersionDependencies.testSupport.js';
+import { branch, business, identity, receive, retiredVersionRow } from './syncPackStoredVersionDependencies.testSupport.js';
 
 const parent = branch('parent', 'parent body', undefined, '2026-05-01T00:00:00.000Z');
 const child = branch('child', 'child body', parent, '2026-05-02T00:00:00.000Z');
@@ -24,11 +24,12 @@ it('accepts a parent omitted from the response when the receiver has its body', 
 
 it('accepts an omitted parent identity whose stored body has been reclaimed', () => scenario(async (source, target) => {
   await upsertRemoteVersion(target.db, identity(parent));
-  const original = target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'parent'").get();
+  const original = target.sqlite.prepare<[], Record<string, unknown> & { snapshot_json: string }>(
+    "SELECT * FROM node_sync_versions WHERE version_id = 'parent'").get()!;
   await receive(source, target, [child]); target.reopen();
   expect(target.sqlite.prepare("SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = 'child'").get())
     .toEqual({ parent_version_id: 'parent' });
-  expect(target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'parent'").get()).toEqual(original);
+  expect(target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE version_id = 'parent'").get()).toEqual(retiredVersionRow(original));
   expect(target.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'parent'").get()).toEqual({ body_text: null });
 }));
 
@@ -73,13 +74,14 @@ it('adds a missing parent relation without receiving the known child body again'
     .toEqual({ body_text: 'child body' });
 }));
 
-it('restores a reclaimed historical body when its original fact arrives again', () => scenario(async (source, target) => {
+it('preserves retired historical identity and hash when its original full fact arrives again', () => scenario(async (source, target) => {
   await receive(source, target, [identity(parent), child]);
   await receive(source, target, [parent, child]); target.reopen();
   const row = target.sqlite.prepare("SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = 'parent'")
     .get() as { body_text: string; snapshot_json: string };
-  expect(row.body_text).toBe('parent body');
-  expect(JSON.parse(row.snapshot_json)).toMatchObject({ id: 'node-1', title: 'Packed Node', content: null });
+  expect(row.body_text).toBeNull();
+  expect(JSON.parse(row.snapshot_json)).toMatchObject({ id: 'node-1', title: 'Packed Node', content: null, body_deleted: true });
+  expect(target.sqlite.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('child body');
   expect(target.sqlite.prepare("SELECT content_hash FROM node_sync_versions WHERE version_id = 'parent'").pluck().get())
     .toBe(parent.content_hash);
 }));

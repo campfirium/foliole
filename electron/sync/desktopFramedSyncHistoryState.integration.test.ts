@@ -1,8 +1,13 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
+
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { wholeBodies } from '../database/topicTextState.testSupport.js';
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -13,6 +18,7 @@ function history(databasePath: string) {
     return {
       node: db.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('history-state'),
       versions: db.prepare(`SELECT version_id, parent_version_id, content_hash, body_text,
+        json_extract(snapshot_json, '$.body_blob_hash') AS body_hash,
         COALESCE(json_extract(snapshot_json, '$.body_deleted'), 0) AS body_deleted
         FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all('history-state'),
       parents: db.prepare(`SELECT edge.* FROM node_sync_version_parents edge JOIN node_sync_versions version
@@ -29,7 +35,8 @@ function removeBody(databasePath: string, versionId: string) {
   } finally { db.close(); }
 }
 
-it.each([false, true])('repairs history with one available source and refuses completion with both missing=%s', async bothMissing => {
+it.each(['unused-ancestor', 'current-one-source', 'current-both-missing'])(
+  'requires current text while allowing retired ancestor gaps: %s', async missing => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original 中文\r\n😀', nodeId: 'history-state', title: 'History' });
@@ -37,10 +44,12 @@ it.each([false, true])('repairs history with one available source and refuses co
     const base = first!.currentVersionId!;
     await fixture.left.seed({ content: 'Current full body', nodeId: 'history-state', title: 'History' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-    removeBody(fixture.rightSnapshot.databasePath, base);
-    if (bothMissing) removeBody(fixture.leftSnapshot.databasePath, base);
+    const current = (await readFixtureInventory(fixture.left)).find(entry => entry.globalId === 'history-state')!.currentVersionId!;
+    const missingVersion = missing === 'unused-ancestor' ? base : current;
+    removeBody(fixture.rightSnapshot.databasePath, missingVersion);
+    if (missing !== 'current-one-source') removeBody(fixture.leftSnapshot.databasePath, missingVersion);
     const result = await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-    if (bothMissing) {
+    if (missing === 'current-both-missing') {
       expect(result).toMatchObject({ complete: false });
       const inventory = await readFixtureInventory(fixture.right);
       expect(inventory.find(entry => entry.globalId === 'history-state')).toMatchObject({ unready: true });
@@ -49,15 +58,19 @@ it.each([false, true])('repairs history with one available source and refuses co
       expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: false });
       const source = new Database(fixture.leftSnapshot.databasePath);
       try { source.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?')
-        .run('Original 中文\r\n😀', base); } finally { source.close(); }
+        .run('Current full body', current); } finally { source.close(); }
       expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true });
       expect(history(restarted.snapshot.databasePath)).toEqual(history(fixture.leftSnapshot.databasePath));
     } else {
       expect(result).toMatchObject({ complete: true });
       expect(history(fixture.rightSnapshot.databasePath)).toEqual(history(fixture.leftSnapshot.databasePath));
       const db = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
-      try { expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get(base))
-        .toEqual({ body_text: 'Original 中文\r\n😀' }); } finally { db.close(); }
+      try {
+        expect(db.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+          FROM node_sync_versions WHERE version_id = ?`).get(base))
+          .toEqual({ body_text: null, hash: createHash('sha256').update('Original 中文\r\n😀').digest('hex') });
+        expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(current)).toBe('Current full body');
+      } finally { db.close(); }
     }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
@@ -80,8 +93,12 @@ it('keeps an offline editor branch and converges three production request peers 
     await fixture.left.invoke('collect_content');
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     const db = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
-    try { expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get(base))
-      .toEqual({ body_text: 'Editor baseline' }); } finally { db.close(); }
+    try {
+      expect(db.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
+        FROM node_sync_versions WHERE version_id = ?`).get(base))
+        .toEqual({ body_text: null, hash: createHash('sha256').update('Editor baseline').digest('hex') });
+      expect(db.prepare("SELECT version_id FROM node_version_local_holds WHERE hold_id = 'editor'").pluck().get()).toBe(base);
+    } finally { db.close(); }
     await fixture.right.invoke('local_content_edit', { baseVersionId: base, versionId: 'offline-history-edit',
       content: 'Unsaved full offline input', hostName: 'offline', nodeId: 'history-state', updatedAt: '2026-10-10T08:00:00Z' });
     await reconnectFixturePeer(fixture.right, third.snapshot);
@@ -90,6 +107,12 @@ it('keeps an offline editor branch and converges three production request peers 
     expect(history(fixture.rightSnapshot.databasePath)).toEqual(history(fixture.leftSnapshot.databasePath));
     expect(history(third.snapshot.databasePath)).toEqual(history(fixture.rightSnapshot.databasePath));
     expect(await reconnectFixturePeer(fixture.right, third.snapshot)).toMatchObject({ complete: true });
+    for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot, third.snapshot]) {
+      const current = new Database(snapshot.databasePath, { readonly: true });
+      try { expect(wholeBodies((await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(current), 'history-state'))!))
+        .toEqual(new Set(['Remote current body', 'Unsaved full offline input'])); }
+      finally { current.close(); }
+    }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
