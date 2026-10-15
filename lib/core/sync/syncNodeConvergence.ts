@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
 import { resolveFolderSourceConflict } from './syncFolderResolution.js';
 import { resolveItemSourceConflict } from './syncItemResolution.js';
@@ -14,38 +15,33 @@ export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: Native
   return applyConvergentSyncNodeSource(port, arraySyncNodeRecordSource(records), options);
 }
 
-export async function applyConvergentSyncNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
+export function applyConvergentSyncNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
   source: SyncNodeRecordSource<M>, options: { collectVersionPayloads?: boolean } = {}) {
+  return port.transaction(tx => convergeNodeSource(tx, source, options));
+}
+
+async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
+  source: SyncNodeRecordSource<M>, options: { collectVersionPayloads?: boolean }) {
   const records = source.records;
   const knownNodeIds = await loadKnownNodeStateIds(port, records);
   const result = await applySyncNodeSourceWithDbPort(port, source, {
-    enqueueSearchInvalidations: false
+    enqueueSearchInvalidations: false, deferBodyRetirement: options.collectVersionPayloads === false
   });
   const conflicts = groupByObjectId(result.conflictNodes);
   const resolvedNodeIds: string[] = [];
-  for (const group of conflicts) {
-    if (group.every((record) => record.snapshot.kind === 'folder')) {
-      resolvedNodeIds.push((await resolveFolderSourceConflict(port, { ...source, records: group })).object_id);
-      continue;
-    }
-    if (group.every((record) => record.snapshot.kind === 'item')) {
-      resolvedNodeIds.push((await resolveItemSourceConflict(port, { ...source, records: group })).object_id);
-      continue;
-    }
-    if (group.some((record) => record.snapshot.kind !== 'topic')) {
-      throw new Error(`sync_node_conflict_kind_mismatch:${group[0]!.object_id}`);
-    }
-    resolvedNodeIds.push((await resolveTopicSourceConflict(port, { ...source, records: group }, options.collectVersionPayloads !== false)).object_id);
-  }
+  for (const group of conflicts) resolvedNodeIds.push(await resolveGroup(port, { ...source, records: group }));
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
   for (const nodeId of new Set(records.map((record) => record.object_id))) {
-    await expireTopicText(port, nodeId, new Date().toISOString(), options.collectVersionPayloads !== false);
+    await expireTopicText(port, nodeId, new Date().toISOString(), false);
   }
   await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
   );
+  if (options.collectVersionPayloads !== false) for (const nodeId of new Set(records.map(record => record.object_id))) {
+    await collectNodeVersionPayloads(port, nodeId, Number.MAX_SAFE_INTEGER);
+  }
   return {
     appliedNodeCount: new Set([
       ...result.appliedIds,
@@ -57,6 +53,19 @@ export async function applyConvergentSyncNodeSource<M extends SyncNodeRecordMeta
       .map((record) => record.object_id),
     processedNodeIds: [...new Set(records.map((record) => record.object_id))]
   };
+}
+
+async function resolveGroup<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>) {
+  if (source.records.every(record => record.snapshot.kind === 'folder')) {
+    return (await resolveFolderSourceConflict(port, source)).object_id;
+  }
+  if (source.records.every(record => record.snapshot.kind === 'item')) {
+    return (await resolveItemSourceConflict(port, source)).object_id;
+  }
+  if (source.records.some(record => record.snapshot.kind !== 'topic')) {
+    throw new Error(`sync_node_conflict_kind_mismatch:${source.records[0]!.object_id}`);
+  }
+  return (await resolveTopicSourceConflict(port, source, false)).object_id;
 }
 
 async function loadKnownNodeStateIds(port: DbPort, records: readonly SyncNodeRecordMetadata[]) {

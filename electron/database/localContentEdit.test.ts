@@ -103,8 +103,8 @@ it('retains complete delayed edits using their real parent and preserves both br
   const heldBodies = sqlite.prepare(`SELECT version_id, body_text FROM node_sync_versions
     WHERE version_id IN (?, ?) ORDER BY version_id`).all(base, 'ver_local-edit');
   expect(heldBodies).toEqual([
-    { version_id: base, body_text: 'Apples\nBread\nMilk\n' },
-    { version_id: 'ver_local-edit', body_text: 'Apples and tea\nBread\nMilk\n' }
+    { version_id: base, body_text: null },
+    { version_id: 'ver_local-edit', body_text: null }
   ].sort((left, right) => left.version_id.localeCompare(right.version_id)));
   const graph = originalGraph();
   const edges = originalEdges();

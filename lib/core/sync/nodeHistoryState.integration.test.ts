@@ -25,7 +25,7 @@ const v2 = textBranch('v2', 'Current body', v1, '2026-10-10T02:00:00Z');
 async function host() {
   const device = textDevice();
   devices.push(device);
-  await device.receive([v1, v2]);
+  await applyConvergentSyncNodesWithDbPort(device.db, [v1, v2], { collectVersionPayloads: false });
   return device;
 }
 
@@ -59,7 +59,9 @@ it('protects current text from a historical deletion while preserving an editor 
     title: 'Topic', updatedAt: '2026-10-10T03:00:00Z' });
   expect(result.submittedVersionId).toBe('offline-edit');
   expect(a.sqlite.prepare('SELECT body_text, parent_version_id FROM node_sync_versions WHERE version_id = ?')
-    .get('offline-edit')).toEqual({ body_text: input, parent_version_id: 'v1' });
+    .get('offline-edit')).toEqual({ body_text: null, parent_version_id: 'v1' });
+  const current = await a.current();
+  expect(new Set([current.body_text, ...current.alternative_bodies?.map(body => body.text) ?? []])).toContain(input);
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBeNull();
 });
 

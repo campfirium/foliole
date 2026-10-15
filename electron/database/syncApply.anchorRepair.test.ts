@@ -19,8 +19,10 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
 import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
@@ -84,6 +86,28 @@ it('persists a separate full body and remaps child anchors without inline snapsh
     anchor_resolution_status FROM nodes WHERE id = ?`).get('child-1'))
     .toEqual({ start: 13, end: 17, anchor_source_version_id: 'phone#parent-v2',
       anchor_resolution_status: 'resolved' });
+});
+
+it('remaps a child after its old anchor source main text has retired', async () => {
+  insertLocalNode({ id: 'parent-1', content: 'Alpha Beta Gamma', versionId: 'desktop#parent-v1' });
+  insertLocalNode({ id: 'child-1', parentId: 'parent-1', anchorLink: JSON.stringify({
+    id: 'anchor-1', kind: 'highlight', locator: { from: 6, originalText: 'Beta', to: 10 }
+  }) });
+  const db = openDatabaseConnection().sqlite;
+  seedNodeVersion(db, 'parent-1', 'desktop#parent-v1');
+  await applySyncNodesAsync([parentRecord('Alpha Beta Gamma')]);
+  db.prepare("UPDATE nodes SET anchor_source_version_id = 'desktop#parent-v1' WHERE id = 'child-1'").run();
+  await collectNodeVersionPayloads(createBetterSqliteDbPort(db), 'parent-1');
+  expect(db.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'desktop#parent-v1'").get())
+    .toEqual({ body_text: null });
+  const next = { ...parentRecord('Prefix Alpha Beta Gamma'), version_id: 'phone#parent-v3',
+    content_hash: 'phone#parent-v3-hash', parent_version_id: 'phone#parent-v2',
+    ancestor_version_ids: ['phone#parent-v2', 'desktop#parent-v1'] };
+  await applySyncNodesAsync([next]);
+  expect(db.prepare(`SELECT json_extract(anchor_link, '$.locator.from') AS start,
+    json_extract(anchor_link, '$.locator.to') AS end, anchor_resolution_status,
+    anchor_source_version_id FROM nodes WHERE id = 'child-1'`).get())
+    .toEqual({ start: 13, end: 17, anchor_resolution_status: 'resolved', anchor_source_version_id: 'phone#parent-v3' });
 });
 
 function insertLocalNode(args: {

@@ -31,7 +31,7 @@ export interface AcceptedRemoteNodeOptions {
   enqueueSearchInvalidations?: boolean;
 }
 
-async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
+async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, deferBodyRetirement = false) {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) return;
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
@@ -48,7 +48,7 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
         !isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot)) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
-    await applyStoredNodeVersionBodyState(port, record);
+    if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) await applyStoredNodeVersionBodyState(port, record);
     await retainVersionParents(port, record);
     return;
   }

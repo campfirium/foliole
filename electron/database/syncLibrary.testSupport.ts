@@ -38,14 +38,14 @@ export async function closeLibraries() {
   await rm(root, { recursive: true, force: true });
 }
 
-export function createPeer(id: string): Peer {
+export function createPeer(id: string, initialize = initializeDatabaseSchema): Peer {
   const file = path.join(root, `${id}.db`);
   const anchor = randomUUID();
   const identity = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group', library_path: file,
     path_flavor: devicePathFlavorFromCanonicalLibraryPath(file) });
   const db = new Database(file);
   db.pragma('foreign_keys = ON');
-  initializeDatabaseSchema(db);
+  initialize(db);
   db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, 'now')").run(JSON.stringify(id));
   const peer = { id: identity.identity_key, name: id, anchor, file, db, driver: createBetterSqlite3Driver(db), port: createBetterSqliteDbPort(db) };
   bindParentOrderWriter(peer.driver, { deviceAnchor: anchor, libraryPath: file });

@@ -63,7 +63,7 @@ it('rolls back retired reference release when blob deletion fails', async () => 
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeDefined();
 });
 
-it('keeps an effective alternative and its source body intact during normal collection', async () => {
+it('keeps an independently stored alternative while retiring its old main source', async () => {
   const peer = createPeer('source');
   const original = edit(peer, ORIGINAL);
   peer.db.prepare(`INSERT INTO node_text_alternatives
@@ -72,7 +72,7 @@ it('keeps an effective alternative and its source body intact during normal coll
   const before = peer.db.prepare('SELECT * FROM node_text_alternatives').all();
   edit(peer, CURRENT);
   await collectNodeVersionPayloads(peer.port, 'topic');
-  expect(history(peer).find((row) => row.version_id === original)?.body_text).toBe(ORIGINAL);
+  expect(history(peer).find((row) => row.version_id === original)?.body_text).toBeNull();
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hashTextBody(ORIGINAL))).toBeUndefined();
   expect(peer.db.prepare('SELECT * FROM node_text_alternatives').all()).toEqual(before);
 });
@@ -91,7 +91,7 @@ it('accepts complete and retired forms through current requests while rejecting 
     expect(business(target)).toEqual(beforeBodyConflict);
     await receive(source, target, [identity(original), head]); target.reopen();
     expect(target.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'original'").get())
-      .toEqual({ body_text: ORIGINAL });
+      .toEqual({ body_text: null });
     await receive(source, retired, [identity(original), head]); retired.reopen();
     expect(retired.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'original'").get())
       .toEqual({ body_text: null });
@@ -107,7 +107,7 @@ it('accepts complete and retired forms through current requests while rejecting 
     for (let replay = 0; replay < 2; replay++) {
       await receive(source, retired, [original, head]); retired.reopen();
       expect(retired.sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
-        .toEqual([{ version_id: 'head', body_text: CURRENT }, { version_id: 'original', body_text: ORIGINAL }]);
+        .toEqual([{ version_id: 'head', body_text: CURRENT }, { version_id: 'original', body_text: null }]);
       expect(retired.sqlite.prepare('SELECT version_id, parent_version_id FROM node_sync_version_parents').all())
         .toEqual([{ version_id: 'head', parent_version_id: 'original' }]);
     }

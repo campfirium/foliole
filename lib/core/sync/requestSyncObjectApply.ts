@@ -8,6 +8,7 @@ import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { recordFramedSyncPeerEpoch } from './framedSyncPeerEpoch.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { assertNodeVersionPeerEpoch } from './nodeVersionPeerProof.js';
 import { advanceLocalSourceRevision } from './nodeVersionSourceRevision.js';
 import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
@@ -77,6 +78,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     if (!overwriting && input.objectType === 'node') {
       await publishLocalNodePosition(tx, input.globalId, requestSyncPositionReady);
     }
+    if (input.objectType === 'node') await collectNodeVersionPayloads(tx, input.globalId, Number.MAX_SAFE_INTEGER);
     const entry = await readFramedSyncInventoryEntry(tx, input);
     if (!entry) throw new Error('request_sync_applied_state_missing');
     input.signal?.throwIfAborted();

@@ -11,7 +11,8 @@ import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js'
 import { root, type Peer } from './syncLibrary.testSupport.js';
 
 export async function withLibraryRequestSnapshot(source: Peer, target: Peer,
-  execute: (replay: () => Promise<void>) => Promise<void>) {
+  execute: (replay: () => Promise<void>) => Promise<void>,
+  runtime = { applyRequestSyncObject, writeRequestSyncSnapshot }) {
   const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
     remote: await readFramedSyncInventory(target.port) }).filter(value => value.direction === 'local_to_remote');
   const files = createDesktopFramedSyncFiles(path.join(root, `snapshot-${crypto.randomUUID()}`));
@@ -21,12 +22,12 @@ export async function withLibraryRequestSnapshot(source: Peer, target: Peer,
   const targetEpoch = String(target.db.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get());
   try {
     for (const [index, difference] of differences.entries()) {
-      await writeRequestSyncSnapshot(source.port, difference, requests[index]!);
+      await runtime.writeRequestSyncSnapshot(source.port, difference, requests[index]!);
     }
     await execute(async () => {
       for (const [index, difference] of differences.entries()) {
         const request = requests[index]!;
-        await applyRequestSyncObject(target.port, {
+        await runtime.applyRequestSyncObject(target.port, {
           context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
             senderDeviceId: source.id, senderLibraryEpoch: proof.library_epoch,
             receiverDeviceId: target.id, receiverLibraryEpoch: targetEpoch },

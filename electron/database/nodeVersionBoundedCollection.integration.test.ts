@@ -49,7 +49,7 @@ it.each(['driver', 'port'] as const)('retires historical body copies and all rel
   if (mode === 'driver') collectNodeVersionChainWithDriver(boundedDriver, 'node');
   else {
     const reads = observeReads(port);
-    expect(await collectNodeVersionPayloads(reads.port, 'node')).toEqual({ released: 3, skipped: null });
+    expect(await collectNodeVersionPayloads(reads.port, 'node')).toEqual({ released: 4, skipped: null });
     sizes.push(...reads.sizes);
   }
   expect(sizes.length).toBeGreaterThan(6);

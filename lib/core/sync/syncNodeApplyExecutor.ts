@@ -44,6 +44,7 @@ export interface ApplySyncNodesWithDbPortResult {
 
 export interface ApplySyncNodesWithDbPortOptions {
   enqueueSearchInvalidations?: boolean;
+  deferBodyRetirement?: boolean;
   hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
   operation?: SyncNodeApplyOperation;
@@ -174,7 +175,7 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   }
   await port.transaction(async (tx) => {
     const history = await prepareIncomingNodeVersionSource(tx, source);
-    await retainIncomingNodeVersionSource(tx, source, history);
+    await retainIncomingNodeVersionSource(tx, source, history, options.deferBodyRetirement);
     for (const metadata of ordered) {
       const record = await source.load(tx, metadata);
       if (await applyIncomingRecord({ tx, record, result, options, invalidatedAt, remoteNodeIdsInBatch,

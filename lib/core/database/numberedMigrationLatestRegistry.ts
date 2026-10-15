@@ -75,6 +75,7 @@ import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaSt
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
+import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 import { migrateTopicTextState } from './topicTextStateMigration.js';
 import { removeUntrackedImportCaches } from './untrackedImportCacheMigration.js';
 
@@ -249,5 +250,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 150, migrate: migrateTextBodyOwnership },
   { version: 151, migrate: migrateNodeHistoryState },
   { version: 152, migrate: migrateCurrentParentOrders },
-  { version: 153, migrate: retireLegacySyncState }
+  { version: 153, migrate: retireLegacySyncState },
+  { version: 154, migrate: migrateTopicHistoryRetirement }
 ];

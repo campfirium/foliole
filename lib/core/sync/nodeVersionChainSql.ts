@@ -1,5 +1,4 @@
 import type { DbParams } from './dbPort.js';
-import type { planNodeVersionChain } from './nodeVersionChainPlan.js';
 
 export const CHAIN_VERSIONS_SQL = 'SELECT * FROM node_sync_versions WHERE object_id = ?';
 export const CHAIN_HEAD_SQL = `SELECT COALESCE(node.current_version_id, tomb.version_id) AS current_version_id,
@@ -115,10 +114,10 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
 }
 
 export function chainMutationStatements(
-  plan: ReturnType<typeof planNodeVersionChain>
+  plan: { removed: string[] | undefined }
 ) {
   const statements: Array<{ sql: string; params: DbParams }> = [];
-  if (plan.skipped || !plan.removed?.length) return statements;
+  if (!plan.removed?.length) return statements;
   for (const id of plan.removed) statements.push({
     sql: `UPDATE node_sync_versions SET body_text = NULL,
       snapshot_json = json_remove(json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true')), '$.text_alternative_bodies')

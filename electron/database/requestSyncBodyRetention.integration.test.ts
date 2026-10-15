@@ -35,7 +35,7 @@ it('reclaims only historical bodies and preserves all identities and parent edge
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
 });
 
-it('keeps editor baselines, pending changes, conflicts, available alternatives and anchor sources', async () => {
+it('keeps identities without treating legacy references as main body uses', async () => {
   const host = await history();
   await host.db.run("INSERT INTO node_version_local_holds VALUES ('editor', 'topic', 'edit-base', 'now')");
   await host.db.run(`INSERT INTO sync_change_log
@@ -49,13 +49,12 @@ it('keeps editor baselines, pending changes, conflicts, available alternatives a
     VALUES ('alternative', 'topic', 'alternative-source', 'Body', 'other', 'now', 'available', 'now')`);
   await host.db.run("UPDATE nodes SET anchor_source_version_id = 'base' WHERE id = 'topic'");
   const result = await requestSyncBodyReferences(host.db, 'topic', 'head');
-  expect([...result.keep].sort()).toEqual(['alternative-source', 'base', 'change-base', 'change-result',
-    'conflict', 'conflict-parent', 'edit-base', 'head']);
+  expect([...result.keep].sort()).toEqual(['head']);
   expect(result.skipped).toBeNull();
-  expect((await collectRequestSyncBodies(host.db, 'topic')).skipped).toBe('protected_body_unavailable');
+  expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
 });
 
-it('skips an active peer without a current epoch position and retains adopted and pending positions', async () => {
+it('reclaims history independently of unknown and stale peer positions', async () => {
   const host = await history();
   host.sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now');
     INSERT INTO sync_group_local_state VALUES (1, 'group', 'local', 'active', 'now');
@@ -66,11 +65,11 @@ it('skips an active peer without a current epoch position and retains adopted an
     INSERT INTO node_version_member_positions VALUES
       ('position', 'group', 'peer', 'topic', 'old', 1, 'base', '["middle"]', 'now', NULL)`);
   expect(await collectRequestSyncBodies(host.db, 'topic'))
-    .toEqual({ released: 0, skipped: 'active_member_position_unknown' });
+    .toEqual({ released: 2, skipped: null });
   await host.db.run("UPDATE node_version_member_positions SET library_epoch = 'new'");
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
   await host.db.run("UPDATE sync_group_devices SET state = 'left'");
-  expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
+  expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
 });
 
 it.each(['group-left', 'group-switched'] as const)(
@@ -84,7 +83,7 @@ it.each(['group-left', 'group-switched'] as const)(
       INSERT INTO node_version_device_revisions VALUES ('old-group', 'peer', 'epoch', 0, 'business', NULL, 'now');
       INSERT INTO node_version_member_positions VALUES
         ('position', 'old-group', 'peer', 'topic', 'epoch', 1, 'base', '["middle"]', 'now', NULL)`);
-    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
+    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
     const identities = await host.db.query(
       'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id');
     const parents = await host.db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal');
@@ -93,7 +92,7 @@ it.each(['group-left', 'group-switched'] as const)(
       await host.db.run("INSERT INTO sync_groups VALUES ('new-group', 'New', 'new-key', 'now', 'now')");
       await host.db.run("UPDATE sync_group_local_state SET group_id = 'new-group'");
     }
-    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
+    expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
     expect(await host.db.query(
       'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id')).toEqual(identities);
     expect(await host.db.query('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal')).toEqual(parents);
@@ -135,32 +134,32 @@ const protectionCases = [
     "UPDATE nodes SET anchor_source_version_id = NULL WHERE id = 'topic'"]
 ] as const;
 
-it.each(protectionCases)('keeps the actual body for %s until its protection ends', async (label, protect, release) => {
+it.each(protectionCases)('reclaims obsolete main text while preserving its %s identity reference', async (_label, protect, release) => {
   const host = await history();
   host.sqlite.exec(protect);
   expect((await collectRequestSyncBodies(host.db, 'topic')).skipped).toBeNull();
   expect(await host.db.query("SELECT body_text FROM node_sync_versions WHERE version_id = 'base'"))
-    .toEqual([{ body_text: 'Original' }]);
+    .toEqual([{ body_text: null }]);
   host.sqlite.exec(release);
-  expect((await collectRequestSyncBodies(host.db, 'topic')).released).toBe(label === 'conflict parent' ? 2 : 1);
+  expect((await collectRequestSyncBodies(host.db, 'topic')).released).toBe(0);
   expect(await host.db.query("SELECT body_text FROM node_sync_versions WHERE version_id = 'base'"))
     .toEqual([{ body_text: null }]);
 });
 
-it('preserves the common merge base while an offline branch is still protected', async () => {
+it('preserves both branch payloads without retaining their common ancestor text', async () => {
   const host = await history();
   await upsertRemoteVersion(host.db, textBranch('offline', 'Offline edit', textBranch('base', 'Original')));
   await host.db.run("INSERT INTO node_version_local_holds VALUES ('editor', 'topic', 'offline', 'now')");
   expect((await collectRequestSyncBodies(host.db, 'topic')).skipped).toBeNull();
   expect(await host.db.query('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id'))
-    .toEqual([{ version_id: 'base' }, { version_id: 'head' }, { version_id: 'offline' }]);
+    .toEqual([{ version_id: 'head' }, { version_id: 'offline' }]);
   await host.db.run('DELETE FROM node_version_local_holds');
   expect((await collectRequestSyncBodies(host.db, 'topic')).released).toBe(0);
   const merged = { ...textBranch('merged', 'Merged', textBranch('head', 'Current')),
     parent_version_ids: ['head', 'offline'] };
   await upsertRemoteVersion(host.db, merged);
   await host.db.run("UPDATE nodes SET current_version_id = 'merged' WHERE id = 'topic'");
-  expect((await collectRequestSyncBodies(host.db, 'topic')).released).toBe(3);
+  expect((await collectRequestSyncBodies(host.db, 'topic')).released).toBe(2);
   expect(await host.db.query('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL'))
     .toEqual([{ version_id: 'merged' }]);
 });

@@ -34,8 +34,8 @@ it('replays a trimmed A to E chain into an offline A to F branch through current
   insertVersion(offline, 'A', null, 'left one\nright one');
   await transferPosition(offline, online);
   expect(await collectNodeVersionPayloads(online.port, nodeId))
-    .toEqual({ released: 3, skipped: null });
-  expect(versionBodies(online)).toEqual([['A', 'left one\nright one'],
+    .toEqual({ released: 4, skipped: null });
+  expect(versionBodies(online)).toEqual([['A', null],
     ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one']]);
   expect(online.db.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?')
     .all('E')).toEqual([{ parent_version_id: 'D' }]);
@@ -53,10 +53,10 @@ it('replays a trimmed A to E chain into an offline A to F branch through current
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
   await transferPosition(online, offline);
   expect((await loadCurrentSyncNodeRecord(port, nodeId))?.version_id).toBe(current.current_version_id);
-  expect(versionBodies(offline)).toContainEqual(['F', 'left one\nright edited']);
+  expect(versionBodies(offline)).toContainEqual(['F', null]);
   await releaseLocalEditBase(port, 'offline-editor', nodeId);
   expect(versionBodies(offline)).toEqual([['A', null],
-    ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
+    ['B', null], ['C', null], ['D', null], ['E', null],
     ['F', null], [current.current_version_id, current.content]]);
   expect(offline.db.prepare("SELECT version_id FROM node_sync_versions WHERE version_id IN ('A', 'F') AND json_extract(snapshot_json, '$.body_deleted') = 1 ORDER BY version_id")
     .all()).toEqual([{ version_id: 'A' }, { version_id: 'F' }]);

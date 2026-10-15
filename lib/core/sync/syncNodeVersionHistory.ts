@@ -66,8 +66,8 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
 }
 
 export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, records: readonly M[]) {
-  for (const metadata of records) await upsertRemoteVersion(port, await source.load(port, metadata));
+  source: SyncNodeRecordSource<M>, records: readonly M[], deferBodyRetirement = false) {
+  for (const metadata of records) await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement);
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

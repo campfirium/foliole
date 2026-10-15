@@ -9,8 +9,9 @@ import { applyLocalContentEditBranch, type LocalContentEditOptions } from './loc
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 import { hashText } from './syncNodeResolution.js';
+import { mergedTopicTextBodies } from './topicTextBodies.js';
 import { normalizeTextAlternatives } from './topicTextState.js';
 
 export interface LocalContentEdit {
@@ -36,11 +37,12 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     if (!base || base.object_id !== input.nodeId) throw new Error('content_edit_base_unavailable');
     if (input.title !== base.snapshot.title) input = { ...input, title: normalizeNodeTitle(input.title) };
     assertNodeTextFieldsWithinBudget(input);
-    const stored = await loadStoredSyncNodeVersionRecord(tx, input.versionId, false);
+    const stored = await loadRetainedSyncNodeVersionFact(tx, input.versionId, false);
     const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
     if (input.content === base.body_text || hashTextBody(input.content) === base.snapshot.body_blob_hash) return { current, submittedVersionId: base.version_id! };
     const record = createEditRecord(base, input, current.snapshot.resource_references);
+    record.alternative_bodies = mergedTopicTextBodies(record.snapshot.text_alternatives ?? [], [base, current]);
     if (stored && !matchesEdit(stored, record)) throw new Error('content_edit_version_mismatch');
     if (current.version_id === record.version_id || current.ancestor_version_ids.includes(input.versionId)) {
       if (!stored) throw new Error('content_edit_version_mismatch');
@@ -48,7 +50,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     }
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward();
-    else await applyLocalContentEditBranch(tx, stored ?? record, options);
+    else await applyLocalContentEditBranch(tx, stored?.body_text === null ? record : stored ?? record, options);
     await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
     await publishLocalNodePosition(tx, input.nodeId);
     await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
@@ -70,7 +72,7 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
     title: input.title,
     updated_at: input.updatedAt,
     text_selection: { version_id: input.versionId, created_at: input.updatedAt },
-    text_alternatives: normalizeTextAlternatives(base.body_text === null ? [] : base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
+    text_alternatives: normalizeTextAlternatives(base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
   };
   delete snapshot.body_deleted;
   return {
@@ -91,7 +93,7 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
 function matchesEdit(stored: NativeSyncNodeRecord, record: NativeSyncNodeRecord) {
   return stored.object_id === record.object_id
     && stored.host_name === record.host_name
-    && stored.body_text === record.body_text
+    && (stored.body_text === record.body_text || stored.snapshot.body_blob_hash === hashTextBody(record.body_text!))
     && stored.snapshot.title === record.snapshot.title
     && stored.snapshot.hide_title_heading === record.snapshot.hide_title_heading
     && stored.updated_at === record.updated_at;

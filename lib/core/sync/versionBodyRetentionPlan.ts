@@ -34,7 +34,7 @@ export function planVersionBodyRetention(versions: readonly ManagedBodyVersion[]
     .slice(0, limit).map((row) => row.versionId), requiredBodyIds: [...keep].sort(), skipped: null };
 }
 
-function lineageAncestors(rows: ReadonlyMap<string, ManagedBodyVersion>) {
+export function lineageAncestors(rows: ReadonlyMap<string, ManagedBodyVersion>) {
   const complete = new Set<string>();
   const visiting = new Set<string>();
   for (const start of rows.keys()) {
