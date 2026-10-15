@@ -1,3 +1,5 @@
+import type { DatabaseBindParams } from '../../lib/core/database/driver.js';
+import { SPECIAL_ROOT_NODE_IDS } from '../../lib/core/database/nodeMutationSpecialRoots.js';
 import type {
   SyncDiagnosticConnection,
   SyncDiagnosticSnapshot,
@@ -22,8 +24,10 @@ interface StateCountRow extends Record<string, unknown> {
   object_type: string;
 }
 
-function count(sql: string) {
-  return Number(openDatabaseConnection().driver.queryOne<CountRow>(sql, [])?.count ?? 0);
+const specialRootPlaceholders = SPECIAL_ROOT_NODE_IDS.map(() => '?').join(', ');
+
+function count(sql: string, params: DatabaseBindParams = []) {
+  return Number(openDatabaseConnection().driver.queryOne<CountRow>(sql, params)?.count ?? 0);
 }
 
 function loadStorage(): SyncDiagnosticStorage {
@@ -35,11 +39,13 @@ function loadStorage(): SyncDiagnosticStorage {
       SELECT COUNT(*) AS count FROM nodes n
       LEFT JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
       WHERE n.deleted_at IS NULL AND s.object_id IS NULL
-    `),
+        AND n.id NOT IN (${specialRootPlaceholders})
+    `, SPECIAL_ROOT_NODE_IDS),
     missing_node_version_count: count(`
       SELECT COUNT(*) AS count FROM nodes n
       WHERE n.deleted_at IS NULL AND (n.current_version_id IS NULL OR n.current_version_id = '')
-    `),
+        AND n.id NOT IN (${specialRootPlaceholders})
+    `, SPECIAL_ROOT_NODE_IDS),
     node_blob_references_missing_rows: count(`
       SELECT COUNT(*) AS count FROM nodes n
       LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
