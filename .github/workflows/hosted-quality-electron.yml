@@ -61,7 +61,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
+          # Migration fixtures compile the installed legacy revision from Git history.
+          fetch-depth: 0
           persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v4

@@ -22,7 +22,7 @@ it('keeps the original declaration, pending tips and sequential revisions across
   vi.setSystemTime(new Date('2026-10-05T00:00:00Z'));
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"id":"node","content":"fork-body"}');
     INSERT INTO node_sync_version_parents VALUES ('fork', 'B', 0)`);
   const ids = ['node'];
   for (let index = 0; index < 127; index += 1) {
@@ -33,7 +33,7 @@ it('keeps the original declaration, pending tips and sequential revisions across
       VALUES (?, 'topic', 'Node', ?, 'now', 'now')`).run(id, version);
     sqlite.prepare(`INSERT INTO node_sync_versions
       (version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json)
-      VALUES (?, ?, 'local', 'now', 'hash', 'body', '{"content":"body"}')`).run(version, id);
+      VALUES (?, ?, 'local', 'now', 'hash', 'body', ?)`).run(version, id, JSON.stringify({ id, content: 'body' }));
   }
   const reference = new Database(sqlite.serialize());
   try {
@@ -55,7 +55,7 @@ it('keeps the original declaration, pending tips and sequential revisions across
 });
 
 it('does not publish incomplete bodies, unknown nodes, special nodes or inactive membership', async () => {
-  sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL, snapshot_json = '{"content":null}'
+  sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL)
     WHERE version_id = 'E'`);
   const before = readDeclarations(sqlite);
   await port.transaction((tx) => publishLocalNodePositionPage(tx, ['node', 'unknown', 'special-inbox']));

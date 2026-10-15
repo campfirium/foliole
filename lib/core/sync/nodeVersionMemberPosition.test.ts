@@ -31,7 +31,7 @@ function readPosition(device = 'remote') {
 it('publishes complete adopted and pending positions once, and refuses missing bodies', async () => {
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"id":"node","content":"fork-body"}');
     INSERT INTO node_sync_version_parents VALUES ('fork', 'B', 0)`);
   await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
   const first = readPosition('local');
@@ -39,7 +39,7 @@ it('publishes complete adopted and pending positions once, and refuses missing b
   await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
   expect(readPosition('local')).toEqual(first);
   sqlite.exec(`UPDATE nodes SET current_version_id = 'fork' WHERE id = 'node';
-    UPDATE node_sync_versions SET body_text = NULL, snapshot_json = '{"content":null}' WHERE version_id = 'E'`);
+    UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = 'E'`);
   await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
   expect(readPosition('local')).toEqual(first);
 });
@@ -79,14 +79,16 @@ it('keeps exit claims until all live positions absorb them, and stale relays can
   expect(readPosition().resolved_revision).toBe(4);
 });
 
-it('does not publish a complete fork tip while its necessary common base body is absent', async () => {
+it('publishes complete topic heads without requiring an unused ancestor body', async () => {
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"id":"node","content":"fork-body"}');
     INSERT INTO node_sync_version_parents VALUES ('fork', 'B', 0);
-    UPDATE node_sync_versions SET body_text = NULL, snapshot_json = '{"content":null}' WHERE version_id = 'B'`);
+    UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = 'B'`);
+  const before = sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
-  expect(readPosition('local')).toBeUndefined();
+  expect(readPosition('local')).toMatchObject({ adopted_version_id: 'E', pending_version_ids_json: '["fork"]' });
+  expect(sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
 });
 
 it('keeps an exit claim when a newly received local fork has not absorbed it', async () => {
@@ -95,8 +97,15 @@ it('keeps an exit claim when a newly received local fork has not absorbed it', a
   sqlite.exec(`UPDATE sync_group_devices SET state = 'left' WHERE device_identity_key = 'remote';
     INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-    VALUES ('fork', 'node', 'A', 'remote', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    VALUES ('fork', 'node', 'A', 'remote', 'now', 'fork-hash', 'fork-body', '{"id":"node","content":"fork-body"}');
     INSERT INTO node_sync_version_parents VALUES ('fork', 'A', 0)`);
   await port.run(RETIRE_RESOLVED_NODE_POSITIONS_SQL, ['node']);
   expect(readPosition().resolved_revision).toBeNull();
+});
+
+it('does not publish complete topic heads when an ancestor identity is missing', async () => {
+  sqlite.exec(`DELETE FROM node_sync_version_parents WHERE version_id = 'B' OR parent_version_id = 'B';
+    DELETE FROM node_sync_versions WHERE version_id = 'B'`);
+  await port.transaction(tx => publishLocalNodePosition(tx, 'node'));
+  expect(readPosition('local')).toBeUndefined();
 });
