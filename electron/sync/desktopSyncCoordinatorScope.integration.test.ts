@@ -46,6 +46,35 @@ function peerCommand(kind: string, peer: DesktopFramedSyncFixtureSnapshot) {
     peerOrigin: peer.origin };
 }
 
+it('completes real sync when a legacy historical version has text but lacks its body hash', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+  try {
+    await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Original historical body' });
+    await fixture.left.invoke('round', { input: peerCommand('remember_peer', fixture.rightSnapshot) });
+    await fixture.left.invoke('round', { input: { kind: 'trigger_sync' } });
+    await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Current body' });
+    await fixture.left.invoke('round', { input: { kind: 'trigger_sync' } });
+    const sqlite = new Database(fixture.leftSnapshot.databasePath);
+    try {
+      sqlite.prepare(`UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_blob_hash')
+        WHERE object_id = ? AND body_text = ?`).run('legacy-topic', 'Original historical body');
+    } finally { sqlite.close(); }
+    await expect(fixture.left.invoke('round', { input: { kind: 'trigger_sync' } }))
+      .resolves.toMatchObject({ status: 'completed' });
+    expect(readContent(fixture.rightSnapshot.databasePath, 'legacy-topic')).toBe('Current body');
+    const restarted = await fixture.restartLeft();
+    const stored = new Database(restarted.snapshot.databasePath, { readonly: true });
+    try {
+      expect(stored.prepare(`SELECT json_extract(snapshot_json, '$.body_blob_hash') FROM node_sync_versions
+        WHERE object_id = ? AND body_text = ?`).pluck().get('legacy-topic', 'Original historical body'))
+        .toMatch(/^[a-f0-9]{64}$/u);
+    } finally { stored.close(); }
+  } finally {
+    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    await fs.rm(fixture.root, { recursive: true, force: true });
+  }
+}, 60_000);
+
 function readContent(databasePath: string, id: string) {
   const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });
   try { return sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(id); }

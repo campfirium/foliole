@@ -24,7 +24,7 @@ export async function applyStoredNodeVersionBodyState(port: DbPort, record: Nati
   const alternatives = validateTopicTextBodies(record.snapshot.text_alternatives ?? [], record.alternative_bodies ?? []);
   await port.run(`UPDATE node_sync_versions SET body_text = ?,
     snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?, '$.text_alternative_bodies', json(?))
-    WHERE version_id = ? AND (body_text IS NULL OR
+    WHERE version_id = ? AND (body_text IS NULL OR json_extract(snapshot_json, '$.body_blob_hash') IS NULL OR
       json_array_length(COALESCE(json_extract(snapshot_json, '$.text_alternatives'), '[]')) !=
       json_array_length(COALESCE(json_extract(snapshot_json, '$.text_alternative_bodies'), '[]')))
       AND COALESCE(json_extract(snapshot_json, '$.body_deleted'), 0) = 0`,

@@ -91,6 +91,19 @@ it('rolls back body state and its inventory together if the transaction fails', 
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBe(v1.body_text);
 });
 
+it('repairs a missing historical body hash when the complete body already exists', async () => {
+  const [a, b] = await Promise.all([host(), host()]);
+  a.sqlite.prepare(`UPDATE node_sync_versions SET snapshot_json =
+    json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = ?`).run('v1');
+  const complete = await readFramedSyncInventoryEntry(b.db, key);
+  const missingHash = await readFramedSyncInventoryEntry(a.db, key);
+  expect(missingHash!.unready).toBe(false);
+  expect(missingHash!.sharedStateHash).not.toEqual(complete!.sharedStateHash);
+  await upsertRemoteVersion(a.db, v1);
+  expect((await readFramedSyncInventoryEntry(a.db, key))!.sharedStateHash).toEqual(complete!.sharedStateHash);
+  expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBe(v1.body_text);
+});
+
 it('maintains the hash for head-only and parent-only changes and repairs missing parent identities', async () => {
   const a = await host();
   const before = await readFramedSyncInventoryEntry(a.db, key);
