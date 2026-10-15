@@ -102,7 +102,7 @@ async function runRetryIfActive(
 function shouldStartForegroundSync(
   args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number, endpointChanged: boolean
 ) {
-  if (!args.isAppActiveRef.current) return false;
+  if (args.cancelled() || !args.isAppActiveRef.current) return false;
   if (!args.isSyncGroupReadyRef.current) return false;
   if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
   if (reason === 'foreground') {
@@ -170,23 +170,35 @@ function startForegroundSync(
 }
 
 export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
-  let observedEndpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
-  const runForegroundSyncCheck = (reason: ForegroundSyncReason) => {
+  const attemptedEndpoints = new Set(args.stateRef.current.remembered_targets);
+  const initialEndpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
+  if (initialEndpoint) attemptedEndpoints.add(initialEndpoint);
+  let pendingEndpoint: string | null = null;
+  const syncArgs: ForegroundSyncRunnerArgs = { ...args, setState(state) {
+    const endpoint = resolveCompanionWorkspaceSyncEndpoint(state);
+    if (endpoint) attemptedEndpoints.add(endpoint);
+    args.setState(state);
+  } };
+  const runForegroundSyncCheck = (reason: ForegroundSyncReason): Promise<void> | null => {
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
-    const endpointChanged = reason === 'endpoint-ready' && Boolean(endpoint) && endpoint !== observedEndpoint;
-    if (reason === 'endpoint-ready') observedEndpoint = endpoint;
+    if (reason === 'endpoint-ready' && endpoint && !attemptedEndpoints.has(endpoint)) pendingEndpoint = endpoint;
     if (args.inFlightRef.current) {
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'pending');
       return null;
     }
+    const endpointChanged = pendingEndpoint !== null && pendingEndpoint === endpoint;
     if (args.retryTimerRef.current && !endpointChanged
       && (reason === 'freshness' || reason === 'endpoint-ready')) return null;
     const now = Date.now();
     if (!shouldStartForegroundSync(args, reason, now, endpointChanged)) return null;
     if (reason !== 'retry') clearRetryTimer(args.retryTimerRef);
     if (endpointChanged) args.retryAttemptRef.current = 0;
+    pendingEndpoint = null;
+    if (endpoint) attemptedEndpoints.add(endpoint);
     args.lastCheckedAtRef.current = now;
-    return startForegroundSync(args, runForegroundSyncCheck, reason, args.stateRef.current);
+    return startForegroundSync(syncArgs, runForegroundSyncCheck, reason, args.stateRef.current).finally(() => {
+      if (pendingEndpoint && !args.cancelled()) return runForegroundSyncCheck('endpoint-ready') ?? undefined;
+    });
   };
 
   return runForegroundSyncCheck;
