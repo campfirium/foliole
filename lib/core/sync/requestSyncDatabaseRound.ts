@@ -42,9 +42,8 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
-  for (let offset = 0; offset < differences.length; offset += REQUEST_SYNC_BATCH_OBJECTS) {
+  for (const batch of directionBatches(differences)) {
     signal?.throwIfAborted();
-    const batch = differences.slice(offset, offset + REQUEST_SYNC_BATCH_OBJECTS);
     const results = await port.transferObjects(batch);
     if (results.length !== batch.length) throw new Error('request_sync_batch_results_missing');
     for (const [index, difference] of batch.entries()) outcomes.set(key(difference), results[index]!);
@@ -78,6 +77,15 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     }
   }, createFramedSyncInventoryDependencyLookup(inventories));
   return { delivered, deferred };
+}
+
+function* directionBatches(differences: readonly FramedSyncInventoryDifference[]) {
+  for (let offset = 0; offset < differences.length; offset += REQUEST_SYNC_BATCH_OBJECTS) {
+    const window = differences.slice(offset, offset + REQUEST_SYNC_BATCH_OBJECTS);
+    for (const direction of new Set(window.map(difference => difference.direction))) {
+      yield window.filter(difference => difference.direction === direction);
+    }
+  }
 }
 
 function key(difference: FramedSyncInventoryDifference) {
