@@ -15,7 +15,7 @@ import { exchangeRequestSyncInventory, type RequestSyncExchange } from './reques
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.js';
 
-it('retrieves every changed object when detail identifiers exceed a control frame', async () => {
+it('retrieves every changed object without uploading local inventories, including large detail requests', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'request-detail-'));
   const files = createDesktopFramedSyncFiles(root);
   const entries: FramedSyncInventoryEntry[] = Array.from({ length: 2100 }, (_, index) => ({
@@ -31,6 +31,7 @@ it('retrieves every changed object when detail identifiers exceed a control fram
     const request = await decodeRequestSyncInventory((async function* () {
       for await (const decoded of readRequestSyncWire({ context, groupKey, ...body })) yield decoded.message;
     })());
+    expect(request.entries).toEqual([]);
     const ids = new Set(request.detailGlobalIds);
     const selected = ids.size ? entries.filter(entry => ids.has(entry.globalId)) : framedSyncInventorySummary(entries);
     const response = await prepareRequestSyncWire({ context, groupKey,
@@ -42,7 +43,7 @@ it('retrieves every changed object when detail identifiers exceed a control fram
     const result = await exchangeRequestSyncInventory({ files,
       readSnapshot: async () => { throw new Error('unexpected_snapshot'); },
       write: async () => { throw new Error('unexpected_write'); }
-    }, exchange, []);
+    }, exchange, entries.map(entry => ({ ...entry, sharedStateHash: new Uint8Array(32).fill(1) })));
     expect(result.remote).toEqual(entries);
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 30_000);

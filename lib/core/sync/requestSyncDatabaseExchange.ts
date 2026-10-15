@@ -3,7 +3,7 @@ import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBina
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readRequestSyncInventorySnapshot } from './framedSyncInventoryRead.js';
-import { differingNodeIds, framedSyncInventorySummary } from './framedSyncInventorySummary.js';
+import { differingNodeIds } from './framedSyncInventorySummary.js';
 import { requestSyncDifferenceMessages } from './requestSyncDifferenceWire.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
@@ -38,12 +38,12 @@ export async function exchangeRequestSyncInventory(host: RequestSyncDatabaseHost
   exchange.signal?.throwIfAborted();
   if (!localInventory) await host.write(db => db.transaction(flushCurrentParentOrderProjectionsWithDbPort));
   const local = localInventory ?? await host.readSnapshot(readRequestSyncInventorySnapshot, exchange.signal);
-  const summaries = await inventoryRequest(host, exchange, local, []);
+  const summaries = await inventoryRequest(exchange, []);
   const ids = differingNodeIds(local, summaries.entries);
   if (!ids.length) return { local, remote: summaries.entries, roundId: summaries.roundId };
   const byId = new Map<string, FramedSyncInventoryEntry>();
   for (const batch of detailBatches(ids)) {
-    const details = await inventoryRequest(host, exchange, [], batch);
+    const details = await inventoryRequest(exchange, batch);
     for (const entry of details.entries) byId.set(entry.globalId, entry);
   }
   return { local, remote: summaries.entries.map(entry => entry.objectType === 'node'
@@ -64,10 +64,9 @@ function* detailBatches(ids: readonly string[]) {
   if (batch.length) yield batch;
 }
 
-async function inventoryRequest(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
-  local: readonly FramedSyncInventoryEntry[], detailGlobalIds: readonly string[]) {
+async function inventoryRequest(exchange: RequestSyncExchange, detailGlobalIds: readonly string[]) {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
-  const messages = iterateRequestSyncInventory({ entries: framedSyncInventorySummary(local), roundId,
+  const messages = iterateRequestSyncInventory({ entries: [], roundId,
     detailGlobalIds, summaryOnly: true });
   return withControlRequest(exchange, '/companion/framed-sync?request=inventory', messages, async response => {
     const decoded = await decodeRequestSyncInventory(decodedMessages(exchange, response));
