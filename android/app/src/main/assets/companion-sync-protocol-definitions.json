@@ -16,6 +16,7 @@
       "node-tombstone-pack-v1",
       "opaque-sync-refs-v1",
       "parent-child-order-v1",
+      "pdf-cross-page-anchors-v1",
       "readwise-library-source-mode-v1",
       "relayed-node-member-positions-v1",
       "resource-availability-v1",

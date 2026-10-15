@@ -133,7 +133,7 @@ it('shows the PDF highlight toolbar on selection completion and preserves the ri
   await waitFor(() => expect(screen.getByRole('toolbar')).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
   expect(onCreatePdfHighlight).toHaveBeenCalledWith('keyword match on page 1', expect.anything());
-  expect(selection?.rangeCount).toBe(0);
+  await waitFor(() => expect(selection?.rangeCount).toBe(0), RELEASE_GATE_WAIT_OPTIONS);
   selection?.removeAllRanges();
   selection?.addRange(range);
   act(() => {
@@ -148,5 +148,6 @@ it('shows the PDF highlight toolbar on selection completion and preserves the ri
   await waitFor(() => expect(screen.getByTestId('pdf-selection-marker')).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
   expect(onCreatePdfHighlight).toHaveBeenCalledTimes(2);
+  await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   selection?.removeAllRanges();
 }, RELEASE_GATE_TEST_TIMEOUT_MS);
