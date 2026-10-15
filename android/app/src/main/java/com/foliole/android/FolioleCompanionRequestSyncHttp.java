@@ -21,6 +21,28 @@ final class FolioleCompanionRequestSyncHttp {
     private static final Map<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private FolioleCompanionRequestSyncHttp() {}
 
+    interface DesktopRequest { JSObject execute(ConnectionOpened opened) throws Exception; }
+    interface ConnectionOpened { void accept(HttpURLConnection connection) throws Exception; }
+
+    static void desktop(PluginCall call, DesktopRequest request) {
+        try {
+            String id = call.getString("request_id") == null ? null : requestId(call);
+            Operation operation = id == null ? null : new Operation(owner(call));
+            if (id != null && ACTIVE.putIfAbsent(id, operation) != null) {
+                throw new IllegalStateException("request_sync_http_duplicate");
+            }
+            new Thread(() -> {
+                try {
+                    if (operation != null) operation.check();
+                    call.resolve(request.execute(connection -> {
+                        if (operation != null) operation.opened(connection);
+                    }));
+                } catch (Exception error) { call.reject(error.getMessage(), error); }
+                finally { if (id != null) ACTIVE.remove(id, operation); }
+            }).start();
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+
     static void post(Context context, PluginCall call, ExecutorService executor) {
         try {
             FramedSyncPayloadBudget owner = owner(call);

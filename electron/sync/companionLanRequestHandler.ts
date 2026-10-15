@@ -20,6 +20,7 @@ import {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
+import { handleCompanionSyncSession } from './companionLanSyncSession.js';
 import {
   handleWorkspaceMetadataGet,
   SYNC_DIAGNOSTICS_PATH,
@@ -154,6 +155,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (request.method === 'POST') {
+      if (await handleCompanionSyncSession(request, response)) return;
       if (await handlePostRequest(request, response, parsedRequestUrl, args)) return;
       if (await handleAuthenticatedPost(request, response, parsedRequestUrl, writeJson)) return;
     }
@@ -165,6 +167,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       writeJson(request, response, 200, { ok: true });
       return;
     }
+    if (await handleCompanionSyncSession(request, response)) return;
     const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
       request, requireMemberState: true
     }));

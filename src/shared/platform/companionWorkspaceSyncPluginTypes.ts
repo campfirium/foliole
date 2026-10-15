@@ -2,7 +2,7 @@ import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/atta
 import type { NativeCompanionFramedFilesPlugin } from '../../../lib/platform/nativeCompanionFramedFilesContract';
 import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
-import type { NativeRequestSyncHttpPlugin } from '../../../lib/platform/nativeRequestSyncHttpContract';
+import type { NativeHttpCancellation, NativeRequestSyncHttpPlugin } from '../../../lib/platform/nativeRequestSyncHttpContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
@@ -44,7 +44,7 @@ export interface CompanionWorkspaceSyncPlugin
     headers?: Record<string, string>;
     method: string;
     url: string;
-  }): Promise<{ body: string; status: number }>;
+  } & NativeHttpCancellation): Promise<{ body: string; status: number }>;
   beginSyncRun(args: { reason: SyncTriggerReason; run_id: string }): Promise<{
     reason: SyncTriggerReason;
     run_id: string;

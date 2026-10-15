@@ -1,4 +1,5 @@
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
+import { isMobileSyncPlatform } from '../../../../../lib/platform/syncSchedulingPlatform.js';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
 import {
   FolioleCompanionSync,
@@ -8,9 +9,11 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
+import { companionDesktopSessionPeer } from './companionDesktopSession.js';
 import { createSignedRequestHeaders } from './signedRequest';
 
 export interface CompanionWorkspaceSyncTarget {
+  platform?: string;
   deviceId?: string;
   deviceName?: string;
   endpointUrl: string;
@@ -47,10 +50,13 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const incompatiblePeers = discovered.filter(candidate => candidate.compatibility.status === 'incompatible'
     && candidate.discovery.group_id === group.group_id
     && candidate.discovery.provider_device_id !== group.local_device_identity_key);
-  return [...matches, ...incompatiblePeers].map((match) => {
+  const desktops = matches.filter(match => !isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
+  const selected = desktops.find(match => match.discovery.provider_device_id === companionDesktopSessionPeer()) ?? desktops[0];
+  const targets = matches.filter(match => isMobileSyncPlatform(match.discovery.provider_platform ?? '') || match === selected);
+  return [...targets, ...incompatiblePeers].map((match) => {
     const known = group.devices.find((device) =>
       device.device_identity_key === match.discovery.provider_device_id);
-    return { deviceId: match.discovery.provider_device_id,
+    return { deviceId: match.discovery.provider_device_id, platform: match.discovery.provider_platform,
       deviceName: match.discovery.provider_device_name ?? known?.device_name
         ?? match.discovery.provider_device_id,
       endpointUrl: match.endpointUrl, groupId: group.group_id,

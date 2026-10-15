@@ -5,13 +5,14 @@ import { withControlRequest, type RequestSyncExchange } from './requestSyncDatab
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import type { SyncPeerRoundLease } from './syncPeerRoundOwnership.js';
 
-export type RequestSyncPeerRound = { id: string; lease: SyncPeerRoundLease; admitted: boolean };
+export type RequestSyncPeerRound = { id: string; lease: SyncPeerRoundLease; admitted: boolean; sessionId?: string };
 const roundIdSchema = z.string().uuid();
 const modeSchema = z.enum(['start', 'continue', 'finish', 'single']);
 
 export function requestSyncPeerRoundPath(path: string, round?: RequestSyncPeerRound) {
   const url = new URL(path, 'http://localhost');
   url.searchParams.set('peer_round_id', round?.id ?? crypto.randomUUID());
+  if (round?.sessionId) url.searchParams.set('sync_session_id', round.sessionId);
   url.searchParams.set('peer_round_mode', round
     ? url.searchParams.get('request') === 'round_finish' ? 'finish' : round.admitted ? 'continue' : 'start'
     : 'single');

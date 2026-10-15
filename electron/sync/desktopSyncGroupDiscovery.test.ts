@@ -137,3 +137,18 @@ describe('desktop Sync Group provider selection', () => {
     })]);
   });
 });
+
+it('does not open a reverse HTTP connection to advertised mobile peers during manual sync discovery', async () => {
+  vi.useFakeTimers();
+  const fetchDiscovery = vi.fn();
+  const discovery = discoverDesktopSyncGroups(fetchDiscovery, true, true);
+  runtime.onService?.({ kind: 'found', service: {
+    addresses: ['192.168.0.107'], domain: 'local.', fqdn: 'android', host: 'android.local.',
+    interfaceIndex: 1, name: 'Android B', port: 41187,
+    txt: { group_id: 'group-1', group_tag: 'tag-1', device_id: 'phone', provider_platform: 'android-capacitor' },
+    type: '_foliole-sync._tcp'
+  } });
+  await vi.advanceTimersByTimeAsync(DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS);
+  await expect(discovery).resolves.toEqual([]);
+  expect(fetchDiscovery).not.toHaveBeenCalled();
+});

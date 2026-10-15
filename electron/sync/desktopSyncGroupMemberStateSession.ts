@@ -1,5 +1,6 @@
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroupMemberState } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -48,6 +49,8 @@ export function startDesktopSyncGroupMemberStateSession(
       if (!isCurrentGroupPeerService(service, group)) return;
       const deviceId = readSyncGroupServiceDeviceId(service);
       if (!deviceId) return;
+      const known = group.devices.find(device => device.device_identity_key === deviceId);
+      if (isMobileSyncPlatform(known?.platform ?? String(service.txt.provider_platform ?? service.txt.platform ?? ''))) return;
       if (kind === 'lost') return discovery.lost(deviceId, service);
       const endpointUrl = resolveCompanionMdnsServiceEndpoints(service)[0];
       if (!endpointUrl) return;
@@ -115,6 +118,7 @@ async function probeAndExchange(
     const qualified = await probe(group, deviceId, endpointUrl);
     if (!qualified || !isCurrent()) return;
     const { peer } = qualified;
+    if (isMobileSyncPlatform(peer.peer_platform)) return;
     endpoints.set(deviceId, peer);
     await exchangeDesktopSyncGroupMemberState(peer);
     if (!isCurrent()) return;

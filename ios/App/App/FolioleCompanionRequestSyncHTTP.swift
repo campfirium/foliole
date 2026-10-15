@@ -2,7 +2,7 @@ import Capacitor
 import Foundation
 import FolioleFramedSyncRuntime
 
-private final class RequestHTTPTasks: @unchecked Sendable {
+final class RequestHTTPTasks: @unchecked Sendable {
     private let lock = NSLock()
     private var tasks = [String: Task<Void, Never>]()
 
@@ -22,7 +22,7 @@ private final class RequestHTTPTasks: @unchecked Sendable {
         tasks.removeValue(forKey: id)
     }
 }
-private let requestHTTPTasks = RequestHTTPTasks()
+let requestHTTPTasks = RequestHTTPTasks()
 
 extension FolioleCompanionSyncPlugin {
     @objc func postRequestSyncHttp(_ call: CAPPluginCall) {
@@ -76,7 +76,7 @@ extension FolioleCompanionSyncPlugin {
         return try FolioleRequestSyncHTTPChunks.split(files: files, directory: directory, input: response)
     }
 
-    private static func requestHTTPOwner(_ call: CAPPluginCall) throws -> FolioleFramedSyncPayloadBudget {
+    static func requestHTTPOwner(_ call: CAPPluginCall) throws -> FolioleFramedSyncPayloadBudget {
         let owner = try FolioleFramedSyncPayloadBudgetRegistry.shared.requireCurrent()
         guard owner.libraryKey == call.getString("library_key"), owner.generationID == call.getString("generation_id") else {
             throw FolioleFramedSyncValidationError("framed_sync_file_owner_mismatch")
@@ -84,7 +84,7 @@ extension FolioleCompanionSyncPlugin {
         return owner
     }
 
-    private static func requestHTTPID(_ call: CAPPluginCall) throws -> String {
+    static func requestHTTPID(_ call: CAPPluginCall) throws -> String {
         guard let id = call.getString("request_id"), UUID(uuidString: id) != nil else {
             throw FolioleFramedSyncValidationError("request_sync_http_id_invalid")
         }

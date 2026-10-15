@@ -2,6 +2,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { runSyncPeerRound, isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -25,7 +26,7 @@ export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
 export function loadDesktopSyncGroupPeers() {
   const group = loadDesktopSyncGroup();
-  return group ? loadDesktopSyncGroupRoutes(group.group_id) : [];
+  return group ? loadDesktopSyncGroupRoutes(group.group_id).filter(peer => !isMobileSyncPlatform(peer.peer_platform)) : [];
 }
 
 export async function continueDesktopSyncGroupSync(
@@ -34,6 +35,7 @@ export async function continueDesktopSyncGroupSync(
 ) {
   const target = peer ?? loadDesktopSyncGroupPeers()[0];
   if (!target) return null;
+  if (isMobileSyncPlatform(target.peer_platform)) return null;
   return runDesktopSyncGroupPeerSingleFlight(
     target.peer_device_id,
     async () => {

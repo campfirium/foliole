@@ -1,5 +1,6 @@
 import { createMemberSyncCadence } from '../../lib/core/sync/memberSyncCadence.js';
 
+import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
   loadActiveDesktopSyncRun,
   runDesktopSyncCoordinator,
@@ -15,6 +16,7 @@ const cadence = createMemberSyncCadence({
 subscribeDesktopSyncCompleted(() => cadence.markActualSync());
 
 export function requestDesktopHighValueSync() {
+  desktopSyncChangeSessions().changed();
   return cadence.requestMutation('mutation');
 }
 

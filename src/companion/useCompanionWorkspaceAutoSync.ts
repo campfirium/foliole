@@ -7,6 +7,7 @@ import {
   subscribeNativeAppBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
+import { closeCompanionDesktopSession, subscribeCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
@@ -74,6 +75,7 @@ function subscribeForegroundSyncEvents(
     void cadence.requestImmediate('foreground');
   }));
   void keep(subscribeNativeAppBackground(() => {
+    void closeCompanionDesktopSession();
     refs.isAppActiveRef.current = false;
     cadence.updateFreshness({ eligible: false, input: null });
     clearRetryTimer(refs.retryTimerRef);
@@ -125,14 +127,18 @@ export function useForegroundAutoSync(
 
     runForegroundSyncCheck('endpoint-ready');
     const unsubscribe = subscribeForegroundSyncEvents(refs, cadence, () => cancelled);
+    const unsubscribeChanges = isSyncGroupReady
+      ? subscribeCompanionDesktopChanges(async () => { await cadence.requestMutation('mutation'); })
+      : () => {};
     return () => {
       cancelled = true;
       cadence.stop();
       if (cadenceRef.current === cadence) cadenceRef.current = null;
       clearRetryTimer(refs.retryTimerRef);
       unsubscribe();
+      unsubscribeChanges();
     };
-  }, [refs, setError, setState, setStatus, tryForegroundAutoSync]);
+  }, [isSyncGroupReady, refs, setError, setState, setStatus, tryForegroundAutoSync]);
 
   useEffect(() => {
     const lastActualSyncAt = state.last_synced_at ? Date.parse(state.last_synced_at) : undefined;

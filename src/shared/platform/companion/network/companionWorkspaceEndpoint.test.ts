@@ -55,7 +55,7 @@ beforeEach(() => {
 
 it('routes only active remote Devices discovered in the same Sync Group', async () => {
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1', platform: 'darwin'
   }]);
   expect(runtime.discover).toHaveBeenCalledWith('http://old:38641', {
     requiredGroupId: 'group-1'
@@ -71,7 +71,7 @@ it('keeps the protocol version negotiated with each discovered desktop', async (
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641',
-    groupId: 'group-1', protocolVersion: 25
+    groupId: 'group-1', protocolVersion: 25, platform: 'darwin'
   }]);
 });
 
@@ -84,11 +84,11 @@ it('routes a Windows 11 desktop using its product-facing discovery label', async
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-windows', deviceName: 'Windows PC', endpointUrl: 'http://windows:38641',
-    groupId: 'group-1'
+    groupId: 'group-1', platform: 'Windows 11'
   }]);
 });
 
-it('routes every reachable same-group desktop during anchor convergence', async () => {
+it('selects one desktop while retaining mobile peer discovery', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac',
@@ -100,10 +100,7 @@ it('routes every reachable same-group desktop during anchor convergence', async 
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
-  }, {
-    deviceId: 'device-windows', deviceName: 'Windows PC', endpointUrl: 'http://windows:38641',
-    groupId: 'group-1'
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1', platform: 'darwin'
   }]);
 });
 
@@ -116,14 +113,14 @@ it('routes companion sync through a discovered mobile Device', async () => {
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://phone:38641'))
     .resolves.toEqual([{ deviceId: 'device-mobile', deviceName: 'Phone',
-      endpointUrl: 'http://phone:38641', groupId: 'group-1' }]);
+      endpointUrl: 'http://phone:38641', groupId: 'group-1', platform: 'android-capacitor' }]);
 });
 
 it('routes an authenticated same-group desktop before it exists in the local member list', async () => {
   runtime.loadGroup.mockResolvedValue({ ...group, devices: [group.devices[0]] });
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://accepted:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1', platform: 'darwin'
   }]);
 });
 

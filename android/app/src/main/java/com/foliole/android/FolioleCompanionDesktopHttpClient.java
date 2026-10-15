@@ -23,11 +23,18 @@ final class FolioleCompanionDesktopHttpClient {
     private FolioleCompanionDesktopHttpClient() {}
 
     static JSObject request(Context context, String url, String method, JSONObject headers, String body) throws Exception {
+        return request(context, url, method, headers, body, connection -> {});
+    }
+
+    static JSObject request(Context context, String url, String method, JSONObject headers, String body,
+            FolioleCompanionRequestSyncHttp.ConnectionOpened opened) throws Exception {
         boolean preparedWorkgroup = FolioleCompanionWorkgroupHttp.isPrepared(headers);
         FolioleCompanionWorkgroupHttp.PreparedRequest prepared = preparedWorkgroup
             ? FolioleCompanionWorkgroupHttp.acceptPrepared(url, headers, body)
             : FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        try {
+        opened.accept(connection);
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestMethod(method);
@@ -49,6 +56,7 @@ final class FolioleCompanionDesktopHttpClient {
         result.put(FolioleCompanionHostBridgeContractDefinitions.networkBodyResponseKey(context),
             new String(responseBody, StandardCharsets.UTF_8));
         return result;
+        } finally { connection.disconnect(); }
     }
 
     private static void applyHeaders(HttpURLConnection connection, JSONObject headers) throws Exception {

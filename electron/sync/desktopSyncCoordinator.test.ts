@@ -9,6 +9,7 @@ const transport = vi.hoisted(() => ({
 vi.mock('../database/settingsStore.js', () => settings);
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => null }));
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/watchedConflictSyncMarker.js', () => ({

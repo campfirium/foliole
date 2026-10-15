@@ -9,6 +9,7 @@ import { markWatchedConflictDecisionsSynced } from '../database/watchedConflictS
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
+import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
   continueDesktopSyncGroupSync,
   type DesktopSyncGroupPeer,
@@ -93,6 +94,11 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
     const peers = preferredPeer ? [preferredPeer]
       : await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupPeers());
     if (peers.length === 0) {
+      if (reason === 'manual' && desktopSyncChangeSessions().hasSessions()) {
+        const complete = await desktopSyncChangeSessions().requestSync();
+        return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+          run_id: runId, started_at: startedAt, status: complete ? 'completed' : 'pending' });
+      }
       if (reason === 'manual') throw new Error('sync_group_peer_unavailable');
       return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
         run_id: runId, started_at: startedAt, status: 'skipped' });

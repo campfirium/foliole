@@ -51,12 +51,18 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
             let method = try requiredString(call, contract.networkRequestKeys, "method")
             let headers = try stringHeaders(call.getObject(try key("headers", contract.networkRequestKeys)) ?? [:])
             let body = call.getString(try key("body", contract.networkRequestKeys))
-            Task {
+            let execute: () async -> Void = {
                 do {
                     call.resolve(try await FolioleCompanionDesktopHttpClient.request(
                         url: url, method: method, headers: headers, body: body, contract: contract
                     ))
                 } catch { call.reject("Desktop HTTP request failed: \(error.localizedDescription)") }
+            }
+            if call.getString("request_id") != nil {
+                _ = try Self.requestHTTPOwner(call)
+                try requestHTTPTasks.start(Self.requestHTTPID(call), execute: execute)
+            } else {
+                Task { await execute() }
             }
         } catch { call.reject("Desktop HTTP request failed: \(error.localizedDescription)") }
     }

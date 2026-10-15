@@ -19,6 +19,7 @@ import {
 } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { logDesktopDnsSdDiagnostic } from './desktopDnsSdDiagnostics.js';
+import { closeDesktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
@@ -218,6 +219,7 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
 }
 
 export async function stopLanWorkspaceSyncServer() {
+  closeDesktopSyncChangeSessions();
   stopDesktopSyncGroupAutoSync();
   clearDesktopSyncGroupMemberStateReadiness();
   if (activeStart) {
@@ -226,6 +228,7 @@ export async function stopLanWorkspaceSyncServer() {
     stopDesktopSyncGroupAutoSync();
     clearDesktopSyncGroupMemberStateReadiness();
   }
+  closeDesktopSyncChangeSessions();
   if (!activeServer) {
     activeStatus = {
       advertised_urls: [],

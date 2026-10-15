@@ -174,6 +174,7 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   const initialEndpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
   if (initialEndpoint) attemptedEndpoints.add(initialEndpoint);
   let pendingEndpoint: string | null = null;
+  let pendingMutation = false;
   const syncArgs: ForegroundSyncRunnerArgs = { ...args, setState(state) {
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(state);
     if (endpoint) attemptedEndpoints.add(endpoint);
@@ -183,6 +184,7 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
     if (reason === 'endpoint-ready' && endpoint && !attemptedEndpoints.has(endpoint)) pendingEndpoint = endpoint;
     if (args.inFlightRef.current) {
+      if (reason === 'mutation') pendingMutation = true;
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'pending');
       return null;
     }
@@ -196,7 +198,9 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
     pendingEndpoint = null;
     if (endpoint) attemptedEndpoints.add(endpoint);
     args.lastCheckedAtRef.current = now;
+    pendingMutation = false;
     return startForegroundSync(syncArgs, runForegroundSyncCheck, reason, args.stateRef.current).finally(() => {
+      if (pendingMutation && !args.cancelled()) return runForegroundSyncCheck('mutation') ?? undefined;
       if (pendingEndpoint && !args.cancelled()) return runForegroundSyncCheck('endpoint-ready') ?? undefined;
     });
   };

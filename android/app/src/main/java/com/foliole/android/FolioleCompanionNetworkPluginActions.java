@@ -13,31 +13,25 @@ final class FolioleCompanionNetworkPluginActions {
     private FolioleCompanionNetworkPluginActions() {}
 
     static void desktopHttpRequest(Context context, PluginCall call) {
-        new Thread(() -> {
-            try {
+        FolioleCompanionRequestSyncHttp.desktop(call, opened -> {
                 String urlKey = FolioleCompanionHostBridgeContractDefinitions.networkUrlRequestKey(context);
                 String methodKey = FolioleCompanionHostBridgeContractDefinitions.networkMethodRequestKey(context);
                 String url = call.getString(urlKey);
                 String method = call.getString(methodKey);
                 if (url == null || url.trim().isEmpty()) {
-                    call.reject(urlKey + " is required.");
-                    return;
+                    throw new IllegalArgumentException(urlKey + " is required.");
                 }
                 if (method == null || method.trim().isEmpty()) {
-                    call.reject(methodKey + " is required.");
-                    return;
+                    throw new IllegalArgumentException(methodKey + " is required.");
                 }
-                call.resolve(FolioleCompanionDesktopHttpClient.request(
+                return FolioleCompanionDesktopHttpClient.request(
                     context,
                     url,
                     method,
                     call.getData().optJSONObject(FolioleCompanionHostBridgeContractDefinitions.networkHeadersRequestKey(context)),
-                    call.getString(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context))
-                ));
-            } catch (Exception exception) {
-                call.reject(FolioleCompanionPluginErrors.withCause("Desktop HTTP request failed.", exception), exception);
-            }
-        }).start();
+                    call.getString(FolioleCompanionHostBridgeContractDefinitions.networkBodyRequestKey(context)), opened
+                );
+        });
     }
 
     static void loadDiscoveryCandidates(Context context, PluginCall call) {

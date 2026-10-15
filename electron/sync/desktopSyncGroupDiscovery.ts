@@ -5,6 +5,7 @@ import {
   parseSyncProtocolTxt,
   syncProtocolVersionHintMatchesDescriptor
 } from '../../lib/platform/syncProtocolContract.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession } from './desktopDnsSd.js';
@@ -16,7 +17,7 @@ import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 type ProbedCandidate = DesktopSyncGroupJoinCandidatePayload;
 
-export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = fetch, allPeers = false) {
+export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = fetch, allPeers = false, desktopOnly = false) {
   const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const services = new Map<string, { endpointUrl: string; name: string; txt: Record<string, unknown> }>();
   let failure: Error | null = null;
@@ -25,6 +26,7 @@ export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = f
     onService: ({ kind, service }) => {
       if (kind === 'lost') return;
       const txt = service.txt as Record<string, unknown>;
+      if (desktopOnly && isMobileSyncPlatform(String(txt.provider_platform ?? txt.platform ?? ''))) return;
       if (txt.runtime_instance_id === localRuntimeInstanceId) return;
       if (typeof txt.group_id !== 'string' || typeof txt.group_tag !== 'string') return;
       const endpointUrl = resolveCompanionMdnsServiceEndpoints(service)[0];

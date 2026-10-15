@@ -57,3 +57,26 @@ it('does not continue a backlog after automatic sync is paused', async () => {
   expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
   vi.useRealTimers();
 });
+
+it('runs another round when a desktop change arrives during an active round', async () => {
+  let finishRun: (() => void) | undefined;
+  const tryForegroundAutoSync = vi.fn(async () => 'completed' as const);
+  tryForegroundAutoSync.mockImplementationOnce(async () => {
+    await new Promise<void>(resolve => { finishRun = resolve; });
+    return 'completed';
+  });
+  const runner = createForegroundSyncRunner({
+    cancelled: () => false, inFlightRef: { current: false }, isAppActiveRef: { current: true },
+    isSyncGroupReadyRef: { current: true }, lastCheckedAtRef: { current: 0 },
+    lastForegroundAtRef: { current: 0 }, readAppActiveState: async () => true,
+    resourceContinuationModeRef: { current: 'full' }, retryAttemptRef: { current: 0 },
+    retryTimerRef: { current: null }, setError: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), stateRef: { current: state }, tryForegroundAutoSync
+  });
+  const running = runner('foreground');
+  expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
+  runner('mutation');
+  finishRun?.();
+  await running;
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+});

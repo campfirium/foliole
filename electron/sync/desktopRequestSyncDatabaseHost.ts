@@ -11,7 +11,7 @@ import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
 import { reportDesktopSyncGroupObjectCommitted } from './desktopSyncGroupCursorCommit.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
-export function createDesktopRequestSyncDatabaseHost(databasePath: string): RequestSyncDatabaseHost {
+export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourceSession?: string): RequestSyncDatabaseHost {
   const files = createDesktopRequestSyncFiles(databasePath);
   return {
     objectOptions: async db => {
@@ -21,7 +21,7 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string): Requ
     objectApplied: async object => {
       notifyWorkspaceSyncApplied({
         appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
-        appliedObjectIds: [object.globalId], appliedReviewOpIds: [] });
+        appliedObjectIds: [object.globalId], appliedReviewOpIds: [] }, sourceSession);
       await reportDesktopSyncGroupObjectCommitted(object);
     },
     files,

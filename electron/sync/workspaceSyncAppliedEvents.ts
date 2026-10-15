@@ -7,14 +7,17 @@ import {
   type WorkspaceSyncAppliedEvent
 } from '../ipc/contracts.js';
 
+import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
+
 function hasAppliedChanges(payload: WorkspaceSyncAppliedEvent) {
   return payload.appliedNodeIds.length > 0 || payload.appliedObjectIds.length > 0 || payload.appliedReviewOpIds.length > 0;
 }
 
-export function notifyWorkspaceSyncApplied(payload: WorkspaceSyncAppliedEvent) {
+export function notifyWorkspaceSyncApplied(payload: WorkspaceSyncAppliedEvent, sourceSession?: string) {
   if (!hasAppliedChanges(payload)) {
     return;
   }
+  desktopSyncChangeSessions().changed(sourceSession);
   if (payload.appliedObjectIds.some((id) => id.endsWith(':search_aliases_document'))) {
     void runWithDatabaseConnectionOwner(() => reconcileSearchAliasMirror()).catch((error) => {
       console.error('[search-aliases] synced document could not be mapped to the local file', error);

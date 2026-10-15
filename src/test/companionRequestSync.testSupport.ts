@@ -22,10 +22,11 @@ import type { CompanionDesktopSyncOptions } from '../shared/platform/companionDe
 
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null,
-  files: null as FramedSyncFilePort | null, post: vi.fn(), sign: vi.fn(), accessFile: vi.fn() }));
+  files: null as FramedSyncFilePort | null, post: vi.fn(), sign: vi.fn(), accessFile: vi.fn(), http: vi.fn(), cancelHttp: vi.fn(async () => {}) }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original => ({
   ...await original<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(), FolioleCompanionSync: {
-  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, accessFramedSyncFile: native.accessFile
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, accessFramedSyncFile: native.accessFile,
+  desktopHttpRequest: native.http, cancelRequestSyncHttp: native.cancelHttp
 } }));
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => {
   const owner = {

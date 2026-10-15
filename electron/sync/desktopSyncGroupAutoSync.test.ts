@@ -32,12 +32,12 @@ it('continues a pending Readwise switch on discovery changes and completed sync'
   await vi.waitFor(() => expect(runtime.readwiseContinue).toHaveBeenCalledTimes(2));
 });
 
-it('retains routes to every reachable desktop and foreground phone without electing a role', async () => {
+it('activates desktops without opening reverse rounds to phones', async () => {
   await startDesktopSyncGroupAutoSync();
   await expect(runtime.memberSessionArgs?.onMember(desktop)).resolves.toBe(true);
-  await expect(runtime.memberSessionArgs?.onMember(phone)).resolves.toBe(true);
-  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([desktop, phone]);
-  expect(runtime.coordinator).toHaveBeenCalledWith('automatic', phone);
+  await expect(runtime.memberSessionArgs?.onMember(phone)).resolves.toBe(false);
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([desktop]);
+  expect(runtime.coordinator).not.toHaveBeenCalledWith('automatic', phone);
   expect(runtime.freshness).toHaveBeenCalledWith(true);
   expect(runtime.updateRole).not.toHaveBeenCalled();
 });
@@ -46,8 +46,8 @@ it('coalesces duplicate discovery activation for a peer', async () => {
   let finish: (value: { status: string }) => void = () => {};
   runtime.coordinator.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await startDesktopSyncGroupAutoSync();
-  const first = runtime.memberSessionArgs?.onMember(phone);
-  const second = runtime.memberSessionArgs?.onMember(phone);
+  const first = runtime.memberSessionArgs?.onMember(desktop);
+  const second = runtime.memberSessionArgs?.onMember(desktop);
   expect(first).toBe(second);
   await vi.waitFor(() => expect(runtime.coordinator).toHaveBeenCalledOnce());
   finish({ status: 'completed' });
@@ -64,11 +64,11 @@ it('removes an unavailable peer while leaving other reachable routes eligible', 
   await vi.waitFor(() => expect(runtime.freshness).toHaveBeenLastCalledWith(true));
 });
 
-it('collects all known endpoints for a manual sync including phones', async () => {
+it('collects desktop endpoints for manual sync without reverse mobile routes', async () => {
   runtime.memberEndpoints = [desktop, phone];
   await runDesktopManualSyncWithDiscovery();
   expect(runtime.coordinator).toHaveBeenCalledWith('manual');
-  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([desktop, phone]);
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([desktop]);
 });
 
 it('discovers and retains every matching peer when manual sync starts without a route', async () => {
@@ -77,7 +77,7 @@ it('discovers and retains every matching peer when manual sync starts without a 
     provider_device_name: peer.peer_device_name, provider_platform: peer.peer_platform })));
   await runDesktopManualSyncWithDiscovery();
   expect(runtime.coordinator).toHaveBeenCalledWith('manual');
-  expect(loadDesktopSyncGroupRoutes('group-1').map(peer => peer.peer_device_id)).toEqual(['desktop-b', 'phone']);
+  expect(loadDesktopSyncGroupRoutes('group-1').map(peer => peer.peer_device_id)).toEqual(['desktop-b']);
 });
 
 it('records no reachable peer without inventing an anchor or starting a round', async () => {

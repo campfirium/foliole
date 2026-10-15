@@ -44,7 +44,7 @@ vi.mock('../database/connection.js', async () => {
   const coordinator = new SqliteConnectionCoordinator();
   runtime.assertOwner = () => coordinator.assertAccess();
   runtime.readwiseContinue.mockImplementation(() => coordinator.runExclusive(() => null));
-  return { runWithDatabaseConnectionOwner: <T>(execute: () => Promise<T> | T) => coordinator.runExclusive(execute) };
+  return { registerDatabaseConnectionCleanup: vi.fn(), runWithDatabaseConnectionOwner: <T>(execute: () => Promise<T> | T) => coordinator.runExclusive(execute) };
 });
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
   if (runtime.requireOwner) runtime.assertOwner();

@@ -2,9 +2,10 @@ import type http from 'node:http';
 
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
-import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
+import { loadDesktopSyncGroup, loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
@@ -15,6 +16,7 @@ import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
+import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 
 export async function handleProductionCompanionFramedSyncPost(args: {
@@ -34,6 +36,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   const round = parseRequestSyncPeerRound(
     url.searchParams.get('peer_round_id'), url.searchParams.get('peer_round_mode'));
   const { lease, ownershipError } = acquireInboundRound(runtime, round);
+  if (round.mode === 'start' || round.mode === 'single') bindSessionRound(lease, runtime.sessionSignal);
   const disconnected = () => {
     if (!args.response.writableFinished) controller.abort(new Error('request_sync_peer_disconnected'));
   };
@@ -55,7 +58,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
-        const reply = await respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath), {
+        const reply = await respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId), {
           context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
           onProgress: () => lease?.touch()
@@ -77,14 +80,26 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   return true;
 }
 
+function bindSessionRound(lease: SyncPeerRoundLease | undefined, signal: AbortSignal | undefined) {
+  if (!lease || !signal) return;
+  const ended = () => lease.release(new Error('sync_session_expired'));
+  signal.addEventListener('abort', ended, { once: true });
+  lease.signal.addEventListener('abort', () => signal.removeEventListener('abort', ended), { once: true });
+  if (signal.aborted) ended();
+}
+
 function acquireInboundRound(runtime: Awaited<ReturnType<typeof loadInboundRuntime>>,
   round: ReturnType<typeof parseRequestSyncPeerRound> | undefined): {
     lease: SyncPeerRoundLease | undefined; ownershipError: unknown
   } {
   try {
-    return { lease: round && runtime.auth.ok ? desktopSyncPeerRoundOwner().acceptInbound(
-      runtime.auth.device_id, round.id, round.mode === 'start' || round.mode === 'single') : undefined,
-    ownershipError: undefined };
+    if (!round || !runtime.auth.ok) return { lease: undefined, ownershipError: undefined };
+    const peer = runtime.auth.device_id;
+    const lease = desktopSyncPeerRoundOwner().acceptInbound(peer, round.id, round.mode === 'start' || round.mode === 'single');
+    return { lease: { ...lease, touch() {
+      lease.touch();
+      if (runtime.sessionId) desktopSyncChangeSessions().signal(peer, runtime.sessionId);
+    } }, ownershipError: undefined };
   } catch (ownershipError) { return { lease: undefined, ownershipError }; }
 }
 
@@ -99,14 +114,19 @@ function loadInboundRuntime(request: http.IncomingMessage) {
     const group = loadDesktopSyncGroupInfo();
     if (!group) throw new Error('sync_group_not_available');
     const bodySha256 = readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER);
+    const auth = authenticateCompanionRequest({
+      ...(bodySha256 === undefined ? {} : { bodySha256 }), request, requireMemberState: true
+    });
+    const sessionId = new URL(request.url ?? '/', 'http://localhost').searchParams.get('sync_session_id') ?? undefined;
+    const peer = auth.ok ? loadDesktopSyncGroup()?.devices.find(device => device.device_identity_key === auth.device_id) : null;
+    if (auth.ok && isMobileSyncPlatform(peer?.platform ?? '') && !sessionId) {
+      throw new Error('sync_session_required');
+    }
+    const sessionSignal = auth.ok && sessionId ? desktopSyncChangeSessions().signal(auth.device_id, sessionId) : undefined;
     return {
       databasePath: connection.dbPath,
       payloadBudget: connection.framedSyncPayloadBudget,
-      auth: authenticateCompanionRequest({
-        ...(bodySha256 === undefined ? {} : { bodySha256 }),
-        request: request,
-        requireMemberState: true
-      }),
+      auth, sessionId, sessionSignal,
       groupKey: new Uint8Array(Buffer.from(group.workgroup_key, 'base64url')),
       libraryEpoch: loadDesktopLocalNodeProof().library_epoch
     };

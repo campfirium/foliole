@@ -1,5 +1,8 @@
 import type { NativeCompanionFramedPayloadBudgetOwner } from './nativeCompanionFramedPayloadBudgetContract.js';
 
+export type NativeHttpCancellation = (NativeCompanionFramedPayloadBudgetOwner & { request_id: string })
+  | { request_id?: never; library_key?: never; generation_id?: never };
+
 /** Native HTTP moves request-owned byte chunks; shared code owns framing, encryption and business apply. */
 export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPayloadBudgetOwner {
   request_id: string;

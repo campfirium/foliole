@@ -1,3 +1,4 @@
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watchedFolderConflictDecisions.js';
@@ -7,6 +8,7 @@ import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPrefe
 import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
+import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import { clearDesktopSyncGroupDiscoveryErrors, setDesktopSyncGroupDiscoveryError } from './desktopSyncGroupDiscoveryStatus.js';
@@ -51,6 +53,7 @@ export function startDesktopSyncGroupAutoSync() {
 }
 
 export function stopDesktopSyncGroupAutoSync() {
+  closeDesktopSyncChangeSessions();
   generation += 1;
   startRun = null;
   inFlight.clear();
@@ -97,11 +100,14 @@ export async function resumeDesktopSyncAfterWatchedDecision() {
     pending: loadUnreconciledWatchedFolderConflictDecisions().length > 0
   }));
   if (current !== generation || !state.group || !state.participating || !state.pending) return;
-  for (const peer of loadDesktopSyncGroupMemberEndpoints(state.group.group_id)) saveDesktopSyncGroupRoute(peer);
+  for (const peer of loadDesktopSyncGroupMemberEndpoints(state.group.group_id)) {
+    if (!isMobileSyncPlatform(peer.peer_platform)) saveDesktopSyncGroupRoute(peer);
+  }
   if (loadDesktopSyncGroupRoutes(state.group.group_id).length) await runDesktopSyncCoordinator('automatic');
 }
 
 function activatePeer(peer: DesktopSyncGroupPeer, isCurrent: () => boolean) {
+  if (isMobileSyncPlatform(peer.peer_platform)) return Promise.resolve(false);
   const existing = inFlight.get(peer.peer_device_id);
   if (existing) return existing;
   const work = runWithDatabaseConnectionOwner(() => {
@@ -128,20 +134,26 @@ function reportActivationError(error: unknown) {
 }
 
 async function runDesktopManualSync() {
+  desktopSyncChangeSessions().changed();
   const current = generation;
   const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
   if (current !== generation) return null;
   if (!group) return runDesktopSyncCoordinator('manual');
+  if (desktopSyncChangeSessions().hasSessions() && !loadDesktopSyncGroupRoutes(group.group_id).length) {
+    return runDesktopSyncCoordinator('manual');
+  }
   await exchangeAllDesktopSyncGroupMemberStates();
   if (current !== generation) return null;
-  for (const peer of loadDesktopSyncGroupMemberEndpoints(group.group_id)) saveDesktopSyncGroupRoute(peer);
+  for (const peer of loadDesktopSyncGroupMemberEndpoints(group.group_id)) {
+    if (!isMobileSyncPlatform(peer.peer_platform)) saveDesktopSyncGroupRoute(peer);
+  }
   if (!loadDesktopSyncGroupRoutes(group.group_id).length) {
-    const candidates = await discoverDesktopSyncGroups(fetch, true);
+    const candidates = await discoverDesktopSyncGroups(fetch, true, true);
     for (const candidate of candidates) {
       if (candidate.provider_device_id === group.local_device_identity_key) continue;
       const route = await runWithDatabaseConnectionOwner(() => routeFromCandidate(group, candidate));
       if (current !== generation) return null;
-      if (route) saveDesktopSyncGroupRoute(route);
+      if (route && !isMobileSyncPlatform(route.peer_platform)) saveDesktopSyncGroupRoute(route);
     }
   }
   if (!loadDesktopSyncGroupRoutes(group.group_id).length) {

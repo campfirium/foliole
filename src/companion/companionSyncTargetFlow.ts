@@ -1,5 +1,7 @@
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
+import { captureCompanionDesktopRound, ensureCompanionDesktopSession, waitForCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -89,13 +91,15 @@ async function runOwnedTarget(args: {
     if (memberState.localExited) throw new Error('sync_group_local_device_removed');
     if (memberState.peerRemoved) return 'skipped';
     if (memberState.normalSyncReady === false && !memberState.restoreFromPeer) return 'skipped';
+    await ensureTargetSession(args.target);
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     if (args.isManualRequested()) triggerReason = 'manual';
     await recordCompanionWorkspaceSyncEvent({
       endpointUrl, kind: 'run_started', message: 'Sync started.',
       runId, startedAt, status: 'started', triggerReason
     });
-    return await args.runStreamSync({
+    const completeSession = captureCompanionDesktopRound(endpointUrl);
+    const outcome = await args.runStreamSync({
       ...args.syncArgs,
       isManualRequested: args.isManualRequested,
       endpointUrl,
@@ -110,6 +114,8 @@ async function runOwnedTarget(args: {
       triggerReason,
       workspaceSnapshot: args.syncArgs.state.workspace_snapshot
     }) ?? 'skipped';
+    if (outcome === 'completed') await completeSession();
+    return outcome;
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
     if (isSyncPeerRoundRetryableError(syncError)) {
@@ -120,6 +126,12 @@ async function runOwnedTarget(args: {
     return recordTargetFailure({
       endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason
     });
+  }
+}
+
+async function ensureTargetSession(target: CompanionWorkspaceSyncTarget) {
+  if (target.deviceId && target.platform && !isMobileSyncPlatform(target.platform)) {
+    await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId);
   }
 }
 
@@ -134,5 +146,7 @@ export async function tryForegroundAutoSyncTarget(
     runId, target, runStreamSync, syncArgs, isManualRequested: () => intent.manualRequested
   }), syncArgs.triggerReason === 'manual');
   syncArgs.onRunIdentified?.(run.runId, run.mode);
-  return await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
+  const outcome = await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
+  waitForCompanionDesktopChanges();
+  return outcome;
 }
