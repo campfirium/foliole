@@ -15,23 +15,31 @@ import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.
 
 const nodeId = 'offline-topic';
 const createdAt = '2026-09-27T00:00:00.000Z';
-beforeEach(startLibraries);
+let online: Peer;
+let offline: Peer;
+beforeEach(async () => {
+  await startLibraries();
+  online = createPeer('online');
+  offline = createPeer('offline');
+  joinPeers(online, offline);
+  online.db.transaction(() => {
+    seedNode(online, 'E', 'left edited\nright one');
+    for (const [id, parent, content] of [
+      ['A', null, 'left one\nright one'],
+      ['B', 'A', 'left draft\nright one'],
+      ['C', 'B', 'left revised\nright one'],
+      ['D', 'C', 'left almost\nright one'],
+      ['E', 'D', 'left edited\nright one']
+    ] as const) insertVersion(online, id, parent, content);
+  })();
+  offline.db.transaction(() => {
+    seedNode(offline, 'A', 'left one\nright one');
+    insertVersion(offline, 'A', null, 'left one\nright one');
+  })();
+});
 afterEach(closeLibraries);
 
 it('replays a trimmed A to E chain into an offline A to F branch through current requests', async () => {
-  const online = createPeer('online');
-  const offline = createPeer('offline');
-  joinPeers(online, offline);
-  seedNode(online, 'E', 'left edited\nright one');
-  for (const [id, parent, content] of [
-    ['A', null, 'left one\nright one'],
-    ['B', 'A', 'left draft\nright one'],
-    ['C', 'B', 'left revised\nright one'],
-    ['D', 'C', 'left almost\nright one'],
-    ['E', 'D', 'left edited\nright one']
-  ] as const) insertVersion(online, id, parent, content);
-  seedNode(offline, 'A', 'left one\nright one');
-  insertVersion(offline, 'A', null, 'left one\nright one');
   await transferPosition(offline, online);
   expect(await collectNodeVersionPayloads(online.port, nodeId))
     .toEqual({ released: 4, skipped: null });
