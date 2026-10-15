@@ -12,15 +12,16 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const SCAN_SCRIPT = path.join(REPO_ROOT, 'scripts/sync/sql-surface-scan.mjs');
 const TEMP_ROOT_BASE = path.join(REPO_ROOT, '.tmp', 'tests');
 
-function runScan(rootDir) {
+function runScan(rootDir, extraEnv = {}) {
   return new Promise((resolve) => {
-    const child = spawn('node', [SCAN_SCRIPT], {
+    const child = spawn(process.execPath, [SCAN_SCRIPT], {
       cwd: REPO_ROOT,
       env: {
         ...process.env,
         GITHUB_ACTIONS: 'true',
         RUNNER_ENVIRONMENT: 'github-hosted',
-        SQL_SURFACE_SCAN_ROOTS: rootDir
+        SQL_SURFACE_SCAN_ROOTS: rootDir,
+        ...extraEnv
       }
     });
     let stdout = '';
@@ -178,4 +179,18 @@ describe('sql-surface-scan', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+});
+
+it('scans the bounded fixture when neither rg nor a shell is on PATH', async () => {
+  await mkdir(TEMP_ROOT_BASE, { recursive: true });
+  const tempRoot = await mkdtemp(path.join(TEMP_ROOT_BASE, 'sql-surface-no-path-'));
+  try {
+    await writeFixture(tempRoot, completeSqlSurface());
+    const result = await runScan(tempRoot, { PATH: '' });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe('');
+    const output = JSON.parse(result.stdout);
+    expect(output.summary.missingCoreCapabilities).toEqual(['iosRuntime']);
+    expect(output.summary.iosRuntimeGap.required).toBe(false);
+  } finally { await rm(tempRoot, { recursive: true, force: true }); }
 });

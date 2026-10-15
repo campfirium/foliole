@@ -111,10 +111,12 @@ if (hardUnknowns.length > 0) {
 
 function listFiles() {
   const roots = resolveRoots();
-  if (hasCommand('rg')) {
+  try {
     return execFileSync('rg', ['--files', ...roots], { encoding: 'utf8' })
       .split('\n')
       .filter(isSourceFile);
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
   }
   return roots.flatMap((root) => listFilesFromRoot(root)).filter(isSourceFile);
 }
@@ -126,11 +128,6 @@ function resolveRoots() {
     .split(delimiter)
     .map((part) => part.trim())
     .filter(Boolean);
-}
-
-function hasCommand(command) {
-  const result = execFileSync('sh', ['-lc', `command -v ${command} >/dev/null 2>&1; echo $?`], { encoding: 'utf8' });
-  return result.trim() === '0';
 }
 
 function listFilesFromRoot(root) {
