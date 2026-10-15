@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import type { SyncGroupDevicePayload } from './syncGroupContract.js';
 import type { SyncGroupRemovalDecisionPayload } from './syncGroupMemberStateContract.js';
-import { eligibleSyncGroupRemovals, parseSyncGroupRemovingEntries, syncGroupRemovingEntries } from './syncGroupRemovalModel.js';
+import { eligibleSyncGroupRemovals, parseSyncGroupRemovingEntries, syncGroupRemovingEntries, syncGroupDisplayDeviceNames, parseSyncGroupDisplayDeviceNames } from './syncGroupRemovalModel.js';
 
 const devices: SyncGroupDevicePayload[] = ['A', 'B', 'C', 'D', 'E'].map(id => ({
   device_identity_key: id, device_name: id, canonical_library_path: `/private/${id}`,
@@ -46,4 +46,29 @@ it('distinguishes same-name identities without exposing library paths and reject
   expect(new Set([entries[0]?.target.device_name, ...entries[0]!.confirmed_devices.map(device => device.device_name)]).size).toBe(3);
   expect(JSON.stringify(entries)).not.toContain('/private/');
   expect(parseSyncGroupRemovingEntries([...entries, null, { target: {}, confirmed_devices: [5] }])).toEqual(entries);
+});
+
+it('ignores hidden departed names while keeping pending departed targets distinguishable', () => {
+  const history = { ...devices[4]!, device_name: 'A', state: 'left' as const };
+  const visible = [...devices.slice(0, 4), history];
+  const rows = syncGroupRemovingEntries(visible, [removal('one', 'D', ['A'])]);
+  expect(rows[0]?.confirmed_devices[0]?.device_name).toBe('A');
+  const pending = { ...devices[3]!, device_name: 'A', state: 'left' as const };
+  const withPending = [...devices.slice(0, 3), pending, history];
+  const pendingRows = syncGroupRemovingEntries(withPending, [removal('one', 'D', ['A'])]);
+  expect(pendingRows[0]?.target.device_name).not.toBe(pendingRows[0]?.confirmed_devices[0]?.device_name);
+});
+
+it('uses identical names for normal members and removal confirmations, including a departed pending target', () => {
+  const visible = devices.map(device => ({ ...device, device_name: 'Mac',
+    state: device.device_identity_key === 'D' || device.device_identity_key === 'E' ? 'left' as const : 'active' as const }));
+  const removals = [removal('one', 'D', ['A', 'B'])];
+  const names = syncGroupDisplayDeviceNames(visible, removals);
+  const [row] = syncGroupRemovingEntries(visible, removals);
+  expect(names.D).toBe(row?.target.device_name);
+  expect(names.E).toBeUndefined();
+  for (const confirmer of row!.confirmed_devices) expect(names[confirmer.device_identity_key]).toBe(confirmer.device_name);
+  expect(new Set(Object.values(names)).size).toBe(4);
+  expect(parseSyncGroupDisplayDeviceNames({ ...names, invalid: 5 })).toEqual(names);
+  expect(parseSyncGroupDisplayDeviceNames(null)).toEqual({});
 });

@@ -8,7 +8,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import {
   initiateDesktopSyncGroupDeviceRemoval
 } from '../database/syncGroupMemberStateStore.js';
-import { loadDesktopSyncGroupRemovingEntries } from '../database/syncGroupPendingRemovalReads.js';
+import { loadDesktopSyncGroupRemovalPresentation } from '../database/syncGroupPendingRemovalReads.js';
 import {
   createDesktopSyncGroup,
   leaveDesktopSyncGroupDevice,
@@ -84,6 +84,8 @@ function runtimeIdentity() {
 
 function overview() {
   const group = loadDesktopSyncGroup();
+  const presentation = group ? loadDesktopSyncGroupRemovalPresentation(group.group_id)
+    : { device_display_names: {}, removing_devices: [] };
   const local = group ? resolveLocalSyncGroupDevice(group) : null;
   const join = loadDesktopSyncGroupJoinState();
   return {
@@ -95,9 +97,9 @@ function overview() {
     join_request: join.pending?.request ?? null,
     join_requests: loadDesktopSyncGroupJoinProvider()?.pending() ?? [],
     server_status: getLanWorkspaceSyncServerStatus(),
-    sync_group: group,
+    sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
-    removing_devices: group ? loadDesktopSyncGroupRemovingEntries(group.group_id) : [],
+    removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()
   };
 }

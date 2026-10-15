@@ -11,7 +11,7 @@ import {
 import type { SyncGroupDiscoverySnapshot } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { displaySyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
-import type { SyncGroupRemovingEntry } from '../../../../../lib/platform/syncGroupRemovalModel';
+import { syncGroupDeviceDisplayName, type SyncGroupRemovingEntry } from '../../../../../lib/platform/syncGroupRemovalModel';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -169,7 +169,7 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
                 key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
                 syncEnabled={props.syncEnabled}
-                removing={false} />
+                displayName={group.device_display_names?.[device.device_identity_key] ?? syncGroupDeviceDisplayName(device, group.devices)} />
             ))}
           </div>
           <SyncGroupRemovingDevices entries={props.removingDevices} />

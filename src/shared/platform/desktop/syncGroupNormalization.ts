@@ -2,7 +2,7 @@ import type {
   SyncGroupDevicePayload,
   SyncGroupPayload
 } from '../../../../lib/platform/syncGroupContract';
-import { parseSyncGroupRemovingEntries } from '../../../../lib/platform/syncGroupRemovalModel';
+import { parseSyncGroupRemovingEntries, parseSyncGroupDisplayDeviceNames } from '../../../../lib/platform/syncGroupRemovalModel';
 
 function readString(raw: Record<string, unknown>, key: string) {
   return typeof raw[key] === 'string' && raw[key].trim() ? raw[key].trim() : null;
@@ -45,6 +45,7 @@ export function normalizeSyncGroup(value: unknown): SyncGroupPayload | null {
   const devices = raw.devices.map(normalizeDevice);
   if (devices.some((device) => device === null)) return null;
   return {
+    device_display_names: parseSyncGroupDisplayDeviceNames(raw.device_display_names),
     removing_devices: parseSyncGroupRemovingEntries(raw.removing_devices),
     created_at: readString(raw, 'created_at')!,
     devices: devices as SyncGroupDevicePayload[],

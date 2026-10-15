@@ -175,10 +175,12 @@ it('keeps removing targets out of normal devices and displays all remaining conf
     left_at: null, platform: 'darwin', state: 'active', updated_at: 'now'
   }));
   renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, { devices, group_id: 'group-1',
-    created_at: 'now', display_name: 'Mac', local_device_identity_key: 'Mac' }, {
+    created_at: 'now', display_name: 'Mac', local_device_identity_key: 'Mac',
+    device_display_names: { Mac: 'Mac (identity)' } }, {
     removing_devices: [{ target: { device_identity_key: 'Phone', device_name: 'Phone' },
-      confirmed_devices: [{ device_identity_key: 'Mac', device_name: 'Mac' }] }]
+      confirmed_devices: [{ device_identity_key: 'Mac', device_name: 'Mac (identity)' }] }]
   });
+  expect(screen.getAllByText('Mac (identity)')).toHaveLength(2);
   expect(screen.getAllByText('Phone')).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'Remove from Sync Group' })).not.toBeInTheDocument();
   expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Mac');

@@ -4,7 +4,7 @@ import { beginSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGr
 import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
-import { syncGroupRemovingEntries } from '../../../../../lib/platform/syncGroupRemovalModel';
+import { syncGroupRemovingEntries, syncGroupDisplayDeviceNames } from '../../../../../lib/platform/syncGroupRemovalModel';
 import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { createCompanionUuid } from '../../companionUuid';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -119,9 +119,10 @@ async function loadGroup(db: DbPort): Promise<SyncGroupPayload | null> {
   ))[0];
   if (!text(row?.group_id)) return null;
   const devices = await loadDevices(db, String(row!.group_id));
+  const removals = await loadRemovals(db, String(row!.group_id));
   return {
-    removing_devices: syncGroupRemovingEntries(devices,
-      await loadRemovals(db, String(row!.group_id))),
+    device_display_names: syncGroupDisplayDeviceNames(devices, removals),
+    removing_devices: syncGroupRemovingEntries(devices, removals),
     created_at: String(row!.created_at),
     devices: devices.filter(device => device.state === 'active'),
     display_name: String(row!.display_name),

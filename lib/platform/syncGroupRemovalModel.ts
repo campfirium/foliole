@@ -29,6 +29,7 @@ export function syncGroupRemovingEntries(
   const remaining = remainingSyncGroupDevices(devices, removals);
   const effective = removals.filter(item => !item.superseded_at);
   const targets = new Set(effective.filter(item => !item.completed_at).map(item => item.target_device_identity_key));
+  const displayed = syncGroupDisplayedDevices(devices, removals);
   return devices.filter(device => targets.has(device.device_identity_key) &&
     !effective.some(item => item.target_device_identity_key === device.device_identity_key && item.completed_at))
     .map(target => {
@@ -36,12 +37,34 @@ export function syncGroupRemovingEntries(
       // Concurrent decisions keep their own evidence. Show one decision, never a union of confirmations.
       const decision = decisions[0];
       return {
-        target: displayDevice(target, devices),
+        target: displayDevice(target, displayed),
         confirmed_devices: remaining.filter(device => decision?.confirmations.some(item =>
           item.kind === 'enforced' && item.confirming_device_identity_key === device.device_identity_key))
-          .map(device => displayDevice(device, devices))
+          .map(device => displayDevice(device, displayed))
       };
     });
+}
+
+export function syncGroupDisplayDeviceNames(
+  devices: SyncGroupDevicePayload[], removals: SyncGroupRemovalDecisionPayload[]
+): Record<string, string> {
+  const displayed = syncGroupDisplayedDevices(devices, removals);
+  return Object.fromEntries(displayed.map(device =>
+    [device.device_identity_key, syncGroupDeviceDisplayName(device, displayed)]));
+}
+
+function syncGroupDisplayedDevices(devices: SyncGroupDevicePayload[], removals: SyncGroupRemovalDecisionPayload[]) {
+  const effective = removals.filter(item => !item.superseded_at);
+  return devices.filter(device => {
+    const decisions = effective.filter(item => item.target_device_identity_key === device.device_identity_key);
+    if (decisions.some(item => item.completed_at)) return false;
+    return device.state === 'active' || decisions.some(item => !item.completed_at);
+  });
+}
+
+export function parseSyncGroupDisplayDeviceNames(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
 }
 
 function displayDevice(device: SyncGroupDevicePayload, devices: SyncGroupDevicePayload[]) {

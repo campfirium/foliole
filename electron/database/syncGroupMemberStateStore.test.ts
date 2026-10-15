@@ -10,7 +10,7 @@ import {
   initiateDesktopSyncGroupDeviceRemoval,
   loadDesktopSyncGroupMemberState
 } from './syncGroupMemberStateStore.js';
-import { loadDesktopSyncGroupRemovingEntries } from './syncGroupPendingRemovalReads.js';
+import { loadDesktopSyncGroupRemovalPresentation } from './syncGroupPendingRemovalReads.js';
 import {
   createDesktopSyncGroup,
   leaveDesktopSyncGroupDevice,
@@ -62,7 +62,7 @@ it('completes an offline target removal after every Device in the initiator list
   use(a);
   initiateDesktopSyncGroupDeviceRemoval(identities[2]!.identity_key, '2026-09-15T01:00:00.000Z');
   const decision = loadDesktopSyncGroupMemberState();
-  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
+  expect(loadDesktopSyncGroupRemovalPresentation('group-1').removing_devices.map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
 
   use(b);
   const fromB = applyDesktopSyncGroupMemberState(decision, identities[0]!.identity_key,
@@ -70,7 +70,7 @@ it('completes an offline target removal after every Device in the initiator list
 
   use(a);
   applyDesktopSyncGroupMemberState(fromB, identities[1]!.identity_key, '2026-09-15T01:02:00.000Z');
-  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([]);
+  expect(loadDesktopSyncGroupRemovalPresentation('group-1').removing_devices.map(entry => entry.target.device_identity_key)).toEqual([]);
   expect(loadDesktopSyncGroupMemberState().devices.find((device) =>
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('left');
   applyDesktopSyncGroupMemberState(fromB, identities[1]!.identity_key, '2026-09-15T01:03:00.000Z');
@@ -164,7 +164,7 @@ it('keeps removal pending when only the target confirms its own exit', () => {
   use(a);
   applyDesktopSyncGroupMemberState(exited.state, identities[2]!.identity_key,
     '2026-09-15T02:02:00.000Z');
-  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
+  expect(loadDesktopSyncGroupRemovalPresentation('group-1').removing_devices.map(entry => entry.target.device_identity_key)).toEqual([identities[2]!.identity_key]);
 });
 
 it('learns unknown members independently and never revives a removed Device from an old active snapshot', () => {
@@ -181,7 +181,7 @@ it('learns unknown members independently and never revives a removed Device from
   const oldActive = loadDesktopSyncGroupMemberState();
   oldActive.devices.find((device) => device.device_identity_key === identities[2]!.identity_key)!.state = 'active';
   applyDesktopSyncGroupMemberState(oldActive, identities[0]!.identity_key);
-  expect(loadDesktopSyncGroupRemovingEntries('group-1').map(entry => entry.target.device_identity_key)).toContain(identities[2]!.identity_key);
+  expect(loadDesktopSyncGroupRemovalPresentation('group-1').removing_devices.map(entry => entry.target.device_identity_key)).toContain(identities[2]!.identity_key);
 });
 
 it('retains a publishable member snapshot after the local Device leaves', () => {

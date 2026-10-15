@@ -17,8 +17,8 @@ const group: SyncGroupPayload = {
 
 it('offers removal for a remote Device', () => {
   const onRemove = vi.fn();
-  renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} disabled={false} group={group}
-    onRemove={onRemove} onTogglePause={vi.fn()} removing={false} syncEnabled syncPaused={false}
+  renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} displayName={remote.device_name} disabled={false} group={group}
+    onRemove={onRemove} onTogglePause={vi.fn()} syncEnabled syncPaused={false}
     />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
@@ -26,17 +26,9 @@ it('offers removal for a remote Device', () => {
   expect(onRemove).toHaveBeenCalledWith(remote);
 });
 
-it('shows durable removal progress instead of a clickable action', () => {
-  renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} disabled={false} group={group}
-    onRemove={vi.fn()} onTogglePause={vi.fn()} removing syncEnabled syncPaused={false}
-    />);
-
-  expect(screen.getByRole('button', { name: 'Removing…' })).toBeDisabled();
-});
-
 it('shows the local device as offline when Sync is off', () => {
-  renderWithLocalization(<SettingsSyncGroupDeviceRow device={group.devices[0]!} disabled={false} group={group}
-    onRemove={vi.fn()} onTogglePause={vi.fn()} removing={false} syncEnabled={false} syncPaused={false}
+  renderWithLocalization(<SettingsSyncGroupDeviceRow device={group.devices[0]!} displayName={group.devices[0]!.device_name} disabled={false} group={group}
+    onRemove={vi.fn()} onTogglePause={vi.fn()} syncEnabled={false} syncPaused={false}
     />);
 
   expect(screen.getByText('Sync off')).toBeVisible();
@@ -59,3 +51,12 @@ function device(id: string, name: string): SyncGroupDevicePayload {
     updated_at: '2026-09-15T00:00:00.000Z'
   };
 }
+
+it('uses the shared display label without changing the identity passed to removal', () => {
+  const onRemove = vi.fn();
+  renderWithLocalization(<SettingsSyncGroupDeviceRow device={remote} disabled={false} group={group}
+    displayName="Windows PC (12345678)" onRemove={onRemove} onTogglePause={vi.fn()} syncEnabled syncPaused={false} />);
+  expect(screen.getByText('Windows PC (12345678)')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Remove from Sync Group' }));
+  expect(onRemove).toHaveBeenCalledWith(remote);
+});

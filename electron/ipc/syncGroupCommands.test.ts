@@ -28,7 +28,7 @@ vi.mock('../database/connection.js', async () => {
   runtime.read = execute => coordinator.runExclusive(execute);
   return { openDatabaseConnection: vi.fn(), runWithDatabaseConnectionOwner: runtime.read };
 });
-vi.mock('../database/syncGroupPendingRemovalReads.js', () => ({ loadDesktopSyncGroupRemovingEntries: () => [] }));
+vi.mock('../database/syncGroupPendingRemovalReads.js', () => ({ loadDesktopSyncGroupRemovalPresentation: () => ({ device_display_names: {}, removing_devices: [] }) }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   initiateDesktopSyncGroupDeviceRemoval: vi.fn()
 }));

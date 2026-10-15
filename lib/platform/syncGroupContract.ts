@@ -15,6 +15,7 @@ export interface SyncGroupDevicePayload {
 }
 
 export interface SyncGroupPayload {
+  device_display_names?: Record<string, string>;
   removing_devices?: import('./syncGroupRemovalModel.js').SyncGroupRemovingEntry[];
   created_at: string;
   devices: SyncGroupDevicePayload[];

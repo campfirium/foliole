@@ -44,7 +44,6 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.group.resume': '恢复同步',
   'settings.companionSync.group.leave': '离开同步组',
   'settings.companionSync.group.remove': '从同步组移除',
-  'settings.companionSync.group.remove.pending': '移除中…',
   'settings.companionSync.group.leave.confirm.title': '离开同步组？',
   'settings.companionSync.group.leave.confirm.description': '这台设备将离开“{name}”，并停止与组内设备同步。',
   'settings.companionSync.group.remove.confirm.title': '移除设备？',

@@ -42,7 +42,6 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.group.resume': 'Resume Sync',
   'settings.companionSync.group.leave': 'Leave Sync Group',
   'settings.companionSync.group.remove': 'Remove from Sync Group',
-  'settings.companionSync.group.remove.pending': 'Removing…',
   'settings.companionSync.group.leave.confirm.title': 'Leave Sync Group?',
   'settings.companionSync.group.leave.confirm.description': 'This device will leave {name} and stop syncing with its devices.',
   'settings.companionSync.group.remove.confirm.title': 'Remove device?',

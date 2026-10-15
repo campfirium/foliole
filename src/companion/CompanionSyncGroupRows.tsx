@@ -70,7 +70,7 @@ function SyncGroupDevices(props: {
         return (
           <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={device.device_identity_key} role="listitem">
             <span className="flex min-w-0 items-baseline gap-2">
-              <span className="truncate text-sm font-semibold text-foreground">{syncGroupDeviceDisplayName(device, props.group.devices)}</span>
+              <span className="truncate text-sm font-semibold text-foreground">{props.group.device_display_names?.[device.device_identity_key] ?? syncGroupDeviceDisplayName(device, props.group.devices)}</span>
               <span className="shrink-0 text-xs text-companion-text-tertiary">
                 {displaySyncGroupPlatform(device.platform)}
               </span>
