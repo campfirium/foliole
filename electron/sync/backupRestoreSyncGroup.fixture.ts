@@ -28,6 +28,7 @@ import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
 import { exchangeDesktopSyncGroupMemberState, publishDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
+import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
@@ -90,12 +91,20 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
     onMembershipCommitted() { throw new Error('test_join_interrupted_after_membership'); }
   });
   if (action === 'joinComplete') return handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
+  if (action === 'joinBusy') return completeJoinWithBusyRound();
   if (action === 'joinProviderEnable') {
     const result = await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
     return result;
   }
   if (action === 'joinOverview') return handleSyncGroupCommand(NATIVE_COMMANDS.loadSyncGroupOverview, {});
   throw new Error('unknown join fixture action');
+}
+
+async function completeJoinWithBusyRound() {
+  const lease = desktopSyncPeerRoundOwner().acquireOutbound('fixture-busy-peer', 'fixture-busy-round');
+  if (!lease) throw new Error('fixture_busy_round_not_acquired');
+  try { return await completeDesktopSyncGroupJoin(); }
+  finally { lease.release(); }
 }
 
 async function restoreBackup(args: Record<string, unknown>, localOnly: boolean) {
@@ -132,7 +141,7 @@ async function runRemovalFixture(action: string, args: Record<string, unknown>) 
 
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
-    'joinProviderEnable', 'joinOverview', 'joinInterrupt'].includes(action)) {
+    'joinProviderEnable', 'joinOverview', 'joinInterrupt', 'joinBusy'].includes(action)) {
     return runJoinFixture(action, args);
   }
   if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopenMemberState'].includes(action)) {

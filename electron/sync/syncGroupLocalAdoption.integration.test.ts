@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterEach, expect, it } from 'vitest';
 
@@ -55,6 +56,24 @@ async function sync(worker: (typeof workers)[number], peer: Awaited<ReturnType<t
   await worker.send('sync', { ...peer });
 }
 
+async function completeJoin(worker: (typeof workers)[number], firstAction = 'joinComplete') {
+  const deadline = Date.now() + 15_000;
+  let pending = 0;
+  let action = firstAction;
+  // The desktop join UI continues completion every second while synchronization remains pending.
+  for (;;) {
+    try { await worker.send(action); return pending; }
+    catch (error) {
+      if (!(error instanceof Error) ||
+          error.message.split('\n', 1)[0] !== `${action}: Error: sync_group_sync_incomplete` ||
+          Date.now() >= deadline) throw error;
+    }
+    pending++;
+    action = 'joinComplete';
+    await delay(1_000);
+  }
+}
+
 it('continues ordinary UUID sync with a previously synchronized offline member after local adoption', async () => {
   const peers = await setup(false);
   const [applicant, provider, other] = workers;
@@ -72,7 +91,7 @@ it('continues ordinary UUID sync with a previously synchronized offline member a
     join_request: { request_id: string }
   };
   await provider!.send('joinAccept', { requestId: request.join_request.request_id });
-  await applicant!.send('joinComplete');
+  expect(await completeJoin(applicant!, 'joinBusy')).toBeGreaterThanOrEqual(1);
   await other!.send('seed', { id: 'offline-created', content: 'Offline data' });
   await sync(applicant!, peers[2]!).catch((error: Error) => { throw new Error(`after adoption: ${error.message}`); });
   for (const worker of [applicant!, other!]) {
@@ -100,7 +119,7 @@ for (const mode of ['use-group']) {
       join_request: { request_id: string }
     };
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
-    await applicant!.send('joinComplete');
+    await completeJoin(applicant!);
     await applicant!.send('sync', { ...peers[1]! }).catch((error: Error) => {
       if (!error.message.includes('sync_group_sync_incomplete')) throw error;
     });
@@ -135,7 +154,7 @@ it('resumes local adoption after interruption and database reopening without pub
   expect(interrupted.library.nodesById['group-source']).toBeUndefined();
   expect((await provider!.send('snapshot')).library.nodesById['local-before']).toBeUndefined();
   await applicant!.send('windowEvents');
-  await applicant!.send('joinComplete');
+  await completeJoin(applicant!);
   const events = await applicant!.send('windowEvents') as unknown as Array<{
     channel: string; payload: { appliedNodeIds?: string[] }
   }>;

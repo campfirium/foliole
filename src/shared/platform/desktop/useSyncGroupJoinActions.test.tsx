@@ -60,11 +60,12 @@ it('requests admission before stopping discovery, then completes after approval'
   });
 });
 
-it('retries completion while approval remains pending', async () => {
+it.each(['sync_group_join_not_accepted', 'sync_group_sync_incomplete'])(
+  'retries completion while %s remains pending', async errorCode => {
   vi.useFakeTimers();
   runtime.complete.mockImplementationOnce(async () => {
     runtime.events.push('complete-pending');
-    throw new Error('sync_group_join_not_accepted');
+    throw new Error(errorCode);
   });
   const { result } = renderActions();
 
