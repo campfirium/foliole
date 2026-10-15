@@ -54,7 +54,25 @@ it.each(['android', 'ios'] as const)('%s keeps an independent snapshot and relea
   }
 });
 
-function readManager(file: string) {
+it.each(['android', 'ios'] as const)('%s reports snapshot open context and releases a failed native connection', async platform => {
+  await mkdir('.tmp/artifacts', { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-snapshot-open-'));
+  const file = path.join(root, 'library.db');
+  new Database(file).close();
+  const nativeError = new Error('Open: Failed in openOrCreateDatabase Cannot open the DB');
+  const { manager, isClosed } = readManager(file, nativeError);
+  const snapshots = new CompanionRequestSyncSnapshots(manager, platform);
+  let entered = false;
+  try {
+    const read = snapshots.read(async () => { entered = true; });
+    await expect(read).rejects.toThrow(`request_sync_snapshot_open_failed:${platform}: ${nativeError.message}`);
+    await expect(read).rejects.toMatchObject({ cause: nativeError });
+    expect(entered).toBe(false);
+    expect(isClosed()).toBe(true);
+  } finally { await snapshots.close(); await rm(root, { recursive: true }); }
+});
+
+function readManager(file: string, openError?: Error) {
   let reader: Database.Database | null = null;
   const manager = {
     async createConnection(name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) {
@@ -63,7 +81,7 @@ function readManager(file: string) {
       reader = new Database(file, { readonly: true, fileMustExist: true });
       const db = reader;
       return new SQLiteDBConnection(name, readonly, {
-        open: async () => undefined,
+        open: async () => { if (openError) throw openError; },
         async query(args: { readonly: boolean; statement: string; values: unknown[] }) {
           expect(args.readonly).toBe(true);
           const statement = db.prepare(args.statement);

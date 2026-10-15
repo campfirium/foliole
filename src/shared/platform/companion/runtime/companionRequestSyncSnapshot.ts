@@ -39,7 +39,10 @@ export class CompanionRequestSyncSnapshots {
       false, 'no-encryption', COMPANION_DATABASE_VERSION, true);
     this.hasConnection = true;
     try {
-      await connection.open();
+      await connection.open().catch(error => {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Error(`request_sync_snapshot_open_failed:${this.platform}: ${detail}`, { cause: error });
+      });
       this.checkCancellation(signal);
       return await this.readTransaction(connection, execute, signal);
     } finally {
