@@ -99,7 +99,9 @@ async function runRetryIfActive(
   if (!args.cancelled() && isActive) runForegroundSyncCheck('retry');
 }
 
-function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number) {
+function shouldStartForegroundSync(
+  args: ForegroundSyncRunnerArgs, reason: ForegroundSyncReason, now: number, endpointChanged: boolean
+) {
   if (!args.isAppActiveRef.current) return false;
   if (!args.isSyncGroupReadyRef.current) return false;
   if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
@@ -109,7 +111,7 @@ function shouldStartForegroundSync(args: ForegroundSyncRunnerArgs, reason: Foreg
     args.lastForegroundAtRef.current = now;
   }
   return shouldRunForegroundAutoSyncCheck({
-    force: reason !== 'endpoint-ready',
+    force: endpointChanged || reason !== 'endpoint-ready',
     isNativeRuntime: isAvailableNativeCompanionRuntime(),
     lastCheckedAt: args.lastCheckedAtRef.current,
     now
@@ -168,15 +170,21 @@ function startForegroundSync(
 }
 
 export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
+  let observedEndpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
   const runForegroundSyncCheck = (reason: ForegroundSyncReason) => {
+    const endpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
+    const endpointChanged = reason === 'endpoint-ready' && Boolean(endpoint) && endpoint !== observedEndpoint;
+    if (reason === 'endpoint-ready') observedEndpoint = endpoint;
     if (args.inFlightRef.current) {
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'pending');
       return null;
     }
-    if (args.retryTimerRef.current && (reason === 'freshness' || reason === 'endpoint-ready')) return null;
+    if (args.retryTimerRef.current && !endpointChanged
+      && (reason === 'freshness' || reason === 'endpoint-ready')) return null;
     const now = Date.now();
-    if (!shouldStartForegroundSync(args, reason, now)) return null;
+    if (!shouldStartForegroundSync(args, reason, now, endpointChanged)) return null;
     if (reason !== 'retry') clearRetryTimer(args.retryTimerRef);
+    if (endpointChanged) args.retryAttemptRef.current = 0;
     args.lastCheckedAtRef.current = now;
     return startForegroundSync(args, runForegroundSyncCheck, reason, args.stateRef.current);
   };

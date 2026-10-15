@@ -40,3 +40,22 @@ it.each(['completed', 'progress'] as const)('does not hide a busy peer behind an
   expect(await sync()).toBe('pending');
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
 });
+
+it.each(['sync_round_busy', 'sync_round_expired', 'TimeoutError'])('retains the retryable cause: %s', async message => {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new Error(message));
+  expect(await sync()).toBe('pending');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'diagnostic', message: expect.stringContaining(message), status: 'skipped', result: 'retrying'
+  }));
+});
+
+it('retains nested network codes and timeout names in diagnostics', async () => {
+  const timeout = new Error('The operation timed out.');
+  timeout.name = 'TimeoutError';
+  const connection = Object.assign(new Error('Connection failed.', { cause: timeout }), { code: 'ECONNRESET' });
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new Error('Request failed.', { cause: connection }));
+  expect(await sync()).toBe('pending');
+  const events = syncPlatformMock.recordCompanionWorkspaceSyncEvent.mock.calls.map(([event]) => event);
+  expect(events).toContainEqual(expect.objectContaining({ kind: 'diagnostic', message: expect.stringContaining('ECONNRESET') }));
+  expect(events).toContainEqual(expect.objectContaining({ kind: 'diagnostic', message: expect.stringContaining('TimeoutError') }));
+});

@@ -11,7 +11,7 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
-import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
+import { formatCompanionSyncDiagnosticMessage, formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import type {
   ForegroundAutoSyncOutcome,
@@ -48,6 +48,22 @@ async function recordTargetFailure(args: {
   }).catch(() => null);
   if (failedState) args.syncArgs.setState({ ...failedState, workspace_snapshot: workspaceSnapshot });
   return 'failed' as const;
+}
+
+async function recordRetryableTarget(args: Parameters<typeof recordTargetFailure>[0]): Promise<ForegroundAutoSyncOutcome> {
+  const { endpointUrl, runId, startedAt, syncArgs, syncError, triggerReason } = args;
+  syncArgs.setSyncProgress(null);
+  syncArgs.setError(null);
+  await recordCompanionWorkspaceSyncEvent({
+    endpointUrl, kind: 'diagnostic', message: formatCompanionSyncDiagnosticMessage(syncError),
+    result: 'retrying', runId, startedAt, status: 'skipped', triggerReason
+  });
+  const pending = await recordCompanionWorkspaceSyncEvent({
+    endpointUrl, kind: 'run_finished', message: 'Sync remains pending.', result: 'partial',
+    runId, startedAt, status: 'skipped', triggerReason
+  });
+  if (pending) syncArgs.setState(pending);
+  return 'pending';
 }
 
 async function runOwnedTarget(args: {
@@ -93,14 +109,9 @@ async function runOwnedTarget(args: {
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
     if (isSyncPeerRoundRetryableError(syncError)) {
-      args.syncArgs.setSyncProgress(null);
-      args.syncArgs.setError(null);
-      const pending = await recordCompanionWorkspaceSyncEvent({
-        endpointUrl, kind: 'run_finished', message: 'Sync remains pending.', result: 'partial',
-        runId, startedAt, status: 'skipped', triggerReason
+      return recordRetryableTarget({
+        endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason
       });
-      if (pending) args.syncArgs.setState(pending);
-      return 'pending';
     }
     return recordTargetFailure({
       endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason

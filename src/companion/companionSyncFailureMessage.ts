@@ -46,3 +46,16 @@ function hasMessage(error: unknown): error is { message: string } {
     'message' in error &&
     typeof error.message === 'string';
 }
+
+export function formatCompanionSyncDiagnosticMessage(error: unknown) {
+  const parts: string[] = [];
+  const seen = new Set<Error>();
+  while (error instanceof Error && !seen.has(error)) {
+    seen.add(error);
+    const code = 'code' in error && typeof error.code === 'string' ? ` [${error.code}]` : '';
+    parts.push(`${error.name}${code}: ${error.message}`);
+    error = error.cause;
+  }
+  if (parts.length) return parts.join(' Caused by: ');
+  return normalizeCompanionSyncErrorMessage(error);
+}
