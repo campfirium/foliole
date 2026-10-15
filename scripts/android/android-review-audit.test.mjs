@@ -23,44 +23,46 @@ function createDatabase(settings = SETTINGS_INPUT) {
   roots.push(root);
   const databasePath = path.join(root, 'review.db');
   const db = new Database(databasePath);
-  db.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT, priority INTEGER, shelved_at TEXT,
-      content TEXT, body_blob_hash TEXT, reveal TEXT, created_at TEXT, updated_at TEXT, deleted_at TEXT
+  db.transaction(() => {
+    db.exec(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY, parent_id TEXT, kind TEXT, priority INTEGER, shelved_at TEXT,
+        content TEXT, body_blob_hash TEXT, reveal TEXT, created_at TEXT, updated_at TEXT, deleted_at TEXT
+      );
+      CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
+      CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
+      CREATE TABLE parent_child_order (parent_id TEXT PRIMARY KEY, child_ids_json TEXT);
+      CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT, last_review_at TEXT, state INTEGER, reps INTEGER, lapses INTEGER);
+      CREATE TABLE node_reading (
+        node_id TEXT PRIMARY KEY, interval_duration_ms INTEGER, interval_growth_factor REAL,
+        last_handled_at TEXT, next_at TEXT, priority INTEGER, repetition_count INTEGER, state TEXT
+      );
+      CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT, node_id TEXT, scheduler_version TEXT, reviewed_at TEXT);
+      CREATE TABLE setting_records (key TEXT, value_json TEXT, updated_at TEXT, device_id TEXT, deleted_at TEXT);
+      CREATE TABLE sync_object_state (
+        object_type TEXT, object_id TEXT, state_seq INTEGER, sync_dirty INTEGER, updated_at TEXT
+      );
+      CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);
+    `);
+    if (settings) db.prepare('INSERT INTO setting_records VALUES (?, ?, ?, ?, NULL)').run(
+      'review_scheduler_settings', JSON.stringify(settings), '2026-07-25T00:00:00.000Z', 'desktop'
     );
-    CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
-    CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-    CREATE TABLE parent_child_order (parent_id TEXT PRIMARY KEY, child_ids_json TEXT);
-    CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT, last_review_at TEXT, state INTEGER, reps INTEGER, lapses INTEGER);
-    CREATE TABLE node_reading (
-      node_id TEXT PRIMARY KEY, interval_duration_ms INTEGER, interval_growth_factor REAL,
-      last_handled_at TEXT, next_at TEXT, priority INTEGER, repetition_count INTEGER, state TEXT
-    );
-    CREATE TABLE review_log (id TEXT PRIMARY KEY, op_id TEXT, node_id TEXT, scheduler_version TEXT, reviewed_at TEXT);
-    CREATE TABLE setting_records (key TEXT, value_json TEXT, updated_at TEXT, device_id TEXT, deleted_at TEXT);
-    CREATE TABLE sync_object_state (
-      object_type TEXT, object_id TEXT, state_seq INTEGER, sync_dirty INTEGER, updated_at TEXT
-    );
-    CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT);
-  `);
-  if (settings) db.prepare('INSERT INTO setting_records VALUES (?, ?, ?, ?, NULL)').run(
-    'review_scheduler_settings', JSON.stringify(settings), '2026-07-25T00:00:00.000Z', 'desktop'
-  );
-  ['fsrs-1', 'fsrs-2'].forEach((id, index) => {
-    insertNode(db, { id, kind: 'item', position: index, reveal: 'private answer' });
-    db.prepare('INSERT INTO node_review VALUES (?, ?, NULL, 2, 4, 1)').run(id, '2026-07-25T00:00:00.000Z');
-  });
-  ['read-1', 'read-2', 'read-3'].forEach((id, index) => {
-    insertNode(db, { id, kind: 'topic', position: index + 2, reveal: null });
-    db.prepare('INSERT INTO node_reading VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
-      id, 86_400_000, 1.5, '2026-07-24T00:00:00.000Z', '2026-07-25T00:00:00.000Z', 0, 1, 'active'
-    );
-  });
-  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://127.0.0.1:38641');
-  db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_events', JSON.stringify([{
-    endpoint_url: 'http://127.0.0.1:38641', kind: 'run_finished', message: 'Desktop identity rejected.',
-    occurred_at: '2026-07-25T01:00:00.000Z', result: 'failed', status: 'failed'
-  }]));
+    ['fsrs-1', 'fsrs-2'].forEach((id, index) => {
+      insertNode(db, { id, kind: 'item', position: index, reveal: 'private answer' });
+      db.prepare('INSERT INTO node_review VALUES (?, ?, NULL, 2, 4, 1)').run(id, '2026-07-25T00:00:00.000Z');
+    });
+    ['read-1', 'read-2', 'read-3'].forEach((id, index) => {
+      insertNode(db, { id, kind: 'topic', position: index + 2, reveal: null });
+      db.prepare('INSERT INTO node_reading VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
+        id, 86_400_000, 1.5, '2026-07-24T00:00:00.000Z', '2026-07-25T00:00:00.000Z', 0, 1, 'active'
+      );
+    });
+    db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_endpoint_url', 'http://127.0.0.1:38641');
+    db.prepare('INSERT INTO companion_meta VALUES (?, ?)').run('workspace_sync_events', JSON.stringify([{
+      endpoint_url: 'http://127.0.0.1:38641', kind: 'run_finished', message: 'Desktop identity rejected.',
+      occurred_at: '2026-07-25T01:00:00.000Z', result: 'failed', status: 'failed'
+    }]));
+  })();
   db.close();
   return databasePath;
 }
