@@ -1,9 +1,13 @@
 // @vitest-environment node
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { readFixtureInventory } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
-import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
+import { buildDesktopFramedSyncFixture, readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
 
 
@@ -130,3 +134,35 @@ it('leaves an unavailable body pending while committing its neighbor and converg
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toContainEqual(expect.objectContaining({ id: 't326-unavailable', content: 'Unavailable edit' }));
 }, 20000);
+
+it('keeps an available desktop convergent beside a busy mobile peer and resumes the companion production request path', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-activation-mobile-'));
+  const script = path.join(root, 'fixture.mjs');
+  await buildDesktopFramedSyncFixture(script, true);
+  const host = await createCompanionRequestFixture(script);
+  const { fixture } = host;
+  const third = await fixture.startThird();
+  try {
+    await fixture.right.invoke('activation_start');
+    await fixture.left.seed({ nodeId: 't326-mobile-input', title: 'Mobile', content: 'Before activation' });
+    await fixture.right.invoke('activation_found', { origin: fixture.leftSnapshot.origin });
+    await fixture.right.invoke('activation_found', { origin: third.snapshot.origin });
+    await fixture.right.seed({ nodeId: 't326-later-edit', title: 'Desktop', content: 'After activation' });
+    await fixture.left.invoke('activation_hold_round', { peerId: fixture.rightSnapshot.deviceId });
+    expect(await fixture.right.invoke('activation_manual')).toMatchObject({ status: 'pending' });
+    expect(readDesktopFramedSyncLibraryEvidence(third.snapshot.databasePath).nodes)
+      .toContainEqual(expect.objectContaining({ id: 't326-later-edit', content: 'After activation' }));
+    await fixture.left.invoke('activation_release_round');
+    expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+    expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
+      .toContainEqual(expect.objectContaining({ id: 't326-later-edit', content: 'After activation' }));
+    await fixture.left.seed({ nodeId: 't326-mobile-input', title: 'Mobile', content: 'Mobile edited' });
+    expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+    expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
+      .toContainEqual(expect.objectContaining({ id: 't326-mobile-input', content: 'Mobile edited' }));
+  } finally {
+    await third.process.close();
+    await host.close();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+}, 60_000);

@@ -169,9 +169,9 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
   const groupStatus = await runWithDatabaseConnectionOwner(() => {
     const group = loadDesktopSyncGroup();
     if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
-    startDesktopSyncGroupAutoSync();
     return resolveLatestGroupStatus();
   });
+  await startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
       onWarning: recordMdnsWarning, onRecovered: clearMdnsWarning, port: activeStatus.port });

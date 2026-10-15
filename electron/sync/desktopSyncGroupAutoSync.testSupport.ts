@@ -8,7 +8,7 @@ const runtime = vi.hoisted(() => ({
   memberEndpoints: [] as Array<Record<string, unknown>>,
   memberSessionArgs: null as null | {
     onChanged(): void;
-    onMember(peer: Record<string, unknown>): Promise<boolean>;
+    onMember(peer: Record<string, unknown>, isCurrent?: () => boolean): Promise<boolean>;
     onMemberLost(deviceId: string): void;
     onDiscoveryState(error: Error | null): void;
   },
@@ -18,7 +18,7 @@ const runtime = vi.hoisted(() => ({
   recoverAdvertisement: vi.fn(),
   readwiseContinue: vi.fn(async () => null),
   syncCompleted: null as null | (() => void),
-  owned: false,
+  assertOwner: () => {},
   requireOwner: false,
   group: {
     devices: [
@@ -39,14 +39,15 @@ export function getRuntime() { return runtime; }
 
 vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncNoPeer: runtime.recordNoPeer }));
 
-vi.mock('../database/connection.js', () => ({
-  runWithDatabaseConnectionOwner: async <T>(execute: () => Promise<T> | T) => {
-    runtime.owned = true;
-    try { return await execute(); } finally { runtime.owned = false; }
-  }
-}));
+vi.mock('../database/connection.js', async () => {
+  const { SqliteConnectionCoordinator } = await import('../database/sqliteConnectionCoordinator.js');
+  const coordinator = new SqliteConnectionCoordinator();
+  runtime.assertOwner = () => coordinator.assertAccess();
+  runtime.readwiseContinue.mockImplementation(() => coordinator.runExclusive(() => null));
+  return { runWithDatabaseConnectionOwner: <T>(execute: () => Promise<T> | T) => coordinator.runExclusive(execute) };
+});
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
-  if (runtime.requireOwner && !runtime.owned) throw new Error('sqlite owner required');
+  if (runtime.requireOwner) runtime.assertOwner();
   return runtime.group;
 } }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
@@ -62,7 +63,10 @@ vi.mock('../database/settingsStore.js', () => ({
   }
 }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncParticipating: () => runtime.participating
+  isDesktopCompanionSyncParticipating: () => {
+    if (runtime.requireOwner) runtime.assertOwner();
+    return runtime.participating;
+  }
 }));
 vi.mock('./companionMdnsAdvertisement.js', () => ({
   recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement
@@ -81,9 +85,10 @@ vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
   loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
   startDesktopSyncGroupMemberStateSession: (_group: unknown, onChanged: () => void,
-    onMember: (peer: Record<string, unknown>) => Promise<boolean>,
+    onMember: (peer: Record<string, unknown>, isCurrent: () => boolean) => Promise<boolean>,
     onMemberLost: (deviceId: string) => void, onDiscoveryState: (error: Error | null) => void) => {
-    runtime.memberSessionArgs = { onChanged, onMember, onMemberLost, onDiscoveryState };
+    runtime.memberSessionArgs = { onChanged, onMember: (peer, isCurrent = () => true) => onMember(peer, isCurrent),
+      onMemberLost, onDiscoveryState };
     return { recover: runtime.recoverMembers, stop: vi.fn() };
   }
 }));

@@ -72,14 +72,15 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
   }
 }
 
-export async function buildDesktopFramedSyncFixture(outputPath: string) {
+export async function buildDesktopFramedSyncFixture(outputPath: string, activationDns = false) {
   await build({
     build: {
       emptyOutDir: false,
       minify: false,
       outDir: path.dirname(outputPath),
       rolldownOptions: {
-        external: (id) => id !== 'electron' && !id.startsWith('.') && !path.isAbsolute(id),
+        external: (id) => !(activationDns && id === '@foliole/desktop-dnssd') &&
+          id !== 'electron' && !id.startsWith('.') && !path.isAbsolute(id),
         input: 'electron/sync/desktopFramedSyncTwoProcess.fixture.ts',
         output: {
           banner: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
@@ -97,6 +98,8 @@ export async function buildDesktopFramedSyncFixture(outputPath: string) {
       enforce: 'pre',
       name: 'desktop-framed-sync-fixture-isolation',
       resolveId(id, importer) {
+        if (activationDns && id === '@foliole/desktop-dnssd')
+          return path.resolve('electron/sync/desktopSyncGroupActivationDns.fixture.ts');
         if (id === 'electron') {
           return path.resolve('electron/sync/backupRestoreSyncGroup.electron.fixture.ts');
         }

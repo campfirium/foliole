@@ -18,6 +18,7 @@ import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecov
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
+import { runActivationFixtureCommand } from './desktopSyncGroupActivation.fixture.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -154,6 +155,7 @@ async function run(command: Command) {
     origin = `http://127.0.0.1:${address.port}`;
     return snapshot();
   }
+  if (command.action.startsWith('activation_')) return runActivationFixtureCommand(command.action, command.args);
   if (command.action === 'seed_request_scale') return seedRequestSyncScaleFixture();
   if (command.action === 'request_counts') return { ...requestCounts };
   if (command.action === 'seed') return seed(command.args);
@@ -194,6 +196,7 @@ async function run(command: Command) {
     return { itemCount: nodeIds.length };
   }
   if (command.action === 'close') {
+    await runActivationFixtureCommand('activation_stop', {});
     await new Promise<void>((resolve) => server.close(() => resolve()));
     closeDatabaseConnection();
     return null;

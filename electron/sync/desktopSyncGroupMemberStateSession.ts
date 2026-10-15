@@ -22,7 +22,7 @@ const endpoints = new Map<string, DesktopSyncGroupPeer>();
 export function startDesktopSyncGroupMemberStateSession(
   group: SyncGroupPayload,
   onChanged: () => void,
-  onMember: (peer: DesktopSyncGroupPeer) => Promise<boolean> = async () => false,
+  onMember: (peer: DesktopSyncGroupPeer, isCurrent: () => boolean) => Promise<boolean> = async () => false,
   onMemberLost: (deviceId: string) => void = () => undefined,
   onDiscoveryState: (error: Error | null) => void = () => undefined
 ): RecoverableDesktopDnsSdSession {
@@ -30,7 +30,7 @@ export function startDesktopSyncGroupMemberStateSession(
   const activatedMembers = new Map<string, string>();
   const discovery = createDesktopSyncGroupMemberDiscovery(
     (observation, isCurrent) => probeAndExchange(group, observation,
-      activatedMembers, onChanged, onMember, isCurrent),
+      activatedMembers, onChanged, onMember, () => active && isCurrent(), onDiscoveryState),
     (deviceId) => {
       endpoints.delete(deviceId);
       activatedMembers.delete(deviceId);
@@ -94,7 +94,7 @@ export async function publishWatchedFolderGroupMemberState() {
 }
 
 export async function publishDesktopSyncGroupDeparture(groupId: string, senderDeviceId: string) {
-  const state = loadDesktopSyncGroupMemberState({ groupId, senderDeviceId });
+  const state = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupMemberState({ groupId, senderDeviceId }));
   const peers = [...endpoints.values()].filter((peer) => peer.group_id === groupId);
   const results = await Promise.allSettled(peers.map((peer) =>
     publishDesktopSyncGroupMemberState(peer, state)));
@@ -106,8 +106,9 @@ async function probeAndExchange(
   observation: MemberObservation,
   activatedMembers: Map<string, string>,
   onChanged: () => void,
-  onMember: (peer: DesktopSyncGroupPeer) => Promise<boolean>,
-  isCurrent: () => boolean
+  onMember: (peer: DesktopSyncGroupPeer, isCurrent: () => boolean) => Promise<boolean>,
+  isCurrent: () => boolean,
+  onDiscoveryState: (error: Error | null) => void
 ) {
   const { deviceId, endpointUrl, service } = observation;
   try {
@@ -120,8 +121,12 @@ async function probeAndExchange(
     onChanged();
     const activation = JSON.stringify([service.txt.runtime_instance_id, peer.endpoint_url]);
     if (activatedMembers.get(deviceId) !== activation
-        && await onMember(peer) && isCurrent()) activatedMembers.set(deviceId, activation);
+        && await onMember(peer, isCurrent) && isCurrent()) {
+      activatedMembers.set(deviceId, activation);
+      onDiscoveryState(null);
+    }
   } catch (error) {
+    if (isCurrent()) onDiscoveryState(error instanceof Error ? error : new Error(String(error)));
     console.info('[sync-group] member state exchange paused', {
       error: error instanceof Error ? error.message : String(error), peerDeviceId: deviceId
     });

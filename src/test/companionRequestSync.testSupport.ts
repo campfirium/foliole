@@ -52,8 +52,8 @@ afterAll(async () => {
   if (compiledDirectory) await fs.rm(compiledDirectory, { recursive: true, force: true });
 });
 
-export async function createCompanionRequestFixture() {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture(compiledScript, true, true);
+export async function createCompanionRequestFixture(script = compiledScript) {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(script, true, true);
   await fixture.left.synchronize(fixture.rightSnapshot.origin);
   let sqlite = open();
   function open() {
