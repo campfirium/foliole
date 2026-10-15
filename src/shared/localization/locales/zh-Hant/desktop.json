@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "這將為不以空格分隔的語言準備全文搜尋。它使用更多的搜尋數據。您可以稍後在“設定”>“常規”中更改此設定。",
   "desktop.searchEnhancement.notNow": "現在不行",
   "desktop.searchEnhancement.turningOn": "更新中...",
-  "desktop.searchEnhancement.turnOn": "使用此選項",
+  "desktop.searchEnhancement.turnOn": "啟用中日韓搜尋",
   "desktop.toolbar.workspace": "工作區頂部工具列",
   "desktop.toolbar.primaryNavigation": "工作區主要導航操作",
   "desktop.toolbar.inspector": "工作區檢查員操作",

@@ -32,7 +32,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.searchEnhancement.prompt.description': 'This prepares full-text search for languages that are not separated by spaces. It uses more search data. You can change this later in Settings > General.',
   'desktop.searchEnhancement.notNow': 'Not now',
   'desktop.searchEnhancement.turningOn': 'Updating...',
-  'desktop.searchEnhancement.turnOn': 'Use this option',
+  'desktop.searchEnhancement.turnOn': 'Enable Chinese, Japanese, and Korean search',
   'desktop.toolbar.workspace': 'Workspace top toolbar',
   'desktop.toolbar.primaryNavigation': 'Workspace primary navigation actions',
   'desktop.toolbar.inspector': 'Workspace inspector actions',

@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "Ceci prépare la recherche en texte intégral pour les langues qui ne sont pas séparées par des espaces. Il utilise davantage de données de recherche. Vous pourrez modifier cela ultérieurement dans Paramètres > Général.",
   "desktop.searchEnhancement.notNow": "Pas maintenant",
   "desktop.searchEnhancement.turningOn": "Mise à jour...",
-  "desktop.searchEnhancement.turnOn": "Utiliser cette option",
+  "desktop.searchEnhancement.turnOn": "Activer la recherche en chinois, japonais et coréen",
   "desktop.toolbar.workspace": "Barre d'outils supérieure de l'espace de travail",
   "desktop.toolbar.primaryNavigation": "Actions de navigation principales de l'espace de travail",
   "desktop.toolbar.inspector": "Actions de l'inspecteur de l'espace de travail",

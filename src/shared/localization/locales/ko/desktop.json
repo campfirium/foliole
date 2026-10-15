@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "이렇게 하면 공백으로 구분되지 않은 언어에 대한 전체 텍스트 검색이 준비됩니다. 더 많은 검색 데이터를 사용합니다. 나중에 설정 > 일반에서 변경할 수 있습니다.",
   "desktop.searchEnhancement.notNow": "지금은 아님",
   "desktop.searchEnhancement.turningOn": "업데이트 중...",
-  "desktop.searchEnhancement.turnOn": "이 옵션을 사용하세요",
+  "desktop.searchEnhancement.turnOn": "중국어·일본어·한국어 검색 활성화",
   "desktop.toolbar.workspace": "작업공간 상단 도구 모음",
   "desktop.toolbar.primaryNavigation": "작업공간 기본 탐색 작업",
   "desktop.toolbar.inspector": "작업공간 검사기 작업",

@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "これにより、スペースで区切られていない言語の全文検索が準備されます。より多くの検索データを使用します。これは、後で [設定] > [一般] で変更できます。",
   "desktop.searchEnhancement.notNow": "今はありません",
   "desktop.searchEnhancement.turningOn": "更新中...",
-  "desktop.searchEnhancement.turnOn": "このオプションを使用します",
+  "desktop.searchEnhancement.turnOn": "中国語・日本語・韓国語の検索を有効にする",
   "desktop.toolbar.workspace": "ワークスペース上部のツールバー",
   "desktop.toolbar.primaryNavigation": "ワークスペースの主なナビゲーション アクション",
   "desktop.toolbar.inspector": "ワークスペースインスペクターのアクション",

@@ -74,7 +74,7 @@ it('offers the Chinese, Japanese, or Korean search language once and turns it on
   expect(screen.getByText(/uses more search data/i)).toBeInTheDocument();
   expect(screen.getByText(/Settings > General/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Use this option' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enable Chinese, Japanese, and Korean search' }));
 
   await waitFor(() => {
     expect(window.localStorage.getItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)).toBe('cjk-trigram');
@@ -116,7 +116,7 @@ it('keeps the search language prompt visible when local settings cannot be writt
   });
   renderWithLocalization(<SearchPaletteEnhancementPrompt />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Use this option' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enable Chinese, Japanese, and Korean search' }));
 
   expect(await screen.findByText('Full-text search language could not be updated.')).toBeInTheDocument();
   expect(screen.getByRole('dialog', {

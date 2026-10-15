@@ -34,7 +34,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.searchEnhancement.prompt.description': '这会为不按空格分词的语言准备全文搜索，会使用更多搜索数据。之后可在“设置 > 常规”中修改。',
   'desktop.searchEnhancement.notNow': '暂不',
   'desktop.searchEnhancement.turningOn': '正在更新...',
-  'desktop.searchEnhancement.turnOn': '使用此选项',
+  'desktop.searchEnhancement.turnOn': '启用中日韩搜索',
   'desktop.toolbar.workspace': '工作区顶部工具栏',
   'desktop.toolbar.primaryNavigation': '工作区主导航操作',
   'desktop.toolbar.inspector': '工作区检查器操作',

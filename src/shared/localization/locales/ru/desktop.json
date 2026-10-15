@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "Это подготавливает полнотекстовый поиск для языков, не разделенных пробелами. Он использует больше данных поиска. Вы можете изменить это позже в «Настройки» > «Основные».",
   "desktop.searchEnhancement.notNow": "Не сейчас",
   "desktop.searchEnhancement.turningOn": "Обновление...",
-  "desktop.searchEnhancement.turnOn": "Используйте этот вариант",
+  "desktop.searchEnhancement.turnOn": "Включить поиск на китайском, японском и корейском",
   "desktop.toolbar.workspace": "Верхняя панель инструментов рабочей области",
   "desktop.toolbar.primaryNavigation": "Основные действия навигации в рабочей области",
   "desktop.toolbar.inspector": "Действия инспектора рабочей области",

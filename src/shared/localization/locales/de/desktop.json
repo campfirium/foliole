@@ -32,7 +32,7 @@
   "desktop.searchEnhancement.prompt.description": "Dies bereitet die Volltextsuche für Sprachen vor, die nicht durch Leerzeichen getrennt sind. Es werden mehr Suchdaten verwendet. Sie können dies später unter Einstellungen > Allgemein ändern.",
   "desktop.searchEnhancement.notNow": "Nicht jetzt",
   "desktop.searchEnhancement.turningOn": "Wird aktualisiert...",
-  "desktop.searchEnhancement.turnOn": "Verwenden Sie diese Option",
+  "desktop.searchEnhancement.turnOn": "Suche für Chinesisch, Japanisch und Koreanisch aktivieren",
   "desktop.toolbar.workspace": "Obere Symbolleiste des Arbeitsbereichs",
   "desktop.toolbar.primaryNavigation": "Primäre Navigationsaktionen des Arbeitsbereichs",
   "desktop.toolbar.inspector": "Aktionen des Arbeitsbereichsinspektors",

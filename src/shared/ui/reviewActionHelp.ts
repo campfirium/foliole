@@ -9,7 +9,7 @@ export interface ReviewActionHelpCopy extends ActionHelpCardCopy {
 export const REVIEW_GRADE_ACTION_HELP = {
   again: {
     body: 'Show this item again soon.',
-    detail: 'Use this when you could not recall the answer.',
+    detail: 'You could not recall the answer.',
     id: 'actionHelp.review.again',
     keywords: ['forgot', 'missed', 'review'],
     sourceLabel: 'Flow action bar',
@@ -17,7 +17,7 @@ export const REVIEW_GRADE_ACTION_HELP = {
   },
   hard: {
     body: 'Show this item again sooner than usual.',
-    detail: 'Use this when you remembered the answer, but only with effort.',
+    detail: 'You recalled the answer, but only with effort.',
     id: 'actionHelp.review.hard',
     keywords: ['difficult', 'effort', 'review'],
     sourceLabel: 'Flow action bar',
@@ -25,7 +25,7 @@ export const REVIEW_GRADE_ACTION_HELP = {
   },
   good: {
     body: 'Keep this item on its normal review path.',
-    detail: 'Use this when you remembered the answer.',
+    detail: 'You recalled the answer.',
     id: 'actionHelp.review.good',
     keywords: ['remembered', 'review'],
     sourceLabel: 'Flow action bar',
@@ -33,7 +33,7 @@ export const REVIEW_GRADE_ACTION_HELP = {
   },
   easy: {
     body: 'Wait longer before showing this item again.',
-    detail: 'Use this when the answer felt obvious.',
+    detail: 'The answer felt obvious.',
     id: 'actionHelp.review.easy',
     keywords: ['obvious', 'review'],
     sourceLabel: 'Flow action bar',
@@ -44,7 +44,7 @@ export const REVIEW_GRADE_ACTION_HELP = {
 export const READING_REVIEW_ACTION_HELP = {
   soon: {
     body: 'Appears again after this queue.',
-    detail: 'Use this when you are not reading it now and want to read it after the queue.',
+    detail: 'Skip it for now and read it after this queue.',
     id: 'actionHelp.review.soon',
     keywords: ['soon', 'queue', 'topic'],
     sourceLabel: 'Flow action bar',
@@ -52,7 +52,7 @@ export const READING_REVIEW_ACTION_HELP = {
   },
   later: {
     body: 'Appears again before its regular interval.',
-    detail: 'Use this when you are not reading it now and want to read it after a shorter interval.',
+    detail: 'Skip it for now and read it after a shorter interval.',
     id: 'actionHelp.review.later',
     keywords: ['later', 'topic'],
     sourceLabel: 'Flow action bar',
@@ -60,7 +60,7 @@ export const READING_REVIEW_ACTION_HELP = {
   },
   read: {
     body: 'Appears again after its regular interval.',
-    detail: 'Use this after reading part of it when you want to continue after the regular interval.',
+    detail: 'You have read part of it and want to continue after the regular interval.',
     id: 'actionHelp.review.read',
     keywords: ['read', 'topic'],
     sourceLabel: 'Flow action bar',
