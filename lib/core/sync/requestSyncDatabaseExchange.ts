@@ -1,14 +1,15 @@
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
-import { readRequestSyncInventorySnapshot } from './framedSyncInventoryRead.js';
+import { differingInventoryBuckets, inventoryBucket, summarizeInventoryBuckets } from './framedSyncInventoryBuckets.js';
+import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
 import { differingNodeIds } from './framedSyncInventorySummary.js';
 import { requestSyncDifferenceMessages } from './requestSyncDifferenceWire.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
+import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export interface RequestSyncExchange {
   context: RequestSyncAuthenticatedContext;
@@ -36,15 +37,40 @@ async function* decodedMessages(exchange: RequestSyncExchange, body: FramedSyncS
 export async function exchangeRequestSyncInventory(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
   localInventory?: readonly FramedSyncInventoryEntry[]) {
   exchange.signal?.throwIfAborted();
-  if (!localInventory) await host.write(db => db.transaction(flushCurrentParentOrderProjectionsWithDbPort));
-  const local = localInventory ?? await host.readSnapshot(readRequestSyncInventorySnapshot, exchange.signal);
-  const summaries = await inventoryRequest(exchange, []);
+  if (!localInventory) await host.write(db => db.transaction(flushRequestSyncInventoryDigests));
+  let local = localInventory ?? await host.readSnapshot(readRequestSyncInventorySummaries, exchange.signal);
+  const buckets = await inventoryRequest(exchange, [], { bucketSummary: true });
+  if (!buckets.bucketSummary || buckets.entries.length) throw new Error('inventory_bucket_summary_invalid');
+  const selectedBuckets = differingInventoryBuckets(summarizeInventoryBuckets(local), {
+    hashes: buckets.bucketHashes, unready: buckets.unreadyBuckets
+  });
+  if (!selectedBuckets.length) return { local, remote: local, roundId: buckets.roundId };
+  const summaries = await inventoryRequest(exchange, [], { selectedBuckets });
+  if (summaries.entries.some(entry => !selectedBuckets.includes(inventoryBucket(entry)))) {
+    throw new Error('inventory_bucket_selection_invalid');
+  }
+  const actual = summarizeInventoryBuckets(summaries.entries);
+  for (const bucket of selectedBuckets) {
+    if (!sameBytes(actual.hashes.subarray(bucket * 32, (bucket + 1) * 32),
+      buckets.bucketHashes.subarray(bucket * 32, (bucket + 1) * 32))) throw new Error('framed_sync_source_changed');
+  }
+  summaries.entries.push(...local.filter(entry => !selectedBuckets.includes(inventoryBucket(entry))));
+  summaries.entries.sort((a, b) => compareSyncFactText(a.objectType, b.objectType) || compareSyncFactText(a.globalId, b.globalId));
   const ids = differingNodeIds(local, summaries.entries);
   if (!ids.length) return { local, remote: summaries.entries, roundId: summaries.roundId };
+  if (!localInventory) local = await host.readSnapshot(db => expandRequestSyncNodeSummaries(db, local, ids), exchange.signal);
   const byId = new Map<string, FramedSyncInventoryEntry>();
   for (const batch of detailBatches(ids)) {
     const details = await inventoryRequest(exchange, batch);
-    for (const entry of details.entries) byId.set(entry.globalId, entry);
+    for (const entry of details.entries) {
+      const summary = summaries.entries.find(value => value.objectType === 'node' && value.globalId === entry.globalId);
+      if (entry.objectType !== 'node' || !batch.includes(entry.globalId) || byId.has(entry.globalId) ||
+          !summary || !sameBytes(summary.sharedStateHash, entry.sharedStateHash)) throw new Error('framed_sync_source_changed');
+      byId.set(entry.globalId, entry);
+    }
+  }
+  if (summaries.entries.some(entry => entry.objectType === 'node' && ids.includes(entry.globalId) && !byId.has(entry.globalId))) {
+    throw new Error('framed_sync_source_changed');
   }
   return { local, remote: summaries.entries.map(entry => entry.objectType === 'node'
     ? byId.get(entry.globalId) ?? entry : entry), roundId: summaries.roundId };
@@ -64,10 +90,11 @@ function* detailBatches(ids: readonly string[]) {
   if (batch.length) yield batch;
 }
 
-async function inventoryRequest(exchange: RequestSyncExchange, detailGlobalIds: readonly string[]) {
+async function inventoryRequest(exchange: RequestSyncExchange, detailGlobalIds: readonly string[],
+  selection: { bucketSummary?: boolean; selectedBuckets?: number[] } = {}) {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
   const messages = iterateRequestSyncInventory({ entries: [], roundId,
-    detailGlobalIds, summaryOnly: true });
+    ...selection, detailGlobalIds, summaryOnly: detailGlobalIds.length === 0 });
   return withControlRequest(exchange, '/companion/framed-sync?request=inventory', messages, async response => {
     const decoded = await decodeRequestSyncInventory(decodedMessages(exchange, response));
     if (!sameBytes(decoded.roundId, roundId)) throw new Error('inventory_round_identity_mismatch');

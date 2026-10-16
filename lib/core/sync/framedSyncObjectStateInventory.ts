@@ -5,7 +5,6 @@ import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
-import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 
@@ -21,6 +20,7 @@ const sharedTypes = FRAMED_SYNC_STATE_OBJECT_TYPES.filter((type) =>
   type !== 'view_state' || !SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES.includes(type));
 
 const sharedSettingPrefix = 'user_space:';
+const STATE_INVENTORY_READ_BATCH = 4096;
 
 export function isFramedSyncSharedStateObject(type: string, objectId: string) {
   return sharedTypes.some((candidate) => candidate === type)
@@ -60,9 +60,9 @@ export async function readFramedSyncObjectStateInventory(
   let afterId = '';
   for (;;) {
     const rows = await port.query<StateRow>(sql, key ? [key.objectType, key.globalId] :
-      [afterType, afterType, afterId, FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame]);
+      [afterType, afterType, afterId, STATE_INVENTORY_READ_BATCH]);
     for (const row of rows) if (isFramedSyncSharedStateObject(row.object_type, row.object_id)) entries.push(stateEntry(row));
-    if (key || rows.length < FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame) return entries;
+    if (key || rows.length < STATE_INVENTORY_READ_BATCH) return entries;
     afterType = rows[rows.length - 1]!.object_type;
     afterId = rows[rows.length - 1]!.object_id;
   }

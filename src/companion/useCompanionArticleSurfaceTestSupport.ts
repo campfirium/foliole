@@ -64,7 +64,7 @@ export function createWorkspaceSync(snapshot: WorkspaceSnapshot | null = createC
     syncGroupDiscoveries: [],
     syncGroupJoined: true,
     joinStatus: 'idle' as const,
-    pullFromDesktop: vi.fn(async () => createSyncState(snapshot)),
+    pullFromDesktop: vi.fn(async () => undefined),
     readableArticle: createReadableArticle(),
     refreshAfterMutation: vi.fn(async () => state.workspace_snapshot),
     refreshFromDevice: vi.fn(async () => state),

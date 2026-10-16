@@ -406,6 +406,28 @@
                       "type": "bool",
                       "id": 4,
                       "protoName": "summary_only"
+                    },
+                    "bucketSummary": {
+                      "type": "bool",
+                      "id": 5,
+                      "protoName": "bucket_summary"
+                    },
+                    "bucketHashes": {
+                      "type": "bytes",
+                      "id": 6,
+                      "protoName": "bucket_hashes"
+                    },
+                    "unreadyBuckets": {
+                      "rule": "repeated",
+                      "type": "uint32",
+                      "id": 7,
+                      "protoName": "unready_buckets"
+                    },
+                    "selectedBuckets": {
+                      "rule": "repeated",
+                      "type": "uint32",
+                      "id": 8,
+                      "protoName": "selected_buckets"
                     }
                   }
                 },

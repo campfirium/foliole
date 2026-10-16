@@ -24,6 +24,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const DESKTOP_SCHEMA_FILES = {
+  FRAMED_SYNC_DIGEST_TABLES: 'lib/core/database/framedSyncDigestSchema.ts',
+  FRAMED_SYNC_DIGEST_SCHEMA: 'lib/core/database/framedSyncDigestSchema.ts',
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   FOREGROUND_TIME_SCHEMA: 'lib/core/database/foregroundTimeSchema.ts',
   FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',

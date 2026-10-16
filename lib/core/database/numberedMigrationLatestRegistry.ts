@@ -5,6 +5,7 @@ import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigrat
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_COMPLETION_BACKFILL, FRAMED_SYNC_COMPLETION_SCHEMA } from './framedSyncCompletionSchema.js';
+import { migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateDesktopFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
@@ -255,5 +256,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 153, migrate: retireLegacySyncState },
   { version: 154, migrate: migrateTopicHistoryRetirement },
   { version: 155, migrate: retireNodePositions },
-  { version: 156, migrate: migrateNodeChildInventory }
+  { version: 156, migrate: migrateNodeChildInventory },
+  { version: 157, migrate: migrateFramedSyncDigests }
 ];

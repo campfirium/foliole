@@ -18,7 +18,8 @@ function createHarness(metaRows: Array<{ key: string; value: string }> = []) {
       return { values: [] };
     }),
     rollbackTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
-    run: vi.fn(async () => ({ changes: { changes: 1 } }))
+    run: vi.fn<(sql: string, values?: unknown[]) => Promise<{ changes: { changes: number } }>>(
+      async () => ({ changes: { changes: 1 } }))
   };
   const manager = {
     closeConnection: vi.fn(async () => undefined),

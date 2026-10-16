@@ -29,6 +29,7 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
+import { migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
@@ -110,6 +111,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 83 && targetVersion >= 83) await migrateCompanionTopicHistoryRetirement(db);
   if (currentVersion < 84 && targetVersion >= 84) await retireCompanionNodePositions(db);
   if (currentVersion < 85 && targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
+  if (currentVersion < 86 && targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -133,6 +135,7 @@ export async function createCompanionDatabase(
   await repairCompanionDatabase(db);
   if (targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   if (targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
+  if (targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

@@ -103,6 +103,13 @@
     "CREATE INDEX IF NOT EXISTS idx_framed_sync_version_summary_object\n    ON framed_sync_version_summary(object_id, version_id)",
     "CREATE TABLE IF NOT EXISTS framed_sync_fact_summary (\n    kind INTEGER NOT NULL, fact_id TEXT NOT NULL, object_id TEXT NOT NULL,\n    PRIMARY KEY (kind, fact_id)\n  )",
     "CREATE INDEX IF NOT EXISTS idx_framed_sync_fact_summary_object\n    ON framed_sync_fact_summary(object_id, kind, fact_id)",
-    "CREATE TABLE IF NOT EXISTS framed_sync_resource_availability (\n    hash TEXT PRIMARY KEY, available INTEGER NOT NULL CHECK(available IN (0, 1))\n  )"
+    "CREATE TABLE IF NOT EXISTS framed_sync_resource_availability (\n    hash TEXT PRIMARY KEY, available INTEGER NOT NULL CHECK(available IN (0, 1))\n  )",
+    "CREATE TABLE IF NOT EXISTS framed_sync_node_digest (\n    object_id TEXT PRIMARY KEY, shared_state_hash TEXT NOT NULL, unready INTEGER NOT NULL\n  )",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_inventory_insert\n    AFTER INSERT ON framed_sync_inventory BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = NEW.object_id;\n      \n    END",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_inventory_update\n    AFTER UPDATE ON framed_sync_inventory BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = NEW.object_id;\n      DELETE FROM framed_sync_node_digest WHERE object_id = OLD.object_id;\n    END",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_inventory_delete\n    AFTER DELETE ON framed_sync_inventory BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = OLD.object_id;\n      \n    END",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_version_insert\n    AFTER INSERT ON framed_sync_version_summary BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = NEW.object_id;\n      \n    END",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_version_update\n    AFTER UPDATE ON framed_sync_version_summary BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = NEW.object_id;\n      DELETE FROM framed_sync_node_digest WHERE object_id = OLD.object_id;\n    END",
+    "CREATE TRIGGER IF NOT EXISTS trg_framed_digest_version_delete\n    AFTER DELETE ON framed_sync_version_summary BEGIN\n      DELETE FROM framed_sync_node_digest WHERE object_id = OLD.object_id;\n      \n    END"
   ]
 }

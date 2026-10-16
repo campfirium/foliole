@@ -1,3 +1,4 @@
+import { sha256 } from '@noble/hashes/sha2.js';
 import { expect, it } from 'vitest';
 
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
@@ -37,4 +38,47 @@ it.each(['missing-part', 'wrong-index', 'wrong-object', 'duplicate-part'] as con
     else payload.entries[0]!.globalId = 'other';
   }
   await expect(decodeRequestSyncInventory(decode(messages))).rejects.toThrow(/inventory_/u);
+});
+
+it('packs small entries into bounded frames without changing their order or identity', async () => {
+  const entries = Array.from({ length: 5000 }, (_, index) => ({ ...entry([]), globalId: `node-${index}` }));
+  const messages = [...iterateRequestSyncInventory({ entries, roundId: new Uint8Array(16) })];
+  expect(messages.filter(message => message.payloadCase === 'inventory_chunk').length).toBeLessThan(50);
+  expect((await decodeRequestSyncInventory(decode(messages))).entries).toEqual(entries);
+});
+
+it.each(['duplicate', 'reorder', 'truncate', 'alter'] as const)('rejects a %s packed inventory', async fault => {
+  const entries = Array.from({ length: 300 }, (_, index) => ({ ...entry([]), globalId: `node-${index}` }));
+  const messages = [...iterateRequestSyncInventory({ entries, roundId: new Uint8Array(16) })];
+  if (fault === 'duplicate') messages.splice(2, 0, messages[1]!);
+  if (fault === 'reorder') [messages[1], messages[2]] = [messages[2]!, messages[1]!];
+  if (fault === 'truncate') messages.pop();
+  if (fault === 'alter') {
+    const payload = messages[1]!.payload as { entries: { globalId: string }[] };
+    payload.entries[0]!.globalId = 'altered';
+  }
+  await expect(decodeRequestSyncInventory(decode(messages))).rejects.toThrow(/inventory_/u);
+});
+
+it('hashes the received encoding, including authenticated protobuf extensions, without re-encoding', async () => {
+  const messages = [...iterateRequestSyncInventory({ entries: [entry([])], roundId: new Uint8Array(16) })];
+  const chunk = encodeValidatedProtocolMessage('inventory_chunk', messages[1]!.payload);
+  const encoded = new Uint8Array(chunk.length + 3);
+  encoded.set(chunk);
+  encoded.set([0xf8, 0x07, 1], chunk.length);
+  const end = { roundId: new Uint8Array(16), inventoryHash: sha256(encoded) };
+  const decoded = (async function* () {
+    yield decodeAndValidateProtocolMessage(encodeValidatedProtocolMessage('inventory_begin', messages[0]!.payload), 1);
+    yield decodeAndValidateProtocolMessage(encoded, 1);
+    yield decodeAndValidateProtocolMessage(encodeValidatedProtocolMessage('inventory_end', end), 1);
+  })();
+  expect((await decodeRequestSyncInventory(decoded)).entries).toEqual([entry([])]);
+});
+
+it('rejects altered bucket summaries against the ending root hash', async () => {
+  const hashes = new Uint8Array(1024 * 32);
+  const messages = [...iterateRequestSyncInventory({ entries: [], roundId: new Uint8Array(16),
+    bucketSummary: true, bucketHashes: hashes })];
+  hashes[0] = 1;
+  await expect(decodeRequestSyncInventory(decode(messages))).rejects.toThrow('inventory_exchange_incomplete');
 });

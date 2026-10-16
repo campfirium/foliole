@@ -109,6 +109,7 @@ function validateRequestPayload(payloadCase: ProtocolPayloadCase, payload: Recor
 function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {
   if (payloadCase === 'inventory_begin') {
     fixedBytes(payload.roundId, 16, 'round_id');
+    validateInventoryBuckets(payload);
     unique(list(payload.detailGlobalIds ?? [], FRAMED_SYNC_LIMITS.maxInventoryEntries)
       .map(id => text(id, 'detail_global_id')), 'detail_global_id');
     if (unsigned(payload.entryCount, 'entry_count') > BigInt(FRAMED_SYNC_LIMITS.maxInventoryEntries)) {
@@ -173,4 +174,23 @@ function validateInventoryEntries(value: unknown) {
       .map((hash) => hex(digest(hash, 'resource_hash'))), 'resource_hash');
     return `${entry.objectType}\0${entry.globalId}`;
   }), 'inventory_entry');
+}
+
+function validateInventoryBuckets(payload: Record<string, unknown>) {
+  const hashes = payload.bucketHashes === undefined ? new Uint8Array() : bytes(payload.bucketHashes, 'bucket_hashes');
+  if (hashes.length && hashes.length !== 1024 * 32) {
+    throw new Error('inventory_bucket_summary_invalid');
+  }
+  const selected = list(payload.selectedBuckets ?? []);
+  const details = list(payload.detailGlobalIds ?? []);
+  if ((payload.bucketSummary === true && (selected.length || details.length)) ||
+      (selected.length && details.length) || (hashes.length && payload.bucketSummary !== true)) {
+    throw new Error('inventory_bucket_selection_invalid');
+  }
+  for (const field of ['unreadyBuckets', 'selectedBuckets']) {
+    const values = list(payload[field] ?? [], 1024).map(value => unsigned(value, field));
+    if (values.some((value, index) => value >= 1024n || (index > 0 && value <= values[index - 1]!))) {
+      throw new Error('inventory_bucket_selection_invalid');
+    }
+  }
 }

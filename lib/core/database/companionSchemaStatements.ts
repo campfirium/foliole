@@ -5,6 +5,7 @@ import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanion
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
+import { FRAMED_SYNC_DIGEST_SCHEMA } from './framedSyncDigestSchema.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from './framedSyncInventorySchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
@@ -32,5 +33,6 @@ export const COMPANION_SCHEMA_STATEMENTS = [
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...CURRENT_PARENT_ORDER_SCHEMA,
 
-  ...FRAMED_SYNC_INVENTORY_TABLES
+  ...FRAMED_SYNC_INVENTORY_TABLES,
+  ...FRAMED_SYNC_DIGEST_SCHEMA
 ].filter((statement) => !isRetiredAttachmentSchema(statement) && !isLegacyOrderingSchema(statement) && !isRetiredSyncSchema(statement));

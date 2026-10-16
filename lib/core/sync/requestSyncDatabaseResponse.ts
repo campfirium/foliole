@@ -1,7 +1,8 @@
-import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import { resolveFramedSyncDifferenceRequest } from './framedSyncDifferenceRequest.js';
-import { readFramedSyncInventoryEntry, readRequestSyncInventorySnapshot } from './framedSyncInventoryRead.js';
+import { inventoryBucket, summarizeInventoryBuckets } from './framedSyncInventoryBuckets.js';
+import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
+import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
 import { respondRequestSyncBatch } from './requestSyncBatchResponse.js';
 import { readRequestSyncDifference } from './requestSyncDifferenceWire.js';
@@ -44,11 +45,22 @@ export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHos
     response = [{ payloadCase: 'round_receipt', payload: { roundId: result.requestId, result: 1, deferredFacts: [] } }];
   } else {
     const request = await decodeRequestSyncInventory(messages, { retainEntries: false });
-    await host.write(db => db.transaction(flushCurrentParentOrderProjectionsWithDbPort));
-    const entries = await host.readSnapshot(readRequestSyncInventorySnapshot, input.signal);
-    const selected = request.detailGlobalIds?.length ? entries.filter(entry => entry.objectType === 'node' &&
-      request.detailGlobalIds!.includes(entry.globalId)) : request.summaryOnly ? framedSyncInventorySummary(entries) : entries;
-    response = iterateRequestSyncInventory({ entries: selected, roundId: request.roundId });
+    await host.write(db => db.transaction(flushRequestSyncInventoryDigests));
+    const entries = await host.readSnapshot(async db => {
+      const summaries = await readRequestSyncInventorySummaries(db);
+      return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(db, summaries, request.detailGlobalIds) : summaries;
+    }, input.signal);
+    if (request.bucketSummary) {
+      const summary = summarizeInventoryBuckets(entries);
+      response = iterateRequestSyncInventory({ entries: [], roundId: request.roundId,
+        bucketHashes: summary.hashes, unreadyBuckets: summary.unready, bucketSummary: true });
+    } else {
+      const selected = request.detailGlobalIds.length ? entries.filter(entry => entry.objectType === 'node' &&
+        request.detailGlobalIds.includes(entry.globalId)) : request.selectedBuckets.length
+        ? entries.filter(entry => request.selectedBuckets.includes(inventoryBucket(entry))) : entries;
+      response = iterateRequestSyncInventory({ entries: request.summaryOnly ? framedSyncInventorySummary(selected) : selected,
+        roundId: request.roundId });
+    }
   }
   const body = await prepareRequestSyncWire({ ...input,
     messages: async function* () { yield* response; } });

@@ -127,6 +127,10 @@ message InventoryBegin {
   uint64 entry_count = 2;
   repeated string detail_global_ids = 3;
   bool summary_only = 4;
+  bool bucket_summary = 5;
+  bytes bucket_hashes = 6;
+  repeated uint32 unready_buckets = 7;
+  repeated uint32 selected_buckets = 8;
 }
 message InventoryChunk {
   bytes round_id = 1;

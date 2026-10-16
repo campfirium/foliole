@@ -3,6 +3,7 @@
     "capabilities": [
       "article-image-sources-v1",
       "author-host-snapshots-v1",
+      "bucket-inventory-v1",
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
       "current-parent-order-sources-v1",
@@ -30,9 +31,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 26,
-    "min_supported_version": 26,
-    "version": 26
+    "max_supported_version": 27,
+    "min_supported_version": 27,
+    "version": 27
   },
   "pushAck": {
     "clientOpIdKeys": [

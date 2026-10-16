@@ -46,6 +46,14 @@ export type ValidatedProtocolMessage<C extends ProtocolPayloadCase = ProtocolPay
   payloadCase: C;
 }>;
 
+const decodedInventoryEncodings = new WeakMap<ValidatedProtocolMessage, Uint8Array>();
+
+export function decodedInventoryEncoding(message: ValidatedProtocolMessage) {
+  const encoded = decodedInventoryEncodings.get(message);
+  if (!encoded) throw new Error('protocol_decoded_inventory_encoding_missing');
+  return Uint8Array.from(encoded);
+}
+
 const decodedFactEncodings = new WeakMap<ValidatedProtocolMessage, Uint8Array>();
 
 /** Return owned bytes from the successful fact decode, independently of its caller's buffer. */
@@ -85,6 +93,7 @@ export function decodeAndValidateProtocolMessage(
   if (payloadCase === 'fact' && encoded.byteLength <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
     decodedFactEncodings.set(message, Uint8Array.from(encoded));
   }
+  if (payloadCase === 'inventory_chunk') decodedInventoryEncodings.set(message, Uint8Array.from(encoded));
   return message;
 }
 

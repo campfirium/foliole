@@ -12,7 +12,7 @@ import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.j
 import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
-interface InventoryRow extends DbRow {
+export interface InventoryRow extends DbRow {
   content_hash: string;
   frontier_json: string;
   object_id: string;
@@ -28,10 +28,10 @@ const versionBodyHashes = z.record(z.string(), z.string().regex(/^[a-f0-9]{64}$/
 const inventoryState = z.tuple([z.string(), z.string().nullable(),
   z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
     z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]);
-const inventoryColumns = `inventory.*, (SELECT json_group_object(version_id, body_hash)
+export const inventoryColumns = `inventory.*, (SELECT json_group_object(version_id, body_hash)
   FROM framed_sync_version_summary WHERE object_id = inventory.object_id) AS version_body_hashes_json`;
 
-function entry(row: InventoryRow): FramedSyncInventoryEntry {
+export function inventoryEntryFromRow(row: InventoryRow): FramedSyncInventoryEntry {
   const state = row.content_hash.startsWith('[') ? inventoryState.parse(JSON.parse(row.content_hash)) : null;
   if (state) {
     const bodies = versionBodyHashes.parse(JSON.parse(row.version_body_hashes_json));
@@ -68,14 +68,14 @@ async function read(port: DbPort, key: InventoryKey | undefined) {
 
 async function readNodes(port: DbPort, key: InventoryKey | undefined) {
   if (key) return (await port.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
-    WHERE object_type = 'node' AND object_id = ?`, [key.globalId])).map(entry);
+    WHERE object_type = 'node' AND object_id = ?`, [key.globalId])).map(inventoryEntryFromRow);
   const nodes: FramedSyncInventoryEntry[] = [];
   let after: string | undefined;
   for (;;) {
     const rows = await port.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
       WHERE object_type = 'node' ${after === undefined ? '' : 'AND object_id > ?'} ORDER BY object_id LIMIT ?`,
     [...(after === undefined ? [] : [after]), FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame]);
-    for (const row of rows) nodes.push(entry(row));
+    for (const row of rows) nodes.push(inventoryEntryFromRow(row));
     if (rows.length < FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame) return nodes;
     after = rows[rows.length - 1]!.object_id;
   }

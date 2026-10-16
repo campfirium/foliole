@@ -1,4 +1,4 @@
-import { deriveSessionFrameKey, encryptFrame } from './framedSyncCrypto.js';
+import { deriveSessionFrameKey, encryptFrame, importFrameKey } from './framedSyncCrypto.js';
 import { decodeFramedSyncPreamble, encodeFrameHeader, encodeFramedSyncPreamble, frameAad, frameNonce } from './framedSyncFraming.js';
 import { decodeAndValidateProtocolMessage } from './framedSyncProtocolCodec.js';
 import { assertFramePayloadBudget, frameTypeForPayload, receiveFramedSyncRequestFrame } from './framedSyncReceiver.js';
@@ -23,7 +23,7 @@ export async function prepareRequestSyncWire(input: {
   const contextId = await deriveSessionContextId({ ...input.context, sessionId });
   const preamble = encodeFramedSyncPreamble({ compression: 'none', contextId, contextKind: 'session',
     noncePrefix, sessionId, startingSequence: 0n });
-  const key = await deriveSessionFrameKey({ groupKey: input.groupKey, sessionContextId: contextId, sessionId });
+  const key = await importFrameKey(await deriveSessionFrameKey({ groupKey: input.groupKey, sessionContextId: contextId, sessionId }), 'encrypt');
   const frames = (async function* (): AsyncGenerator<RequestSyncWireFrame> {
     let sequence = 0n;
     for await (const message of input.messages(contextId)) {
@@ -51,8 +51,8 @@ export async function* readRequestSyncWire(input: {
   input.signal?.throwIfAborted();
   const preamble = decodeFramedSyncPreamble(input.preamble);
   const session = await assertAuthenticatedSessionBootstrap(input.context, preamble);
-  const key = await deriveSessionFrameKey({ groupKey: input.groupKey,
-    sessionContextId: preamble.contextId, sessionId: session.sessionId });
+  const key = await importFrameKey(await deriveSessionFrameKey({ groupKey: input.groupKey,
+    sessionContextId: preamble.contextId, sessionId: session.sessionId }), 'decrypt');
   let expectedSequence = 0n;
   for await (const frame of input.frames) {
     input.signal?.throwIfAborted();

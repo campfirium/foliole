@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
@@ -66,4 +66,24 @@ it.each(['groupId', 'initiatorDeviceId', 'initiatorLibraryEpoch', 'responderDevi
   })()).rejects.toThrow('session_context_mismatch');
   expect(reads).toBe(0);
   expect(received).toEqual([]);
+});
+
+it('imports one AES key for each stream direction regardless of frame count', async () => {
+  const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: 'a', initiatorLibraryEpoch: 'a-epoch', responderDeviceId: 'b', responderLibraryEpoch: 'b-epoch' } as const;
+  const groupKey = new Uint8Array(32).fill(7);
+  const imported = vi.spyOn(crypto.subtle, 'importKey');
+  try {
+    const stream = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
+      for (let index = 0; index < 20; index++) {
+        yield { payloadCase: 'round_receipt', payload: { roundId: new Uint8Array(16), result: 1, deferredFacts: [] } };
+      }
+    } });
+    let received = 0;
+    for await (const message of readRequestSyncWire({ context, groupKey, ...stream })) {
+      expect(message.message.payloadCase).toBe('round_receipt'); received += 1;
+    }
+    expect(received).toBe(20);
+    expect(imported.mock.calls.filter(call => typeof call[2] === 'object' && call[2].name === 'AES-GCM')).toHaveLength(2);
+  } finally { imported.mockRestore(); }
 });

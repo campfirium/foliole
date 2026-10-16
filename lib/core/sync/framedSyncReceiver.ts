@@ -90,7 +90,7 @@ export async function receiveFramedSyncFrame(args: {
   decompressGzip?: GzipChunkDecoder;
   expectedSequence?: bigint;
   frameHeader: Uint8Array;
-  key: Uint8Array;
+  key: Uint8Array | CryptoKey;
   preamble: Uint8Array;
 }) {
   return receiveAuthenticatedFrame(args, false);

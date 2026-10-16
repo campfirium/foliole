@@ -54,14 +54,19 @@ export async function deriveSessionFrameKey(args: {
   return new Uint8Array(bits);
 }
 
+export function importFrameKey(key: Uint8Array, usage: 'encrypt' | 'decrypt') {
+  if (key.byteLength !== 32) throw new Error('frame_crypto_input_invalid');
+  return globalThis.crypto.subtle.importKey('raw', cryptoBytes(key), { name: 'AES-GCM' }, false, [usage]);
+}
+
 export async function encryptFrame(args: {
   aad: Uint8Array;
-  key: Uint8Array;
+  key: Uint8Array | CryptoKey;
   nonce: Uint8Array;
   plaintext: Uint8Array;
 }) {
-  if (args.key.byteLength !== 32 || args.nonce.byteLength !== 12) throw new Error('frame_crypto_input_invalid');
-  const key = await globalThis.crypto.subtle.importKey('raw', cryptoBytes(args.key), { name: 'AES-GCM' }, false, ['encrypt']);
+  if (args.nonce.byteLength !== 12) throw new Error('frame_crypto_input_invalid');
+  const key = args.key instanceof Uint8Array ? await importFrameKey(args.key, 'encrypt') : args.key;
   return new Uint8Array(await globalThis.crypto.subtle.encrypt({
     additionalData: cryptoBytes(args.aad), iv: cryptoBytes(args.nonce), name: 'AES-GCM', tagLength: 128
   }, key, cryptoBytes(args.plaintext)));
@@ -70,15 +75,13 @@ export async function encryptFrame(args: {
 export async function decryptFrame(args: {
   aad: Uint8Array;
   ciphertext: Uint8Array;
-  key: Uint8Array;
+  key: Uint8Array | CryptoKey;
   nonce: Uint8Array;
 }) {
-  if (args.key.byteLength !== 32 || args.nonce.byteLength !== 12) {
+  if (args.nonce.byteLength !== 12) {
     throw new Error('frame_crypto_input_invalid');
   }
-  const key = await globalThis.crypto.subtle.importKey(
-    'raw', cryptoBytes(args.key), { name: 'AES-GCM' }, false, ['decrypt']
-  );
+  const key = args.key instanceof Uint8Array ? await importFrameKey(args.key, 'decrypt') : args.key;
   try {
     return new Uint8Array(await globalThis.crypto.subtle.decrypt({
       additionalData: cryptoBytes(args.aad), iv: cryptoBytes(args.nonce), name: 'AES-GCM', tagLength: 128
