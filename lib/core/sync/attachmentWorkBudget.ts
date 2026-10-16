@@ -10,8 +10,10 @@ export function waitForAttachmentWorkYield() {
   return () => { waiters--; };
 }
 
+export function hasWaitingSyncData() { return waiters > 0; }
+
 export function attachmentWorkBudget(milliseconds = 2000) {
   const revision = priorityRevision;
   const deadline = performance.now() + milliseconds;
-  return () => waiters > 0 || revision !== priorityRevision || performance.now() >= deadline;
+  return () => hasWaitingSyncData() || revision !== priorityRevision || performance.now() >= deadline;
 }

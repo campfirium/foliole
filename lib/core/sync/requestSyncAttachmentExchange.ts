@@ -1,6 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import { transferAttachmentSlice } from './attachmentBlockTransfer.js';
-import { attachmentWorkBudget } from './attachmentWorkBudget.js';
+import { attachmentWorkBudget, hasWaitingSyncData } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
@@ -93,6 +93,8 @@ async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
 /** Reuse one demand list while streaming; yield only at recoverable boundaries. */
 export async function exchangeRequestSyncAttachments(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   report: (storageKey: string, error: unknown) => void, shouldYield = attachmentWorkBudget()) {
+  exchange.signal?.throwIfAborted();
+  if (hasWaitingSyncData()) return { transferred: 0, blocks: 0, pending: null, yielded: true };
   const remoteNeeds = new Set<string>();
   let pendingScan = false;
   await request(exchange, { operation: 'needs' }, async message => {

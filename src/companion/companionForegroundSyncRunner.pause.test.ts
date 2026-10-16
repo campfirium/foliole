@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import { attachmentWorkBudget } from '../../lib/core/sync/attachmentWorkBudget';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
@@ -58,7 +59,8 @@ it('does not continue a backlog after automatic sync is paused', async () => {
   vi.useRealTimers();
 });
 
-it('runs another round when a desktop change arrives during an active round', async () => {
+it.each([false, true])('keeps queued data ahead of attachments and releases priority when cancelled=%s', async cancel => {
+  let cancelled = false;
   let finishRun: (() => void) | undefined;
   const tryForegroundAutoSync = vi.fn(async () => 'completed' as const);
   tryForegroundAutoSync.mockImplementationOnce(async () => {
@@ -66,7 +68,7 @@ it('runs another round when a desktop change arrives during an active round', as
     return 'completed';
   });
   const runner = createForegroundSyncRunner({
-    cancelled: () => false, inFlightRef: { current: false }, isAppActiveRef: { current: true },
+    cancelled: () => cancelled, inFlightRef: { current: false }, isAppActiveRef: { current: true },
     isSyncGroupReadyRef: { current: true }, lastCheckedAtRef: { current: 0 },
     lastForegroundAtRef: { current: 0 }, readAppActiveState: async () => true,
     resourceContinuationModeRef: { current: 'full' }, retryAttemptRef: { current: 0 },
@@ -76,7 +78,12 @@ it('runs another round when a desktop change arrives during an active round', as
   const running = runner('foreground');
   expect(tryForegroundAutoSync).toHaveBeenCalledOnce();
   runner('mutation');
+  runner('mutation');
+  const yieldsBeforeAttachmentStage = attachmentWorkBudget()();
+  cancelled = cancel;
   finishRun?.();
   await running;
-  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(2);
+  expect(tryForegroundAutoSync).toHaveBeenCalledTimes(cancel ? 1 : 2);
+  expect(yieldsBeforeAttachmentStage).toBe(true);
+  expect(attachmentWorkBudget()()).toBe(false);
 });

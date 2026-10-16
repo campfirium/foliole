@@ -13,6 +13,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
@@ -104,6 +105,13 @@ async function runSlice(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
   try {
     const result = await withRequestSyncPeerRound(exchange, peerRound,
       async () => {
+        if (index === 0) {
+          const release = waitForAttachmentWorkYield();
+          try {
+            expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }))
+              .toMatchObject({ blocks: 0, pending: null, yielded: true });
+          } finally { release(); }
+        }
         if (index === 1) await syncDataDuringAttachment(local.database, exchange, targetPath);
         return exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }, () => true);
       });
