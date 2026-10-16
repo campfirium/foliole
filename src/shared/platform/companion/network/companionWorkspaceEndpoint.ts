@@ -53,7 +53,9 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const desktops = matches.filter(match => !isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
   const selected = desktops.find(match => match.discovery.provider_device_id === companionDesktopSessionPeer()) ?? desktops[0];
   const targets = matches.filter(match => isMobileSyncPlatform(match.discovery.provider_platform ?? '') || match === selected);
-  return [...targets, ...incompatiblePeers].map((match) => {
+  const incompatibleTargets = incompatiblePeers.filter(match => !selected
+    || isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
+  return [...targets, ...incompatibleTargets].map((match) => {
     const known = group.devices.find((device) =>
       device.device_identity_key === match.discovery.provider_device_id);
     return { deviceId: match.discovery.provider_device_id, platform: match.discovery.provider_platform,

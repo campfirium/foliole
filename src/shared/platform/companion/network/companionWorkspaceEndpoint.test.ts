@@ -149,7 +149,7 @@ it('rejects a target from another Sync Group', async () => {
 it('keeps incompatible members visible after compatible targets in a mixed group', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'incompatible' }, endpointUrl: 'http://old-phone:38641',
-    discovery: { group_id: 'group-1', provider_device_id: 'device-old-phone' }
+    discovery: { group_id: 'group-1', provider_device_id: 'device-old-phone', provider_platform: 'android-capacitor' }
   }, {
     compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac' }
@@ -158,4 +158,15 @@ it('keeps incompatible members visible after compatible targets in a mixed group
   expect(targets.map(target => [target.endpointUrl, target.protocolIncompatible])).toEqual([
     ['http://mac:38641', undefined], ['http://old-phone:38641', true]
   ]);
+});
+
+it('does not schedule an incompatible second desktop after selecting a compatible desktop', async () => {
+  runtime.discover.mockResolvedValue([
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
+      discovery: { group_id: 'group-1', provider_device_id: 'device-mac', provider_platform: 'macOS' } },
+    { compatibility: { status: 'incompatible' }, endpointUrl: 'http://windows:38641',
+      discovery: { group_id: 'group-1', provider_device_id: 'device-windows', provider_platform: 'Windows 11' } }
+  ]);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://mac:38641');
+  expect(targets.map(target => target.deviceId)).toEqual(['device-mac']);
 });

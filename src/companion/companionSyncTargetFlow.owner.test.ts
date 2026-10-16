@@ -46,7 +46,7 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
     peerRemoved: false, restoreFromPeer: null
   });
   mocks.run.mockImplementation((_endpointUrl, runId, work) => ({
-    completion: work(), mode: 'started', runId
+    completion: work({ manualRequested: false }), mode: 'started', runId
   }));
   const runStreamSync = vi.fn(async () => 'completed' as const);
   const { tryForegroundAutoSyncTarget } = await import('./companionSyncTargetFlow');
@@ -70,7 +70,7 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
 
 it('keeps a timed-out foreground round pending for retry without reporting success or failure', async () => {
   mocks.exchangeMemberState.mockRejectedValueOnce(new DOMException('Discovery timed out', 'TimeoutError'));
-  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work(), mode: 'started', runId }));
+  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work({ manualRequested: false }), mode: 'started', runId }));
   mocks.recordEvent.mockClear();
   const setError = vi.fn();
   const setSyncProgress = vi.fn();
@@ -89,7 +89,7 @@ it('keeps a timed-out foreground round pending for retry without reporting succe
 
 it('fails an incompatible target before exchanging or applying data', async () => {
   mocks.exchangeMemberState.mockClear();
-  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work(), mode: 'started', runId }));
+  mocks.run.mockImplementation((_endpointUrl, runId, work) => ({ completion: work({ manualRequested: false }), mode: 'started', runId }));
   const setError = vi.fn();
   const runStreamSync = vi.fn();
   const { tryForegroundAutoSyncTarget } = await import('./companionSyncTargetFlow');
