@@ -51,3 +51,18 @@ it('forces unready entries to expand even when both summaries are byte-identical
   const summary = summarizeInventoryBuckets([{ ...original, unready: true }]);
   expect(differingInventoryBuckets(summary, summary)).toEqual([inventoryBucket(original)]);
 });
+
+
+it.each(['', 'Document body'])('retains the database repair for missing external body %j', body => {
+  const complete = { ...entry('document', 'same-state', 'external_document'),
+    resourceHashes: [sha256(new TextEncoder().encode(body))] };
+  const missing = { ...complete, resourceHashes: [] };
+  const buckets = differingInventoryBuckets(summarizeInventoryBuckets([complete]), summarizeInventoryBuckets([missing]));
+  expect(buckets).toEqual([inventoryBucket(complete)]);
+  const differences = compareFramedSyncDatabaseInventories({ local: [complete], remote: [missing] });
+  expect(differences).toHaveLength(1);
+  expect(differences[0]).toMatchObject({ direction: 'local_to_remote', objectType: 'external_document',
+    need: { sharedState: false, stateFactIds: complete.stateFactIds, resourceHashes: [] } });
+  expect(differingInventoryBuckets(summarizeInventoryBuckets([complete]), summarizeInventoryBuckets([complete]))).toEqual([]);
+  expect(compareFramedSyncDatabaseInventories({ local: [complete], remote: [complete] })).toEqual([]);
+});
