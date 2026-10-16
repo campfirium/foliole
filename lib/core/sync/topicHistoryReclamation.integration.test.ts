@@ -5,7 +5,6 @@ import { textBranch, textDevice, wholeBodies } from '../../../electron/database/
 
 import { applyLocalContentEdit } from './localContentEdit.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
@@ -51,6 +50,5 @@ it('retires an empty unreferenced ancestor and permits publishing the complete h
   host.sqlite.prepare("INSERT INTO node_version_local_holds VALUES ('editor', 'topic', 'base', 'now')").run();
   expect(await collectNodeVersionPayloads(host.db, 'topic')).toEqual({ released: 1, skipped: null });
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
-  expect(await requestSyncPositionReady(host.db, 'topic', 'head')).toBe(true);
   expect((await host.current()).body_text).toBe('Current');
 });

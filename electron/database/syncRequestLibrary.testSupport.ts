@@ -12,7 +12,6 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { root, type Peer } from './syncLibrary.testSupport.js';
-import { receiveMemberPosition } from './syncMemberPosition.testSupport.js';
 
 function proof(peer: Peer) {
   return peer.db.prepare<[], { library_epoch: string; proof_revision: number }>(
@@ -43,7 +42,5 @@ export async function syncRequestLibrary(source: Peer, target: Peer) {
       return 'delivered' as const;
     }));
   if (deferred.length) throw new Error(`test_request_sync_dependencies_unresolved:${deferred.map(value => value.globalId).join(',')}`);
-  await receiveMemberPosition(target, source);
-  await receiveMemberPosition(source, target);
   await collectNodeVersionPayloads(source.port, 'topic');
 }

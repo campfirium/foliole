@@ -7,7 +7,6 @@ import { hashTextBody } from '../database/textBodyHash.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
 import { releaseLocalEditBase, retainLocalEditBase } from './nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
@@ -76,7 +75,6 @@ it.each(['missing identity', 'missing edge', 'cycle', 'wrong owner'])('does not 
     INSERT INTO node_sync_version_parents VALUES ('base', 'head', 0)`);
   const before = host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   expect(await collectNodeVersionPayloads(host.db, 'topic')).toEqual({ released: 0, skipped: 'lineage_unproven' });
-  expect(await requestSyncPositionReady(host.db, 'topic', 'head')).toBe(false);
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
 });
 
@@ -88,7 +86,6 @@ it.each(['null', 'absent'])('reports missing required text with %s content while
   expect(await collectNodeVersionPayloads(host.db, 'topic'))
     .toEqual({ released: 1, skipped: 'protected_body_unavailable' });
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
-  expect(await requestSyncPositionReady(host.db, 'topic', 'head')).toBe(false);
 });
 
 it.each(['folder', 'item'])('preserves all %s historical bodies', async kind => {

@@ -1,20 +1,9 @@
 import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
 
 import type { DbPort, DbParams } from './dbPort.js';
-import { versionPositionStorage } from './nodeVersionMemberPositionFact.js';
 
 export function adoptedPeerEpochKey(incoming: SyncGroupMemberStatePayload, epoch = incoming.library_epoch) {
   return `sync_group_adopted_epoch:${JSON.stringify([incoming.group_id, incoming.sender_device_identity_key, epoch])}`;
-}
-
-export function retirePeerPositionStatements(incoming: SyncGroupMemberStatePayload): { sql: string; params: DbParams }[] {
-  const storage = versionPositionStorage();
-  return [{
-    sql: `DELETE FROM sync_object_state WHERE object_type = '${storage.objectType}' AND object_id IN
-      (SELECT fact_id FROM ${storage.table} WHERE group_id = ? AND device_identity_key = ?)`,
-    params: [incoming.group_id, incoming.sender_device_identity_key]
-  }, { sql: `DELETE FROM ${storage.table} WHERE group_id = ? AND device_identity_key = ?`,
-    params: [incoming.group_id, incoming.sender_device_identity_key] }];
 }
 
 export function adoptedPeerEpochStatements(
@@ -26,7 +15,6 @@ export function adoptedPeerEpochStatements(
   if (changed && alreadySeen) return [];
   const epochs = changed ? [knownEpoch, incoming.library_epoch] : [incoming.library_epoch];
   return [
-    ...(changed ? retirePeerPositionStatements(incoming) : []),
     ...(changed ? [{ sql: 'DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
       params: [incoming.group_id, incoming.sender_device_identity_key] }] : []),
     ...epochs.map((epoch) => ({

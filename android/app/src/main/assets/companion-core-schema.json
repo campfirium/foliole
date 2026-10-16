@@ -89,8 +89,6 @@
     "INSERT OR IGNORE INTO node_version_local_proof_state\n    (singleton_id, library_epoch, proof_revision)\n    VALUES (1, lower(hex(randomblob(16))), 0)",
     "CREATE TABLE IF NOT EXISTS node_version_local_source_revisions (\n    source_device_identity_key TEXT PRIMARY KEY,\n    proof_revision INTEGER NOT NULL\n  )",
     "CREATE INDEX IF NOT EXISTS idx_node_version_local_holds_object\n    ON node_version_local_holds (object_id, version_id)",
-    "CREATE TABLE IF NOT EXISTS node_version_member_positions (\n    fact_id TEXT PRIMARY KEY,\n    group_id TEXT NOT NULL,\n    device_identity_key TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    library_epoch TEXT NOT NULL,\n    proof_revision INTEGER NOT NULL,\n    adopted_version_id TEXT NOT NULL,\n    pending_version_ids_json TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    resolved_revision INTEGER,\n    UNIQUE (group_id, device_identity_key, object_id)\n  )",
-    "CREATE INDEX IF NOT EXISTS idx_node_version_member_positions_object\n    ON node_version_member_positions (object_id, group_id)",
     "CREATE TABLE IF NOT EXISTS parent_order_sources (\n    parent_id TEXT NOT NULL, author_id TEXT NOT NULL,\n    counter INTEGER NOT NULL CHECK (counter >= 0 AND counter <= 9007199254740991),\n    child_ids_json TEXT NOT NULL, PRIMARY KEY (parent_id, author_id))",
     "CREATE TABLE IF NOT EXISTS parent_order_writer (\n    singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),\n    binding_id TEXT NOT NULL, source_epoch TEXT NOT NULL, author_id TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS parent_order_projection_pending (parent_id TEXT PRIMARY KEY)",

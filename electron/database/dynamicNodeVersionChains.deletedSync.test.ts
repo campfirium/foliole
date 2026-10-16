@@ -11,14 +11,12 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { permanentlyDelete, restartDeletedPeer } from './dynamicNodeVersionChains.delete.testSupport.js';
 import { closeLibraries, createPeer, edit, history, joinPeers,
   startLibraries, type Peer } from './syncLibrary.testSupport.js';
-import { receiveMemberPosition } from './syncMemberPosition.testSupport.js';
 import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
 async function advancePosition(source: Peer, target: Peer) {
-  await receiveMemberPosition(source, target);
   await collectNodeVersionPayloads(source.port, 'topic');
   await collectNodeVersionPayloads(target.port, 'topic');
 }

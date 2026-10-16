@@ -8,13 +8,10 @@ export async function publishSyncGroupRestoreEvent(port: DbPort, value: SyncGrou
   const tables = new Set((await port.query<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table'"
   )).map((row) => row.name));
-  if (tables.has('sync_object_state')) {
-    await port.run("DELETE FROM sync_object_state WHERE object_type = 'node_position'");
-  }
   for (const table of [
-    'node_version_local_holds', 'node_version_member_positions',
+    'node_version_local_holds',
     'node_version_device_revisions', 'node_version_local_source_revisions',
-    'sync_push_ack', ]) {
+    'sync_push_ack']) {
     if (tables.has(table)) await port.run(`DELETE FROM ${table}`);
   }
   await port.run(`UPDATE node_version_local_proof_state SET library_epoch = ?, proof_revision = 0

@@ -42,7 +42,7 @@ it('retries two expired discovery requests and commits the next round through pr
     try {
       expect(db.prepare('SELECT content FROM nodes WHERE id = ?').get('after-timeouts'))
         .toEqual({ content: 'Durable after retry' });
-      expect(db.prepare('SELECT count(*) FROM node_version_member_positions WHERE object_id = ?')
+      expect(db.prepare('SELECT count(*) FROM node_sync_versions WHERE object_id = ?')
         .pluck().get('after-timeouts')).toBeGreaterThan(0);
     } finally { db.close(); }
   } finally {

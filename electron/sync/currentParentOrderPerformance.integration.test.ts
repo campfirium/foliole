@@ -12,7 +12,7 @@ function storage(databasePath: string) {
   const db = new Database(databasePath, { readonly: true, fileMustExist: true });
   try {
     const tables = ['parent_child_order', 'parent_order_versions', 'parent_order_sources',
-      'node_version_member_positions', 'sync_object_state'];
+      'sync_object_state'];
     const bytes = db.prepare(`SELECT name, SUM(pgsize) bytes FROM dbstat
       WHERE name IN (${tables.map(() => '?').join(',')}) GROUP BY name`).all(...tables);
     const orders = db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order ORDER BY parent_id').all();

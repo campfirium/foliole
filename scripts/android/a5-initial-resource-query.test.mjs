@@ -21,28 +21,28 @@ it('reads active node-owned resource references after attachment registry retire
   } finally { db.close(); }
 });
 
-it('requires the local member to adopt the current version with no pending branches', () => {
+it('requires an active group and a persisted current version with no pending branches', () => {
   const source = fs.readFileSync(new globalThis.URL('../../android/app/src/androidTest/java/com/foliole/android/FolioleCompanionInitialResourceProof.java', import.meta.url), 'utf8');
-  const expression = source.match(/nodeCommitted = count\(db, ([\s\S]*?), nodeId, groupId\)/u)?.[1];
+  const expression = source.match(/nodeCommitted = count\(db, ([\s\S]*?),\s*nodeId, groupId\)/u)?.[1];
   if (!expression) throw new Error('Node commit query not found');
   const sql = [...expression.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/gu)]
     .map((match) => JSON.parse(`"${match[1]}"`)).join('');
   const db = new DatabaseSync(':memory:');
   try {
     db.exec(`CREATE TABLE nodes (id TEXT, current_version_id TEXT, deleted_at TEXT);
-      CREATE TABLE node_version_member_positions (object_id TEXT, adopted_version_id TEXT,
-        group_id TEXT, device_identity_key TEXT, pending_version_ids_json TEXT);
+      CREATE TABLE node_sync_versions (object_id TEXT, version_id TEXT);
+      CREATE TABLE node_sync_version_parents (version_id TEXT, parent_version_id TEXT);
       CREATE TABLE sync_group_local_state (group_id TEXT, local_device_identity_key TEXT, state TEXT);
       INSERT INTO nodes VALUES ('node', 'current', NULL);
       INSERT INTO sync_group_local_state VALUES ('group', 'local', 'active');
-      INSERT INTO node_version_member_positions VALUES ('node', 'current', 'group', 'other', '[]');`);
+      INSERT INTO node_sync_versions VALUES ('node', 'old');`);
     const count = () => Object.values(db.prepare(sql).get('node', 'group'))[0];
     expect(count()).toBe(0);
-    db.exec("UPDATE node_version_member_positions SET device_identity_key='local'");
+    db.exec("UPDATE node_sync_versions SET version_id='current'");
     expect(count()).toBe(1);
-    db.exec("UPDATE node_version_member_positions SET adopted_version_id='old'");
+    db.exec("UPDATE sync_group_local_state SET state='left'");
     expect(count()).toBe(0);
-    db.exec(`UPDATE node_version_member_positions SET adopted_version_id='current', pending_version_ids_json='["branch"]'`);
+    db.exec(`UPDATE sync_group_local_state SET state='active'; INSERT INTO node_sync_versions VALUES ('node', 'branch')`);
     expect(count()).toBe(0);
   } finally { db.close(); }
 });

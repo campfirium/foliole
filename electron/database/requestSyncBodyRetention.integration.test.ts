@@ -54,35 +54,30 @@ it('keeps identities without treating legacy references as main body uses', asyn
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
 });
 
-it('reclaims history independently of unknown and stale peer positions', async () => {
+it('reclaims history independently of peer membership', async () => {
   const host = await history();
   host.sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now');
     INSERT INTO sync_group_local_state VALUES (1, 'group', 'local', 'active', 'now');
     INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
       device_name, platform, state, joined_at, updated_at)
     VALUES ('group', 'peer', 'anchor', '/peer', 'Peer', 'mac', 'active', 'now', 'now');
-    INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'new', 0, 'business', NULL, 'now');
-    INSERT INTO node_version_member_positions VALUES
-      ('position', 'group', 'peer', 'topic', 'old', 1, 'base', '["middle"]', 'now', NULL)`);
+    INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'new', 0, 'business', NULL, 'now')`);
   expect(await collectRequestSyncBodies(host.db, 'topic'))
     .toEqual({ released: 2, skipped: null });
-  await host.db.run("UPDATE node_version_member_positions SET library_epoch = 'new'");
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
   await host.db.run("UPDATE sync_group_devices SET state = 'left'");
   expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 0, skipped: null });
 });
 
 it.each(['group-left', 'group-switched'] as const)(
-  'ignores obsolete group positions after %s while preserving current text and the version graph', async change => {
+  'preserves retained facts after %s while preserving current text and the version graph', async change => {
     const host = await history();
     host.sqlite.exec(`INSERT INTO sync_groups VALUES ('old-group', 'Old', 'key', 'now', 'now');
       INSERT INTO sync_group_local_state VALUES (1, 'old-group', 'local', 'active', 'now');
       INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
         device_name, platform, state, joined_at, updated_at)
       VALUES ('old-group', 'peer', 'anchor', '/peer', 'Peer', 'mac', 'active', 'now', 'now');
-      INSERT INTO node_version_device_revisions VALUES ('old-group', 'peer', 'epoch', 0, 'business', NULL, 'now');
-      INSERT INTO node_version_member_positions VALUES
-        ('position', 'old-group', 'peer', 'topic', 'epoch', 1, 'base', '["middle"]', 'now', NULL)`);
+      INSERT INTO node_version_device_revisions VALUES ('old-group', 'peer', 'epoch', 0, 'business', NULL, 'now')`);
     expect(await collectRequestSyncBodies(host.db, 'topic')).toEqual({ released: 2, skipped: null });
     const identities = await host.db.query(
       'SELECT version_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id');

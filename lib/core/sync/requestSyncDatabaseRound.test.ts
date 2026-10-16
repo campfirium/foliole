@@ -104,9 +104,9 @@ it.each([
   expect(transfers).toBeLessThanOrEqual(4);
 });
 
-it.each([false, true])('rechecks cached position failure after child recovery, persistent failure=%s', async persistent => {
+it.each([false, true])('rechecks cached child state failure after child recovery, persistent failure=%s', async persistent => {
   const inventories = { local: [entry('a-child'), entry('z-parent'),
-    { ...entry('position'), objectType: 'node_position' as const }], remote: [] };
+    { ...entry('position'), objectType: 'node_open_state' as const }], remote: [] };
   const accepted = new Set<string>();
   let positionAttempts = 0;
   const result = await deliverRequestSyncDatabaseDifferences({
@@ -115,9 +115,9 @@ it.each([false, true])('rechecks cached position failure after child recovery, p
       if (difference.globalId === 'a-child' && !accepted.has('z-parent')) {
         return outcome(difference, 'framed_sync_node_parent_missing:z-parent');
       }
-      if (difference.objectType === 'node_position') {
+      if (difference.objectType === 'node_open_state') {
         positionAttempts++;
-        if (persistent || !accepted.has('a-child')) return outcome(difference, 'node_position_lineage_unproven:a-child');
+        if (persistent || !accepted.has('a-child')) return outcome(difference, 'sync_node_open_state_node_missing:a-child');
       }
       accepted.add(difference.globalId);
       return outcome(difference);

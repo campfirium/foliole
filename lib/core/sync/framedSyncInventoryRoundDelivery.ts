@@ -3,7 +3,6 @@ import { type FramedSyncInventoryDifference } from './framedSyncInventory.js';
 const MISSING_DEPENDENCIES = {
   'framed_sync_node_delete_child_pending:': 'node',
   'framed_sync_node_parent_missing:': 'node',
-  'node_position_lineage_unproven:': 'node',
   'framed_sync_review_node_missing:': 'node',
   'sync_node_open_state_node_missing:': 'node',
   'framed_sync_parent_relation_version_missing:': 'node_version',

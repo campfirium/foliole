@@ -11,7 +11,6 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { receiveMemberPositionFixture } from './nodeVersionMemberPosition.testSupport.js';
 
 it('retires unused topic bodies after restart independently of member positions', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-version-restart-'));
@@ -33,15 +32,11 @@ it('retires unused topic bodies after restart independently of member positions'
     const port = createBetterSqliteDbPort(sqlite);
     const parents = sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
     expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
-    await receiveMemberPositionFixture(port, { group_id: 'group', device_identity_key: 'target',
-      object_id: 'node', library_epoch: 'epoch', proof_revision: 2, adopted_version_id: 'C',
-      pending_version_ids_json: '[]', updated_at: 'later' });
     expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
     expect(sqlite.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
       .toEqual([{ version_id: 'A', body_text: null }, { version_id: 'B', body_text: null },
         { version_id: 'C', body_text: null }, { version_id: 'D', body_text: 'body-d' }]);
     expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(parents);
-    expect(sqlite.prepare("SELECT adopted_version_id FROM node_version_member_positions WHERE device_identity_key = 'target'").pluck().get()).toBe('C');
     expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions ORDER BY version_id`).all())
       .toEqual(['A', 'B', 'C', 'D'].map((version_id) => ({ version_id })));
   } finally {

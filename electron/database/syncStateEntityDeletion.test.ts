@@ -51,7 +51,7 @@ it('preserves original versions, parents and member positions while upgrading st
   joinPeers(source, target);
   edit(source, 'protected body');
   await sync(source, target);
-  const proofTables = ['node_sync_versions', 'node_sync_version_parents', 'node_version_member_positions'];
+  const proofTables = ['node_sync_versions', 'node_sync_version_parents'];
   const before = proofTables.map((table) => source.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
   expect(before[0]!.length).toBeGreaterThan(0);
   upsertSyncObjectState(source.driver, { objectType: 'node_review', objectId: 'legacy-orphan',

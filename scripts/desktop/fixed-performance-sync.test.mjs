@@ -45,7 +45,7 @@ test('applies real request versions and replays identical facts without changing
     const nodes = fixture.db.prepare('SELECT * FROM nodes ORDER BY id').all();
     expect(versions).toHaveLength(130);
     expect(fixture.db.prepare("SELECT parent_id FROM nodes WHERE id='bench-24'").pluck().get()).toBe('bench-1');
-    expect(fixture.db.prepare('SELECT count(*) FROM node_version_member_positions').pluck().get()).toBe(130);
+    expect(fixture.db.prepare("SELECT count(*) FROM sync_object_state WHERE object_type = 'node_position'").pluck().get()).toBe(0);
     await fixture.apply(); fixture.assertResult();
     expect(contexts).toHaveLength(4);
     expect(new Set(contexts).size).toBe(4);

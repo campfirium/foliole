@@ -49,7 +49,7 @@ async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, recor
   } finally { await Promise.all(files.map(file => file.close())); }
 }
 
-it('rolls back a bad graph object while committing the following valid object and its member position', async () => {
+it('rolls back a bad graph object while committing the following valid object and its version', async () => {
   const fixture = await receiver();
   const missing = batchRecord('parent', 'missing');
   const result = await transfer(fixture, [batchRecord('bad', 'bad', missing), batchRecord('good', 'good')]);
@@ -58,19 +58,19 @@ it('rolls back a bad graph object while committing the following valid object an
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([{ id: 'good' }]);
   expect(await fixture.device.db.query('SELECT object_id, version_id FROM node_sync_versions'))
     .toEqual([{ object_id: 'good', version_id: 'version-good' }]);
-  expect(await fixture.device.db.query('SELECT adopted_version_id FROM node_version_member_positions'))
-    .toEqual([{ adopted_version_id: 'version-good' }]);
+  expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions'))
+    .toEqual([{ version_id: 'version-good' }]);
 });
 
 it('keeps earlier object commits when a later object transaction fails', async () => {
   const fixture = await receiver();
-  fixture.device.sqlite.exec(`CREATE TRIGGER reject_bad_position BEFORE INSERT ON node_version_member_positions
-    WHEN NEW.adopted_version_id = 'version-bad' BEGIN SELECT RAISE(ABORT, 'injected_position_failure'); END`);
+  fixture.device.sqlite.exec(`CREATE TRIGGER reject_bad_version BEFORE INSERT ON node_sync_versions
+    WHEN NEW.version_id = 'version-bad' BEGIN SELECT RAISE(ABORT, 'injected_version_failure'); END`);
   const result = await transfer(fixture, [batchRecord('good', 'good'), batchRecord('bad', 'bad'), batchRecord('last', 'last')]);
-  expect(result.results.map(result => result.error)).toEqual(['', 'injected_position_failure', '']);
+  expect(result.results.map(result => result.error)).toEqual(['', 'injected_version_failure', '']);
   expect(await fixture.device.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'good' }, { id: 'last' }]);
-  expect(await fixture.device.db.query('SELECT adopted_version_id FROM node_version_member_positions ORDER BY adopted_version_id'))
-    .toEqual([{ adopted_version_id: 'version-good' }, { adopted_version_id: 'version-last' }]);
+  expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions ORDER BY version_id'))
+    .toEqual([{ version_id: 'version-good' }, { version_id: 'version-last' }]);
 });
 
 it('keeps two siblings and their original versions when their parent already exists', async () => {
@@ -150,8 +150,7 @@ it('preserves the first full object when the second body is truncated and conver
   const fixture = await receiver();
   const secondBody = 'Second完整正文'.repeat(40_000);
   const records = [batchRecord('first', 'First😀原文'), batchRecord('second', secondBody)];
-  const originals = () => ['nodes', 'node_sync_versions', 'node_sync_version_parents',
-    'node_version_member_positions'].map(table => fixture.device.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+  const originals = () => ['nodes', 'node_sync_versions', 'node_sync_version_parents'].map(table => fixture.device.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
   let first: ReturnType<typeof originals> | undefined;
   fixture.host.objectApplied = object => { if (object.globalId === 'first') first = originals(); };
   await expect(transfer(fixture, records, { truncateSecond: true })).rejects.toThrow('request_sync_object_incomplete');

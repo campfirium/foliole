@@ -85,7 +85,7 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
     try {
       await applyRemoteNodeTombstone(createBetterSqliteDbPort(source), record, false);
       source.prepare("UPDATE sync_object_state SET current_version_id = NULL WHERE object_type = 'node' AND object_id = 'topic'").run();
-      expect(source.prepare("SELECT * FROM node_version_member_positions WHERE object_id = 'topic'").all()).toEqual([]);
+      expect(source.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_position' AND object_id = 'topic'").all()).toEqual([]);
     } finally { source.close(); }
     const input = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
       libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
@@ -97,7 +97,7 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
         .get()).toEqual({ version_id: versionId, parent_version_id: record.parent_version_id, content_hash: record.content_hash,
         deleted_at: record.snapshot.deleted_at });
       expect(right.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
-      expect(right.prepare("SELECT * FROM node_version_member_positions WHERE object_id = 'topic'").all()).toEqual([]);
+      expect(right.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_position' AND object_id = 'topic'").all()).toEqual([]);
       expect(right.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").get()).toBeUndefined();
     } finally { right.close(); }
   } finally {
@@ -110,7 +110,7 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
 function persistentFacts(databasePath: string) {
   const db = new Database(databasePath, { readonly: true });
   try {
-    return ['node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones', 'node_version_member_positions']
+    return ['node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones']
       .map(table => db.prepare(`SELECT * FROM ${table} ORDER BY 1, 2`).all());
   } finally { db.close(); }
 }

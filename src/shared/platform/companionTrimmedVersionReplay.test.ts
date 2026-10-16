@@ -1,15 +1,12 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { receiveMemberPositionFixture } from '../../../electron/database/nodeVersionMemberPosition.testSupport.js';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../../electron/database/syncLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from '../../../electron/database/syncRequestSnapshot.testSupport.js';
 import { buildCanonicalNodeSyncPayload } from '../../../lib/core/database/nodeSyncPayload.js';
 import { nodeSyncSnapshotHashMetadata } from '../../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { computeSyncContentHash } from '../../../lib/core/database/syncState.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../lib/core/sync/nodeVersionLocalEditHold.js';
-import { nodePositionPayloadSchema } from '../../../lib/core/sync/nodeVersionMemberPositionFact.js';
-import { publishLocalNodePosition } from '../../../lib/core/sync/nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 
@@ -40,7 +37,6 @@ beforeEach(async () => {
 afterEach(closeLibraries);
 
 it('replays a trimmed A to E chain into an offline A to F branch through current requests', async () => {
-  await transferPosition(offline, online);
   expect(await collectNodeVersionPayloads(online.port, nodeId))
     .toEqual({ released: 4, skipped: null });
   expect(versionBodies(online)).toEqual([['A', null],
@@ -59,7 +55,6 @@ it('replays a trimmed A to E chain into an offline A to F branch through current
   expect(new Set([chosen?.body_text, ...chosen?.alternative_bodies?.map(body => body.text) ?? []]))
     .toEqual(new Set(['left edited\nright one', 'left one\nright edited']));
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  await transferPosition(online, offline);
   expect((await loadCurrentSyncNodeRecord(port, nodeId))?.version_id).toBe(current.current_version_id);
   expect(versionBodies(offline)).toContainEqual(['F', null]);
   await releaseLocalEditBase(port, 'offline-editor', nodeId);
@@ -115,13 +110,4 @@ function insertVersion(peer: Peer, id: string, parent: string | null, content: s
 function versionBodies(peer: Peer) {
   return (peer.db.prepare('SELECT version_id, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id')
     .all(nodeId) as Array<{ version_id: string; body_text: string | null }>).map(row => [row.version_id, row.body_text]);
-}
-
-async function transferPosition(author: Peer, receiver: Peer) {
-  await author.port.transaction(db => publishLocalNodePosition(db, nodeId));
-  const row = author.db.prepare(`SELECT adopted_version_id, device_identity_key, group_id, library_epoch, object_id,
-    pending_version_ids_json, proof_revision, updated_at FROM node_version_member_positions
-    WHERE device_identity_key = ? AND object_id = ?`)
-    .get(author.id, nodeId);
-  await receiveMemberPositionFixture(receiver.port, nodePositionPayloadSchema.parse(row));
 }

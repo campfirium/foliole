@@ -46,7 +46,7 @@ export async function receive(source: RestorePeer, target: RestorePeer, records:
 
 export function business(peer: RestorePeer) {
   return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones', 'sync_object_state',
-    'node_version_member_positions', 'node_version_local_source_revisions', 'node_version_device_revisions']
+    'node_version_local_source_revisions', 'node_version_device_revisions']
     .map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
 

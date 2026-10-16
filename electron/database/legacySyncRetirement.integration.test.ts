@@ -30,7 +30,7 @@ const names = (db: Database.Database) => db.prepare<[], { name: string }>(
 it('creates a desktop library without retired transmission tables', () => {
   const host = textDevice(); hosts.push(host);
   expect(names(host.sqlite).filter(name => retired.includes(name))).toEqual([]);
-  for (const retained of ['node_version_member_positions', 'node_version_local_source_revisions',
+  for (const retained of ['node_version_local_source_revisions',
     'node_version_device_revisions', 'sync_group_restore_events', 'sync_change_log', 'framed_sync_inventory']) {
     expect(names(host.sqlite)).toContain(retained);
   }

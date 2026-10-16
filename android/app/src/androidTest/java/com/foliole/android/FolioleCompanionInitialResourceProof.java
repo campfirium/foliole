@@ -33,12 +33,13 @@ final class FolioleCompanionInitialResourceProof {
             SQLiteDatabase.OPEN_READONLY
         )) {
             nodeCommitted = count(db, "SELECT COUNT(*) FROM nodes n " +
-                "JOIN node_version_member_positions p ON p.object_id=n.id " +
-                "AND p.adopted_version_id=n.current_version_id " +
-                "JOIN sync_group_local_state l ON l.group_id=p.group_id " +
-                "AND l.local_device_identity_key=p.device_identity_key " +
-                "WHERE n.id=? AND p.group_id=? AND n.deleted_at IS NULL " +
-                "AND p.pending_version_ids_json='[]' AND l.state='active'", nodeId, groupId) == 1;
+                "JOIN node_sync_versions v ON v.object_id=n.id AND v.version_id=n.current_version_id " +
+                "JOIN sync_group_local_state l ON l.state='active' " +
+                "WHERE n.id=? AND l.group_id=? AND n.deleted_at IS NULL " +
+                "AND NOT EXISTS (SELECT 1 FROM node_sync_versions h WHERE h.object_id=n.id " +
+                "AND h.version_id<>n.current_version_id AND NOT EXISTS " +
+                "(SELECT 1 FROM node_sync_version_parents e WHERE e.parent_version_id=h.version_id))",
+                nodeId, groupId) == 1;
             bodyReady = count(db, "SELECT COUNT(*) FROM nodes n WHERE n.id=? " +
                 "AND n.deleted_at IS NULL " +
                 "AND instr(n.content, 'Resource LAN body remains readable.')>0", nodeId) == 1;

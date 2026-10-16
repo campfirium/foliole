@@ -1,11 +1,6 @@
 import { PARENT_ORDER_PAYLOAD_SQL } from '../database/currentParentOrderSchema.js';
 
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
-  node_position: `SELECT json_object('adopted_version_id', adopted_version_id,
-    'device_identity_key', device_identity_key, 'group_id', group_id,
-    'library_epoch', library_epoch, 'object_id', object_id,
-    'pending_version_ids_json', pending_version_ids_json, 'proof_revision', proof_revision,
-    'updated_at', updated_at) AS payload_json FROM node_version_member_positions WHERE fact_id = ?`,
   foreground_daily_time: `SELECT json_object('source_id', source_id, 'day_key', day_key, 'duration_ms', duration_ms)
     AS payload_json FROM foreground_daily_time WHERE id = ?`,
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)

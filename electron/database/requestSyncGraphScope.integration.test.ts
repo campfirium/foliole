@@ -43,7 +43,7 @@ async function snapshot(peer: RestorePeer) {
 
 function facts(peer: RestorePeer) {
   return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_object_state',
-    'node_version_member_positions'].map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+    'node_version_local_source_revisions'].map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
 
 it.each([2, 300])('preserves every branch and parent edge in a %s-parent request snapshot', async count => {

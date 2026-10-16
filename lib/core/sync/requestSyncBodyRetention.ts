@@ -3,11 +3,8 @@ import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobC
 
 
 import type { DbPort } from './dbPort.js';
-import { CHAIN_VERSION_METADATA_SQL } from './nodeVersionChainMetadata.js';
-import { planNodeVersionMetadataChain, type ChainVersionMetadata } from './nodeVersionChainPlan.js';
 import type { ChainEdge } from './nodeVersionChainPlan.js';
 import { CHAIN_EDGES_SQL, chainMutationStatements } from './nodeVersionChainSql.js';
-import { REQUEST_LOCAL_REFERENCES_SQL, REQUEST_LOCAL_DEVICE_SQL, REQUEST_MEMBER_REFERENCES_SQL, requestSyncReferenceSet, type RequestMemberPosition } from './requestSyncBodyReferencePolicy.js';
 import { REQUEST_CHAIN_HEAD_SQL } from './requestSyncBodyReferencePolicy.js';
 import { planTopicBodyRetention, TOPIC_BODY_VERSIONS_SQL, TOPIC_EDIT_BASES_SQL, type TopicBodyVersion } from './topicBodyRetentionPlan.js';
 
@@ -20,19 +17,6 @@ export async function planStoredTopicBodies(db: DbPort, nodeId: string, headId: 
 export async function requestSyncBodyReferences(db: DbPort, nodeId: string, headId: string) {
   const plan = await planStoredTopicBodies(db, nodeId, headId, 1);
   return { keep: new Set(plan.requiredBodyIds), skipped: plan.skipped };
-}
-
-export async function requestSyncPositionReady(db: DbPort, nodeId: string, headId: string) {
-  const [node] = await db.query<{ kind: string }>(REQUEST_CHAIN_HEAD_SQL, [nodeId]);
-  if (node?.kind !== 'topic') {
-    const refs = await db.query<{ version_id: string | null }>(REQUEST_LOCAL_REFERENCES_SQL, Array<string>(10).fill(nodeId));
-    const [local] = await db.query<{ local_device_identity_key: string }>(REQUEST_LOCAL_DEVICE_SQL);
-    const positions = await db.query<RequestMemberPosition>(REQUEST_MEMBER_REFERENCES_SQL, [nodeId]);
-    const { keep } = requestSyncReferenceSet(headId, refs, positions, local?.local_device_identity_key);
-    return planNodeVersionMetadataChain(await db.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [nodeId]),
-      await db.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), keep, new Set(), 1, new Set([headId])).skipped === null;
-  }
-  return (await planStoredTopicBodies(db, nodeId, headId, 1)).skipped === null;
 }
 
 export async function collectRequestSyncBodies(port: DbPort, nodeId: string, limit = 32) {

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { saveLocalCurrentParentOrder } from '../../lib/core/database/currentParentOrderStore.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { publishLocalNodePositionWithDriver } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
 
 import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 
@@ -21,15 +20,13 @@ it('discovers an independent production order edit without a Node edit', async (
   expect(after).toContainEqual(expect.objectContaining({ globalId: 'root', objectType: 'parent_child_order' }));
 });
 
-it('discovers the original production member position declaration', async () => {
+it('does not publish replication positions after a local edit', async () => {
   const source = createPeer('position-source');
   const receiver = createPeer('position-receiver');
   joinPeers(source, receiver);
   edit(source, 'Node with an adopted version');
-  source.driver.transaction((driver) => publishLocalNodePositionWithDriver(driver, 'topic'));
-  const facts = source.db.prepare("SELECT fact_id FROM node_version_member_positions WHERE object_id = 'topic'").all();
-  expect(facts).toHaveLength(1);
   const inventory = await readFramedSyncInventory(source.port);
-  expect(inventory.filter((entry) => entry.objectType === 'node_position').map((entry) => entry.globalId))
-    .toEqual(facts.map((fact) => (fact as { fact_id: string }).fact_id));
+  expect(inventory.some(entry => entry.objectType === 'node_position')).toBe(false);
+  expect(source.db.prepare("SELECT name FROM sqlite_master WHERE name = 'node_version_member_positions'").all()).toEqual([]);
+  expect(source.db.prepare('SELECT proof_revision FROM node_version_local_proof_state').pluck().get()).toBeGreaterThan(0);
 });

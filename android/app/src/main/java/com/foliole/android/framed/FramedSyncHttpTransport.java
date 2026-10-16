@@ -129,7 +129,7 @@ public final class FramedSyncHttpTransport {
             for (String graph : new String[] { "node_version_missing_parents:", "node_version_parent_identity_mismatch:" }) {
                 if (error.startsWith(graph)) return error.substring(graph.length()).matches("[A-Za-z0-9_,:-]{1,3000}") ? error : null;
             }
-            for (String dependency : new String[] { MISSING_PARENT, "node_position_lineage_unproven:",
+            for (String dependency : new String[] { MISSING_PARENT,
                 "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
                 "framed_sync_parent_relation_version_missing:" }) {
                 if (!error.startsWith(dependency)) continue;

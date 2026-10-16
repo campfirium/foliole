@@ -1,5 +1,4 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { retirePeerPositionStatements } from '../../../../../lib/core/sync/syncGroupAdoptedPeerEpoch';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import {
   loadLatestSyncGroupRestoreEvent,
@@ -69,7 +68,6 @@ export async function applyCompanionSyncGroupMemberState(
       if (incoming.adopting_from === context.localDeviceId) {
         await tx.run('DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
           [incoming.group_id, authenticatedDeviceId]);
-        for (const statement of retirePeerPositionStatements(incoming)) await tx.run(statement.sql, statement.params);
       }
       await mergeMemberMetadata(tx, incoming, context.localDeviceId);
       const now = new Date().toISOString();

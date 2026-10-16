@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
-import { port, proveBase, setupVersionCollectionFixture, sqlite } from './nodeVersionPayloadCollector.testSupport.js';
+import { port, seedPeerProof, setupVersionCollectionFixture, sqlite } from './nodeVersionPayloadCollector.testSupport.js';
 
 setupVersionCollectionFixture();
 
@@ -47,7 +47,7 @@ it('retains parent identity after body deletion while rejecting a wrong node or 
 });
 
 it('updates one editor hold and releases its submitted prefix while preserving another holder and device base', async () => {
-  proveBase('A');
+  seedPeerProof();
   await hold('C');
   await hold('D', 'editor:edit:submitted');
   await hold('D');
@@ -56,7 +56,7 @@ it('updates one editor hold and releases its submitted prefix while preserving a
   await hold('B', 'other-editor');
   await hold('C', 'editor:edit:submitted');
   const edges = sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
-  const positions = sqlite.prepare('SELECT * FROM node_version_member_positions ORDER BY fact_id').all();
+  const proofs = sqlite.prepare('SELECT * FROM node_version_local_proof_state').all();
   await releaseLocalEditBase(port, 'editor', 'node');
   expect(sqlite.prepare('SELECT hold_id, version_id FROM node_version_local_holds').all())
     .toEqual([{ hold_id: 'other-editor', version_id: 'B' }]);
@@ -67,11 +67,11 @@ it('updates one editor hold and releases its submitted prefix while preserving a
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').pluck().all())
     .toEqual(['A', 'B', 'C', 'D', 'E']);
   expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(edges);
-  expect(sqlite.prepare('SELECT * FROM node_version_member_positions ORDER BY fact_id').all()).toEqual(positions);
+  expect(sqlite.prepare('SELECT * FROM node_version_local_proof_state').all()).toEqual(proofs);
 });
 
 it('rolls back release and collection together when version retirement fails', async () => {
-  proveBase('A');
+  seedPeerProof();
   await hold('C');
   const before = sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   sqlite.exec("CREATE TRIGGER reject_retirement BEFORE UPDATE ON node_sync_versions BEGIN SELECT RAISE(ABORT, 'retirement_failed'); END");

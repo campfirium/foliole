@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'lib/core/database/nodePositionRetirementMigration.integration.test.ts',
   'electron/database/syncGroupRemovalRollback.test.ts',
   'electron/sync/buildCompanionSyncDiagnostics.test.ts',
   'electron/sync/desktopSyncGroupActivation.integration.test.ts',
@@ -61,7 +62,6 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/runtime/companionRequestSyncSnapshot.sqlite.test.ts',
   'src/companion/requestSnapshotProbe.test.ts',
   'lib/core/sync/syncGroupRestoreEvents.test.ts',
-  'lib/core/sync/nodeVersionMemberPosition.test.ts',
   'lib/core/sync/nodeOwnedArticleResourceNeeds.test.ts',
   'lib/core/sync/articleAttachmentNeeds.test.ts',
   'lib/core/sync/syncNodeTextBudget.integration.test.ts',
@@ -135,7 +135,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/syncGroupSharedKeyTrust.test.ts',
   'electron/sync/syncGroupLocalAdoption.integration.test.ts',
   'lib/core/database/nodeBodyConsumersStable.integration.test.ts',
-  'lib/core/sync/nodeVersionMemberPositionPage.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionSyncGroupLocalAdoption.sqlite.test.ts',
   'src/shared/platform/companion/sync/framed/companionRetiredHash.integration.test.ts',

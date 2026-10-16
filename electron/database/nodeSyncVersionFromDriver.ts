@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
-import { publishLocalNodePositionWithDriver } from '../../lib/core/sync/nodeVersionMemberPositionPublish.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 
 import { upsertNodeSyncState } from './nodeSyncStateRows.js';
@@ -53,7 +52,6 @@ export function flushNodeSyncVersionWithDriver(
       updatedAt: row.updated_at
     }, driver);
     driver.execute('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
-    publishLocalNodePositionWithDriver(driver, nodeId);
     collectNodeVersionChainWithDriver(driver, nodeId);
     createdVersionId = resolvedVersionId;
   });

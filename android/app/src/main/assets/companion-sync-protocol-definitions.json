@@ -30,9 +30,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 25,
-    "min_supported_version": 25,
-    "version": 25
+    "max_supported_version": 26,
+    "min_supported_version": 26,
+    "version": 26
   },
   "pushAck": {
     "clientOpIdKeys": [

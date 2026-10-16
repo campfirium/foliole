@@ -11,7 +11,7 @@ import { prepareImportedNodeDeletionVersions } from '../database/importedNodeDel
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it.each([false, true])('synchronizes production permanent deletion and member position with original received=%s', async (receivedOriginal) => {
+it.each([false, true])('synchronizes production permanent deletion without position replication with original received=%s', async (receivedOriginal) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
@@ -35,9 +35,6 @@ it.each([false, true])('synchronizes production permanent deletion and member po
     const left = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
-      const position = 'SELECT fact_id, adopted_version_id, pending_version_ids_json, proof_revision FROM node_version_member_positions WHERE device_identity_key = ?';
-      expect(right.prepare(position).all(fixture.leftSnapshot.deviceId))
-        .toEqual(left.prepare(position).all(fixture.leftSnapshot.deviceId));
       const tombstone = 'SELECT node_id, version_id, content_hash, deleted_at FROM node_sync_tombstones WHERE node_id = ?';
       expect(right.prepare(tombstone).get(nodeId)).toEqual(left.prepare(tombstone).get(nodeId));
       const body = `SELECT body_text FROM node_sync_versions WHERE version_id =

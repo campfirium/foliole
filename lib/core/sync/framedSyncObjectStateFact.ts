@@ -8,7 +8,6 @@ import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifes
 import { assertFramedExternalDocumentBody, selectFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { framedSyncObjectStateFactId, FRAMED_SYNC_STATE_OBJECT_TYPES, isFramedSyncSharedStateObject } from './framedSyncObjectStateInventory.js';
 import { readFramedSyncObjectPayload } from './framedSyncObjectStatePayload.js';
-import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { loadSyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
@@ -74,7 +73,6 @@ export async function applyFramedSyncObjectStateRecord(db: DbPort,
       await loadSyncGroupOverwriteProgress(db)) {
     throw new Error('sync_group_overwrite_settings_excluded');
   }
-  if (record.object_type === 'node_position') return applyNodeMemberPosition(db, record);
   return applySyncObjectInTransaction(db, record, options);
 }
 

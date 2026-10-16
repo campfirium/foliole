@@ -57,11 +57,9 @@ it.each(['adoption', 'restore'] as const)('resumes %s without clearing accepted 
     expect((await prepareSyncGroupOverwrite(target.db, progress)).cleared).toBe(false);
     expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual(partial);
     expect(await readRequestSyncInventorySnapshot(target.db)).toEqual([]);
-    expect(await target.db.query("SELECT * FROM node_version_member_positions WHERE device_identity_key = 'local'"))
-      .toEqual([]);
-    target.sqlite.exec(`CREATE TRIGGER reject_recovery_finish BEFORE INSERT ON node_version_member_positions
-      WHEN NEW.device_identity_key = 'local' BEGIN SELECT RAISE(ABORT, 'finish_position_failure'); END`);
-    await expect(runRequestSyncOverwriteRound(local, progress, round)).rejects.toThrow('finish_position_failure');
+    target.sqlite.exec(`CREATE TRIGGER reject_recovery_finish BEFORE DELETE ON sync_group_metadata
+      BEGIN SELECT RAISE(ABORT, 'finish_progress_failure'); END`);
+    await expect(runRequestSyncOverwriteRound(local, progress, round)).rejects.toThrow('finish_progress_failure');
     expect(await loadSyncGroupOverwriteProgress(target.db)).toEqual(progress);
     expect(await readRequestSyncInventorySnapshot(target.db)).toEqual([]);
     target.sqlite.exec('DROP TRIGGER reject_recovery_finish');
@@ -70,8 +68,7 @@ it.each(['adoption', 'restore'] as const)('resumes %s without clearing accepted 
     expect(await loadSyncGroupLocalAdoption(target.db)).toBeNull();
     if (mode === 'restore') expect((await loadLatestSyncGroupRestoreEvent(target.db, 'group'))?.applied).toBe(true);
     expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'first' }, { id: 'second' }]);
-    expect(await target.db.query("SELECT object_id FROM node_version_member_positions WHERE device_identity_key = 'local' ORDER BY object_id"))
-      .toEqual([{ object_id: 'first' }, { object_id: 'second' }]);
+
   } finally { source.sqlite.close(); target.sqlite.close(); await rm(root, { recursive: true }); }
 });
 

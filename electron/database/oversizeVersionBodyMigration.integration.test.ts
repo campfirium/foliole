@@ -3,6 +3,8 @@ import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from '../../lib/core/database/nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { retireOversizeNodeVersionBodies } from '../../lib/core/database/oversizeVersionBodyMigration.js';
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
@@ -11,6 +13,7 @@ import { canonicalContentId, type CanonicalBlob, type CanonicalFact } from '../.
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
@@ -21,7 +24,7 @@ afterEach(() => devices.splice(0).forEach((device) => device.sqlite.close()));
 async function fixture(held: boolean) {
   const host = textDevice();
   devices.push(host);
-  for (const statement of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+  for (const statement of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS, ...NODE_VERSION_MEMBER_POSITION_SCHEMA,
     ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(statement);
   const base = textBranch('base', 'Old text');
   const small = textBranch('small', 'Small historical text', base);
@@ -153,4 +156,18 @@ it('keeps editor basis identity while selecting retired oversize history for a n
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
     .toEqual({ bytes: null });
   expect(host.sqlite.prepare('SELECT version_id FROM node_version_local_holds').all()).toEqual([{ version_id: 'base' }]);
+});
+
+it.each([false, true])('keeps the historical ownership migration on the full upgrade path companion=%s', async companion => {
+  const host = await fixture(false);
+  const identities = () => host.sqlite.prepare(
+    'SELECT version_id, object_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id').all();
+  const before = identities();
+  host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
+  if (companion) await host.db.transaction(tx => migrateCompanionDatabase(tx, 78, COMPANION_DATABASE_VERSION));
+  else initializeDatabaseSchema(host.sqlite);
+  expect(identities()).toEqual(before);
+  expect(host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'head'").pluck().get()).toBe('Current text');
+  expect(host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'base'").pluck().get()).toBeNull();
+  expect(host.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_version_member_positions'").all()).toEqual([]);
 });

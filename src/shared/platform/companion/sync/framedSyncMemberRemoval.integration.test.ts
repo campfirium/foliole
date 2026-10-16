@@ -104,7 +104,6 @@ it('preserves member positions, current text and version identity after ordinary
   const after = originalFacts(a);
   expect(after.nodes).toEqual(facts.nodes);
   expect(after.parents).toEqual(facts.parents);
-  expect(after.positions).toEqual(facts.positions);
   expect(a.prepare(versionIdentitySql).all()).toEqual(versionIdentities);
   expect(a.prepare('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id').all())
     .toEqual([{ version_id: 'current-head', body_text: 'Current complete body' },
@@ -161,8 +160,6 @@ it('preserves approved rejoin and current positions when the superseded removal 
   applyDesktopSyncGroupMemberState(exited, identities[2]!.identity_key);
   expect(memberState(a, 2)).toBe('left');
   registerSyncGroupDevice({ device: identities[2]!, deviceName: 'Approved rejoin', platform: 'desktop' });
-  a.prepare(`UPDATE node_version_member_positions SET library_epoch = 'rejoined-epoch', proof_revision = 2
-    WHERE group_id = 'group-removal' AND device_identity_key = ?`).run(identities[2]!.identity_key);
   const facts = originalFacts(a);
   const current = wire();
   expect(current.removals[0]?.superseded_at).not.toBeNull();

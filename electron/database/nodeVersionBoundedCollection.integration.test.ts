@@ -4,11 +4,10 @@ import { expect, it } from 'vitest';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
-import { nodePositionWriteStatements } from '../../lib/core/sync/nodeVersionMemberPositionFact.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { port, proveBase, setupVersionCollectionFixture, sqlite } from './nodeVersionPayloadCollector.testSupport.js';
+import { port, seedPeerProof, setupVersionCollectionFixture, sqlite } from './nodeVersionPayloadCollector.testSupport.js';
 import { observeReads } from './syncNodeVerifiedTopicConflict.testSupport.js';
 
 setupVersionCollectionFixture();
@@ -23,10 +22,7 @@ it.each(['driver', 'port'] as const)('retires historical body copies and all rel
     text_alternatives: [{ body_blob_hash: hashes[1] }] };
   sqlite.prepare('UPDATE node_sync_versions SET body_text = ?, snapshot_json = ? WHERE version_id = ?')
     .run(body, JSON.stringify(snapshot), 'B');
-  proveBase('A');
-  for (const statement of nodePositionWriteStatements({ group_id: 'group', device_identity_key: 'remote',
-    library_epoch: 'epoch', object_id: 'node', adopted_version_id: 'A', pending_version_ids_json: '[]',
-    proof_revision: 1, updated_at: 'now' })) driver.execute(statement.sql, statement.params);
+  seedPeerProof();
   const sizes: number[] = [];
   const inspect = <T extends DatabaseRow>(rows: T[]) => {
     for (const row of rows) for (const value of Object.values(row)) {

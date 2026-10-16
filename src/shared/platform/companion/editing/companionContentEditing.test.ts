@@ -5,7 +5,6 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { receiveMemberPositionFixture } from '../../../../../electron/database/nodeVersionMemberPosition.testSupport';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
@@ -130,10 +129,6 @@ it('reclaims middle bodies during continued editing against an offline device ba
       VALUES ('group', 'mobile', 'mobile-anchor', '/mobile', 'Mobile', 'ios', 'active', 'now', 'now'),
         ('group', 'offline', 'offline-anchor', '/offline', 'Offline', 'mac', 'active', 'now', 'now');
   `);
-  await state.owner!.runWriter(db => receiveMemberPositionFixture(db, {
-    group_id: 'group', device_identity_key: 'offline', object_id: 'topic', library_epoch: 'epoch',
-    adopted_version_id: 'base', pending_version_ids_json: '[]', proof_revision: 1, updated_at: now
-  }));
   await readCompanionContentSource('topic', 'editor-session');
   let baseVersionId = 'base';
   for (const [index, versionId] of ['B', 'C', 'D', 'E'].entries()) {
@@ -148,8 +143,7 @@ it('reclaims middle bodies during continued editing against an offline device ba
   expect(rows.filter((row) => row.body_text !== null).map((row) => row.version_id))
     .toEqual(['E']);
   expect(rows.map(row => row.version_id)).toEqual(['B', 'C', 'D', 'E', 'base']);
-  expect(database.prepare("SELECT adopted_version_id FROM node_version_member_positions WHERE device_identity_key = 'offline'").get())
-    .toEqual({ adopted_version_id: 'base' });
+
 });
 
 it('drops an orphaned companion editor hold when its database owner reopens', async () => {

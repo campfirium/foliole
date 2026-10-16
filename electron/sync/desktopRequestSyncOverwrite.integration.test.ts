@@ -39,8 +39,8 @@ it.each(['restore', 'adoption'] as const)('resumes production %s after an object
     withDb(fixture.rightSnapshot.databasePath, db => {
       expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get('framed_sync_inbound_transfers')).toBeUndefined();
       expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get('framed_sync_receipts')).toBeUndefined();
-      expect(db.prepare('SELECT object_id FROM node_version_member_positions WHERE device_identity_key = ? ORDER BY object_id')
-        .all(fixture.rightSnapshot.deviceId)).toEqual([{ object_id: 'a' }, { object_id: 'b' }]);
+      expect(db.prepare('SELECT DISTINCT object_id FROM node_sync_versions ORDER BY object_id')
+        .all()).toEqual([{ object_id: 'a' }, { object_id: 'b' }]);
     });
     passed = true;
   } finally {

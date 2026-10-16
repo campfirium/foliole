@@ -3,7 +3,6 @@ import { afterEach, beforeEach } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { nodePositionWriteStatements } from '../../lib/core/sync/nodeVersionMemberPositionFact.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -43,10 +42,7 @@ export function setupVersionCollectionFixture() {
   afterEach(() => sqlite.close());
 }
 
-export function proveBase(versionId: string) {
+export function seedPeerProof() {
   sqlite.prepare(`INSERT OR IGNORE INTO node_version_device_revisions VALUES
     ('group', 'remote', 'epoch', 1, 'pack-1', NULL, 'now')`).run();
-  for (const statement of nodePositionWriteStatements({ group_id: 'group', device_identity_key: 'remote',
-    library_epoch: 'epoch', object_id: 'node', adopted_version_id: versionId, pending_version_ids_json: '[]',
-    proof_revision: 1, updated_at: 'now' })) sqlite.prepare(statement.sql).run(...statement.params);
 }

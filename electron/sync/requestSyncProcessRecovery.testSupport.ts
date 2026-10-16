@@ -11,7 +11,6 @@ export function requestProcessEvidence(databasePath: string, nodeId?: string) {
       versions: db.prepare(`SELECT * FROM node_sync_versions ${nodeId ? 'WHERE object_id = ?' : ''} ORDER BY version_id`).all(...args),
       parents: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all(),
       state: db.prepare(`SELECT * FROM sync_object_state ${nodeId ? "WHERE object_type = 'node' AND object_id = ?" : ''} ORDER BY object_type, object_id`).all(...args),
-      positions: db.prepare(`SELECT * FROM node_version_member_positions ${nodeId ? 'WHERE object_id = ?' : ''} ORDER BY fact_id`).all(...args),
       retiredTables: db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (
         'framed_sync_inbound_transfers', 'framed_sync_inbound_attempts', 'framed_sync_inbound_frames',
         'framed_sync_receipts', 'framed_sync_blob_pins', 'framed_sync_available_blobs',

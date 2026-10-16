@@ -45,7 +45,7 @@ function request(): RequestSyncObjectInput {
   };
 }
 
-it('commits business facts, source progress, peer epoch and local position together without delivery rows', async () => {
+it('commits business facts, source progress, peer epoch together without delivery rows', async () => {
   const host = receiver();
   const input = request();
   await applyRequestSyncObject(host.db, input);
@@ -54,27 +54,25 @@ it('commits business facts, source progress, peer epoch and local position toget
     .toEqual([{ source_device_identity_key: 'peer' }]);
   expect(await host.db.query('SELECT library_epoch FROM node_version_device_revisions'))
     .toEqual([{ library_epoch: 'peer-epoch' }]);
-  const position = await host.db.query('SELECT adopted_version_id, pending_version_ids_json FROM node_version_member_positions');
-  expect(position).toEqual([{ adopted_version_id: 'head', pending_version_ids_json: '[]' }]);
+  const progress = await host.db.query('SELECT source_device_identity_key FROM node_version_local_source_revisions');
   await applyRequestSyncObject(host.db, input);
   expect((await host.current()).version_id).toBe('head');
-  expect(await host.db.query('SELECT adopted_version_id, pending_version_ids_json FROM node_version_member_positions')).toEqual(position);
+  expect(await host.db.query('SELECT source_device_identity_key FROM node_version_local_source_revisions')).toEqual(progress);
   for (const table of ['framed_sync_outbound_publications', 'framed_sync_inbound_transfers',
     'framed_sync_receipts', 'sync_delivery_receipts', 'node_version_inbound_receipts']) {
     expect(await host.db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", [table])).toEqual([]);
   }
 });
 
-it('rolls back the entire object when position publication fails, then retries normally', async () => {
+it('rolls back the entire object when source progress fails, then retries normally', async () => {
   const host = receiver();
-  host.sqlite.exec(`CREATE TRIGGER reject_test_position BEFORE INSERT ON node_version_member_positions
-    BEGIN SELECT RAISE(ABORT, 'injected_position_failure'); END`);
-  await expect(applyRequestSyncObject(host.db, request())).rejects.toThrow('injected_position_failure');
-  for (const table of ['nodes', 'node_sync_versions', 'node_version_member_positions',
-    'node_version_local_source_revisions', 'node_version_device_revisions']) {
+  host.sqlite.exec(`CREATE TRIGGER reject_test_progress BEFORE INSERT ON node_version_local_source_revisions
+    BEGIN SELECT RAISE(ABORT, 'injected_progress_failure'); END`);
+  await expect(applyRequestSyncObject(host.db, request())).rejects.toThrow('injected_progress_failure');
+  for (const table of ['nodes', 'node_sync_versions', 'node_version_local_source_revisions', 'node_version_device_revisions']) {
     expect(await host.db.query(`SELECT count(*) AS count FROM ${table}`)).toEqual([{ count: 0 }]);
   }
-  host.sqlite.exec('DROP TRIGGER reject_test_position');
+  host.sqlite.exec('DROP TRIGGER reject_test_progress');
   await applyRequestSyncObject(host.db, request());
   expect((await host.current()).version_id).toBe('head');
 });
@@ -94,15 +92,14 @@ it('rolls back facts and progress when cancellation arrives during the object tr
     controller.abort(new Error('request_cancelled_before_commit'));
     return 1;
   });
-  host.sqlite.exec(`CREATE TRIGGER cancel_test_position AFTER INSERT ON node_version_member_positions
+  host.sqlite.exec(`CREATE TRIGGER cancel_test_progress AFTER INSERT ON node_version_local_source_revisions
     BEGIN SELECT cancel_request(); END`);
   await expect(applyRequestSyncObject(host.db, { ...request(), signal: controller.signal }))
     .rejects.toThrow('request_cancelled_before_commit');
-  for (const table of ['nodes', 'node_sync_versions', 'node_version_member_positions',
-    'node_version_local_source_revisions', 'node_version_device_revisions']) {
+  for (const table of ['nodes', 'node_sync_versions', 'node_version_local_source_revisions', 'node_version_device_revisions']) {
     expect(await host.db.query(`SELECT count(*) AS count FROM ${table}`)).toEqual([{ count: 0 }]);
   }
-  host.sqlite.exec('DROP TRIGGER cancel_test_position');
+  host.sqlite.exec('DROP TRIGGER cancel_test_progress');
   await applyRequestSyncObject(host.db, request());
   expect((await host.current()).version_id).toBe('head');
 });
@@ -119,7 +116,7 @@ it('accepts the approved overwrite source after a peer proof changes during rece
   host.sqlite.exec("INSERT INTO node_version_device_revisions VALUES ('group', 'peer', 'peer-epoch', 9, 'acknowledged', NULL, 'now')");
   await applyRequestSyncObject(host.db, input);
   expect((await host.current()).body_text).toBe('Current');
-  expect(await host.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toEqual([]);
+  expect(await host.db.query("SELECT object_id FROM sync_object_state WHERE object_type = 'node_position'")).toEqual([]);
   expect(await host.db.query('SELECT proof_revision FROM node_version_device_revisions'))
     .toEqual([{ proof_revision: 9 }]);
   await expect(applyRequestSyncObject(host.db, { ...input,
@@ -136,6 +133,5 @@ it('applies an authorized request when another exchange advances the same peer p
   expect((await host.current()).body_text).toBe('Current');
   expect(await host.db.query('SELECT proof_revision FROM node_version_device_revisions'))
     .toEqual([{ proof_revision: 9 }]);
-  expect(await host.db.query('SELECT adopted_version_id FROM node_version_member_positions'))
-    .toEqual([{ adopted_version_id: 'head' }]);
+  expect(await host.db.query("SELECT object_id FROM sync_object_state WHERE object_type = 'node_position'")).toEqual([]);
 });

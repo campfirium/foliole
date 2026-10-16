@@ -57,7 +57,7 @@ it('rolls back a state object when its next sequence is occupied without replaci
     await setting(target, 'search_aliases_document', '{"aliases":["keep"]}');
     const occupied = Number(target.sqlite.prepare('SELECT MAX(state_seq) FROM sync_object_state').pluck().get());
     target.sqlite.prepare('UPDATE sync_state_sequence SET high_water = ?').run(occupied - 1);
-    const tables = ['setting_records', 'sync_object_state', 'sync_state_sequence', 'node_version_member_positions'];
+    const tables = ['setting_records', 'sync_object_state', 'sync_state_sequence'];
     const saved = () => tables.map(table => target.sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
     const before = saved();
     await expect(send(source, target)).rejects.toThrow('UNIQUE constraint failed: sync_object_state.state_seq');

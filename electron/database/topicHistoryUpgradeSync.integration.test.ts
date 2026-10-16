@@ -116,7 +116,7 @@ it('collects only after all object facts and state, returns the final digest, an
   const { a, b } = await oldPeers();
   initializeDatabaseSchema(a.db);
   const before = ['node_sync_versions', 'node_sync_version_parents', 'nodes', 'sync_object_state',
-    'node_version_member_positions', 'framed_sync_inventory'];
+    'framed_sync_inventory'];
   const state = () => before.map(table => b.db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
   const original = state();
   let sawHistoryBeforeTail = false;

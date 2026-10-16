@@ -84,7 +84,7 @@ function registerReceiveTest() {
 }
 
 function registerRestartTest() {
-  it('rolls back a late position failure and receives original facts after an actual receiver process restart', async () => {
+  it('rolls back a version write failure and receives original facts after an actual receiver process restart', async () => {
     const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     let succeeded = false;
     try {
@@ -92,23 +92,23 @@ function registerRestartTest() {
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       const receiver = new Database(fixture.rightSnapshot.databasePath);
       try {
-        receiver.exec(`CREATE TRIGGER reject_verified_http_position BEFORE INSERT ON node_version_member_positions
+        receiver.exec(`CREATE TRIGGER reject_verified_http_version BEFORE INSERT ON node_sync_versions
           WHEN new.object_id = 't326-verified-receiver'
-          BEGIN SELECT RAISE(ABORT, 'verified_http_position_rejected'); END`);
+          BEGIN SELECT RAISE(ABORT, 'verified_http_version_rejected'); END`);
       } finally { receiver.close(); }
-      await expect(fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).rejects.toThrow('verified_http_position_rejected');
+      await expect(fixture.left.synchronize(fixture.rightSnapshot.origin, nodeId)).rejects.toThrow('verified_http_version_rejected');
       const failed = verifiedReceiverBusinessEvidence(fixture.rightSnapshot.databasePath, nodeId);
       expect(failed.node).toBeUndefined();
       expect(failed.versions).toEqual([]);
       expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId)).toMatchObject({
-        nodes: [], versions: [], parents: [], state: [], positions: [], retiredTables: []
+        nodes: [], versions: [], parents: [], state: [], retiredTables: []
       });
       const restarted = await fixture.restartRight();
       expect(restarted.snapshot.pid).not.toBe(fixture.rightSnapshot.pid);
       const reopened = verifiedReceiverBusinessEvidence(restarted.snapshot.databasePath, nodeId);
       expect(reopened).toEqual(failed);
       const retry = new Database(restarted.snapshot.databasePath);
-      try { retry.exec('DROP TRIGGER reject_verified_http_position'); } finally { retry.close(); }
+      try { retry.exec('DROP TRIGGER reject_verified_http_version'); } finally { retry.close(); }
       await fixture.left.synchronize(restarted.snapshot.origin, nodeId);
       expect(await verifiedReceiverArticle(restarted.snapshot.databasePath, nodeId)).toMatchObject({ ...expected, content });
       const committed = verifiedReceiverBusinessEvidence(restarted.snapshot.databasePath, nodeId);

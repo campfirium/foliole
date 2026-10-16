@@ -36,6 +36,8 @@ import { migrateCompanionIndependentNodeVersions } from './independentNodeVersio
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
+import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
@@ -98,12 +100,14 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 74 && targetVersion >= 74) await migrateCompanionFramedSyncPermanentDeleteHistory(db);
   if (currentVersion < 76 && targetVersion >= 76) await migrateCompanionTopicTextState(db);
   if (currentVersion < COMPANION_TEXT_BODY_OWNERSHIP_VERSION && targetVersion >= COMPANION_TEXT_BODY_OWNERSHIP_VERSION) {
+    for (const sql of NODE_VERSION_MEMBER_POSITION_SCHEMA) await db.run(sql);
     await migrateCompanionTextBodyOwnership(db);
   }
   if (currentVersion < 80 && targetVersion >= 80) await migrateCompanionNodeHistoryState(db);
   if (currentVersion < 81 && targetVersion >= 81) await migrateCompanionCurrentParentOrders(db);
   if (currentVersion < 82 && targetVersion >= 82) await retireCompanionLegacySyncState(db);
   if (currentVersion < 83 && targetVersion >= 83) await migrateCompanionTopicHistoryRetirement(db);
+  if (currentVersion < 84 && targetVersion >= 84) await retireCompanionNodePositions(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

@@ -2,8 +2,6 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
 import { readFramedSyncOverwriteInventory } from './framedSyncInventoryRead.js';
 import { pendingFramedSyncOverwriteDifferences } from './framedSyncOverwriteCompletion.js';
-import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
-import { requestSyncPositionReady } from './requestSyncBodyRetention.js';
 import { deliverRequestSyncDatabaseDifferences, type RequestSyncDatabaseRoundPort } from './requestSyncDatabaseRound.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
@@ -44,9 +42,6 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
       const restore = await loadLatestSyncGroupRestoreEvent(tx, progress.groupId);
       if (!restore || restore.event.restore_id !== progress.overwriteId) throw new Error('framed_sync_restore_state_invalid');
       await markSyncGroupRestoreApplied(tx, restore.event);
-    }
-    for (const entry of local) {
-      if (entry.objectType === 'node') await publishLocalNodePosition(tx, entry.globalId, requestSyncPositionReady);
     }
     signal?.throwIfAborted();
     return true;

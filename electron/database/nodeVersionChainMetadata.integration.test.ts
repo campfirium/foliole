@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from '../../lib/core/database/nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 import { nodeVersionChainMetadataSql } from '../../lib/core/sync/nodeVersionChainMetadata.js';
@@ -81,7 +82,7 @@ it('retires the same planned bodies while retaining current, frozen, held versio
 it('uses owned body availability in the historical migration holder query without reading full text', async () => {
   const host = textDevice();
   try {
-    for (const sql of [...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS, ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(sql);
+    for (const sql of [...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS, ...NODE_VERSION_MEMBER_POSITION_SCHEMA, ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) host.sqlite.exec(sql);
     const base = textBranch('base', 'Original');
     const head = textBranch('head', 'Current', base);
     for (const record of [base, head]) await upsertRemoteVersion(host.db, record);

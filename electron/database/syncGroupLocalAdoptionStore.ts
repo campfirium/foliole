@@ -1,5 +1,5 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { adoptedPeerEpochKey, adoptedPeerEpochStatements, retirePeerPositionStatements } from '../../lib/core/sync/syncGroupAdoptedPeerEpoch.js';
+import { adoptedPeerEpochKey, adoptedPeerEpochStatements } from '../../lib/core/sync/syncGroupAdoptedPeerEpoch.js';
 import { completedSyncGroupAdoptionSource, parseSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY, SYNC_GROUP_LOCAL_ADOPTION_KEY } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 
@@ -42,7 +42,6 @@ export function applyDesktopSyncGroupAdoptionPeerProof(incoming: SyncGroupMember
     assertDesktopPeerProofFresh(incoming);
   }
   if (incoming.adopting_from === local.sender_device_identity_key) {
-    for (const statement of retirePeerPositionStatements(incoming)) driver.execute(statement.sql, statement.params);
     driver.execute('DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
       [incoming.group_id, incoming.sender_device_identity_key]);
   } else recordDesktopAcknowledgedPeerProof(incoming, local.sender_device_identity_key);

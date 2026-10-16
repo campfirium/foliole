@@ -87,8 +87,8 @@ function assertFinished(file: string, deviceId: string, mode: 'restore' | 'adopt
   const db = new Database(file, { readonly: true, fileMustExist: true });
   try {
     expect(db.prepare("SELECT count(*) FROM nodes WHERE id = 'old-large-library'").pluck().get()).toBe(0);
-    expect(db.prepare('SELECT count(*) FROM node_version_member_positions WHERE device_identity_key = ?')
-      .pluck().get(deviceId)).toBe(1000);
+    expect(db.prepare('SELECT count(DISTINCT object_id) FROM node_sync_versions')
+      .pluck().get()).toBe(1000);
     for (const table of ['framed_sync_inbound_transfers', 'framed_sync_receipts'])
       expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)).toBeUndefined();
     const state = restoreIdentityState(file);

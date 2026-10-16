@@ -1,7 +1,6 @@
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
-import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { applyForegroundDailyTime } from './syncForegroundDailyTime.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
 import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
@@ -37,8 +36,6 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeOpenStateObject(port, record);
     case 'parent_child_order':
       return applyCurrentParentOrderRecord(port, record);
-    case 'node_position':
-      return applyNodeMemberPosition(port, record);
     case 'node_reading':
       return applyNodeReadingObject(port, record, options);
     case 'node_review':

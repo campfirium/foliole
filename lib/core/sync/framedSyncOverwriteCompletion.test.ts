@@ -40,7 +40,7 @@ it('does not use a node receipt to complete another object type with the same ID
 });
 
 
-it.each(['node_open_state', 'node_review', 'node_position', 'parent_child_order'])(
+it.each(['node_open_state', 'node_review', 'parent_child_order'])(
   'finishes consumed %s state without replacing a newer local result', objectType => {
     const remote = [{ ...source, objectType }];
     const current = [{ ...local, objectType, stateFactIds: ['local-newer'] }];

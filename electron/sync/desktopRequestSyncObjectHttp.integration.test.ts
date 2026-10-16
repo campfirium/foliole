@@ -135,8 +135,7 @@ async function pullBack(host: RequestSyncDatabaseHost, endpointUrl: string, sour
   await withRequestSyncReadonlySnapshot(sourcePath, async db => {
     expect(await db.query("SELECT current_version_id FROM nodes WHERE id = 'topic'"))
       .toEqual([{ current_version_id: 'remote-edit' }]);
-    expect(await db.query('SELECT adopted_version_id FROM node_version_member_positions'))
-      .toEqual([{ adopted_version_id: 'remote-edit' }]);
+    expect(await db.query("SELECT object_id FROM sync_object_state WHERE object_type = 'node_position'")).toEqual([]);
   });
 }
 
@@ -148,7 +147,7 @@ async function assertCommitted() {
   const persisted = new Database(databasePath, { readonly: true });
   try {
     expect(persisted.prepare("SELECT current_version_id FROM nodes WHERE id = 'topic'").pluck().get()).toBe('head');
-    expect(persisted.prepare('SELECT adopted_version_id FROM node_version_member_positions').pluck().get()).toBe('head');
+    expect(persisted.prepare("SELECT object_id FROM sync_object_state WHERE object_type = 'node_position'").all()).toEqual([]);
     expect(persisted.prepare('SELECT library_epoch FROM node_version_device_revisions').pluck().get()).toBe('peer-epoch');
     expect(persisted.prepare('SELECT count(*) FROM sync_group_nonce_ledger').pluck().get()).toBe(1);
     for (const table of ['framed_sync_outbound_publications', 'framed_sync_inbound_transfers', 'framed_sync_receipts',

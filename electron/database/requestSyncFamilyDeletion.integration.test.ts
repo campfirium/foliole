@@ -104,7 +104,7 @@ it('rejects a lone parent tombstone without deleting a live child or retaining p
       await applyRemoteNodeTombstone(tx, tombstone, false);
     });
     const rows = () => ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_sync_tombstones',
-      'sync_object_state', 'node_version_member_positions'].map(table => target.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+      'sync_object_state'].map(table => target.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
     const before = rows();
     const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db),
       remote: await readFramedSyncInventory(target.db) });

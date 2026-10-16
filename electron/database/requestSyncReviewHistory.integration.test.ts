@@ -23,7 +23,7 @@ function rows(peer: RestorePeer) {
 
 function durableState(peer: RestorePeer) {
   return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'review_log',
-    'node_version_member_positions', 'node_version_device_revisions', 'node_version_local_proof_state']
+    'node_version_device_revisions', 'node_version_local_proof_state']
     .map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
 

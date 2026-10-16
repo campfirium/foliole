@@ -50,7 +50,7 @@ it.each([false, true])('upgrades desktop history and old empty shells once (grou
     initializeDatabaseSchema(db);
     db.exec("INSERT INTO settings VALUES ('host_name', '\"local\"', 'now')");
     oldChain(db, group);
-    db.exec('DROP TABLE node_version_member_positions');
+    db.exec('DROP TABLE IF EXISTS node_version_member_positions');
     db.pragma('user_version = 119');
     initializeDatabaseSchema(db);
     expectChain(db);

@@ -24,9 +24,9 @@ it('retries oversized node metadata after object rollback without changing its o
     if (!difference) throw new Error('test_large_node_difference_missing');
     const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
-    target.sqlite.exec(`CREATE TEMP TRIGGER fail_position BEFORE INSERT ON node_version_member_positions
-      BEGIN SELECT RAISE(ABORT, 'position_boundary_failure'); END`);
-    await expect(transfer(source, target, progress, difference)).rejects.toThrow('position_boundary_failure');
+    target.sqlite.exec(`CREATE TEMP TRIGGER fail_version BEFORE INSERT ON node_sync_versions
+      BEGIN SELECT RAISE(ABORT, 'version_boundary_failure'); END`);
+    await expect(transfer(source, target, progress, difference)).rejects.toThrow('version_boundary_failure');
     expect(target.sqlite.prepare("SELECT * FROM nodes WHERE id = 'topic'").all()).toEqual([]);
     expect(target.sqlite.prepare("SELECT * FROM node_sync_versions WHERE object_id = 'topic'").all()).toEqual([]);
     target.reopen();

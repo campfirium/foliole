@@ -43,7 +43,7 @@ it('upgrades empty and complete old history atomically without altering identiti
   expect(host.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(edges);
   initializeDatabaseSchema(host.sqlite);
   expect(facts(host)).toEqual(before);
-  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(154);
+  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(155);
 });
 
 it('rolls back migration payloads, inventory and schema version when the owner fails', async () => {

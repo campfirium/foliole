@@ -8,7 +8,7 @@ import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/n
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
 
-import { port, proveBase, setupVersionCollectionFixture,
+import { port, seedPeerProof, setupVersionCollectionFixture,
   sqlite } from './nodeVersionPayloadCollector.testSupport.js';
 
 setupVersionCollectionFixture();
@@ -44,7 +44,7 @@ async function collect(db: DbPort = port) {
 }
 
 it('retires offline ancestor copies while preserving current text, identities and edges', async () => {
-  proveBase('A');
+  seedPeerProof();
   expect(await collect()).toEqual({ released: 4, skipped: null });
   expect(payloads()).toEqual([
     { version_id: 'A', body_text: null, snapshot_content: null, parent_version_id: null },
@@ -67,7 +67,7 @@ it('keeps sibling branch text and common ancestor identity without retaining its
     VALUES ('F', 'node', 'B', 'remote', 'later', 'hash-F', 'body-F',
       '{"id":"node","content":"body-F"}');
     INSERT INTO node_sync_version_parents VALUES ('F', 'B', 0);`);
-  proveBase('F');
+  seedPeerProof();
 
   expect((await loadMergeBase(port, 'F', 'E'))?.version_id).toBe('B');
   expect(await collect()).toEqual({ released: 4, skipped: null });
@@ -82,7 +82,7 @@ it('retires unused ancestor copies without waiting for direct device declaration
 });
 
 it('keeps an unabsorbed sibling body and its ancestor identity without a member declaration', async () => {
-  proveBase('A');
+  seedPeerProof();
   sqlite.exec(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at,
      content_hash, body_text, snapshot_json)
@@ -98,7 +98,7 @@ it('keeps an unabsorbed sibling body and its ancestor identity without a member 
 });
 
 it('preserves editor and legacy conflict references while retiring unused topic body copies', async () => {
-  proveBase('A');
+  seedPeerProof();
   sqlite.prepare(`INSERT INTO node_version_local_holds VALUES ('editor-1', 'node', 'B', 'now')`).run();
   sqlite.prepare(`INSERT INTO node_sync_conflicts
     (conflict_version_id, object_id, snapshot_json, detected_at)
@@ -114,7 +114,7 @@ it('preserves editor and legacy conflict references while retiring unused topic 
 });
 
 it('keeps an editor base identity usable after retirement and releases its hold', async () => {
-  proveBase('A');
+  seedPeerProof();
   await port.transaction((tx) => retainLocalEditBase(tx, {
     holdId: 'editor-1', nodeId: 'node', versionId: 'B'
   }));
@@ -128,7 +128,7 @@ it('keeps an editor base identity usable after retirement and releases its hold'
 });
 
 it('preserves an anchor source identity without retaining its obsolete body copy', async () => {
-  proveBase('A');
+  seedPeerProof();
   sqlite.prepare(`INSERT INTO nodes
     (id, kind, title, anchor_source_version_id, created_at, updated_at)
     VALUES ('child', 'topic', 'Child', 'C', 'now', 'now')`).run();
@@ -141,7 +141,7 @@ it('preserves an anchor source identity without retaining its obsolete body copy
 });
 
 it('still selects a newer protected merge base across stripped intermediates', async () => {
-  proveBase('B');
+  seedPeerProof();
   await collect();
   sqlite.prepare(`INSERT INTO node_sync_versions
     (version_id, object_id, parent_version_id, host_name, created_at,
@@ -154,7 +154,7 @@ it('still selects a newer protected merge base across stripped intermediates', a
 });
 
 it('rolls the entire node back when an update fails', async () => {
-  proveBase('A');
+  seedPeerProof();
   const before = sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   let updates = 0;
   const failingPort: DbPort = {

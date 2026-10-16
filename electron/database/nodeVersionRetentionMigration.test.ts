@@ -30,7 +30,7 @@ function dropRetentionTables(sqlite: Database.Database) {
 function expectTables(sqlite: Database.Database) {
   const names = sqlite.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'
     AND name LIKE 'node_version_%' ORDER BY name`).all() as Array<{ name: string }>;
-  expect(names.map((row) => row.name)).toEqual(TABLES.filter(name => !isRetiredSyncSchema(name)).sort());
+  expect(names.map((row) => row.name)).toEqual(TABLES.filter(name => !isRetiredSyncSchema(name) && name !== 'node_version_member_positions').sort());
 }
 
 it.each(['desktop', 'companion'] as const)('preserves historical confirmation digests during %s retirement', async (host) => {

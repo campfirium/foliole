@@ -7,7 +7,6 @@ import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from './framedSyncInventorySchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
-import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
@@ -31,7 +30,6 @@ export const COMPANION_SCHEMA_STATEMENTS = [
   ...SYNC_GROUP_SCHEMA_STATEMENTS,
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
-  ...NODE_VERSION_MEMBER_POSITION_SCHEMA,
   ...CURRENT_PARENT_ORDER_SCHEMA,
 
   ...FRAMED_SYNC_INVENTORY_TABLES

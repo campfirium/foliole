@@ -38,7 +38,7 @@ function apply(source: RestorePeer, target: RestorePeer, request: RequestSyncFil
 
 function durableState(peer: RestorePeer) {
   return ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_object_state', 'sync_state_sequence',
-    'node_version_member_positions', 'node_version_device_revisions', 'node_version_local_proof_state',
+    'node_version_device_revisions', 'node_version_local_proof_state',
     'content_blobs', 'content_blob_data'].map(table => peer.sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
 

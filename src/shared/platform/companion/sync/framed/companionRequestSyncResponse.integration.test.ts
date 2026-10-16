@@ -102,7 +102,7 @@ it.each([false, true])('applies the native handoff and cleans a late rejected re
       expect((await target.current()).body_text).toBe(body);
       expect(visibleBodies).toHaveLength(1);
       expect(await Promise.all(visibleBodies)).toEqual([body]);
-      expect(await target.db.query('SELECT adopted_version_id FROM node_version_member_positions')).toContainEqual({ adopted_version_id: 'head' });
+      expect(await target.db.query('SELECT version_id FROM node_sync_versions')).toContainEqual({ version_id: 'head' });
       expect(await target.db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_inbound_transfers'")).toEqual([]);
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
       await runtime.files!.remove(directory);
@@ -185,7 +185,7 @@ it.each(['push', 'pull', 'cancel-pull', 'lost-push'])('isolates objects through 
       ]);
       expect(results[1]!.error).toContain('parent');
       expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'a-good' }, { id: 'c-good' }]);
-      expect(await target.db.query('SELECT object_id FROM node_version_member_positions ORDER BY object_id'))
+      expect(await target.db.query('SELECT DISTINCT object_id FROM node_sync_versions ORDER BY object_id'))
         .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
     }
     expect(modes).toEqual(mode === 'lost-push' ? ['objects', 'objects'] : [pushing ? 'objects' : 'pulls']);
@@ -203,7 +203,7 @@ async function assertLostBatchResponse(transfer: Promise<unknown>, retry: () => 
   expect(await target.query('SELECT id FROM nodes ORDER BY id')).toEqual(expected);
   expect(await target.query('SELECT version_id FROM node_sync_versions ORDER BY version_id'))
     .toEqual([{ version_id: 'a-good-head' }, { version_id: 'c-good-head' }]);
-  expect(await target.query('SELECT object_id FROM node_version_member_positions ORDER BY object_id'))
+  expect(await target.query('SELECT DISTINCT object_id FROM node_sync_versions ORDER BY object_id'))
     .toEqual([{ object_id: 'a-good' }, { object_id: 'c-good' }]);
   expect(await target.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_inbound_transfers'")).toEqual([]);
 }

@@ -10,11 +10,8 @@ import { createBetterSqliteDbPort } from '../../../../../electron/database/bette
 import { textBranch } from '../../../../../electron/database/topicTextState.testSupport.js';
 import { bootstrapCompanionDatabase } from '../../../../../lib/core/database/companionDatabaseLifecycle.js';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort.js';
-import { applyNodeMemberPosition } from '../../../../../lib/core/sync/nodeVersionMemberPositionApply.js';
-import { nodePositionFactId } from '../../../../../lib/core/sync/nodeVersionMemberPositionFact.js';
 import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor.js';
-import { hashText } from '../../../../../lib/core/sync/syncNodeResolution.js';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract.js';
 
 const owner = vi.hoisted(() => ({ db: null as DbPort | null }));
@@ -66,7 +63,7 @@ async function pending(db: DbPort, applied: boolean) {
     source.identity_key, applied ? event.restored_at : null, event.restored_at]);
 }
 
-it('receives a third member version declaration from the restore source and keeps restore pending after reopening', async () => {
+it('receives a third member from the restore source and keeps restore pending after reopening', async () => {
   const sender = currentCompanionFixture();
   const target = currentCompanionFixture();
   try {
@@ -78,22 +75,12 @@ it('receives a third member version declaration from the restore source and keep
     const version = textBranch('restored-version', 'Complete restored body', undefined, event.restored_at);
     await applySyncNodesWithDbPort(sender.port(), [version], { enqueueSearchInvalidations: false });
     await applySyncNodesWithDbPort(target.port(), [version], { enqueueSearchInvalidations: false });
-    const payload = { adopted_version_id: version.version_id!, device_identity_key: windows.identity_key,
-      group_id: groupId, library_epoch: 'windows-epoch', object_id: version.object_id,
-      pending_version_ids_json: '[]', proof_revision: 1, updated_at: event.restored_at };
-    const record = { object_type: 'node_position', object_id: nodePositionFactId(payload),
-      content_hash: hashText(JSON.stringify(payload)), payload_json: JSON.stringify(payload),
-      deleted_at: null, updated_at: event.restored_at };
-    await expect(applyNodeMemberPosition(target.port(), record)).rejects.toThrow('node_position_member_unknown');
     const state = await applyCompanionSyncGroupMemberState(incoming, source.identity_key);
     expect(state.normal_sync_ready).toBe(false);
     expect(state.state.restore).toEqual({ event, applied: false });
-    expect(await applyNodeMemberPosition(target.port(), record)).toBe(true);
     target.reopen(); owner.db = target.port();
-    expect(await applyNodeMemberPosition(target.port(), record)).toBe(false);
     expect((await loadCompanionSyncGroupMemberState()).restore).toEqual({ event, applied: false });
-    expect(target.main.prepare('SELECT adopted_version_id FROM node_version_member_positions').all())
-      .toEqual([{ adopted_version_id: version.version_id }]);
+    expect(target.main.prepare("SELECT state FROM sync_group_devices WHERE device_identity_key = ?").get(windows.identity_key)).toEqual({ state: 'active' });
     expect(target.main.prepare("SELECT content FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ content: version.body_text }]);
   } finally { owner.db = null; sender.close(); target.close(); }
 });

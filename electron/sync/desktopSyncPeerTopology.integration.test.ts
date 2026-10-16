@@ -4,6 +4,10 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+
 import { createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess, type DesktopFramedSyncFixtureSnapshot
 } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -35,6 +39,13 @@ it('converges simultaneous initiators and relays through one peer without an A/B
     expect(await round(a, hub)).toEqual({ complete: true });
     for (const device of [a, b, hub]) assertBodies(device,
       ['t326-a', 't326-a-relay', 't326-b', 't326-b-relay']);
+    const before = await Promise.all([a, b, hub].map(inventory));
+    expect(compareFramedSyncInventories({ local: before[0]!, remote: before[1]! })).toEqual([]);
+    expect(compareFramedSyncInventories({ local: before[0]!, remote: before[2]! })).toEqual([]);
+    for (const [source, target] of [[a, hub], [hub, b], [b, a]]) {
+      expect(await round(source!, target!)).toEqual({ complete: true });
+    }
+    expect(await Promise.all([a, b, hub].map(inventory))).toEqual(before);
     const restarted = await fixture.restartRight();
     assertBodies(restarted, ['t326-a', 't326-a-relay', 't326-b', 't326-b-relay']);
   } finally {
@@ -78,6 +89,14 @@ function assertBodies(device: Device, ids: string[]) {
       content: ({ 't326-a': 'From A', 't326-b': 'From B', 't326-a-relay': 'A through hub',
         't326-b-relay': 'B through hub', 't326-online': 'Offline peer must not block' }[id]),
       current_version_id: expect.any(String) })));
-    expect(db.prepare('SELECT count(*) FROM node_version_member_positions').pluck().get()).toBeGreaterThan(0);
+    expect(db.prepare('SELECT count(*) FROM node_version_device_revisions').pluck().get()).toBeGreaterThan(0);
+  } finally { db.close(); }
+}
+
+async function inventory(device: Device) {
+  const db = new Database(device.snapshot.databasePath, { readonly: true });
+  try {
+    expect(db.prepare("SELECT object_id FROM sync_object_state WHERE object_type = 'node_position'").all()).toEqual([]);
+    return await readFramedSyncInventory(createBetterSqliteDbPort(db));
   } finally { db.close(); }
 }

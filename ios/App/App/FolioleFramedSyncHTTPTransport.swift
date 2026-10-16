@@ -95,7 +95,7 @@ enum FolioleFramedSyncHTTPTransport {
             return identities.range(of: "^[A-Za-z0-9_,:-]{1,3000}$", options: .regularExpression) != nil
                 ? "\(fallback):\(detail)" : fallback
         }
-        let prefixes = ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
+        let prefixes = ["framed_sync_node_parent_missing:",
             "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"]
         guard let prefix = prefixes.first(where: detail.hasPrefix) else { return fallback }
         let parentID = String(detail.dropFirst(prefix.count))
