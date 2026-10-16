@@ -16,6 +16,7 @@ type CadenceArgs<Input> = {
   didSync?: (result: unknown) => boolean;
   getActiveRun?: () => Promise<unknown> | null;
   now?: () => number;
+  holdPendingMutation?: () => () => void;
   run: (input: Input) => Promise<unknown> | null;
 };
 
@@ -27,6 +28,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   private lastActualSyncAt = 0;
   private readonly now: () => number;
   private retryNotBeforeAt = 0;
+  private releasePendingMutation: (() => void) | null = null;
   private stopped = false;
   private trailingInput: Input | null = null;
   private trailingTimer: Timer | null = null;
@@ -74,6 +76,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
       );
     }
     if (!this.eligible) {
+      this.releaseMutationHold();
       this.clearTimer(this.trailingTimer);
       this.trailingTimer = null;
     } else if (this.trailingInput) {
@@ -95,8 +98,14 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
 
   private clearTrailing() {
     this.trailingInput = null;
+    this.releaseMutationHold();
     this.clearTimer(this.trailingTimer);
     this.trailingTimer = null;
+  }
+
+  private releaseMutationHold() {
+    this.releasePendingMutation?.();
+    this.releasePendingMutation = null;
   }
 
   private externalActiveRun() {
@@ -123,7 +132,8 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   private scheduleTrailingCheck() {
     this.clearTimer(this.trailingTimer);
     this.trailingTimer = null;
-    if (!this.trailingInput || this.stopped) return;
+    if (!this.trailingInput || this.stopped || !this.eligible) return;
+    this.releasePendingMutation ??= this.args.holdPendingMutation?.() ?? null;
     const delay = Math.max(0, this.trailingWindowUntil - this.now());
     this.trailingTimer = setTimeout(() => {
       this.trailingTimer = null;
@@ -141,7 +151,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     }
     if (this.now() < this.trailingWindowUntil) return this.scheduleTrailingCheck();
     const input = this.trailingInput;
-    this.trailingInput = null;
+    this.clearTrailing();
     await this.startMutationRun(input);
   }
 

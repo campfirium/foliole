@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { attachmentWorkBudget, hasWaitingSyncData } from '../../lib/core/sync/attachmentWorkBudget';
 import {
   publishCompanionHighValueMutation,
   publishCompanionSyncMutationRevision
@@ -54,6 +55,33 @@ beforeEach(() => {
 
 afterEach(() => vi.useRealTimers());
 
+it('keeps attachments yielding while the cadence holds a committed edit', async () => {
+  let finishRun: (() => void) | undefined;
+  const active = new Promise<void>(resolve => { finishRun = resolve; });
+  const run = vi.fn().mockResolvedValueOnce('completed').mockImplementationOnce(() => active)
+    .mockResolvedValue('completed');
+  const callbacks = [vi.fn(), vi.fn(), vi.fn(), vi.fn()] as const;
+  const hook = renderHook(() => useForegroundAutoSync(
+    ...callbacks, true, state, run
+  ));
+  try {
+    await act(async () => Promise.resolve());
+    await act(async () => { publishCompanionHighValueMutation(); });
+    publishCompanionHighValueMutation();
+    publishCompanionHighValueMutation();
+    expect(attachmentWorkBudget()()).toBe(true);
+    await act(async () => { finishRun?.(); });
+    expect(attachmentWorkBudget()()).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(5_000));
+    expect(run).toHaveBeenCalledTimes(3);
+    expect(hasWaitingSyncData()).toBe(false);
+  } finally {
+    finishRun?.();
+    hook.unmount();
+  }
+  expect(hasWaitingSyncData()).toBe(false);
+});
+
 it('runs immediately and merges a five-second high-value burst into one trailing sync', async () => {
   const { hook, run } = renderMutationSchedule();
   await act(async () => Promise.resolve());
@@ -97,7 +125,9 @@ it('retains an active-run mutation across background and syncs it on foreground'
 
   await act(async () => { publishCompanionHighValueMutation(); await Promise.resolve(); });
   publishCompanionHighValueMutation();
+  expect(hasWaitingSyncData()).toBe(true);
   await act(async () => lifecycle.backgroundHandlers[0]?.());
+  expect(hasWaitingSyncData()).toBe(false);
   finishRun?.('completed');
   await act(async () => vi.advanceTimersByTimeAsync(5_000));
   expect(run).toHaveBeenCalledTimes(2);
@@ -106,4 +136,21 @@ it('retains an active-run mutation across background and syncs it on foreground'
   await act(async () => vi.advanceTimersByTimeAsync(5_000));
   expect(run).toHaveBeenCalledTimes(3);
   hook.unmount();
+  expect(hasWaitingSyncData()).toBe(false);
+});
+
+it('releases a queued edit on unmount before the active run finishes', async () => {
+  let finish: (() => void) | undefined;
+  const active = new Promise<void>(resolve => { finish = resolve; });
+  const run = vi.fn().mockResolvedValueOnce('completed').mockReturnValue(active);
+  const hook = renderHook(() => useForegroundAutoSync(
+    vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
+  ));
+  await act(async () => Promise.resolve());
+  await act(async () => { publishCompanionHighValueMutation(); });
+  publishCompanionHighValueMutation();
+  expect(hasWaitingSyncData()).toBe(true);
+  hook.unmount();
+  expect(hasWaitingSyncData()).toBe(false);
+  await act(async () => { finish?.(); });
 });

@@ -1,5 +1,6 @@
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef } from 'react';
 
+import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget';
 import { createMemberSyncCadence, type MemberSyncCadence } from '../../lib/core/sync/memberSyncCadence';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
@@ -120,6 +121,7 @@ export function useForegroundAutoSync(
     const cadence = createMemberSyncCadence<ForegroundSyncReason>({
       didSync: (result) => result === 'completed',
       getActiveRun: () => loadActiveCompanionSyncRun()?.completion ?? null,
+      holdPendingMutation: waitForAttachmentWorkYield,
       run: (reason) => runForegroundSyncCheck(reason)
     });
     cadenceRef.current = cadence;
