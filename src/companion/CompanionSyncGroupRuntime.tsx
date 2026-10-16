@@ -25,6 +25,7 @@ export function CompanionSyncGroupRuntime(props: {
   const { bootstrapState, workspaceSync } = props;
   const [group, setGroup] = useState<SyncGroupPayload | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const providerRequestRef = useRef<string | null>(null);
   const providerGroupRef = useRef<SyncGroupPayload | null>(null);
   const mutationRevision = useSyncExternalStore(
     subscribeCompanionSyncMutationRevision,
@@ -52,10 +53,15 @@ export function CompanionSyncGroupRuntime(props: {
 
   useEffect(() => {
     if (!isNativeCompanionSyncGroupRuntime() || !loaded) return;
+    const request = JSON.stringify([bootstrapState.runtime_kind, bootstrapState.booted_at,
+      bootstrapState.database_path, providerIdentity, workspaceSync.syncParticipation.participating]);
+    if (providerRequestRef.current === request) return;
+    providerRequestRef.current = request;
     void reconcileCompanionSyncGroupProvider(
       bootstrapState, providerGroupRef.current,
       workspaceSync.syncParticipation.participating
     ).catch((error) => {
+      if (providerRequestRef.current === request) providerRequestRef.current = null;
       console.error('[companion-sync-group] provider reconciliation failed', error);
     });
   }, [bootstrapState, loaded, providerIdentity, workspaceSync.syncParticipation.participating]);
