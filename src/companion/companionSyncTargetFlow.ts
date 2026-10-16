@@ -1,7 +1,7 @@
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
-import { captureCompanionDesktopRound, ensureCompanionDesktopSession, waitForCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
+import { captureCompanionDesktopRound, ensureCompanionDesktopSession, invalidateCompanionDesktopSession, waitForCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import type { CompanionWorkspaceSyncTarget } from '../shared/platform/companion/network/companionWorkspaceEndpoint';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
@@ -83,11 +83,9 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
     args.syncArgs.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     if (args.target.protocolIncompatible) throw new Error('sync_group_peer_incompatible');
     await bindCompanionWorkspaceSyncTarget(args.target);
-    const memberState = await exchangeCompanionSyncGroupMemberState(args.target);
-    if (memberState.localExited) throw new Error('sync_group_local_device_removed');
-    if (memberState.peerRemoved) return 'skipped';
-    if (memberState.normalSyncReady === false && !memberState.restoreFromPeer) return 'skipped';
-    await ensureTargetSession(args.target);
+    const memberState = await validateTargetMembership(args.target);
+    if (!memberState) return 'skipped';
+    await ensureTargetSession(args.target, memberState.peerLibraryEpoch);
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     if (args.isManualRequested()) triggerReason = 'manual';
     await writeCompanionSyncActivity({
@@ -126,9 +124,23 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
   }
 }
 
-async function ensureTargetSession(target: CompanionWorkspaceSyncTarget) {
+async function validateTargetMembership(target: CompanionWorkspaceSyncTarget) {
+  const state = await exchangeCompanionSyncGroupMemberState(target).catch(async error => {
+    await invalidateCompanionDesktopSession(target.endpointUrl);
+    throw error;
+  });
+  if (state.localExited || state.peerRemoved || (state.normalSyncReady === false && !state.restoreFromPeer)) {
+    await invalidateCompanionDesktopSession(target.endpointUrl);
+    if (state.localExited) throw new Error('sync_group_local_device_removed');
+    return null;
+  }
+  return state;
+}
+
+async function ensureTargetSession(target: CompanionWorkspaceSyncTarget, libraryEpoch: string | null | undefined) {
   if (target.deviceId && target.platform && !isMobileSyncPlatform(target.platform)) {
-    await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId);
+    await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId,
+      libraryEpoch ? { target, libraryEpoch } : undefined);
   }
 }
 

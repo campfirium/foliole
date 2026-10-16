@@ -9,7 +9,7 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
-import { companionDesktopSessionPeer } from './companionDesktopSession.js';
+import { companionDesktopSessionPeer, companionDesktopSessionTarget } from './companionDesktopSession.js';
 import { createSignedRequestHeaders } from './signedRequest';
 
 export interface CompanionWorkspaceSyncTarget {
@@ -29,11 +29,13 @@ export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspac
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   endpointUrl: string,
-  options: CompanionDiscoveryOptions = {}
+  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean } = {}
 ): Promise<CompanionWorkspaceSyncTarget[]> {
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
+  const active = companionDesktopSessionTarget(group.group_id);
+  if (active && !options.mobilePeersOnly) return [active];
   const discovered = await discoverCompanionDesktops(normalized, {
     ...options, requiredGroupId: group.group_id
   });
@@ -42,6 +44,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
       && candidate.discovery.group_id === group.group_id
       && candidate.discovery.provider_device_id !== group.local_device_identity_key;
   });
+  if (matches.length === 0 && options.mobilePeersOnly) return [];
   if (matches.length === 0) {
     const incompatible = discovered.some((candidate) => candidate.compatibility.status === 'incompatible'
       && candidate.discovery.group_id === group.group_id);
@@ -52,8 +55,9 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     && candidate.discovery.provider_device_id !== group.local_device_identity_key);
   const desktops = matches.filter(match => !isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
   const selected = desktops.find(match => match.discovery.provider_device_id === companionDesktopSessionPeer()) ?? desktops[0];
-  const targets = matches.filter(match => isMobileSyncPlatform(match.discovery.provider_platform ?? '') || match === selected);
-  const incompatibleTargets = incompatiblePeers.filter(match => !selected
+  const mobiles = matches.filter(match => isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
+  const targets = selected && !options.mobilePeersOnly ? [selected, ...mobiles] : mobiles;
+  const incompatibleTargets = incompatiblePeers.filter(match => (!selected && !options.mobilePeersOnly)
     || isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
   return [...targets, ...incompatibleTargets].map((match) => {
     const known = group.devices.find((device) =>
@@ -71,7 +75,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoint(
   endpointUrl: string,
-  options: CompanionDiscoveryOptions = {}
+  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean } = {}
 ) {
   return (await resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl, options))[0]?.endpointUrl
     ?? normalizeEndpointUrl(endpointUrl);

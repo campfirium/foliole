@@ -170,3 +170,15 @@ it('does not schedule an incompatible second desktop after selecting a compatibl
   const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://mac:38641');
   expect(targets.map(target => target.deviceId)).toEqual(['device-mac']);
 });
+
+
+it('schedules the selected desktop before a phone discovered first', async () => {
+  runtime.discover.mockResolvedValue([
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',
+      discovery: { group_id: 'group-1', provider_device_id: 'device-mobile', provider_platform: 'android-capacitor' } },
+    { compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
+      discovery: { group_id: 'group-1', provider_device_id: 'device-mac', provider_platform: 'darwin' } }
+  ]);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://mac:38641');
+  expect(targets.map(target => target.deviceId)).toEqual(['device-mac', 'device-mobile']);
+});

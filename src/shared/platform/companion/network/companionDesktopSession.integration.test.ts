@@ -4,10 +4,11 @@ import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 
 import { decryptWorkgroupPayloadNode } from '../../../../../electron/sync/workgroupAeadNode.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 import { syncSessionReplySchema } from '../../../../../lib/platform/syncSessionContract.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 
-import { captureCompanionDesktopRound, closeCompanionDesktopSession, ensureCompanionDesktopSession,
+import { captureCompanionDesktopRound, closeCompanionDesktopSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
   subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession.js';
 import { requestCompanionSyncSession } from './companionSyncSessionHttp.js';
 
@@ -100,7 +101,14 @@ it('automatically pulls desktop changes while the phone waits and reconciles aft
   let unsubscribe = () => {};
   try {
     await mobile.fixture.right.seed({ nodeId: 'automatic-edit', title: 'Automatic', content: 'Before' });
-    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    const target = { endpointUrl: endpoint, deviceId: mobile.fixture.rightSnapshot.deviceId, groupId: 't326-group',
+      platform: 'darwin', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
+    const binding = { target, libraryEpoch: `${target.deviceId}-epoch` };
+    await ensureCompanionDesktopSession(endpoint, target.deviceId, binding);
+    const requestsAfterOpen = native.http.mock.calls.length;
+    await ensureCompanionDesktopSession(endpoint, target.deviceId, binding);
+    expect(native.http.mock.calls.length).toBe(requestsAfterOpen);
+    expect(companionDesktopSessionTarget('t326-group')).toEqual(target);
     await mobile.sync();
     const baseVersionId = mobile.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?')
       .pluck().get('automatic-edit');
@@ -115,6 +123,7 @@ it('automatically pulls desktop changes while the phone waits and reconciles aft
     expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('automatic-edit'))
       .toBe('Delivered automatically');
     await closeCompanionDesktopSession();
+    expect(companionDesktopSessionTarget('t326-group')).toBeNull();
     await mobile.fixture.right.invoke('local_content_edit', { nodeId: 'automatic-edit',
       baseVersionId: 'automatic-desktop-version', versionId: 'offline-desktop-version', content: 'While disconnected',
       hostName: 'Desktop', updatedAt: '2026-10-16T02:01:00Z' });

@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
   syncCompanionObjectsFromDesktop,
@@ -56,6 +57,7 @@ export interface RunCompanionStreamSyncArgs {
 }
 
 export interface TryForegroundAutoSyncArgs {
+  discoverMobilePeers?: boolean;
   triggeredAt?: string;
   cancelled: () => boolean;
   signal?: AbortSignal;
@@ -166,6 +168,23 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       outcomes.push(await tryForegroundAutoSyncTarget(
         { ...targetArgs, triggeredAt }, target, runCompanionStreamSync
       ));
+    }
+    if (!args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
+      try {
+        const peers = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
+          allowWhileNotParticipating: args.triggerReason === 'manual', mobilePeersOnly: true
+        });
+        for (const peer of peers) {
+          if (args.cancelled()) break;
+          if (!isMobileSyncPlatform(peer.platform ?? '') || targets.some(target => target.deviceId === peer.deviceId)) continue;
+          outcomes.push(await tryForegroundAutoSyncTarget(
+            { ...resetSharedContinuation(args), triggeredAt }, peer, runCompanionStreamSync
+          ));
+        }
+      } catch (error) {
+        args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
+        outcomes.push('failed');
+      }
     }
     return combineForegroundSyncOutcomes(outcomes);
   } finally {

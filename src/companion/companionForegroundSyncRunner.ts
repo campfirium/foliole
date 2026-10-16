@@ -19,6 +19,7 @@ const AUTO_SYNC_BACKLOG_CONTINUE_DELAY_MS = 1_000;
 type RunForegroundSyncCheck = (reason: ForegroundSyncReason, endpointUrl?: string) => void;
 
 export type TryForegroundAutoSync = (args: {
+  discoverMobilePeers?: boolean;
   cancelled: () => boolean;
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
@@ -127,6 +128,7 @@ function startForegroundSync(
   let retryOutcome: Exclude<ForegroundAutoSyncOutcome, 'completed' | 'skipped'> | null = null;
   args.inFlightRef.current = true;
   const work = args.tryForegroundAutoSync({
+    discoverMobilePeers: reason === 'foreground' || reason === 'freshness' || reason === 'endpoint-ready',
     cancelled: args.cancelled,
     continuationMode: reason === 'retry' ? args.resourceContinuationModeRef.current : 'full',
     onContinuationModeChange: (mode) => {

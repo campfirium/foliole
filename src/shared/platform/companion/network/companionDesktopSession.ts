@@ -1,13 +1,25 @@
 import { syncSessionReplySchema, type SyncSessionReply } from '../../../../../lib/platform/syncSessionContract.js';
 
 import { requestCompanionSyncSession } from './companionSyncSessionHttp.js';
+import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint.js';
+
+type Binding = { target: CompanionWorkspaceSyncTarget; libraryEpoch: string };
 
 type Session = { endpoint: string; peer: string; reply: SyncSessionReply; waiting: boolean; active: boolean;
-  controller: AbortController };
+  controller: AbortController; binding?: Binding };
 let current: Session | null = null;
 let opening: Promise<Session> | null = null;
 let generation = 0;
 let wake: (() => Promise<unknown>) | null = null;
+
+export function companionDesktopSessionTarget(groupId: string) {
+  return current?.active && current.binding?.target.groupId === groupId
+    ? { ...current.binding.target } : null;
+}
+
+export function invalidateCompanionDesktopSession(endpoint: string) {
+  if (current?.endpoint === endpoint) void closeCompanionDesktopSession();
+}
 
 export function companionDesktopSessionPeer() { return current?.peer; }
 
@@ -29,14 +41,18 @@ export function subscribeCompanionDesktopChanges(onChange: () => Promise<unknown
   return () => { if (wake === onChange) wake = null; void closeCompanionDesktopSession(); };
 }
 
-export async function ensureCompanionDesktopSession(endpoint: string, peer: string) {
-  if (current?.endpoint === endpoint && current.peer === peer) return;
-  if (opening) { await opening; return ensureCompanionDesktopSession(endpoint, peer); }
+export async function ensureCompanionDesktopSession(endpoint: string, peer: string, binding?: Binding) {
+  if (current?.endpoint === endpoint && current.peer === peer
+    && (!binding || current.binding?.libraryEpoch === binding.libraryEpoch)) {
+    if (binding) current.binding = binding;
+    return;
+  }
+  if (opening) { await opening; return ensureCompanionDesktopSession(endpoint, peer, binding); }
   if (current) void closeCompanionDesktopSession();
   const expected = generation;
   const work = open(endpoint, peer, expected);
   opening = work;
-  try { current = await work; }
+  try { current = await work; if (binding) current.binding = binding; }
   finally { if (opening === work) opening = null; }
 }
 
