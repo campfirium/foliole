@@ -63,6 +63,7 @@
 		50F300111FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F300121FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift */; };
 		50F400111FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F400121FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift */; };
 		50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */; };
+		50F100711FED79650016851F /* FoliolePhysicalSyncInspectionUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100721FED79650016851F /* FoliolePhysicalSyncInspectionUITestSupport.swift */; };
 		50F100331FED79650016851F /* FoliolePhysicalT262OrderUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100341FED79650016851F /* FoliolePhysicalT262OrderUITestSupport.swift */; };
 		50F100411FED79650016851F /* FoliolePhysicalPermissionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */; };
 		50F220111FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */; };
@@ -192,6 +193,7 @@
 		50F300121FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalBrowseNavigationUITestSupport.swift; sourceTree = "<group>"; };
 		50F400121FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalTopicEditingUITestSupport.swift; sourceTree = "<group>"; };
 		50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupMutationUITestSupport.swift; sourceTree = "<group>"; };
+		50F100721FED79650016851F /* FoliolePhysicalSyncInspectionUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncInspectionUITestSupport.swift; sourceTree = "<group>"; };
 		50F100341FED79650016851F /* FoliolePhysicalT262OrderUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalT262OrderUITestSupport.swift; sourceTree = "<group>"; };
 		50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalPermissionUITests.swift; sourceTree = "<group>"; };
 		50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalOfflineJourneyUITests.swift; sourceTree = "<group>"; };
@@ -383,6 +385,7 @@
 				50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */,
 				50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */,
 				50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */,
+				50F100721FED79650016851F /* FoliolePhysicalSyncInspectionUITestSupport.swift */,
 				50F100341FED79650016851F /* FoliolePhysicalT262OrderUITestSupport.swift */,
 				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
 				50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */,
@@ -663,6 +666,7 @@
 				50F100411FED79650016851F /* FoliolePhysicalPermissionUITests.swift in Sources */,
 				50F220111FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift in Sources */,
 				50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */,
+				50F100711FED79650016851F /* FoliolePhysicalSyncInspectionUITestSupport.swift in Sources */,
 				50F100331FED79650016851F /* FoliolePhysicalT262OrderUITestSupport.swift in Sources */,
 				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
 				50F200111FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift in Sources */,
