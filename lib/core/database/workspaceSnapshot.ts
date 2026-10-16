@@ -4,6 +4,7 @@ import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
 import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
+import { READWISE_SOURCE_JOIN_SQL } from './workspaceReadwiseSourceSql.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import { buildBodySelection } from './workspaceSnapshotBodySelection.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
@@ -87,12 +88,6 @@ interface NodeOrderRow extends DatabaseRow {
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
-const READWISE_SOURCE_JOIN_SQL = `LEFT JOIN (
-  SELECT latest_node_id, remote_import_state_json,
-    ROW_NUMBER() OVER (PARTITION BY latest_node_id ORDER BY last_imported_at DESC) AS source_rank
-  FROM import_sources WHERE remote_provider = 'readwise' AND latest_node_id IS NOT NULL
-) readwise_source ON readwise_source.latest_node_id = n.id AND readwise_source.source_rank = 1`;
-
 
 function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
   const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);

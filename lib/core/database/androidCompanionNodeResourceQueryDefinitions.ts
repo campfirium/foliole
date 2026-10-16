@@ -7,6 +7,7 @@ import {
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
+import { READWISE_SOURCE_JOIN_SQL } from './workspaceReadwiseSourceSql.js';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL, VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
@@ -140,14 +141,14 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'ELSE NULL END AS collection_source_content, ' +
       'n.virtual_filter, NULL AS reveal, CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal, ' +
       'n.anchor_link, n.image_regions, n.image_sources, n.resource_references, n.import_source_fingerprint, n.import_content_fingerprint, ' +
-      "(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i " +
-      "WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, " +
+      "json_extract(readwise_source.remote_import_state_json, '$.remoteLifecycle') AS readwise_remote_lifecycle, " +
       'n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
       'NULL AS position, ' +
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
       'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
       'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id ' +
+      `${READWISE_SOURCE_JOIN_SQL} ` +
       'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ' +
