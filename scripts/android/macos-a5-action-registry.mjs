@@ -1,4 +1,6 @@
 const ACTION_OVERRIDES = Object.freeze({
+  'existing-sync-preflight': { deviceLeaseMode: 'readonly-lifecycle',
+    formalSourceClass: 'source-free-readonly', mutatesFixedA5: false },
   'bundle-release': { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'unsigned-release-bundle', mutatesFixedA5: false },
   deploy: { requiresDataProtection: false },

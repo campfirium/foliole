@@ -5,7 +5,25 @@ import process from 'node:process';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+
+import { dispatchMacosA5Action } from './macos-a5-action-dispatch.mjs';
+import { inspectExistingSyncDevice } from './macos-a5-existing-sync-readiness-runner.mjs';
+
+vi.mock('./macos-a5-existing-sync-readiness-runner.mjs', () => ({ inspectExistingSyncDevice: vi.fn() }));
+
+it('binds read-only preflight to the daily library and refuses unreviewed differences', async () => {
+  vi.mocked(inspectExistingSyncDevice).mockResolvedValue({ resultStatus: 'approval_required' });
+  const assertFixed = vi.fn();
+  const build = vi.fn();
+  await expect(dispatchMacosA5Action({ action: 'existing-sync-preflight', assertFixed, build,
+    paths: { adb: '/adb', desktopDevLibrary: '/different-controller-library' } }))
+    .rejects.toThrow('content differences require review');
+  expect(inspectExistingSyncDevice).toHaveBeenCalledWith({ adb: '/adb',
+    desktopDatabase: '/Users/roamer/Documents/Foliole/Data/foliole.db' });
+  expect(assertFixed).toHaveBeenCalledOnce();
+  expect(build).not.toHaveBeenCalled();
+});
 
 it('runs the sync acceptance controller from the same source root as its APK', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a5-frozen-dispatch-'));

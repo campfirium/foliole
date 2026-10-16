@@ -33,18 +33,20 @@ const workspace = {
   pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
 };
 
-it('accepts existing Sync Group authority without legacy pairing credentials', () => {
-  expect(runMacosA5ExistingSyncPreflight(
-    { adb: '/adb', buildRoot: '/repo' }, runFor(groupState, workspace)
-  )).toEqual(groupState);
+it('uses the current-model inspection against the same library the scenario will open', () => {
+  const ready = { resultStatus: 'ready', differences: [], syncGroupId: 'group-1' };
+  const run = vi.fn().mockReturnValue(result('[android-data] existing-sync-readiness=', ready));
+  expect(runMacosA5ExistingSyncPreflight({ adb: '/adb', buildRoot: '/repo', desktopDevLibrary: '/library' }, run))
+    .toEqual(ready);
+  expect(run.mock.calls[0][1]).toEqual(['/repo/scripts/android/macos-a5-existing-sync-readiness-runner.mjs',
+    '/adb', '/library/Data/foliole.db']);
 });
 
-it('rejects ambiguous Sync Group credentials even when legacy pairing exists', () => {
-  expect(() => runMacosA5ExistingSyncPreflight(
-    { adb: '/adb', buildRoot: '/repo' }, runFor({
-      ...groupState, pairingCredentialsPresent: true, syncGroupPeerConflict: true
-    }, workspace)
-  )).toThrow('authorized existing Sync Group state');
+it('rejects unapproved content differences', () => {
+  const run = vi.fn().mockReturnValue(result('[android-data] existing-sync-readiness=',
+    { resultStatus: 'approval_required' }, 77));
+  expect(() => runMacosA5ExistingSyncPreflight({ adb: '/adb', buildRoot: '/repo', desktopDevLibrary: '/library' }, run))
+    .toThrow('content differences require review');
 });
 
 it('reads protected Sync Group facts without treating a missing secure key as authority', () => {

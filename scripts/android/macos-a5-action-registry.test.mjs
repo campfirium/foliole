@@ -6,6 +6,13 @@ import {
   assertFormalMacosA5Action, assertRegisteredMacosA5Action
 } from './macos-a5-action-registry.mjs';
 
+it('inspects the existing daily group without building or starting a hidden desktop', () => {
+  expect(assertRegisteredMacosA5Action('existing-sync-preflight')).toMatchObject({
+    deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
+    mutatesFixedA5: false, requiresHiddenDesktopRuntime: false
+  });
+});
+
 it('keeps build and status outside the fixed A5 mutation lease', () => {
   expect(assertRegisteredMacosA5Action('build')).toMatchObject({
     deviceLeaseMode: null, formalSourceClass: 'frozen-build', formalTarget: 'build-capsule',

@@ -82,18 +82,15 @@ export function inspectMacosA5SyncGroupFacts(paths, run = spawnSync) {
 }
 
 export function runMacosA5ExistingSyncPreflight(paths, run = spawnSync) {
-  const pairState = inspectMacosA5SyncGroupFacts(paths, run);
-  const groupAuthority = pairState.syncGroupCredentialsPresent === true
-    && pairState.syncGroupPeerConflict === false
-    && /^[0-9a-f]{16}$/u.test(pairState.syncGroupRemotePeerFingerprint ?? '')
-    && /^[0-9a-f]{16}$/u.test(pairState.localMemberAuthorizationFingerprint ?? '')
-    && typeof pairState.syncGroupId === 'string'
-    && typeof pairState.syncGroupTimelineId === 'string'
-    && pairState.activeSyncGroupMemberCount >= 2;
-  if (!groupAuthority) {
-    throw new Error('Fixed A5 no longer matches the authorized existing Sync Group state.');
+  const result = evidence(process.execPath, [
+    path.join(paths.buildRoot, 'scripts/android/macos-a5-existing-sync-readiness-runner.mjs'),
+    paths.adb, path.join(paths.desktopDevLibrary, 'Data', 'foliole.db')
+  ], { cwd: paths.buildRoot }, run);
+  const readiness = parseEvidence(result.stdout, '[android-data] existing-sync-readiness=');
+  if (result.status !== 0 || readiness.resultStatus !== 'ready') {
+    throw new Error('Existing A5 content differences require review before sync.');
   }
-  return pairState;
+  return readiness;
 }
 
 export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
