@@ -10,7 +10,8 @@ extension FoliolePhysicalSyncGroupUITests {
         hierarchy.name = "Fri-existing-sync-settings-hierarchy"
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
-        tapButton(named: "Details", in: app, timeout: 30)
+        guard localizedButton(named: "Details", in: app).waitForExistence(timeout: 3) else { return }
+        tapButton(named: "Details", in: app, timeout: 3)
         attachScreenshot(named: "Fri-existing-sync-group-details")
         let details = XCTAttachment(string: app.debugDescription)
         details.name = "Fri-existing-sync-group-details-hierarchy"

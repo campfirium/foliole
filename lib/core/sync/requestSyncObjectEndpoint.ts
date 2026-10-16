@@ -6,7 +6,7 @@ import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
 import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from './requestSyncFiles.js';
 import { applyRequestSyncObject } from './requestSyncObjectApply.js';
-import { requestSyncObjectMessages, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
+import { assertRequestSyncObjectSource, requestSyncObjectMessages, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages } from './requestSyncObjectReceiver.js';
 import { writeRequestSyncSnapshot } from './requestSyncSnapshot.js';
 import { prepareRequestSyncWire, readRequestSyncWire,
@@ -31,7 +31,7 @@ export async function sendRequestSyncObject<T>(host: RequestSyncDatabaseHost, in
   return withRequestSyncFiles(host.files, async files => {
     const entry = await host.readSnapshot(db => writeRequestSyncSnapshot(db, input.difference, files), input.signal);
     const header = { requestId: crypto.getRandomValues(new Uint8Array(16)),
-      globalId: entry.globalId, objectType: entry.objectType, sourceStateHash: entry.sharedStateHash };
+      globalId: entry.globalId, objectType: entry.objectType, currentVersionId: entry.currentVersionId ?? '', sourceStateHash: entry.sharedStateHash };
     const stream = await prepareRequestSyncWire({ context: input.context, groupKey: input.groupKey,
        ...(input.signal ? { signal: input.signal } : {}),
       messages: contextId => requestSyncObjectMessages(header, contextId, files) });
@@ -49,7 +49,7 @@ export async function receiveRequestSyncObject(host: RequestSyncDatabaseHost, in
   peerState: SyncGroupMemberStatePayload;
   preamble: Uint8Array;
   frames: AsyncIterable<RequestSyncWireFrame>;
-  expectedObject: { objectType: string; globalId: string };
+  expectedObject: { objectType: string; globalId: string; sourceSnapshot?: FramedSyncInventoryDifference['sourceSnapshot'] };
   signal?: AbortSignal;
   objectOptions?: ApplySyncObjectsWithDbPortOptions;
 }) {
@@ -59,6 +59,7 @@ export async function receiveRequestSyncObject(host: RequestSyncDatabaseHost, in
     if (header.globalId !== input.expectedObject.globalId || header.objectType !== input.expectedObject.objectType) {
       throw new Error('request_sync_object_identity_mismatch');
     }
+    assertRequestSyncObjectSource(header, input.expectedObject.sourceSnapshot);
     return applyReceivedRequestSyncObject(host, input, header, files);
   }, input.signal);
 }
@@ -69,6 +70,7 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
   input.signal?.throwIfAborted();
   const result = await host.write(async db => applyRequestSyncObject(db, {
     context: objectContext(input.context, input.author), globalId: header.globalId, objectType: header.objectType,
+    ...(header.currentVersionId ? { currentVersionId: header.currentVersionId } : {}),
     requestId: header.requestId, peerState: input.peerState,
     facts: async function* (_db, kinds) { yield* files.readFacts(kinds); }, loadBody: (_db, blob) => files.loadBody(blob),
     enqueueSearchInvalidations: host.enqueueSearchInvalidations ?? true,

@@ -13,6 +13,7 @@ export interface RequestSyncObjectHeader {
   objectType: string;
   globalId: string;
   sourceStateHash: Uint8Array;
+  currentVersionId: string;
 }
 
 export type RequestSyncMessage = Readonly<{ payloadCase: ProtocolPayloadCase; payload: unknown }>;
@@ -57,4 +58,14 @@ export async function* requestSyncObjectMessages(header: RequestSyncObjectHeader
   }
   yield { payloadCase: 'request_object_end', payload: { requestId: header.requestId,
     streamHash: digest.digest(), factCount: wireUint64(factCount), bodyCount: wireUint64(BigInt(bodyHashes.size)) } };
+}
+
+export function assertRequestSyncObjectSource(header: RequestSyncObjectHeader,
+  expected?: { sharedStateHash: Uint8Array; currentVersionId?: string | undefined }) {
+  if (!expected) return;
+  if (header.currentVersionId !== (expected.currentVersionId ?? '') ||
+      header.sourceStateHash.length !== expected.sharedStateHash.length ||
+      !header.sourceStateHash.every((value, index) => value === expected.sharedStateHash[index])) {
+    throw new Error('request_sync_object_source_mismatch');
+  }
 }

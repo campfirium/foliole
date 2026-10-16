@@ -29,7 +29,7 @@ export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHos
   })();
   if (input.mode === 'pull') {
     const request = await readRequestSyncDifference(messages);
-    const key = request?.facts[0];
+    const key = request;
     if (!request || !key) throw new Error('request_sync_object_identity_missing');
     const difference = await host.readSnapshot(async db => {
       const entry = await readFramedSyncInventoryEntry(db, key);

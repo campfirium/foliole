@@ -102,8 +102,8 @@
       "payload_case": "inventory_end"
     },
     {
-      "base64": "MlEKEAARIjNEVWZ3iJmqu8zd7v8SGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tNxogMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
-      "byte_length": 83,
+      "base64": "MmoKEAARIjNEVWZ3iJmqu8zd7v8SGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tNxogMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMyBG5vZGU6Bm5vZGUtMUIJdmVyc2lvbi03",
+      "byte_length": 108,
       "name": "difference-request",
       "payload_case": "difference_request"
     },
@@ -162,8 +162,8 @@
       "payload_case": "transfer_receipt"
     },
     {
-      "base64": "mgFCChAAESIzRFVmd4iZqrvM3e7/EgRub2RlGgZub2RlLWEiICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi",
-      "byte_length": 69,
+      "base64": "mgFNChAAESIzRFVmd4iZqrvM3e7/EgRub2RlGgZub2RlLWEiICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiKgl2ZXJzaW9uLTc=",
+      "byte_length": 80,
       "name": "request-object-header",
       "payload_case": "request_object_header"
     },
@@ -211,5 +211,5 @@
     }
   ],
   "protocol_version": 25,
-  "schema_sha256": "992f1d75a683307ad7012742b1e57886de160fe132aeb1dea4ccba6f987a1a77"
+  "schema_sha256": "f33e818ac57867d4614ff42e6cb15ab2b0762fcf315a45f4848689cc87477098"
 }

@@ -30,7 +30,7 @@ import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigra
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
-import { migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
+import { INVALIDATE_UNREADY_SYNC_DIGESTS, migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
@@ -119,6 +119,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 88 && targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   if (currentVersion < 89 && targetVersion >= 89) await retireCompanionForegroundIdentityTriggers(db);
   if (currentVersion < 90 && targetVersion >= 90) await migrateCompanionMissingCurrentVersionInventory(db);
+  if (currentVersion < 91 && targetVersion >= 91) await db.run(INVALIDATE_UNREADY_SYNC_DIGESTS);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

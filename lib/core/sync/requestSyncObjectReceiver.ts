@@ -75,7 +75,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
     if (!header) {
       header = readHeader(message);
     } else if (message.payloadCase === 'request_object_end') {
-      if (fragment || !bodies.complete || facts.size === 0 ||
+      if (fragment || !bodies.complete ||
           !same(bytes(message.payload.requestId, 'request_id'), header.requestId) ||
           !same(bytes(message.payload.streamHash, 'stream_hash'), digest.digest()) ||
           unsigned(message.payload.factCount, 'fact_count') !== BigInt(facts.size) ||
@@ -113,7 +113,11 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
 
 function readHeader(message: ValidatedProtocolMessage): RequestSyncObjectHeader {
   if (message.payloadCase !== 'request_object_header') throw new Error('request_sync_object_header_required');
+  if (message.payload.objectType === 'node' && !message.payload.currentVersionId) {
+    throw new Error('request_sync_current_version_unavailable');
+  }
   return { requestId: bytes(message.payload.requestId, 'request_id').slice(),
     objectType: text(message.payload.objectType, 'object_type'), globalId: text(message.payload.globalId, 'global_id'),
+    currentVersionId: typeof message.payload.currentVersionId === 'string' ? message.payload.currentVersionId : '',
     sourceStateHash: bytes(message.payload.sourceStateHash, 'source_state_hash').slice() };
 }

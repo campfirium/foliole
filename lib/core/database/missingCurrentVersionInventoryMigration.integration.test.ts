@@ -8,7 +8,7 @@ import { readFramedSyncInventory } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
 
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from './migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
 
 it.each(['desktop', 'companion'])('rebuilds %s missing-head inventory atomically without changing original facts', async host => {
   const sqlite = new Database(':memory:');
@@ -36,6 +36,6 @@ it.each(['desktop', 'companion'])('rebuilds %s missing-head inventory atomically
     expect(sqlite.prepare('SELECT count(*) FROM framed_sync_node_digest').pluck().get()).toBe(0);
     expect((await readFramedSyncInventory(db)).find(entry => entry.globalId === 'node-1'))
       .toMatchObject({ currentVersionId: 'current', unready: true });
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(host === 'desktop' ? 161 : 90);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(host === 'desktop' ? DATABASE_SCHEMA_VERSION : 90);
   } finally { sqlite.close(); }
 });

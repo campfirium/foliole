@@ -21,6 +21,7 @@ export interface RequestSyncObjectInput {
   globalId: string;
   objectType: string;
   requestId: Uint8Array;
+  currentVersionId?: string;
   peerState: SyncGroupMemberStatePayload;
   facts: FramedFactSource;
   loadBody: FramedBodyLoader;
@@ -65,6 +66,8 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     };
     const result = await applyFramedFactSources(tx, [source], { loadBody: input.loadBody,
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
+      ...(input.objectType === 'node' && input.currentVersionId
+        ? { currentVersion: { globalId: input.globalId, versionId: input.currentVersionId } } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (input.objectType === 'node') {
       await assertCurrentNodeParentChain(tx, input.globalId);

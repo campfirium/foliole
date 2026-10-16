@@ -12,7 +12,7 @@ it('roundtrips a receiver attachment demand without requesting any database or b
   const encoded = encodeValidatedProtocolMessage('difference_request', request);
   const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(encoded,
     FRAMED_SYNC_FRAME_TYPES.sessionControl));
-  expect(decoded).toEqual(request);
+  expect(decoded).toEqual({ ...request, objectType: '', globalId: '', currentVersionId: '' });
 });
 
 it.each([

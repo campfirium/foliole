@@ -3,9 +3,12 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { branch, identity } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import type { DbRow } from '../sync/dbPort.js';
 import { canonicalContentId, canonicalManifestBytes, canonicalTransferIdSync,
   type CanonicalManifest } from '../sync/framedSyncCanonicalManifest.js';
+import { requiredFramedSyncNodeVersionIds } from '../sync/framedSyncInventory.js';
+import { projectFramedSyncNodeIdentityFact } from '../sync/framedSyncNodeProjection.js';
 import { decodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
 
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
@@ -15,13 +18,13 @@ import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from './numberedMigrationLatestRegi
 let sqlite: Database.Database;
 afterEach(() => sqlite?.close());
 
-async function setup(protocolVersion = 25) {
+async function setup(protocolVersion = 25, selected?: CanonicalManifest) {
   sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   const context = { groupId: 'g', protocolVersion, senderDeviceId: 'A',
     senderLibraryEpoch: 'a', receiverDeviceId: 'B', receiverLibraryEpoch: 'b' };
-  const manifest = { blobs: [], facts: [{ blobs: [], body: [
+  const manifest = selected ?? { blobs: [], facts: [{ blobs: [], body: [
     { name: 'payload_json', value: { kind: 'string', value: 'Only surviving original setting' } }
   ], kind: 1, objectType: 'setting', globalId: 's', factId: 'state',
   sharedStateHash: new Uint8Array(32) }] } satisfies CanonicalManifest;
@@ -79,4 +82,17 @@ it.each([22, 23])('upgrades protocol %s publication payloads from schema 147', a
   expect(after!.canonical_manifest).toHaveLength(0);
   expect(sqlite.prepare('SELECT transfer_id, member_id FROM framed_sync_outbound_holds').all())
     .toEqual([{ transfer_id: Buffer.from(transferId), member_id: 'B' }]);
+});
+
+it('keeps the selected node version set when a legacy publication has no version states', async () => {
+  const record = identity(branch('selected', 'Body', branch('known-parent', 'Parent')));
+  const manifest = { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] };
+  const { db } = await setup(25, manifest);
+  migrate();
+  const [row] = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
+  const restored = readFramedSyncPublication(row!);
+  expect(restored.manifest).toEqual(manifest);
+  expect(restored.inventoryDifference?.sourceSnapshot.versionStates).toBeUndefined();
+  expect(restored.inventoryDifference?.need.frontierFactIds).toEqual(['selected']);
+  expect(requiredFramedSyncNodeVersionIds(restored.inventoryDifference!)).toEqual(['selected']);
 });

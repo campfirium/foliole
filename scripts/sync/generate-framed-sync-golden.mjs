@@ -127,7 +127,8 @@ function messageCases() {
     }], roundId } }),
     encodeCase('inventory-end', { inventoryEnd: { inventoryHash: contentId, roundId } }),
     encodeCase('difference-request', { differenceRequest: {
-      blobHashes: [blobHash], facts: [identity], roundId
+      blobHashes: [blobHash], facts: [identity], roundId,
+      objectType: identity.objectType, globalId: identity.globalId, currentVersionId: 'version-7'
     } }),
     encodeCase('transfer-proposal', { transferProposal: {
       blobCount: 1, contentId, factCount: 1, receiverDeviceId: 'device-b',
@@ -158,7 +159,7 @@ function messageCases() {
       receiverLibraryEpoch: 'epoch-b', transferId
     } }),
     encodeCase('request-object-header', { requestObjectHeader: {
-      requestId: roundId, objectType: 'node', globalId: 'node-a', sourceStateHash: contentId
+      requestId: roundId, objectType: 'node', globalId: 'node-a', currentVersionId: 'version-7', sourceStateHash: contentId
     } }),
     encodeCase('request-attachment', { requestAttachment: {
       requestId: roundId, operation: 'push', storageKey: 'a'.repeat(64) + '.pdf',

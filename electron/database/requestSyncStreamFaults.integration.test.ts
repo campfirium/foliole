@@ -92,7 +92,7 @@ async function seed(files: RequestSyncFiles, fault: Fault) {
   for (const blob of fact.blobs) await files.writeBody(blob, body);
   await files.writeFact(fact);
   return { requestId: new Uint8Array(16).fill(2), objectType: 'node', globalId: 'topic',
-    sourceStateHash: fact.sharedStateHash };
+    currentVersionId: fact.factId, sourceStateHash: fact.sharedStateHash };
 }
 
 async function* mutateMessages(

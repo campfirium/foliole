@@ -1,8 +1,7 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { assertFramedSyncDigest } from './framedSyncContract.js';
-import { changedNodeVersionIds } from './framedSyncNodeInventoryState.js';
-import { parseFramedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
+import { changedNodeVersionIds, needsNodeCurrentReference } from './framedSyncNodeInventoryState.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export type FramedSyncInventoryEntry = Readonly<{
@@ -45,17 +44,7 @@ export type FramedSyncDeferredObject = Readonly<{
 
 export function requiredFramedSyncNodeVersionIds(difference: FramedSyncInventoryDifference) {
   if (difference.objectType !== 'node') throw new Error('framed_sync_inventory_identity_invalid');
-  const ids = new Set(difference.need.frontierFactIds);
-  if (difference.need.sharedState || difference.need.resourceHashes.length > 0) {
-    if (difference.sourceSnapshot.currentVersionId) ids.add(difference.sourceSnapshot.currentVersionId);
-    else if (!difference.sourceSnapshot.versionStates) for (const id of difference.sourceSnapshot.frontierFactIds) ids.add(id);
-  }
-  for (const relationId of difference.need.requiredRelationIds) {
-    const relation = parseFramedSyncParentRelationFactId(relationId);
-    ids.add(relation.version_id);
-    ids.add(relation.parent_version_id);
-  }
-  return [...ids];
+  return [...difference.need.frontierFactIds];
 }
 
 function compareKey(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
@@ -123,7 +112,8 @@ function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInve
     stateFactIds: source.objectType === 'external_document' && resourceHashes.length > 0
       ? [...source.stateFactIds ?? []]
       : missingStrings(source.stateFactIds ?? [], destination?.stateFactIds ?? []),
-    sharedState: Boolean(source.unready || destination?.unready) || !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
+    sharedState: source.objectType === 'node' && source.versionStates ? needsNodeCurrentReference(source, destination)
+      : !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
   } satisfies FramedSyncInventoryNeed;
 }
 

@@ -50,7 +50,7 @@ async function prepareObject(db: DbPort, selection: RequestSyncBatchSelection,
     const difference = await selection.resolve(db);
     const entry = await writeRequestSyncSnapshot(db, difference, files);
     return { kind: 'object', files, header: { requestId: selection.requestId,
-      globalId: entry.globalId, objectType: entry.objectType, sourceStateHash: entry.sharedStateHash } };
+      globalId: entry.globalId, objectType: entry.objectType, currentVersionId: entry.currentVersionId ?? '', sourceStateHash: entry.sharedStateHash } };
   } catch (error) {
     signal?.throwIfAborted();
     return { kind: 'error', result: { requestId: selection.requestId, objectType: selection.objectType,

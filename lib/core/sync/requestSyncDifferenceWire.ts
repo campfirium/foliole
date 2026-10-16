@@ -21,7 +21,7 @@ export async function* requestSyncDifferenceMessages(difference: FramedSyncInven
       count = Math.max(1, Math.floor(count / 2));
     }
   }
-  if (!payload.facts.length) throw new Error('request_sync_object_identity_missing');
+  if (!payload.facts.length) yield { payloadCase: 'difference_request', payload };
 }
 
 export async function readRequestSyncDifference(messages: AsyncIterable<ValidatedProtocolMessage>) {
@@ -29,8 +29,10 @@ export async function readRequestSyncDifference(messages: AsyncIterable<Validate
   const identities = new Set<string>();
   for await (const message of messages) {
     const part = decodeFramedSyncDifferenceRequest(message);
-    if (part.resources.length || !part.facts.length) throw new Error('framed_sync_database_request_required');
-    const first = request?.facts[0] ?? part.facts[0]!;
+    if (part.resources.length) throw new Error('framed_sync_database_request_required');
+    const first = request ?? part;
+    if (part.globalId !== first.globalId || part.objectType !== first.objectType ||
+        part.currentVersionId !== first.currentVersionId) throw new Error('request_sync_difference_identity_mismatch');
     for (const fact of part.facts) {
       if (fact.globalId !== first.globalId || fact.objectType !== first.objectType) throw new Error('request_sync_single_object_required');
       const key = `${fact.kind}\0${fact.factId}`;

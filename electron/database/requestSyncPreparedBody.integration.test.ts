@@ -47,7 +47,7 @@ it.each([1, 6])('keeps an independent prepared request intact after source closu
     if (!entry) throw new Error('inventory_missing');
     const [difference] = compareFramedSyncInventories({ local: [entry], remote: [] });
     if (!difference) throw new Error('difference_missing');
-    const header = { requestId: new Uint8Array(16).fill(1), objectType: 'node', globalId: 'topic', sourceStateHash: entry.sharedStateHash };
+    const header = { requestId: new Uint8Array(16).fill(1), objectType: 'node', globalId: 'topic', currentVersionId: entry.currentVersionId ?? '', sourceStateHash: entry.sharedStateHash };
     const prepared = await withRequestSyncFiles(files, async request => {
       await writeRequestSyncSnapshot(source.db, difference, request);
       return Promise.all([0, 1].map(async () => {

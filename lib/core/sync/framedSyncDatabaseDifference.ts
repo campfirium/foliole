@@ -19,3 +19,9 @@ export function* iterateFramedSyncDatabaseDifferences(inventories: Parameters<ty
         need.reviewFactIds.length || need.stateFactIds?.length) yield { ...difference, need };
   }
 }
+
+/** Equal incomplete inventories carry no transferable work, but cannot confirm completion. */
+export function unreadyFramedSyncDatabaseObjectCount(inventories: Parameters<typeof compareFramedSyncInventories>[0]) {
+  return new Set([...inventories.local, ...inventories.remote].filter(entry => entry.unready)
+    .map(entry => `${entry.objectType}\0${entry.globalId}`)).size;
+}

@@ -66,6 +66,7 @@ it('rejects a retained old-algorithm summary and accepts a freshly captured summ
     ['node', 'current', [historical]], [], [], []
   ])));
   const request: Parameters<typeof resolveFramedSyncDifferenceRequest>[1] = {
+    globalId: current.globalId, objectType: 'node', currentVersionId: current.currentVersionId ?? '',
     blobHashes: [], resources: [], roundId: new Uint8Array(16),
     facts: [{ factId: 'current', globalId: 'node', kind: 2 as const, objectType: 'node' }],
     sourceStateHash: oldHash };

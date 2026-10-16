@@ -501,6 +501,21 @@
                       "type": "bytes",
                       "id": 5,
                       "protoName": "source_state_hash"
+                    },
+                    "objectType": {
+                      "type": "string",
+                      "id": 6,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 7,
+                      "protoName": "global_id"
+                    },
+                    "currentVersionId": {
+                      "type": "string",
+                      "id": 8,
+                      "protoName": "current_version_id"
                     }
                   }
                 },
@@ -977,6 +992,11 @@
                       "type": "bytes",
                       "id": 4,
                       "protoName": "source_state_hash"
+                    },
+                    "currentVersionId": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "current_version_id"
                     }
                   }
                 },

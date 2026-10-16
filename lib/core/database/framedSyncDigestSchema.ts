@@ -2,6 +2,8 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
+export const INVALIDATE_UNREADY_SYNC_DIGESTS = 'DELETE FROM framed_sync_node_digest WHERE unready != 0';
+
 /** Rebuildable entry digests; invalidated in the same transaction as their source projection. */
 export const FRAMED_SYNC_DIGEST_TABLES = [
   `CREATE TABLE IF NOT EXISTS framed_sync_node_digest (

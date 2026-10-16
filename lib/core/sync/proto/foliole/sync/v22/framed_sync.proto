@@ -149,6 +149,9 @@ message DifferenceRequest {
   repeated bytes blob_hashes = 3;
   repeated ResourceDemand resources = 4;
   bytes source_state_hash = 5;
+  string object_type = 6;
+  string global_id = 7;
+  string current_version_id = 8;
 }
 message ResourceDemand {
   string demand_id = 1;

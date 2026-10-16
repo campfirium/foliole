@@ -35,7 +35,6 @@ it('projects one remote Node difference into exact requested fact identities and
 
   expect(decoded.facts).toEqual([
     { factId: 'version-2', globalId: 'node-1', kind: 2, objectType: 'node' },
-    { factId: 'version-1', globalId: 'node-1', kind: 2, objectType: 'node' },
     { factId: JSON.stringify(['version-2', 'version-1', 0]), globalId: 'node-1', kind: 3, objectType: 'node' },
     { factId: 'review-1', globalId: 'node-1', kind: 4, objectType: 'node' }
   ]);
@@ -43,7 +42,7 @@ it('projects one remote Node difference into exact requested fact identities and
   expect(decoded.roundId).toEqual(hash(8, 16));
   expect(resolveFramedSyncDifferenceRequest(difference().sourceSnapshot, decoded)).toMatchObject({
     direction: 'local_to_remote', globalId: 'node-1', need: {
-      frontierFactIds: ['version-2', 'version-1'], requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0])],
+      frontierFactIds: ['version-2'], requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0])],
       reviewFactIds: ['review-1'], sharedState: true
     }
   });
@@ -83,4 +82,23 @@ it('rejects a local-to-remote difference because it does not need a pull request
   expect(() => projectFramedSyncDifferenceRequest({
     difference: difference('local_to_remote'), roundId: hash(8, 16)
   })).toThrow('framed_sync_difference_request_direction_invalid');
+});
+
+it('binds an empty fact selection to its object, current reference and actual source hash', () => {
+  const input = difference();
+  const source = { ...input.sourceSnapshot, currentVersionId: 'version-2', versionStates: [], unready: true };
+  const projected = projectFramedSyncDifferenceRequest({ roundId: hash(8, 16), difference: {
+    ...input, sourceSnapshot: source,
+    need: { frontierFactIds: [], requiredRelationIds: [], resourceHashes: [], reviewFactIds: [], sharedState: true }
+  } });
+  const request = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
+    projected.encoded, FRAMED_SYNC_FRAME_TYPES.sessionControl));
+  expect(request).toMatchObject({ facts: [], globalId: 'node-1', objectType: 'node', currentVersionId: 'version-2' });
+  expect(resolveFramedSyncDifferenceRequest(source, request).need.frontierFactIds).toEqual([]);
+  expect(() => resolveFramedSyncDifferenceRequest(source, { ...request, globalId: 'other' }))
+    .toThrow('framed_sync_difference_request_identity_mismatch');
+  expect(() => resolveFramedSyncDifferenceRequest(source, { ...request, currentVersionId: 'version-1' }))
+    .toThrow('framed_sync_difference_request_source_changed');
+  expect(() => resolveFramedSyncDifferenceRequest({ ...source, sharedStateHash: hash(9) }, request))
+    .toThrow('framed_sync_difference_request_source_changed');
 });

@@ -1,4 +1,4 @@
-import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
+import { compareFramedSyncDatabaseInventories, unreadyFramedSyncDatabaseObjectCount } from './framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
@@ -20,22 +20,25 @@ export const REQUEST_SYNC_MAX_PASSES = 4;
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
   let inventories = await port.exchangeInventory();
   let transferred = 0;
-  const initialPending = compareFramedSyncDatabaseInventories(inventories).length;
+  const initialPending = pendingObjects(inventories);
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const differences = compareFramedSyncDatabaseInventories(inventories);
-    if (!differences.length) return { complete: true, pending: 0, transferred, madeProgress: initialPending > 0 };
+    if (!differences.length) {
+      const pending = pendingObjects(inventories);
+      return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
+    }
     const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal);
     transferred += round.delivered.length;
     const next = await port.exchangeInventory();
     if (JSON.stringify(next.local) === JSON.stringify(inventories.local) &&
         JSON.stringify(next.remote) === JSON.stringify(inventories.remote)) {
-      const pending = Math.max(compareFramedSyncDatabaseInventories(next).length, round.deferred.length);
+      const pending = Math.max(pendingObjects(next), round.deferred.length);
       return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
     }
     inventories = next;
   }
-  const pending = compareFramedSyncDatabaseInventories(inventories).length;
+  const pending = pendingObjects(inventories);
   return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
 }
 
@@ -68,7 +71,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     } catch (error) {
       signal?.throwIfAborted();
       const detail = (error instanceof Error ? error.message : String(error)).replace(/^framed_sync_http_400:/u, '');
-      const badGraph = ['node_version_missing_parents:', 'node_version_graph_cycle', 'framed_sync_node_parent_cycle',
+      const badGraph = ['request_sync_current_version_unavailable', 'node_version_missing_parents:', 'node_version_graph_cycle', 'framed_sync_node_parent_cycle',
         'node_version_parent_identity_mismatch:'].some(prefix => detail.startsWith(prefix));
       const changed = detail === 'framed_sync_source_changed' || detail === 'framed_sync_difference_request_source_changed';
       if (!badGraph && !changed) throw error;
@@ -90,4 +93,9 @@ function* directionBatches(differences: readonly FramedSyncInventoryDifference[]
 
 function key(difference: FramedSyncInventoryDifference) {
   return `${difference.direction}\0${difference.objectType}\0${difference.globalId}`;
+}
+
+function pendingObjects(inventories: RequestSyncInventories) {
+  return Math.max(compareFramedSyncDatabaseInventories(inventories).length,
+    unreadyFramedSyncDatabaseObjectCount(inventories));
 }

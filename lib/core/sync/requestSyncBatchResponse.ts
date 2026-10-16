@@ -17,9 +17,9 @@ export async function respondRequestSyncBatch<T>(host: RequestSyncDatabaseHost,
       for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) yield decoded.message;
     })());
     const selections = requests.map(request => ({ requestId: request.roundId,
-      objectType: request.facts[0]!.objectType, globalId: request.facts[0]!.globalId,
+      objectType: request.objectType, globalId: request.globalId,
       resolve: async (db: Parameters<typeof readFramedSyncInventoryEntry>[0]) => {
-        const entry = await readFramedSyncInventoryEntry(db, request.facts[0]!);
+        const entry = await readFramedSyncInventoryEntry(db, request);
         if (!entry) throw new Error('framed_sync_difference_request_source_changed');
         return resolveFramedSyncDifferenceRequest(entry, request);
       } }));

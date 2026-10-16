@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
@@ -20,7 +20,7 @@ it('transfers a new version without retransmitting the history already held by i
     await applySyncNodesWithDbPort(source.db, history);
     await receive(source, target, history);
     await applySyncNodesWithDbPort(source.db, [branch('next', 'new content', history.at(-1))]);
-    const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db),
+    const differences = compareFramedSyncDatabaseInventories({ local: await readFramedSyncInventory(source.db),
       remote: await readFramedSyncInventory(target.db) });
     const difference = differences.find(value => value.direction === 'local_to_remote' && value.objectType === 'node');
     if (!difference) throw new Error('missing_node_difference');
@@ -28,7 +28,7 @@ it('transfers a new version without retransmitting the history already held by i
       await writeRequestSyncSnapshot(source.db, difference, files);
       const versions = [];
       for await (const fact of files.readFacts()) if (fact.kind === 2) versions.push(fact);
-      expect(versions.length).toBeLessThanOrEqual(2);
+      expect(versions.map(fact => fact.factId)).toEqual(['next']);
     });
     await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);

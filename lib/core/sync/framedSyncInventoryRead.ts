@@ -53,7 +53,7 @@ export function inventoryEntryFromRow(row: InventoryRow): FramedSyncInventoryEnt
     requiredRelationIds: ids.parse(JSON.parse(row.relations_json)),
     resourceHashes: hashes.parse(JSON.parse(row.resources_json)).map(hexToBytes),
     reviewFactIds: ids.parse(JSON.parse(row.reviews_json)),
-    sharedStateHash: unready ? new Uint8Array(32) : hash,
+    sharedStateHash: hash,
     ...(state ? { currentVersionId: state[1] ?? '', versionStates, unready } : {}),
     stateFactIds: ids.parse(JSON.parse(row.states_json))
   };

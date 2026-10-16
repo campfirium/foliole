@@ -39,7 +39,7 @@ export async function readRequestSyncBatchDifferences(messages: AsyncIterable<Va
     }
   }
   if (!requestId) throw new Error('request_sync_batch_end_missing');
-  const unique = new Set(requests.map(request => `${request.facts[0]!.objectType}\0${request.facts[0]!.globalId}`));
+  const unique = new Set(requests.map(request => `${request.objectType}\0${request.globalId}`));
   if (unique.size !== requests.length) throw new Error('request_sync_batch_identity_duplicate');
   return { requestId, requests };
 }

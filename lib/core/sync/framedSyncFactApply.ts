@@ -11,6 +11,7 @@ import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDe
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
+import { withRequestSyncCurrentVersion, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
 import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
@@ -24,6 +25,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; loadBody: FramedBodyLoader;
   enqueueSearchInvalidations?: boolean;
   requireCompleteVersionGraph?: boolean;
+  currentVersion?: RequestSyncCurrentVersion;
 }) {
   return db.transaction(async (tx) => {
     const nodes: CanonicalFact[] = [];
@@ -35,14 +37,18 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
             ![1, 2, 3, 4].includes(fact.kind)) throw new Error('framed_sync_process_fact_set_invalid');
         if (fact.kind === 2) nodes.push(fact);
       }
-      if (!identity) throw new Error('framed_sync_process_fact_set_invalid');
+      if (!identity && !options.currentVersion) throw new Error('framed_sync_process_fact_set_invalid');
     }
     const restoredSource = framedSyncNodeRecordSource(nodes, options.loadBody);
-    const nodeSource = options.requireCompleteVersionGraph
+    const validated = options.requireCompleteVersionGraph
       ? await requestSyncNodeSource(tx, restoredSource) : restoredSource;
-    await assertFramedSyncNodeParentDependencies(tx, nodeSource.records.filter((node) => !nodeSource.isIdentityOnly(node)));
+    await assertFramedSyncNodeParentDependencies(tx, validated.records.filter(record => !validated.isIdentityOnly(record)));
+    const selected = await withRequestSyncCurrentVersion(tx, validated, options.currentVersion);
+    const hasStoredReference = selected.records.some(record => !validated.records.includes(record));
+    const nodeSource = hasStoredReference ? await requestSyncNodeSource(tx, selected) : selected;
+    if (hasStoredReference) await assertFramedSyncNodeParentDependencies(tx, nodeSource.records);
     let generatedChanges = false;
-    if (nodes.length) {
+    if (nodeSource.records.length) {
       if (options.operation === 'local_restore') await applySyncNodeSourceWithDbPort(tx, nodeSource, { operation: 'local_restore' });
       else {
         const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false });

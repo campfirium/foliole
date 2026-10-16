@@ -62,6 +62,7 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
   } else if (payloadCase === 'difference_request') {
     fixedBytes(payload.roundId, 16, 'round_id');
     validateIdentityList(payload.facts);
+    if (!list(payload.resources).length) { text(payload.objectType, 'object_type'); text(payload.globalId, 'global_id'); }
     const sourceHash = bytes(payload.sourceStateHash ?? new Uint8Array(), 'source_state_hash');
     if (sourceHash.byteLength) assertFramedSyncDigest(sourceHash, 'source_state_hash');
     const hashes = list(payload.blobHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)

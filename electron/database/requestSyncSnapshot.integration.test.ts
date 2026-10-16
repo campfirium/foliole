@@ -56,7 +56,7 @@ it('spools a complete history with retired middle bodies and applies it without 
     await withRequestSyncFiles(files, async received => {
 
       const header = { requestId: new Uint8Array(16).fill(1), objectType: 'node', globalId: 'topic',
-        sourceStateHash: entry.sharedStateHash };
+        currentVersionId: entry.currentVersionId ?? '', sourceStateHash: entry.sharedStateHash };
       const context: RequestSyncAuthenticatedContext = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
         initiatorDeviceId: 'source', initiatorLibraryEpoch: 'source-epoch',
         responderDeviceId: 'target', responderLibraryEpoch: 'target-epoch' };

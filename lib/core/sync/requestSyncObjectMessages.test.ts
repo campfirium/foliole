@@ -15,7 +15,7 @@ it('sends the same header bytes that were accounted when a borrowed source buffe
   await withRequestSyncFiles(files, async source => {
     await source.writeFact({ factId: 'fact', globalId: 'node', objectType: 'node', kind: 2,
       sharedStateHash: new Uint8Array(32), body: [], blobs: [] });
-    const header = { requestId: new Uint8Array(16), objectType: 'node', globalId: 'node', sourceStateHash: new Uint8Array(32) };
+    const header = { requestId: new Uint8Array(16), objectType: 'node', globalId: 'node', currentVersionId: 'fact', sourceStateHash: new Uint8Array(32) };
     const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* (contextId) {
       const messages = requestSyncObjectMessages(header, contextId, source);
       const first = await messages.next();
@@ -30,6 +30,30 @@ it('sends the same header bytes that were accounted when a borrowed source buffe
       const facts = [];
       for await (const fact of target.readFacts()) facts.push(fact.factId);
       expect(facts).toEqual(['fact']);
+    });
+  });
+});
+
+it('authenticates an empty fact stream and binds its source reference', async () => {
+  const { assertRequestSyncObjectSource } = await import('./requestSyncObjectMessages.js');
+  const files = { read: async () => null, write: async () => undefined, remove: async () => undefined };
+  const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: 'a', initiatorLibraryEpoch: 'a-epoch', responderDeviceId: 'b', responderLibraryEpoch: 'b-epoch' } satisfies RequestSyncAuthenticatedContext;
+  const groupKey = new Uint8Array(32).fill(7);
+  await withRequestSyncFiles(files, async source => {
+    const header = { requestId: new Uint8Array(16), objectType: 'node', globalId: 'node',
+      currentVersionId: 'known', sourceStateHash: new Uint8Array(32).fill(3) };
+    const wire = await prepareRequestSyncWire({ context, groupKey,
+      messages: contextId => requestSyncObjectMessages(header, contextId, source) });
+    await withRequestSyncFiles(files, async target => {
+      const received = await receiveRequestSyncObjectMessages(readRequestSyncWire({ context, groupKey, ...wire }), wire.contextId, target);
+      expect(received).toEqual(header);
+      expect(() => assertRequestSyncObjectSource(received,
+        { currentVersionId: 'known', sharedStateHash: header.sourceStateHash })).not.toThrow();
+      expect(() => assertRequestSyncObjectSource(received,
+        { currentVersionId: 'other', sharedStateHash: header.sourceStateHash })).toThrow('request_sync_object_source_mismatch');
+      expect(() => assertRequestSyncObjectSource(received,
+        { currentVersionId: 'known', sharedStateHash: new Uint8Array(32).fill(4) })).toThrow('request_sync_object_source_mismatch');
     });
   });
 });

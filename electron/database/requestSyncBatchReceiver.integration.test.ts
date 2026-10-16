@@ -31,7 +31,7 @@ async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, recor
       const fact = projection.manifest.facts[0]!;
       for (const blob of fact.blobs) await file.writeBody(blob, projection.bodyBlob);
       await file.writeFact(fact);
-      return { ...identities[i]!, sourceStateHash: fact.sharedStateHash };
+      return { ...identities[i]!, currentVersionId: record.version_id ?? '', sourceStateHash: fact.sharedStateHash };
     }));
     const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* (contextId): AsyncGenerator<RequestSyncMessage> {
       for (const [i, header] of headers.entries()) {

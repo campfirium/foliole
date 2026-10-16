@@ -1,5 +1,5 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
-import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
+import { compareFramedSyncDatabaseInventories, unreadyFramedSyncDatabaseObjectCount } from './framedSyncDatabaseDifference.js';
 import { readFramedSyncOverwriteInventory } from './framedSyncInventoryRead.js';
 import { pendingFramedSyncOverwriteDifferences } from './framedSyncOverwriteCompletion.js';
 import { deliverRequestSyncDatabaseDifferences, type RequestSyncDatabaseRoundPort } from './requestSyncDatabaseRound.js';
@@ -26,14 +26,15 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
     { local: [], remote: inventories.remote }, differences, signal);
   const confirmed = await port.exchangeInventory();
   const transferred = round.delivered.length;
-  const pending = Math.max(round.deferred.length,
+  const pending = Math.max(round.deferred.length, unreadyFramedSyncDatabaseObjectCount(confirmed),
     pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences: round.delivered }).length);
   const madeProgress = pending < differences.length;
   if (pending) return { complete: false, pending, transferred, madeProgress };
   const complete = await host.write(db => db.transaction(async tx => {
     signal?.throwIfAborted();
     const local = await readFramedSyncOverwriteInventory(tx, context);
-    if (pendingFramedSyncOverwriteDifferences({ local, remote: confirmed.remote,
+    if (unreadyFramedSyncDatabaseObjectCount({ local, remote: confirmed.remote }) ||
+      pendingFramedSyncOverwriteDifferences({ local, remote: confirmed.remote,
       deliveredDifferences: round.delivered }).length) return false;
     const adoption = await loadSyncGroupLocalAdoption(tx);
     await finishSyncGroupOverwriteProgress(tx, progress);

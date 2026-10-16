@@ -46,6 +46,9 @@ export function projectFramedSyncDifferenceRequestPayload(input: {
     ...difference.need.reviewFactIds.map((id) => identity(difference.globalId, id, 4, difference.objectType))
   ];
   const payload = {
+    globalId: difference.globalId,
+    objectType: difference.objectType,
+    currentVersionId: difference.sourceSnapshot.currentVersionId ?? '',
     blobHashes: difference.need.resourceHashes,
     facts,
     resources: [],
@@ -78,6 +81,9 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
   return {
     blobHashes: list(payload.blobHashes).map((value) => bytes(value, 'blob_hash').slice()),
     facts,
+    globalId: typeof payload.globalId === 'string' ? payload.globalId : '',
+    objectType: typeof payload.objectType === 'string' ? payload.objectType : '',
+    currentVersionId: typeof payload.currentVersionId === 'string' ? payload.currentVersionId : '',
     resources: readFramedSyncRequestedResources(payload.resources),
     roundId: bytes(payload.roundId, 'round_id').slice(),
     ...(bytes(payload.sourceStateHash ?? new Uint8Array(), 'source_state_hash').length ?
@@ -90,7 +96,11 @@ export function resolveFramedSyncDifferenceRequest(
   request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
 ): FramedSyncInventoryDifference {
   if (request.resources.length) throw new Error('framed_sync_database_request_required');
-  if (request.sourceStateHash?.length && hex(request.sourceStateHash) !== hex(current.sharedStateHash)) {
+  if (request.currentVersionId !== (current.currentVersionId ?? '')) throw new Error('framed_sync_difference_request_source_changed');
+  if (request.globalId !== current.globalId || request.objectType !== current.objectType) {
+    throw new Error('framed_sync_difference_request_identity_mismatch');
+  }
+  if (!request.sourceStateHash || hex(request.sourceStateHash) !== hex(current.sharedStateHash)) {
     throw new Error('framed_sync_difference_request_source_changed');
   }
   if (request.facts.some((fact) =>

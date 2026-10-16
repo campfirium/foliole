@@ -31,7 +31,7 @@ it('exchanges inventory and delivers complete original facts through the product
       kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin
     } });
-    expect(result).toEqual({ complete: true });
+    expect(result).toMatchObject({ complete: true });
     expect(await verifiedReceiverArticle(fixture.rightSnapshot.databasePath, nodeId))
       .toMatchObject({ ...expected, content });
     expect(requestProcessEvidence(fixture.rightSnapshot.databasePath, nodeId).retiredTables).toEqual([]);
@@ -47,17 +47,17 @@ it('requests a stable remote difference and converges through the inbound authen
     const expected = sourceArticleIdentity(fixture.rightSnapshot.databasePath, nodeId);
     const input = { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin };
-    expect(await fixture.left.invoke('round', { input })).toEqual({ complete: true });
+    expect(await fixture.left.invoke('round', { input })).toMatchObject({ complete: true });
     expect(await verifiedReceiverArticle(fixture.leftSnapshot.databasePath, nodeId))
       .toMatchObject({ ...expected, content });
     const originalFacts = requestProcessEvidence(fixture.leftSnapshot.databasePath, nodeId).versions;
     // A repeat round must converge without duplicating or changing the original versions.
     expect(await fixture.left.invoke('round', { input }))
-      .toEqual({ complete: true });
+      .toMatchObject({ complete: true });
     const read = { input: { kind: 'read_inventory' } };
     expect(await fixture.left.invoke('round', read)).toEqual(await fixture.right.invoke('round', read));
     expect(await fixture.left.invoke('round', { input }))
-      .toEqual({ complete: true });
+      .toMatchObject({ complete: true });
     expect(requestProcessEvidence(fixture.leftSnapshot.databasePath, nodeId).versions).toEqual(originalFacts);
     succeeded = true;
   } finally { await closeFixture(fixture, succeeded); }

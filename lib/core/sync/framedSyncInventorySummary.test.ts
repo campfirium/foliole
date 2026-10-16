@@ -30,5 +30,5 @@ it('ends equal node comparison without requesting historical versions and select
     versionStates: [state('v1', 'available'), state('v2', 'missing'), state('v3', 'available')] };
   const changes = compareFramedSyncInventories({ local: [a], remote: [b] });
   expect(changes.find(change => change.direction === 'local_to_remote')!.need.frontierFactIds).toEqual(['v1', 'v2']);
-  expect(changes.find(change => change.direction === 'remote_to_local')!.need.frontierFactIds).toEqual([]);
+  expect(changes.filter(change => change.direction === 'remote_to_local')).toEqual([]);
 });

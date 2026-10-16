@@ -17,3 +17,7 @@ export function changedNodeVersionIds(source: FramedSyncInventoryEntry, destinat
     return other && JSON.stringify(other) === text ? [] : [value[0]];
   });
 }
+
+export function needsNodeCurrentReference(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {
+  return Boolean(source.currentVersionId) && (!destination || source.currentVersionId !== destination.currentVersionId);
+}
