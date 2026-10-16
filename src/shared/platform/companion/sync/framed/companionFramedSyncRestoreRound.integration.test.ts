@@ -15,6 +15,7 @@ import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { loadSyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, receiveSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../../lib/platform/syncProtocolContract.js';
 import { syncCompanionIdentityObjects } from '../syncGroupIdentityCompanionResult.js';
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null,
@@ -76,7 +77,7 @@ it('resumes companion request restore after an object fails without erasing the 
     sender_device_identity_key: event.source_device_identity_key, library_epoch: event.restore_id,
     proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: { event, applied: true } }, true);
   const options = { restoreId: event.restore_id, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-    libraryEpoch: event.restore_id, protocolVersion: 25 } };
+    libraryEpoch: event.restore_id, protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version } };
   bridge.sqlite.exec(`CREATE TRIGGER reject_second BEFORE INSERT ON nodes
     WHEN NEW.id = 't326-b' BEGIN SELECT RAISE(ABORT, 'second_object_failed'); END`);
   await expect(syncCompanionIdentityObjects(fixture.rightSnapshot.origin, options)).rejects.toThrow('second_object_failed');

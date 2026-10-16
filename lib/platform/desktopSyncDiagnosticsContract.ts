@@ -10,6 +10,7 @@ export interface DesktopSyncActivityEvent extends NativeCompanionSyncEvent {
   stage: DesktopSyncStage;
   confirmation?: 'sent' | 'saved' | 'confirmed' | 'blocked';
   record_count?: number;
+  waiting_for?: 'mobile';
 }
 
 export interface DesktopSyncDiagnosticsPayload {

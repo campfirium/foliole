@@ -1,5 +1,7 @@
 import { SYNC_SESSION_WAIT_MS, type SyncChangeMarker } from '../../platform/syncSessionContract.js';
 
+const MANUAL_SYNC_WAIT_MS = 30_000;
+
 type Session = {
   id: string;
   controller: AbortController;
@@ -73,6 +75,7 @@ export function createSyncChangeSessions(instance: string, newId: () => string) 
 function waitForCompletion(session: Session, requested: SyncChangeMarker) {
   return new Promise<boolean>(resolve => {
     const finish = (complete: boolean) => {
+      clearTimeout(timer);
       session.completed.delete(completed);
       session.controller.signal.removeEventListener('abort', aborted);
       resolve(complete);
@@ -81,6 +84,7 @@ function waitForCompletion(session: Session, requested: SyncChangeMarker) {
       if (observed.instance === requested.instance && observed.sequence >= requested.sequence) finish(true);
     };
     const aborted = () => finish(false);
+    const timer = setTimeout(() => finish(false), MANUAL_SYNC_WAIT_MS);
     session.completed.add(completed);
     session.controller.signal.addEventListener('abort', aborted, { once: true });
   });

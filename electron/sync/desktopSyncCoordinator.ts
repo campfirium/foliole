@@ -97,7 +97,7 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
       if (reason === 'manual' && desktopSyncChangeSessions().hasSessions()) {
         const complete = await desktopSyncChangeSessions().requestSync();
         return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
-          run_id: runId, started_at: startedAt, status: complete ? 'completed' : 'pending' });
+          run_id: runId, started_at: startedAt, status: complete ? 'completed' : 'pending' }, complete ? undefined : 'mobile');
       }
       if (reason === 'manual') throw new Error('sync_group_peer_unavailable');
       return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
@@ -128,10 +128,11 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
   }
 }
 
-async function persistResult(result: SyncTriggerResult) {
+async function persistResult(result: SyncTriggerResult, waitingFor?: 'mobile') {
   const context: DesktopSyncActivityContext = { runId: result.run_id,
     reason: result.reason, startedAt: result.started_at };
   await recordDesktopSyncActivity(context, { direction: 'local', kind: 'run_finished',
+    ...(waitingFor ? { waiting_for: waitingFor } : {}),
     message: result.error ?? (result.status === 'skipped' ? 'No available device'
       : result.status === 'pending' ? 'Sync remains pending.' : 'Local sync round completed'),
     result: result.status === 'skipped' ? 'waiting' : result.status === 'pending' ? 'partial' : result.status,

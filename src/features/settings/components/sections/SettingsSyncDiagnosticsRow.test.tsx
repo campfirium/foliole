@@ -74,3 +74,13 @@ it('shows diagnostic load failures and permits a later refresh', async () => {
   await screen.findByText('No sync activity recorded yet');
   expect(screen.queryByText('diagnostic unavailable')).not.toBeInTheDocument();
 });
+
+it('shows a settled mobile wait instead of an active sync', async () => {
+  load.mockResolvedValue({ ...result(), activity: [{ id: 'wait', run_id: 'manual',
+    endpoint_url: null, occurred_at: '2026-10-16T00:00:30Z', direction: 'local', stage: 'run',
+    kind: 'run_finished', result: 'partial', status: 'skipped', waiting_for: 'mobile',
+    message: 'Sync remains pending.', peer_device_id: null, peer_device_name: null }] });
+  renderWithLocalization(<SettingsSyncDiagnosticsRow disabled={false} />);
+  fireEvent.click(screen.getByRole('button', { name: 'View log' }));
+  expect((await screen.findAllByText(/Waiting for mobile device/)).length).toBeGreaterThan(0);
+});

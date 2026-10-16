@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
 
 const mocks = vi.hoisted(() => ({ ensure: vi.fn(), group: vi.fn(), exchange: vi.fn(), sync: vi.fn() }));
 vi.mock('../shared/platform/companion/sync/syncGroupProviderDataOwner', () => ({
@@ -30,7 +30,7 @@ describe('iOS acceptance request sync', () => {
     expect(mocks.ensure).toHaveBeenCalledOnce();
     expect(mocks.exchange).toHaveBeenCalledWith({ endpointUrl: endpoint, deviceId: peer.sourcePeerId, groupId: 'accepted-group' });
     expect(mocks.sync).toHaveBeenCalledWith(endpoint, { resourcesOnly, framedPeer: {
-      deviceId: peer.sourcePeerId, libraryEpoch: 'provider-epoch', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION
+      deviceId: peer.sourcePeerId, libraryEpoch: 'provider-epoch', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
     } });
     expect(mocks.ensure.mock.invocationCallOrder[0]).toBeLessThan(mocks.exchange.mock.invocationCallOrder[0]!);
     expect(mocks.exchange.mock.invocationCallOrder[0]).toBeLessThan(mocks.sync.mock.invocationCallOrder[0]!);

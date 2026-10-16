@@ -1,5 +1,6 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult
@@ -19,7 +20,7 @@ export async function syncCompanionIdentityObjects(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions
 ): Promise<CompanionDesktopSyncResult> {
-  if (options.framedPeer?.protocolVersion !== FRAMED_SYNC_PROTOCOL_VERSION) {
+  if (options.framedPeer?.protocolVersion !== CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version) {
     throw new Error('framed_sync_peer_required');
   }
   return withCompanionSyncPeerRound(options.framedPeer.deviceId,

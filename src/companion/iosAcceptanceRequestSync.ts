@@ -1,4 +1,4 @@
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract';
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import { ensureCompanionSyncGroupDataOwner } from '../shared/platform/companion/sync/syncGroupProviderDataOwner';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
@@ -22,6 +22,6 @@ export async function syncIosAcceptanceRequest(
   return syncCompanionObjectsFromDesktop(endpointUrl, {
     resourcesOnly,
     framedPeer: { deviceId: peer.sourcePeerId, libraryEpoch: state.peerLibraryEpoch,
-      protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION }
+      protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version }
   });
 }

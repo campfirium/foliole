@@ -64,6 +64,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   "settings.companionSync.diagnostics.duration": "{seconds}s",
   "settings.companionSync.diagnostics.unknownDevice": "Device",
   "settings.companionSync.diagnostics.running": "In progress",
+  "settings.companionSync.diagnostics.waitingForMobile": "Waiting for mobile device",
   "settings.companionSync.diagnostics.pending": "Sync not finished",
   "settings.companionSync.diagnostics.interrupted": "No completion recorded",
   "settings.companionSync.diagnostics.waiting": "Waiting for confirmation",

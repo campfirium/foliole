@@ -79,3 +79,24 @@ it('expires abandoned sessions and cancels their manual demand without claiming 
   await expect(manual).resolves.toBe(false);
   expect(() => sessions.signal('phone', session.session)).toThrow('sync_session_expired');
 });
+
+it('ends manual waiting within 30 seconds even while the phone keeps its session alive', async () => {
+  vi.useFakeTimers();
+  const sessions = createSyncChangeSessions(randomUUID(), randomUUID);
+  const session = sessions.open('phone');
+  let result: boolean | undefined;
+  const manual = sessions.requestSync().then(value => { result = value; });
+  for (let elapsed = 0; elapsed < 30_000; elapsed += 10_000) {
+    await vi.advanceTimersByTimeAsync(10_000);
+    sessions.signal('phone', session.session);
+  }
+  expect(result).toBe(false);
+  await manual;
+  expect(sessions.hasSessions()).toBe(true);
+  const retry = sessions.requestSync();
+  const observed = await sessions.wait('phone', session.session, session.marker, new AbortController().signal);
+  sessions.complete('phone', session.session, observed.marker);
+  await expect(retry).resolves.toBe(true);
+  sessions.closeAll();
+  expect(vi.getTimerCount()).toBe(0);
+});

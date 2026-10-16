@@ -14,6 +14,7 @@ import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktop
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
@@ -98,7 +99,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
     pathWithQuery: input.path_with_query, bodySha256: input.body_hash, secret: Buffer.alloc(32, 7).toString('base64url')
   }) }));
   const peer = { deviceId: fixture.rightSnapshot.deviceId,
-    libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 };
+    libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
   rememberCompanionRequestSyncPeerState({ contract_version: 3, group_id: 't326-group',
     sender_device_identity_key: peer.deviceId, library_epoch: peer.libraryEpoch,
     proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null }, true);

@@ -1,7 +1,8 @@
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell } from './harness/settings';
+import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 test('settles every queued offline target and retains the durable failure after reload', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
@@ -38,4 +39,31 @@ test('settles every queued offline target and retains the durable failure after 
     return runWithDatabaseConnectionOwner(() => coordinator.loadDesktopSyncTriggerResult());
   }, moduleUrl);
   expect(persisted).toEqual(result.persisted);
+});
+
+test('settles an unresponsive mobile round and shows the persisted wait after reload', async ({ desktopApp, desktopWindow }, info) => {
+  test.setTimeout(90_000);
+  await expectWorkspaceShell(desktopWindow);
+  const result = await desktopApp.evaluate(async () => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const coordinator = require(`${process.cwd()}/dist/electron/sync/desktopSyncCoordinator.js`);
+    const sessions = require(`${process.cwd()}/dist/electron/sync/desktopSyncChangeSessions.js`).desktopSyncChangeSessions();
+    const phone = sessions.open('waiting-phone');
+    const keepAlive = setInterval(() => sessions.signal('waiting-phone', phone.session), 10_000);
+    try {
+      const result = await coordinator.runDesktopSyncCoordinator('manual');
+      return { status: result.status, active: coordinator.loadActiveDesktopSyncRun() !== null };
+    } finally { clearInterval(keepAlive); sessions.closeAll(); }
+  });
+  expect(result).toEqual({ status: 'pending', active: false });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await openSettingsCategory(desktopWindow, 'Sync');
+  await desktopWindow.getByRole('button', { name: /^(View log|查看日志)$/ }).click();
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Sync log|同步日志)$/ });
+  await expect(dialog.getByText(/Manual sync · Waiting for mobile device|手动同步 · 等待手机/)).toBeVisible();
+  const imagePath = path.resolve('.tmp/artifacts/desktop-acceptance/s353-mobile-wait.png');
+  await mkdir(path.dirname(imagePath), { recursive: true });
+  await desktopWindow.screenshot({ path: imagePath });
+  await info.attach('mobile-wait', { path: imagePath, contentType: 'image/png' });
 });

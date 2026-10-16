@@ -18,6 +18,7 @@ export function groupDesktopSyncActivity(events: DesktopSyncActivityEvent[]) {
 }
 
 function eventDescription(event: DesktopSyncActivityEvent, t: Translate) {
+  if (event.waiting_for === 'mobile') return t(`${PREFIX}.waitingForMobile`);
   if (event.kind === 'run_finished' && event.result === 'partial') return t(`${PREFIX}.pending`);
   if (event.status === 'started') return t(event.direction === 'send' ? `${PREFIX}.sending` : `${PREFIX}.stage.${event.stage}`);
   if (event.confirmation === 'saved' && event.stage !== 'sync_push') return t(`${PREFIX}.saved`);
@@ -38,6 +39,7 @@ function eventDescription(event: DesktopSyncActivityEvent, t: Translate) {
 function roundResult(events: DesktopSyncActivityEvent[], active: boolean, t: Translate) {
   const terminal = events.find((event) => event.kind === 'run_finished');
   if (!terminal) return t(active ? `${PREFIX}.running` : `${PREFIX}.interrupted`);
+  if (terminal.waiting_for === 'mobile') return t(`${PREFIX}.waitingForMobile`);
   if (terminal.result === 'partial') return t(`${PREFIX}.pending`);
   if (terminal.result === 'waiting') return t(terminal.stage === 'run' ? `${PREFIX}.noPeerStatus` : `${PREFIX}.waiting`);
   if (terminal.result === 'blocked') return t(`${PREFIX}.blocked`);

@@ -7,6 +7,7 @@ import { expect, it, vi } from 'vitest';
 
 import { buildDesktopFramedSyncFixture, readDesktopFramedSyncLibraryEvidence } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { createCompanionRequestFixture, native } from '../test/companionRequestSync.testSupport';
 
 import { clearRetryTimer, createForegroundSyncRunner } from './companionForegroundSyncRunner';
@@ -43,7 +44,7 @@ it('releases a busy automatic round and lets a manual production round persist b
     vi.spyOn(runtime, 'isAvailableNativeCompanionRuntime').mockReturnValue(true);
     view.epoch = `${fixture.rightSnapshot.deviceId}-epoch`;
     const target = { endpointUrl: fixture.rightSnapshot.origin, deviceId: fixture.rightSnapshot.deviceId,
-      groupId: 't326-group', protocolVersion: 25 };
+      groupId: 't326-group', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
     view.state.endpoint_url = target.endpointUrl;
     await fixture.left.seed({ nodeId: 't326-backoff-mobile-edit', title: 'Mobile', content: 'Saved on mobile' });
     await fixture.right.seed({ nodeId: 't326-backoff-desktop-edit', title: 'Desktop', content: 'Saved on desktop' });
@@ -86,7 +87,7 @@ it('distinguishes a committed neighbor from repeated unchanged pending and resum
   const { fixture } = host;
   const sync = () => runCompanionStreamSync({ cancelled: () => false,
     endpointUrl: fixture.rightSnapshot.origin, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 },
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version },
     runId: crypto.randomUUID(), startedAt: new Date().toISOString(), triggerReason: 'automatic',
     workspaceSnapshot: null, setState: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() });
   try {
@@ -126,7 +127,7 @@ it('backs off real transfers when concurrent edits keep differences from shrinki
   let editing = true;
   const sync = () => runCompanionStreamSync({ cancelled: () => false,
     endpointUrl: fixture.rightSnapshot.origin, framedPeer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: 25 },
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch`, protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version },
     runId: crypto.randomUUID(), startedAt: new Date().toISOString(), triggerReason: 'automatic',
     workspaceSnapshot: null, setState: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() });
   try {
@@ -162,7 +163,7 @@ it('preserves a manual click joined during automatic preparation through peer wa
     const { companionSyncPeerRoundOwner } = await import('../shared/platform/companion/sync/framed/companionSyncPeerRounds');
     view.epoch = `${fixture.rightSnapshot.deviceId}-epoch`;
     const target = { endpointUrl: fixture.rightSnapshot.origin, deviceId: fixture.rightSnapshot.deviceId,
-      groupId: 't326-group', protocolVersion: 25 };
+      groupId: 't326-group', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
     await fixture.left.seed({ nodeId: 't326-promoted-mobile', title: 'Mobile', content: 'Mobile edit' });
     await fixture.right.seed({ nodeId: 't326-promoted-desktop', title: 'Desktop', content: 'Desktop edit' });
     const owner = await companionSyncPeerRoundOwner();

@@ -1,5 +1,5 @@
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 import { exchangeCompanionSyncGroupMemberState } from '../network/companionSyncGroupMemberState';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
@@ -17,6 +17,6 @@ export async function completeCompanionSyncGroupAdoption(): Promise<void> {
   }
   await syncCompanionIdentityObjects(adoption.endpointUrl, { framedPeer: {
     deviceId: adoption.providerDeviceId, libraryEpoch: state.peerLibraryEpoch,
-    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION
+    protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
   } });
 }

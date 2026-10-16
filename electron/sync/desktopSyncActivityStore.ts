@@ -42,7 +42,7 @@ export function loadDesktopSyncActivity(): DesktopSyncActivityEvent[] {
 export async function recordDesktopSyncActivity(
   context: DesktopSyncActivityContext,
   event: Pick<DesktopSyncActivityEvent, 'direction' | 'kind' | 'message' | 'stage' | 'status'> &
-    Partial<Pick<DesktopSyncActivityEvent, 'confirmation' | 'record_count' | 'result'>>,
+    Partial<Pick<DesktopSyncActivityEvent, 'confirmation' | 'record_count' | 'result' | 'waiting_for'>>,
   peer?: Pick<DesktopSyncGroupPeer, 'peer_device_id' | 'peer_device_name'>
 ) {
   if (event.kind === 'run_started') activeRunIds.add(context.runId);

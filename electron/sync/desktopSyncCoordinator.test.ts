@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const settings = vi.hoisted(() => ({ loadJsonSetting: vi.fn(), saveJsonSetting: vi.fn() }));
 const transport = vi.hoisted(() => ({
@@ -18,7 +18,9 @@ vi.mock('../database/watchedConflictSyncMarker.js', () => ({
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
 
+import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
+  loadActiveDesktopSyncRun,
   loadDesktopSyncTriggerResult,
   runDesktopSyncCoordinator,
   subscribeDesktopSyncCompleted
@@ -175,4 +177,25 @@ it('keeps the sync result intact when saving diagnostic activity fails', async (
   } finally {
     warning.mockRestore(); settings.saveJsonSetting.mockReset();
   }
+});
+
+afterEach(() => { desktopSyncChangeSessions().closeAll(); vi.useRealTimers(); });
+
+it('releases the coordinator and persists mobile waiting when an active phone does not finish', async () => {
+  vi.useFakeTimers();
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([]);
+  const sessions = desktopSyncChangeSessions();
+  const phone = sessions.open('phone');
+  const manual = runDesktopSyncCoordinator('manual');
+  await vi.advanceTimersByTimeAsync(20_000);
+  sessions.signal('phone', phone.session);
+  await vi.advanceTimersByTimeAsync(10_000);
+  await expect(manual).resolves.toMatchObject({ status: 'pending', error: null });
+  expect(loadActiveDesktopSyncRun()).toBeNull();
+  const activity = settings.saveJsonSetting.mock.calls.filter(([key]) => key === 'sync_group_activity').at(-1)?.[1];
+  expect(activity).toEqual(expect.arrayContaining([expect.objectContaining({
+    kind: 'run_finished', result: 'partial', waiting_for: 'mobile'
+  })]));
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([peer]);
+  await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });
 });

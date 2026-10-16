@@ -66,6 +66,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   "settings.companionSync.diagnostics.duration": "{seconds} 秒",
   "settings.companionSync.diagnostics.unknownDevice": "设备",
   "settings.companionSync.diagnostics.running": "进行中",
+  "settings.companionSync.diagnostics.waitingForMobile": "等待手机",
   "settings.companionSync.diagnostics.pending": "同步未完成",
   "settings.companionSync.diagnostics.interrupted": "未记录完成结果",
   "settings.companionSync.diagnostics.waiting": "等待确认",

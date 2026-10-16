@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({ database: vi.fn(), resources: vi.fn() }));
 vi.mock('./framed/companionRequestSyncDatabaseRound.js', () => ({ runCompanionRequestSyncDatabaseRound: runtime.database }));
@@ -20,7 +21,7 @@ vi.mock('./framed/companionSyncPeerRounds.js', () => ({
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 
-const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 25 };
+const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'], madeProgress: true });
