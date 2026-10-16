@@ -77,10 +77,7 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
             editLatencyMs = performance.now() - requestedAt;
           }
           const result = await exchangeRequestSyncAttachments(host, exchange, (_key, error) => { throw error; });
-          if (editLatencyMs && result.blocks && !streamingProved) {
-            expect(result.blocks).toBeGreaterThan(2);
-            streamingProved = true;
-          }
+          if (editLatencyMs && result.blocks > 2) streamingProved = true;
           pending = result.pending; totalBlocks += result.blocks;
         });
       } finally { lease.release(); }
@@ -89,6 +86,7 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
     for (const key of keys) for (const root of [local.assetsDir, target.assetsDir]) {
       expect(createHash('sha256').update(await readFile(path.join(root, key))).digest('hex')).toBe(key.slice(0, 64));
     }
+    expect(streamingProved).toBe(true);
     expect(totalBlocks).toBe(512);
     expect(rounds).toBeLessThan(128);
     expect(editLatencyMs).toBeGreaterThan(0);

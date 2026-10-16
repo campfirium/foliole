@@ -11,7 +11,7 @@ function madeResourceProgress(result: CompanionDesktopSyncResult) {
 }
 
 function hasResourceBacklog(result: CompanionDesktopSyncResult) {
-  return isKnownBacklog(result.remainingAttachmentResourceCount);
+  return result.remainingAttachmentResourceCount === null || isKnownBacklog(result.remainingAttachmentResourceCount);
 }
 
 function hasWaitingLocalChanges(result: CompanionDesktopSyncResult) {

@@ -59,7 +59,7 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     async needsSlice(shouldYield) {
       await checkLibrary();
       const result = await readDemand(host, shouldYield);
-      return { keys: result.pending ? [] : await inspectAttachmentNeeds(host, result.keys, inspect), pending: result.pending };
+      return { keys: await inspectAttachmentNeeds(host, result.keys, inspect), pending: result.pending };
     },
     async needs() {
       await checkLibrary();

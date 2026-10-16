@@ -2,6 +2,8 @@ import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import type { AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 
+const lastAttempted = new WeakMap<RequestSyncAttachmentHost, string>();
+
 export async function exchangePdfTextArtifacts(input: {
   signal?: AbortSignal; host: RequestSyncAttachmentHost; keys: string[]; shouldYield: () => boolean;
   describe: (key: string) => Promise<AttachmentRequest>;
@@ -10,9 +12,14 @@ export async function exchangePdfTextArtifacts(input: {
 }) {
   let blocks = 0; let transferred = 0; let pending = 0;
   if (!input.host.importPdfText) return { blocks, transferred, pending };
-  for (const key of input.keys) {
+  const next = input.keys.indexOf(lastAttempted.get(input.host) ?? '') + 1;
+  const keys = [...input.keys.slice(next), ...input.keys.slice(0, next)];
+  let attempted = false;
+  for (const key of keys) {
     input.signal?.throwIfAborted();
-    if (input.shouldYield()) { pending++; continue; }
+    if (attempted && input.shouldYield()) { pending++; continue; }
+    attempted = true;
+    lastAttempted.set(input.host, key);
     try {
       const description = await input.describe(key);
       if (description.state === 'end') { pending++; continue; }

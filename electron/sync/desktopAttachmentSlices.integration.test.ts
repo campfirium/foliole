@@ -105,15 +105,11 @@ async function runSlice(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
   try {
     const result = await withRequestSyncPeerRound(exchange, peerRound,
       async () => {
-        if (index === 0) {
-          const release = waitForAttachmentWorkYield();
-          try {
-            expect(await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }))
-              .toMatchObject({ blocks: 0, pending: null, yielded: true });
-          } finally { release(); }
-        }
         if (index === 1) await syncDataDuringAttachment(local.database, exchange, targetPath);
-        return exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }, () => true);
+        const release = waitForAttachmentWorkYield();
+        try {
+          return await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; });
+        } finally { release(); }
       });
     expect(result).toMatchObject([
       { blocks: 2, pending: 2, transferred: 0 }, { blocks: 2, pending: 2, transferred: 0 },

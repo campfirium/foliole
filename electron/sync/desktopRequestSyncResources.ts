@@ -10,7 +10,7 @@ import type { runDesktopRequestSyncDatabaseRound } from './desktopRequestSyncDat
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
-export async function continueDesktopRequestSyncResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]) {
+export async function continueDesktopRequestSyncResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0] & { boundedSlice?: boolean }) {
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(input.peer.group_id));
   if (!key) throw new Error('sync_group_workgroup_key_missing');
   const { databasePath } = await runWithDatabaseConnectionOwner(resolveRuntimeDataPaths);
@@ -28,5 +28,5 @@ export async function continueDesktopRequestSyncResources(input: Parameters<type
     ...(input.signal ? { signal: input.signal } : {})
   }), (storageKey, error) => appendMainProcessDiagnosticLog('request_sync_attachment_failed', {
     storageKey, sourceDeviceId: input.peer.peer_device_id, error: String(error)
-  }));
+  }), input.boundedSlice ? () => true : undefined);
 }

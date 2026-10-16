@@ -28,21 +28,22 @@ beforeEach(() => {
   runtime.resources.mockResolvedValue({ pending: 3, transferred: 1 });
 });
 
-it('leaves attachment scanning for a later round while database changes remain', async () => {
+it('reserves a bounded attachment slice while database changes remain', async () => {
   const confirmed = vi.fn();
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, onDatabaseConfirmed: confirmed });
-  expect(runtime.resources).not.toHaveBeenCalled();
+  expect(runtime.resources).toHaveBeenCalledWith(expect.objectContaining({ boundedSlice: true }));
   expect(confirmed).not.toHaveBeenCalled();
   expect(result).toMatchObject({ remainingStructureChangeCount: 1,
-    remainingAttachmentResourceCount: null, attachmentWorkYielded: false,
+    remainingAttachmentResourceCount: 3,
     appliedObjectIds: ['pulled'], pushedObjectIds: ['pushed'] });
 });
 
 it('does not treat deferred attachments as progress when database differences remain unchanged', async () => {
   const { hasFastRetryWork } = await import('../../../../companion/companionSyncContinuation');
   runtime.database.mockResolvedValue({ pending: 1, received: [], sent: [], madeProgress: false });
+  runtime.resources.mockResolvedValue({ pending: 0, transferred: 0, blocks: 0, yielded: false });
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
-  expect(runtime.resources).not.toHaveBeenCalled();
+  expect(runtime.resources).toHaveBeenCalledOnce();
   expect(hasFastRetryWork(result)).toBe(false);
 });
 
@@ -53,8 +54,8 @@ it('reports request-scoped database changes and keeps attachment progress separa
     localLibraryEpoch: 'local-epoch', peerState: { sender_device_identity_key: 'desktop', library_epoch: 'desktop-epoch' } }));
   expect(refreshed).toHaveBeenCalledOnce();
   expect(result).toMatchObject({ appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
-    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: null,
-    transferredAttachmentCount: 0, madeDatabaseProgress: true });
+    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: 3,
+    transferredAttachmentCount: 1, madeDatabaseProgress: true });
 });
 
 it('rejects missing negotiation and the incompatible previous protocol', async () => {
@@ -125,4 +126,13 @@ it('retains committed data and retries confirmation when the session acknowledge
   expect(describeCompanionSyncPassResult(result)).toMatchObject({ result: 'partial', outcome: 'skipped' });
   expect(hasRetryWork(result)).toBe(true);
   expect(resolveCompanionSyncContinuationMode(result)).toBe('full');
+});
+
+it('retries unfinished attachment scanning without treating an idle scan as transfer progress', async () => {
+  const { hasRetryWork, hasFastRetryWork } = await import('../../../../companion/companionSyncContinuation');
+  runtime.database.mockResolvedValue({ pending: 0, received: [], sent: [], madeProgress: false });
+  runtime.resources.mockResolvedValue({ pending: null, transferred: 0, blocks: 0, yielded: false });
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
+  expect(hasRetryWork(result)).toBe(true);
+  expect(hasFastRetryWork(result)).toBe(false);
 });

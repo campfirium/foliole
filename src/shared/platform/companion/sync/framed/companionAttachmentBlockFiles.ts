@@ -63,8 +63,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     importPdfText: (pdf, artifact) => importCompanionPdfTextArtifact(db, host, pdf, artifact),
     async needsSlice(shouldYield) {
       const result = await demand(db, shouldYield);
-      return { keys: result.pending ? [] : await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending,
-        pdfTextKeys: result.pending ? [] : await db.readSnapshot(port => missingPdfTextArtifacts(port, result.keys)) };
+      return { keys: await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending,
+        pdfTextKeys: await db.readSnapshot(port => missingPdfTextArtifacts(port, result.keys)) };
     },
     status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
     receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),

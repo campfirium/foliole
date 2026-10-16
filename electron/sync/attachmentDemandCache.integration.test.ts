@@ -37,7 +37,7 @@ it('resumes a 30000-node scan after yielding and reuses bodies until committed r
   const started = performance.now();
   try {
     const budget = attachmentWorkBudget();
-    expect(await demand(host, budget)).toEqual({ keys: [], pending: true });
+    expect(await demand(host, budget)).toEqual({ keys: [key], pending: true });
     expect(bodyRows).toBe(128);
     const pausedPages = pages;
     expect(await demand(host, () => false)).toEqual({ keys: [key], pending: false });
@@ -53,5 +53,32 @@ it('resumes a 30000-node scan after yielding and reuses bodies until committed r
     expect(bodyRows).toBe(60000);
     console.info(JSON.stringify({ sampleNodes: 30000, pausedPages, cachedRounds: 20, bodyRows,
       elapsedMs: Math.round(performance.now() - started) }));
+  } finally { sqlite.close(); }
+});
+
+it('visits later references during continuous writes and preserves readable demand beside a missing body', async () => {
+  const sqlite = new Database(':memory:');
+  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, deleted_at TEXT, body_blob_hash TEXT,
+    resource_references TEXT, content TEXT);
+    CREATE TABLE node_version_local_proof_state (singleton_id INTEGER, library_epoch TEXT, proof_revision INTEGER);
+    INSERT INTO node_version_local_proof_state VALUES (1, 'epoch', 0)`);
+  const key = `${'c'.repeat(64)}.png`;
+  const insert = sqlite.prepare('INSERT INTO nodes VALUES (?, NULL, NULL, ?, ?)');
+  for (let i = 0; i < 300; i++) insert.run(String(i).padStart(3, '0'), '[]', i === 299 ? `![last](asset://${key})` : 'Body');
+  sqlite.exec("UPDATE nodes SET body_blob_hash = 'missing', content = NULL WHERE id = '000'");
+  const port = createBetterSqliteDbPort(sqlite);
+  const host = { readSnapshot: <T>(read: (db: typeof port) => Promise<T>) => port.transaction(read) };
+  const demand = createAttachmentDemandCache();
+  const seen = new Set<string>();
+  try {
+    for (let round = 0; round < 3; round++) {
+      sqlite.exec('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1');
+      const result = await demand(host, () => true);
+      result.keys.forEach(value => seen.add(value));
+    }
+    expect([...seen]).toEqual([key]);
+    // A new library identity must restart the cursor and discard old references.
+    sqlite.exec("DELETE FROM nodes; UPDATE node_version_local_proof_state SET library_epoch = 'replacement'");
+    expect(await demand(host, () => true)).toEqual({ keys: [], pending: false });
   } finally { sqlite.close(); }
 });

@@ -6,7 +6,7 @@ import { describeCompanionSyncPassResult } from '../companion/companionSyncPassR
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport';
 
-it('continues pending text before scanning attachments after exhausting the data passes', async () => {
+it('offers attachments a bounded slice after exhausting the data passes', async () => {
   const host = await createCompanionRequestFixture();
   try {
     const nodeId = 't326-pending-data-before-attachments';
@@ -26,7 +26,7 @@ it('continues pending text before scanning attachments after exhausting the data
     const pending = await host.sync();
     expect(revision).toBe(4);
     expect(pending.remainingStructureChangeCount).toBeGreaterThan(0);
-    expect(attachmentRequests).toBe(0);
+    expect(attachmentRequests).toBeGreaterThan(0);
     expect(pending.databaseConfirmedAt).toBeUndefined();
     native.post.mockImplementation(host.post);
     expect((await host.sync()).remainingStructureChangeCount).toBe(0);

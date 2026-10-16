@@ -10,6 +10,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${sandbox.root}/host/${name}`, isPackaged: false
 } }));
 
+import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { missingPdfTextArtifacts } from '../../lib/core/sync/pdfTextArtifact.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
@@ -45,13 +46,9 @@ it('transfers PDF text over authenticated resumable attachments and imports it o
     pdfTextKeys: await local.database.readSnapshot(db => missingPdfTextArtifacts(db, [key])) });
   local.host.importPdfText = (pdf, artifact) => importCompanionPdfTextArtifact(local.database, local.host, pdf, artifact);
   let artifactBlocks = 0;
-  const receive = local.host.receive.bind(local.host);
-  local.host.receive = async (resource, offset, bytes) => {
-    const result = await receive(resource, offset, bytes);
-    if (resource.storageKey.endsWith('.pdftext')) artifactBlocks++;
-    return result;
-  };
+  trackArtifactBlocks(local.host, () => artifactBlocks++);
   const server = await attachmentHttpServer(0); const owner = createSyncPeerRoundOwnership(60_000);
+  const release = waitForAttachmentWorkYield();
   try {
     let completed = false;
     for (let round = 0; round < 10 && !completed; round++) {
@@ -64,7 +61,7 @@ it('transfers PDF text over authenticated resumable attachments and imports it o
           initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
       try {
         const result = await withRequestSyncPeerRound(exchange, peerRound,
-          () => exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }, () => round === 0 && artifactBlocks > 0));
+          () => exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }));
         if (round === 0) {
           expect(result.pending).toBeGreaterThan(0);
           expect(local.sqlite.prepare('SELECT COUNT(*) count FROM pdf_page_text').get()).toEqual({ count: 0 });
@@ -72,16 +69,26 @@ it('transfers PDF text over authenticated resumable attachments and imports it o
         completed = result.pending === 0;
       } finally { lease.release(); }
     }
-    expect(completed).toBe(true);
+    expect(completed && artifactBlocks > 1).toBe(true);
     expect(local.sqlite.prepare('SELECT text, page_width, page_height FROM pdf_page_text').get())
       .toEqual({ text, page_width: 600, page_height: 800 });
     expect(local.sqlite.prepare('SELECT COUNT(*) count FROM pdf_text_artifact').get()).toEqual({ count: 1 });
     expect(local.sqlite.prepare("SELECT COUNT(*) count FROM sync_object_state WHERE object_type = 'pdf_page_text'").get()).toEqual({ count: 0 });
     expect((await local.host.needsSlice(() => false)).pdfTextKeys).toEqual([]);
   } finally {
+    release();
     owner.close(); await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
 }, 60_000);
+
+function trackArtifactBlocks(host: Awaited<ReturnType<typeof attachmentHttpSource>>['host'], onBlock: () => void) {
+  const receive = host.receive.bind(host);
+  host.receive = async (resource, offset, bytes) => {
+    const result = await receive(resource, offset, bytes);
+    if (resource.storageKey.endsWith('.pdftext')) onBlock();
+    return result;
+  };
+}

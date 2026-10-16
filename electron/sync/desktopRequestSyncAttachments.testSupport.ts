@@ -63,7 +63,7 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
     async needsSlice(shouldYield) {
       const result = await demand(database, shouldYield);
-      return { pending: result.pending, keys: result.pending ? [] : await inspectAttachmentNeeds(database, result.keys, inspect) };
+      return { pending: result.pending, keys: await inspectAttachmentNeeds(database, result.keys, inspect) };
     },
     needs: () => readRequestSyncAttachmentNeeds(database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)))) };
   return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };

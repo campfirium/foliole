@@ -122,9 +122,8 @@ Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: bo
     peerRound: input.peerRound, ...(input.signal ? { signal: input.signal } : {}) });
   return withRequestSyncPeerRound(exchange, input.peerRound, async () => {
     const database = await runDesktopRequestSyncDatabaseRound(input);
-    if (!database.complete) return database;
-    const resources = await continueDesktopRequestSyncResources(input);
-    return { ...database, complete: resources.pending === 0, attachmentProgress: resources.blocks ?? 0, attachmentYielded: resources.yielded };
+    const resources = await continueDesktopRequestSyncResources({ ...input, boundedSlice: !database.complete });
+    return { ...database, complete: database.complete && resources.pending === 0, attachmentProgress: resources.blocks ?? 0, attachmentYielded: resources.yielded };
   });
 }
 

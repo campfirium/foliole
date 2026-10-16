@@ -1,6 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import { transferAttachmentSlice } from './attachmentBlockTransfer.js';
-import { attachmentWorkBudget, hasWaitingSyncData } from './attachmentWorkBudget.js';
+import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
@@ -94,7 +94,6 @@ async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
 export async function exchangeRequestSyncAttachments(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   report: (storageKey: string, error: unknown) => void, shouldYield = attachmentWorkBudget()) {
   exchange.signal?.throwIfAborted();
-  if (hasWaitingSyncData()) return { transferred: 0, blocks: 0, pending: null, yielded: true };
   const remoteNeeds = new Set<string>();
   let pendingScan = false;
   await request(exchange, { operation: 'needs' }, async message => {
@@ -102,9 +101,8 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
     for (const key of message.storageKeys) remoteNeeds.add(key);
     pendingScan ||= message.pending;
   });
-  if (pendingScan) return { transferred: 0, blocks: 0, pending: null, yielded: true };
   const local = await host.needsSlice(shouldYield);
-  if (local.pending) return { transferred: 0, blocks: 0, pending: null, yielded: true };
+  pendingScan ||= local.pending;
   const result = { transferred: 0, blocks: 0 };
   const pendingKeys = new Set<string>();
   const attempt = async (key: string, execute: () => Promise<{ complete: boolean; blocks: number }>) => {
@@ -145,5 +143,6 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
         }
       } }));
   }
-  return { ...result, pending: pendingKeys.size + text.pending, yielded: pendingKeys.size > 0 && shouldYield() };
+  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending,
+    yielded: result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield())) };
 }

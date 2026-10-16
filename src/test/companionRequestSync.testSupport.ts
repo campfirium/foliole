@@ -85,15 +85,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
   };
   const post = (input: NativeRequestSyncHttpRequest) => postCompanionRequestFixture(native.files!, input);
   native.post.mockImplementation(post);
-  native.accessFile.mockImplementation(async (input: { action: string; key: string }) => {
-    if (!['source-stat', 'source-open'].includes(input.action)) throw new Error(`fixture_attachment_action_unavailable:${input.action}`);
-    const file = path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', input.key);
-    const info = await fs.stat(file).catch(error => {
-      if (error.code !== 'ENOENT') throw error;
-      return null;
-    });
-    return { present: Boolean(info), length: info?.size ?? 0, hash: info ? createHash('sha256').update(await fs.readFile(file)).digest('hex') : '' };
-  });
+  configureAttachmentReads(fixture.leftSnapshot.stateRoot);
   native.sign.mockImplementation(input => ({ headers: createDesktopSyncGroupSignedHeaders({
     groupId: input.sync_group_id, localDeviceId: fixture.leftSnapshot.deviceId, method: input.method,
     pathWithQuery: input.path_with_query, bodySha256: input.body_hash, secret: Buffer.alloc(32, 7).toString('base64url')
@@ -119,4 +111,27 @@ export async function createCompanionRequestFixture(script = compiledScript) {
       vi.resetAllMocks();
     }
   };
+}
+
+function configureAttachmentReads(stateRoot: string) {
+  native.accessFile.mockImplementation(async (input: { action: string; key: string; keys?: string[]; offset?: number; length?: number }) => {
+    const assets = path.join(stateRoot, 'documents', 'Foliole', 'Assets');
+    if (input.action === 'source-close') return {};
+    if (input.action === 'source-read') {
+      const bytes = await fs.readFile(path.join(assets, input.key));
+      return { base64: bytes.subarray(input.offset, (input.offset ?? 0) + (input.length ?? 0)).toString('base64') };
+    }
+    if (input.action === 'source-stat-batch') return { presence: await Promise.all((input.keys ?? [])
+      .map(key => fs.stat(path.join(assets, key)).then(() => true, error => {
+        if (error.code !== 'ENOENT') throw error;
+        return false;
+      }))) };
+    if (!['source-stat', 'source-open'].includes(input.action)) throw new Error(`fixture_attachment_action_unavailable:${input.action}`);
+    const file = path.join(stateRoot, 'documents', 'Foliole', 'Assets', input.key);
+    const info = await fs.stat(file).catch(error => {
+      if (error.code !== 'ENOENT') throw error;
+      return null;
+    });
+    return { present: Boolean(info), length: info?.size ?? 0, hash: info ? createHash('sha256').update(await fs.readFile(file)).digest('hex') : '' };
+  });
 }
