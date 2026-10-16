@@ -1,4 +1,4 @@
-import { buildAssetMarkdownUrl, parseAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
+import { ASSET_MARKDOWN_SCHEME, buildAssetMarkdownUrl, parseAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
 import { folioleMarkdownParser } from '../markdown/folioleMarkdownParser.js';
 import { normalizeMarkdownReferenceLabel as normalizeLabel } from '../markdown/markdownReferenceLabel.js';
 
@@ -65,6 +65,7 @@ export function localizeArticleImageSource(content: string, sourceUrl: string, s
 }
 
 export function collectArticleImageStorageKeys(content: string) {
+  if (!content.includes(ASSET_MARKDOWN_SCHEME)) return [];
   const keys = new Set<string>();
   const tree = folioleMarkdownParser.parse(content);
   const references = referenceTargets(tree, content);
