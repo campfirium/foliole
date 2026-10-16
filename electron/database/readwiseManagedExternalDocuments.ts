@@ -1,8 +1,8 @@
 import path from 'node:path';
 
+import { retireExternalDocument } from '../../lib/core/database/externalDocumentRetirement.js';
 import { matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { searchStoredSources, type StoredSourceSearchRow } from '../../lib/core/database/storedSourceSearch.js';
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -52,26 +52,8 @@ export function hideReadwiseExternalDocument(
 ) {
   const documentId = buildReadwiseExternalDocumentId(kind, sourceName);
   const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<{ is_present: number }>(
-    'SELECT is_present FROM external_documents WHERE document_id = ?', [documentId]
-  );
-  if (!row || row.is_present === 0) return;
-  connection.driver.execute(
-    `UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ?
-     WHERE document_id = ? AND is_present = 1`,
-    [updatedAt, updatedAt, documentId]
-  );
-  upsertSyncObjectState(connection.driver, {
-    contentHash: computeSyncContentHash('external_document', {
-      deleted_at: updatedAt,
-      document_id: documentId
-    }),
-    deletedAt: updatedAt,
-    lastModifiedByHostName: loadOrCreateDesktopHostName(updatedAt),
-    objectId: documentId,
-    objectType: 'external_document',
-    syncDirty: true,
-    updatedAt
+  retireExternalDocument(connection.driver, {
+    documentId, deletedAt: updatedAt, hostName: loadOrCreateDesktopHostName(updatedAt)
   });
 }
 

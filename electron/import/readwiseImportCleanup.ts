@@ -1,3 +1,4 @@
+import { retireExternalDocument } from '../../lib/core/database/externalDocumentRetirement.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type {
   NativeReadwiseCleanupEntry,
@@ -5,6 +6,7 @@ import type {
   NativeReadwiseCleanupRunResult
 } from '../../lib/platform/nativeImportContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalDocuments.js';
@@ -152,22 +154,13 @@ function collectDetachedNodeIds(entries: NativeReadwiseCleanupEntry[]) {
     ]);
 }
 
-function clearReadwiseExternalDocuments(rows: ReadwiseExternalCleanupRow[]) {
-  if (rows.length === 0) {
-    return 0;
-  }
-  const connection = openDatabaseConnection();
-  const deleteExternalDocument = connection.sqlite.prepare('DELETE FROM external_documents WHERE document_id = ?');
-  const deleteExternalSyncState = connection.sqlite.prepare(
-    "DELETE FROM sync_object_state WHERE object_type = 'external_document' AND object_id = ?"
-  );
-  connection.sqlite.transaction(() => {
-    rows.forEach((row) => {
-      deleteExternalDocument.run(row.document_id);
-      deleteExternalSyncState.run(row.document_id);
-    });
-  })();
-  return rows.length;
+function clearReadwiseExternalDocuments(rows: ReadwiseExternalCleanupRow[], deletedAt: string) {
+  if (!rows.length) return 0;
+  const driver = openDatabaseConnection().driver;
+  const hostName = loadOrCreateDesktopHostName(deletedAt);
+  return driver.transaction(tx => rows.reduce((count, row) => count + Number(retireExternalDocument(tx, {
+    documentId: row.document_id, deletedAt, hostName
+  })), 0));
 }
 
 export function previewReadwiseImportCleanup(): NativeReadwiseCleanupPreviewResult {
@@ -185,7 +178,7 @@ export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
   const deletedIdSet = new Set(deleteNodeIds);
   clearReadwiseTracking({ deletedNodeIds: deleteNodeIds, detachedNodeIds });
   clearPersistedReadwiseBookGeneratedNodes(new Set(deleteNodeIds.filter(isReadwiseBookStructureNodeId)), cleanedAt);
-  const externalDeletedCount = clearReadwiseExternalDocuments(externalRows);
+  const externalDeletedCount = clearReadwiseExternalDocuments(externalRows, cleanedAt);
   if (deleteNodeIds.length > 0) {
     deleteNodesPermanently({
       nodeIds: deleteNodeIds,

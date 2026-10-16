@@ -216,7 +216,7 @@ it('deletes changed Readwise topics and keeps removed tracking rows', async () =
   expect(readRows('SELECT * FROM import_runs')).toEqual([]);
 });
 
-it('removes Readwise-managed External documents and sync rows', async () => {
+it('retires Readwise-managed external documents with durable deletion facts', async () => {
   const fixture = await seedReadwiseFixture();
   saveReadwiseSettings(fixture, { withHighlightsDestination: 'external', withoutHighlightsDestination: 'off' });
   await runReadwiseReaderImport();
@@ -236,7 +236,11 @@ it('removes Readwise-managed External documents and sync rows', async () => {
     external_deleted_count: 1,
     status: 'completed'
   });
-  expect(readRows('SELECT document_id FROM external_documents')).toEqual([]);
+  expect(readRows('SELECT document_id, is_present FROM external_documents')).toEqual([
+    { document_id: 'readwise-reader-import-articles:Plain.md', is_present: 0 }
+  ]);
   expect(readRows('SELECT * FROM keep_import_items')).toEqual([]);
-  expect(readRows("SELECT object_id FROM sync_object_state WHERE object_type = 'external_document'")).toEqual([]);
+  expect(readRows("SELECT object_id, deleted_at FROM sync_object_state WHERE object_type = 'external_document'")).toEqual([
+    { object_id: 'readwise-reader-import-articles:Plain.md', deleted_at: result.cleaned_at }
+  ]);
 });
