@@ -28,6 +28,7 @@ export const CORE_TABLES = [
   'setting_records',
   'sync_change_log',
   'sync_object_state',
+  'sync_node_child_owners',
   'sync_group_restore_events',
   'sync_state_sequence',
   'workspace_meta'
