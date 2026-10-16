@@ -4,19 +4,15 @@ import type { CompanionDesktopSyncProgress } from '../shared/platform/companionD
 import type { CompanionSyncPassInput } from './companionSyncPassResult';
 
 function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
-  return isKnownBacklog(result.remainingAttachmentResourceCount) || isKnownBacklog(result.remainingContentBlobCount);
+  return isKnownBacklog(result.remainingAttachmentResourceCount);
 }
 
 function isKnownBacklog(count: number | null) {
   return typeof count === 'number' && count > 0;
 }
 
-function hasContentProgress(result: CompanionSyncPassInput) {
-  return (result.syncedContentBlobHashes?.length ?? 0) > 0;
-}
-
 function hasAttachmentProgress(result: CompanionSyncPassInput) {
-  return (result.syncedAttachmentIds?.length ?? 0) > 0;
+  return (result.transferredAttachmentCount ?? 0) > 0;
 }
 
 function knownNumber(value: number | null | undefined) {
@@ -24,32 +20,14 @@ function knownNumber(value: number | null | undefined) {
 }
 
 export function shouldClearCompanionSyncProgress(result: CompanionSyncPassInput) {
-  if (result.attachmentResourceError || result.contentBlobError) {
+  if (result.attachmentResourceError) {
     return !hasRemainingResourceBacklog(result);
   }
   const structureDone = result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0;
-  return !isKnownBacklog(result.remainingAttachmentResourceCount) && !isKnownBacklog(result.remainingContentBlobCount) && structureDone;
+  return !isKnownBacklog(result.remainingAttachmentResourceCount) && structureDone;
 }
 
 export function buildRemainingSyncProgress(result: CompanionSyncPassInput): CompanionDesktopSyncProgress | null {
-  if (isKnownBacklog(result.remainingContentBlobCount)) {
-    if (hasContentProgress(result)) {
-      return null;
-    }
-    return {
-      completed: 0,
-      completedBytes: 0,
-      mode: 'remaining',
-      phase: 'content',
-      total: result.remainingContentBlobCount,
-      totalBytes: result.remainingContentBlobBytes ?? null,
-      ...definedProps({
-        contentBreakdown: result.remainingContentBreakdown,
-        failedBytes: knownNumber(result.remainingFailedContentBlobBytes),
-        failedCount: knownNumber(result.remainingFailedContentBlobCount)
-      })
-    };
-  }
   if (isKnownBacklog(result.remainingAttachmentResourceCount)) {
     if (hasAttachmentProgress(result)) {
       return null;

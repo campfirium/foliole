@@ -50,7 +50,6 @@ export function createSyncObjectsResult(
     appliedReviewOpIds: [],
     attachmentResourceError: null,
     changedObjectIds: [],
-    contentBlobError: null,
     localDirtyCount: 0,
     pendingAckCount: 0,
     pushedNodeIds: [],
@@ -65,18 +64,9 @@ export function createSyncObjectsResult(
     remainingAttachmentResourceCount: 0,
     remainingFailedAttachmentResourceBytes: null,
     remainingFailedAttachmentResourceCount: 0,
-    remainingContentBreakdown: undefined,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: 0,
-    remainingFailedContentBlobBytes: null,
-    remainingFailedContentBlobCount: 0,
     remainingStructureChangeCount: 0,
     requestedObjectIds: [],
-    syncedAttachmentIds: [],
-    syncedAttachmentResourceBytes: 0,
-    syncedContentBlobBytes: 0,
-    syncedContentBlobHashes: [],
-    syncedResourceElapsedMs: 0,
+    transferredAttachmentCount: 0,
     ...overrides
   };
 }

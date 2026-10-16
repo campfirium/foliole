@@ -1,31 +1,17 @@
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 
-import {
-  formatSyncPassCount
-} from './companionSyncPassResultFormat';
 
 export interface CompanionSyncPassInput {
+  databaseConfirmedAt?: string;
+  transferredAttachmentCount?: number;
   attachmentResourceError: string | null;
-  contentBlobError: string | null;
   localDirtyCount?: number | null | undefined;
   pendingAckCount?: number | null | undefined;
   pushConflictCount?: number | undefined;
   pushError?: string | null | undefined;
   pushIssueCount?: number | null | undefined;
   pushRejectedCount?: number | undefined;
-  syncedAttachmentIds?: string[] | undefined;
   syncedAttachmentResourceElapsedMs?: number | undefined;
-  syncedAttachmentResourceBytes?: number | undefined;
-  syncedContentBlobElapsedMs?: number | undefined;
-  syncedContentBlobBytes?: number | undefined;
-  syncedContentBlobHashes?: string[] | undefined;
-  syncedContentBlobNativeTiming?: {
-    dbElapsedMs: number;
-    httpElapsedMs: number;
-    parseElapsedMs: number;
-    totalElapsedMs: number;
-  } | undefined;
-  syncedResourceElapsedMs?: number | undefined;
   syncedStructureElapsedMs?: number | undefined;
   remainingAttachmentBreakdown?: {
     activeTopicAttachments?: number;
@@ -41,18 +27,6 @@ export interface CompanionSyncPassInput {
   remainingAttachmentResourceCount: number | null;
   remainingFailedAttachmentResourceBytes?: number | null | undefined;
   remainingFailedAttachmentResourceCount?: number | null | undefined;
-  remainingContentBreakdown?: {
-    activeTopicBodies?: number;
-    dueReviewBodies?: number;
-    externalDocumentBodies?: number;
-    nestedTopicBodies?: number;
-    topLevelTopicBodies?: number;
-    topicBodies?: number;
-  } | undefined;
-  remainingContentBlobBytes?: number | null | undefined;
-  remainingContentBlobCount: number | null;
-  remainingFailedContentBlobBytes?: number | null | undefined;
-  remainingFailedContentBlobCount?: number | null | undefined;
   remainingStructureChangeCount?: number | null | undefined;
 }
 
@@ -74,7 +48,7 @@ function createPassResult(
 }
 
 function hasRemainingResourceBacklog(result: CompanionSyncPassInput) {
-  return isKnownBacklog(result.remainingContentBlobCount) || isKnownBacklog(result.remainingAttachmentResourceCount);
+  return isKnownBacklog(result.remainingAttachmentResourceCount);
 }
 
 function isKnownBacklog(count: number | null) {
@@ -86,59 +60,48 @@ function clarifyCheckOnlyMessage(message: string) {
 }
 
 function madeResourceProgress(result: CompanionSyncPassInput) {
-  return (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+  return (result.transferredAttachmentCount ?? 0) > 0;
 }
 
 function hasFailedResourceBacklog(result: CompanionSyncPassInput) {
-  return (result.remainingFailedContentBlobCount ?? 0) > 0 || (result.remainingFailedAttachmentResourceCount ?? 0) > 0;
+  return (result.remainingFailedAttachmentResourceCount ?? 0) > 0;
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
-  const withTiming = (message: string) => message;
-  const errorResult = describeErrorPass(result, withTiming);
+  const errorResult = describeErrorPass(result);
   if (errorResult) return errorResult;
-  const pushResult = describePushPass(result, withTiming);
+  const pushResult = describePushPass(result);
   if (pushResult) return pushResult;
-  const completedResult = describeCompletedPass(result, withTiming);
+  const completedResult = describeCompletedPass(result);
   if (completedResult) return completedResult;
-  return describeUnfinishedPass(result, withTiming);
+  return describeUnfinishedPass(result);
 }
 
 function describeErrorPass(
-  result: CompanionSyncPassInput,
-  withTiming: (message: string) => string
+  result: CompanionSyncPassInput
 ) {
   if (result.attachmentResourceError) {
+    if (result.databaseConfirmedAt) return createPassResult(
+      'Text and state synced; attachments need another attempt.', 'skipped', 'partial');
     if (hasRemainingResourceBacklog(result)) {
       return createPassResult(
-        withTiming(`Sync checked; attachment files could not download in this pass: ${result.attachmentResourceError}`),
+        `Sync checked; attachment files could not download in this pass: ${result.attachmentResourceError}`,
         'skipped',
         'partial'
       );
     }
-    return createPassResult(withTiming(`Attachment download failed: ${result.attachmentResourceError}`), 'failed');
-  }
-  if (result.contentBlobError) {
-    if (hasRemainingResourceBacklog(result)) {
-      return createPassResult(
-        withTiming(`Sync checked; body downloads could not finish in this pass: ${result.contentBlobError}`),
-        'skipped',
-        'partial'
-      );
-    }
-    return createPassResult(withTiming(`Body download failed: ${result.contentBlobError}`), 'failed');
+    return createPassResult(`Attachment download failed: ${result.attachmentResourceError}`, 'failed');
   }
   return null;
 }
 
 function describePushPass(
-  result: CompanionSyncPassInput,
-  withTiming: (message: string) => string
+  result: CompanionSyncPassInput
 ) {
   const extra = describePullBacklogWhilePushPending(result);
   if (result.pushError) {
     return createPassResult(
-      withTiming(`Device changes were not sent: ${result.pushError}${extra}`),
+      `Device changes were not sent: ${result.pushError}${extra}`,
       'skipped',
       'retrying'
     );
@@ -148,7 +111,7 @@ function describePushPass(
   );
   if (rejectedOrConflicted > 0) {
     return createPassResult(
-      withTiming(`${formatSyncPassCount(rejectedOrConflicted, 'device change was', 'device changes were')} not sent after desktop rejected or conflicted ${rejectedOrConflicted === 1 ? 'it' : 'them'}.${extra}`),
+      `${formatSyncPassCount(rejectedOrConflicted, 'device change was', 'device changes were')} not sent after desktop rejected or conflicted ${rejectedOrConflicted === 1 ? 'it' : 'them'}.${extra}`,
       'skipped',
       'waiting'
     );
@@ -158,7 +121,7 @@ function describePushPass(
 
 function describePullBacklogWhilePushPending(result: CompanionSyncPassInput) {
   if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
-    return ' Topic list confirmation is still pending.';
+    return ' Text and state are waiting for confirmation.';
   }
   if (hasRemainingResourceBacklog(result)) {
     return ' Resource downloads are still pending.';
@@ -167,43 +130,43 @@ function describePullBacklogWhilePushPending(result: CompanionSyncPassInput) {
 }
 
 function describeCompletedPass(
-  result: CompanionSyncPassInput,
-  withTiming: (message: string) => string
+  result: CompanionSyncPassInput
 ) {
   if (
-    result.remainingContentBlobCount === 0 &&
     result.remainingAttachmentResourceCount === 0 &&
     (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0) &&
     result.localDirtyCount === 0 &&
     result.pendingAckCount === 0
   ) {
-    return createPassResult(withTiming('All stages completed.'), 'completed');
+    return createPassResult('All stages completed.', 'completed');
   }
   return null;
 }
 
 function describeUnfinishedPass(
-  result: CompanionSyncPassInput,
-  withTiming: (message: string) => string
+  result: CompanionSyncPassInput
 ) {
   if (
-    result.remainingContentBlobCount === 0 &&
     result.remainingAttachmentResourceCount === 0 &&
     (result.remainingStructureChangeCount === undefined || result.remainingStructureChangeCount === 0)
   ) {
-    return createPassResult(withTiming('Device changes are still waiting to sync.'), 'skipped', 'waiting');
+    return createPassResult('Device changes are still waiting to sync.', 'skipped', 'waiting');
   }
   if (result.remainingStructureChangeCount === null || (result.remainingStructureChangeCount ?? 0) > 0) {
-    return createPassResult(withTiming('Topic list confirmation is still pending.'), 'skipped', 'partial');
+    return createPassResult('Text and state are waiting for confirmation.', 'skipped', 'partial');
   }
   if (hasFailedResourceBacklog(result)) {
-    return createPassResult(withTiming('Resource downloads need another pass; some downloads failed earlier.'), 'skipped');
+    return createPassResult('Resource downloads need another pass; some downloads failed earlier.', 'skipped');
   }
   if (hasRemainingResourceBacklog(result)) {
     return createPassResult(
-      withTiming(madeResourceProgress(result) ? 'Resource downloads made progress and will continue.' : 'Resource downloads are still pending.'),
+      madeResourceProgress(result) ? 'Resource downloads made progress and will continue.' : 'Resource downloads are still pending.',
       'skipped'
     );
   }
-  return createPassResult(withTiming(clarifyCheckOnlyMessage('Sync checked')), 'skipped');
+  return createPassResult(clarifyCheckOnlyMessage('Sync checked'), 'skipped');
+}
+
+function formatSyncPassCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }

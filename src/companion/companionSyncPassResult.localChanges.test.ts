@@ -8,7 +8,6 @@ import {
 function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSyncPassInput {
   return {
     attachmentResourceError: null,
-    contentBlobError: null,
     localDirtyCount: 0,
     pendingAckCount: 0,
     pushConflictCount: 0,
@@ -17,8 +16,6 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: 0,
     remainingStructureChangeCount: 0,
     ...overrides
   };
@@ -40,7 +37,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
   it('keeps pull success visible when push fails', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
-      remainingContentBlobCount: 3
+      remainingAttachmentResourceCount: 3
     }))).toEqual({
       message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Resource downloads are still pending.',
       outcome: 'skipped',
@@ -53,8 +50,7 @@ describe('describeCompanionSyncPassResult local changes', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushConflictCount: 1,
       pushIssueCount: null,
-      remainingAttachmentResourceCount: 0,
-      remainingContentBlobCount: 3
+      remainingAttachmentResourceCount: 3,
     }))).toEqual({
       message: '1 device change was not sent after desktop rejected or conflicted it. Resource downloads are still pending.',
       outcome: 'skipped',
@@ -93,7 +89,7 @@ describe('describeCompanionSyncPassResult structure lag', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: 4
     }))).toEqual({
-      message: 'Topic list confirmation is still pending.',
+      message: 'Text and state are waiting for confirmation.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'
@@ -104,7 +100,7 @@ describe('describeCompanionSyncPassResult structure lag', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingStructureChangeCount: null
     }))).toEqual({
-      message: 'Topic list confirmation is still pending.',
+      message: 'Text and state are waiting for confirmation.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'

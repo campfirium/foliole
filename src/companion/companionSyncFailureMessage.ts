@@ -14,9 +14,6 @@ export function formatCompanionSyncFailureMessage(error: unknown) {
   if (message.includes('applying the structure pack')) {
     return `Topic list sync failed: ${message}`;
   }
-  if (message.includes('fetching body downloads') || message.includes('fetching topic bodies')) {
-    return `Body download sync failed: ${message}`;
-  }
   if (message.includes('fetching attachment resources')) {
     return `Attachment file sync failed: ${message}`;
   }

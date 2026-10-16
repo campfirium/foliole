@@ -12,8 +12,6 @@ async function testRecordsBacklogBytesWithoutFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceBytes: 3145728,
     remainingAttachmentResourceCount: 2,
-    remainingContentBlobBytes: 5242880,
-    remainingContentBlobCount: 5
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 
@@ -38,16 +36,14 @@ async function testRecordsDownloadedResourcesForPass() {
     options?.onProgress?.({
       completed: 1,
       completedBytes: 1048576,
-      phase: 'content',
+      phase: 'attachment',
       total: 6,
       totalBytes: 6291456
     });
     return createSyncObjectsResult({
-      remainingContentBlobBytes: 5242880,
-      remainingContentBlobCount: 5,
-      syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1'],
-      syncedResourceElapsedMs: 8000
+      remainingAttachmentResourceBytes: 5242880,
+      remainingAttachmentResourceCount: 5,
+      transferredAttachmentCount: 1,
     });
   });
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
@@ -69,7 +65,7 @@ async function testRecordsDownloadedResourcesForPass() {
   expect(setSyncProgress).toHaveBeenLastCalledWith({
     completed: 1,
     completedBytes: 1048576,
-    phase: 'content',
+    phase: 'attachment',
     total: 6,
     totalBytes: 6291456
   });
@@ -83,8 +79,8 @@ async function testRecordsDownloadedResourcesForPass() {
 
 async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
-    contentBlobError: 'Topic body batch could not download any requested body.',
-    remainingContentBlobCount: 5
+    attachmentResourceError: 'Attachment file batch could not download any requested file.',
+    remainingAttachmentResourceCount: 5
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setSyncProgress = vi.fn();
@@ -103,18 +99,18 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
     completedBytes: 0,
-    contentBreakdown: undefined,
+    attachmentBreakdown: undefined,
     failedBytes: undefined,
     failedCount: 0,
     mode: 'remaining',
-    phase: 'content',
+    phase: 'attachment',
     total: 5,
     totalBytes: null
   });
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
-    message: 'Sync checked; body downloads could not finish in this pass: Topic body batch could not download any requested body.',
+    message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file.',
     status: 'skipped'
   }));
 }
@@ -122,15 +118,6 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
 async function testKeepsProgressVisibleWhenBacklogRemains() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: 2,
-    remainingContentBreakdown: {
-      activeTopicBodies: 1,
-      dueReviewBodies: 2,
-      externalDocumentBodies: 1,
-      nestedTopicBodies: 3,
-      topLevelTopicBodies: 1,
-      topicBodies: 4
-    },
-    remainingContentBlobCount: 5
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setSyncProgress = vi.fn();
@@ -149,19 +136,12 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
   expect(setSyncProgress).toHaveBeenCalledWith({
     completed: 0,
     completedBytes: 0,
-    contentBreakdown: {
-      activeTopicBodies: 1,
-      dueReviewBodies: 2,
-      externalDocumentBodies: 1,
-      nestedTopicBodies: 3,
-      topLevelTopicBodies: 1,
-      topicBodies: 4
-    },
+    attachmentBreakdown: undefined,
     failedBytes: undefined,
     failedCount: 0,
     mode: 'remaining',
-    phase: 'content',
-    total: 5,
+    phase: 'attachment',
+    total: 2,
     totalBytes: null
   });
 }

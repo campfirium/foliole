@@ -93,7 +93,6 @@ function syncResult(): CompanionDesktopSyncResult {
     appliedReviewOpIds: [],
     attachmentResourceError: null,
     changedObjectIds: [],
-    contentBlobError: null,
     localDirtyCount: 0,
     pendingAckCount: 0,
     pushConflictCount: 0,
@@ -105,19 +104,11 @@ function syncResult(): CompanionDesktopSyncResult {
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: 0,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobBytes: 0,
-    remainingContentBlobCount: 0,
     remainingFailedAttachmentResourceBytes: 0,
     remainingFailedAttachmentResourceCount: 0,
-    remainingFailedContentBlobBytes: 0,
-    remainingFailedContentBlobCount: 0,
     remainingStructureChangeCount: 0,
     requestedObjectIds: [],
-    syncedAttachmentIds: [],
-    syncedAttachmentResourceBytes: 0,
-    syncedContentBlobBytes: 0,
-    syncedContentBlobHashes: [],
-    syncedResourceElapsedMs: 0
+    transferredAttachmentCount: 0,
   };
 }
 

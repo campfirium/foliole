@@ -172,7 +172,8 @@ function formatSyncDetail(detail: string, t: Translate) {
   if (normalized === 'Resource backlog was not measured in this pass.') return t('companion.sync.activity.resourceBacklogNotMeasured');
   if (normalized === 'Resource downloads are still pending.') return t('companion.sync.activity.resourceDownloadsPending');
   if (normalized === 'Resource downloads made progress and will continue.') return t('companion.sync.activity.resourceDownloadsContinue');
-  if (normalized === 'Topic list confirmation is still pending.') return t('companion.sync.activity.topicListPending');
+  if (normalized === 'Text and state synced; attachments need another attempt.') return t('companion.sync.activity.attachmentsRetry');
+  if (normalized === 'Text and state are waiting for confirmation.' || normalized === 'Topic list confirmation is still pending.') return t('companion.sync.activity.topicListPending');
   if (isDeviceChangesWaitingMessage(normalized)) {
     return t('companion.sync.activity.deviceChangesWaiting');
   }

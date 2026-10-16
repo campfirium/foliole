@@ -7,14 +7,14 @@ function testKeepsBodySessionBaselineAcrossPasses() {
     {
       completed: 64,
       completedBytes: 2_097_152,
-      phase: 'content',
+      phase: 'attachment',
       total: 616,
       totalBytes: 20_971_520
     },
     {
       completed: 32,
       completedBytes: 1_048_576,
-      phase: 'content',
+      phase: 'attachment',
       total: 552,
       totalBytes: 18_874_368
     }
@@ -23,7 +23,7 @@ function testKeepsBodySessionBaselineAcrossPasses() {
   expect(merged).toEqual(expect.objectContaining({
     completed: 96,
     completedBytes: 3_145_728,
-    phase: 'content',
+    phase: 'attachment',
     total: 616,
     totalBytes: 20_971_520
   }));
@@ -38,31 +38,31 @@ function testResetsWhenPhaseChanges() {
   };
 
   expect(mergeCompanionSyncProgressSession(
-    { completed: 64, phase: 'content', total: 616 },
+    { completed: 64, phase: 'structure', total: 616 },
     next
   )).toBe(next);
 }
 
 function testResetsWhenWorkloadGrows() {
-  const next = { completed: 0, phase: 'content' as const, total: 640 };
+  const next = { completed: 0, phase: 'attachment' as const, total: 640 };
 
   expect(mergeCompanionSyncProgressSession(
-    { completed: 64, phase: 'content', total: 616 },
+    { completed: 64, phase: 'attachment', total: 616 },
     next
   )).toBe(next);
 }
 
 function testDoesNotMergeRemainingBacklogIntoActiveSession() {
-  const next = { completed: 0, mode: 'remaining' as const, phase: 'content' as const, total: 552 };
+  const next = { completed: 0, mode: 'remaining' as const, phase: 'attachment' as const, total: 552 };
 
   expect(mergeCompanionSyncProgressSession(
-    { completed: 64, phase: 'content', total: 616 },
+    { completed: 64, phase: 'attachment', total: 616 },
     next
   )).toBe(next);
 }
 
 describe('mergeCompanionSyncProgressSession', () => {
-  it('keeps the body progress baseline across resource passes', testKeepsBodySessionBaselineAcrossPasses);
+  it('keeps the attachment progress baseline across resource passes', testKeepsBodySessionBaselineAcrossPasses);
 
   it('resets the progress session when the resource phase changes', testResetsWhenPhaseChanges);
 

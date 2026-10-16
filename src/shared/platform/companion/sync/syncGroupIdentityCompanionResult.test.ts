@@ -72,3 +72,17 @@ it.each([
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
   expect(describeCompanionSyncPassResult(result).outcome).toBe(outcome);
 });
+
+it('preserves confirmed data when the attachment stage fails', async () => {
+  const { describeCompanionSyncPassResult } = await import('../../../../companion/companionSyncPassResult');
+  runtime.database.mockResolvedValue({ pending: 0, received: ['saved'], sent: [], madeProgress: true });
+  runtime.resources.mockRejectedValue(new Error('attachment_connection_reset'));
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
+  expect(result.databaseConfirmedAt).toEqual(expect.any(String));
+  expect(result.appliedObjectIds).toEqual(['saved']);
+  expect(result.attachmentResourceError).toBe('attachment_connection_reset');
+  expect(result.remainingAttachmentResourceCount).toBeNull();
+  expect(result.transferredAttachmentCount).toBeUndefined();
+  expect(describeCompanionSyncPassResult(result)).toMatchObject({ result: 'partial', outcome: 'skipped',
+    message: 'Text and state synced; attachments need another attempt.' });
+});

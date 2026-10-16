@@ -60,7 +60,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
   await options.onStructureSynced?.({ receivedCount: round.received.length });
   const resourcesStartedAt = Date.now();
-  const resources = await continueCompanionRequestSyncResources({ endpoint_url: endpointUrl,
+  const resources = await runAttachmentStage({ endpoint_url: endpointUrl,
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
     receiver_library_epoch: framedPeer.libraryEpoch });
@@ -71,9 +71,9 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
     // Bodies commit with their database objects; no separate body download stage remains.
-    remainingContentBlobCount: 0,
     remainingAttachmentResourceCount: resources.pending,
-    transferredAttachmentCount: resources.transferred,
+    ...(resources.transferred === undefined ? {} : { transferredAttachmentCount: resources.transferred }),
+    attachmentResourceError: resources.error,
     localDirtyCount: round.pending,
     pushConflictCount: 0,
     pushError: null,
@@ -109,4 +109,14 @@ function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionReques
     pushedReviewOpIds: [],
     requestedObjectIds: round.received
   };
+}
+
+async function runAttachmentStage(input: Parameters<typeof continueCompanionRequestSyncResources>[0]) {
+  try {
+    return { ...await continueCompanionRequestSyncResources(input), error: null };
+  } catch (error) {
+    if (input.signal?.aborted) throw error;
+    return { pending: null, transferred: undefined,
+      error: error instanceof Error ? error.message : String(error) };
+  }
 }

@@ -13,7 +13,6 @@ function syncResult(overrides: Partial<CompanionDesktopSyncResult> = {}): Compan
     appliedReviewOpIds: [],
     attachmentResourceError: null,
     changedObjectIds: [],
-    contentBlobError: null,
     localDirtyCount: 0,
     pendingAckCount: 0,
     pushConflictCount: 0,
@@ -25,19 +24,11 @@ function syncResult(overrides: Partial<CompanionDesktopSyncResult> = {}): Compan
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: 0,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobBytes: 0,
-    remainingContentBlobCount: 0,
     remainingFailedAttachmentResourceBytes: 0,
     remainingFailedAttachmentResourceCount: 0,
-    remainingFailedContentBlobBytes: 0,
-    remainingFailedContentBlobCount: 0,
     remainingStructureChangeCount: 0,
     requestedObjectIds: [],
-    syncedAttachmentIds: [],
-    syncedAttachmentResourceBytes: 0,
-    syncedContentBlobBytes: 0,
-    syncedContentBlobHashes: [],
-    syncedResourceElapsedMs: 0,
+    transferredAttachmentCount: 0,
     ...overrides
   };
 }
@@ -50,12 +41,11 @@ describe('buildCompanionSyncRunSummary', () => {
         appliedPackObjectCount: 3,
         pushedObjectIds: ['topic:1'],
         pushedReviewOpIds: ['review:1'],
-        syncedAttachmentIds: ['attachment:1'],
-        syncedContentBlobHashes: ['hash:1']
+        transferredAttachmentCount: 1,
       }),
       startedAt: '2026-05-09T06:42:00.000Z'
     })).toMatchObject({
-      change_count: 7,
+      change_count: 6,
       duration_ms: 8_000
     });
   });

@@ -15,13 +15,11 @@ function countLabel(count: number | undefined, singular: string, plural: string)
 }
 
 function reviewQueueTotal(progress: CompanionDesktopSyncProgress) {
-  if (progress.phase === 'content') return progress.contentBreakdown?.dueReviewBodies ?? 0;
   if (progress.phase === 'attachment') return progress.attachmentBreakdown?.dueReviewAttachments ?? 0;
   return 0;
 }
 
 function activeTopicTotal(progress: CompanionDesktopSyncProgress) {
-  if (progress.phase === 'content') return progress.contentBreakdown?.activeTopicBodies ?? 0;
   if (progress.phase === 'attachment') return progress.attachmentBreakdown?.activeTopicAttachments ?? 0;
   return 0;
 }
@@ -51,8 +49,7 @@ function formatSyncPhase(progress: CompanionDesktopSyncProgress, t: Translate) {
   if (progress.phase === 'structure') return t('companion.sync.progress.libraryIndex');
   if (isActiveTopicProgress(progress)) return t('companion.sync.progress.currentTopic');
   if (isReviewQueueProgress(progress)) return t('companion.sync.progress.reviewResources');
-  if (progress.phase === 'attachment') return t('companion.sync.progress.attachments');
-  return t('companion.sync.progress.bodyDownloads');
+  return t('companion.sync.progress.attachments');
 }
 
 function formatBytes(bytes: number) {
@@ -75,24 +72,6 @@ function fallbackT(t: Translate, key: Parameters<Translate>[0], values?: Paramet
   } catch {
     return null;
   }
-}
-
-function formatContentBreakdown(progress: CompanionDesktopSyncProgress, t: Translate) {
-  const breakdown = progress.contentBreakdown;
-  if (progress.phase !== 'content' || !breakdown) return null;
-  const body = t('companion.sync.progress.body');
-  const bodies = t('companion.sync.progress.bodies');
-  const currentTopic = t('companion.sync.progress.currentTopic');
-  const reviewQueue = t('companion.sync.progress.reviewQueue');
-  if (isActiveTopicProgress(progress)) return `${currentTopic}: ${countLabel(breakdown.activeTopicBodies, body, bodies)}`;
-  if (isReviewQueueProgress(progress)) return `${reviewQueue}: ${countLabel(breakdown.dueReviewBodies, body, bodies)}`;
-  const segments = [
-    [t('companion.sync.progress.topLevel'), breakdown.topLevelTopicBodies],
-    [t('companion.sync.progress.nested'), breakdown.nestedTopicBodies],
-    [t('companion.sync.progress.external'), breakdown.externalDocumentBodies],
-    [reviewQueue, breakdown.dueReviewBodies]
-  ].filter((segment): segment is [string, number] => typeof segment[1] === 'number');
-  return segments.map(([label, count]) => `${label} ${count}`).join(' · ') || null;
 }
 
 function formatAttachmentBreakdown(progress: CompanionDesktopSyncProgress, t: Translate) {
@@ -140,7 +119,7 @@ export function formatCompanionSyncProgressSummary(progress: CompanionDesktopSyn
     ? fallbackT(t, 'companion.sync.progress.failed', { count: progress.failedCount }) ?? `${progress.failedCount} failed`
     : null;
   return {
-    detail: formatContentBreakdown(progress, t) ?? formatAttachmentBreakdown(progress, t),
+    detail: formatAttachmentBreakdown(progress, t),
     status: [byteLabel ? `${count} - ${byteLabel}` : count, failedLabel, elapsedLabel].filter(Boolean).join(' · '),
     title: formatSyncPhase(progress, t)
   };

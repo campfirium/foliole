@@ -8,7 +8,6 @@ import {
 function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSyncPassInput {
   return {
     attachmentResourceError: null,
-    contentBlobError: null,
     localDirtyCount: 0,
     pendingAckCount: 0,
     pushConflictCount: 0,
@@ -17,8 +16,6 @@ function passInput(overrides: Partial<CompanionSyncPassInput> = {}): CompanionSy
     pushRejectedCount: 0,
     remainingAttachmentResourceBytes: null,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: 0,
     remainingStructureChangeCount: 0,
     ...overrides
   };
@@ -36,11 +33,7 @@ describe('describeCompanionSyncPassResult', () => {
 
   it('records downloaded resources when a pass makes progress', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      syncedAttachmentIds: ['att-1'],
-      syncedAttachmentResourceBytes: 2097152,
-      syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1', 'hash-2'],
-      syncedResourceElapsedMs: 8000
+      transferredAttachmentCount: 1,
     }))).toEqual({
       message: 'All stages completed.',
       outcome: 'completed',
@@ -51,12 +44,10 @@ describe('describeCompanionSyncPassResult', () => {
 });
 
 describe('describeCompanionSyncPassResult backlog', () => {
-  it('keeps body and attachment backlog as a skipped download pass', () => {
+  it('keeps attachment backlog as a skipped download pass', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingAttachmentResourceBytes: 3145728,
       remainingAttachmentResourceCount: 2,
-      remainingContentBlobBytes: 5242880,
-      remainingContentBlobCount: 5
     }))).toEqual({
       message: 'Resource downloads are still pending.',
       outcome: 'skipped',
@@ -68,7 +59,6 @@ describe('describeCompanionSyncPassResult backlog', () => {
   it('keeps unknown resource counts from claiming backlog or completion', () => {
     expect(describeCompanionSyncPassResult(passInput({
       remainingAttachmentResourceCount: null,
-      remainingContentBlobCount: null
     }))).toEqual({
       message: 'Sync checked; resource backlog was not measured in this pass.',
       outcome: 'skipped',
@@ -79,11 +69,9 @@ describe('describeCompanionSyncPassResult backlog', () => {
 
   it('records progress and remaining backlog together', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      remainingContentBlobBytes: 5242880,
-      remainingContentBlobCount: 5,
-      syncedContentBlobBytes: 1048576,
-      syncedContentBlobHashes: ['hash-1'],
-      syncedResourceElapsedMs: 65000
+      remainingAttachmentResourceBytes: 5242880,
+      remainingAttachmentResourceCount: 5,
+      transferredAttachmentCount: 1,
     }))).toEqual({
       message: 'Resource downloads made progress and will continue.',
       outcome: 'skipped',
@@ -94,12 +82,10 @@ describe('describeCompanionSyncPassResult backlog', () => {
 
   it('shows failed downloads separately from ordinary backlog', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      remainingContentBlobBytes: 5242880,
-      remainingContentBlobCount: 5,
+      remainingAttachmentResourceBytes: 5242880,
+      remainingAttachmentResourceCount: 5,
       remainingFailedAttachmentResourceBytes: 524288,
       remainingFailedAttachmentResourceCount: 1,
-      remainingFailedContentBlobBytes: 1048576,
-      remainingFailedContentBlobCount: 1
     }))).toEqual({
       message: 'Resource downloads need another pass; some downloads failed earlier.',
       outcome: 'skipped',
@@ -114,7 +100,6 @@ describe('describeCompanionSyncPassResult push blocks', () => {
     expect(describeCompanionSyncPassResult(passInput({
       pushIssueCount: 2,
       remainingAttachmentResourceCount: 1,
-      remainingContentBlobCount: 3
     }))).toEqual({
       message: '2 device changes were not sent after desktop rejected or conflicted them. Resource downloads are still pending.',
       outcome: 'skipped',
@@ -128,7 +113,7 @@ describe('describeCompanionSyncPassResult push blocks', () => {
       pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
       remainingStructureChangeCount: 2
     }))).toEqual({
-      message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Topic list confirmation is still pending.',
+      message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push. Text and state are waiting for confirmation.',
       outcome: 'skipped',
       result: 'retrying',
       status: 'skipped'
@@ -137,13 +122,10 @@ describe('describeCompanionSyncPassResult push blocks', () => {
 });
 
 describe('describeCompanionSyncPassResult timing', () => {
-  it('records stage timing when a pass completes', () => {
+  it('keeps diagnostic timing out of the completion message', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      syncedAttachmentIds: ['att-1'],
+      transferredAttachmentCount: 1,
       syncedAttachmentResourceElapsedMs: 12200,
-      syncedContentBlobElapsedMs: 8100,
-      syncedContentBlobHashes: ['hash-1'],
-      syncedResourceElapsedMs: 20300,
       syncedStructureElapsedMs: 1300
     }))).toEqual({
       message: 'All stages completed.',
@@ -153,31 +135,16 @@ describe('describeCompanionSyncPassResult timing', () => {
     });
   });
 
-  it('records native topic body timing when Android reports batch internals', () => {
-    expect(describeCompanionSyncPassResult(passInput({
-      syncedContentBlobHashes: ['hash-1'],
-      syncedContentBlobNativeTiming: {
-        dbElapsedMs: 450,
-        httpElapsedMs: 1200,
-        parseElapsedMs: 80,
-        totalElapsedMs: 1800
-      }
-    }))).toEqual({
-      message: 'All stages completed.',
-      outcome: 'completed',
-      result: 'completed',
-      status: 'completed'
-    });
-  });
+
 });
 
 describe('describeCompanionSyncPassResult errors', () => {
-  it('keeps a body download error on the backlog retry path when bodies remain', () => {
+  it('keeps a attachment download error on the backlog retry path when attachments remain', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      contentBlobError: 'Topic body batch could not download any requested body.',
-      remainingContentBlobCount: 5
+      attachmentResourceError: 'Attachment file batch could not download any requested file.',
+      remainingAttachmentResourceCount: 5
     }))).toEqual({
-      message: 'Sync checked; body downloads could not finish in this pass: Topic body batch could not download any requested body.',
+      message: 'Sync checked; attachment files could not download in this pass: Attachment file batch could not download any requested file.',
       outcome: 'skipped',
       result: 'partial',
       status: 'skipped'
@@ -196,14 +163,21 @@ describe('describeCompanionSyncPassResult errors', () => {
     });
   });
 
-  it('marks a body download error failed when no body backlog remains', () => {
+  it('marks a attachment download error failed when no attachment backlog remains', () => {
     expect(describeCompanionSyncPassResult(passInput({
-      contentBlobError: 'Topic body batch could not download any requested body.'
+      attachmentResourceError: 'Attachment file batch could not download any requested file.'
     }))).toEqual({
-      message: 'Body download failed: Topic body batch could not download any requested body.',
+      message: 'Attachment download failed: Attachment file batch could not download any requested file.',
       outcome: 'failed',
       result: 'failed',
       status: 'failed'
     });
   });
+});
+
+it('uses the actual attachment transfer count to report progress', () => {
+  expect(describeCompanionSyncPassResult(passInput({
+    transferredAttachmentCount: 1, remainingAttachmentResourceCount: 2
+  }))).toMatchObject({ result: 'partial', outcome: 'skipped',
+    message: 'Resource downloads made progress and will continue.' });
 });

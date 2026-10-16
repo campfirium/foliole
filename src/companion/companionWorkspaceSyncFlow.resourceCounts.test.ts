@@ -11,7 +11,6 @@ import {
 async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: null,
-    remainingContentBlobCount: null
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const setSyncProgress = vi.fn();
@@ -26,7 +25,6 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   });
 
   expect(outcome).toBe('skipped');
-  expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'content' }));
   expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
   expect(setSyncProgress).toHaveBeenLastCalledWith(null);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -38,8 +36,7 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
 async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: null,
-    remainingContentBlobCount: null,
-    syncedContentBlobHashes: ['hash-1']
+    transferredAttachmentCount: 1
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 

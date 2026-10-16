@@ -163,7 +163,7 @@ async function testRecordsStructureLagWithoutCompleting() {
   expect(outcome).toBe('pending');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
-    message: 'Topic list confirmation is still pending.',
+    message: 'Text and state are waiting for confirmation.',
     result: 'partial',
     status: 'skipped'
   }));
@@ -172,7 +172,6 @@ async function testRecordsStructureLagWithoutCompleting() {
 async function testKeepsProgressVisibleWhenStructureLagRemains() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobCount: 0,
     remainingStructureChangeCount: 4
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
@@ -201,7 +200,6 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
     localDirtyCount: 1,
     pendingAckCount: 1,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobCount: 0
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 

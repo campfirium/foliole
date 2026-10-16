@@ -75,7 +75,7 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
   const runId = args.runId;
   let triggerReason = args.syncArgs.triggerReason
     ?? (args.syncArgs.state.last_synced_at ? 'automatic' : 'initial');
-  const startedAt = new Date().toISOString();
+  const startedAt = args.syncArgs.triggeredAt ?? new Date().toISOString();
   try {
     args.syncArgs.setStatus('syncing');
     await beginNativeCompanionSyncRun(triggerReason, runId);

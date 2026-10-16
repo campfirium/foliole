@@ -31,8 +31,7 @@ export function buildCompanionSyncRunSummary(args: {
   const waitingSendCount = desktopReviewCount > 0 || waitingConfirmationCount > 0 ? 0 : knownCount(args.result.localDirtyCount);
   const changeCount =
     knownCount(args.result.appliedPackObjectCount) +
-    uniqueCount(args.result.syncedContentBlobHashes) +
-    uniqueCount(args.result.syncedAttachmentIds) +
+    knownCount(args.result.transferredAttachmentCount) +
     uniqueCount(args.result.pushedObjectIds) +
     uniqueCount(args.result.pushedReviewOpIds) +
     desktopReviewCount +
@@ -43,7 +42,7 @@ export function buildCompanionSyncRunSummary(args: {
     ...definedProps({
       database_duration_ms: args.result.syncedStructureElapsedMs,
       attachment_duration_ms: args.result.syncedAttachmentResourceElapsedMs,
-      attachment_count: args.result.transferredAttachmentCount ?? args.result.syncedAttachmentIds.length,
+      attachment_count: args.result.transferredAttachmentCount,
       received_count: args.result.appliedObjectIds.length,
       desktop_review_count: desktopReviewCount || undefined,
       duration_ms: durationMs(args.startedAt, args.occurredAt),

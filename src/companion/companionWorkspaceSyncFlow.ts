@@ -56,6 +56,7 @@ export interface RunCompanionStreamSyncArgs {
 }
 
 export interface TryForegroundAutoSyncArgs {
+  triggeredAt?: string;
   cancelled: () => boolean;
   signal?: AbortSignal;
   setError(error: string | null): void;
@@ -144,6 +145,7 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
 }
 
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
+  const triggeredAt = args.triggeredAt ?? new Date().toISOString();
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return 'skipped';
   let targets;
@@ -162,7 +164,7 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       if (args.cancelled()) break;
       const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
       outcomes.push(await tryForegroundAutoSyncTarget(
-        targetArgs, target, runCompanionStreamSync
+        { ...targetArgs, triggeredAt }, target, runCompanionStreamSync
       ));
     }
     return combineForegroundSyncOutcomes(outcomes);

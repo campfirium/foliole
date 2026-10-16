@@ -154,7 +154,7 @@ describe('CompanionSyncStatusDetails activity progress', () => {
       syncProgress: {
         completed: 12,
         completedBytes: 2_097_152,
-        phase: 'content',
+        phase: 'attachment',
         total: 585,
         totalBytes: 10_066_330
       }
@@ -163,7 +163,7 @@ describe('CompanionSyncStatusDetails activity progress', () => {
     expect(screen.getByText('Current sync')).toBeInTheDocument();
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('Now')).toBeInTheDocument();
-    expect(screen.getByText('Body downloads; 12/585 - 2.0 MB/9.6 MB')).toBeInTheDocument();
+    expect(screen.getByText('Attachments; 12/585 - 2.0 MB/9.6 MB')).toBeInTheDocument();
     expect(screen.queryByText('Auto sync started.')).not.toBeInTheDocument();
   });
 

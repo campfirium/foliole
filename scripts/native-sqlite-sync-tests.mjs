@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'src/test/companionSyncStageFailure.integration.test.ts',
   'src/companion/companionSyncActivityFailure.integration.test.ts',
   'lib/core/database/nodePositionRetirementMigration.integration.test.ts',
   'electron/database/nodeChildInventory.integration.test.ts',

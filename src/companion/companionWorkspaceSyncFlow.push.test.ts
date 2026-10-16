@@ -13,7 +13,6 @@ async function testRecordsPushFailureWithoutFailingPull() {
     localDirtyCount: 1,
     pushError: 'Desktop sync target returned 500 for /companion/sync-push.',
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobCount: 0
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 
@@ -42,7 +41,6 @@ async function testRecordsPushConflictWithoutCompleting() {
     pushIssueCount: 2,
     pushRejectedCount: 1,
     remainingAttachmentResourceCount: 0,
-    remainingContentBlobCount: 0
   }));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
 

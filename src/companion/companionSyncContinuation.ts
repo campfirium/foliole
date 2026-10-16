@@ -7,11 +7,11 @@ function isKnownBacklog(count: number | null) {
 }
 
 function madeResourceProgress(result: CompanionDesktopSyncResult) {
-  return (result.transferredAttachmentCount ?? 0) > 0 || (result.syncedContentBlobHashes?.length ?? 0) > 0 || (result.syncedAttachmentIds?.length ?? 0) > 0;
+  return (result.transferredAttachmentCount ?? 0) > 0;
 }
 
 function hasResourceBacklog(result: CompanionDesktopSyncResult) {
-  return isKnownBacklog(result.remainingContentBlobCount) || isKnownBacklog(result.remainingAttachmentResourceCount);
+  return isKnownBacklog(result.remainingAttachmentResourceCount);
 }
 
 function hasWaitingLocalChanges(result: CompanionDesktopSyncResult) {
@@ -25,7 +25,6 @@ function hasWaitingLocalChanges(result: CompanionDesktopSyncResult) {
 export function resolveCompanionSyncContinuationMode(result: CompanionDesktopSyncResult): CompanionSyncContinuationMode {
   if (
     result.attachmentResourceError ||
-    result.contentBlobError ||
     !hasResourceBacklog(result) ||
     !madeResourceProgress(result) ||
     (result.remainingStructureChangeCount ?? 0) > 0 ||
@@ -37,7 +36,7 @@ export function resolveCompanionSyncContinuationMode(result: CompanionDesktopSyn
 }
 
 export function hasRetryWork(result: CompanionDesktopSyncResult) {
-  if (result.attachmentResourceError || result.contentBlobError) {
+  if (result.attachmentResourceError) {
     return false;
   }
   return madeResourceProgress(result) || hasResourceBacklog(result) || (result.remainingStructureChangeCount ?? 0) > 0 || hasWaitingLocalChanges(result);
