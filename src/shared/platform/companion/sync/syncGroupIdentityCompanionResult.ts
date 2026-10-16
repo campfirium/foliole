@@ -46,7 +46,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     initiatorDeviceId: group.local_device_identity_key, initiatorLibraryEpoch: local.library_epoch,
     responderDeviceId: options.framedPeer.deviceId, responderLibraryEpoch: options.framedPeer.libraryEpoch } as const;
   return withCompanionRequestSyncPeerRound(context, endpointUrl, peerRound, async () => {
-  const round = options.resourcesOnly && !options.restoreId ? { pending: 0, received: [], sent: [], madeProgress: false } : await runCompanionRequestSyncDatabaseRound({ endpointUrl, groupId: group.group_id,
+  const round = options.resourcesOnly && !options.restoreId ? { pending: 0, received: [], sent: [], madeProgress: false, workspaceChanged: false } : await runCompanionRequestSyncDatabaseRound({ endpointUrl, groupId: group.group_id,
     peerRound, signal,
     localLibraryEpoch: local.library_epoch, peerState,
     ...(options.restoreId ? { restoreId: options.restoreId } : {}),
@@ -59,7 +59,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
   const sessionConfirmationPending = await confirmDatabase(options, databaseConfirmedAt);
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
-  await options.onStructureSynced?.({ receivedCount: round.received.length });
+  await options.onStructureSynced?.({ receivedCount: round.received.length, workspaceChanged: round.workspaceChanged });
   const resourcesStartedAt = Date.now();
   const resources = await runAttachmentStage({ endpoint_url: endpointUrl,
     peerRound, signal,

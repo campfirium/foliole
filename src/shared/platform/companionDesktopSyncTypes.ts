@@ -8,7 +8,7 @@ export interface CompanionDesktopSyncOptions {
   waitForInbound?: () => boolean;
   signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
-  onStructureSynced?: (facts: { receivedCount: number }) => Promise<void> | void;
+  onStructureSynced?: (facts: { receivedCount: number; workspaceChanged: boolean }) => Promise<void> | void;
   onDatabaseConfirmed?: (confirmedAt: string) => Promise<void>;
   resourcesOnly?: boolean;
   restoreId?: string;

@@ -20,12 +20,20 @@ function createView() {
     }, setError: vi.fn(), setStatus: vi.fn(), setSyncProgress: vi.fn() } };
 }
 
-function receiveChanges() {
+function receiveChanges(workspaceChanged = true) {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {
-    await options.onStructureSynced?.({ receivedCount: 1 });
+    await options.onStructureSynced?.({ receivedCount: 1, workspaceChanged });
     return createSyncObjectsResult({ appliedObjectIds: ['received'] });
   });
 }
+
+it('does not reload the tree for received foreground time alone', async () => {
+  const view = createView();
+  receiveChanges(false);
+  expect(await tryForegroundAutoSync(view.args)).toBe('completed');
+  expect(syncPlatformMock.loadCompanionWorkspaceSyncState).not.toHaveBeenCalled();
+  expect(view.current().workspace_snapshot?.activeNodeId).toBe('original');
+});
 
 it('releases the run before a slow display refresh and preserves current metadata', async () => {
   const view = createView();

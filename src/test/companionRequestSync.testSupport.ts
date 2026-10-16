@@ -105,7 +105,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
     proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null }, true);
   return {
     fixture, post, get sqlite() { return sqlite; }, get db() { return native.db!; },
-    sync: (options: Pick<CompanionDesktopSyncOptions, 'waitForInbound' | 'onProgress' | 'signal' | 'onDatabaseConfirmed'> = {}) =>
+    sync: (options: Pick<CompanionDesktopSyncOptions, 'waitForInbound' | 'onProgress' | 'signal' | 'onDatabaseConfirmed' | 'onStructureSynced'> = {}) =>
       syncCompanionIdentityObjects(fixture.rightSnapshot.origin, { ...options, framedPeer: peer }),
     async restart() {
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());

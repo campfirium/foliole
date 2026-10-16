@@ -24,7 +24,7 @@ describe('companion workspace manual sync refresh', () => {
       workspace_snapshot: syncedSnapshot
     }));
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {
-      await options.onStructureSynced?.({ receivedCount: 1 });
+      await options.onStructureSynced?.({ receivedCount: 1, workspaceChanged: true });
       return createSyncResult();
     });
 

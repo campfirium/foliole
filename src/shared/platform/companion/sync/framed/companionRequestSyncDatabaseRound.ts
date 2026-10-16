@@ -53,6 +53,7 @@ async function runRound(input: RoundInput) {
   let receivingOverwrite = Boolean(overwriteId);
   const received = new Set<string>();
   const sent = new Set<string>();
+  let workspaceChanged = Boolean(overwriteId);
   const port: RequestSyncDatabaseRoundPort = {
     exchangeInventory: async () => exchangeRequestSyncInventory(host, exchange, receivingOverwrite
       ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
@@ -63,12 +64,15 @@ async function runRound(input: RoundInput) {
       const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
       for (const [index, result] of results.entries()) if (!result.error) {
         (differences[index]!.direction === 'local_to_remote' ? sent : received).add(result.globalId);
+        if (differences[index]!.direction === 'remote_to_local' && result.objectType !== 'foreground_source') {
+          workspaceChanged = true;
+        }
       }
       return results;
     },
     reportObjectError: input.reportObjectError
   };
-  if (!overwriteId) return { ...await runRequestSyncDatabaseRound(port, input.signal), received: [...received], sent: [...sent] };
+  if (!overwriteId) return { ...await runRequestSyncDatabaseRound(port, input.signal), received: [...received], sent: [...sent], workspaceChanged };
   let result = await withCompanionForegroundTimeMaintenance(async () => {
     await host.write(db => prepareSyncGroupOverwrite(db, progress));
     return runRequestSyncOverwriteRound(host, progress, port, input.signal);
@@ -79,5 +83,5 @@ async function runRound(input: RoundInput) {
     result = { ...continuation, transferred: result.transferred + continuation.transferred,
       madeProgress: result.madeProgress || continuation.madeProgress };
   }
-  return { ...result, received: [...received], sent: [...sent] };
+  return { ...result, received: [...received], sent: [...sent], workspaceChanged };
 }
