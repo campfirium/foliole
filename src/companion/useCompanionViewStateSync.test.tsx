@@ -110,3 +110,16 @@ it('removes a lifecycle subscription that resolves after unmount', async () => {
   expect(saves.unsubscribe).toHaveBeenCalledTimes(1);
   expect(saves.position).not.toHaveBeenCalled();
 });
+
+it('does not write periodically during continuous scrolling', () => {
+  const hook = renderHook(useCompanionViewStateSync, { initialProps: view('one') });
+  act(() => {
+    for (let position = 0; position < 10; position += 1) {
+      hook.result.current(position * 100);
+      vi.advanceTimersByTime(500);
+    }
+  });
+  expect(saves.position).not.toHaveBeenCalled();
+  act(() => vi.advanceTimersByTime(300));
+  expect(saves.position).toHaveBeenCalledExactlyOnceWith({ nodeId: 'one', scrollTop: 900 });
+});

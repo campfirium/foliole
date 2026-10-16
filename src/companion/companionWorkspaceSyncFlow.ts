@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
   syncCompanionObjectsFromDesktop,
@@ -169,14 +170,19 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
     if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
     return 'failed';
   }
+  const mobilePeers = targets.filter(target => isMobileSyncPlatform(target.platform ?? ''));
+  const foregroundTargets = targets.filter(target => !mobilePeers.includes(target));
   const outcomes: ForegroundAutoSyncOutcome[] = [];
   try {
-    for (const target of targets) {
+    for (const target of foregroundTargets.length ? foregroundTargets : targets) {
       if (args.cancelled()) break;
       const targetArgs = targets.length > 1 ? resetSharedContinuation(args) : args;
       outcomes.push(await tryForegroundAutoSyncTarget(
         { ...targetArgs, triggeredAt }, target, runCompanionStreamSync
       ));
+    }
+    if (foregroundTargets.length && mobilePeers.length) {
+      scheduleCompanionMobilePeerSync(storedEndpointUrl, args, runCompanionStreamSync, mobilePeers);
     }
     if (reusedSession && !args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
       scheduleCompanionMobilePeerSync(storedEndpointUrl, args, runCompanionStreamSync);

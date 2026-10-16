@@ -103,12 +103,33 @@ it('sends a new desktop edit while mobile discovery is still unresolved', async 
   }
 });
 
-it('does not discover twice when initial resolution already found mobile peers', async () => {
+it('finishes the initial desktop foreground round while discovered mobile transfer is blocked', async () => {
+  let release!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  let mobileFinished = false;
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValue([desktop, phone]);
-  await expect(tryForegroundAutoSync({ ...args(), discoverMobilePeers: true })).resolves.toBe('completed');
-  expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).toHaveBeenCalledOnce();
-  expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint))
-    .toEqual([desktop.endpointUrl, phone.endpointUrl]);
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async endpoint => {
+    if (endpoint === phone.endpointUrl) {
+      await blocked;
+      mobileFinished = true;
+    }
+    return createSyncObjectsResult();
+  });
+  let outcome: string | undefined;
+  const foreground = tryForegroundAutoSync({ ...args(), discoverMobilePeers: true })
+    .then(result => { outcome = result; });
+  try {
+    await vi.waitFor(() => expect(outcome).toBe('completed'));
+    await vi.waitFor(() => expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2));
+    expect(mobileFinished).toBe(false);
+    expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).toHaveBeenCalledOnce();
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint))
+      .toEqual([desktop.endpointUrl, phone.endpointUrl]);
+  } finally {
+    release();
+    await foreground;
+    await vi.waitFor(() => expect(mobileFinished).toBe(true));
+  }
 });
 
 

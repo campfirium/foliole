@@ -9,10 +9,11 @@ const pending = new Map<string, Promise<void>>();
 
 /** Discovery has no foreground-run ownership; only an actual transfer acquires it. */
 export function scheduleCompanionMobilePeerSync(
-  endpoint: string, args: TryForegroundAutoSyncArgs, runStream: typeof runCompanionStreamSync
+  endpoint: string, args: TryForegroundAutoSyncArgs, runStream: typeof runCompanionStreamSync,
+  discoveredPeers?: Awaited<ReturnType<typeof resolveReachableCompanionWorkspaceSyncEndpoints>>
 ) {
   if (pending.has(endpoint) || args.cancelled()) return;
-  const work = discoverAndSync(endpoint, args, runStream).catch(error => {
+  const work = discoverAndSync(endpoint, args, runStream, discoveredPeers).catch(error => {
     if (!args.cancelled()) args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
   }).finally(() => {
     if (pending.get(endpoint) === work) pending.delete(endpoint);
@@ -21,9 +22,10 @@ export function scheduleCompanionMobilePeerSync(
 }
 
 async function discoverAndSync(
-  endpoint: string, args: TryForegroundAutoSyncArgs, runStream: typeof runCompanionStreamSync
+  endpoint: string, args: TryForegroundAutoSyncArgs, runStream: typeof runCompanionStreamSync,
+  discoveredPeers?: Awaited<ReturnType<typeof resolveReachableCompanionWorkspaceSyncEndpoints>>
 ) {
-  const peers = await resolveReachableCompanionWorkspaceSyncEndpoints(endpoint, {
+  const peers = discoveredPeers ?? await resolveReachableCompanionWorkspaceSyncEndpoints(endpoint, {
     allowWhileNotParticipating: args.triggerReason === 'manual', mobilePeersOnly: true
   });
   const targetArgs = { ...args, triggeredAt: new Date().toISOString() };
