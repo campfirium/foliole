@@ -7,10 +7,22 @@ export const FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL = `INSERT INTO framed_sync_re
 export async function recordFramedSyncResourceAvailability(
   db: DbPort, hashes: readonly string[], available: boolean
 ) {
-  for (const hash of new Set(hashes)) {
-    if (!/^[a-f0-9]{64}$/u.test(hash)) throw new Error('framed_sync_resource_hash_invalid');
-    await db.run(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [hash, available ? 1 : 0]);
-  }
+  const unique = [...new Set(hashes)];
+  if (unique.some(hash => !/^[a-f0-9]{64}$/u.test(hash))) throw new Error('framed_sync_resource_hash_invalid');
+  if (!unique.length) return;
+  await db.transaction(async tx => {
+    for (let offset = 0; offset < unique.length; offset += 128) {
+      const batch = unique.slice(offset, offset + 128);
+      const rows = await tx.query<{ hash: string; available: number }>(`SELECT hash, available
+        FROM framed_sync_resource_availability WHERE hash IN (${batch.map(() => '?').join(',')})`, batch);
+      const current = new Map(rows.map(row => [row.hash, row.available]));
+      const changed = batch.filter(hash => current.get(hash) !== Number(available));
+      if (!changed.length) continue;
+      await tx.run(`INSERT INTO framed_sync_resource_availability (hash, available)
+        VALUES ${changed.map(() => '(?, ?)').join(',')} ON CONFLICT(hash) DO UPDATE SET available = excluded.available
+        WHERE framed_sync_resource_availability.available != excluded.available`, changed.flatMap(hash => [hash, Number(available)]));
+    }
+  });
 }
 
 /** Ready resource pins exist only after the attachment bytes have been verified and promoted. */

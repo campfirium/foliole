@@ -20,8 +20,11 @@ final class FolioleAttachmentBlockFiles {
             owner.onAttachmentClose { close(owner) }
         }
         try owner.requireActive()
+        if call.getString("action") == "source-stat-batch", call.getArray("keys", String.self) == nil {
+            throw FolioleFramedSyncValidationError("attachment_stat_batch_invalid")
+        }
         return try files.execute(action: call.getString("action") ?? "", key: call.getString("key") ?? "",
-                                 partial: call.getBool("partial") ?? false,
+                                 partial: call.getBool("partial") ?? false, keys: call.getArray("keys", String.self) ?? [],
                                  number: { call.getDouble($0) }, base64: call.getString("base64")) as! JSObject
     }
 

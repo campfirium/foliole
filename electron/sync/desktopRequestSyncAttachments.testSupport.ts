@@ -58,7 +58,7 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
   if (receiver.kind !== 'acquired') throw new Error('test_owner_busy');
   const source = createDesktopAttachmentBlockSource(assetsDir);
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
-    needs: () => readRequestSyncAttachmentNeeds(database, key => isDesktopAttachmentPresent(assetsDir, key)) };
+    needs: () => readRequestSyncAttachmentNeeds(database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)))) };
   return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
 }
 

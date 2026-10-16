@@ -4,6 +4,20 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleAttachmentBlockSourceTests: XCTestCase {
+    func testBatchPresenceRechecksFilesAndBoundsRequests() throws {
+        let fixture = try AttachmentBlockStorageFixture()
+        defer { fixture.close() }
+        let keys = [fixture.key, String(repeating: "b", count: 64) + ".png"]
+        let file = fixture.root.appendingPathComponent(fixture.key)
+        try Data([1, 2, 3]).write(to: file)
+        XCTAssertEqual(try fixture.storage.execute(action: "source-stat-batch", key: "", keys: keys)["presence"] as? [Bool], [true, false])
+        try FileManager.default.removeItem(at: file)
+        XCTAssertEqual(try fixture.storage.execute(action: "source-stat-batch", key: "", keys: keys)["presence"] as? [Bool], [false, false])
+        XCTAssertThrowsError(try fixture.storage.execute(action: "source-stat-batch", key: "", keys: Array(repeating: fixture.key, count: 65)))
+        XCTAssertThrowsError(try fixture.storage.execute(action: "source-stat-batch", key: "", keys: [String(repeating: "a", count: 16385)]))
+        XCTAssertThrowsError(try fixture.storage.execute(action: "source-stat-batch", key: "", keys: ["../escape"]))
+    }
+
     func testReadsExactRangesFromAssetsAndTrashAndCloseReleasesSource() throws {
         let fixture = try AttachmentBlockStorageFixture()
         defer { fixture.close() }

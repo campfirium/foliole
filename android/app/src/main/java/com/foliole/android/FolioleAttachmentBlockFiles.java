@@ -3,12 +3,14 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -65,6 +67,7 @@ public final class FolioleAttachmentBlockFiles {
     private JSObject execute(PluginCall call) throws Exception {
         String action = call.getString("action", "");
         String key = call.getString("key", "");
+        if (action.equals("source-stat-batch")) return sourceStatBatch(call);
         if (action.equals("acquire")) { acquire(); return new JSObject(); }
         if (action.startsWith("source-")) return source(call, action, key);
         boolean partial = call.getBoolean("partial", false);
@@ -72,6 +75,21 @@ public final class FolioleAttachmentBlockFiles {
         if (action.equals("hash")) return new JSObject().put("hash", digest(resolve(key, partial)));
         acquire();
         return mutate(call, action, key);
+    }
+
+    private JSObject sourceStatBatch(PluginCall call) throws Exception {
+        JSArray keys = call.getArray("keys");
+        if (keys == null || keys.length() > 64) throw new IllegalArgumentException("attachment_stat_batch_invalid");
+        int bytes = 0;
+        for (int i = 0; i < keys.length(); i++) {
+            if (!(keys.get(i) instanceof String)) throw new IllegalArgumentException("attachment_stat_batch_invalid");
+            bytes += keys.getString(i).getBytes(StandardCharsets.UTF_8).length;
+            if (bytes > 16384) throw new IllegalArgumentException("attachment_stat_batch_invalid");
+            resolve(keys.getString(i), false);
+        }
+        JSArray presence = new JSArray();
+        for (int i = 0; i < keys.length(); i++) presence.put(source(call, "source-stat", keys.getString(i)).getBoolean("present"));
+        return new JSObject().put("presence", presence);
     }
 
     private JSObject mutate(PluginCall call, String action, String key) throws Exception {

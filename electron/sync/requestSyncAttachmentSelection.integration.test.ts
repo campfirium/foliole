@@ -116,10 +116,10 @@ it('keeps availability and original facts unchanged when a file check fails and 
     for (const item of items) await writeFile(path.join(local.assetsDir, item.key), item.bytes);
     const initial = availability();
     let checks = 0;
-    await expect(readRequestSyncAttachmentNeeds(host, async key => {
+    await expect(readRequestSyncAttachmentNeeds(host, async keys => Promise.all(keys.map(async key => {
       if (++checks === 2) throw new Error('fixture_file_check_failed');
       return isDesktopAttachmentPresent(local.assetsDir, key);
-    })).rejects.toThrow('fixture_file_check_failed');
+    })))).rejects.toThrow('fixture_file_check_failed');
     expect(checks).toBe(2);
     expect(availability()).toEqual(initial);
     expect(local.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);

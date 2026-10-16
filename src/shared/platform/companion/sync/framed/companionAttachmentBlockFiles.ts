@@ -68,8 +68,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
         } });
       } finally { await call({ key, action: 'source-close' }); }
     }),
-    needs: () => readRequestSyncAttachmentNeeds(db, async key =>
-      statSchema.parse(await call({ key, action: 'source-stat' })).present)
+    needs: () => readRequestSyncAttachmentNeeds(db, async keys =>
+      z.array(z.boolean()).parse((await call({ key: '', keys, action: 'source-stat-batch' })).presence))
   };
   return host;
 }

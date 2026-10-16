@@ -49,7 +49,7 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     async receive(resource, offset, bytes) { return (await receiver()).receive(resource, offset, bytes); },
     async needs() {
       await checkLibrary();
-      return readRequestSyncAttachmentNeeds(host, key => isDesktopAttachmentPresent(assetsDir, key));
+      return readRequestSyncAttachmentNeeds(host, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key))));
     }
   };
 }

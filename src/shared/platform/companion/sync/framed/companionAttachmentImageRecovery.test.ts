@@ -102,9 +102,10 @@ it('recomputes needs using metadata without opening or hashing present attachmen
   const key = `${'b'.repeat(64)}.png`;
   await seedAttachmentReferences(sqlite, [key]);
   native.access.mockImplementation(async (input: NativeCompanionFramedFileRequest) => {
-    if (input.operation !== 'attachment' || input.action !== 'source-stat') throw new Error('Unexpected content read during needs');
-    try { return { present: true, length: (await stat(path.join(root, input.key))).size, hash: '' }; }
-    catch { return { present: false, length: 0, hash: '' }; }
+    if (input.operation !== 'attachment' || input.action !== 'source-stat-batch') throw new Error('Unexpected content read during needs');
+    return { presence: await Promise.all(input.keys!.map(async key => {
+      try { return (await stat(path.join(root, key))).isFile(); } catch { return false; }
+    })) };
   });
   try {
     const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
@@ -115,6 +116,8 @@ it('recomputes needs using metadata without opening or hashing present attachmen
     expect(await host.needs()).toEqual([]);
     await rm(path.join(root, key));
     expect(await host.needs()).toEqual([key]);
+    native.access.mockResolvedValue({ presence: [] });
+    await expect(host.needs()).rejects.toThrow('attachment_stat_response_invalid');
   } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });
 

@@ -35,14 +35,24 @@ final class FolioleAttachmentBlockStorage {
         }
         descriptor = candidate
     }
-    func execute(action: String, key: String, partial: Bool = false,
+    func execute(action: String, key: String, partial: Bool = false, keys: [String] = [],
                  number: (String) -> Double? = { _ in nil }, base64: String? = nil) throws -> [String: Any] {
+        if action == "source-stat-batch" { return try sourceStatBatch(keys) }
         if action == "acquire" { try acquire(); return [:] }
         if action.hasPrefix("source-") { return try source(action: action, key: key, number: number) }
         if action == "stat" { return try info(resolve(key, partial: partial), hash: !partial) }
         if action == "hash" { return ["hash": try digest(resolve(key, partial: partial))] }
         try acquire()
         return try mutate(action: action, key: key, number: number, base64: base64)
+    }
+    private func sourceStatBatch(_ keys: [String]) throws -> [String: Any] {
+        guard keys.count <= 64, keys.reduce(0, { $0 + $1.utf8.count }) <= 16384 else {
+            throw invalid("attachment_stat_batch_invalid")
+        }
+        for key in keys { _ = try resolve(key, partial: false) }
+        return ["presence": try keys.map { key in
+            try source(action: "source-stat", key: key, number: { _ in nil })["present"] as! Bool
+        }]
     }
     private func mutate(action: String, key: String, number: (String) -> Double?,
                         base64: String?) throws -> [String: Any] {
