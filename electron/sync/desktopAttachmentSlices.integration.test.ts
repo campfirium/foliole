@@ -105,12 +105,12 @@ async function runSlice(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
     const result = await withRequestSyncPeerRound(exchange, peerRound,
       async () => {
         if (index === 1) await syncDataDuringAttachment(local.database, exchange, targetPath);
-        return exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; });
+        return exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; }, () => true);
       });
-    expect(result).toEqual([
+    expect(result).toMatchObject([
       { blocks: 2, pending: 2, transferred: 0 }, { blocks: 2, pending: 2, transferred: 0 },
       { blocks: 2, pending: 1, transferred: 1 }, { blocks: 1, pending: 0, transferred: 1 }
-    ][index]);
+    ][index]!);
     if (index === 0) {
       const signal = AbortSignal.abort(new Error('cancelled_between_slices'));
       await expect(exchangeRequestSyncAttachments(local.host, { ...exchange, signal }, () => {}))

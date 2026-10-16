@@ -1,3 +1,5 @@
+import { requestAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
+
 type SyncRunIntent = { manualRequested: boolean };
 
 type ActiveSyncRun = {
@@ -31,6 +33,7 @@ export function runCompanionSyncAsOwner<T>(
 ): CompanionSyncRunHandle<T> {
   const activeRun = activeSyncRun;
   if (activeRun) {
+    requestAttachmentWorkYield();
     if (manualRequested) activeRun.intent.manualRequested = true;
     return { completion: activeRun.completion, mode: 'joined', runId: activeRun.runId };
   }

@@ -1,3 +1,4 @@
+import { requestAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { createMemberSyncCadence } from '../../lib/core/sync/memberSyncCadence.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -16,6 +17,7 @@ const cadence = createMemberSyncCadence({
 subscribeDesktopSyncCompleted(() => cadence.markActualSync());
 
 export function requestDesktopHighValueSync() {
+  requestAttachmentWorkYield();
   desktopSyncChangeSessions().changed();
   return cadence.requestMutation('mutation');
 }

@@ -6,7 +6,8 @@ import Database from 'better-sqlite3';
 
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { createAttachmentDemandCache } from '../../lib/core/sync/attachmentDemandCache.js';
+import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
@@ -57,7 +58,13 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
     availability: (hash, available) => recordFramedSyncResourceAvailability(db, [hash], available) });
   if (receiver.kind !== 'acquired') throw new Error('test_owner_busy');
   const source = createDesktopAttachmentBlockSource(assetsDir);
+  const demand = createAttachmentDemandCache();
+  const inspect = (keys: string[]) => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
+    async needsSlice(shouldYield) {
+      const result = await demand(database, shouldYield);
+      return { pending: result.pending, keys: result.pending ? [] : await inspectAttachmentNeeds(database, result.keys, inspect) };
+    },
     needs: () => readRequestSyncAttachmentNeeds(database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)))) };
   return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
 }

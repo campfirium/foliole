@@ -1079,6 +1079,15 @@
                     "state": {
                       "type": "string",
                       "id": 8
+                    },
+                    "pending": {
+                      "type": "bool",
+                      "id": 9
+                    },
+                    "maxBlocks": {
+                      "type": "uint32",
+                      "id": 10,
+                      "protoName": "max_blocks"
                     }
                   }
                 }

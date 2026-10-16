@@ -33,4 +33,6 @@ message RequestAttachment {
   bytes data = 6;
   repeated string storage_keys = 7;
   string state = 8;
+  bool pending = 9;
+  uint32 max_blocks = 10;
 }

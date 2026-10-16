@@ -10,7 +10,7 @@ export async function drainAttachmentSlices(...args: Parameters<typeof exchangeR
       args[2](key, error);
     });
     transferred += result.transferred;
-    if (!result.pending || !result.blocks || failed) return { pending: result.pending, transferred };
+    if (result.pending === 0 || (!result.blocks && !result.yielded) || failed) return { pending: result.pending, transferred };
   }
   throw new Error('attachment_test_did_not_converge');
 }

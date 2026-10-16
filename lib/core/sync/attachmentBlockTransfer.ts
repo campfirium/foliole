@@ -15,12 +15,12 @@ export interface AttachmentBlockSource {
 }
 
 export async function transferAttachmentSlice(input: {
-  storageKey: string; source: AttachmentBlockSource; destination: AttachmentBlockDestination; signal?: AbortSignal; maxBlocks?: number;
+  storageKey: string; source: AttachmentBlockSource; destination: AttachmentBlockDestination; signal?: AbortSignal; maxBlocks?: number; shouldYield?: () => boolean;
 }) {
   return input.source.withFile(input.storageKey, async file => {
     let current = await input.destination.status(file.resource);
     let blocks = 0;
-    while (current.kind !== 'complete' && blocks < (input.maxBlocks ?? 1)) {
+    while (current.kind !== 'complete' && blocks < (input.maxBlocks ?? 1) && (!blocks || !input.shouldYield?.())) {
       input.signal?.throwIfAborted();
       const offset = current.offset;
       if (!Number.isSafeInteger(offset) || offset < 0 || offset >= file.resource.byteLength ||

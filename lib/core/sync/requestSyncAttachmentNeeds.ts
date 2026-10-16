@@ -32,15 +32,8 @@ export async function readRequestSyncAttachmentNeeds(host: Pick<RequestSyncDatab
   while (true) {
     const page = await readPage(host, after);
     for (const keys of attachmentStatBatches(page.keys.filter(key => !seen.has(key)))) {
-      const presence = await inspect(keys);
-      if (presence.length !== keys.length || presence.some(value => typeof value !== 'boolean')) {
-        throw new Error('attachment_stat_response_invalid');
-      }
-      await host.write(db => db.transaction(async tx => {
-        await recordFramedSyncResourceAvailability(tx, keys.filter((_, i) => presence[i]).map(key => key.slice(0, 64)), true);
-        await recordFramedSyncResourceAvailability(tx, keys.filter((_, i) => !presence[i]).map(key => key.slice(0, 64)), false);
-      }));
-      keys.forEach((key, i) => { seen.add(key); if (!presence[i]) missing.add(key); });
+      for (const key of await inspectAttachmentNeeds(host, keys, inspect)) missing.add(key);
+      keys.forEach(key => seen.add(key));
     }
     if (page.last === null) break;
     after = page.last;
@@ -56,4 +49,21 @@ async function readPage(host: Pick<RequestSyncDatabaseHost, 'readSnapshot'>, aft
     if (result.unreadableArticleIds.length) throw new Error('attachment_current_body_unavailable');
     return { keys: result.needs.map(need => need.storageKey), last: nodes.length === 128 ? nodes.at(-1)!.id : null };
   });
+}
+
+export async function inspectAttachmentNeeds(host: Pick<RequestSyncDatabaseHost, 'write'>, resources: readonly string[],
+  inspect: (keys: string[]) => Promise<boolean[]>) {
+  const missing: string[] = [];
+  for (const keys of attachmentStatBatches(resources)) {
+    const presence = await inspect(keys);
+    if (presence.length !== keys.length || presence.some(value => typeof value !== 'boolean')) {
+      throw new Error('attachment_stat_response_invalid');
+    }
+    await host.write(db => db.transaction(async tx => {
+      await recordFramedSyncResourceAvailability(tx, keys.filter((_, i) => presence[i]).map(key => key.slice(0, 64)), true);
+      await recordFramedSyncResourceAvailability(tx, keys.filter((_, i) => !presence[i]).map(key => key.slice(0, 64)), false);
+    }));
+    keys.forEach((key, i) => { if (!presence[i]) missing.push(key); });
+  }
+  return missing;
 }

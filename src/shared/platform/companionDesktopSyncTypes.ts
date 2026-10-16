@@ -56,6 +56,7 @@ export interface CompanionDesktopSyncResult {
   requestedObjectIds: string[];
   transferredAttachmentCount?: number;
   transferredAttachmentBlockCount?: number;
+  attachmentWorkYielded?: boolean;
   syncedAttachmentResourceElapsedMs?: number;
   syncedStructureElapsedMs?: number;
   attachmentResourceError: string | null;

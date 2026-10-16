@@ -76,6 +76,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     remainingAttachmentResourceCount: resources.pending,
     ...(resources.transferred === undefined ? {} : { transferredAttachmentCount: resources.transferred }),
     transferredAttachmentBlockCount: resources.blocks ?? 0,
+    attachmentWorkYielded: resources.yielded,
     attachmentResourceError: resources.error,
     localDirtyCount: round.pending,
     pushConflictCount: 0,
@@ -129,7 +130,7 @@ async function runAttachmentStage(input: Parameters<typeof continueCompanionRequ
     return { ...await continueCompanionRequestSyncResources(input), error: null };
   } catch (error) {
     if (input.signal?.aborted) throw error;
-    return { pending: null, transferred: undefined, blocks: 0,
+    return { pending: null, transferred: undefined, blocks: 0, yielded: false,
       error: error instanceof Error ? error.message : String(error) };
   }
 }

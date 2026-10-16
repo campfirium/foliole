@@ -1,3 +1,4 @@
+import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
@@ -151,7 +152,8 @@ export async function tryForegroundAutoSyncTarget(
 ) {
   let active = loadActiveCompanionSyncRun();
   while (active && active.endpointUrl !== target.endpointUrl && !syncArgs.cancelled()) {
-    await active.completion.catch(() => undefined);
+    const releaseWaiter = waitForAttachmentWorkYield();
+    try { await active.completion.catch(() => undefined); } finally { releaseWaiter(); }
     active = loadActiveCompanionSyncRun();
   }
   const runId = syncArgs.runId ?? createCompanionSyncRunId();

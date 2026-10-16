@@ -14,7 +14,8 @@ it.each([
   { madeDatabaseProgress: true, appliedObjectIds: ['received'], remainingStructureChangeCount: 2 },
   { madeDatabaseProgress: true, pushedObjectIds: ['sent'], localDirtyCount: 2 },
   { transferredAttachmentCount: 1, remainingAttachmentResourceCount: 2 },
-  { transferredAttachmentBlockCount: 1, remainingAttachmentResourceCount: 1 }
+  { transferredAttachmentBlockCount: 1, remainingAttachmentResourceCount: 1 },
+  { attachmentWorkYielded: true, remainingAttachmentResourceCount: null }
 ])('continues actual progress quickly: %j', async result => {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult(result));
   expect(await sync()).toBe('backlog');

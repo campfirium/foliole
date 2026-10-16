@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
-import { readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { createAttachmentDemandCache } from '../../../../../../lib/core/sync/attachmentDemandCache.js';
+import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract.js';
@@ -53,7 +54,14 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     publish: async resource => { await call({ key: resource.storageKey, action: 'publish' }); },
     availability: (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))
   });
+  const demand = createAttachmentDemandCache();
+  const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
+    (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
   const host: RequestSyncAttachmentHost = {
+    async needsSlice(shouldYield) {
+      const result = await demand(db, shouldYield);
+      return { keys: result.pending ? [] : await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending };
+    },
     status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
     receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),
     withFile: (key, consume) => files.exclusive(`send-${key}`, async () => {
@@ -68,8 +76,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
         } });
       } finally { await call({ key, action: 'source-close' }); }
     }),
-    needs: () => readRequestSyncAttachmentNeeds(db, async keys =>
-      z.array(z.boolean()).parse((await call({ key: '', keys, action: 'source-stat-batch' })).presence))
+    needs: () => readRequestSyncAttachmentNeeds(db, inspect)
   };
   return host;
 }

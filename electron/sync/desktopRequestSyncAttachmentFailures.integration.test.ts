@@ -33,7 +33,7 @@ async function withAttachments(keys: string[], execute: (fixture: {
   local: Awaited<ReturnType<typeof attachmentHttpSource>>;
   remoteDir: string;
   failures: Array<{ key: string; error: unknown }>;
-  transfer: () => Promise<{ pending: number; transferred: number }>;
+  transfer: () => Promise<{ pending: number | null; transferred: number }>;
 }) => Promise<void>) {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));

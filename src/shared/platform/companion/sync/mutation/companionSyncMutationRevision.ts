@@ -1,3 +1,4 @@
+import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
 
 type MutationListener = () => void;
@@ -22,6 +23,7 @@ export function subscribeCompanionHighValueMutation(listener: MutationListener) 
 
 export function publishCompanionSyncMutationRevision() {
   mutationRevision += 1;
+  requestAttachmentWorkYield();
   for (const listener of mutationListeners) {
     try {
       listener();

@@ -1,5 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
+import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import { attachmentMessage, attachmentRequestSchema, type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
@@ -7,6 +8,7 @@ import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthentica
 
 export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, AttachmentBlockSource {
   needs(): Promise<string[]>;
+  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean }>;
 }
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
@@ -33,11 +35,12 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
 
 async function* responseMessages(host: RequestSyncAttachmentHost, request: AttachmentRequest) {
   if (request.operation === 'needs') {
-    const needs = await host.needs();
+    const demand = await host.needsSlice(attachmentWorkBudget());
+    const needs = demand.keys;
     for (let index = 0; index < needs.length; index += 256) {
       yield attachmentMessage({ ...request, storageKeys: needs.slice(index, index + 256), state: 'partial' });
     }
-    yield attachmentMessage({ ...request, state: 'end' });
+    yield attachmentMessage({ ...request, state: 'end', pending: demand.pending });
     return;
   }
   const resource = attachmentBlockResourceSchema.parse(request);
@@ -54,13 +57,17 @@ async function* sourceMessages(request: AttachmentRequest,
   }
   if (request.byteLength !== file.resource.byteLength || request.offset > file.resource.byteLength ||
       request.offset % ATTACHMENT_BLOCK_BYTES !== 0) throw new Error('attachment_pull_range_invalid');
-  const end = Math.min(request.offset + ATTACHMENT_BLOCK_BYTES, file.resource.byteLength);
+  const end = Math.min(request.offset + ATTACHMENT_BLOCK_BYTES * request.maxBlocks, file.resource.byteLength);
+  const shouldYield = attachmentWorkBudget(250);
+  let sentEnd = request.offset;
   for (let offset = request.offset; offset < end; offset += ATTACHMENT_BLOCK_BYTES) {
+    if (offset > request.offset && shouldYield()) break;
     signal?.throwIfAborted();
     onProgress?.();
     const data = await file.read(offset, Math.min(ATTACHMENT_BLOCK_BYTES, file.resource.byteLength - offset));
     onProgress?.();
+    sentEnd = offset + data.length;
     yield attachmentMessage({ ...request, offset, data, state: 'block' });
   }
-  yield attachmentMessage({ ...request, offset: end, state: 'end' });
+  yield attachmentMessage({ ...request, offset: sentEnd, state: 'end' });
 }

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES } from './attachmentBlockReceiver.js';
+import { requestAttachmentWorkYield } from './attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import { attachmentMessage, attachmentRequestSchema } from './requestSyncAttachmentContract.js';
 import { respondRequestSyncAttachments, type RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
@@ -12,7 +13,8 @@ import { createSyncPeerRoundOwnership } from './syncPeerRoundOwnership.js';
 
 afterEach(() => vi.useRealTimers());
 
-it('ends an encrypted pull after one block while renewing its idle lease', async () => {
+it.each([{ maxBlocks: 1, expected: 1, interrupt: false }, { maxBlocks: 8, expected: 2, interrupt: false },
+  { maxBlocks: 8, expected: 1, interrupt: true }])('bounds an encrypted pull window and renews its lease: %j', async ({ maxBlocks, expected, interrupt }) => {
   vi.useFakeTimers();
   const owner = createSyncPeerRoundOwnership(200);
   const lease = owner.acceptInbound('peer', 'round', true);
@@ -24,9 +26,9 @@ it('ends an encrypted pull after one block while renewing its idle lease', async
     initiatorDeviceId: 'a', initiatorLibraryEpoch: 'a-epoch', responderDeviceId: 'b', responderLibraryEpoch: 'b-epoch' } as const;
   const groupKey = new Uint8Array(32).fill(7);
   const stream = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
-    yield attachmentMessage({ operation: 'pull', requestId: new Uint8Array(16), storageKey, byteLength: bytes.length });
+    yield attachmentMessage({ operation: 'pull', requestId: new Uint8Array(16), storageKey, byteLength: bytes.length, maxBlocks });
   } });
-  const host: RequestSyncAttachmentHost = { needs: async () => [],
+  const host: RequestSyncAttachmentHost = { needs: async () => [], needsSlice: async () => ({ keys: [], pending: false }),
     status: async () => { throw new Error('unexpected status'); },
     receive: async () => { throw new Error('unexpected receive'); },
     withFile: async (_key, consume) => consume({ resource: { storageKey, byteLength: bytes.length },
@@ -34,6 +36,7 @@ it('ends an encrypted pull after one block while renewing its idle lease', async
         const index = offset / ATTACHMENT_BLOCK_BYTES;
         starts[index]!.resolve();
         await releases[index]!.promise;
+        if (interrupt) requestAttachmentWorkYield();
         return bytes.subarray(offset, offset + length);
       } }) };
   const work = respondRequestSyncAttachments(host, { context, groupKey, stream, signal: lease.signal,
@@ -52,7 +55,7 @@ it('ends an encrypted pull after one block while renewing its idle lease', async
       await vi.advanceTimersByTimeAsync(125);
       releases[index]!.resolve();
     }
-    expect(await work).toEqual({ ok: true, value: ATTACHMENT_BLOCK_BYTES });
+    expect(await work).toEqual({ ok: true, value: ATTACHMENT_BLOCK_BYTES * expected });
     expect(lease.signal.aborted).toBe(false);
   } finally { owner.close(); await stream.frames.return(undefined); }
 });

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { requestAttachmentWorkYield, waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
 import type { SyncTriggerReason, SyncTriggerResult } from '../../lib/platform/syncTriggerContract.js';
 import { syncTriggerError } from '../../lib/platform/syncTriggerContract.js';
@@ -23,6 +24,7 @@ let activePeerId: string | null = null;
 const completedListeners = new Set<() => void>();
 interface SyncRequest {
   continuation: boolean;
+  releaseWaiter?: () => void;
   reason: SyncTriggerReason;
   peer: DesktopSyncGroupPeer | undefined;
   promise: Promise<SyncTriggerResult>;
@@ -50,6 +52,7 @@ export function runDesktopSyncCoordinator(
   preferredPeer?: DesktopSyncGroupPeer,
   continuation = false
 ): Promise<SyncTriggerResult> {
+  if (activeRun && !continuation) requestAttachmentWorkYield();
   if (activeRun && activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
   const queued = preferredPeer ? queuedRuns.get(preferredPeer.peer_device_id)
     : pendingRuns.find(request => !request.peer)?.promise;
@@ -60,7 +63,8 @@ export function runDesktopSyncCoordinator(
     resolve = accept;
     reject = decline;
   });
-  pendingRuns.push({ continuation, reason, peer: preferredPeer, promise, resolve, reject });
+  pendingRuns.push({ continuation, reason, peer: preferredPeer, promise, resolve, reject,
+    ...(activeRun && !continuation ? { releaseWaiter: waitForAttachmentWorkYield() } : {}) });
   if (preferredPeer) queuedRuns.set(preferredPeer.peer_device_id, promise);
   startNextRun();
   return promise;
@@ -70,6 +74,7 @@ function startNextRun() {
   if (activeRun) return;
   const request = pendingRuns.shift();
   if (!request) return;
+  request.releaseWaiter?.();
   activeRun = request.promise;
   activePeerId = request.peer?.peer_device_id ?? null;
   if (request.peer) queuedRuns.delete(request.peer.peer_device_id);
@@ -118,7 +123,7 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer: DesktopSyn
         const outcome = await continueDesktopSyncGroupSync(peer, activity);
         if (!outcome?.complete) {
           complete = false;
-          if ((outcome?.attachmentProgress ?? 0) > 0) continuations.push(peer);
+          if ((outcome?.attachmentProgress ?? 0) > 0 || outcome?.attachmentYielded) continuations.push(peer);
         }
       } catch (error) {
         if (!isSyncPeerRoundRetryableError(error)) throw error;

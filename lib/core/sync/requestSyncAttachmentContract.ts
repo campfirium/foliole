@@ -9,7 +9,7 @@ const integer = z.union([z.number(), z.string().regex(/^\d+$/u).transform(Number
   .pipe(z.number().int().nonnegative().max(FRAMED_SYNC_LIMITS.maxBlobBytes));
 const key = attachmentBlockResourceSchema.shape.storageKey;
 const binary = z.unknown().transform(value => bytes(value, 'attachment'));
-/** In dev v27, pull returns at most one block; end.offset is the resumable slice boundary. */
+/** Dev v27 pull windows retain individually authenticated blocks and a resumable end offset. */
 export const attachmentRequestSchema = z.object({
   requestId: binary.refine(bytes => bytes.length === 16),
   operation: z.enum(['needs', 'describe', 'pull', 'status', 'push']),
@@ -19,6 +19,8 @@ export const attachmentRequestSchema = z.object({
   data: binary.refine(bytes => bytes.length <= ATTACHMENT_BLOCK_BYTES)
     .default(() => new Uint8Array()),
   storageKeys: z.array(key).max(256).default([]),
+  pending: z.boolean().default(false),
+  maxBlocks: z.number().int().min(0).max(8).transform(value => value || 1).default(1),
   state: z.enum(['', 'partial', 'complete', 'offset', 'block', 'end']).default('')
 });
 export type AttachmentRequest = z.infer<typeof attachmentRequestSchema>;
