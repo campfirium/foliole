@@ -1,7 +1,7 @@
 import type { DbPort } from './dbPort.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { proveStoredNodeResolutionFrontier } from './syncNodeResolutionFrontierProof.js';
-import type { SyncNodeVersionParentRow } from './syncNodeVersionRows.js';
+import type { SyncNodeVersionParentRow, SyncNodeVersionRow } from './syncNodeVersionRows.js';
 
 interface VersionIdentity {
   object_id: string;
@@ -32,6 +32,7 @@ export async function validateStoredVersionDependencies(
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
   const equivalentFrontiers = new Map<string, boolean>();
   await assertReturningParentOwners(port, byId);
+  const { storedChildren, storedParents } = await loadStoredDependencies(port, parents);
   for (const edge of parents) {
     const child = byId.get(edge.version_id) ?? await heldVersion(port, edge.version_id);
     if (!child) throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
@@ -43,8 +44,7 @@ export async function validateStoredVersionDependencies(
   }
   for (const edge of parents) {
     const incomingChild = byId.get(edge.version_id);
-    const [storedChild] = await port.query<{ parent_version_id: string | null }>(
-      'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
+    const storedChild = storedChildren.get(edge.version_id);
     if (convergedReplays.has(edge.version_id) && storedChild && (!incomingChild ||
         storedChild.parent_version_id !== incomingChild.parent_version_id)) continue;
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
@@ -59,17 +59,11 @@ export async function validateStoredVersionDependencies(
         await isStoredAncestorVersion(port, storedChild.parent_version_id, incomingChild.parent_version_id))) continue;
       throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
     }
-    const [conflict] = await port.query<{ parent_version_id: string }>(
-      `SELECT parent_version_id FROM main.node_sync_version_parents
-       WHERE version_id = ? AND
-         ((ordinal = ? AND parent_version_id <> ?)
-          OR (parent_version_id = ? AND ordinal <> ?)) LIMIT 1`,
-      [edge.version_id, edge.ordinal, edge.parent_version_id,
-        edge.parent_version_id, edge.ordinal]
-    );
-    const [sameRelation] = await port.query(
-      'SELECT 1 FROM node_sync_version_parents WHERE version_id = ? AND parent_version_id = ?',
-      [edge.version_id, edge.parent_version_id]);
+    const heldParents = storedParents.get(edge.version_id) ?? [];
+    const conflict = heldParents.find(held =>
+      held.ordinal === edge.ordinal && held.parent_version_id !== edge.parent_version_id ||
+      held.parent_version_id === edge.parent_version_id && held.ordinal !== edge.ordinal);
+    const sameRelation = heldParents.some(held => held.parent_version_id === edge.parent_version_id);
     if (conflict && !sameRelation && !await isStoredAncestorVersion(port, edge.parent_version_id, edge.version_id)
         && !incomingAncestor(parents, conflict.parent_version_id, edge.parent_version_id)
         && !await provenContractedFrontiers(port, edge.version_id, parents)
@@ -77,6 +71,23 @@ export async function validateStoredVersionDependencies(
       throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
     }
   }
+}
+
+async function loadStoredDependencies(port: DbPort, parents: SyncNodeVersionParentRow[]) {
+  const childIds = JSON.stringify([...new Set(parents.map(edge => edge.version_id))]);
+  const storedChildren = new Map((await port.query<Pick<SyncNodeVersionRow, 'version_id' | 'object_id' | 'parent_version_id'>>(
+    `SELECT version_id, object_id, parent_version_id FROM node_sync_versions
+     WHERE version_id IN (SELECT value FROM json_each(?))`, [childIds]
+  )).map(row => [row.version_id, row]));
+  const storedParents = new Map<string, SyncNodeVersionParentRow[]>();
+  for (const row of await port.query<SyncNodeVersionParentRow>(
+    `SELECT version_id, parent_version_id, ordinal FROM main.node_sync_version_parents
+     WHERE version_id IN (SELECT value FROM json_each(?))`, [childIds])) {
+    const edges = storedParents.get(row.version_id) ?? [];
+    edges.push(row);
+    storedParents.set(row.version_id, edges);
+  }
+  return { storedChildren, storedParents };
 }
 
 async function provenContractedFrontiers(port: DbPort, versionId: string, incoming: SyncNodeVersionParentRow[]) {

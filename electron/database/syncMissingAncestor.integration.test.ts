@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -93,17 +94,19 @@ it('restores peer base identity and preserves each complete divergent body', asy
 });
 
 
-it.each(['identity', 'body'])('rejects an unavailable current version %s without changing receiver node facts', async unavailable => {
+it.each(['identity', 'identity-with-history', 'body'])('rejects an unavailable current version %s without changing receiver node facts', async unavailable => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
   edit(source, 'Available original body');
-  if (unavailable === 'identity') source.db.prepare("DELETE FROM node_sync_versions WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 'topic')").run();
+  if (unavailable === 'identity-with-history') edit(source, 'New current body');
+  if (unavailable !== 'body') source.db.prepare("DELETE FROM node_sync_versions WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 'topic')").run();
   else source.db.prepare(`UPDATE node_sync_versions SET body_text = NULL,
     snapshot_json = json_set(snapshot_json, '$.content', NULL)
     WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 'topic')`).run();
   const before = originals(target);
-  await expect(sync(source, target)).rejects.toThrow(unavailable === 'identity'
-    ? /test_request_sync_dependencies_unresolved:pos_/ : 'request_sync_applied_state_missing');
+  expect((await readFramedSyncInventory(source.port)).find(entry => entry.globalId === 'topic')).toMatchObject({ unready: true });
+  await expect(sync(source, target)).rejects.toThrow(unavailable !== 'body'
+    ? /request_sync_version_missing:/ : 'request_sync_applied_state_missing');
   expect(originals(target)).toEqual(before);
 });

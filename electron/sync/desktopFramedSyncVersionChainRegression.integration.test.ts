@@ -63,7 +63,7 @@ async () => {
     nodes: [], parents: [], versions: []
   });
 
-  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true, attachmentProgress: 0, attachmentYielded: false });
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([
     expect.objectContaining({ content: 'Child body', id: nodeId, title: 'Child' })
@@ -105,7 +105,7 @@ it('converges independent roots while retaining both original bodies and the com
   expect((beforeLeft.nodes[0] as { current_version_id: string }).current_version_id)
     .not.toBe((beforeRight.nodes[0] as { current_version_id: string }).current_version_id);
 
-  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true, attachmentProgress: 0, attachmentYielded: false });
   const left = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
   const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(left.nodes).toEqual(right.nodes);

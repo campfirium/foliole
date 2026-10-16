@@ -37,6 +37,7 @@ import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombst
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
+import { migrateCompanionMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
@@ -117,6 +118,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 87 && targetVersion >= 87) await migrateCompanionForegroundSources(db);
   if (currentVersion < 88 && targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   if (currentVersion < 89 && targetVersion >= 89) await retireCompanionForegroundIdentityTriggers(db);
+  if (currentVersion < 90 && targetVersion >= 90) await migrateCompanionMissingCurrentVersionInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

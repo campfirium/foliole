@@ -69,7 +69,8 @@ export function framedSyncNodeInventorySql(id: string) {
         ORDER BY hash)), '[]')
     FROM sync_object_state state WHERE state.object_type = 'node' AND state.object_id IN (${id})
       AND state.object_id NOT IN ('special-inbox', 'special-virtual-root')
-      AND EXISTS (SELECT 1 FROM framed_sync_version_summary WHERE object_id = state.object_id);`;
+      AND (state.current_version_id IS NOT NULL OR
+        EXISTS (SELECT 1 FROM framed_sync_version_summary WHERE object_id = state.object_id));`;
 }
 
 export function framedSyncTombstoneSummarySql(where: string) {

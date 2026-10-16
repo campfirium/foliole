@@ -160,7 +160,24 @@ export async function loadMergeBaseCandidates(port: DbPort, leftId: string, righ
 }
 
 export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, currentId: string) {
-  return (await loadAncestorDistances(port, currentId)).has(ancestorId);
+  const [match] = await port.query(`WITH RECURSIVE ancestors(version_id) AS (
+    SELECT ?
+    UNION
+    SELECT edge.parent_version_id FROM ancestors ancestor
+      JOIN node_sync_version_parents edge ON edge.version_id = ancestor.version_id
+    UNION
+    SELECT version.parent_version_id FROM ancestors ancestor
+      JOIN node_sync_versions version ON version.version_id = ancestor.version_id
+      WHERE version.parent_version_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM node_sync_version_parents edge WHERE edge.version_id = ancestor.version_id)
+    UNION
+    SELECT tomb.parent_version_id FROM ancestors ancestor
+      JOIN node_sync_tombstones tomb ON tomb.version_id = ancestor.version_id
+      WHERE tomb.parent_version_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM node_sync_version_parents edge WHERE edge.version_id = ancestor.version_id)
+      AND NOT EXISTS (SELECT 1 FROM node_sync_versions version WHERE version.version_id = ancestor.version_id)
+    ) SELECT 1 FROM ancestors WHERE version_id = ? LIMIT 1`, [currentId, ancestorId]);
+  return Boolean(match);
 }
 
 async function storedVersionToRecord(

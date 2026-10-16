@@ -10,5 +10,11 @@ extension FoliolePhysicalSyncGroupUITests {
         hierarchy.name = "Fri-existing-sync-settings-hierarchy"
         hierarchy.lifetime = .keepAlways
         add(hierarchy)
+        tapButton(named: "Details", in: app, timeout: 30)
+        attachScreenshot(named: "Fri-existing-sync-group-details")
+        let details = XCTAttachment(string: app.debugDescription)
+        details.name = "Fri-existing-sync-group-details-hierarchy"
+        details.lifetime = .keepAlways
+        add(details)
     }
 }

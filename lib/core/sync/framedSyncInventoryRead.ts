@@ -41,12 +41,14 @@ export function inventoryEntryFromRow(row: InventoryRow): FramedSyncInventoryEnt
     }
   }
   const versionStates = state?.[2].map(value => JSON.stringify(value));
-  const unready = state?.[2].some(value => value[5] === 'missing') ?? false;
+  const frontierFactIds = ids.parse(JSON.parse(row.frontier_json));
+  const unready = Boolean(state && (state[2].some(value => value[5] === 'missing') ||
+    state[1] && !frontierFactIds.includes(state[1])));
   const hash = state ? sha256(new TextEncoder().encode(JSON.stringify([
     state, JSON.parse(row.relations_json), JSON.parse(row.reviews_json), JSON.parse(row.states_json)
   ]))) : hexToBytes(row.content_hash);
   return {
-    frontierFactIds: ids.parse(JSON.parse(row.frontier_json)),
+    frontierFactIds,
     globalId: row.object_id, objectType: 'node',
     requiredRelationIds: ids.parse(JSON.parse(row.relations_json)),
     resourceHashes: hashes.parse(JSON.parse(row.resources_json)).map(hexToBytes),

@@ -2,6 +2,7 @@ import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { retireLegacySyncState } from './legacySyncRetirement.js';
+import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireNodePositions } from './nodePositionRetirementMigration.js';
@@ -21,5 +22,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 157, migrate: migrateFramedSyncDigests },
   { version: 158, migrate: migrateForegroundSources },
   { version: 159, migrate: migratePdfTextArtifacts },
-  { version: 160, migrate: retireForegroundIdentityTriggers }
+  { version: 160, migrate: retireForegroundIdentityTriggers },
+  { version: 161, migrate: migrateMissingCurrentVersionInventory }
 ];
