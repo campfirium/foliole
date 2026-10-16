@@ -30,10 +30,10 @@ beforeEach(async () => {
   }));
 });
 
-it('finishes the desktop data pass before independently discovering mobile peers', async () => {
+it.each(['onSessionReused', 'onDiscoveryShortened'] as const)('finishes desktop data before mobile discovery after %s', async trigger => {
   const order: string[] = [];
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
-    .mockImplementationOnce(async (_endpoint, options) => { options?.onSessionReused?.(); return [desktop]; })
+    .mockImplementationOnce(async (_endpoint, options) => { options?.[trigger]?.(); return [desktop]; })
     .mockImplementationOnce(async () => { order.push('mobile-discovery'); return [phone]; });
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async endpoint => {
     order.push(endpoint);

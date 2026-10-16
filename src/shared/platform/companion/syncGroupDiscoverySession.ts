@@ -4,8 +4,10 @@ import {
   parseSyncProtocolTxt
 } from '../../../../lib/platform/syncProtocolContract';
 import { loadCompanionDiscoveryCandidates } from '../companionWorkspaceDiscovery';
-import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
+import { isNativeCompanionNetworkRuntime } from '../companionWorkspaceRuntimeRepository';
 import type { CompanionNativeDiscoveryEvent } from '../companionWorkspaceSyncPluginTypes';
+
+import { acquireCompanionDiscovery } from './network/companionDiscoveryLease';
 
 function isDesktopProvider(platform: string) {
   return ['darwin', 'macos', 'win32', 'windows'].includes(platform.toLowerCase());
@@ -80,19 +82,17 @@ export async function startCompanionSyncGroupDiscoverySession(
       status
     });
   };
-  let handle: Awaited<ReturnType<typeof FolioleCompanionSync.addListener>> | null = null;
+  let release: (() => Promise<void>) | null = null;
   try {
-    handle = await FolioleCompanionSync.addListener('syncGroupDiscoveryChanged', (event) => void publish(event));
-    await publish(await FolioleCompanionSync.startDiscoverySession());
+    release = await acquireCompanionDiscovery(event => { void publish(event); });
   } catch {
     active = false;
-    await handle?.remove().catch(() => undefined);
+    await release?.().catch(() => undefined);
     onSnapshot({ candidates: [], change: 'failed', error_code: 'bridge_incompatible', status: 'incompatible' });
     return async () => undefined;
   }
   return async () => {
     active = false;
-    await FolioleCompanionSync.stopDiscoverySession().catch(() => undefined);
-    await handle.remove();
+    await release().catch(() => undefined);
   };
 }

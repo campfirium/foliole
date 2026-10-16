@@ -9,6 +9,9 @@ import {
   companionPeerAdvertisements,
   waitForCompanionDesktopAdvertisements
 } from './companion/companionDesktopDiscoveryWait';
+import { requestNativeDiscovery } from './companion/network/companionDiscoveryHttp';
+import { discoverReachableDesktop } from './companion/network/companionFastDiscovery';
+import { withCompanionRequestSyncLifecycle } from './companion/sync/framed/companionRequestSyncLifecycle';
 import {
   DISCOVERY_ENDPOINT_PATH,
   FolioleCompanionSync,
@@ -26,6 +29,9 @@ export type CompanionDiscoveryResult = {
 export type CompanionDiscoveryOptions = {
   allowWhileNotParticipating?: boolean;
   requiredGroupId?: string;
+  fastDesktop?: boolean;
+  onDiscoveryShortened?(): void;
+  signal?: AbortSignal;
 };
 
 export type DiscoveryCandidate = {
@@ -112,11 +118,17 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
   } satisfies SyncProtocolCompatibilityResult;
 }
 
-async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise<CompanionDiscoveryResult | null> {
+async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate, signal?: AbortSignal): Promise<CompanionDiscoveryResult | null> {
   const normalizedEndpointUrl = normalizeEndpointUrl(candidate.endpointUrl);
   const { controller, timeoutId } = createDiscoveryTimeout();
+  const abort = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) abort();
   try {
-    const response = await requestDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal);
+    const response = signal && isNativeCompanionNetworkRuntime()
+      ? await requestNativeDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal)
+        .then(payload => new Response(payload.body, { status: payload.status }))
+      : await requestDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal);
     if (!response.ok) {
       return null;
     }
@@ -130,6 +142,7 @@ async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate): Promise
     return null;
   } finally {
     window.clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abort);
   }
 }
 
@@ -181,6 +194,16 @@ export async function discoverCompanionDesktops(
   preferredEndpointUrl: string,
   options: CompanionDiscoveryOptions = {}
 ): Promise<CompanionDiscoveryResult[]> {
+  if (options.fastDesktop && options.requiredGroupId && isNativeCompanionNetworkRuntime()) {
+    if (!options.allowWhileNotParticipating) {
+      const state = await FolioleCompanionSync.loadSyncParticipationState();
+      if (!state.sync_enabled || state.sync_paused) return [];
+    }
+    const groupId = options.requiredGroupId;
+    options.onDiscoveryShortened?.();
+    return withCompanionRequestSyncLifecycle(signal =>
+      discoverReachableDesktop(preferredEndpointUrl, groupId, tryLoadCompanionDiscovery, signal), options.signal);
+  }
   const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl, options);
   const discovered = await loadCompanionDiscoveryCandidates(candidates);
   if (discovered.length > 0 || !options.requiredGroupId || !isNativeCompanionNetworkRuntime()) {

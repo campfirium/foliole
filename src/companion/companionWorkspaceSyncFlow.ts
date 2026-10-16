@@ -160,10 +160,13 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
   if (!storedEndpointUrl) return 'skipped';
   let targets;
   let reusedSession = false;
+  let shortenedDiscovery = false;
   try {
     targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
+      ...(args.signal ? { signal: args.signal } : {}),
       allowWhileNotParticipating: args.triggerReason === 'manual',
-      onSessionReused: () => { reusedSession = true; }
+      onSessionReused: () => { reusedSession = true; },
+      onDiscoveryShortened: () => { shortenedDiscovery = true; }
     });
   } catch (error) {
     args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
@@ -181,10 +184,10 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
         { ...targetArgs, triggeredAt }, target, runCompanionStreamSync
       ));
     }
-    if (foregroundTargets.length && mobilePeers.length) {
+    if (foregroundTargets.length && mobilePeers.length && !shortenedDiscovery) {
       scheduleCompanionMobilePeerSync(storedEndpointUrl, args, runCompanionStreamSync, mobilePeers);
     }
-    if (reusedSession && !args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
+    if ((reusedSession || (shortenedDiscovery && foregroundTargets.length > 0)) && !args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
       scheduleCompanionMobilePeerSync(storedEndpointUrl, args, runCompanionStreamSync);
     }
     return combineForegroundSyncOutcomes(outcomes);

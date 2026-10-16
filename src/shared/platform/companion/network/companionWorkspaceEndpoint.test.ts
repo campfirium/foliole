@@ -58,7 +58,7 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1', platform: 'darwin'
   }]);
   expect(runtime.discover).toHaveBeenCalledWith('http://old:38641', {
-    requiredGroupId: 'group-1'
+    requiredGroupId: 'group-1', fastDesktop: true
   });
 });
 

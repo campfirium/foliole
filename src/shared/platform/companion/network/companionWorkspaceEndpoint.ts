@@ -40,7 +40,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     return [active];
   }
   const discovered = await discoverCompanionDesktops(normalized, {
-    ...options, requiredGroupId: group.group_id
+    ...options, fastDesktop: !options.mobilePeersOnly, requiredGroupId: group.group_id
   });
   const matches = discovered.filter((candidate) => {
     return candidate.compatibility.status === 'compatible'
