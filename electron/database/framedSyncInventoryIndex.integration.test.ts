@@ -55,7 +55,7 @@ it('records reading-only state and changes the complete Node hash', () => {
   expect(after.content_hash).toBe(before.content_hash);
   const state = z.object({ content_hash: z.string() }).parse(peer.db.prepare(
     "SELECT content_hash FROM sync_object_state WHERE object_type = 'node_reading' AND object_id = 'topic'").get());
-  expect(JSON.parse(after.states_json)).toEqual(['node_reading:' + state.content_hash]);
+  expect(JSON.parse(after.states_json)).toEqual([JSON.stringify(['node_reading', 'topic', state.content_hash])]);
 });
 
 function traceQueries(port: DbPort, sql: string[]): DbPort {

@@ -3,8 +3,8 @@ import { loadFramedExternalDocumentBody } from './framedSyncExternalDocumentBody
 import { revalidateFramedSyncInventorySource, requiredFramedSyncNodeVersionIds,
   type FramedSyncInventoryDifference } from './framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
+import { selectFramedSyncNodeChildFact } from './framedSyncNodeChildFact.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
-import { selectFramedSyncNodeReadingFact } from './framedSyncNodeReadingFact.js';
 import { selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewSelection.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
@@ -36,7 +36,7 @@ async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference,
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   for (const fact of related.facts) await files.writeFact(fact);
   for (const id of difference.need.stateFactIds ?? []) {
-    await files.writeFact(await selectFramedSyncNodeReadingFact(db, difference.globalId, id));
+    await files.writeFact(await selectFramedSyncNodeChildFact(db, difference.globalId, id));
   }
 }
 

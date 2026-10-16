@@ -1,10 +1,10 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { framedSyncNodeInventorySql, framedSyncTombstoneSummarySql,
-  framedSyncVersionSummarySql } from './framedSyncInventoryProjectionSql.js';
-import { FRAMED_SYNC_INVENTORY_TABLES, FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { framedSyncNodeInventorySql, framedSyncTombstoneSummarySql,
+  framedSyncVersionSummarySql } from './preNodeChildInventoryProjectionSql.js';
+import { FRAMED_SYNC_INVENTORY_TABLES, FRAMED_SYNC_INVENTORY_TRIGGERS } from './preNodeChildInventorySchema.js';
 
 /** Initialize once in the numbered migration transaction, never during discovery. */
 export function migrateFramedSyncInventory(sqlite: DatabaseMigrationTarget) {

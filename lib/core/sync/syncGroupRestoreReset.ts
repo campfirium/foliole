@@ -6,7 +6,7 @@ import { clearRestoreWorkspaceSettings } from './syncGroupRestoreSettings.js';
 const CLEAR_TABLES = [
   'node_version_local_origins', 'node_version_local_holds',
   'node_version_device_revisions', 'node_version_local_source_revisions',
-  'sync_push_ack', 'sync_change_log', 'node_text_alternatives',
+  'sync_push_ack', 'sync_change_log', 'node_text_alternatives', 'sync_node_child_owners',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_view_state', 'review_log',

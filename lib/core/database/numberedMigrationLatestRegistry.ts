@@ -16,6 +16,7 @@ import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { retireLegacySyncState } from './legacySyncRetirement.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireNodePositions } from './nodePositionRetirementMigration.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
@@ -253,5 +254,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 152, migrate: migrateCurrentParentOrders },
   { version: 153, migrate: retireLegacySyncState },
   { version: 154, migrate: migrateTopicHistoryRetirement },
-  { version: 155, migrate: retireNodePositions }
+  { version: 155, migrate: retireNodePositions },
+  { version: 156, migrate: migrateNodeChildInventory }
 ];

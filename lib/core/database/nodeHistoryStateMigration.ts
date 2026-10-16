@@ -1,8 +1,8 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import { framedSyncNodeInventorySql } from './framedSyncInventoryProjectionSql.js';
-import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { framedSyncNodeInventorySql } from './preNodeChildInventoryProjectionSql.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './preNodeChildInventorySchema.js';
 
 function statements() {
   const drop = FRAMED_SYNC_INVENTORY_TRIGGERS.map(sql => {

@@ -5,10 +5,10 @@ import type { DbPort, DbRow } from '../sync/dbPort.js';
 import type { CanonicalFact } from '../sync/framedSyncCanonicalManifest.js';
 import { restoreFramedSyncParentRelation, restoreFramedSyncReview } from '../sync/framedSyncRelationReviewFact.js';
 
-import { framedSyncNodeInventorySql } from './framedSyncInventoryProjectionSql.js';
-import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import { decodeFramedSyncManifest } from './framedSyncStagingSerialization.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { framedSyncNodeInventorySql } from './preNodeChildInventoryProjectionSql.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './preNodeChildInventorySchema.js';
 import { isRetiredSyncSchema, RETIRED_SYNC_TABLES } from './retiredSyncSchema.js';
 import { hashTextBodyWithLength } from './textBodyHash.js';
 

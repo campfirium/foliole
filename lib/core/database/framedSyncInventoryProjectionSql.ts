@@ -1,5 +1,7 @@
 import { matchingTombstoneVersionSql } from '../sync/syncNodeTombstoneVersion.js';
 
+import { nodeChildFactIdsSql } from './nodeChildStateSql.js';
+
 const EMPTY_BODY_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 export function framedSyncResourceVersionSql(state: string) {
@@ -51,10 +53,7 @@ export function framedSyncNodeInventorySql(id: string) {
       COALESCE((SELECT json_group_array(fact_id) FROM (
         SELECT fact_id FROM framed_sync_fact_summary WHERE object_id = state.object_id AND kind = 4
         ORDER BY fact_id)), '[]'),
-      COALESCE((SELECT json_group_array('node_reading:' || content_hash) FROM sync_object_state
-        WHERE object_type = 'node_reading' AND object_id = state.object_id
-          AND (deleted_at IS NOT NULL OR EXISTS
-            (SELECT 1 FROM node_reading WHERE node_id = state.object_id))), '[]'),
+      ${nodeChildFactIdsSql('state.object_id')},
       COALESCE((SELECT json_group_array(hash) FROM (
         SELECT body_hash AS hash FROM framed_sync_version_summary
           WHERE version_id = ${framedSyncResourceVersionSql('state')} AND body_hash IS NOT NULL

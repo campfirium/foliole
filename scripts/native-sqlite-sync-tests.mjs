@@ -1,5 +1,8 @@
 export const controlledSyncSqliteTests = [
   'lib/core/database/nodePositionRetirementMigration.integration.test.ts',
+  'electron/database/nodeChildInventory.integration.test.ts',
+  'electron/database/nodeChildInventoryMigration.integration.test.ts',
+  'electron/sync/nodeChildSync.integration.test.ts',
   'electron/database/syncGroupRemovalRollback.test.ts',
   'electron/sync/buildCompanionSyncDiagnostics.test.ts',
   'electron/sync/desktopSyncGroupActivation.integration.test.ts',

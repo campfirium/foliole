@@ -1,11 +1,11 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import { migrateCompanionExternalDocumentBodyOwnership, migrateExternalDocumentBodyOwnership } from './externalDocumentBodyOwnershipMigration.js';
-import { framedSyncNodeInventorySql } from './framedSyncInventoryProjectionSql.js';
-import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateCompanionNodeBodyOwnership, migrateNodeBodyOwnership } from './nodeBodyOwnershipMigration.js';
 import { migrateCompanionOversizeVersionBodies, migrateOversizeVersionBodies } from './oversizeVersionBodyMigration.js';
+import { framedSyncNodeInventorySql } from './preNodeChildInventoryProjectionSql.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './preNodeChildInventorySchema.js';
 import { migrateCompanionReadwiseSourceUpdateBodyOwnership, migrateReadwiseSourceUpdateBodyOwnership } from './readwiseSourceUpdateBodyOwnershipMigration.js';
 import { migrateCompanionTopicTextBodyOwnership, migrateTopicTextBodyOwnership } from './topicTextBodyOwnershipMigration.js';
 

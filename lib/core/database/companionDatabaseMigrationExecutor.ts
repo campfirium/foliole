@@ -35,6 +35,7 @@ import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombst
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
+import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
@@ -108,6 +109,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 82 && targetVersion >= 82) await retireCompanionLegacySyncState(db);
   if (currentVersion < 83 && targetVersion >= 83) await migrateCompanionTopicHistoryRetirement(db);
   if (currentVersion < 84 && targetVersion >= 84) await retireCompanionNodePositions(db);
+  if (currentVersion < 85 && targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -130,6 +132,7 @@ export async function createCompanionDatabase(
   await installCompanionSchema(db);
   await repairCompanionDatabase(db);
   if (targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
+  if (targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

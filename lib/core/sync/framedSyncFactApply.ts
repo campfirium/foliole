@@ -6,8 +6,8 @@ import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrd
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
+import { applyFramedSyncNodeChildFact } from './framedSyncNodeChildFact.js';
 import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDependencies.js';
-import { restoreFramedSyncNodeReadingFact } from './framedSyncNodeReadingFact.js';
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
@@ -66,7 +66,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
 async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,
   options?: ApplySyncObjectsWithDbPortOptions) {
   if (fact.objectType === 'node') {
-    await applyFramedSyncObjectStateRecord(db, restoreFramedSyncNodeReadingFact(fact), options);
+    await applyFramedSyncNodeChildFact(db, fact, options);
     return;
   }
   let record = restoreFramedSyncObjectStateFact(fact);

@@ -4,6 +4,7 @@ import {
   framedSyncTombstoneSummarySql,
   framedSyncVersionSummarySql
 } from './framedSyncInventoryProjectionSql.js';
+import { NODE_CHILD_OWNER_SCHEMA, nodeChildOwnerSql } from './nodeChildStateSql.js';
 
 function triggers(table: string, task: (reference: string) => string) {
   return ['INSERT', 'UPDATE', 'DELETE'].map((action) => {
@@ -17,6 +18,7 @@ const nodeFromVersion = (reference: string) => `(SELECT object_id FROM framed_sy
   WHERE version_id = ${reference}.version_id)`;
 
 export const FRAMED_SYNC_INVENTORY_TABLES = [
+  ...NODE_CHILD_OWNER_SCHEMA,
   `CREATE TABLE IF NOT EXISTS framed_sync_inventory (
     object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL,
     frontier_json TEXT NOT NULL, relations_json TEXT NOT NULL, reviews_json TEXT NOT NULL,
@@ -43,7 +45,7 @@ export const FRAMED_SYNC_INVENTORY_TABLES = [
 function nodeVersionTriggers() {
   return [
     ...triggers('sync_object_state', (ref) =>
-    framedSyncNodeInventorySql(`${ref}.object_id`)),
+    framedSyncNodeInventorySql(`SELECT ${ref}.object_id UNION SELECT ${nodeChildOwnerSql(ref)}`)),
     ...triggers('node_sync_versions', (ref) => `
     DELETE FROM framed_sync_fact_summary WHERE kind = 3
       AND json_extract(fact_id, '$[0]') = ${ref}.version_id
@@ -75,7 +77,14 @@ function nodeVersionTriggers() {
 export function createFramedSyncInventoryTriggers() {
   return [
     ...nodeVersionTriggers(),
-    ...triggers('node_reading', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
+    ...['node_reading', 'node_review', 'node_open_state'].flatMap(table =>
+      triggers(table, ref => framedSyncNodeInventorySql(`${ref}.node_id`))),
+    ...triggers('parent_order_sources', ref => framedSyncNodeInventorySql(`${ref}.parent_id`)),
+    ...triggers('topic_daily_count_entries', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
+    ...triggers('sync_node_child_owners', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
+    ...childOwnerTriggers(),
+    ...triggers('node_text_alternatives', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
+    ...triggers('import_sources', ref => framedSyncNodeInventorySql(`${ref}.latest_node_id`)),
     ...triggers('node_sync_version_parents', (ref) => `
     DELETE FROM framed_sync_fact_summary WHERE kind = 3
       AND fact_id = json_array(${ref}.version_id, ${ref}.parent_version_id, ${ref}.ordinal);
@@ -105,3 +114,19 @@ export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers(
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [
   ...FRAMED_SYNC_INVENTORY_TABLES, ...FRAMED_SYNC_INVENTORY_TRIGGERS
 ];
+
+function childOwnerTriggers() {
+  const sources = [
+    ['node_text_alternative', 'node_text_alternatives', 'alternative_id', 'node_id'],
+    ['import_source', 'import_sources', 'source_fingerprint', 'latest_node_id']
+  ];
+  return sources.flatMap(([type, table, id, owner]) => ['INSERT', 'UPDATE'].map(action =>
+    `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_owner_${table}_${action.toLowerCase()}
+     AFTER ${action} ON ${table} BEGIN
+       DELETE FROM sync_node_child_owners WHERE object_type = '${type}' AND object_id = NEW.${id}
+         AND NEW.${owner} IS NULL;
+       INSERT INTO sync_node_child_owners (object_type, object_id, node_id)
+         SELECT '${type}', NEW.${id}, NEW.${owner} WHERE NEW.${owner} IS NOT NULL
+         ON CONFLICT(object_type, object_id) DO UPDATE SET node_id = excluded.node_id;
+     END`));
+}

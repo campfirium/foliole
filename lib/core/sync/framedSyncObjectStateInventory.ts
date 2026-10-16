@@ -1,5 +1,7 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
+import { NODE_CHILD_STATE_TYPES_SQL, nodeChildOwnerSql } from '../database/nodeChildStateSql.js';
+import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
@@ -45,13 +47,11 @@ export async function readFramedSyncObjectStateInventory(
       ELSE NULL END AS body_blob_hash
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
-      AND (object_type != 'node_reading' OR deleted_at IS NOT NULL)
-      AND (object_type != 'node_review' OR deleted_at IS NOT NULL OR EXISTS
-        (SELECT 1 FROM nodes JOIN node_review review ON review.node_id = nodes.id
-          WHERE nodes.id = sync_object_state.object_id))
-      AND (object_type != 'node_open_state' OR deleted_at IS NOT NULL OR EXISTS
-        (SELECT 1 FROM nodes JOIN node_open_state opened ON opened.node_id = nodes.id
-          WHERE nodes.id = sync_object_state.object_id))
+      AND (object_type NOT IN (${NODE_CHILD_STATE_TYPES_SQL})
+        OR (object_type = 'parent_child_order' AND object_id = '${ROOT_CHILD_ORDER_ID}')
+        OR (deleted_at IS NOT NULL AND NOT EXISTS
+          (SELECT 1 FROM framed_sync_inventory owner WHERE owner.object_type = 'node'
+            AND owner.object_id = ${nodeChildOwnerSql('sync_object_state')})))
       ${key ? 'AND object_type = ? AND object_id = ?' :
     'AND (object_type > ? OR (object_type = ? AND object_id > ?))'}
     ORDER BY object_type, object_id ${key ? '' : 'LIMIT ?'}`;

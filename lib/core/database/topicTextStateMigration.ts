@@ -7,8 +7,8 @@ import { buildResolutionRecord } from '../sync/syncNodeResolution.js';
 import { normalizeTextAlternatives, TEXT_ALTERNATIVE_LIFETIME_MS } from '../sync/topicTextState.js';
 
 import { migrateFramedSyncInventory, migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
-import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './framedSyncInventorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from './preNodeChildInventorySchema.js';
 import { hashTextBody } from './textBodyHash.js';
 
 const nodeSchema = z.object({ id: z.string(), version_id: z.string(), host_name: z.string(),
