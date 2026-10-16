@@ -8,6 +8,7 @@ import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { markWatchedConflictDecisionsSynced } from '../database/watchedConflictSyncMarker.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
+import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
@@ -21,6 +22,7 @@ let activeRun: Promise<SyncTriggerResult> | null = null;
 let activePeerId: string | null = null;
 const completedListeners = new Set<() => void>();
 interface SyncRequest {
+  continuation: boolean;
   reason: SyncTriggerReason;
   peer: DesktopSyncGroupPeer | undefined;
   promise: Promise<SyncTriggerResult>;
@@ -45,7 +47,8 @@ export function loadDesktopSyncTriggerResult() {
 
 export function runDesktopSyncCoordinator(
   reason: SyncTriggerReason,
-  preferredPeer?: DesktopSyncGroupPeer
+  preferredPeer?: DesktopSyncGroupPeer,
+  continuation = false
 ): Promise<SyncTriggerResult> {
   if (activeRun && activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
   const queued = preferredPeer ? queuedRuns.get(preferredPeer.peer_device_id)
@@ -57,7 +60,7 @@ export function runDesktopSyncCoordinator(
     resolve = accept;
     reject = decline;
   });
-  pendingRuns.push({ reason, peer: preferredPeer, promise, resolve, reject });
+  pendingRuns.push({ continuation, reason, peer: preferredPeer, promise, resolve, reject });
   if (preferredPeer) queuedRuns.set(preferredPeer.peer_device_id, promise);
   startNextRun();
   return promise;
@@ -70,12 +73,14 @@ function startNextRun() {
   activeRun = request.promise;
   activePeerId = request.peer?.peer_device_id ?? null;
   if (request.peer) queuedRuns.delete(request.peer.peer_device_id);
+  const continuations: DesktopSyncGroupPeer[] = [];
   const finish = () => {
     activeRun = null;
     activePeerId = null;
     startNextRun();
+    for (const peer of continuations) void runDesktopSyncCoordinator('automatic', peer, true).catch(() => undefined);
   };
-  void runOwnedSync(request.reason, request.peer).then((result) => {
+  void runOwnedSync(request.reason, request.peer, continuations, request.continuation).then((result) => {
     finish();
     request.resolve(result);
   }, (error: unknown) => {
@@ -84,13 +89,17 @@ function startNextRun() {
   });
 }
 
-async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSyncGroupPeer) {
+async function runOwnedSync(reason: SyncTriggerReason, preferredPeer: DesktopSyncGroupPeer | undefined, continuations: DesktopSyncGroupPeer[], continuation: boolean) {
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
   const activity = { runId, reason, startedAt };
   await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
     message: 'Sync started', stage: 'run', status: 'started' });
   try {
+    if (continuation && !await runWithDatabaseConnectionOwner(isDesktopCompanionSyncParticipating)) {
+      return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
+        run_id: runId, started_at: startedAt, status: 'skipped' });
+    }
     const peers = preferredPeer ? [preferredPeer]
       : await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupPeers());
     if (peers.length === 0) {
@@ -107,7 +116,10 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
     for (const peer of peers) {
       try {
         const outcome = await continueDesktopSyncGroupSync(peer, activity);
-        if (!outcome?.complete) complete = false;
+        if (!outcome?.complete) {
+          complete = false;
+          if ((outcome?.attachmentProgress ?? 0) > 0) continuations.push(peer);
+        }
       } catch (error) {
         if (!isSyncPeerRoundRetryableError(error)) throw error;
         complete = false;

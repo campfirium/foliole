@@ -12,12 +12,12 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
+import { drainAttachmentSlices as exchangeRequestSyncAttachments } from './attachmentSliceDrain.testSupport.js';
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';

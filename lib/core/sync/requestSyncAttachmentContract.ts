@@ -9,6 +9,7 @@ const integer = z.union([z.number(), z.string().regex(/^\d+$/u).transform(Number
   .pipe(z.number().int().nonnegative().max(FRAMED_SYNC_LIMITS.maxBlobBytes));
 const key = attachmentBlockResourceSchema.shape.storageKey;
 const binary = z.unknown().transform(value => bytes(value, 'attachment'));
+/** In dev v27, pull returns at most one block; end.offset is the resumable slice boundary. */
 export const attachmentRequestSchema = z.object({
   requestId: binary.refine(bytes => bytes.length === 16),
   operation: z.enum(['needs', 'describe', 'pull', 'status', 'push']),

@@ -42,7 +42,11 @@ async function discoverAndSync(
         active = loadActiveCompanionSyncRun();
       }
       if (args.cancelled()) return;
-      await tryForegroundAutoSyncTarget(targetArgs, peer, runStream);
+      let outcome;
+      do {
+        if (args.cancelled()) return;
+        outcome = await tryForegroundAutoSyncTarget(targetArgs, peer, runStream);
+      } while (outcome === 'backlog');
     }
   } finally {
     if (!args.cancelled() && !loadActiveCompanionSyncRun()) args.setStatus('idle');

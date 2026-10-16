@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+const participation = vi.hoisted(() => ({ active: true }));
+vi.mock('./desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncParticipating: () => participation.active }));
+
 const settings = vi.hoisted(() => ({ loadJsonSetting: vi.fn(), saveJsonSetting: vi.fn() }));
 const transport = vi.hoisted(() => ({
   continueDesktopSyncGroupSync: vi.fn(),
@@ -37,6 +40,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  participation.active = true;
   transport.loadDesktopSyncGroupPeers.mockReturnValue([peer]);
   transport.continueDesktopSyncGroupSync.mockResolvedValue({ complete: true, cursor: 9 });
 });
@@ -198,4 +202,30 @@ it('releases the coordinator and persists mobile waiting when an active phone do
   })]));
   transport.loadDesktopSyncGroupPeers.mockReturnValue([peer]);
   await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });
+});
+
+
+it('queues attachment continuation behind a waiting peer after releasing the current slice', async () => {
+  const slice = deferred<{ complete: boolean; attachmentProgress: number }>();
+  transport.continueDesktopSyncGroupSync.mockImplementationOnce(() => slice.promise);
+  const first = runDesktopSyncCoordinator('automatic', peer);
+  await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1));
+  const waiting = runDesktopSyncCoordinator('manual', peerB);
+  slice.resolve({ complete: false, attachmentProgress: 1 });
+  await expect(first).resolves.toMatchObject({ status: 'pending' });
+  await waiting;
+  await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(3));
+  expect(transport.continueDesktopSyncGroupSync.mock.calls.map(([target]) => target)).toEqual([peer, peerB, peer]);
+  await loadActiveDesktopSyncRun();
+});
+
+
+it('does not resume an attachment slice after sync participation stops', async () => {
+  transport.continueDesktopSyncGroupSync.mockImplementationOnce(async () => {
+    participation.active = false;
+    return { complete: false, attachmentProgress: 1 };
+  });
+  await runDesktopSyncCoordinator('automatic', peer);
+  await loadActiveDesktopSyncRun();
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1);
 });

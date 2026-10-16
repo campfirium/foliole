@@ -34,7 +34,7 @@ it.each([false, true])('retrieves complete details or rejects a changing source 
       for await (const decoded of readRequestSyncWire({ context, groupKey, ...body })) yield decoded.message;
     })());
     expect(request.entries).toEqual([]);
-    if (sourceChanges && request.selectedBuckets.length) entries[0]!.sharedStateHash = new Uint8Array(32).fill(2);
+    if (sourceChanges && request.selectedBuckets.length) entries[0] = { ...entries[0]!, sharedStateHash: new Uint8Array(32).fill(2) };
     const ids = new Set(request.detailGlobalIds);
     const selected = ids.size ? entries.filter(entry => ids.has(entry.globalId)) :
       framedSyncInventorySummary(entries.filter(entry => request.selectedBuckets.includes(inventoryBucket(entry))));

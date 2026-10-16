@@ -39,14 +39,16 @@ export async function seedAttachmentReferences(sqlite: Database.Database, storag
     ({ storage_key, role: 'reference', original_name: null }))), 'topic']);
 }
 
-export async function attachmentHttpSource(keys: string[], root: string) {
+export async function attachmentHttpSource(keys: string[], root: string, reopen = false) {
   const directory = path.join(root, 'source');
   await mkdir(directory, { recursive: true });
   const databasePath = path.join(directory, 'source.sqlite');
   const sqlite = new Database(databasePath);
   sqlite.pragma('journal_mode = WAL'); initializeDatabaseSchema(sqlite);
-  seedAttachmentMembership(sqlite, 'peer');
-  await seedAttachmentReferences(sqlite, keys);
+  if (!reopen) {
+    seedAttachmentMembership(sqlite, 'peer');
+    await seedAttachmentReferences(sqlite, keys);
+  }
   const db = createBetterSqliteDbPort(sqlite);
   const database: RequestSyncDatabaseHost = { files: createDesktopRequestSyncFiles(databasePath),
     readSnapshot: read => read(db), write: write => write(db) };
@@ -57,7 +59,7 @@ export async function attachmentHttpSource(keys: string[], root: string) {
   const source = createDesktopAttachmentBlockSource(assetsDir);
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
     needs: () => readRequestSyncAttachmentNeeds(database, key => isDesktopAttachmentPresent(assetsDir, key)) };
-  return { host, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
+  return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
 }
 
 export async function seedAttachmentTarget(keys: string[]) {

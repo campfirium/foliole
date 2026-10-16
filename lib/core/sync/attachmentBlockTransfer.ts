@@ -14,12 +14,13 @@ export interface AttachmentBlockSource {
   }) => Promise<T>): Promise<T>;
 }
 
-export async function transferAttachmentBlocks(input: {
-  storageKey: string; source: AttachmentBlockSource; destination: AttachmentBlockDestination; signal?: AbortSignal;
+export async function transferAttachmentSlice(input: {
+  storageKey: string; source: AttachmentBlockSource; destination: AttachmentBlockDestination; signal?: AbortSignal; maxBlocks?: number;
 }) {
   return input.source.withFile(input.storageKey, async file => {
     let current = await input.destination.status(file.resource);
-    while (current.kind !== 'complete') {
+    let blocks = 0;
+    while (current.kind !== 'complete' && blocks < (input.maxBlocks ?? 1)) {
       input.signal?.throwIfAborted();
       const offset = current.offset;
       if (!Number.isSafeInteger(offset) || offset < 0 || offset >= file.resource.byteLength ||
@@ -36,10 +37,15 @@ export async function transferAttachmentBlocks(input: {
       }
       if (next.offset <= offset) throw new Error('attachment_transfer_no_progress');
       current = next.kind === 'offset' ? await input.destination.status(file.resource) : next;
+      blocks++;
     }
-    if (current.offset !== file.resource.byteLength) throw new Error('attachment_receiver_length_invalid');
-    return file.resource;
+    if (current.kind === 'complete' && current.offset !== file.resource.byteLength) throw new Error('attachment_receiver_length_invalid');
+    return { resource: file.resource, complete: current.kind === 'complete', blocks };
   });
+}
+
+export async function transferAttachmentBlocks(input: Parameters<typeof transferAttachmentSlice>[0]) {
+  return (await transferAttachmentSlice({ ...input, maxBlocks: Infinity })).resource;
 }
 
 /** Each endpoint derives current needs afresh; the initiator carries bytes in both directions. */

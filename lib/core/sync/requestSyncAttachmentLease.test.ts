@@ -12,7 +12,7 @@ import { createSyncPeerRoundOwnership } from './syncPeerRoundOwnership.js';
 
 afterEach(() => vi.useRealTimers());
 
-it('finishes a single encrypted attachment pull lasting longer than its renewed idle lease', async () => {
+it('ends an encrypted pull after one block while renewing its idle lease', async () => {
   vi.useFakeTimers();
   const owner = createSyncPeerRoundOwnership(200);
   const lease = owner.acceptInbound('peer', 'round', true);
@@ -52,7 +52,7 @@ it('finishes a single encrypted attachment pull lasting longer than its renewed 
       await vi.advanceTimersByTimeAsync(125);
       releases[index]!.resolve();
     }
-    expect(await work).toEqual({ ok: true, value: bytes.length });
+    expect(await work).toEqual({ ok: true, value: ATTACHMENT_BLOCK_BYTES });
     expect(lease.signal.aborted).toBe(false);
   } finally { owner.close(); await stream.frames.return(undefined); }
 });

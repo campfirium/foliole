@@ -75,6 +75,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     // Bodies commit with their database objects; no separate body download stage remains.
     remainingAttachmentResourceCount: resources.pending,
     ...(resources.transferred === undefined ? {} : { transferredAttachmentCount: resources.transferred }),
+    transferredAttachmentBlockCount: resources.blocks ?? 0,
     attachmentResourceError: resources.error,
     localDirtyCount: round.pending,
     pushConflictCount: 0,
@@ -128,7 +129,7 @@ async function runAttachmentStage(input: Parameters<typeof continueCompanionRequ
     return { ...await continueCompanionRequestSyncResources(input), error: null };
   } catch (error) {
     if (input.signal?.aborted) throw error;
-    return { pending: null, transferred: undefined,
+    return { pending: null, transferred: undefined, blocks: 0,
       error: error instanceof Error ? error.message : String(error) };
   }
 }

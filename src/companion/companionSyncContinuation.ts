@@ -7,7 +7,7 @@ function isKnownBacklog(count: number | null) {
 }
 
 function madeResourceProgress(result: CompanionDesktopSyncResult) {
-  return (result.transferredAttachmentCount ?? 0) > 0;
+  return (result.transferredAttachmentCount ?? 0) > 0 || (result.transferredAttachmentBlockCount ?? 0) > 0;
 }
 
 function hasResourceBacklog(result: CompanionDesktopSyncResult) {

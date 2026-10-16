@@ -54,12 +54,13 @@ async function* sourceMessages(request: AttachmentRequest,
   }
   if (request.byteLength !== file.resource.byteLength || request.offset > file.resource.byteLength ||
       request.offset % ATTACHMENT_BLOCK_BYTES !== 0) throw new Error('attachment_pull_range_invalid');
-  for (let offset = request.offset; offset < file.resource.byteLength; offset += ATTACHMENT_BLOCK_BYTES) {
+  const end = Math.min(request.offset + ATTACHMENT_BLOCK_BYTES, file.resource.byteLength);
+  for (let offset = request.offset; offset < end; offset += ATTACHMENT_BLOCK_BYTES) {
     signal?.throwIfAborted();
     onProgress?.();
     const data = await file.read(offset, Math.min(ATTACHMENT_BLOCK_BYTES, file.resource.byteLength - offset));
     onProgress?.();
     yield attachmentMessage({ ...request, offset, data, state: 'block' });
   }
-  yield attachmentMessage({ ...request, offset: file.resource.byteLength, state: 'end' });
+  yield attachmentMessage({ ...request, offset: end, state: 'end' });
 }
