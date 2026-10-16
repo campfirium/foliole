@@ -20,10 +20,10 @@ const now = '2026-10-10T00:00:00.000Z';
 async function contribute(file: string, sourceId: string, durationMs: number) {
   const sqlite = new Database(file);
   try {
-    const payload = { source_id: sourceId, day_key: day, duration_ms: durationMs };
+    const payload = { source_id: sourceId, days: { [day]: durationMs } };
     await createBetterSqliteDbPort(sqlite).transaction(tx => applySyncObjectInTransaction(tx, {
-      object_type: 'foreground_daily_time', object_id: `${sourceId}:${day}`, deleted_at: null,
-      payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('foreground_daily_time', payload), updated_at: now
+      object_type: 'foreground_source', object_id: sourceId, deleted_at: null,
+      payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('foreground_source', payload), updated_at: now
     }));
   } finally { sqlite.close(); }
 }
@@ -71,7 +71,7 @@ it('preserves unpublished maxima on overwrite and publishes them with later inde
     let originalSource: string;
     try {
       originalSource = await loadForegroundSourceWithDbPort(createBetterSqliteDbPort(sqlite), rightSource);
-      sqlite.prepare("DELETE FROM sync_object_state WHERE object_type = 'foreground_daily_time'").run();
+      sqlite.prepare("DELETE FROM sync_object_state WHERE object_type = 'foreground_source'").run();
     } finally { sqlite.close(); }
     const args = { mode: 'restore', peerOrigin: fixture.leftSnapshot.origin,
       peerDeviceId: fixture.leftSnapshot.deviceId, restoreId: 'foreground-restore' };
@@ -86,7 +86,7 @@ it('preserves unpublished maxima on overwrite and publishes them with later inde
     try {
       freshSource = await loadForegroundSourceWithDbPort(createBetterSqliteDbPort(restored), rightSource);
       expect(freshSource).not.toBe(originalSource);
-      expect(restored.prepare("SELECT count(*) FROM sync_object_state WHERE object_type = 'foreground_daily_time'").pluck().get()).toBe(2);
+      expect(restored.prepare("SELECT count(*) FROM sync_object_state WHERE object_type = 'foreground_source'").pluck().get()).toBe(2);
     } finally { restored.close(); }
     await fixture.restartRight();
     await contribute(receiverFile, freshSource, 10_000);

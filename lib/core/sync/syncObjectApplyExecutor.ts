@@ -1,11 +1,12 @@
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { computeSyncContentHash } from '../database/syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
-import { shouldApplyForegroundTime } from './syncForegroundDailyTime.js';
+import { readForegroundSource, shouldApplyForegroundSource } from './foregroundSource.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
@@ -24,7 +25,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_reading',
   'node_review',
   'topic_daily_count',
-  'foreground_daily_time',
+  'foreground_source',
   'node_text_alternative',
   'parent_child_order',
   'pdf_page_text',
@@ -144,7 +145,10 @@ async function applySingleSyncObjectInTransaction(
   );
   if (appliedPayload === false) return null;
   await options.onPayloadAppliedInTransaction?.(port, record);
-  await upsertAppliedSyncObjectState(port, record);
+  const applied = record.object_type === 'foreground_source'
+    ? { ...record, content_hash: computeSyncContentHash('foreground_source', await readForegroundSource(port, record.object_id)) }
+    : record;
+  await upsertAppliedSyncObjectState(port, applied);
   return `${record.object_type}:${record.object_id}`;
 }
 
@@ -183,8 +187,8 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord):
     'SELECT content_hash, deleted_at, updated_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     [record.object_type, record.object_id]
   ))[0];
-  if (record.object_type === 'foreground_daily_time') {
-    return await shouldApplyForegroundTime(port, record) ? 'apply' : 'already_applied';
+  if (record.object_type === 'foreground_source') {
+    return await shouldApplyForegroundSource(port, record) ? 'apply' : 'already_applied';
   }
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';

@@ -1,4 +1,5 @@
 import type { DbPort } from '../sync/dbPort.js';
+import { readForegroundSource } from '../sync/foregroundSource.js';
 
 import { FOREGROUND_SOURCE_PREFIX, renewForegroundSources } from './foregroundTimeSource.js';
 import { computeSyncContentHash } from './syncState.js';
@@ -53,17 +54,15 @@ export async function mergeRestoredForegroundTime(db: DbPort, preserved: Foregro
 async function publishForegroundTimeAfterRestore(db: DbPort, hostName: string) {
   const [present] = await db.query('SELECT 1 AS present FROM sqlite_master WHERE name = ?', ['foreground_daily_time']);
   if (!present) return;
-  const rows = await db.query<TimeRow>('SELECT id, source_id, day_key, duration_ms FROM foreground_daily_time');
+  const rows = await db.query<{ source_id: string }>('SELECT DISTINCT source_id FROM foreground_daily_time');
   for (const row of rows) {
-    const contentHash = computeSyncContentHash('foreground_daily_time', {
-      source_id: row.source_id, day_key: row.day_key, duration_ms: row.duration_ms
-    });
+    const contentHash = computeSyncContentHash('foreground_source', await readForegroundSource(db, row.source_id));
     await db.run(`INSERT INTO sync_object_state(object_type, object_id, state_seq, content_hash,
       last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
-      VALUES ('foreground_daily_time', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, NULL, 1)
+      VALUES ('foreground_source', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, NULL, 1)
       ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq,
       content_hash = excluded.content_hash, last_modified_by_host_name = excluded.last_modified_by_host_name,
       updated_at = excluded.updated_at, deleted_at = NULL, sync_dirty = 1`,
-    [row.id, contentHash, hostName, new Date().toISOString()]);
+    [row.source_id, contentHash, hostName, new Date().toISOString()]);
   }
 }

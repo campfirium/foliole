@@ -12,7 +12,7 @@ export const ANDROID_COMPANION_SYNC_OBJECT_TYPES = {
   nodeTextAlternative: 'node_text_alternative',
   settingRecord: 'setting',
   topicDailyCount: 'topic_daily_count',
-  foregroundDailyTime: 'foreground_daily_time',
+  foregroundSource: 'foreground_source',
   viewState: 'view_state'
 } as const;
 

@@ -10,7 +10,7 @@ export type NativeSyncObjectType =
   | 'node_reading'
   | 'node_review'
   | 'topic_daily_count'
-  | 'foreground_daily_time'
+  | 'foreground_source'
   | 'node_text_alternative'
   | 'pdf_page_text'
   | 'setting'

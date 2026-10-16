@@ -1,7 +1,7 @@
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
-import { applyForegroundDailyTime } from './syncForegroundDailyTime.js';
+import { applyForegroundSource } from './foregroundSource.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
 import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
 import {
@@ -22,8 +22,8 @@ export async function applySyncObjectPayloadWithDbPort(
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   switch (record.object_type) {
-    case 'foreground_daily_time':
-      return applyForegroundDailyTime(port, record);
+    case 'foreground_source':
+      return applyForegroundSource(port, record);
     case 'topic_daily_count':
       return applyTopicDailyCount(port, record);
     case 'external_document':

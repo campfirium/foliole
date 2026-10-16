@@ -1,8 +1,9 @@
 import { PARENT_ORDER_PAYLOAD_SQL } from '../database/currentParentOrderSchema.js';
 
+import { FOREGROUND_SOURCE_PAYLOAD_SQL } from './foregroundSource.js';
+
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
-  foreground_daily_time: `SELECT json_object('source_id', source_id, 'day_key', day_key, 'duration_ms', duration_ms)
-    AS payload_json FROM foreground_daily_time WHERE id = ?`,
+  foreground_source: FOREGROUND_SOURCE_PAYLOAD_SQL,
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
     AS payload_json FROM topic_daily_count_entries WHERE id = ?`,
   parent_child_order: PARENT_ORDER_PAYLOAD_SQL,

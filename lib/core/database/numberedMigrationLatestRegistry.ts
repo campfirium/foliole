@@ -3,6 +3,7 @@ import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
+import { migrateForegroundSources } from './foregroundSourceMigration.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_COMPLETION_BACKFILL, FRAMED_SYNC_COMPLETION_SCHEMA } from './framedSyncCompletionSchema.js';
 import { migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
@@ -257,5 +258,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 154, migrate: migrateTopicHistoryRetirement },
   { version: 155, migrate: retireNodePositions },
   { version: 156, migrate: migrateNodeChildInventory },
-  { version: 157, migrate: migrateFramedSyncDigests }
+  { version: 157, migrate: migrateFramedSyncDigests },
+  { version: 158, migrate: migrateForegroundSources }
 ];

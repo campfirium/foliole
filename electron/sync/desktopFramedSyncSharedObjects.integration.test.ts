@@ -17,13 +17,13 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 const now = '2026-10-06T23:00:00.000Z';
 const day = '2026-10-06';
 const timeSource = '11111111-1111-4111-8111-111111111111';
-const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload: Record<string, string | number | boolean | null>;
+const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload: Record<string, string | number | boolean | null | Record<string, number>>;
   query: string; expected: unknown }[] = [
   { type: 'external_folder', id: 'folder', payload: { attachment_mode: 'document_relative_first_then_fixed_root',
     excluded_dirs_json: '[".git"]', host_name: 'original-host', host_platform: 'darwin', id: 'folder', source_ref: 'external:folder' },
     query: "SELECT excluded_dirs_json FROM external_search_folders WHERE id = 'folder'", expected: '[".git"]' },
   { type: 'import_source', id: 'source', payload: { first_imported_at: now, last_imported_at: now,
-    last_content_fingerprint: 'original', provider: 'manual', source_kind: 'markdown', source_locator: '/original.md', source_name: 'Original.md' },
+    latest_node_id: 'topic', last_content_fingerprint: 'original', provider: 'manual', source_kind: 'markdown', source_locator: '/original.md', source_name: 'Original.md' },
     query: "SELECT source_name FROM import_sources WHERE source_fingerprint = 'source'", expected: 'Original.md' },
   { type: 'node_open_state', id: 'topic', payload: { node_id: 'topic', last_opened_at: now },
     query: "SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'", expected: now },
@@ -42,7 +42,7 @@ const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload:
     query: "SELECT reported_path FROM watched_folder_bindings WHERE binding_id = 'watched'", expected: '/Original' },
   { type: 'topic_daily_count', id: `${day}:topic`, payload: { day_key: day, node_id: 'topic' },
     query: "SELECT node_id FROM topic_daily_count_entries WHERE day_key = '2026-10-06'", expected: 'topic' },
-  { type: 'foreground_daily_time', id: `${timeSource}:${day}`, payload: { day_key: day, source_id: timeSource, duration_ms: 123456 },
+  { type: 'foreground_source', id: timeSource, payload: { source_id: timeSource, days: { [day]: 123456 } },
     query: "SELECT duration_ms FROM foreground_daily_time WHERE source_id = '11111111-1111-4111-8111-111111111111'", expected: 123456 }
 ];
 
@@ -64,15 +64,11 @@ it.each(cases)('discovers and persists the original $type payload through a norm
         deleted_at: null, payload_json: JSON.stringify(payload), updated_at: now });
       expect(source.prepare(sample.query).pluck().get()).toEqual(sample.expected);
     } finally { source.close(); }
-    const original = (await readFixtureInventory(fixture.left))
-      .find((entry) => entry.objectType === sample.type && entry.globalId === sample.id);
-    expect(original).toBeDefined();
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     const target = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try { expect(target.prepare(sample.query).pluck().get()).toEqual(sample.expected); }
     finally { target.close(); }
-    expect((await readFixtureInventory(fixture.right))
-      .find((entry) => entry.objectType === sample.type && entry.globalId === sample.id)).toEqual(original);
+    expect(await readFixtureInventory(fixture.right)).toEqual(await readFixtureInventory(fixture.left));
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });

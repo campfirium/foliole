@@ -39,7 +39,7 @@ function persistSnapshot(state: Recording, snapshot: ReturnType<ForegroundTimeRe
   const request = state.tail.then(() => state.owner.runWriter((db) => saveForegroundTime(db, {
     ...snapshot, hash: iosCompanionContentHash,
     mark: async (tx, record) => markIosCompanionMutation({ db: tx,
-      hostName: await iosCompanionHostName(tx), objectType: 'foreground_daily_time',
+      hostName: await iosCompanionHostName(tx), objectType: 'foreground_source',
       objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt })
   })));
   state.tail = request.then(() => { lastFailure = null; }, (error: unknown) => { lastFailure = error; });

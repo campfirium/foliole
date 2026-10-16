@@ -30,14 +30,14 @@ function instance() {
 afterEach(() => { for (const db of connections.splice(0)) db.close(); });
 async function save(db: ReturnType<typeof instance>, sourceId: string, durationMs: number) {
   await saveForegroundTime(db.port, { sourceId, buckets: [{ day: '2026-10-04', durationMs }], hash: iosCompanionContentHash,
-    mark: (tx, record) => markIosCompanionMutation({ db: tx, hostName: 'mobile', objectType: 'foreground_daily_time',
+    mark: (tx, record) => markIosCompanionMutation({ db: tx, hostName: 'mobile', objectType: 'foreground_source',
       objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt }) });
 }
 function records(db: ReturnType<typeof instance>): NativeSyncObjectRecord[] {
   return db.sql.prepare(`SELECT s.object_type, s.object_id, s.content_hash, s.deleted_at, s.updated_at,
-    json_object('source_id', t.source_id, 'day_key', t.day_key, 'duration_ms', t.duration_ms) payload_json
-    FROM sync_object_state s JOIN foreground_daily_time t ON t.id = s.object_id
-    WHERE s.object_type = 'foreground_daily_time'`).all() as NativeSyncObjectRecord[];
+    json_object('source_id', s.object_id, 'days', json((SELECT json_group_object(day_key, duration_ms)
+      FROM foreground_daily_time t WHERE t.source_id = s.object_id))) payload_json
+    FROM sync_object_state s WHERE s.object_type = 'foreground_source'`).all() as NativeSyncObjectRecord[];
 }
 
 it('persists per-source cumulative time, combines devices and preserves totals across replay and older timestamps', async () => {
@@ -69,9 +69,9 @@ it('applies cumulative request payloads and state together while rejecting a new
     await save({ sql: source.db, port: source.port }, sourceA, 120_000);
     await save({ sql: smaller.db, port: smaller.port }, sourceA, 30_000);
     const record = records({ sql: source.db, port: source.port })[0]!;
-    const payload = JSON.parse(record.payload_json!) as { source_id: string; day_key: string; duration_ms: number };
-    source.db.exec("UPDATE sync_object_state SET updated_at = '2000-01-01' WHERE object_type = 'foreground_daily_time'");
-    smaller.db.exec("UPDATE sync_object_state SET updated_at = '2099-01-01' WHERE object_type = 'foreground_daily_time'");
+    const payload = JSON.parse(record.payload_json!) as { source_id: string; days: Record<string, number> };
+    source.db.exec("UPDATE sync_object_state SET updated_at = '2000-01-01' WHERE object_type = 'foreground_source'");
+    smaller.db.exec("UPDATE sync_object_state SET updated_at = '2099-01-01' WHERE object_type = 'foreground_source'");
     await syncRequestLibrary(source, target);
     expect(db.sql.prepare('SELECT duration_ms FROM foreground_daily_time').get()).toEqual({ duration_ms: 120_000 });
     expect(db.sql.prepare('SELECT content_hash FROM sync_object_state WHERE object_id = ?').get(record.object_id))
@@ -80,8 +80,8 @@ it('applies cumulative request payloads and state together while rejecting a new
     expect(db.sql.prepare('SELECT duration_ms FROM foreground_daily_time').get()).toEqual({ duration_ms: 120_000 });
     expect(db.sql.prepare('SELECT content_hash FROM sync_object_state WHERE object_id = ?').get(record.object_id))
       .toEqual({ content_hash: record.content_hash });
-    expect(db.sql.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.foreground_daily_time).get(record.object_id)).toEqual({
-      payload_json: JSON.stringify({ ...payload, duration_ms: 120_000 }) });
+    expect(db.sql.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.foreground_source).get(record.object_id)).toEqual({
+      payload_json: JSON.stringify({ ...payload, days: { '2026-10-04': 120_000 } }) });
   } finally { await closeLibraries(); }
 });
 
@@ -101,9 +101,9 @@ it('rejects malformed identities, dates, durations and deletions before changing
   const record = records(db)[0]!;
   for (const changes of [
     { object_id: 'wrong-id' }, { deleted_at: '2026-10-04' },
-    ...[{ source_id: 'bad', day_key: '2026-10-04', duration_ms: 90_000 },
-      { source_id: sourceA, day_key: '2026-02-30', duration_ms: 90_000 },
-      { source_id: sourceA, day_key: '2026-10-04', duration_ms: -1 }].map((payload) => ({ payload_json: JSON.stringify(payload) }))
+    ...[{ source_id: 'bad', days: { '2026-10-04': 90_000 } },
+      { source_id: sourceA, days: { '2026-02-30': 90_000 } },
+      { source_id: sourceA, days: { '2026-10-04': -1 } }].map((payload) => ({ payload_json: JSON.stringify(payload) }))
   ]) {
     const skipped: unknown[] = [];
     expect(await applySyncObjectsWithDbPort(db.port, [{ ...record, ...changes }], {
@@ -161,4 +161,15 @@ it('reports a known zero lifetime total for an initialized empty library', async
   const db = instance();
   expect(await readForegroundTimeHistory(db.port, { fromDay: '2026-10-01', toDay: '2026-11-01' }, 4))
     .toMatchObject({ totalDurationMs: 0, days: [] });
+});
+
+it('keeps one published object per source as new days accumulate', async () => {
+  const db = instance();
+  for (const day of ['2026-10-01', '2026-10-02', '2026-10-03']) {
+    await saveForegroundTime(db.port, { sourceId: sourceA, buckets: [{ day, durationMs: 60_000 }], hash: iosCompanionContentHash,
+      mark: (tx, record) => markIosCompanionMutation({ db: tx, hostName: 'mobile', objectType: 'foreground_source',
+        objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt }) });
+  }
+  expect(db.sql.prepare('SELECT COUNT(*) total FROM sync_object_state').get()).toEqual({ total: 1 });
+  expect(db.sql.prepare('SELECT SUM(duration_ms) total FROM foreground_daily_time').get()).toEqual({ total: 180_000 });
 });

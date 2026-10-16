@@ -76,5 +76,5 @@ export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129 = [
 
 export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
   ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129,
-  ...entityTriggers('foreground_daily_time', '$.id', ['foreground_daily_time'])
+  ...entityTriggers('foreground_daily_time', '$.source_id', ['foreground_source'])
 ] as const;

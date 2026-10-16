@@ -31,7 +31,7 @@ const source = '11111111-1111-4111-8111-111111111111';
 const next = '22222222-2222-4222-8222-222222222222';
 const ownerKey = 'foreground_time_source:33333333-3333-4333-8333-333333333333';
 const day = '2026-10-04';
-const id = `${source}:${day}`;
+const id = source;
 
 beforeEach(async () => {
   fixture.root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-time-restore-'));
@@ -46,8 +46,8 @@ function save(sourceId: string, durationMs: number) {
   const objectId = `${sourceId}:${day}`;
   driver.execute(`INSERT INTO foreground_daily_time(id, source_id, day_key, duration_ms) VALUES (?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET duration_ms = excluded.duration_ms`, [objectId, sourceId, day, durationMs]);
-  upsertSyncObjectState(driver, { objectType: 'foreground_daily_time', objectId,
-    contentHash: computeSyncContentHash('foreground_daily_time', { source_id: sourceId, day_key: day, duration_ms: durationMs }),
+  upsertSyncObjectState(driver, { objectType: 'foreground_source', objectId: sourceId,
+    contentHash: computeSyncContentHash('foreground_source', { source_id: sourceId, days: { [day]: durationMs } }),
     lastModifiedByHostName: 'desktop', updatedAt: day, syncDirty: true });
 }
 
@@ -58,7 +58,7 @@ it('merges saved contributions into an older backup, rotates ownership, and publ
   save(source, 60_000);
   const backup = await createApplicationDatabaseBackup();
   save(source, 100_000); save(next, 20_000);
-  openDatabaseConnection().driver.execute("DELETE FROM sync_object_state WHERE object_type = 'foreground_daily_time'");
+  openDatabaseConnection().driver.execute("DELETE FROM sync_object_state WHERE object_type = 'foreground_source'");
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
   const rotated = currentSource();
   expect(rotated).not.toBe(source);
@@ -66,15 +66,15 @@ it('merges saved contributions into an older backup, rotates ownership, and publ
   const connection = openDatabaseConnection();
   const retained = connection.driver.queryOne<{ content_hash: string; sync_dirty: number }>(
     'SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_id = ?', [id]);
-  expect(retained).toEqual({ content_hash: computeSyncContentHash('foreground_daily_time', {
-    source_id: source, day_key: day, duration_ms: 100_000
+  expect(retained).toEqual({ content_hash: computeSyncContentHash('foreground_source', {
+    source_id: source, days: { [day]: 100_000 }
   }), sync_dirty: 1 });
-  const smaller = { object_type: 'foreground_daily_time' as const, object_id: id, content_hash: 'older',
-    payload_json: JSON.stringify({ source_id: source, day_key: day, duration_ms: 60_000 }), updated_at: '2099-01-01', deleted_at: null };
+  const smaller = { object_type: 'foreground_source' as const, object_id: id, content_hash: computeSyncContentHash('foreground_source', { source_id: source, days: { [day]: 60_000 } }),
+    payload_json: JSON.stringify({ source_id: source, days: { [day]: 60_000 } }), updated_at: '2099-01-01', deleted_at: null };
   await applySyncObjectsWithDbPort(createBetterSqliteDbPort(connection.sqlite), [smaller, smaller]);
   expect(total()).toBe(120_000);
-  expect(connection.driver.queryOne(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.foreground_daily_time, [id]))
-    .toEqual({ payload_json: JSON.stringify({ source_id: source, day_key: day, duration_ms: 100_000 }) });
+  expect(connection.driver.queryOne(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.foreground_source, [id]))
+    .toEqual({ payload_json: JSON.stringify({ source_id: source, days: { [day]: 100_000 } }) });
   closeDatabaseConnection(); initializeDatabase();
   expect(total()).toBe(120_000); expect(currentSource()).toBe(rotated);
   save(rotated!, 10_000);

@@ -1,3 +1,5 @@
+import { FOREGROUND_SOURCE_PAYLOAD_SQL } from '../sync/foregroundSource.js';
+
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 
 export type CompanionNativePlatform = 'android' | 'ios';
@@ -95,10 +97,9 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
       'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1'
   },
-  syncPayloadForegroundDailyTime: {
-    syncPayload: { argMode: 'object_id', objectType: 'foreground_daily_time' },
-    sql: "SELECT json_object('source_id', source_id, 'day_key', day_key, 'duration_ms', duration_ms) AS payload_json " +
-      'FROM foreground_daily_time WHERE id = ? LIMIT 1'
+  syncPayloadForegroundSource: {
+    syncPayload: { argMode: 'object_id', objectType: 'foreground_source' },
+    sql: FOREGROUND_SOURCE_PAYLOAD_SQL
   },
   syncPayloadTopicDailyCount: {
     syncPayload: { argMode: 'object_id', objectType: 'topic_daily_count' },
