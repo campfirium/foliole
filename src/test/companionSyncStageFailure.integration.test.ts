@@ -6,6 +6,38 @@ import { describeCompanionSyncPassResult } from '../companion/companionSyncPassR
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport';
 
+it('continues pending text before scanning attachments after exhausting the data passes', async () => {
+  const host = await createCompanionRequestFixture();
+  try {
+    const nodeId = 't326-pending-data-before-attachments';
+    await host.fixture.right.seed({ nodeId, title: 'Pending', content: 'Revision 0' });
+    let revision = 0;
+    let attachmentRequests = 0;
+    native.post.mockImplementation(async input => {
+      const request = new URL(input.url).searchParams.get('request');
+      if (request === 'attachments') attachmentRequests++;
+      const response = await host.post(input);
+      if (request === 'pulls' && revision < 4) {
+        revision++;
+        await host.fixture.right.seed({ nodeId, title: 'Pending', content: `Revision ${revision}` });
+      }
+      return response;
+    });
+    const pending = await host.sync();
+    expect(revision).toBe(4);
+    expect(pending.remainingStructureChangeCount).toBeGreaterThan(0);
+    expect(attachmentRequests).toBe(0);
+    expect(pending.databaseConfirmedAt).toBeUndefined();
+    native.post.mockImplementation(host.post);
+    expect((await host.sync()).remainingStructureChangeCount).toBe(0);
+    await host.restart();
+    for (const snapshot of [host.fixture.leftSnapshot, host.fixture.rightSnapshot]) {
+      expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes)
+        .toContainEqual(expect.objectContaining({ id: nodeId, content: 'Revision 4' }));
+    }
+  } finally { await host.close(); }
+}, 60_000);
+
 it('keeps committed text successful when attachment HTTP fails and resumes without new document versions', async () => {
   const host = await createCompanionRequestFixture();
   try {

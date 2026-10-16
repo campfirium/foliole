@@ -61,7 +61,9 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
   await options.onStructureSynced?.({ receivedCount: round.received.length, workspaceChanged: round.workspaceChanged });
   const resourcesStartedAt = Date.now();
-  const resources = await runAttachmentStage({ endpoint_url: endpointUrl,
+  const resources = round.pending > 0
+    ? { pending: null, transferred: 0, blocks: 0, yielded: true, error: null }
+    : await runAttachmentStage({ endpoint_url: endpointUrl,
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
     receiver_library_epoch: framedPeer.libraryEpoch });

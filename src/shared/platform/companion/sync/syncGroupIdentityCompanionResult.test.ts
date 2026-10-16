@@ -28,6 +28,16 @@ beforeEach(() => {
   runtime.resources.mockResolvedValue({ pending: 3, transferred: 1 });
 });
 
+it('leaves attachment scanning for a later round while database changes remain', async () => {
+  const confirmed = vi.fn();
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, onDatabaseConfirmed: confirmed });
+  expect(runtime.resources).not.toHaveBeenCalled();
+  expect(confirmed).not.toHaveBeenCalled();
+  expect(result).toMatchObject({ remainingStructureChangeCount: 1,
+    remainingAttachmentResourceCount: null, attachmentWorkYielded: true,
+    appliedObjectIds: ['pulled'], pushedObjectIds: ['pushed'] });
+});
+
 it('reports request-scoped database changes and keeps attachment progress separate', async () => {
   const refreshed = vi.fn();
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, onStructureSynced: refreshed });
@@ -35,8 +45,8 @@ it('reports request-scoped database changes and keeps attachment progress separa
     localLibraryEpoch: 'local-epoch', peerState: { sender_device_identity_key: 'desktop', library_epoch: 'desktop-epoch' } }));
   expect(refreshed).toHaveBeenCalledOnce();
   expect(result).toMatchObject({ appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
-    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: 3,
-    transferredAttachmentCount: 1, madeDatabaseProgress: true });
+    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: null,
+    transferredAttachmentCount: 0, madeDatabaseProgress: true });
 });
 
 it('rejects missing negotiation and the incompatible previous protocol', async () => {
@@ -47,6 +57,7 @@ it('rejects missing negotiation and the incompatible previous protocol', async (
 });
 
 it('finishes an authenticated restore before a resource-only continuation', async () => {
+  runtime.database.mockResolvedValue({ pending: 0, received: ['restored'], sent: [], madeProgress: true });
   await syncCompanionIdentityObjects('http://peer', { framedPeer, restoreId: 'restore-1', resourcesOnly: true });
   expect(runtime.database).toHaveBeenCalledWith(expect.objectContaining({ restoreId: 'restore-1' }));
   expect(runtime.resources).toHaveBeenCalledOnce();
