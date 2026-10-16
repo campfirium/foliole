@@ -1,0 +1,25 @@
+import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
+import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
+import { migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
+import { retireLegacySyncState } from './legacySyncRetirement.js';
+import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
+import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
+import { retireNodePositions } from './nodePositionRetirementMigration.js';
+import type { NumberedSchemaMigration } from './numberedMigrations.js';
+import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
+import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
+import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
+
+export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
+  { version: 150, migrate: migrateTextBodyOwnership },
+  { version: 151, migrate: migrateNodeHistoryState },
+  { version: 152, migrate: migrateCurrentParentOrders },
+  { version: 153, migrate: retireLegacySyncState },
+  { version: 154, migrate: migrateTopicHistoryRetirement },
+  { version: 155, migrate: retireNodePositions },
+  { version: 156, migrate: migrateNodeChildInventory },
+  { version: 157, migrate: migrateFramedSyncDigests },
+  { version: 158, migrate: migrateForegroundSources },
+  { version: 159, migrate: migratePdfTextArtifacts },
+  { version: 160, migrate: retireForegroundIdentityTriggers }
+];

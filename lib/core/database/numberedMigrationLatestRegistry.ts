@@ -1,12 +1,9 @@
 import { retireAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
-import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
-import { migrateForegroundSources } from './foregroundSourceMigration.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_COMPLETION_BACKFILL, FRAMED_SYNC_COMPLETION_SCHEMA } from './framedSyncCompletionSchema.js';
-import { migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateDesktopFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
@@ -16,11 +13,7 @@ import { migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInvent
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
-import { retireLegacySyncState } from './legacySyncRetirement.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
-import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
-import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
-import { retireNodePositions } from './nodePositionRetirementMigration.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
@@ -43,6 +36,7 @@ import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
 import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
+import { SYNC_MODEL_SCHEMA_MIGRATIONS } from './numberedMigrationSyncModelRegistry.js';
 import { repairSyncObjectStateBaseContentHash } from './numberedMigrationSyncStateBaseHash.js';
 import { migrateWatchedDeviceBindings } from './numberedMigrationWatchedDeviceBindings.js';
 import {
@@ -52,7 +46,6 @@ import {
 } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
-import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -79,8 +72,6 @@ import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStaging
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
-import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
-import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 import { migrateTopicTextState } from './topicTextStateMigration.js';
 import { removeUntrackedImportCaches } from './untrackedImportCacheMigration.js';
 
@@ -252,14 +243,5 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrateDesktopFramedSyncPayloads(sqlite);
   } },
   { version: 149, migrate: (sqlite) => sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA) },
-  { version: 150, migrate: migrateTextBodyOwnership },
-  { version: 151, migrate: migrateNodeHistoryState },
-  { version: 152, migrate: migrateCurrentParentOrders },
-  { version: 153, migrate: retireLegacySyncState },
-  { version: 154, migrate: migrateTopicHistoryRetirement },
-  { version: 155, migrate: retireNodePositions },
-  { version: 156, migrate: migrateNodeChildInventory },
-  { version: 157, migrate: migrateFramedSyncDigests },
-  { version: 158, migrate: migrateForegroundSources },
-  { version: 159, migrate: migratePdfTextArtifacts }
+  ...SYNC_MODEL_SCHEMA_MIGRATIONS
 ];

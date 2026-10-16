@@ -32,6 +32,13 @@ it('collapses daily inventory into one source on both hosts without changing any
         object_type: 'foreground_source', object_id: source,
         content_hash: computeSyncContentHash('foreground_source', { source_id: source, days: { '2026-10-01': 50, '2026-10-02': 70 } })
       }]);
+      await applySyncObjectsWithDbPort(createBetterSqliteDbPort(db), [{
+        object_type: 'foreground_source', object_id: source,
+        payload_json: JSON.stringify({ source_id: source, days: { '2026-10-01': 90, '2026-10-03': 30 } }),
+        content_hash: computeSyncContentHash('foreground_source', { source_id: source, days: { '2026-10-01': 90, '2026-10-03': 30 } }),
+        updated_at: '2099-10-16', deleted_at: null
+      }], { onSkippedRecord: (_record, error) => { throw error; } });
+      expect(db.prepare('SELECT SUM(duration_ms) total FROM foreground_daily_time').get()).toEqual({ total: 190 });
     } finally { db.close(); }
   }
 });

@@ -29,7 +29,7 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
-import { migrateCompanionForegroundSources } from './foregroundSourceMigration.js';
+import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
@@ -116,6 +116,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 86 && targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   if (currentVersion < 87 && targetVersion >= 87) await migrateCompanionForegroundSources(db);
   if (currentVersion < 88 && targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
+  if (currentVersion < 89 && targetVersion >= 89) await retireCompanionForegroundIdentityTriggers(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

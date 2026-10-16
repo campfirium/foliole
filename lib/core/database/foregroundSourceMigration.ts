@@ -4,7 +4,6 @@ import type { DbPort } from '../sync/dbPort.js';
 import { foregroundSourceSchema } from '../sync/foregroundSource.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
-import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
 import { computeSyncContentHash } from './syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from './syncStateSequenceSchemaStatements.js';
 
@@ -16,10 +15,15 @@ const publishSql = `INSERT INTO sync_object_state(object_type, object_id, state_
   ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq,
   content_hash = excluded.content_hash, updated_at = excluded.updated_at, deleted_at = NULL, sync_dirty = 1`;
 const retireSql = "DELETE FROM sync_object_state WHERE object_type = 'foreground_daily_time'";
-const triggerSql = [
-  ...['insert', 'update', 'delete'].map(action => `DROP TRIGGER IF EXISTS trg_sync_identity_foreground_daily_time_${action}`),
-  ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS.filter(sql => sql.includes('ON foreground_daily_time'))
-];
+const triggerSql = ['insert', 'update', 'delete'].map(action =>
+  `DROP TRIGGER IF EXISTS trg_sync_identity_foreground_daily_time_${action}`);
+
+export function retireForegroundIdentityTriggers(sqlite: DatabaseMigrationTarget) {
+  for (const sql of triggerSql) sqlite.exec(sql);
+}
+export async function retireCompanionForegroundIdentityTriggers(db: DbPort) {
+  for (const sql of triggerSql) await db.run(sql);
+}
 function parameters(row: unknown) {
   const { payload_json: json } = z.object({ payload_json: z.string() }).parse(row);
   const payload = foregroundSourceSchema.parse(JSON.parse(json));
