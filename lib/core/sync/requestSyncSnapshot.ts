@@ -14,10 +14,9 @@ import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 
 async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference, files: RequestSyncFiles) {
-  const graph = await readRequestSyncNodeGraph(db, difference.globalId);
+  await readRequestSyncNodeGraph(db, difference.globalId);
   const requested = requiredFramedSyncNodeVersionIds(difference);
-  const identities = new Set([...requested, ...graph.ancestorsOf(requested)]);
-  for (const id of identities) {
+  for (const id of requested) {
     const record = await loadRetainedSyncNodeVersionFact(db, id, false);
     if (!record || record.object_id !== difference.globalId) throw new Error(`request_sync_version_missing:${id}`);
     if (isNodeVersionIdentityOnly(record)) {

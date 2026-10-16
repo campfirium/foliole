@@ -87,6 +87,12 @@ async () => {
   expect(reopened.nodes).toEqual(received.nodes);
   expect(reopened.versions).toEqual(received.versions);
   expect(reopened.parents).toEqual(received.parents);
+  await fixture.left.seed({ content: 'Next body', nodeId, title: 'Next' });
+  await expect(fixture.left.synchronize(restarted.snapshot.origin)).resolves.toMatchObject({ complete: true });
+  const incremental = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
+  expect(incremental.nodes).toEqual([expect.objectContaining({ content: 'Next body', id: nodeId })]);
+  expect(incremental.versions).toHaveLength(4);
+  expect(incremental.parents).toHaveLength(3);
 });
 
 it('converges independent roots while retaining both original bodies and the complete alternative', async () => {
