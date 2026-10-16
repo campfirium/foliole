@@ -6,11 +6,12 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtoco
 import { createCompanionRequestFixture } from '../test/companionRequestSync.testSupport';
 
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
-import { runCompanionStreamSync } from './companionWorkspaceSyncFlow';
+import { runCompanionStreamSync, tryForegroundAutoSync } from './companionWorkspaceSyncFlow';
 
-const runtime = vi.hoisted(() => ({ epoch: '', complete: vi.fn(async () => undefined),
+const runtime = vi.hoisted(() => ({ epoch: '', resolve: vi.fn(), complete: vi.fn(async () => undefined),
   record: vi.fn(async () => { throw new Error('activity_storage_unavailable'); }) }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
+  resolveReachableCompanionWorkspaceSyncEndpoints: runtime.resolve,
   bindCompanionWorkspaceSyncTarget: async () => undefined,
   saveCompanionWorkspaceSyncEndpoint: async () => undefined,
   recordCompanionWorkspaceSyncEvent: runtime.record,
@@ -57,4 +58,45 @@ it('persists both directions and reports completion even when both activity writ
       ]));
     }
   } finally { vi.restoreAllMocks(); await host.close(); }
+}, 60_000);
+
+
+it('persists a new desktop-bound change while independent mobile discovery remains pending', async () => {
+  const host = await createCompanionRequestFixture();
+  const { fixture } = host;
+  let finishDiscovery!: (targets: []) => void;
+  const discovery = new Promise<[]>(resolve => { finishDiscovery = resolve; });
+  let cancelled = false;
+  let first: Promise<unknown> | undefined;
+  try {
+    const bridge = await import('../shared/platform/companionWorkspaceRuntimeRepository');
+    vi.spyOn(bridge, 'beginNativeCompanionSyncRun').mockResolvedValue({ reason: 'automatic', run_id: 'test', runtime: 'ios' });
+    runtime.epoch = `${fixture.rightSnapshot.deviceId}-epoch`;
+    const target = { endpointUrl: fixture.rightSnapshot.origin, deviceId: fixture.rightSnapshot.deviceId,
+      protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
+    runtime.resolve.mockImplementationOnce(async (_endpoint, options) => { options.onSessionReused(); return [target]; })
+      .mockImplementationOnce(() => discovery).mockResolvedValue([target]);
+    const args = { cancelled: () => cancelled, setError: vi.fn(), setState: vi.fn(),
+      setStatus: vi.fn(), setSyncProgress: vi.fn(), state: {
+        endpoint_url: target.endpointUrl, last_synced_at: null, remembered_targets: [],
+        sync_events: [], sync_onboarding_status: 'completed' as const, workspace_snapshot: null
+      } };
+    let firstResult: unknown;
+    first = tryForegroundAutoSync({ ...args, discoverMobilePeers: true }).then(result => { firstResult = result; });
+    await vi.waitFor(() => expect(firstResult).toBe('completed'), { timeout: 3000 });
+    expect(runtime.resolve).toHaveBeenCalledTimes(2);
+    await fixture.left.seed({ nodeId: 't326-edit-during-discovery', title: 'New edit', content: 'No discovery delay' });
+    await expect(tryForegroundAutoSync(args)).resolves.toBe('completed');
+    for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+      expect(readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 't326-edit-during-discovery', content: 'No discovery delay' })
+      ]));
+    }
+  } finally {
+    cancelled = true;
+    finishDiscovery([]);
+    await first?.catch(() => undefined);
+    vi.restoreAllMocks();
+    await host.close();
+  }
 }, 60_000);

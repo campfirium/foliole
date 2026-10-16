@@ -24,6 +24,7 @@ function hasWaitingLocalChanges(result: CompanionDesktopSyncResult) {
 
 export function resolveCompanionSyncContinuationMode(result: CompanionDesktopSyncResult): CompanionSyncContinuationMode {
   if (
+    result.sessionConfirmationPending ||
     result.attachmentResourceError ||
     !hasResourceBacklog(result) ||
     !madeResourceProgress(result) ||
@@ -36,6 +37,7 @@ export function resolveCompanionSyncContinuationMode(result: CompanionDesktopSyn
 }
 
 export function hasRetryWork(result: CompanionDesktopSyncResult) {
+  if (result.sessionConfirmationPending) return true;
   if (result.attachmentResourceError) {
     return false;
   }

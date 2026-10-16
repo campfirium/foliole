@@ -3,6 +3,7 @@ import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanio
 
 export interface CompanionSyncPassInput {
   databaseConfirmedAt?: string;
+  sessionConfirmationPending?: boolean;
   transferredAttachmentCount?: number;
   attachmentResourceError: string | null;
   localDirtyCount?: number | null | undefined;
@@ -68,6 +69,8 @@ function hasFailedResourceBacklog(result: CompanionSyncPassInput) {
 }
 
 export function describeCompanionSyncPassResult(result: CompanionSyncPassInput): CompanionSyncPassResult {
+  if (result.sessionConfirmationPending) return createPassResult(
+    'Text and state are waiting for confirmation.', 'skipped', 'partial');
   const errorResult = describeErrorPass(result);
   if (errorResult) return errorResult;
   const pushResult = describePushPass(result);

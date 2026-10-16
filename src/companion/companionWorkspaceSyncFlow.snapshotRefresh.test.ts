@@ -50,17 +50,23 @@ it('does not rebuild the workspace when no data was received', async () => {
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('original');
 });
 
-it('discards a late snapshot after a local edit', async () => {
+it('reloads after discarding a late snapshot so both remote changes and local edits become visible', async () => {
   const view = createView();
   let resolve!: (state: ReturnType<typeof createSyncState>) => void;
-  syncPlatformMock.loadCompanionWorkspaceSyncState.mockReturnValue(new Promise(done => { resolve = done; }));
+  const combined = createWorkspaceSnapshot('local-edit');
+  combined.nodesById.received = createWorkspaceSnapshot('received').nodesById.received!;
+  combined.nodeOrder.push('received');
+  syncPlatformMock.loadCompanionWorkspaceSyncState
+    .mockReturnValueOnce(new Promise(done => { resolve = done; }))
+    .mockResolvedValue(createSyncState({ workspace_snapshot: combined }));
   receiveChanges();
   expect(await tryForegroundAutoSync(view.args), JSON.stringify(view.args.setError.mock.calls)).toBe('completed');
   publishCompanionSyncMutationRevision();
   view.args.setState(current => ({ ...current, workspace_snapshot: createWorkspaceSnapshot('local-edit') }));
   resolve(createSyncState({ workspace_snapshot: createWorkspaceSnapshot('stale') }));
-  await new Promise(done => setTimeout(done, 0));
+  await vi.waitFor(() => expect(view.current().workspace_snapshot?.nodesById.received).toBeDefined());
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('local-edit');
+  expect(syncPlatformMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
 });
 
 it('reports display failure without changing the committed data result', async () => {
@@ -83,4 +89,25 @@ it('clears the visible workspace when the last received node is deleted', async 
   expect(await tryForegroundAutoSync(view.args)).toBe('completed');
   await vi.waitFor(() => expect(view.current().workspace_snapshot).toBeNull());
   expect(view.args.setError.mock.calls.every(([error]) => error === null)).toBe(true);
+});
+
+it('retries when a local edit arrives after reading but before React publishes the snapshot', async () => {
+  const { refreshCompanionSyncDisplay } = await import('./companionSyncDisplayRefresh');
+  const view = createView();
+  const updates: Array<Parameters<TryForegroundAutoSyncArgs['setState']>[0]> = [];
+  const combined = createWorkspaceSnapshot('local-edit');
+  combined.nodesById.received = createWorkspaceSnapshot('received').nodesById.received!;
+  combined.nodeOrder.push('received');
+  syncPlatformMock.loadCompanionWorkspaceSyncState
+    .mockResolvedValueOnce(createSyncState({ workspace_snapshot: createWorkspaceSnapshot('stale') }))
+    .mockResolvedValue(createSyncState({ workspace_snapshot: combined }));
+  await refreshCompanionSyncDisplay({ ...view.args, setState: update => updates.push(update) });
+  publishCompanionSyncMutationRevision();
+  view.args.setState(current => ({ ...current, workspace_snapshot: createWorkspaceSnapshot('local-edit') }));
+  view.args.setState(updates[0]!);
+  expect(view.current().workspace_snapshot?.activeNodeId).toBe('local-edit');
+  await vi.waitFor(() => expect(updates).toHaveLength(2));
+  view.args.setState(updates[1]!);
+  expect(view.current().workspace_snapshot?.nodesById.received).toBeDefined();
+  expect(view.current().workspace_snapshot?.activeNodeId).toBe('local-edit');
 });

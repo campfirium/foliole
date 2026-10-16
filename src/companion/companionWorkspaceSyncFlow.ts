@@ -1,7 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
   syncCompanionObjectsFromDesktop,
@@ -16,6 +15,7 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
+import { scheduleCompanionMobilePeerSync } from './companionMobilePeerSync';
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import {
   hasFastRetryWork,
@@ -29,6 +29,7 @@ import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
+import { loadActiveCompanionSyncRun } from './companionSyncRunOwner';
 import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -37,6 +38,7 @@ export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
 
 export interface RunCompanionStreamSyncArgs {
+  confirmDatabase?(): Promise<void>;
   setError?(message: string | null): void;
   deferAfterRelease?(work: () => void): void;
   isManualRequested?(): boolean;
@@ -96,6 +98,11 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     waitForInbound: () => args.triggerReason === 'manual' || args.isManualRequested?.() === true,
     onProgress: args.setSyncProgress,
     onStructureSynced: facts => { receivedChanges = facts.receivedCount > 0; },
+    onDatabaseConfirmed: async confirmedAt => {
+      if (args.cancelled()) throw new Error('sync_session_cancelled');
+      args.setState(current => ({ ...current, last_synced_at: confirmedAt }));
+      await args.confirmDatabase?.();
+    },
     resourcesOnly: args.continuationMode === 'resources-only'
   }).finally(() => {
     if (receivedChanges) {
@@ -151,13 +158,15 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return 'skipped';
   let targets;
+  let reusedSession = false;
   try {
     targets = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
-      allowWhileNotParticipating: args.triggerReason === 'manual'
+      allowWhileNotParticipating: args.triggerReason === 'manual',
+      onSessionReused: () => { reusedSession = true; }
     });
   } catch (error) {
     args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
-    args.setStatus('idle');
+    if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
     return 'failed';
   }
   const outcomes: ForegroundAutoSyncOutcome[] = [];
@@ -169,25 +178,11 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
         { ...targetArgs, triggeredAt }, target, runCompanionStreamSync
       ));
     }
-    if (!args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
-      try {
-        const peers = await resolveReachableCompanionWorkspaceSyncEndpoints(storedEndpointUrl, {
-          allowWhileNotParticipating: args.triggerReason === 'manual', mobilePeersOnly: true
-        });
-        for (const peer of peers) {
-          if (args.cancelled()) break;
-          if (!isMobileSyncPlatform(peer.platform ?? '') || targets.some(target => target.deviceId === peer.deviceId)) continue;
-          outcomes.push(await tryForegroundAutoSyncTarget(
-            { ...resetSharedContinuation(args), triggeredAt }, peer, runCompanionStreamSync
-          ));
-        }
-      } catch (error) {
-        args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
-        outcomes.push('failed');
-      }
+    if (reusedSession && !args.cancelled() && (args.discoverMobilePeers || args.triggerReason === 'manual')) {
+      scheduleCompanionMobilePeerSync(storedEndpointUrl, args, runCompanionStreamSync);
     }
     return combineForegroundSyncOutcomes(outcomes);
   } finally {
-    if (!args.cancelled()) args.setStatus('idle');
+    if (!args.cancelled() && !loadActiveCompanionSyncRun()) args.setStatus('idle');
   }
 }

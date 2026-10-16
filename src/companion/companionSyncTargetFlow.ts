@@ -13,7 +13,7 @@ import {
 
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import { formatCompanionSyncDiagnosticMessage, formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
-import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
+import { loadActiveCompanionSyncRun, runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import type {
   ForegroundAutoSyncOutcome,
   RunCompanionStreamSyncArgs,
@@ -98,6 +98,7 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
       isManualRequested: args.isManualRequested,
       deferAfterRelease: args.deferAfterRelease,
       endpointUrl,
+      confirmDatabase: completeSession,
       ...(args.target.deviceId && memberState.peerLibraryEpoch && args.target.protocolVersion ? { framedPeer: {
         deviceId: args.target.deviceId,
         libraryEpoch: memberState.peerLibraryEpoch,
@@ -109,7 +110,6 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
       triggerReason,
       workspaceSnapshot: args.syncArgs.state.workspace_snapshot
     }) ?? 'skipped';
-    if (outcome === 'completed') await completeSession();
     return outcome;
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
@@ -149,6 +149,11 @@ export async function tryForegroundAutoSyncTarget(
   target: CompanionWorkspaceSyncTarget,
   runStreamSync: RunCompanionStreamSync
 ) {
+  let active = loadActiveCompanionSyncRun();
+  while (active && active.endpointUrl !== target.endpointUrl && !syncArgs.cancelled()) {
+    await active.completion.catch(() => undefined);
+    active = loadActiveCompanionSyncRun();
+  }
   const runId = syncArgs.runId ?? createCompanionSyncRunId();
   if (syncArgs.cancelled()) return 'skipped';
   const afterRelease: Array<() => void> = [];

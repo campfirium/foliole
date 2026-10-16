@@ -15,16 +15,32 @@ export async function refreshCompanionSyncDisplay(args: {
   setError?(message: string | null): void;
 }) {
   const generation = ++refreshGeneration;
-  const mutation = getCompanionSyncMutationRevision();
-  const isCurrent = () => !args.cancelled() && generation === refreshGeneration
-    && mutation === getCompanionSyncMutationRevision();
-  const report = await loadCompanionStateAfterStructureSyncReport();
-  if (!isCurrent()) return;
-  if (report.fallbackReason) {
-    args.setError?.('sync_display_unavailable');
-    return;
+  const active = () => !args.cancelled() && generation === refreshGeneration;
+  let retryQueued = false;
+  const retry = () => {
+    if (retryQueued || !active()) return;
+    retryQueued = true;
+    queueMicrotask(() => {
+      if (active()) void refreshCompanionSyncDisplay(args).catch(() => args.setError?.('sync_display_unavailable'));
+    });
+  };
+  while (active()) {
+    const mutation = getCompanionSyncMutationRevision();
+    const report = await loadCompanionStateAfterStructureSyncReport();
+    if (!active()) return;
+    if (mutation !== getCompanionSyncMutationRevision()) continue;
+    if (report.fallbackReason) {
+      args.setError?.('sync_display_unavailable');
+      return;
+    }
+    const snapshot = report.state?.workspace_snapshot ?? null;
+    args.setState(current => {
+      if (!active()) return current;
+      if (mutation !== getCompanionSyncMutationRevision()) { retry(); return current; }
+      return { ...current, workspace_snapshot: snapshot };
+    });
+    break;
   }
-  const snapshot = report.state?.workspace_snapshot ?? null;
-  args.setState(current => isCurrent() ? { ...current, workspace_snapshot: snapshot } : current);
+  if (!active()) return;
   await Promise.allSettled([hydrateCompanionReviewSchedulerSettings(), hydrateCompanionSystemEntryDisplayNames()]);
 }

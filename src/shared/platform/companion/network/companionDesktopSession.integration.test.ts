@@ -133,3 +133,50 @@ it('automatically pulls desktop changes while the phone waits and reconciles aft
       .toBe('While disconnected');
   } finally { unsubscribe(); await closeCompanionDesktopSession(); await mobile.close(); }
 }, 60_000);
+
+it('confirms desktop manual data synchronization before stalled attachments finish', async () => {
+  const mobile = await createCompanionRequestFixture();
+  installHttpBoundary();
+  const endpoint = mobile.fixture.rightSnapshot.origin;
+  let release!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  let attachmentStarted = false;
+  let manualResult: unknown;
+  let unsubscribe = () => {};
+  let sync: Promise<unknown> | undefined;
+  try {
+    await mobile.fixture.right.seed({ nodeId: 'confirm-before-attachments', title: 'Text', content: 'Persisted before attachments' });
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    native.post.mockImplementation(async input => {
+      if (new URL(input.url).searchParams.get('request') === 'attachments') {
+        attachmentStarted = true;
+        await blocked;
+        throw new Error('attachment_http_unavailable');
+      }
+      return mobile.post(input);
+    });
+    unsubscribe = subscribeCompanionDesktopChanges(async () => {
+      const complete = captureCompanionDesktopRound(endpoint);
+      sync = mobile.sync({ onDatabaseConfirmed: complete });
+      await sync;
+    });
+    waitForCompanionDesktopChanges();
+    const manual = mobile.fixture.right.invoke('activation_manual').then(result => { manualResult = result; });
+    await vi.waitFor(() => {
+      expect(attachmentStarted).toBe(true);
+      expect(manualResult).toMatchObject({ status: 'completed' });
+    }, { timeout: 3000 });
+    expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('confirm-before-attachments'))
+      .toBe('Persisted before attachments');
+    release();
+    await expect(sync).resolves.toMatchObject({ attachmentResourceError: 'attachment_http_unavailable',
+      databaseConfirmedAt: expect.any(String) });
+    await manual;
+  } finally {
+    release();
+    await sync?.catch(() => undefined);
+    unsubscribe();
+    await closeCompanionDesktopSession();
+    await mobile.close();
+  }
+}, 60_000);

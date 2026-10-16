@@ -11,8 +11,10 @@ export const syncPlatformMock = {
   loadCompanionWorkspaceSyncState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
-  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(
-    async (endpointUrl: string): Promise<CompanionWorkspaceSyncTarget[]> => [{ endpointUrl }]
+  resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn<(
+    endpointUrl: string, options?: { onSessionReused?(): void }
+  ) => Promise<CompanionWorkspaceSyncTarget[]>>(
+    async (endpointUrl: string) => [{ endpointUrl }]
   ),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 };

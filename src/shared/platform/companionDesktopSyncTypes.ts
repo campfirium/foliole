@@ -9,6 +9,7 @@ export interface CompanionDesktopSyncOptions {
   signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: (facts: { receivedCount: number }) => Promise<void> | void;
+  onDatabaseConfirmed?: (confirmedAt: string) => Promise<void>;
   resourcesOnly?: boolean;
   restoreId?: string;
   runId?: string;
@@ -39,6 +40,7 @@ export interface CompanionDesktopSyncProgress {
 
 export interface CompanionDesktopSyncResult {
   databaseConfirmedAt?: string;
+  sessionConfirmationPending?: boolean;
   syncMetadataUnavailable?: boolean;
   madeDatabaseProgress?: boolean;
   appliedNodeIds: string[];

@@ -129,7 +129,7 @@ function startForegroundSync(
   args.inFlightRef.current = true;
   const work = args.tryForegroundAutoSync({
     discoverMobilePeers: reason === 'foreground' || reason === 'freshness' || reason === 'endpoint-ready',
-    cancelled: args.cancelled,
+    cancelled: () => args.cancelled() || !args.isAppActiveRef.current,
     continuationMode: reason === 'retry' ? args.resourceContinuationModeRef.current : 'full',
     onContinuationModeChange: (mode) => {
       args.resourceContinuationModeRef.current = mode;

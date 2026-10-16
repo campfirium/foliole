@@ -24,7 +24,7 @@ describe('manual companion workspace sync', () => {
 
     expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).toHaveBeenCalledWith(
       'http://10.0.2.2:38641',
-      { allowWhileNotParticipating: true }
+      expect.objectContaining({ allowWhileNotParticipating: true })
     );
   });
 });

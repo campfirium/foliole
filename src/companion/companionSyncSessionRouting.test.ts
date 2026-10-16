@@ -33,7 +33,7 @@ beforeEach(async () => {
 it('finishes the desktop data pass before independently discovering mobile peers', async () => {
   const order: string[] = [];
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
-    .mockImplementationOnce(async () => [desktop])
+    .mockImplementationOnce(async (_endpoint, options) => { options?.onSessionReused?.(); return [desktop]; })
     .mockImplementationOnce(async () => { order.push('mobile-discovery'); return [phone]; });
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async endpoint => {
     order.push(endpoint);
@@ -43,7 +43,7 @@ it('finishes the desktop data pass before independently discovering mobile peers
   const result = await tryForegroundAutoSync(input);
   expect(input.setError.mock.calls.filter(([error]) => error !== null)).toEqual([]);
   expect(result).toBe('completed');
-  expect(order).toEqual([desktop.endpointUrl, 'mobile-discovery', phone.endpointUrl]);
+  await vi.waitFor(() => expect(order).toEqual([desktop.endpointUrl, 'mobile-discovery', phone.endpointUrl]));
   expect(sessions.ensure).toHaveBeenCalledOnce();
 });
 
@@ -77,4 +77,70 @@ it('invalidates revoked membership without transferring data', async () => {
   await expect(tryForegroundAutoSync(args())).resolves.toBe('skipped');
   expect(sessions.invalidate).toHaveBeenCalledWith(desktop.endpointUrl);
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
+});
+
+it('sends a new desktop edit while mobile discovery is still unresolved', async () => {
+  let finishDiscovery!: (targets: typeof phone[]) => void;
+  const discovery = new Promise<typeof phone[]>(resolve => { finishDiscovery = resolve; });
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+    .mockImplementationOnce(async (_endpoint, options) => { options?.onSessionReused?.(); return [desktop]; })
+    .mockImplementationOnce(() => discovery)
+    .mockResolvedValue([desktop]);
+  let firstOutcome: string | undefined;
+  const first = tryForegroundAutoSync({ ...args(), discoverMobilePeers: true }).then(outcome => {
+    firstOutcome = outcome;
+    return outcome;
+  });
+  try {
+    await vi.waitFor(() => expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(firstOutcome).toBe('completed'), { timeout: 1000 });
+    await expect(tryForegroundAutoSync(args())).resolves.toBe('completed');
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint))
+      .toEqual([desktop.endpointUrl, desktop.endpointUrl]);
+  } finally {
+    finishDiscovery([]);
+    await first;
+  }
+});
+
+it('does not discover twice when initial resolution already found mobile peers', async () => {
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValue([desktop, phone]);
+  await expect(tryForegroundAutoSync({ ...args(), discoverMobilePeers: true })).resolves.toBe('completed');
+  expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).toHaveBeenCalledOnce();
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint))
+    .toEqual([desktop.endpointUrl, phone.endpointUrl]);
+});
+
+
+it('acknowledges committed data even when the attachment result remains partial', async () => {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async (_endpoint, options) => {
+    await options.onDatabaseConfirmed('2026-10-16T01:00:00Z');
+    expect(sessions.complete).toHaveBeenCalledOnce();
+    return createSyncObjectsResult({ databaseConfirmedAt: '2026-10-16T01:00:00Z',
+      attachmentResourceError: 'unavailable' });
+  });
+  await tryForegroundAutoSync(args());
+  expect(sessions.complete).toHaveBeenCalledOnce();
+});
+
+
+it('does not mistake an in-flight mobile transfer for a requested desktop round', async () => {
+  let release!: () => void;
+  let started!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+    .mockResolvedValueOnce([phone]).mockResolvedValue([desktop]);
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async () => {
+    started();
+    await blocked;
+    return createSyncObjectsResult();
+  }).mockResolvedValue(createSyncObjectsResult());
+  const mobile = tryForegroundAutoSync(args());
+  await ready;
+  const desktopRound = tryForegroundAutoSync(args());
+  release();
+  await Promise.all([mobile, desktopRound]);
+  expect(syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls.map(([endpoint]) => endpoint))
+    .toEqual([phone.endpointUrl, desktop.endpointUrl]);
 });

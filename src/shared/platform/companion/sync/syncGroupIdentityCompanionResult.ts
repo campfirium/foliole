@@ -57,6 +57,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     }) });
   const syncedStructureElapsedMs = Date.now() - startedAt;
   const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
+  const sessionConfirmationPending = await confirmDatabase(options, databaseConfirmedAt);
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
   await options.onStructureSynced?.({ receivedCount: round.received.length });
   const resourcesStartedAt = Date.now();
@@ -67,6 +68,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   return {
     ...(databaseConfirmedAt ? { databaseConfirmedAt } : {}),
     syncMetadataUnavailable,
+    ...(sessionConfirmationPending ? { sessionConfirmationPending: true } : {}),
     ...databaseResult(round),
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
@@ -83,6 +85,16 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     syncedStructureElapsedMs
   };
   });
+}
+
+async function confirmDatabase(options: CompanionDesktopSyncOptions, confirmedAt: string | undefined) {
+  if (!confirmedAt || !options.onDatabaseConfirmed) return false;
+  try {
+    await options.onDatabaseConfirmed(confirmedAt);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 async function persistConfirmedSyncTime(confirmedAt: string | undefined) {

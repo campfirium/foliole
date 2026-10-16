@@ -29,13 +29,16 @@ export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspac
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   endpointUrl: string,
-  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean } = {}
+  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean; onSessionReused?(): void } = {}
 ): Promise<CompanionWorkspaceSyncTarget[]> {
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
   if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
   const active = companionDesktopSessionTarget(group.group_id);
-  if (active && !options.mobilePeersOnly) return [active];
+  if (active && !options.mobilePeersOnly) {
+    options.onSessionReused?.();
+    return [active];
+  }
   const discovered = await discoverCompanionDesktops(normalized, {
     ...options, requiredGroupId: group.group_id
   });
@@ -75,7 +78,7 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
 
 export async function resolveReachableCompanionWorkspaceSyncEndpoint(
   endpointUrl: string,
-  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean } = {}
+  options: CompanionDiscoveryOptions & { mobilePeersOnly?: boolean; onSessionReused?(): void } = {}
 ) {
   return (await resolveReachableCompanionWorkspaceSyncEndpoints(endpointUrl, options))[0]?.endpointUrl
     ?? normalizeEndpointUrl(endpointUrl);

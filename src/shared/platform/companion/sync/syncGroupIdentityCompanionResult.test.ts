@@ -86,3 +86,24 @@ it('preserves confirmed data when the attachment stage fails', async () => {
   expect(describeCompanionSyncPassResult(result)).toMatchObject({ result: 'partial', outcome: 'skipped',
     message: 'Text and state synced; attachments need another attempt.' });
 });
+
+it.each([{ resourcesOnly: false }, { resourcesOnly: true }])('does not confirm an incomplete or resource-only data round: %j', async options => {
+  const confirmed = vi.fn();
+  await syncCompanionIdentityObjects('http://peer', { framedPeer, ...options, onDatabaseConfirmed: confirmed });
+  expect(confirmed).not.toHaveBeenCalled();
+});
+
+it('retains committed data and retries confirmation when the session acknowledgement fails', async () => {
+  const { describeCompanionSyncPassResult } = await import('../../../../companion/companionSyncPassResult');
+  const { hasRetryWork, resolveCompanionSyncContinuationMode } = await import('../../../../companion/companionSyncContinuation');
+  runtime.database.mockResolvedValue({ pending: 0, received: ['saved'], sent: [], madeProgress: true });
+  const confirmed = vi.fn(async () => { throw new Error('session_ack_unavailable'); });
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, onDatabaseConfirmed: confirmed });
+  expect(confirmed).toHaveBeenCalledOnce();
+  expect(runtime.resources).toHaveBeenCalledOnce();
+  expect(result).toMatchObject({ databaseConfirmedAt: expect.any(String), appliedObjectIds: ['saved'],
+    sessionConfirmationPending: true });
+  expect(describeCompanionSyncPassResult(result)).toMatchObject({ result: 'partial', outcome: 'skipped' });
+  expect(hasRetryWork(result)).toBe(true);
+  expect(resolveCompanionSyncContinuationMode(result)).toBe('full');
+});

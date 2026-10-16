@@ -1,6 +1,7 @@
 type SyncRunIntent = { manualRequested: boolean };
 
 type ActiveSyncRun = {
+  endpointUrl: string;
   intent: SyncRunIntent;
   completion: Promise<unknown>;
   runId: string;
@@ -23,7 +24,7 @@ export function loadActiveCompanionSyncRun() {
 }
 
 export function runCompanionSyncAsOwner<T>(
-  _endpointUrl: string,
+  endpointUrl: string,
   runId: string,
   work: (intent: SyncRunIntent) => Promise<T>,
   manualRequested = false
@@ -39,7 +40,7 @@ export function runCompanionSyncAsOwner<T>(
     resolveRun = resolve;
     rejectRun = reject;
   });
-  const active: ActiveSyncRun = { completion, runId, intent: { manualRequested } };
+  const active: ActiveSyncRun = { endpointUrl, completion, runId, intent: { manualRequested } };
   activeSyncRun = active;
   const release = () => {
     if (activeSyncRun === active) activeSyncRun = null;
