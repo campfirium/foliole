@@ -140,6 +140,10 @@ export interface NativeCompanionSyncEvent {
 }
 
 export interface NativeCompanionSyncEventSummary {
+  database_duration_ms?: number;
+  attachment_duration_ms?: number;
+  attachment_count?: number;
+  received_count?: number;
   change_count: number;
   desktop_review_count?: number;
   duration_ms?: number;

@@ -84,10 +84,11 @@ async function browse(initial: NativeCompanionWorkspaceSyncState, actions: Retur
 }
 
 it('keeps a newer sync endpoint when a previously opened page finishes a local operation', async () => {
-  const initial = await saveCompanionWorkspaceSyncEndpoint('http://192.168.1.10:38641');
+  await saveCompanionWorkspaceSyncEndpoint('http://192.168.1.10:38641');
+  const initial = await loadCompanionWorkspaceSyncState();
   const ui = surface(initial);
   const updated = await saveCompanionWorkspaceSyncEndpoint('http://192.168.1.20:38641');
-  ui.setState(updated);
+  ui.setState(current => ({ ...current, ...updated }));
   await browse(initial, ui.actions);
   expect(ui.current().endpoint_url).toBe(updated.endpoint_url);
   expect(ui.current().remembered_targets).toEqual(updated.remembered_targets);

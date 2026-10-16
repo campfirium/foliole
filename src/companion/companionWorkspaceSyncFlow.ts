@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from 'react';
+
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
@@ -9,34 +11,33 @@ import {
   statusForSyncRunResult
 } from '../shared/platform/companionSyncActivityEvents';
 import {
-  recordCompanionWorkspaceSyncEvent,
   resolveReachableCompanionWorkspaceSyncEndpoints
 } from '../shared/platform/companionWorkspaceSync';
 
 import type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
-import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
-import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
+import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import {
   hasFastRetryWork,
   hasRetryWork,
   resolveCompanionSyncContinuationMode,
   type CompanionSyncContinuationMode
 } from './companionSyncContinuation';
+import { refreshCompanionSyncDisplay } from './companionSyncDisplayRefresh';
 import { describeCompanionSyncPassResult } from './companionSyncPassResult';
 import {
   buildRemainingSyncProgress,
   shouldClearCompanionSyncProgress
 } from './companionSyncProgressVisibility';
 import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
-import { recordCompanionSyncStageEvents } from './companionSyncStageEvents';
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
-import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
 export type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
 
 export interface RunCompanionStreamSyncArgs {
+  setError?(message: string | null): void;
+  deferAfterRelease?(work: () => void): void;
   isManualRequested?(): boolean;
   cancelled: () => boolean;
   signal?: AbortSignal;
@@ -45,7 +46,7 @@ export interface RunCompanionStreamSyncArgs {
   runId: string;
   restoreId?: string;
   startedAt: string;
-  setState(state: NativeCompanionWorkspaceSyncState): void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   continuationMode?: CompanionSyncContinuationMode;
@@ -58,7 +59,7 @@ export interface TryForegroundAutoSyncArgs {
   cancelled: () => boolean;
   signal?: AbortSignal;
   setError(error: string | null): void;
-  setState(state: NativeCompanionWorkspaceSyncState): void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   continuationMode?: CompanionSyncContinuationMode;
@@ -67,14 +68,6 @@ export interface TryForegroundAutoSyncArgs {
   runId?: string;
   state: NativeCompanionWorkspaceSyncState;
   triggerReason?: SyncTriggerReason;
-}
-
-async function showCompletedStructure(args: {
-  setState(state: NativeCompanionWorkspaceSyncState): void;
-  state: NativeCompanionWorkspaceSyncState;
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-}) {
-  args.setState({ ...args.state, workspace_snapshot: args.workspaceSnapshot });
 }
 
 function applyRemainingProgress(args: {
@@ -89,31 +82,9 @@ function applyRemainingProgress(args: {
   }
 }
 
-async function refreshVisibleStructure(args: {
-  cancelled: () => boolean;
-  signal?: AbortSignal;
-  fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-  setState(state: NativeCompanionWorkspaceSyncState): void;
-}) {
-  const refreshedState = await loadCompanionStateAfterStructureSync(args.fallbackSnapshot);
-  const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.fallbackSnapshot;
-  if (!args.cancelled() && refreshedState) {
-    args.setState(refreshedState);
-  }
-  return workspaceSnapshot;
-}
-
 export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
-  let latestWorkspaceSnapshot = args.workspaceSnapshot;
-  let structureRefreshCompleted = false;
-  const refreshAfterStructureSync = async () => {
-    structureRefreshCompleted = true;
-    latestWorkspaceSnapshot = await refreshVisibleStructure({
-      cancelled: args.cancelled,
-      fallbackSnapshot: latestWorkspaceSnapshot,
-      setState: args.setState
-    });
-  };
+  let receivedChanges = false;
+  const refresh = () => { void refreshCompanionSyncDisplay(args).catch(() => args.setError?.('sync_display_unavailable')); };
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     ...(args.framedPeer ? { framedPeer: args.framedPeer } : {}),
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
@@ -121,19 +92,22 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     ...(args.signal ? { signal: args.signal } : {}),
     waitForInbound: () => args.triggerReason === 'manual' || args.isManualRequested?.() === true,
     onProgress: args.setSyncProgress,
-    onStructureSynced: refreshAfterStructureSync,
+    onStructureSynced: facts => { receivedChanges = facts.receivedCount > 0; },
     resourcesOnly: args.continuationMode === 'resources-only'
+  }).finally(() => {
+    if (receivedChanges) {
+      if (args.deferAfterRelease) args.deferAfterRelease(refresh);
+      else refresh();
+    }
   });
   if (args.cancelled()) {
     return;
   }
-  if (!structureRefreshCompleted) {
-    await refreshAfterStructureSync();
-  }
-  await recordCompanionSyncStageEvents(args, result);
+  if (result.databaseConfirmedAt) args.setState(current => ({ ...current, last_synced_at: result.databaseConfirmedAt! }));
+  if (result.syncMetadataUnavailable) args.setError?.('sync_activity_unavailable');
   const passResult = describeCompanionSyncPassResult(result);
   const occurredAt = new Date().toISOString();
-  const completedState = await recordCompanionWorkspaceSyncEvent({
+  const completedState = await writeCompanionSyncActivity({
     endpointUrl: args.endpointUrl,
     kind: 'run_finished',
     message: passResult.message,
@@ -144,14 +118,8 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     status: statusForSyncRunResult(passResult.result),
     summary: buildCompanionSyncRunSummary({ occurredAt, result, startedAt: args.startedAt }),
     triggerReason: args.triggerReason
-  });
-  await showCompletedStructure({
-    setState: args.setState,
-    state: completedState,
-    workspaceSnapshot: latestWorkspaceSnapshot
-  });
-  await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-  await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
+  }, message => args.setError?.(message));
+  if (completedState) args.setState(current => ({ ...current, ...completedState }));
   applyRemainingProgress({ result, setSyncProgress: args.setSyncProgress });
   args.onContinuationModeChange?.(resolveCompanionSyncContinuationMode(result));
   if (passResult.outcome === 'skipped' && hasRetryWork(result)) {

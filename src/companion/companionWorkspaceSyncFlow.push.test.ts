@@ -27,12 +27,7 @@ async function testRecordsPushFailureWithoutFailingPull() {
   });
 
   expect(outcome).toBe('skipped');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Device changes were not sent; Desktop sync target returned 500 for /companion/sync-push.',
-    result: 'partial',
-    status: 'completed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Device changes were not sent: Desktop sync target returned 500 for /companion/sync-push.',
@@ -61,12 +56,7 @@ async function testRecordsPushConflictWithoutCompleting() {
   });
 
   expect(outcome).toBe('skipped');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Device changes were not sent; 2 changes were rejected or conflicted by desktop.',
-    result: 'partial',
-    status: 'completed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: '2 device changes were not sent after desktop rejected or conflicted them.',

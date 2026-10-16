@@ -41,6 +41,10 @@ export function buildCompanionSyncRunSummary(args: {
   return {
     change_count: changeCount,
     ...definedProps({
+      database_duration_ms: args.result.syncedStructureElapsedMs,
+      attachment_duration_ms: args.result.syncedAttachmentResourceElapsedMs,
+      attachment_count: args.result.transferredAttachmentCount ?? args.result.syncedAttachmentIds.length,
+      received_count: args.result.appliedObjectIds.length,
       desktop_review_count: desktopReviewCount || undefined,
       duration_ms: durationMs(args.startedAt, args.occurredAt),
       waiting_confirmation_count: waitingConfirmationCount || undefined,

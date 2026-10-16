@@ -73,12 +73,7 @@ async function testRecordsDownloadedResourcesForPass() {
     total: 6,
     totalBytes: 6291456
   });
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Body files downloaded; 1 body file (1.0 MB).',
-    result: 'completed',
-    status: 'completed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Resource downloads made progress and will continue.',
@@ -116,12 +111,7 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
     total: 5,
     totalBytes: null
   });
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Body downloads failed; Topic body batch could not download any requested body.',
-    result: 'failed',
-    status: 'failed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Sync checked; body downloads could not finish in this pass: Topic body batch could not download any requested body.',

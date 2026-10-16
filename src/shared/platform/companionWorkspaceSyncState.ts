@@ -2,8 +2,7 @@ import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from
 import { isSyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
 import {
-  compactSyncEvents,
-  isSyncEventConfirmedProgress
+  compactSyncEvents
 } from './companionSyncActivityEvents';
 
 const WEB_SYNC_STATE_KEY = 'foliole-companion-workspace-sync-state';
@@ -69,6 +68,8 @@ function normalizeSyncEventSummary(value: unknown): NativeCompanionSyncEvent['su
   const waitingSendCount = normalizeNonNegativeNumber(raw.waiting_send_count);
   return {
     change_count: changeCount,
+    ...Object.fromEntries(['database_duration_ms', 'attachment_duration_ms', 'attachment_count', 'received_count']
+      .flatMap(key => { const count = normalizeNonNegativeNumber(raw[key]); return count === undefined ? [] : [[key, count]]; })),
     ...(desktopReviewCount !== undefined ? { desktop_review_count: desktopReviewCount } : {}),
     ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
     ...(waitingConfirmationCount !== undefined ? { waiting_confirmation_count: waitingConfirmationCount } : {}),
@@ -104,17 +105,6 @@ function normalizeSyncEvents(raw: Record<string, unknown>) {
   return raw.sync_events.map(normalizeSyncEvent).filter((event): event is NativeCompanionSyncEvent => event !== null);
 }
 
-function resolveLastSyncedAt(raw: Record<string, unknown>, syncEvents: NativeCompanionSyncEvent[]) {
-  if (typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim()) {
-    return raw.last_synced_at.trim();
-  }
-  return syncEvents.find(isSyncCheckRecorded)?.occurred_at ?? null;
-}
-
-function isSyncCheckRecorded(event: NativeCompanionSyncEvent) {
-  return isSyncEventConfirmedProgress(event);
-}
-
 export function prependSyncEvent(
   state: NativeCompanionWorkspaceSyncState,
   event: Omit<NativeCompanionSyncEvent, 'id'> & { id?: string }
@@ -123,7 +113,6 @@ export function prependSyncEvent(
   const nextEvent = { ...event, id };
   return {
     ...state,
-    last_synced_at: isSyncCheckRecorded(nextEvent) ? nextEvent.occurred_at : state.last_synced_at,
     sync_events: compactSyncEvents([nextEvent, ...state.sync_events])
   };
 }
@@ -144,7 +133,7 @@ export function normalizeWorkspaceSyncState(value: unknown): NativeCompanionWork
   const syncEvents = normalizeSyncEvents(raw);
   return {
     endpoint_url: typeof raw.endpoint_url === 'string' && raw.endpoint_url.trim() ? raw.endpoint_url.trim() : null,
-    last_synced_at: resolveLastSyncedAt(raw, syncEvents),
+    last_synced_at: typeof raw.last_synced_at === 'string' && raw.last_synced_at.trim() ? raw.last_synced_at.trim() : null,
     remembered_targets: Array.isArray(raw.remembered_targets)
       ? raw.remembered_targets.filter((target): target is string => typeof target === 'string' && target.trim().length > 0)
       : [],

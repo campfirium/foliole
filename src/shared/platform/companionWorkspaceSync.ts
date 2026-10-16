@@ -3,7 +3,8 @@ import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from
 import { readCompanionArticle } from './companion/reading/companionArticleRead';
 import {
   loadIosCompanionWorkspaceSyncState,
-  saveIosCompanionWorkspaceSyncState
+  updateIosCompanionWorkspaceSyncMetadata,
+  type CompanionSyncMetadata
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
 import {
   resolveReadableCompanionArticle,
@@ -15,7 +16,6 @@ import {
   completeCompanionSyncGroupJoin,
   requestCompanionSyncGroupJoin
 } from './companionSyncGroupJoinClient';
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import {
   discoverCompanionDesktop,
   discoverCompanionDesktops
@@ -29,15 +29,6 @@ import {
   removeRememberedTarget,
   writeWebSyncState
 } from './companionWorkspaceSyncState';
-
-function updateIosWorkspaceSyncState(
-  update: (current: NativeCompanionWorkspaceSyncState) => NativeCompanionWorkspaceSyncState
-) {
-  return runCompanionSyncWriterTask(async () => {
-    const current = await loadIosCompanionWorkspaceSyncState();
-    return saveIosCompanionWorkspaceSyncState(update(current));
-  });
-}
 
 export async function loadCompanionWorkspaceSyncState() {
   if (usesSharedOwner()) {
@@ -60,30 +51,28 @@ export {
   resolveReachableCompanionWorkspaceSyncEndpoints
 } from './companion/network/companionWorkspaceEndpoint';
 
-export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string) {
+export async function saveCompanionWorkspaceSyncEndpoint(endpointUrl: string): Promise<CompanionSyncMetadata> {
   const normalizedEndpointUrl = endpointUrl.trim() ? normalizeEndpointUrl(endpointUrl) : null;
   if (usesSharedOwner()) {
-    return updateIosWorkspaceSyncState((current) => ({
-      ...current,
+    return updateIosCompanionWorkspaceSyncMetadata((current) => ({
       endpoint_url: normalizedEndpointUrl,
       remembered_targets: appendRememberedTarget(current.remembered_targets, normalizedEndpointUrl)
     }));
   }
   const current = readWebSyncState();
-  return writeWebSyncState({
+  return metadataFromState(writeWebSyncState({
     ...current,
     endpoint_url: normalizedEndpointUrl,
     remembered_targets: appendRememberedTarget(current.remembered_targets, normalizedEndpointUrl)
-  });
+  }));
 }
 
-export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: string) {
+export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: string): Promise<CompanionSyncMetadata> {
   const normalizedEndpointUrl = normalizeEndpointUrl(endpointUrl);
   if (usesSharedOwner()) {
-    return updateIosWorkspaceSyncState((current) => {
+    return updateIosCompanionWorkspaceSyncMetadata((current) => {
       const remembered = removeRememberedTarget(current.remembered_targets, normalizedEndpointUrl);
       return {
-        ...current,
         endpoint_url: current.endpoint_url === normalizedEndpointUrl ? remembered[0] ?? null : current.endpoint_url,
         remembered_targets: remembered
       };
@@ -91,19 +80,19 @@ export async function removeCompanionWorkspaceSyncRememberedTarget(endpointUrl: 
   }
   const current = readWebSyncState();
   const nextRememberedTargets = removeRememberedTarget(current.remembered_targets, normalizedEndpointUrl);
-  return writeWebSyncState({
+  return metadataFromState(writeWebSyncState({
     ...current,
     endpoint_url: current.endpoint_url === normalizedEndpointUrl ? nextRememberedTargets[0] ?? null : current.endpoint_url,
     remembered_targets: nextRememberedTargets
-  });
+  }));
 }
 
-export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnboardingStatus) {
+export async function saveCompanionSyncOnboardingStatus(status: CompanionSyncOnboardingStatus): Promise<CompanionSyncMetadata> {
   if (usesSharedOwner()) {
-    return updateIosWorkspaceSyncState((current) => ({ ...current, sync_onboarding_status: status }));
+    return updateIosCompanionWorkspaceSyncMetadata(() => ({ sync_onboarding_status: status }));
   }
   const current = readWebSyncState();
-  return writeWebSyncState({ ...current, sync_onboarding_status: status });
+  return metadataFromState(writeWebSyncState({ ...current, sync_onboarding_status: status }));
 }
 
 export async function recordCompanionWorkspaceSyncEvent(args: {
@@ -117,7 +106,7 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
   status: 'completed' | 'failed' | 'skipped' | 'started';
   summary?: NativeCompanionSyncEvent['summary'];
   triggerReason?: NativeCompanionSyncEvent['trigger_reason'];
-}) {
+}): Promise<CompanionSyncMetadata> {
   const occurredAt = args.occurredAt ?? new Date().toISOString();
   const event = {
     endpoint_url: args.endpointUrl,
@@ -132,10 +121,10 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
     ...(args.triggerReason !== undefined ? { trigger_reason: args.triggerReason } : {})
   };
   if (usesSharedOwner()) {
-    return updateIosWorkspaceSyncState((current) => prependSyncEvent(current, event));
+    return updateIosCompanionWorkspaceSyncMetadata((current) => ({ sync_events: prependSyncEvent({ ...current, workspace_snapshot: null }, event).sync_events }));
   }
   const current = readWebSyncState();
-  return writeWebSyncState(prependSyncEvent(current, event));
+  return metadataFromState(writeWebSyncState(prependSyncEvent(current, event)));
 }
 
 export async function loadCompanionReadableArticle(
@@ -161,4 +150,10 @@ export async function loadCompanionReadableArticle(
 function usesSharedOwner() {
   const kind = getCompanionRuntimeCapability().kind;
   return kind === 'android-native' || kind === 'ios-native';
+}
+
+function metadataFromState(state: NativeCompanionWorkspaceSyncState): CompanionSyncMetadata {
+  return { endpoint_url: state.endpoint_url, last_synced_at: state.last_synced_at,
+    remembered_targets: state.remembered_targets, sync_events: state.sync_events,
+    sync_onboarding_status: state.sync_onboarding_status };
 }

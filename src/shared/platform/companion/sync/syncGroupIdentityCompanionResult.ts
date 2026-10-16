@@ -14,6 +14,7 @@ import { continueCompanionRequestSyncResources } from './framed/companionRequest
 import { withCompanionSyncPeerRound, withCompanionRequestSyncPeerRound } from './framed/companionSyncPeerRounds.js';
 import { loadCompanionSyncGroupMemberState } from './syncGroupMemberStateStore.js';
 import { loadCompanionSyncGroup } from './syncGroupStore';
+import { updateIosCompanionWorkspaceSyncMetadata } from './workspace-state/iosCompanionWorkspaceSyncStateStore';
 
 /** Request-scoped database exchange; attachment transfer is an independent stage. */
 export async function syncCompanionIdentityObjects(
@@ -54,25 +55,19 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
       sourceDeviceId: difference.direction === 'local_to_remote' ? group.local_device_identity_key : peerState.sender_device_identity_key,
       error: error instanceof Error ? error.message : String(error)
     }) });
-  await options.onStructureSynced?.();
+  const syncedStructureElapsedMs = Date.now() - startedAt;
+  const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
+  const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
+  await options.onStructureSynced?.({ receivedCount: round.received.length });
+  const resourcesStartedAt = Date.now();
   const resources = await continueCompanionRequestSyncResources({ endpoint_url: endpointUrl,
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
     receiver_library_epoch: framedPeer.libraryEpoch });
-  const receivedIds = round.received;
-  const sentIds = round.sent;
   return {
-    madeDatabaseProgress: round.madeProgress,
-    appliedNodeIds: receivedIds,
-    appliedObjectIds: receivedIds,
-    appliedPackBlobCount: 0,
-    appliedPackObjectCount: receivedIds.length,
-    appliedReviewOpIds: [],
-    changedObjectIds: receivedIds,
-    pushedNodeIds: sentIds,
-    pushedObjectIds: sentIds,
-    pushedReviewOpIds: [],
-    requestedObjectIds: receivedIds,
+    ...(databaseConfirmedAt ? { databaseConfirmedAt } : {}),
+    syncMetadataUnavailable,
+    ...databaseResult(round),
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
     // Bodies commit with their database objects; no separate body download stage remains.
@@ -84,7 +79,34 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     pushError: null,
     pushRejectedCount: 0,
     remainingStructureChangeCount: round.pending,
-    syncedStructureElapsedMs: Date.now() - startedAt
+    syncedAttachmentResourceElapsedMs: Date.now() - resourcesStartedAt,
+    syncedStructureElapsedMs
   };
   });
+}
+
+async function persistConfirmedSyncTime(confirmedAt: string | undefined) {
+  if (!confirmedAt) return false;
+  try {
+    await updateIosCompanionWorkspaceSyncMetadata(() => ({ last_synced_at: confirmedAt }));
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionRequestSyncDatabaseRound>>, 'received' | 'sent' | 'madeProgress'>) {
+  return {
+    madeDatabaseProgress: round.madeProgress,
+    appliedNodeIds: round.received,
+    appliedObjectIds: round.received,
+    appliedPackBlobCount: 0,
+    appliedPackObjectCount: round.received.length,
+    appliedReviewOpIds: [],
+    changedObjectIds: round.received,
+    pushedNodeIds: round.sent,
+    pushedObjectIds: round.sent,
+    pushedReviewOpIds: [],
+    requestedObjectIds: round.received
+  };
 }

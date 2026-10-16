@@ -199,7 +199,7 @@ describe('companion sync run owner', () => {
     releaseSync();
 
     await autoSync;
-    await expect(manualSync).resolves.toMatchObject({ sync_events: expect.any(Array) });
+    await expect(manualSync).resolves.toBeUndefined();
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
     expect(countRunEvents()).toBe(2);
     const lifecycle = setManualSyncAction.mock.calls.map(([action]) => action);

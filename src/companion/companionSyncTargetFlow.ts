@@ -8,11 +8,10 @@ import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivi
 import { beginNativeCompanionSyncRun } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import {
   bindCompanionWorkspaceSyncTarget,
-  recordCompanionWorkspaceSyncEvent,
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
-import { loadCompanionStateAfterStructureSync } from './companionStructureSyncSnapshot';
+import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import { formatCompanionSyncDiagnosticMessage, formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { runCompanionSyncAsOwner } from './companionSyncRunOwner';
 import type {
@@ -40,15 +39,13 @@ async function recordTargetFailure(args: {
   triggerReason: SyncTriggerReason;
 }) {
   const message = formatCompanionSyncFailureMessage(args.syncError);
-  const refreshedState = await loadCompanionStateAfterStructureSync(args.syncArgs.state.workspace_snapshot);
-  const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.syncArgs.state.workspace_snapshot;
   args.syncArgs.setSyncProgress(null);
   args.syncArgs.setError(message);
-  const failedState = await recordCompanionWorkspaceSyncEvent({
+  const failedState = await writeCompanionSyncActivity({
     endpointUrl: args.endpointUrl, kind: 'run_finished', message, result: 'failed',
     runId: args.runId, startedAt: args.startedAt, status: 'failed', triggerReason: args.triggerReason
-  }).catch(() => null);
-  if (failedState) args.syncArgs.setState({ ...failedState, workspace_snapshot: workspaceSnapshot });
+  }, () => undefined);
+  if (failedState) args.syncArgs.setState(current => ({ ...current, ...failedState }));
   return 'failed' as const;
 }
 
@@ -56,25 +53,24 @@ async function recordRetryableTarget(args: Parameters<typeof recordTargetFailure
   const { endpointUrl, runId, startedAt, syncArgs, syncError, triggerReason } = args;
   syncArgs.setSyncProgress(null);
   syncArgs.setError(null);
-  await recordCompanionWorkspaceSyncEvent({
-    endpointUrl, kind: 'diagnostic', message: formatCompanionSyncDiagnosticMessage(syncError),
-    result: 'retrying', runId, startedAt, status: 'skipped', triggerReason
-  });
-  const pending = await recordCompanionWorkspaceSyncEvent({
-    endpointUrl, kind: 'run_finished', message: 'Sync remains pending.', result: 'partial',
+  const pending = await writeCompanionSyncActivity({
+    endpointUrl, kind: 'run_finished', message: formatCompanionSyncDiagnosticMessage(syncError), result: 'partial',
     runId, startedAt, status: 'skipped', triggerReason
-  });
-  if (pending) syncArgs.setState(pending);
+  }, syncArgs.setError);
+  if (pending) syncArgs.setState(current => ({ ...current, ...pending }));
   return 'pending';
 }
 
-async function runOwnedTarget(args: {
+type OwnedTargetArgs = {
   runId: string;
   target: CompanionWorkspaceSyncTarget;
   runStreamSync: RunCompanionStreamSync;
   syncArgs: TryForegroundAutoSyncArgs;
   isManualRequested(): boolean;
-}): Promise<ForegroundAutoSyncOutcome> {
+  deferAfterRelease(work: () => void): void;
+};
+
+async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSyncOutcome> {
   const endpointUrl = args.target.endpointUrl;
   const runId = args.runId;
   let triggerReason = args.syncArgs.triggerReason
@@ -94,14 +90,15 @@ async function runOwnedTarget(args: {
     await ensureTargetSession(args.target);
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     if (args.isManualRequested()) triggerReason = 'manual';
-    await recordCompanionWorkspaceSyncEvent({
+    await writeCompanionSyncActivity({
       endpointUrl, kind: 'run_started', message: 'Sync started.',
       runId, startedAt, status: 'started', triggerReason
-    });
+    }, args.syncArgs.setError);
     const completeSession = captureCompanionDesktopRound(endpointUrl);
     const outcome = await args.runStreamSync({
       ...args.syncArgs,
       isManualRequested: args.isManualRequested,
+      deferAfterRelease: args.deferAfterRelease,
       endpointUrl,
       ...(args.target.deviceId && memberState.peerLibraryEpoch && args.target.protocolVersion ? { framedPeer: {
         deviceId: args.target.deviceId,
@@ -142,11 +139,13 @@ export async function tryForegroundAutoSyncTarget(
 ) {
   const runId = syncArgs.runId ?? createCompanionSyncRunId();
   if (syncArgs.cancelled()) return 'skipped';
+  const afterRelease: Array<() => void> = [];
   const run = runCompanionSyncAsOwner(target.endpointUrl, runId, intent => runOwnedTarget({
-    runId, target, runStreamSync, syncArgs, isManualRequested: () => intent.manualRequested
+    runId, target, runStreamSync, syncArgs, deferAfterRelease: work => afterRelease.push(work), isManualRequested: () => intent.manualRequested
   }), syncArgs.triggerReason === 'manual');
   syncArgs.onRunIdentified?.(run.runId, run.mode);
   const outcome = await run.completion.catch(() => 'failed') as ForegroundAutoSyncOutcome;
+  for (const work of afterRelease) work();
   waitForCompanionDesktopChanges();
   return outcome;
 }

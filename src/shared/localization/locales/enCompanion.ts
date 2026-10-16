@@ -155,6 +155,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.discovery.incompatible': 'Update Foliole on both devices to connect.',
   'companion.sync.discovery.noDevices': 'No devices available for sync.',
   'companion.sync.discovery.permissionRequired': 'Allow Local Network access to find Sync Groups nearby.',
+  'companion.sync.displayUnavailable': 'Synced data could not be displayed. Refresh to try again.',
+  'companion.sync.activityUnavailable': 'Sync history is temporarily unavailable.',
   'companion.sync.discovery.unavailable': 'Sync Group discovery is unavailable on this device or network.',
   'companion.sync.discovery.connectionFailed': 'A Sync Group was found, but Foliole could not connect to it.',
   'companion.sync.discovery.error.incompatible': 'Update Foliole on both devices, then request to join again.',

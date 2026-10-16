@@ -21,25 +21,43 @@ export async function loadIosCompanionWorkspaceSyncState(
   return manager ? withConnection(manager, loadState) : getIosCompanionDatabaseOwner().read(loadState);
 }
 
-export async function saveIosCompanionWorkspaceSyncState(
-  state: NativeCompanionWorkspaceSyncState,
+export type CompanionSyncMetadata = Omit<NativeCompanionWorkspaceSyncState, 'workspace_snapshot'>;
+
+const metadataKeys = {
+  endpoint_url: META.endpointUrl,
+  last_synced_at: META.lastSyncedAt,
+  sync_onboarding_status: META.onboardingStatus,
+  remembered_targets: META.rememberedTargets,
+  sync_events: META.events
+} satisfies Record<keyof CompanionSyncMetadata, string>;
+
+export async function updateIosCompanionWorkspaceSyncMetadata(
+  update: (current: CompanionSyncMetadata) => Partial<CompanionSyncMetadata>,
   manager?: CompanionSqliteConnectionManager
 ) {
-  const save = async (connection: DbPort) => {
+  const save = (connection: DbPort) => connection.transaction(async tx => {
+    const current = await loadMetadata(tx);
+    const patch = update(current);
     const now = new Date().toISOString();
-    await connection.transaction(async (tx) => {
-      await writeMeta(tx, META.endpointUrl, state.endpoint_url, now);
-      await writeMeta(tx, META.lastSyncedAt, state.last_synced_at, now);
-      await writeMeta(tx, META.onboardingStatus, state.sync_onboarding_status, now);
-      await writeMeta(tx, META.rememberedTargets, JSON.stringify(state.remembered_targets), now);
-      await writeMeta(tx, META.events, JSON.stringify(state.sync_events), now);
-    });
-    return loadState(connection);
-  };
+    for (const field of Object.keys(metadataKeys) as Array<keyof CompanionSyncMetadata>) {
+      if (!(field in patch)) continue;
+      const value = patch[field];
+      if (value === undefined || JSON.stringify(value) === JSON.stringify(current[field])) continue;
+      await writeMeta(tx, metadataKeys[field], Array.isArray(value) ? JSON.stringify(value) : value, now);
+    }
+    return { ...current, ...patch };
+  });
   return manager ? withConnection(manager, save) : getIosCompanionDatabaseOwner().runWriter(save);
 }
 
 async function loadState(connection: DbPort) {
+  const metadata = await loadMetadata(connection);
+  const workspace_snapshot = await loadIosCompanionWorkspaceSnapshot(connection);
+  registerWorkspaceAttachmentResources(workspace_snapshot);
+  return normalizeWorkspaceSyncState({ ...metadata, workspace_snapshot });
+}
+
+async function loadMetadata(connection: DbPort): Promise<CompanionSyncMetadata> {
   const rows = await connection.query(
     `SELECT key, value FROM companion_meta WHERE key IN (?, ?, ?, ?, ?)`,
     [META.endpointUrl, META.events, META.lastSyncedAt, META.onboardingStatus, META.rememberedTargets]
@@ -51,10 +69,11 @@ async function loadState(connection: DbPort) {
     remembered_targets: parseJson(values[META.rememberedTargets], []),
     sync_events: parseJson(values[META.events], []),
     sync_onboarding_status: stringOrNull(values[META.onboardingStatus]),
-    workspace_snapshot: await loadIosCompanionWorkspaceSnapshot(connection)
+    workspace_snapshot: null
   });
-  registerWorkspaceAttachmentResources(state.workspace_snapshot);
-  return state;
+  return { endpoint_url: state.endpoint_url, last_synced_at: state.last_synced_at,
+    remembered_targets: state.remembered_targets, sync_events: state.sync_events,
+    sync_onboarding_status: state.sync_onboarding_status };
 }
 
 async function writeMeta(

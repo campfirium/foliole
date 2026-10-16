@@ -6,20 +6,12 @@ const workspaceSyncMock = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
 
-const fallbackSnapshot = {
-  activeNodeId: 'fallback-node',
-  nodeOrder: ['fallback-node'],
-  nodesById: {},
-  trashedNodeIds: [],
-  untitledSequenceByParent: {}
-};
-
 describe('loadCompanionStateAfterStructureSyncReport', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
-  it('reports no_data when state loads without a workspace snapshot', async () => {
+  it('accepts an empty workspace after its last node is deleted', async () => {
     const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
     workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue({
       endpoint_url: null,
@@ -30,17 +22,17 @@ describe('loadCompanionStateAfterStructureSyncReport', () => {
       workspace_snapshot: null
     });
 
-    const report = await loadCompanionStateAfterStructureSyncReport(fallbackSnapshot);
+    const report = await loadCompanionStateAfterStructureSyncReport();
 
-    expect(report.fallbackReason).toBe('no_data');
-    expect(report.state?.workspace_snapshot).toBe(fallbackSnapshot);
+    expect(report.fallbackReason).toBeNull();
+    expect(report.state?.workspace_snapshot).toBeNull();
   });
 
   it('reports db_busy separately from generic snapshot refresh errors', async () => {
     const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
     workspaceSyncMock.loadCompanionWorkspaceSyncState.mockRejectedValue(new Error('SQLiteException: database is locked'));
 
-    const report = await loadCompanionStateAfterStructureSyncReport(fallbackSnapshot);
+    const report = await loadCompanionStateAfterStructureSyncReport();
 
     expect(report.fallbackReason).toBe('db_busy');
     expect(report.state).toBeNull();
@@ -52,7 +44,7 @@ describe('loadCompanionStateAfterStructureSyncReport', () => {
       const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
       workspaceSyncMock.loadCompanionWorkspaceSyncState.mockReturnValue(new Promise(() => undefined));
 
-      const reportPromise = loadCompanionStateAfterStructureSyncReport(fallbackSnapshot);
+      const reportPromise = loadCompanionStateAfterStructureSyncReport();
       await vi.advanceTimersByTimeAsync(8_000);
       const report = await reportPromise;
 

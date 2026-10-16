@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
@@ -23,7 +23,7 @@ export type TryForegroundAutoSync = (args: {
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   setError(error: string | null): void;
-  setState(state: NativeCompanionWorkspaceSyncState): void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
   state: NativeCompanionWorkspaceSyncState;
@@ -42,7 +42,7 @@ type ForegroundSyncRunnerArgs = {
   retryAttemptRef: MutableRefObject<number>;
   retryTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   setError: (error: string | null) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
   stateRef: MutableRefObject<NativeCompanionWorkspaceSyncState>;
@@ -175,10 +175,11 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   if (initialEndpoint) attemptedEndpoints.add(initialEndpoint);
   let pendingEndpoint: string | null = null;
   let pendingMutation = false;
-  const syncArgs: ForegroundSyncRunnerArgs = { ...args, setState(state) {
+  const syncArgs: ForegroundSyncRunnerArgs = { ...args, setState(update) {
+    const state = typeof update === 'function' ? update(args.stateRef.current) : update;
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(state);
     if (endpoint) attemptedEndpoints.add(endpoint);
-    args.setState(state);
+    args.setState(update);
   } };
   const runForegroundSyncCheck = (reason: ForegroundSyncReason): Promise<void> | null => {
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);

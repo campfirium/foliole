@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { getCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
@@ -38,8 +39,9 @@ async function refreshConflictAwareState(args: {
   setSyncConflictCount: (count: number) => void;
   setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
 }) {
+  const revision = getCompanionSyncMutationRevision();
   const nextState = await loadCompanionWorkspaceSyncState();
-  args.setState(nextState);
+  args.setState(current => revision === getCompanionSyncMutationRevision() ? nextState : current);
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
@@ -76,9 +78,9 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
       if (outcome === 'failed' || outcome === 'skipped' || outcome === 'pending') {
         throw new Error(syncFailure ?? 'Manual sync did not complete.');
       }
-      const state = await refreshConflictAwareState(args);
+      await loadCompanionSyncNodeConflicts().then(conflicts => args.setSyncConflictCount(conflicts.length))
+        .catch(() => args.setError('sync_display_unavailable'));
       args.setManualSyncAction?.(finishCompanionManualSyncAction(action, 'completed'));
-      return state;
     } catch (error) {
       args.setStatus('idle');
       args.setSyncProgress(null);
@@ -105,19 +107,19 @@ export function createWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs
     refreshFromDevice: () => refreshConflictAwareState(args),
     removeRememberedTarget: async (endpointUrl: string) => {
       const nextState = await removeCompanionWorkspaceSyncRememberedTarget(endpointUrl);
-      args.setState(nextState);
+      args.setState(current => ({ ...current, ...nextState }));
       return nextState;
     },
     refreshAfterMutation: (previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) =>
       refreshAfterMutation(args, previewSnapshot),
     saveEndpoint: async (endpointUrl: string) => {
       const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
-      args.setState(nextState);
+      args.setState(current => ({ ...current, ...nextState }));
       return nextState;
     },
     saveSyncOnboardingStatus: async (status: NativeCompanionWorkspaceSyncState['sync_onboarding_status']) => {
       const nextState = await saveCompanionSyncOnboardingStatus(status);
-      args.setState(nextState);
+      args.setState(current => ({ ...current, ...nextState }));
       return nextState;
     }
   };

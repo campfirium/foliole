@@ -25,7 +25,7 @@ function runEvent(index: number, kind: 'run_finished' | 'run_started') {
   };
 }
 
-function testUsesLatestFullSyncEvent() {
+function testDoesNotDeriveTimeFromCompletedActivity() {
   const state = normalizeWorkspaceSyncState({
     endpoint_url: 'http://10.0.2.2:38641',
     sync_events: [
@@ -46,10 +46,10 @@ function testUsesLatestFullSyncEvent() {
     ]
   });
 
-  expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
+  expect(state.last_synced_at).toBeNull();
 }
 
-function testUsesLegacySkippedSyncCheck() {
+function testDoesNotDeriveTimeFromLegacyActivity() {
   const state = normalizeWorkspaceSyncState({
     endpoint_url: 'http://10.0.2.2:38641',
     sync_events: [
@@ -63,7 +63,7 @@ function testUsesLegacySkippedSyncCheck() {
     ]
   });
 
-  expect(state.last_synced_at).toBe('2026-04-29T02:18:00.000Z');
+  expect(state.last_synced_at).toBeNull();
 }
 
 function testBlockedRunDoesNotUpdateLastSyncedAt() {
@@ -178,8 +178,8 @@ function testKeepsCurrentStartedRunBeforeFinish() {
 }
 
 describe('normalizeWorkspaceSyncState', () => {
-  it('uses the latest full sync event when last sync metadata is missing', testUsesLatestFullSyncEvent);
-  it('uses a completed sync check when no changes were applied', testUsesLegacySkippedSyncCheck);
+  it('does not infer sync time from completed activity', testDoesNotDeriveTimeFromCompletedActivity);
+  it('does not infer sync time from legacy activity', testDoesNotDeriveTimeFromLegacyActivity);
   it('does not treat blocked runs as synced progress', testBlockedRunDoesNotUpdateLastSyncedAt);
   it('does not treat waiting local-change runs as synced progress', testWaitingRunDoesNotUpdateLastSyncedAt);
   it('preserves stage finished events as stage facts', testPreservesStageFinishedKind);

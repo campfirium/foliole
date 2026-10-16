@@ -120,7 +120,11 @@ export function resetCompanionWorkspaceSyncFlowMocks() {
   });
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult());
   syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
-  syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
+  syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockImplementation(async () => {
+    const state: Partial<NativeCompanionWorkspaceSyncState> = createSyncState();
+    delete state.workspace_snapshot;
+    return state;
+  });
   syncPlatformMock.bindCompanionWorkspaceSyncTarget.mockResolvedValue(undefined);
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoint.mockImplementation(async (endpointUrl: string) => endpointUrl);
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(

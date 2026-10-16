@@ -24,16 +24,15 @@ describe('companion workspace manual sync refresh', () => {
       workspace_snapshot: syncedSnapshot
     }));
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {
-      await options.onStructureSynced?.();
+      await options.onStructureSynced?.({ receivedCount: 1 });
       return createSyncResult();
     });
 
-    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState({
-      workspace_snapshot: syncedSnapshot
-    }));
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
 
     expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
-    expect(callbacks.setState).toHaveBeenLastCalledWith(expect.objectContaining({
+    const latestUpdate = callbacks.setState.mock.calls.at(-1)?.[0];
+    expect(typeof latestUpdate === 'function' ? latestUpdate(createSyncState()) : latestUpdate).toEqual(expect.objectContaining({
       workspace_snapshot: syncedSnapshot
     }));
   });
@@ -45,10 +44,11 @@ describe('companion workspace manual sync refresh', () => {
     }));
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(createSyncResult());
 
-    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
 
     expect(workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint).toHaveBeenCalledWith('http://10.0.2.2:38641');
-    expect(callbacks.setState).toHaveBeenCalledWith(expect.objectContaining({
+    expect(callbacks.setState.mock.calls.map(([update]) => typeof update === 'function' ? update(createSyncState()) : update))
+      .toContainEqual(expect.objectContaining({
       endpoint_url: 'http://10.0.2.2:38641', workspace_snapshot: createSnapshot()
     }));
   });
@@ -65,7 +65,7 @@ describe('companion workspace manual sync refresh', () => {
     }));
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(createSyncResult());
 
-    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
 
     expect(workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint).toHaveBeenCalledWith('http://192.168.0.11:38641');
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(

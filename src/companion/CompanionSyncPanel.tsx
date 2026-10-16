@@ -47,6 +47,8 @@ const EMULATOR_DEFAULT_ENDPOINT = 'http://10.0.2.2:38641';
 
 function formatSyncPanelError(message: string, t: Translate) {
   if (message === 'discovery_permission_required') return t('companion.sync.discovery.permissionRequired');
+  if (message === 'sync_display_unavailable') return t('companion.sync.displayUnavailable');
+  if (message === 'sync_activity_unavailable') return t('companion.sync.activityUnavailable');
   if (message === 'discovery_unavailable') return t('companion.sync.discovery.unavailable');
   if (message === 'discovery_incompatible') return t('companion.sync.discovery.incompatible');
   if (message === 'discovery_no_devices') return t('companion.sync.discovery.noDevices');

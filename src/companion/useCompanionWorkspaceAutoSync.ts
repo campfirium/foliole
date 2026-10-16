@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef } from 'react';
 
 import { createMemberSyncCadence, type MemberSyncCadence } from '../../lib/core/sync/memberSyncCadence';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
@@ -88,7 +88,7 @@ function subscribeForegroundSyncEvents(
 
 export function useForegroundAutoSync(
   setError: (error: string | null) => void,
-  setState: (state: NativeCompanionWorkspaceSyncState) => void,
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>,
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void,
   isSyncGroupReady: boolean,

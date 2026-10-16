@@ -8,7 +8,7 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS =
   companionSyncTimeoutOwnership('workspace_snapshot_refresh').timeoutMs;
 
-export type CompanionStructureSnapshotFallbackReason = 'db_busy' | 'error' | 'no_data' | 'timeout';
+export type CompanionStructureSnapshotFallbackReason = 'db_busy' | 'error' | 'timeout';
 
 export interface CompanionStructureSnapshotRefreshReport {
   elapsedMs: number;
@@ -21,9 +21,7 @@ function classifySnapshotRefreshError(error: unknown): CompanionStructureSnapsho
   return /database is locked|database locked|sqlite_busy|db busy/i.test(message) ? 'db_busy' : 'error';
 }
 
-export async function loadCompanionStateAfterStructureSyncReport(
-  fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']
-): Promise<CompanionStructureSnapshotRefreshReport> {
+export async function loadCompanionStateAfterStructureSyncReport(): Promise<CompanionStructureSnapshotRefreshReport> {
   const startedAt = Date.now();
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   const timeout = new Promise<never>((_, reject) => {
@@ -36,11 +34,8 @@ export async function loadCompanionStateAfterStructureSyncReport(
     const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
     return {
       elapsedMs: Date.now() - startedAt,
-      fallbackReason: refreshedState.workspace_snapshot ? null : 'no_data',
-      state: {
-        ...refreshedState,
-        workspace_snapshot: refreshedState.workspace_snapshot ?? fallbackSnapshot
-      }
+      fallbackReason: null,
+      state: refreshedState
     };
   } catch (error) {
     return {
@@ -53,10 +48,4 @@ export async function loadCompanionStateAfterStructureSyncReport(
       clearTimeout(timeoutId);
     }
   }
-}
-
-export async function loadCompanionStateAfterStructureSync(
-  fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']
-) {
-  return (await loadCompanionStateAfterStructureSyncReport(fallbackSnapshot)).state;
 }

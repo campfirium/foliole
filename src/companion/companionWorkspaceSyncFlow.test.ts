@@ -40,7 +40,8 @@ async function testUsesStreamSyncDirectly() {
     kind: 'run_finished',
     status: 'completed'
   }));
-  expect(setState).toHaveBeenCalledWith(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
+  expect(setState.mock.calls.map(([update]) => typeof update === 'function' ? update(createSyncState()) : update))
+    .toContainEqual(expect.objectContaining({ endpoint_url: 'http://10.0.2.2:38641' }));
   expect(setStatus.mock.calls.map(([status]) => status)).toEqual(['syncing', 'syncing', 'idle']);
   expect(setStatus).toHaveBeenLastCalledWith('idle');
 }
@@ -214,12 +215,7 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   });
 
   expect(outcome).toBe('pending');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Device changes are waiting for desktop confirmation; 1 change pending.',
-    result: 'partial',
-    status: 'completed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     kind: 'run_finished',
     message: 'Device changes are still waiting to sync.',

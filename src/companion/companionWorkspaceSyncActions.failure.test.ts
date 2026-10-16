@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   createActions,
   createSyncResult,
-  createSyncState,
   getSyncObjectsMock,
   getWorkspaceSyncMock,
   resetSyncActionMocks,
@@ -42,7 +41,7 @@ describe('companion workspace manual sync failures', () => {
       .mockResolvedValueOnce(createSyncResult());
 
     await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).rejects.toThrow('structure pack');
-    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+    await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
 
     expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledTimes(2);
     expect(callbacks.setStatus).toHaveBeenLastCalledWith('idle');
@@ -56,5 +55,5 @@ it('does not report a busy manual round as completed and can complete after cont
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValueOnce(new Error('sync_round_busy'))
     .mockResolvedValueOnce(createSyncResult());
   await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).rejects.toThrow('Manual sync did not complete');
-  await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toEqual(createSyncState());
+  await expect(actions.pullFromDesktop('http://10.0.2.2:38641')).resolves.toBeUndefined();
 });

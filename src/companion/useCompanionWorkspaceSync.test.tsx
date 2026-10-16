@@ -112,7 +112,7 @@ function resetCompanionWorkspaceSyncMocks() {
     .mockResolvedValueOnce(createSyncState(null))
     .mockResolvedValue(createSyncState(createSnapshot()));
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async (_endpointUrl, options) => {
-    await options?.onStructureSynced?.();
+    await options?.onStructureSynced?.({ receivedCount: 1 });
     return createSyncObjectsResult();
   });
   syncObjectsMock.loadCompanionSyncNodeConflicts.mockResolvedValue([]);

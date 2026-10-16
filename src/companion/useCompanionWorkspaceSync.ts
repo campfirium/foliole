@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
@@ -35,7 +35,7 @@ async function initializeWorkspaceSyncState(args: {
   cancelled: () => boolean;
   setIsStateReady(ready: boolean): void;
   setSyncConflictCount(count: number): void;
-  setState(state: NativeCompanionWorkspaceSyncState): void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
 }) {
   const nextState = await loadCompanionWorkspaceSyncState();
@@ -53,7 +53,7 @@ async function initializeWorkspaceSyncState(args: {
 function useWorkspaceSyncBootstrap(
   setIsStateReady: (ready: boolean) => void,
   setSyncConflictCount: (count: number) => void,
-  setState: (state: NativeCompanionWorkspaceSyncState) => void,
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void
 ) {
   useEffect(() => {

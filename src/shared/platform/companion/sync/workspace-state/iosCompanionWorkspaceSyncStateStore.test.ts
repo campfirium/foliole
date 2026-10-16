@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import {
   loadIosCompanionWorkspaceSyncState,
-  saveIosCompanionWorkspaceSyncState
+  updateIosCompanionWorkspaceSyncMetadata
 } from './iosCompanionWorkspaceSyncStateStore';
 
 function createHarness(metaRows: Array<{ key: string; value: string }> = []) {
@@ -29,7 +29,6 @@ function createHarness(metaRows: Array<{ key: string; value: string }> = []) {
   return { connection, manager };
 }
 
-describe('iosCompanionWorkspaceSyncStateStore', () => {
   it('loads permanent sync metadata without a duplicate snapshot blob', async () => {
     const { connection, manager } = createHarness([
       { key: 'workspace_sync_endpoint_url', value: 'http://192.168.1.5:38641' },
@@ -48,7 +47,7 @@ describe('iosCompanionWorkspaceSyncStateStore', () => {
     expect(connection.query).not.toHaveBeenCalledWith(expect.stringContaining('workspace_snapshot'), expect.anything());
   });
 
-  it('writes metadata atomically and reloads canonical SQLite state', async () => {
+  it('writes metadata without querying workspace content', async () => {
     const { connection, manager } = createHarness();
     const state = {
       endpoint_url: 'http://192.168.1.5:38641',
@@ -59,12 +58,13 @@ describe('iosCompanionWorkspaceSyncStateStore', () => {
       workspace_snapshot: null
     };
 
-    await saveIosCompanionWorkspaceSyncState(state, manager as never);
+    await updateIosCompanionWorkspaceSyncMetadata(() => state, manager as never);
 
-    // Metadata commits before the separate consistent snapshot read.
-    expect(connection.beginTransaction).toHaveBeenCalledTimes(2);
-    expect(connection.commitTransaction).toHaveBeenCalledTimes(2);
+    // Metadata updates must not rebuild the workspace.
+    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
     expect(connection.rollbackTransaction).not.toHaveBeenCalled();
+    expect(connection.query.mock.calls.every(([sql]) => sql.includes('companion_meta'))).toBe(true);
     expect(connection.run).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT(key) DO UPDATE'),
       ['workspace_sync_endpoint_url', state.endpoint_url, expect.any(String)],
@@ -76,15 +76,29 @@ describe('iosCompanionWorkspaceSyncStateStore', () => {
     const { connection, manager } = createHarness();
     connection.run.mockRejectedValueOnce(new Error('write_failed'));
 
-    await expect(saveIosCompanionWorkspaceSyncState({
-      endpoint_url: null,
+    await expect(updateIosCompanionWorkspaceSyncMetadata(() => ({
+      endpoint_url: 'http://new-host',
       last_synced_at: null,
       remembered_targets: [],
       sync_events: [],
       sync_onboarding_status: 'pending',
       workspace_snapshot: null
-    }, manager as never)).rejects.toThrow('write_failed');
+    }), manager as never)).rejects.toThrow('write_failed');
     expect(connection.rollbackTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).not.toHaveBeenCalled();
   });
-});
+  it('appends activity without rewriting endpoint or onboarding metadata', async () => {
+    const { connection, manager } = createHarness([
+      { key: 'workspace_sync_endpoint_url', value: 'http://existing-host' },
+      { key: 'workspace_sync_onboarding_status', value: 'accepted' }
+    ]);
+    const result = await updateIosCompanionWorkspaceSyncMetadata(current => ({
+      sync_events: [...current.sync_events, { id: 'event', occurred_at: '2026-10-16T01:00:00Z',
+        endpoint_url: null, message: 'Sync started.', status: 'started' }]
+    }), manager as never);
+    expect(connection.run).toHaveBeenCalledTimes(1);
+    expect(connection.run.mock.calls[0]?.[1]?.[0]).toBe('workspace_sync_events');
+    expect(connection.query.mock.calls.every(([sql]) => sql.includes('companion_meta'))).toBe(true);
+    expect(result.endpoint_url).toBe('http://existing-host');
+    expect(result).not.toHaveProperty('workspace_snapshot');
+  });

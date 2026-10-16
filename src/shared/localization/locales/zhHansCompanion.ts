@@ -154,6 +154,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.sync.discovery.incompatible': '请更新两台设备上的 Foliole 后再连接。',
   'companion.sync.discovery.noDevices': '没有可同步的设备。',
   'companion.sync.discovery.permissionRequired': '请允许访问本地网络，以查找附近的同步组。',
+  'companion.sync.displayUnavailable': '\u540c\u6b65\u5185\u5bb9\u663e\u793a\u5931\u8d25\uff0c\u8bf7\u5237\u65b0\u91cd\u8bd5\u3002',
+  'companion.sync.activityUnavailable': '\u540c\u6b65\u8bb0\u5f55\u6682\u4e0d\u53ef\u7528\u3002',
   'companion.sync.discovery.unavailable': '当前设备或网络无法查找同步组。',
   'companion.sync.discovery.connectionFailed': '已找到同步组，但 Foliole 无法连接。',
   'companion.sync.discovery.error.incompatible': '请更新两台设备上的 Foliole，然后重新申请加入。',

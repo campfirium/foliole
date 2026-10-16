@@ -53,11 +53,7 @@ async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
   });
 
   expect(outcome).toBe('backlog');
-  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
-    kind: 'stage_finished',
-    message: 'Body files downloaded; 1 body file.',
-    status: 'completed'
-  }));
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledTimes(2);
 }
 
 describe('tryForegroundAutoSync resource count boundaries', () => {

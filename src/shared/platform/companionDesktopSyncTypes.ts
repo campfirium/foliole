@@ -8,7 +8,7 @@ export interface CompanionDesktopSyncOptions {
   waitForInbound?: () => boolean;
   signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
-  onStructureSynced?: () => Promise<void> | void;
+  onStructureSynced?: (facts: { receivedCount: number }) => Promise<void> | void;
   resourcesOnly?: boolean;
   restoreId?: string;
   runId?: string;
@@ -52,6 +52,8 @@ export interface CompanionContentBlobNativeTiming {
 }
 
 export interface CompanionDesktopSyncResult {
+  databaseConfirmedAt?: string;
+  syncMetadataUnavailable?: boolean;
   madeDatabaseProgress?: boolean;
   appliedNodeIds: string[];
   appliedPackBlobCount: number;
