@@ -43,7 +43,7 @@ it('does not treat deferred attachments as progress when database differences re
   runtime.database.mockResolvedValue({ pending: 1, received: [], sent: [], madeProgress: false });
   runtime.resources.mockResolvedValue({ pending: 0, transferred: 0, blocks: 0, yielded: false });
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
-  expect(runtime.resources).toHaveBeenCalledOnce();
+  expect(runtime.resources).toHaveBeenCalledWith(expect.objectContaining({ boundedSlice: false }));
   expect(hasFastRetryWork(result)).toBe(false);
 });
 

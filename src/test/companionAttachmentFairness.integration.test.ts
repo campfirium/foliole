@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
@@ -46,10 +47,13 @@ it.each([
     });
     const release = waitForAttachmentWorkYield();
     try {
+      let desktopBlocks = 0;
       for (let round = 0; round < 3; round++) {
         if (desktop) {
-          expect(await host.fixture.left.synchronize(host.fixture.rightSnapshot.origin))
-            .toMatchObject({ complete: false, attachmentProgress: 1 });
+          const result = await host.fixture.left.synchronize(host.fixture.rightSnapshot.origin);
+          expect(result).toMatchObject({ complete: false });
+          const parsed = z.object({ attachmentProgress: z.number() }).parse(result);
+          desktopBlocks += parsed.attachmentProgress;
         } else {
           const result = await host.sync();
           expect(result.remainingStructureChangeCount).toBeGreaterThan(0);
@@ -57,9 +61,43 @@ it.each([
           expect(result.transferredAttachmentBlockCount).toBe(1);
         }
       }
+      if (desktop) expect(desktopBlocks).toBe(3);
       const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
       expect(await readFile(target)).toEqual(bytes);
       if (scenario === 'continuous edits') expect(edit).toBeGreaterThanOrEqual(12);
     } finally { release(); }
   } finally { await host.close(); }
 }, 60_000);
+
+it('uses the normal attachment budget when repeated data requests make no progress', async () => {
+  const host = await createCompanionRequestFixture();
+  const bytes = Buffer.alloc(16 * 1024 * 1024, 0x62);
+  const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
+  const nodeId = 't326-blocked-throughput';
+  try {
+    await host.fixture.left.seed({ nodeId: 't326-throughput-attachment', title: 'Image', content: `![image](asset://${key})` });
+    await host.fixture.right.seed({ nodeId, title: 'Blocked', content: 'Initial' });
+    await host.sync();
+    const assets = path.join(host.fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets');
+    await mkdir(assets, { recursive: true });
+    await writeFile(path.join(assets, key), bytes);
+    await host.fixture.right.seed({ nodeId, title: 'Blocked', content: 'Unavailable' });
+    const source = new Database(host.fixture.rightSnapshot.databasePath);
+    try {
+      source.prepare(`UPDATE node_sync_versions SET body_text = NULL,
+        snapshot_json = json_set(snapshot_json, '$.content', NULL)
+        WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = ?)`).run(nodeId);
+    } finally { source.close(); }
+    let blocks = 0;
+    for (let round = 0; round < 8 && blocks < 32; round++) {
+      const result = await host.sync();
+      expect(result.remainingStructureChangeCount).toBeGreaterThan(0);
+      expect(result.databaseConfirmedAt).toBeUndefined();
+      expect(result.madeDatabaseProgress).toBe(false);
+      blocks += result.transferredAttachmentBlockCount ?? 0;
+    }
+    expect(blocks).toBe(32);
+    const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
+    expect(await readFile(target)).toEqual(bytes);
+  } finally { await host.close(); }
+}, 60000);
