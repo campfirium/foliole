@@ -1,5 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
+import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
+
 import {
   getCompanionSyncMutationRevision,
   runCompanionHighValueMutationTask,
@@ -7,6 +9,18 @@ import {
   subscribeCompanionHighValueMutation,
   subscribeCompanionSyncMutationRevision
 } from './companionSyncMutationRevision';
+
+it('keeps attachment streaming for private writes and yields after a committed syncable write', async () => {
+  const shouldYield = attachmentWorkBudget(60_000);
+  await runCompanionSyncMutationTask(async () => 'view saved');
+  expect(shouldYield()).toBe(false);
+  await expect(runCompanionHighValueMutationTask(async () => {
+    throw new Error('write failed');
+  })).rejects.toThrow('write failed');
+  expect(shouldYield()).toBe(false);
+  await runCompanionHighValueMutationTask(async () => 'content saved');
+  expect(shouldYield()).toBe(true);
+});
 
 it('publishes a new revision only after a successful local mutation', async () => {
   const listener = vi.fn();

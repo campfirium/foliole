@@ -23,7 +23,6 @@ export function subscribeCompanionHighValueMutation(listener: MutationListener) 
 
 export function publishCompanionSyncMutationRevision() {
   mutationRevision += 1;
-  requestAttachmentWorkYield();
   for (const listener of mutationListeners) {
     try {
       listener();
@@ -34,6 +33,7 @@ export function publishCompanionSyncMutationRevision() {
 }
 
 export function publishCompanionHighValueMutation() {
+  requestAttachmentWorkYield();
   publishCompanionSyncMutationRevision();
   for (const listener of highValueMutationListeners) {
     try {
