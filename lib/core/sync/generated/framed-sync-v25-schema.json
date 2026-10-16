@@ -1088,6 +1088,15 @@
                       "type": "uint32",
                       "id": 10,
                       "protoName": "max_blocks"
+                    },
+                    "derive": {
+                      "type": "string",
+                      "id": 11
+                    },
+                    "extractorVersion": {
+                      "type": "uint32",
+                      "id": 12,
+                      "protoName": "extractor_version"
                     }
                   }
                 }

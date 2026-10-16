@@ -7,6 +7,7 @@ final class FolioleCompanionCanonicalAttachmentKey {
     private static final Map<String, String> EXTENSIONS = new HashMap<>();
     static {
         EXTENSIONS.put("application/pdf", ".pdf");
+        EXTENSIONS.put("application/vnd.foliole.pdf-text+json", ".pdftext");
         EXTENSIONS.put("application/epub+zip", ".epub");
         EXTENSIONS.put("image/gif", ".gif");
         EXTENSIONS.put("image/jpeg", ".jpg");

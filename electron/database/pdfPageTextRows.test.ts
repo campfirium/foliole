@@ -106,7 +106,7 @@ function readPdfReferenceNodeBody() {
   return row;
 }
 
-it('writes sync object state for saved PDF page text rows', () => {
+it('keeps extracted PDF pages local without publishing per-page sync objects', () => {
   seedPdfAttachment();
 
   savePdfPageTextRows(
@@ -118,14 +118,11 @@ it('writes sync object state for saved PDF page text rows', () => {
     '2026-04-24T00:01:00.000Z'
   );
 
-  expect(listPdfPageTextState()).toEqual([
-    { object_id: `${pdfHash}:1`, deleted_at: null, sync_dirty: 1 },
-    { object_id: `${pdfHash}:2`, deleted_at: null, sync_dirty: 1 }
-  ]);
+  expect(listPdfPageTextState()).toEqual([]);
   expect(countPdfPageTextChanges().count).toBe(0);
 });
 
-it('marks removed PDF pages as deleted sync objects', () => {
+it('replaces local PDF pages without publishing tombstones', () => {
   seedPdfAttachment();
   savePdfPageTextRows(
     pdfHash,
@@ -142,10 +139,7 @@ it('marks removed PDF pages as deleted sync objects', () => {
     '2026-04-24T00:02:00.000Z'
   );
 
-  expect(listPdfPageTextState()).toEqual([
-    { object_id: `${pdfHash}:1`, deleted_at: null, sync_dirty: 1 },
-    { object_id: `${pdfHash}:2`, deleted_at: '2026-04-24T00:02:00.000Z', sync_dirty: 1 }
-  ]);
+  expect(listPdfPageTextState()).toEqual([]);
   expect(countPdfPageTextChanges().count).toBe(0);
 });
 

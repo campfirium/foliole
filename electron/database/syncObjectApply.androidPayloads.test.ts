@@ -79,33 +79,6 @@ it('accepts Android-exported numeric strings without importing device-private re
   )).toEqual({ count: 0 });
 });
 
-it('accepts Android-exported numeric strings when applying pdf page text', async () => {
-  const id = 'a'.repeat(64);
-  insertNode('pdf-topic');
-  openDatabaseConnection().driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?',
-    [JSON.stringify([{ storage_key: `${id}.pdf`, original_name: 'sample.pdf', role: 'reference' }]), 'pdf-topic']);
-
-  await applySyncObjectsAsync([{
-    content_hash: 'hash-pdf-page',
-    deleted_at: null,
-    object_id: `${id}:3`,
-    object_type: 'pdf_page_text',
-    payload_json: JSON.stringify({
-      attachment_id: id,
-      page: '3',
-      page_height: '1200.5',
-      page_width: '800.25',
-      text: 'page text'
-    }),
-    updated_at: '2026-04-25T08:05:00.000Z'
-  }]);
-
-  expect(openDatabaseConnection().driver.queryOne<{ page: number; page_height: number; page_width: number }>(
-    'SELECT page, page_height, page_width FROM pdf_page_text WHERE attachment_id = ?',
-    [id]
-  )).toEqual({ page: 3, page_height: 1200.5, page_width: 800.25 });
-});
-
 it('accepts Android-exported numeric strings when applying external documents', async () => {
   const bodyHash = upsertTextBodyBlob(openDatabaseConnection().driver, 'body', '2026-04-25T08:00:00.000Z');
   const referenceJson = JSON.stringify({

@@ -8,7 +8,9 @@ import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthentica
 
 export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, AttachmentBlockSource {
   needs(): Promise<string[]>;
-  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean }>;
+  derivePdfText?(pdfKey: string, version: number): Promise<string | null>;
+  importPdfText?(pdfKey: string, artifactKey: string): Promise<void>;
+  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; pdfTextKeys?: string[] }>;
 }
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
@@ -26,6 +28,15 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
     try { return await consume(stream); }
     finally { await stream.frames.return(undefined); }
   };
+  if (request.derive) {
+    if (request.operation !== 'describe' || !request.storageKey.endsWith('.pdf')) throw new Error('attachment_derivation_invalid');
+    const selected = request;
+    const key = await host.derivePdfText?.(selected.storageKey, selected.extractorVersion);
+    if (!key) return reply((async function* () { yield attachmentMessage({ ...selected, state: 'end' }); })());
+    return host.withFile(key, file => reply((async function* () {
+      yield attachmentMessage({ ...selected, storageKeys: [key], byteLength: file.resource.byteLength, state: 'complete' });
+    })()));
+  }
   if (request.operation === 'pull' || request.operation === 'describe') {
     const selected = request;
     return host.withFile(selected.storageKey, file => reply(sourceMessages(selected, file, input.signal, input.onProgress)));

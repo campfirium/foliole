@@ -99,7 +99,7 @@ final class FolioleAttachmentBlockStorage {
         return ["base64": data.base64EncodedString()]
     }
     private func resolve(_ key: String, partial: Bool) throws -> URL {
-        let valid = partial ? key.range(of: "^[a-f0-9]{64}(\\.(png|jpg|gif|webp|pdf|epub))?$", options: .regularExpression) != nil
+        let valid = partial ? key.range(of: "^[a-f0-9]{64}(\\.(png|jpg|gif|webp|pdf|epub|pdftext))?$", options: .regularExpression) != nil
             : FolioleCompanionCanonicalAttachmentKey.valid(key)
         guard valid else { throw invalid("attachment_key_invalid") }
         let file = root.appendingPathComponent(partial ? ".attachment-\(key.prefix(64)).partial" : key)

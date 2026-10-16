@@ -106,13 +106,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     sql: "SELECT json_object('day_key', day_key, 'node_id', node_id) AS payload_json " +
       'FROM topic_daily_count_entries WHERE id = ? LIMIT 1'
   },
-  syncPayloadPdfPageText: {
-    syncPayload: { argMode: 'object_id', objectType: 'pdf_page_text' },
-    sql:
-      "SELECT json_object('attachment_id', attachment_id, 'page', page, 'text', text, " +
-      "'page_width', page_width, 'page_height', page_height) AS payload_json " +
-      "FROM pdf_page_text WHERE attachment_id || ':' || page = ? LIMIT 1"
-  },
+
   syncPayloadSetting: {
     syncPayload: {
       argMode: 'object_id',

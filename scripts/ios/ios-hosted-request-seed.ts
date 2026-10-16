@@ -61,9 +61,8 @@ async function seedExternalAndPdf(db: DbPort) {
       content_hash: computeSyncContentHash('external_document', buildCanonicalExternalDocumentPayload(external)),
       payload_json: JSON.stringify(external)
     });
-    await applySyncObjectInTransaction(tx, {
-      object_type: 'pdf_page_text', object_id: `${pdf.attachment_id}:1`, deleted_at: null, updated_at: createdAt,
-      content_hash: computeSyncContentHash('pdf_page_text', pdf), payload_json: JSON.stringify(pdf)
-    });
+    await tx.run('INSERT INTO pdf_page_text(attachment_id, page, text, page_width, page_height) VALUES (?, ?, ?, ?, ?)',
+      [pdf.attachment_id, pdf.page, pdf.text, pdf.page_width, pdf.page_height]);
+    await tx.run("INSERT INTO pdf_index_state(attachment_id, status, version) VALUES (?, 'ready', 1)", [pdf.attachment_id]);
   });
 }

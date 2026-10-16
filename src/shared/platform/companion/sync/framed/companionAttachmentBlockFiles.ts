@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
 import { createAttachmentDemandCache } from '../../../../../../lib/core/sync/attachmentDemandCache.js';
+import { missingPdfTextArtifacts } from '../../../../../../lib/core/sync/pdfTextArtifact.js';
 import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -13,6 +14,7 @@ import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBu
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { createCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
+import { importCompanionPdfTextArtifact } from './companionPdfTextArtifact.js';
 
 const hosts = new WeakMap<object, { generation: string; host: Promise<RequestSyncAttachmentHost> }>();
 const statSchema = z.object({ present: z.boolean(), length: z.number().int().nonnegative(), hash: z.string() });
@@ -58,9 +60,11 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
     (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
   const host: RequestSyncAttachmentHost = {
+    importPdfText: (pdf, artifact) => importCompanionPdfTextArtifact(db, host, pdf, artifact),
     async needsSlice(shouldYield) {
       const result = await demand(db, shouldYield);
-      return { keys: result.pending ? [] : await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending };
+      return { keys: result.pending ? [] : await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending,
+        pdfTextKeys: result.pending ? [] : await db.readSnapshot(port => missingPdfTextArtifacts(port, result.keys)) };
     },
     status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
     receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),

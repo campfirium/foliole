@@ -2,7 +2,7 @@ import Foundation
 
 enum FolioleCompanionCanonicalAttachmentKey {
     private static let extensions = [
-        "application/epub+zip": ".epub", "application/pdf": ".pdf", "image/gif": ".gif", "image/jpeg": ".jpg",
+        "application/epub+zip": ".epub", "application/pdf": ".pdf", "application/vnd.foliole.pdf-text+json": ".pdftext", "image/gif": ".gif", "image/jpeg": ".jpg",
         "image/png": ".png", "image/webp": ".webp"
     ]
 

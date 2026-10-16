@@ -60,7 +60,6 @@ export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129 = [
   ...entityTriggers('node_review', '$.node_id', ['node_review']),
   ...entityTriggers('node_text_alternatives', '$.alternative_id', ['node_text_alternative']),
   ...entityTriggers('parent_child_order', '$.parent_id', ['parent_child_order']),
-  ...entityTriggers('pdf_page_text', "$.attachment_id || ':' || $.page", ['pdf_page_text']),
   ...entityTriggers('setting_records',
     "$.scope || ':' || $.platform || ':' || $.form_factor || ':' || $.host_name || ':' || $.key",
     ['setting']),

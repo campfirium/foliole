@@ -42,10 +42,6 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'body_text', body_text, 'source_host_name', source_host_name, 'created_at', created_at,
     'status', status, 'updated_at', updated_at
   ) AS payload_json FROM node_text_alternatives WHERE alternative_id = ?`,
-  pdf_page_text: `SELECT json_object(
-    'attachment_id', attachment_id, 'page', page, 'text', text,
-    'page_width', page_width, 'page_height', page_height
-  ) AS payload_json FROM pdf_page_text WHERE attachment_id || ':' || page = ?`,
   setting: `SELECT json_object(
     'key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor,
     'host_name', host_name, 'value_json', value_json

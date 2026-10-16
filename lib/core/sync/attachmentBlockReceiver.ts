@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ATTACHMENT_BLOCK_BYTES = 512 * 1024;
 export const attachmentBlockResourceSchema = z.object({
-  storageKey: z.string().regex(/^[a-f0-9]{64}\.(png|jpg|gif|webp|pdf|epub)$/u),
+  storageKey: z.string().regex(/^[a-f0-9]{64}\.(png|jpg|gif|webp|pdf|epub|pdftext)$/u),
   byteLength: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
 });
 export type AttachmentBlockResource = z.infer<typeof attachmentBlockResourceSchema>;

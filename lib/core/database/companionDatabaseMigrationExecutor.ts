@@ -41,6 +41,7 @@ import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigratio
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
+import { migrateCompanionPdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
@@ -114,6 +115,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 85 && targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
   if (currentVersion < 86 && targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   if (currentVersion < 87 && targetVersion >= 87) await migrateCompanionForegroundSources(db);
+  if (currentVersion < 88 && targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -139,6 +141,7 @@ export async function createCompanionDatabase(
   if (targetVersion >= 85) await migrateCompanionNodeChildInventory(db);
   if (targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   if (targetVersion >= 87) await migrateCompanionForegroundSources(db);
+  if (targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

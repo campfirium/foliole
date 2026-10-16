@@ -1,3 +1,4 @@
+import { exportPdfTextArtifact, importPdfTextArtifact } from '../../lib/core/sync/pdfTextArtifact.ts';
 // @vitest-environment node
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
@@ -48,7 +49,8 @@ it('creates current synthetic versions and transfers complete topic, external an
       .toBe(hostedContentBodies[name].text);
   }
   await transfer(context, 'external_document', 'ios-external:orchid.md');
-  await transfer(context, 'pdf_page_text', `${hostedAttachments.valid.hash}:1`);
+  const artifact = await exportPdfTextArtifact(context.source.db, hostedAttachments.valid.hash, 1);
+  await importPdfTextArtifact(context.target.db, `${hostedAttachments.valid.hash}.pdf`, artifact.storageKey, artifact.text);
   expect(context.target.sqlite.prepare('SELECT content FROM external_documents').get().content)
     .toBe(hostedContentBodies.external.text);
   expect(context.target.sqlite.prepare('SELECT text FROM pdf_page_text').get().text).toBe('Extracted pdf-cobalt-token');

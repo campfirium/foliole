@@ -1,3 +1,10 @@
+import { randomUUID } from 'node:crypto';
+import { desktopSyncChangeSessions } from '../../electron/sync/desktopSyncChangeSessions.ts';
+import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.ts';
+import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.ts';
+import { createAttachmentDemandCache } from '../../lib/core/sync/attachmentDemandCache.ts';
+import { missingPdfTextArtifacts } from '../../lib/core/sync/pdfTextArtifact.ts';
+import { importCompanionPdfTextArtifact } from '../../src/shared/platform/companion/sync/framed/companionPdfTextArtifact.ts';
 import { mkdir } from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
 import http from 'node:http';
@@ -58,6 +65,8 @@ export async function scenarioFixture(root, options) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const endpointUrl = `http://127.0.0.1:${server.address().port}`;
   let lastExchange;
+  const ownership = createSyncPeerRoundOwnership(60_000);
+  const sessionId = desktopSyncChangeSessions().open(phoneId).session;
   async function round() {
     const proof = phone.prepare('SELECT library_epoch,proof_revision FROM node_version_local_proof_state').get();
     const current = await library.memberState();
@@ -70,16 +79,23 @@ export async function scenarioFixture(root, options) {
       responderDeviceId: IOS_HOSTED_PROVIDER_DEVICE_ID, responderLibraryEpoch: accepted.state.library_epoch
     } };
     lastExchange = exchange;
-    const result = await runRequestSyncDatabaseRound({
+    const id = randomUUID();
+    const lease = ownership.acquireOutbound(IOS_HOSTED_PROVIDER_DEVICE_ID, id);
+    if (!lease) throw new Error('fixture_round_busy');
+    exchange.peerRound = { id, lease, admitted: false, sessionId };
+    let result;
+    try { result = await withRequestSyncPeerRound(createDesktopRequestSyncExchange(exchange), exchange.peerRound, () => runRequestSyncDatabaseRound({
       exchangeInventory: () => exchangeDesktopRequestSyncInventory(host, exchange),
       transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange), differences,
         { peerState: accepted.state }),
       reportObjectError: (_difference, error) => { throw error; }
-    });
+    }));
+    } finally { lease.release(); }
     await completion;
     return result;
   }
-  return { phone, db, observations, round, attachments: () => phoneAttachments({ root, db, host, exchange: lastExchange }), async close() {
+  return { phone, db, observations, round, attachments: () => phoneAttachments({ root, db, host, exchange: lastExchange, ownership, sessionId }), async close() {
+    ownership.close(); desktopSyncChangeSessions().close(phoneId, sessionId);
     await new Promise(resolve => server.close(resolve)); phone.close();
   } };
 }
@@ -96,7 +112,7 @@ function seedPhoneMembership(phone, state, phoneId, secret) {
     VALUES ('special-inbox','folder','Inbox','','2026-07-21','2026-07-21')`).run();
 }
 
-async function phoneAttachments({ root, db, host, exchange }) {
+async function phoneAttachments({ root, db, host, exchange, ownership, sessionId }) {
   if (!exchange) throw new Error('fixture_member_exchange_required');
   const assetsDir = path.join(root, 'phone', 'Assets');
   await mkdir(assetsDir, { recursive: true });
@@ -105,9 +121,26 @@ async function phoneAttachments({ root, db, host, exchange }) {
   if (receiver.kind !== 'acquired') throw new Error('fixture_attachment_owner_busy');
   try {
     const failures = [];
-    const result = await exchangeRequestSyncAttachments({ ...receiver, ...createDesktopAttachmentBlockSource(assetsDir),
-      needs: () => readRequestSyncAttachmentNeeds(host, key => isDesktopAttachmentPresent(assetsDir, key))
-    }, createDesktopRequestSyncExchange(exchange), (key, error) => failures.push({ key, error: String(error) }));
+    const source = createDesktopAttachmentBlockSource(assetsDir);
+    const inspect = keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
+    const demand = createAttachmentDemandCache();
+    const attachmentHost = { ...receiver, ...source,
+      importPdfText: (pdf, artifact) => importCompanionPdfTextArtifact(host, source, pdf, artifact),
+      async needsSlice(shouldYield) {
+        const result = await demand(host, shouldYield);
+        return { pending: result.pending, keys: await readRequestSyncAttachmentNeeds(host, inspect),
+          pdfTextKeys: await missingPdfTextArtifacts(db, result.keys) };
+      },
+      needs: () => readRequestSyncAttachmentNeeds(host, inspect)
+    };
+    const id = randomUUID(), lease = ownership.acquireOutbound(IOS_HOSTED_PROVIDER_DEVICE_ID, id);
+    if (!lease) throw new Error('fixture_round_busy');
+    const peerRound = { id, lease, admitted: false, sessionId };
+    const transfer = createDesktopRequestSyncExchange({ ...exchange, peerRound });
+    let result;
+    try { result = await withRequestSyncPeerRound(transfer, peerRound, () => exchangeRequestSyncAttachments(attachmentHost,
+      transfer, (key, error) => failures.push({ key, error: String(error) }))); }
+    finally { lease.release(); }
     return { assetsDir, failures, result };
   } finally { await receiver.close(); }
 }

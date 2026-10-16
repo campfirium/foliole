@@ -12,6 +12,8 @@ const binary = z.unknown().transform(value => bytes(value, 'attachment'));
 /** Dev v27 pull windows retain individually authenticated blocks and a resumable end offset. */
 export const attachmentRequestSchema = z.object({
   requestId: binary.refine(bytes => bytes.length === 16),
+  derive: z.enum(['', 'pdf_text']).default(''),
+  extractorVersion: z.number().int().nonnegative().default(0),
   operation: z.enum(['needs', 'describe', 'pull', 'status', 'push']),
   storageKey: z.union([key, z.literal('')]).default(''),
   byteLength: integer.default(0),

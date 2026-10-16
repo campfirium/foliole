@@ -10,7 +10,7 @@ const CLEAR_TABLES = [
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_view_state', 'review_log',
-  'parent_order_projection_pending', 'parent_order_sources', 'parent_child_order', 'pdf_page_text', 'external_documents',
+  'parent_order_projection_pending', 'parent_order_sources', 'parent_child_order', 'pdf_page_text', 'pdf_text_artifact', 'external_documents',
   'external_search_folders', 'external_folder_host_preferences', 'import_sources', 'watched_folder_bindings',
   'keep_import_items', 'keep_import_item_cache', 'watched_folder_conflict_decisions',
   'source_disposition_states', 'readwise_api_import_stage', 'readwise_api_import_runs',

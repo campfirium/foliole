@@ -52,6 +52,7 @@ import {
 } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
+import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -259,5 +260,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 155, migrate: retireNodePositions },
   { version: 156, migrate: migrateNodeChildInventory },
   { version: 157, migrate: migrateFramedSyncDigests },
-  { version: 158, migrate: migrateForegroundSources }
+  { version: 158, migrate: migrateForegroundSources },
+  { version: 159, migrate: migratePdfTextArtifacts }
 ];

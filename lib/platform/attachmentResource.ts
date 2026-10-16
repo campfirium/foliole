@@ -3,6 +3,7 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 export const CANONICAL_EXTENSION_BY_MIME = {
   'application/epub+zip': '.epub',
   'application/pdf': '.pdf',
+  'application/vnd.foliole.pdf-text+json': '.pdftext',
   'image/gif': '.gif',
   'image/jpeg': '.jpg',
   'image/png': '.png',

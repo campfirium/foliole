@@ -156,7 +156,7 @@ public final class FolioleAttachmentBlockFiles {
     }
 
     private File resolve(String key, boolean partial) throws Exception {
-        if (!(partial ? key.matches("[a-f0-9]{64}(\\.(png|jpg|gif|webp|pdf|epub))?")
+        if (!(partial ? key.matches("[a-f0-9]{64}(\\.(png|jpg|gif|webp|pdf|epub|pdftext))?")
             : FolioleCompanionCanonicalAttachmentKey.valid(key))) throw new IllegalArgumentException("attachment_key_invalid");
         File file = new File(root, partial ? ".attachment-" + key.substring(0, 64) + ".partial" : key);
         if (!file.getCanonicalPath().equals(file.getAbsolutePath())) throw new IllegalArgumentException("attachment_file_unsafe");

@@ -63,9 +63,8 @@ export function cleanupOrphanAttachments(driver: DatabaseDriver, plan: Attachmen
   const retained = new Set(plan.retainedKeys);
   const files = plan.candidates.filter((row) => !retained.has(buildCanonicalAttachmentStorageKey(row.id, row.mime_type)!));
   deleteAttachmentFiles(files);
-  const deletedAt = new Date().toISOString();
   for (const file of files) {
-    deletePdfPageTextRowsForAttachment(file.id, deletedAt);
+    deletePdfPageTextRowsForAttachment(file.id);
     driver.execute('DELETE FROM pdf_index_state WHERE attachment_id = ?', [file.id]);
   }
   return files;

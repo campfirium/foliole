@@ -147,12 +147,13 @@ it('downloads complete content objects and four references over HTTP without pen
   }
   expect(fixture.phone.prepare("SELECT content FROM external_documents WHERE document_id='ios-external:orchid.md'").get().content)
     .toBe(hostedContentBodies.external.text);
-  expect(fixture.phone.prepare('SELECT text FROM pdf_page_text WHERE attachment_id=?').get(hostedAttachments.valid.hash).text)
-    .toBe('Extracted pdf-cobalt-token');
   const refs = JSON.parse(fixture.phone.prepare("SELECT resource_references FROM nodes WHERE id='ios-content-topic'").get().resource_references);
   expect(refs.map(ref => ref.storage_key).sort()).toEqual(Object.entries(hostedAttachments)
     .map(([name, resource]) => `${resource.hash}.${name === 'valid' ? 'pdf' : 'png'}`).sort());
   const resources = await fixture.attachments();
+  expect(fixture.phone.prepare('SELECT text FROM pdf_page_text WHERE attachment_id=?').get(hostedAttachments.valid.hash).text)
+    .toBe('Extracted pdf-cobalt-token');
+
   const bytes = fs.readFileSync(path.join(resources.assetsDir, `${hostedAttachments.valid.hash}.pdf`));
   expect(bytes).toEqual(Buffer.from(hostedAttachments.valid.base64, 'base64'));
   expect(createHash('sha256').update(bytes).digest('hex')).toBe(hostedAttachments.valid.hash);

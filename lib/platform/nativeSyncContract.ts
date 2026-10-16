@@ -12,7 +12,6 @@ export type NativeSyncObjectType =
   | 'topic_daily_count'
   | 'foreground_source'
   | 'node_text_alternative'
-  | 'pdf_page_text'
   | 'setting'
   | 'watched_folder'
   | 'view_state';

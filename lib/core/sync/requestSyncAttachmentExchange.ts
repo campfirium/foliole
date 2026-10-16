@@ -1,10 +1,12 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import { transferAttachmentSlice } from './attachmentBlockTransfer.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
+import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
+import { exchangePdfTextArtifacts } from './requestSyncPdfText.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
 
 async function request(exchange: RequestSyncExchange, input: Partial<AttachmentRequest> &
@@ -78,6 +80,16 @@ export async function pullRequestSyncAttachment(host: RequestSyncAttachmentHost,
   while (!(await pullSlice(host, exchange, storageKey)).complete) exchange.signal?.throwIfAborted();
 }
 
+async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
+  key: string, shouldYield: () => boolean) {
+  let blocks = 0; let slice;
+  do {
+    slice = await pullSlice(host, exchange, key, shouldYield() ? 1 : 8, shouldYield);
+    blocks += slice.blocks;
+  } while (!slice.complete && !shouldYield());
+  return { complete: slice.complete, blocks };
+}
+
 /** Reuse one demand list while streaming; yield only at recoverable boundaries. */
 export async function exchangeRequestSyncAttachments(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   report: (storageKey: string, error: unknown) => void, shouldYield = attachmentWorkBudget()) {
@@ -107,14 +119,14 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   const pullBudget = attachmentWorkBudget(remoteNeeds.size ? 1000 : 2000);
   for (const key of local.keys) {
     if (result.blocks && (shouldYield() || pullBudget())) { pendingKeys.add(key); continue; }
-    await attempt(key, async () => {
-      let blocks = 0;
-      let slice;
-      do { slice = await pullSlice(host, exchange, key, shouldYield() ? 1 : 8, () => shouldYield() || pullBudget()); blocks += slice.blocks; }
-      while (!slice.complete && !shouldYield() && !pullBudget());
-      return { complete: slice.complete, blocks };
-    });
+    await attempt(key, () => pullBudgeted(host, exchange, key, () => shouldYield() || pullBudget()));
   }
+  const text = await exchangePdfTextArtifacts({ host, ...(exchange.signal ? { signal: exchange.signal } : {}), keys: local.pdfTextKeys ?? [], shouldYield, report,
+    describe: storageKey => single(exchange, { operation: 'describe', storageKey, derive: 'pdf_text',
+      extractorVersion: PDF_TEXT_EXTRACTOR_VERSION }),
+    pull: key => pullBudgeted(host, exchange, key, shouldYield) });
+  result.blocks += text.blocks;
+  result.transferred += text.transferred;
   const pulledBlocks = result.blocks;
   for (const key of remoteNeeds) {
     if (result.blocks > pulledBlocks && shouldYield()) { pendingKeys.add(key); continue; }
@@ -131,5 +143,5 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
         }
       } }));
   }
-  return { ...result, pending: pendingKeys.size, yielded: pendingKeys.size > 0 && shouldYield() };
+  return { ...result, pending: pendingKeys.size + text.pending, yielded: pendingKeys.size > 0 && shouldYield() };
 }

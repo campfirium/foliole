@@ -377,20 +377,6 @@
         "recovery": "saved"
       },
       {
-        "category": "content",
-        "conflict": "lww",
-        "scope": "workspace",
-        "key": "pdf_page_text",
-        "objectType": "pdf_page_text",
-        "pushIssue": "review_required",
-        "storage": [
-          "pdf_page_text"
-        ],
-        "userVisible": true,
-        "ownership": "workspace",
-        "recovery": "saved"
-      },
-      {
         "category": "resource",
         "conflict": "cache_refresh",
         "scope": "cache",
@@ -613,7 +599,6 @@
       "node_review",
       "node_text_alternative",
       "parent_child_order",
-      "pdf_page_text",
       "setting",
       "topic_daily_count",
       "watched_folder"

@@ -36,7 +36,6 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
     ownership: 'source', ownerVia: 'watched_folder' },
   { ...policy('watched_folder', 'watched_folder', 'structure', 'workspace', 'lww', ['watched_folder_bindings'], true),
     ownership: 'device' },
-  policy('pdf_page_text', 'pdf_page_text', 'content', 'workspace', 'lww', ['pdf_page_text'], true),
   policy('content_blobs', null, 'resource', 'cache', 'cache_refresh', ['content_blobs', 'content_blob_data'], true, 'diagnostic'),
   policy(
     'node_open_state', 'node_open_state', 'activity', 'workspace', 'lww',

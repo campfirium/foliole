@@ -43,12 +43,12 @@ function openInitializedDriver() {
 }
 
 it('computes stable object hashes independent of payload key order', () => {
-  const first = computeSyncContentHash('pdf_page_text', {
+  const first = computeSyncContentHash('external_folder', {
     page: 1,
     text: 'Page one',
     page_width: 800
   });
-  const second = computeSyncContentHash('pdf_page_text', {
+  const second = computeSyncContentHash('external_folder', {
     page_width: 800,
     text: 'Page one',
     page: 1
@@ -57,11 +57,11 @@ it('computes stable object hashes independent of payload key order', () => {
   expect(second).toBe(first);
 });
 
-it('writes sync object state for pdf text setting and view state', () => {
+it('writes sync object state for folder setting and view state', () => {
   const driver = openInitializedDriver();
   const updatedAt = '2026-04-24T00:00:00.000Z';
   const rows = [
-    { objectType: 'pdf_page_text' as const, objectId: `${'a'.repeat(64)}:1` },
+    { objectType: 'external_folder' as const, objectId: `${'a'.repeat(64)}:1` },
     { objectType: 'setting' as const, objectId: 'device:*:*:desktop-1:font_scale' },
     { objectType: 'view_state' as const, objectId: 'session_resume:windows:desktop-1:active_node' }
   ];
@@ -83,7 +83,7 @@ it('writes sync object state for pdf text setting and view state', () => {
   );
 
   expect(stored).toEqual([
-    { object_type: 'pdf_page_text', object_id: `${'a'.repeat(64)}:1`, sync_dirty: 1 },
+    { object_type: 'external_folder', object_id: `${'a'.repeat(64)}:1`, sync_dirty: 1 },
     { object_type: 'setting', object_id: 'device:*:*:desktop-1:font_scale', sync_dirty: 1 },
     { object_type: 'view_state', object_id: 'session_resume:windows:desktop-1:active_node', sync_dirty: 1 }
   ]);
@@ -102,16 +102,16 @@ it('advances state sequence monotonically and queries by cursor', () => {
       });
     }
     upsertSyncObjectState(transactionDriver, {
-      objectType: 'pdf_page_text',
+      objectType: 'external_folder',
       objectId: `${'a'.repeat(64)}:1`,
-      contentHash: computeSyncContentHash('pdf_page_text', { page: 1, text: 'Original' }),
+      contentHash: computeSyncContentHash('external_folder', { page: 1, text: 'Original' }),
       lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:10:00.000Z'
     });
     upsertSyncObjectState(transactionDriver, {
-      objectType: 'pdf_page_text',
+      objectType: 'external_folder',
       objectId: `${'a'.repeat(64)}:1`,
-      contentHash: computeSyncContentHash('pdf_page_text', { page: 1, text: 'Updated' }),
+      contentHash: computeSyncContentHash('external_folder', { page: 1, text: 'Updated' }),
       lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:11:00.000Z'
     });
@@ -127,7 +127,7 @@ it('advances state sequence monotonically and queries by cursor', () => {
 
   expect(duplicateSeqRows).toEqual([]);
   expect(rows.map((row) => row.stateSeq)).toEqual([1000, 1002]);
-  expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: `${'a'.repeat(64)}:1`, objectType: 'pdf_page_text' }));
+  expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: `${'a'.repeat(64)}:1`, objectType: 'external_folder' }));
 });
 
 it('does not reuse a committed state position after its row is deleted', () => {

@@ -24,6 +24,7 @@ export const CORE_TABLES = [
   'parent_order_projection_pending',
   'pdf_index_state',
   'pdf_page_text',
+  'pdf_text_artifact',
   'review_log',
   'setting_records',
   'sync_change_log',

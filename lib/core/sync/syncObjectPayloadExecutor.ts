@@ -10,7 +10,7 @@ import {
   type SyncObjectPayloadApplyOptions
 } from './syncObjectLearningPayloadExecutor.js';
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
-import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
+import { asObject, integer, text } from './syncObjectPayloadValues.js';
 import { applySettingObject, applyViewStateObject } from './syncObjectPrivateStatePayloadExecutor.js';
 import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
@@ -42,8 +42,6 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeReviewObject(port, record);
     case 'node_text_alternative':
       return applyNodeTextAlternativeObject(port, record);
-    case 'pdf_page_text':
-      return applyPdfPageTextObject(port, record);
     case 'setting':
       return applySettingObject(port, record, options);
     case 'watched_folder':
@@ -114,20 +112,5 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncObjectRecor
       text(payload.indexed_at) ?? record.updated_at, 1,
       text(payload.reference_kind) ?? 'local_path', text(payload.reference_json), text(payload.missing_at),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
-  );
-}
-
-async function applyPdfPageTextObject(port: DbPort, record: SyncObjectRecord) {
-  const payload = asObject(record);
-  const attachmentId = text(payload.attachment_id) ?? record.object_id.split(':')[0] ?? record.object_id;
-  const page = numberOrNull(payload.page) ?? Number(record.object_id.split(':').at(-1));
-  if (record.deleted_at) {
-    await port.run('DELETE FROM pdf_page_text WHERE attachment_id = ? AND page = ?', [attachmentId, page]);
-    return;
-  }
-  await port.run(
-    `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height) VALUES (?, ?, ?, ?, ?) ` +
-    `ON CONFLICT(attachment_id, page) DO UPDATE SET text = excluded.text, page_width = excluded.page_width, page_height = excluded.page_height`,
-    [attachmentId, page, text(payload.text) ?? '', numberOrNull(payload.page_width), numberOrNull(payload.page_height)]
   );
 }

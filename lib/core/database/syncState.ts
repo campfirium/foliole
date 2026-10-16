@@ -17,7 +17,6 @@ export type SyncObjectType =
   | 'node_review'
   | 'topic_daily_count'
   | 'foreground_source'
-  | 'pdf_page_text'
   | 'setting'
   | 'watched_folder'
   | 'view_state';

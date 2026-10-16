@@ -10,6 +10,7 @@ import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { openDesktopAttachmentBlockReceiver } from './desktopAttachmentBlockFiles.js';
 import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
+import { createDesktopPdfTextArtifact } from './desktopPdfTextArtifact.js';
 
 type Receiver = Extract<Awaited<ReturnType<typeof openDesktopAttachmentBlockReceiver>>, { kind: 'acquired' }>;
 const demands = new Map<string, ReturnType<typeof createAttachmentDemandCache>>();
@@ -51,6 +52,7 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     return pending;
   };
   return {
+    derivePdfText: (key, version) => createDesktopPdfTextArtifact(host, assetsDir, key, version),
     async withFile(key, consume) { await checkLibrary(); return source.withFile(key, consume); },
     async status(resource) { return (await receiver()).status(resource); },
     async receive(resource, offset, bytes) { return (await receiver()).receive(resource, offset, bytes); },

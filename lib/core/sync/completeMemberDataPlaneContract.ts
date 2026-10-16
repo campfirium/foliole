@@ -14,7 +14,6 @@ export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
   'node_reading',
   'node_review',
   'node_text_alternative',
-  'pdf_page_text',
   'review_log',
   'topic_daily_count',
   'foreground_source',
