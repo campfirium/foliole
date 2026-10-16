@@ -34,8 +34,16 @@ it('leaves attachment scanning for a later round while database changes remain',
   expect(runtime.resources).not.toHaveBeenCalled();
   expect(confirmed).not.toHaveBeenCalled();
   expect(result).toMatchObject({ remainingStructureChangeCount: 1,
-    remainingAttachmentResourceCount: null, attachmentWorkYielded: true,
+    remainingAttachmentResourceCount: null, attachmentWorkYielded: false,
     appliedObjectIds: ['pulled'], pushedObjectIds: ['pushed'] });
+});
+
+it('does not treat deferred attachments as progress when database differences remain unchanged', async () => {
+  const { hasFastRetryWork } = await import('../../../../companion/companionSyncContinuation');
+  runtime.database.mockResolvedValue({ pending: 1, received: [], sent: [], madeProgress: false });
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
+  expect(runtime.resources).not.toHaveBeenCalled();
+  expect(hasFastRetryWork(result)).toBe(false);
 });
 
 it('reports request-scoped database changes and keeps attachment progress separate', async () => {

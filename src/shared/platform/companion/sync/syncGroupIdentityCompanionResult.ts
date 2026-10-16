@@ -62,7 +62,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   await options.onStructureSynced?.({ receivedCount: round.received.length, workspaceChanged: round.workspaceChanged });
   const resourcesStartedAt = Date.now();
   const resources = round.pending > 0
-    ? { pending: null, transferred: 0, blocks: 0, yielded: true, error: null }
+    ? { pending: null, transferred: 0, blocks: 0, yielded: false, error: null }
     : await runAttachmentStage({ endpoint_url: endpointUrl,
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
