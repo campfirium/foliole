@@ -42,8 +42,8 @@ export async function releaseCompanionContentBase(nodeId: string, holdId: string
 
 export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   if (!isNativeCompanionNodeVersionWriteRuntime()) throw new Error('content_edit_runtime_unavailable');
-  return runCompanionHighValueMutationTask(async () => {
-    const result = await writeIosCompanionDatabase((port) => port.transaction(async (db) => {
+  const result = await runCompanionHighValueMutationTask(() =>
+    writeIosCompanionDatabase((port) => port.transaction(async (db) => {
       await requireEditableTopic(db, edit.nodeId);
       const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
       if (!base || base.snapshot.kind !== 'topic') throw new Error('content_edit_base_unavailable');
@@ -71,11 +71,11 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
         currentVersionId: result.current.version_id,
         submittedVersionId: result.submittedVersionId
       };
-    }));
-    await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32))
-      .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
-    return result;
-  });
+    })));
+  await runCompanionSyncWriterTask(() =>
+    writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32)))
+    .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
+  return result;
 }
 
 async function requireEditableTopic(db: DbPort, nodeId: string) {
