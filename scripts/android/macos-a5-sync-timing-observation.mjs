@@ -91,3 +91,7 @@ export function assertTimingOverlap(requests, startedAt) {
   assert.ok(request, 'No completed attachment response of at least 512 KiB overlapped the edit');
   return request;
 }
+
+export function hasActiveTimingTransfer(requests, now = Date.now()) {
+  return requests.some(value => !value.endedAt && now - value.startedAt >= 100);
+}

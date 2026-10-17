@@ -7,7 +7,7 @@ import path from 'node:path';
 
 import { readMacImageFact } from './macos-a5-image-content-evidence.mjs';
 import { connectImageWebView, openAndroidImageTopic, showAndroidImageNavigation } from './macos-a5-image-content-ui.mjs';
-import { assertTimingOverlap, observeTimingAttachments, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
+import { assertTimingOverlap, hasActiveTimingTransfer, observeTimingAttachments, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
 
 async function createTopic(session, suffix) {
   const nodeId = `sync-timing-${suffix}-${randomUUID()}`;
@@ -72,10 +72,10 @@ async function sample({ direction, index, topic, session, page, reader, evidence
   }
   if (requests) {
     const deadline = Date.now() + 30_000;
-    while (!requests.some(value => !value.endedAt) && Date.now() < deadline) {
+    while (!hasActiveTimingTransfer(requests) && Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 10));
     }
-    assert.ok(requests.some(value => !value.endedAt), 'No attachment request in flight');
+    assert.ok(hasActiveTimingTransfer(requests), 'No attachment request in flight');
   }
   const startedAt = Date.now();
   const record = { direction, index, nodeId: topic.nodeId, startedAt, content, status: 'started',

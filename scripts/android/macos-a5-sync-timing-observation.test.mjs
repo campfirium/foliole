@@ -2,7 +2,7 @@
 import { expect, it } from 'vitest';
 
 import { prepareAndroidEdit, replaceAndroidTimingBody } from './macos-a5-sync-timing-scenario.mjs';
-import { assertTimingOverlap, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
+import { assertTimingOverlap, hasActiveTimingTransfer, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
 
 it('accepts only the complete persisted body and records its version', async () => {
   let index = 0;
@@ -85,4 +85,11 @@ it('refuses to type over a partial selection instead of corrupting the timing fi
   }), keyboard: { insertText: async () => { typed = true; } } };
   await expect(replaceAndroidTimingBody(page, 'New body')).rejects.toThrow('timing_input_requires_full_body_selection');
   expect(typed).toBe(false);
+});
+
+it('waits past short control requests but still requires completed byte evidence', () => {
+  expect(hasActiveTimingTransfer([{ startedAt: 10 }], 50)).toBe(false);
+  expect(hasActiveTimingTransfer([{ startedAt: 10, endedAt: 40 }], 150)).toBe(false);
+  expect(hasActiveTimingTransfer([{ startedAt: 10 }], 150)).toBe(true);
+  expect(() => assertTimingOverlap([{ startedAt: 10, endedAt: 200, bytes: 163 }], 150)).toThrow();
 });
