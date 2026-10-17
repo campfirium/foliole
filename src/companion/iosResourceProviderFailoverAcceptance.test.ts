@@ -87,3 +87,13 @@ it.each(['body', 'url'])('rejects unreadable %s evidence', async kind => {
   expect(mocks.sync).toHaveBeenCalledTimes(kind === 'body' ? 1 : 2);
   expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'failed', error: 'acceptance_article_or_attachment_unreadable' }));
 });
+
+it('keeps the failed read values and stage without weakening the acceptance criteria', async () => {
+  mocks.article.mockReturnValue({ bodyStatus: 'ready', content: 'Wrong adopted body' });
+  await run();
+  expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({
+    status: 'failed', step: 'after-mac-read', error: 'acceptance_article_or_attachment_unreadable',
+    evidence: { expected: 'missing_file', bodyStatus: 'ready', content: 'Wrong adopted body',
+      resourceStatus: 'missing_file', resourceUrl: null }
+  }));
+});

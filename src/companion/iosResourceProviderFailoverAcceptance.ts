@@ -65,6 +65,13 @@ async function loadBothProviders(endpointUrl: string) {
   throw new Error('acceptance_independent_a5_provider_not_discovered');
 }
 
+class ReadEvidenceError extends Error {
+  constructor(readonly evidence: {
+    expected: string; bodyStatus: string | null; content: string | null;
+    resourceStatus: string | null; resourceUrl: string | null;
+  }) { super('acceptance_article_or_attachment_unreadable'); }
+}
+
 async function verifyRead(expected: 'ready' | 'missing_file' = 'ready') {
   const workspace = await loadCompanionWorkspaceSyncState();
   const article = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, NODE_ID);
@@ -75,13 +82,15 @@ async function verifyRead(expected: 'ready' | 'missing_file' = 'ready') {
   if (article?.bodyStatus !== 'ready' || !article.content.includes('Resource LAN body remains readable.') ||
       !article.content.includes(`asset://${IMAGE_HASH}.png`) || resource?.status !== expected ||
       (expected === 'ready' && !resource.resource_url)) {
-    throw new Error('acceptance_article_or_attachment_unreadable');
+    throw new ReadEvidenceError({ expected, bodyStatus: article?.bodyStatus ?? null, content: article?.content ?? null,
+      resourceStatus: resource?.status ?? null, resourceUrl: resource?.resource_url ?? null });
   }
   return { article_body_status: article.bodyStatus, attachment_status: resource.status,
     resource_url: resource.resource_url };
 }
 
 export async function runIosResourceProviderFailoverAcceptance() {
+  let step = 'bootstrap';
   try {
     if (!GROUP_ID || !MAC_ID || !A5_ID || !NODE_ID || !/^[a-f0-9]{64}$/u.test(IMAGE_HASH)) {
       throw new Error('acceptance_fixture_identity_missing');
@@ -92,6 +101,7 @@ export async function runIosResourceProviderFailoverAcceptance() {
     const existing = await loadCompanionSyncGroup();
     if (existing) {
       if (existing.group_id !== GROUP_ID) throw new Error('acceptance_group_changed_on_restart');
+      step = 'restart-read';
       postResult({ error: null, evidence: await verifyRead(), phase: 'restart-clean',
         scenario: SCENARIO, status: 'passed' });
       return;
@@ -106,10 +116,14 @@ export async function runIosResourceProviderFailoverAcceptance() {
     if (!mac || !a5) throw new Error('acceptance_required_provider_missing');
     const beforeMac = await resolveRuntimeAttachmentResource(`asset://${IMAGE_HASH}.png`, { refresh: true });
     if (beforeMac?.status === 'ready') throw new Error('acceptance_attachment_already_available');
+    step = 'mac-request';
     await syncIosAcceptanceRequest(mac.endpointUrl, { sourcePeerId: mac.deviceId });
+    step = 'after-mac-read';
     const afterMac = await verifyRead('missing_file');
     const beforeA5 = await verifyRead('missing_file');
+    step = 'a5-request';
     await syncIosAcceptanceRequest(a5.endpointUrl, { sourcePeerId: a5.deviceId }, true);
+    step = 'after-a5-read';
     const afterA5 = await verifyRead();
     postResult({ transfers: [
       { device_id: mac.deviceId, endpoint: mac.endpointUrl,
@@ -118,6 +132,7 @@ export async function runIosResourceProviderFailoverAcceptance() {
     ], error: null, evidence: afterA5, phase: 'provider-selected', scenario: SCENARIO, status: 'passed' });
   } catch (error) {
     postResult({ error: error instanceof Error ? error.message : String(error),
-      phase: 'failed', scenario: SCENARIO, status: 'failed' });
+      ...(error instanceof ReadEvidenceError ? { evidence: error.evidence } : {}),
+      step, phase: 'failed', scenario: SCENARIO, status: 'failed' });
   }
 }
