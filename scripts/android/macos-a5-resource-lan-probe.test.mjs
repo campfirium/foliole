@@ -54,7 +54,8 @@ it('commits both image descriptions with the fixture body before withholding byt
   const imported = [];
   const session = { invoke: async (command, args) => {
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: [] };
-    if (command === 'create_topic') { saved = args; return { createdNodeIds: [args.nodeId] }; }
+    if (command === 'create_topic') return { nodes: [{ nodeId: args.nodeId, currentVersionId: 'initial' }] };
+    if (command === 'update_node_content_with_anchors') { saved = args; return {}; }
     if (command === 'load_library_path_settings') return { assets_dir: assets };
     const bytes = Buffer.from(args.bytesBase64, 'base64');
     const hash = createHash('sha256').update(bytes).digest('hex');
@@ -63,9 +64,9 @@ it('commits both image descriptions with the fixture body before withholding byt
     return { status: 'imported', attachment_id: hash, storage_key: `${hash}.png`, original_name: args.originalName };
   } };
   const fixture = await seedA5ResourceLanProbe(session, root);
-  expect(saved.newImageReferences).toEqual(imported);
+  expect(saved.edit.newImageReferences).toEqual(imported);
   expect(imported).toHaveLength(2);
-  for (const item of imported) expect(saved.content).toContain(`asset://${item.storage_key}`);
+  for (const item of imported) expect(saved.parent.content).toContain(`asset://${item.storage_key}`);
   expect(fs.existsSync(fixture.missingPath)).toBe(false);
   fixture.restore();
   expect(fs.existsSync(fixture.missingPath)).toBe(true);

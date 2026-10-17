@@ -54,6 +54,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionShareRecovery.integration.test.ts',
   'src/companion/CompanionSearchSnapshot.integration.test.tsx',
   'src/companion/companionWorkspaceMutation.integration.test.ts',
+  'scripts/desktop/sync-image-fixtures.integration.test.mjs',
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',
   'scripts/desktop/fixed-performance-sync.test.mjs',

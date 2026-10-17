@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 
 const IMAGES = [
@@ -34,10 +34,12 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
     createdAt: now, isTitleManual: true, kind: 'topic', nodeId,
     nodeOrder: [...snapshot.nodeOrder, nodeId], parentNodeId: 'special-inbox',
     position: snapshot.nodeOrder.length, reveal: null, title: 'Resource LAN', updatedAt: now };
+  const created = await session.invoke('create_topic', payload);
+  const baseVersionId = created.nodes.find(node => node.nodeId === nodeId).currentVersionId;
   const newImageReferences = [];
   for (const bytesBase64 of IMAGES) {
     const result = await session.invoke('import_clipboard_image_attachment', {
-      bytesBase64, mimeType: 'image/png', originalName: 'resource-lan.png'
+      bytesBase64, mimeType: 'image/png', nodeId, originalName: 'resource-lan.png'
     });
     if (result?.status !== 'imported') {
       throw new Error(`Resource LAN image import failed: ${JSON.stringify(result)}`);
@@ -46,7 +48,8 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
     const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
     if (result.attachment_id !== hash) throw new Error('Resource LAN fixture bytes changed on import.');
   }
-  await session.invoke('create_topic', { ...payload, newImageReferences });
+  await session.invoke('update_node_content_with_anchors', { parent: payload, affectedAnchors: [],
+    edit: { baseVersionId, versionId: randomUUID(), newImageReferences } });
   const paths = await session.invoke('load_library_path_settings');
   const missingPath = assertOwnedResourcePath(libraryHome, paths.assets_dir, images[1].storageKey);
   const savedBytes = fs.readFileSync(missingPath);

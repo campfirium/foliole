@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -22,8 +23,12 @@ export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, 
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   if (!Array.isArray(snapshot?.nodeOrder)) throw new Error('Desktop workspace snapshot is unavailable.');
   const payload = factPayload(device, snapshot, now);
+  const result = await session.invoke('create_topic', payload);
+  if (!result?.createdNodeIds?.includes(payload.nodeId)) {
+    throw new Error('Desktop product command did not persist the journey fact.');
+  }
   const attachment = withAttachment ? await session.invoke('import_clipboard_image_attachment', {
-    bytesBase64: JOURNEY_PNG_BASE64[device], mimeType: 'image/png',
+    bytesBase64: JOURNEY_PNG_BASE64[device], mimeType: 'image/png', nodeId: payload.nodeId,
     originalName: `${payload.nodeId}.png`
   }) : null;
   if (withAttachment && attachment?.status !== 'imported') {
@@ -31,12 +36,11 @@ export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, 
   }
   if (attachment) {
     payload.content += `\n\n![Journey image](asset://${attachment.storage_key})`;
-    payload.newImageReferences = [{ storage_key: attachment.storage_key,
+    const newImageReferences = [{ storage_key: attachment.storage_key,
       original_name: attachment.original_name, role: 'image' }];
-  }
-  const result = await session.invoke('create_topic', payload);
-  if (!result?.createdNodeIds?.includes(payload.nodeId)) {
-    throw new Error('Desktop product command did not persist the journey fact.');
+    const baseVersionId = result.nodes.find(node => node.nodeId === payload.nodeId).currentVersionId;
+    await session.invoke('update_node_content_with_anchors', { parent: payload, affectedAnchors: [],
+      edit: { baseVersionId, versionId: randomUUID(), newImageReferences } });
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const receiptPath = path.join(evidenceRoot, `${device.toLowerCase()}-fact-receipt.json`);

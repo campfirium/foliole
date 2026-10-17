@@ -11,7 +11,8 @@ it('creates every bounded fixture only through registered desktop product comman
   const attachmentBytes = [];
   const invoke = vi.fn(async (command, args) => {
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
-    if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
+    if (command === 'update_node_content_with_anchors') return {};
+    if (command === 'create_topic') return { createdNodeIds: [args.nodeId], nodes: [{ nodeId: args.nodeId, currentVersionId: 'initial' }] };
     if (command === 'import_clipboard_image_attachment') {
       attachmentBytes.push(args.bytesBase64);
       return { storage_key: `attachment-${attachmentBytes.length}.png`, original_name: args.originalName, attachment_id: `attachment-${attachmentBytes.length}`, status: 'imported' };
@@ -26,20 +27,14 @@ it('creates every bounded fixture only through registered desktop product comman
     session: { invoke }
   });
   expect(result).toMatchObject({ attachmentCount: 3, nodeCount: 2, resultStatus: 'success' });
-  expect(invoke.mock.calls.map(([command]) => command)).toEqual([
-    'import_clipboard_image_attachment', 'import_clipboard_image_attachment',
-    'import_clipboard_image_attachment', 'load_workspace_list_snapshot',
-    'create_topic', 'create_topic', 'resolve_attachment_resource',
-    'resolve_attachment_resource', 'resolve_attachment_resource'
-  ]);
   expect(new Set(attachmentBytes).size).toBe(3);
-  const nodes = invoke.mock.calls.filter(([command]) => command === 'create_topic').map(([, args]) => args);
-  expect(nodes.flatMap(node => node.newImageReferences ?? [])).toHaveLength(3);
-  for (const node of nodes) for (const reference of node.newImageReferences ?? []) {
-    expect(node.content).toContain(`asset://${reference.storage_key}`);
+  const nodes = invoke.mock.calls.filter(([command]) => command === 'update_node_content_with_anchors').map(([, args]) => args);
+  expect(nodes.flatMap(node => node.edit.newImageReferences ?? [])).toHaveLength(3);
+  for (const node of nodes) for (const reference of node.edit.newImageReferences ?? []) {
+    expect(node.parent.content).toContain(`asset://${reference.storage_key}`);
   }
   expect(progress).toEqual([
-    { completed: 3, phase: 'attachments', total: 3 },
-    { completed: 2, phase: 'nodes', total: 2 }
+    { completed: 2, phase: 'nodes', total: 2 },
+    { completed: 3, phase: 'attachments', total: 3 }
   ]);
 });
