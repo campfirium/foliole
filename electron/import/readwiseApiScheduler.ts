@@ -1,5 +1,6 @@
 import type { ReadwiseSyncFrequency } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { NativeReadwiseApiScheduleStatus } from '../../lib/platform/nativeReadwiseApiImportContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { isReadwiseApiMigrationPending } from '../database/readwiseApiCandidateRun.js';
 import { loadReadwiseApiCandidateProgress } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseApiCompletedThrough } from '../database/readwiseApiImportState.js';
@@ -211,5 +212,5 @@ const scheduler = createReadwiseApiScheduler({
 
 export const loadReadwiseApiScheduleStatus = scheduler.loadStatus;
 export const refreshReadwiseApiScheduler = scheduler.refresh;
-export const startReadwiseApiScheduler = () => scheduler.refresh(true);
+export const startReadwiseApiScheduler = () => runWithDatabaseConnectionOwner(() => scheduler.refresh(true));
 export const stopReadwiseApiScheduler = scheduler.stop;
