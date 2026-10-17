@@ -24,6 +24,7 @@ it('ignores only the authenticated source session and wakes other sessions', asy
   const sessions = createSyncChangeSessions(randomUUID(), randomUUID);
   const a = sessions.open('a');
   const b = sessions.open('b');
+  expect(() => sessions.signal('b', a.session)).toThrow('sync_session_expired');
   sessions.changed(a.session);
   expect((await sessions.wait('b', b.session, b.marker, new AbortController().signal)).changed).toBe(true);
   const own = sessions.wait('a', a.session, a.marker, new AbortController().signal);

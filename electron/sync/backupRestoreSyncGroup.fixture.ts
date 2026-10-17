@@ -24,6 +24,7 @@ import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
+import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
@@ -43,7 +44,7 @@ async function initializeGroup(args: Record<string, unknown>) {
     workgroupKey: Buffer.alloc(32, 7).toString('base64url') });
   if (!server) {
     server = createWorkspaceSyncHttpServer({ appVersion: '0.7.14', deviceId: identity.identity_key });
-    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    await new Promise<void>((resolve) => server!.listen(Number(args.port ?? 0), '127.0.0.1', resolve));
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('test server address missing');
     origin = `http://127.0.0.1:${address.port}`;
@@ -200,7 +201,9 @@ async function run(action: string, args: Record<string, unknown>) {
   throw new Error('unknown test action');
 }
 process.on('message', (message: { id: number; action: string; args: Record<string, unknown> }) => {
-  const handler = message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
+  const handler = message.action === 'local_content_edit'
+    ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runDesktopFramedSyncEditCommand(action, args))
+    : message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
   void handler(message.action, message.args).then(
     (result) => process.send?.({ id: message.id, result }),
     (error: unknown) => process.send?.({ id: message.id, error: error instanceof Error ? `${message.action}: ${error.stack}` : String(error) })

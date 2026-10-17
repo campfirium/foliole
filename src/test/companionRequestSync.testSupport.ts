@@ -114,9 +114,9 @@ export async function createCompanionRequestFixture(script = compiledScript) {
 }
 
 function configureAttachmentReads(stateRoot: string) {
-  native.accessFile.mockImplementation(async (input: { action: string; key: string; keys?: string[]; offset?: number; length?: number }) => {
+  native.accessFile.mockImplementation(async (input: { action: string; key: string; keys?: string[]; offset?: number; length?: number; partial?: boolean; base64?: string }) => {
     const assets = path.join(stateRoot, 'documents', 'Foliole', 'Assets');
-    if (input.action === 'source-close') return {};
+    if (input.action === 'source-close' || input.action === 'acquire') return {};
     if (input.action === 'source-read') {
       const bytes = await fs.readFile(path.join(assets, input.key));
       return { base64: bytes.subarray(input.offset, (input.offset ?? 0) + (input.length ?? 0)).toString('base64') };
@@ -126,8 +126,19 @@ function configureAttachmentReads(stateRoot: string) {
         if (error.code !== 'ENOENT') throw error;
         return false;
       }))) };
-    if (!['source-stat', 'source-open'].includes(input.action)) throw new Error(`fixture_attachment_action_unavailable:${input.action}`);
-    const file = path.join(stateRoot, 'documents', 'Foliole', 'Assets', input.key);
+    const partial = path.join(assets, `.${input.key.slice(0, 64)}.partial`);
+    if (input.action === 'truncate') { await fs.writeFile(partial, Buffer.alloc(input.length ?? 0)); return {}; }
+    if (input.action === 'append') {
+      const info = await fs.stat(partial);
+      if (info.size !== input.offset) throw new Error('fixture_attachment_offset_mismatch');
+      await fs.appendFile(partial, Buffer.from(input.base64 ?? '', 'base64'));
+      return {};
+    }
+    if (input.action === 'hash') return { hash: createHash('sha256').update(await fs.readFile(partial)).digest('hex') };
+    if (input.action === 'publish') { await fs.rename(partial, path.join(assets, input.key)); return {}; }
+    if (input.action === 'discard') { await fs.rm(partial, { force: true }); return {}; }
+    if (!['source-stat', 'source-open', 'stat'].includes(input.action)) throw new Error(`fixture_attachment_action_unavailable:${input.action}`);
+    const file = input.partial ? partial : path.join(assets, input.key);
     const info = await fs.stat(file).catch(error => {
       if (error.code !== 'ENOENT') throw error;
       return null;

@@ -2,10 +2,9 @@ import type http from 'node:http';
 
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
-import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
-import { loadDesktopSyncGroup, loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
+import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
@@ -117,12 +116,10 @@ function loadInboundRuntime(request: http.IncomingMessage) {
     const auth = authenticateCompanionRequest({
       ...(bodySha256 === undefined ? {} : { bodySha256 }), request, requireMemberState: true
     });
-    const sessionId = new URL(request.url ?? '/', 'http://localhost').searchParams.get('sync_session_id') ?? undefined;
-    const peer = auth.ok ? loadDesktopSyncGroup()?.devices.find(device => device.device_identity_key === auth.device_id) : null;
-    if (auth.ok && isMobileSyncPlatform(peer?.platform ?? '') && !sessionId) {
-      throw new Error('sync_session_required');
-    }
-    const sessionSignal = auth.ok && sessionId ? desktopSyncChangeSessions().signal(auth.device_id, sessionId) : undefined;
+    const params = new URL(request.url ?? '/', 'http://localhost').searchParams;
+    const sessionId = params.has('sync_session_id') ? params.get('sync_session_id') ?? '' : undefined;
+    const sessionSignal = auth.ok && sessionId !== undefined
+      ? desktopSyncChangeSessions().signal(auth.device_id, sessionId) : undefined;
     return {
       databasePath: connection.dbPath,
       payloadBudget: connection.framedSyncPayloadBudget,
