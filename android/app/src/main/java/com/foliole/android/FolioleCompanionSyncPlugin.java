@@ -45,7 +45,9 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void maintainAttachmentFiles(PluginCall call) {
         fileExecutor.execute(() -> {
             try { call.resolve(FolioleAttachmentMaintenanceFiles.execute(getContext(), call)); }
-            catch (Exception error) { call.reject("Attachment maintenance failed", error); }
+            catch (Exception error) {
+                call.reject(FolioleCompanionPluginErrors.withCause("Attachment maintenance failed", error), error);
+            }
         });
     }
 

@@ -33,8 +33,9 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
       operation: 'attachment', action: 'stat', key: resource.storageKey });
     if (existing.present) {
       requireValue(existing.hash === hash && existing.length === bytes.length, 'Relaunched attachment differs');
+      const lease = await verifySendLease(await createHost(), resource, companionFramedFileOwner(owner));
       await remove(resource.storageKey);
-      return { restoredAfterRelaunch: true, hash, byteLength: bytes.length, cleanup: true };
+      return { restoredAfterRelaunch: true, hash, byteLength: bytes.length, lease, cleanup: true };
     }
     const first = await createHost();
     await first.receive(resource, 0, bytes.subarray(0, BLOCK));
@@ -50,19 +51,31 @@ export async function runAttachmentBlockNativeProbe(platform: 'android' | 'ios')
     for (let offset = BLOCK; offset < bytes.length; offset += BLOCK) {
       await recovered.receive(resource, offset, bytes.subarray(offset, offset + BLOCK));
     }
-    await recovered.withFile(resource.storageKey, async source => {
-      const presence = await FolioleCompanionSync.accessFramedSyncFile({ ...companionFramedFileOwner(owner),
-        operation: 'attachment', action: 'source-stat', key: resource.storageKey });
-      requireValue(presence.present && presence.length === bytes.length && presence.hash === '', 'Presence probe read content');
-      let protectedByLease = false;
-      try { await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'move', storageKey: resource.storageKey, trash: true }); }
-      catch (error) { protectedByLease = String(error).includes('attachment_send_busy'); }
-      requireValue(protectedByLease, 'Collection moved a leased attachment');
-      requireValue((await source.read(3 * BLOCK, 19)).every(byte => byte === 0x79), 'Attachment tail differs');
-    });
+    const lease = await verifySendLease(recovered, resource, companionFramedFileOwner(owner));
     return { restoredAfterRelaunch: false, hash, byteLength: bytes.length, recoveredOffset: status.offset,
-      leaseProtected: true, cleanup: false };
+      leaseProtected: true, lease, cleanup: false };
   } finally { await fixture.close(); }
+}
+
+async function verifySendLease(host: Awaited<ReturnType<typeof createCompanionAttachmentHost>>,
+  resource: { storageKey: string; byteLength: number }, owner: ReturnType<typeof companionFramedFileOwner>) {
+  return host.withFile(resource.storageKey, async source => {
+    const presence = await FolioleCompanionSync.accessFramedSyncFile({ ...owner,
+      operation: 'attachment', action: 'source-stat', key: resource.storageKey });
+    requireValue(presence.present && presence.length === resource.byteLength && presence.hash === '', 'Presence probe read content');
+    let rejected = false, errorMessage = '';
+    try { await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'move', storageKey: resource.storageKey, trash: true }); }
+    catch (error) { rejected = true; errorMessage = String(error); }
+    const inventories = await Promise.all([false, true].map(trash =>
+      FolioleCompanionSync.maintainAttachmentFiles({ operation: 'inventory', trash })));
+    requireValue(inventories.every(value => Array.isArray(value.files)), 'Lease inventory unavailable');
+    const [inAssets, inTrash] = inventories.map(value => value.files!.some(file => file.storageKey === resource.storageKey));
+    const tailMatches = (await source.read(3 * BLOCK, 19)).every(byte => byte === 0x79);
+    const evidence = { rejected, errorMessage, inAssets, inTrash, tailMatches };
+    requireValue(rejected && inAssets && !inTrash && tailMatches, `Lease protection failed: ${JSON.stringify(evidence)}`);
+    requireValue(errorMessage.includes('attachment_send_busy'), `Lease rejection reason hidden: ${JSON.stringify(evidence)}`);
+    return evidence;
+  });
 }
 
 async function remove(storageKey: string) {
