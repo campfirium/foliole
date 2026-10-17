@@ -8,7 +8,7 @@ import { resetPendingNodeContentRuntimePersistsForTests, scheduleNodeContentRunt
   drainPendingNodeContentRuntimePersists } from '../../src/store/workspaceStoreContentRuntimePersist';
 import { syncNodeContentWithAnchorsMutationToRuntime } from '../../src/store/workspaceRuntimeSync';
 import { waitForDesktopProductState } from '../acceptance/desktop-product-event.mjs';
-import { INITIAL_BODY, pasteMacImage } from './macos-a5-image-content-ui.mjs';
+import { INITIAL_BODY, openAndroidImageTopic, pasteMacImage } from './macos-a5-image-content-ui.mjs';
 
 vi.mock('../../src/store/workspaceRuntimeSync', () => ({
   hasWorkspaceNodeMutationRuntime: () => true,
@@ -82,4 +82,24 @@ it.each([
   await expect(pending).rejects.toThrow(error);
   expect(f.invoke).toHaveBeenCalledTimes(reads);
   expect(globalThis.__FOLIOLE_EDITOR_INPUT_DIAG).toBeUndefined();
+});
+
+it.each([true, false])('opens the image topic from review=%s without exiting another surface', async initiallyReviewing => {
+  let reviewing = initiallyReviewing;
+  const calls = [];
+  const locator = id => ({
+    or: () => ({ first: () => ({ waitFor: async () => {} }) }),
+    isVisible: async () => reviewing && id === 'companion-review-action-read',
+    click: async () => {
+      if (reviewing) throw new Error('navigation_hidden_by_review');
+      calls.push(id);
+    },
+    waitFor: async () => {}
+  });
+  const page = { getByTestId: locator, getByText: locator, locator };
+  const args = { paths: { adb: '/adb' }, serial: 'fixed', checked: vi.fn(() => { reviewing = false; }) };
+  await openAndroidImageTopic(page, 'Image topic', 'image-node', args);
+  expect(args.checked).toHaveBeenCalledTimes(initiallyReviewing ? 1 : 0);
+  if (initiallyReviewing) expect(args.checked).toHaveBeenCalledWith('/adb', ['-s', 'fixed', 'shell', 'input', 'keyevent', 'KEYCODE_BACK']);
+  expect(calls).toEqual(['companion-tab-browse', 'Image topic']);
 });

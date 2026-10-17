@@ -8,7 +8,7 @@ import { ACCEPTANCE_APP_ID } from './macos-a5-acceptance-package-cleanup.mjs';
 import { assertImageContentFact, readAndroidImageFact, readMacImageFact } from './macos-a5-image-content-evidence.mjs';
 import {
   ANDROID_MARKER, IMAGE_NAME, INITIAL_BODY, assertLoadedImages, connectImageWebView,
-  editAndroidBody, imageDevice, openAndroidImageTopic, pasteMacImage
+  editAndroidBody, imageDevice, openAndroidImageTopic, pasteMacImage, showAndroidImageNavigation
 } from './macos-a5-image-content-ui.mjs';
 import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
 
@@ -46,8 +46,9 @@ function startAndroid(args) {
     `${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`]);
 }
 
-async function requestAndroidImageSync(page, evidenceRoot) {
+async function requestAndroidImageSync(page, evidenceRoot, args) {
   try {
+    await showAndroidImageNavigation(page, args);
     await page.getByTestId('companion-tab-settings').click();
     await page.getByTestId('companion-settings-sync').click();
     await page.getByTestId('companion-sync-now').click();
@@ -71,8 +72,8 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   let binding = await connectImageWebView(args, device);
   receipt.stage = 'android-receive';
   receipt.firstWebView = { pid: binding.pid, socket: binding.socket };
-  await requestAndroidImageSync(binding.page, evidenceRoot);
-  await openAndroidImageTopic(binding.page, title, nodeId);
+  await requestAndroidImageSync(binding.page, evidenceRoot, args);
+  await openAndroidImageTopic(binding.page, title, nodeId, args);
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-received-image.png') });
   const waiting = session.waitForState({ command: 'load_node_document', commandArgs: { nodeId },
@@ -89,7 +90,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   binding = await connectImageWebView(args, device);
   receipt.restartedWebView = { pid: binding.pid, socket: binding.socket };
   assert.notEqual(receipt.restartedWebView.pid, receipt.firstWebView.pid);
-  await openAndroidImageTopic(binding.page, title, nodeId);
+  await openAndroidImageTopic(binding.page, title, nodeId, args);
   await binding.page.getByText(ANDROID_MARKER, { exact: true }).waitFor();
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-restarted-image.png') });
