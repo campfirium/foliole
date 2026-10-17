@@ -25,7 +25,8 @@ it('binds read-only preflight to the daily library and refuses unreviewed differ
   expect(build).not.toHaveBeenCalled();
 });
 
-it('runs the sync acceptance controller from the same source root as its APK', () => {
+it.each(['single-principal-sync-group', 'image-content-sync'])(
+  'runs %s from the APK source root with its device output reader', action => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a5-frozen-dispatch-'));
   const actionDirectory = path.join(root, 'scripts/android');
   const marker = path.join(root, 'controller-source.json');
@@ -33,6 +34,9 @@ it('runs the sync acceptance controller from the same source root as its APK', (
   fs.writeFileSync(path.join(actionDirectory, 'macos-a5-single-principal-sync-group-entry.mjs'),
     `import fs from 'node:fs';
 export async function runMacosA5SinglePrincipalSyncGroupEntry(args) {
+  if (args.scenario === 'image-content' && args.captured('/adb', ['pidof']) !== '1234') {
+    throw new Error('Device output reader was not forwarded.');
+  }
   fs.writeFileSync(${JSON.stringify(marker)}, JSON.stringify(args.paths));
 }
 `);
@@ -41,7 +45,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args) {
     const entry = pathToFileURL(path.resolve('scripts/android/macos-a5-action-dispatch.mjs')).href;
     execFileSync(process.execPath, ['--input-type=module', '-e',
       `import { dispatchMacosA5Action } from ${JSON.stringify(entry)};
-await dispatchMacosA5Action({ action: 'single-principal-sync-group',
+await dispatchMacosA5Action({ action: ${JSON.stringify(action)}, captured: () => '1234',
   paths: ${JSON.stringify(paths)},
   assertFixed: () => { throw new Error('Unfrozen controller was executed.'); }
 });`]);
