@@ -80,9 +80,19 @@ async function sample({ direction, index, topic, session, page, reader, evidence
   record.saveReturnedAt = Date.now();
   const read = direction === 'mac-to-a5' ? () => reader.read(topic.nodeId) : () => readMacImageFact(evidenceRoot, topic.nodeId);
   const sourceRead = direction === 'mac-to-a5' ? () => readMacImageFact(evidenceRoot, topic.nodeId) : () => reader.read(topic.nodeId);
-  const source = await waitForTimingBody(sourceRead, content, { startedAt });
+  record.stage = 'source-body-readback';
+  const source = await waitForTimingBody(async () => {
+    const fact = await sourceRead();
+    record.lastSourceBody = fact?.content ?? null;
+    return fact;
+  }, content, { startedAt });
   record.source = source;
-  Object.assign(record, await waitForTimingBody(read, content, { startedAt }));
+  record.stage = 'target-body-readback';
+  Object.assign(record, await waitForTimingBody(async () => {
+    const fact = await read();
+    record.lastTargetBody = fact?.content ?? null;
+    return fact;
+  }, content, { startedAt }));
   await waitForTimingBody(() => reader.read(topic.nodeId), content, { startedAt });
   const mac = await readMacImageFact(evidenceRoot, topic.nodeId);
   assert.equal(mac.content, content);
@@ -117,6 +127,8 @@ export async function runSyncTimingScenario({ args, device, evidenceRoot, sessio
     receipt.status = 'passed';
   } catch (error) {
     receipt.status = 'failed'; receipt.error = error.message;
+    const active = receipt.samples.at(-1);
+    if (active?.status === 'started') { active.status = 'failed'; active.error = error.message; }
     await page.screenshot({ path: path.join(evidenceRoot, 'timing-failure.png') }).catch(() => undefined);
     fs.writeFileSync(path.join(evidenceRoot, 'timing-failure.txt'), await page.locator('body').innerText().catch(() => 'page unavailable'));
     throw error;
