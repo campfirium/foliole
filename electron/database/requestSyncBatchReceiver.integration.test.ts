@@ -21,7 +21,8 @@ async function receiver() {
 }
 
 async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, records: NativeSyncNodeRecord[],
-  options: { truncate?: boolean; wrongId?: boolean; wrongObjectId?: boolean; wrongGlobalId?: boolean; truncateSecond?: boolean; duplicate?: boolean } = {}) {
+  options: { truncate?: boolean; wrongId?: boolean; wrongObjectId?: boolean; wrongGlobalId?: boolean; truncateSecond?: boolean;
+    duplicate?: boolean; selection?: 'missing' | 'extra' | 'duplicate' | 'exact'; legacy?: boolean } = {}) {
   const files = records.map(() => new RequestSyncFiles(fixture.host.files, `requests/${crypto.randomUUID()}`));
   const identities = records.map((record, i) => ({ requestId: new Uint8Array(16).fill(i + 1), objectType: 'node', globalId: record.object_id }));
   try {
@@ -31,6 +32,7 @@ async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, recor
       const fact = projection.manifest.facts[0]!;
       for (const blob of fact.blobs) await file.writeBody(blob, projection.bodyBlob);
       await file.writeFact(fact);
+      if (options.selection === 'duplicate') await file.writeFact(fact);
       return { ...identities[i]!, currentVersionId: record.version_id ?? '', sourceStateHash: fact.sharedStateHash };
     }));
     const wire = await prepareRequestSyncWire({ context, groupKey, messages: async function* (contextId): AsyncGenerator<RequestSyncMessage> {
@@ -43,11 +45,34 @@ async function transfer(fixture: Awaited<ReturnType<typeof batchFixture>>, recor
       }
       if (!options.truncate) yield requestSyncBatchEnd(batchId, records.length);
     } });
+    if (options.legacy) new DataView(wire.preamble.buffer, wire.preamble.byteOffset).setUint16(10, 25);
+    const expected = identities.map((identity, index) => ({ ...identity,
+      ...(options.selection ? { need: { frontierFactIds: options.selection === 'extra' ? [] :
+        [records[index]!.version_id!, ...(options.selection === 'missing' ? ['missing-version'] : [])],
+      requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], resourceHashes: [], sharedState: true } } : {}) }));
     return await receiveRequestSyncBatch(fixture.host, { ...wire, context, groupKey, peerState,
       author: 'initiator', requestId: options.wrongId ? new Uint8Array(16).fill(99) : batchId,
-      expected: options.wrongObjectId ? identities.map(identity => ({ ...identity, requestId: new Uint8Array(16).fill(99) })) : options.wrongGlobalId ? identities.map(identity => ({ ...identity, globalId: 'another-object' })) : identities });
+      expected: options.wrongObjectId ? identities.map(identity => ({ ...identity, requestId: new Uint8Array(16).fill(99) })) : options.wrongGlobalId ? identities.map(identity => ({ ...identity, globalId: 'another-object' })) : expected });
   } finally { await Promise.all(files.map(file => file.close())); }
 }
+
+it.each(['missing', 'extra', 'duplicate', 'exact'] as const)('commits only the exact requested fact set: %s', async selection => {
+  const fixture = await receiver();
+  const result = transfer(fixture, [batchRecord('selected', 'Body')], { selection });
+  if (selection === 'exact') await expect(result).resolves.toMatchObject({ results: [{ error: '' }] });
+  else await expect(result).rejects.toThrow();
+  expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual(selection === 'exact' ? [{ id: 'selected' }] : []);
+  expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions'))
+    .toEqual(selection === 'exact' ? [{ version_id: 'version-selected' }] : []);
+});
+
+it('rejects framed 25 before applying any business facts', async () => {
+  const fixture = await receiver();
+  await expect(transfer(fixture, [batchRecord('old', 'Body')], { legacy: true }))
+    .rejects.toThrow('framed_sync_protocol_version_unsupported');
+  expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([]);
+  expect(await fixture.device.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
+});
 
 it('rolls back a bad graph object while committing the following valid object and its version', async () => {
   const fixture = await receiver();

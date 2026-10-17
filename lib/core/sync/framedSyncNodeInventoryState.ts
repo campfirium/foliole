@@ -10,12 +10,16 @@ export function changedNodeVersionIds(source: FramedSyncInventoryEntry, destinat
     const value = version.parse(JSON.parse(text));
     return [value[0], value] as const;
   }));
-  return (source.versionStates ?? []).flatMap(text => {
+  const described = new Set<string>();
+  const changed = (source.versionStates ?? []).flatMap(text => {
     const value = version.parse(JSON.parse(text));
+    described.add(value[0]);
     const other = present.get(value[0]);
     if (other?.[5] === 'deleted' || value[5] === 'missing') return other ? [] : [value[0]];
     return other && JSON.stringify(other) === text ? [] : [value[0]];
   });
+  const known = new Set(destination?.frontierFactIds ?? []);
+  return [...changed, ...source.frontierFactIds.filter(id => !described.has(id) && !known.has(id))];
 }
 
 export function needsNodeCurrentReference(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {

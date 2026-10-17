@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   run: vi.fn()
 }));
 
-vi.mock('./companionSyncRunOwner', () => ({ runCompanionSyncAsOwner: mocks.run }));
+vi.mock('./companionSyncRunOwner', () => ({
+  loadActiveCompanionSyncRun: () => null, runCompanionSyncAsOwner: mocks.run
+}));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   recordCompanionWorkspaceSyncEvent: mocks.recordEvent,
@@ -60,11 +62,11 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
     }
   }, {
     deviceId: 'desktop-1', endpointUrl: 'http://desktop:38641', groupId: 'group-1',
-    protocolVersion: 25
+    protocolVersion: 26
   }, runStreamSync);
 
   expect(runStreamSync).toHaveBeenCalledWith(expect.objectContaining({ framedPeer: {
-    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 25
+    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 26
   } }));
 });
 

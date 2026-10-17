@@ -14,7 +14,7 @@ import { restoreFixture, transfer } from './requestSyncRestoreRecovery.testSuppo
 import { textBranch } from './topicTextState.testSupport.js';
 
 it.each(['node_open_state', 'parent_child_order'] as const)(
-  'preserves %s received before its node and recovers after the dependency arrives', async type => {
+  'preserves %s through its current node dependency contract', async type => {
     const fixture = await restoreFixture();
     const source = fixture.peer('source'); const target = fixture.peer('target');
     try {
@@ -31,18 +31,18 @@ it.each(['node_open_state', 'parent_child_order'] as const)(
       const differences = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(source.db), remote: [] });
       const state = differences.find(value => value.objectType === type);
       const node = differences.find(value => value.objectType === 'node' && value.globalId === 'topic');
-      if (!state || !node) throw new Error('dependency_fixture_inventory_missing');
+      if (!node || (type === 'parent_child_order' && !state)) throw new Error('dependency_fixture_inventory_missing');
       const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
         providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
       if (type === 'node_open_state') {
-        await expect(transfer(source, target, progress, state)).rejects.toThrow('sync_node_open_state_node_missing:topic');
-        expect(target.sqlite.prepare('SELECT * FROM node_open_state').all()).toEqual([]);
+        expect(state).toBeUndefined();
+        expect(node.need.stateFactIds).toContain(JSON.stringify([type, id, hash]));
       } else {
-        await transfer(source, target, progress, state);
+        await transfer(source, target, progress, state!);
         expect(target.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(id)).toBe('[]');
       }
       await transfer(source, target, progress, node);
-      await transfer(source, target, progress, state);
+      if (state) await transfer(source, target, progress, state);
       target.reopen();
       expect(target.sqlite.prepare("SELECT kind, content FROM nodes WHERE id = 'topic'").get())
         .toEqual({ kind: 'folder', content: '' });

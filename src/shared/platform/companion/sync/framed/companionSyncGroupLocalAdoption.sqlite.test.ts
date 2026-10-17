@@ -47,7 +47,7 @@ async function setup(kind: 'android' | 'ios') {
   const prepare = async (record: NativeSyncNodeRecord): Promise<RequestSyncObjectInput> => {
     const projection = projectFramedSyncNodeRecord(record);
     return {
-      context: { groupId: adoption.groupId, protocolVersion: 25,
+      context: { groupId: adoption.groupId, protocolVersion: 26,
         senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', receiverDeviceId: 'receiver',
         receiverLibraryEpoch: adoption.libraryEpoch },
       globalId: record.object_id, objectType: record.object_type, requestId: new Uint8Array(16).fill(++index),
@@ -76,7 +76,7 @@ it.each(['android', 'ios'] as const)('clears once and commits %s objects indepen
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(true);
   await applyRequestSyncObject(port, first);
   expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
-  expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 25,
+  expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 26,
     senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
     receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch })).toHaveLength(1);
   await applyRequestSyncObject(port, second);

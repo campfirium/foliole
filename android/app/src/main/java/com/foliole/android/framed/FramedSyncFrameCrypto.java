@@ -12,9 +12,9 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class FramedSyncFrameCrypto {
     private static final byte[] SESSION_INFO =
-        "Foliole framed sync v25 session".getBytes(StandardCharsets.UTF_8);
+        "Foliole framed sync v26 session".getBytes(StandardCharsets.UTF_8);
     private static final byte[] TRANSFER_INFO =
-        "Foliole framed sync v25 transfer".getBytes(StandardCharsets.UTF_8);
+        "Foliole framed sync v26 transfer".getBytes(StandardCharsets.UTF_8);
 
     private FramedSyncFrameCrypto() {}
 

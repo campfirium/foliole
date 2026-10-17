@@ -3,9 +3,9 @@ import { expect, it } from 'vitest';
 
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
 import { migrateCompanionDatabase } from '../database/companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from '../database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../database/migrations.js';
 
-import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
+import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
 import { readFramedSyncInventory } from './framedSyncInventoryRead.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
 
@@ -47,6 +47,20 @@ it.each(['desktop', 'companion'] as const)('upgrades the %s digest projection wi
     expect(await readFramedSyncInventory(host.db)).toEqual(before);
     await host.db.transaction(flushRequestSyncInventoryDigests);
     expect(await readRequestSyncInventorySummaries(host.db)).toEqual(framedSyncInventorySummary(before));
-    expect(host.sqlite.pragma('user_version', { simple: true })).toBe(platform === 'desktop' ? 157 : 86);
+    expect(host.sqlite.pragma('user_version', { simple: true })).toBe(platform === 'desktop' ? DATABASE_SCHEMA_VERSION : 86);
+  } finally { host.sqlite.close(); }
+});
+
+
+it('rejects a corrupt digest within the same read snapshot', async () => {
+  const host = textDevice();
+  try {
+    await host.receive([textBranch('version', 'Body')]);
+    await host.db.transaction(flushRequestSyncInventoryDigests);
+    host.sqlite.prepare('UPDATE framed_sync_node_digest SET shared_state_hash = ?').run('0'.repeat(64));
+    await expect(host.db.transaction(async db => {
+      const summaries = await readRequestSyncInventorySummaries(db);
+      return expandRequestSyncNodeSummaries(db, summaries, ['topic']);
+    })).rejects.toThrow('framed_sync_source_changed');
   } finally { host.sqlite.close(); }
 });

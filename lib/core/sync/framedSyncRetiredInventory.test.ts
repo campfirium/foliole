@@ -59,7 +59,7 @@ it.each(['available', 'missing'] as const)('preserves the %s body requirement', 
   }
 });
 
-it('rejects a retained old-algorithm summary and accepts a freshly captured summary', async () => {
+it('resolves requested immutable fact IDs independently of a previous inventory hash', async () => {
   const historical = version('a'.repeat(64));
   const current = await inventory(historical);
   const oldHash = sha256(new TextEncoder().encode(JSON.stringify([
@@ -71,7 +71,7 @@ it('rejects a retained old-algorithm summary and accepts a freshly captured summ
     facts: [{ factId: 'current', globalId: 'node', kind: 2 as const, objectType: 'node' }],
     sourceStateHash: oldHash };
   expect(() => resolveFramedSyncDifferenceRequest(current, request))
-    .toThrow('framed_sync_difference_request_source_changed');
+    .not.toThrow();
   expect(() => resolveFramedSyncDifferenceRequest(current,
     { ...request, sourceStateHash: new Uint8Array(current.sharedStateHash) })).not.toThrow();
 });

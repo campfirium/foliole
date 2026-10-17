@@ -1,6 +1,6 @@
 import { bytes, unsigned } from './framedSyncDecodedValues.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
-import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
+import type { FramedSyncInventoryEntry, FramedSyncInventoryNeed } from './framedSyncInventory.js';
 import { assertRequestSyncBatchEnd, assertRequestSyncObjectIdentity, readRequestSyncObjectIdentity,
   readRequestSyncObjectResult, REQUEST_SYNC_BATCH_OBJECTS,
   type RequestSyncObjectIdentity, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
@@ -8,10 +8,11 @@ import { withRequestSyncFiles } from './requestSyncFiles.js';
 import { applyReceivedRequestSyncObject, type RequestSyncDatabaseHost, type receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
 import { assertRequestSyncObjectSource } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages, type RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
+import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
 
 type ReceiveInput = Omit<Parameters<typeof receiveRequestSyncObject>[1], 'expectedObject'> & {
-  expected?: readonly (RequestSyncObjectIdentity & { sourceSnapshot?: FramedSyncInventoryEntry })[];
+  expected?: readonly (RequestSyncObjectIdentity & { sourceSnapshot?: FramedSyncInventoryEntry; need?: FramedSyncInventoryNeed })[];
   requestId?: Uint8Array;
 };
 
@@ -43,17 +44,19 @@ export async function receiveRequestSyncBatch(host: RequestSyncDatabaseHost, inp
         const result = readRequestSyncObjectResult(message);
         if (!result.error) throw new Error('request_sync_batch_object_missing');
         results.push(result);
-      } else results.push(await receiveObject(host, input, next.value, messages, input.expected?.[results.length]?.sourceSnapshot));
+      } else results.push(await receiveObject(host, input, next.value, messages, input.expected?.[results.length]));
     }
   } finally { await messages.return(undefined); }
 }
 
 async function receiveObject(host: RequestSyncDatabaseHost, input: ReceiveInput,
-  first: RequestSyncDecodedMessage, messages: AsyncIterator<RequestSyncDecodedMessage>, expected?: FramedSyncInventoryEntry) {
+  first: RequestSyncDecodedMessage, messages: AsyncIterator<RequestSyncDecodedMessage>,
+  expected?: { sourceSnapshot?: FramedSyncInventoryEntry; need?: FramedSyncInventoryNeed }) {
   return withRequestSyncFiles(host.files, async files => {
     const header = await receiveRequestSyncObjectMessages(objectMessages(first, messages),
       decodeFramedSyncPreamble(input.preamble).contextId, files);
-    assertRequestSyncObjectSource(header, expected);
+    assertRequestSyncObjectSource(header, expected?.sourceSnapshot);
+    if (expected?.need) await assertReceivedRequestFacts(files, expected.need);
     try {
       await applyReceivedRequestSyncObject(host, input, header, files);
       return { ...header, error: '' };

@@ -27,11 +27,13 @@ it('retains a review with a missing receiver node, delivers independent work and
   try {
     receiver.pragma('foreign_keys = OFF');
     receiver.prepare('DELETE FROM review_log WHERE op_id = ?').run('t326-review-op');
+    receiver.prepare('DELETE FROM node_sync_version_parents WHERE version_id IN (SELECT version_id FROM node_sync_versions WHERE object_id = ?)').run('t326-relation-review');
+    receiver.prepare('DELETE FROM node_sync_versions WHERE object_id = ?').run('t326-relation-review');
     receiver.prepare('DELETE FROM nodes WHERE id = ?').run('t326-relation-review');
   } finally { receiver.close(); }
   await fixture.left.seed({ content: 'Independent body', nodeId: 't326-independent', title: 'Independent' });
 
-  await expect(sendReviewOnly(host)).rejects.toThrow('framed_sync_review_node_missing:t326-relation-review');
+  await expect(sendReviewOnly(host)).rejects.toThrow('request_sync_current_version_unavailable');
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).reviews).toEqual([]);
   expect(host.sqlite.prepare('SELECT * FROM review_log WHERE op_id = ?').get('t326-review-op')).toEqual(original);
 
@@ -56,7 +58,7 @@ async function sendReviewOnly(host: Awaited<ReturnType<typeof createCompanionReq
   const database = await currentCompanionRequestSyncDatabaseHost();
   const exchange = createCompanionRequestSyncExchange(database, {
     endpointUrl: fixture.rightSnapshot.origin, groupKey: new Uint8Array(32).fill(7),
-    context: { groupId: 't326-group', protocolVersion: 25,
+    context: { groupId: 't326-group', protocolVersion: 26,
       initiatorDeviceId: fixture.leftSnapshot.deviceId,
       initiatorLibraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
       responderDeviceId: fixture.rightSnapshot.deviceId,

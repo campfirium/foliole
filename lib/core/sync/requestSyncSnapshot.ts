@@ -8,13 +8,12 @@ import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '
 import { selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewSelection.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
-import { readRequestSyncNodeGraph } from './requestSyncNodeGraph.js';
+import { selectRequestSyncNodeSource } from './requestSyncSelection.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 
 async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference, files: RequestSyncFiles) {
-  await readRequestSyncNodeGraph(db, difference.globalId);
   const requested = requiredFramedSyncNodeVersionIds(difference);
   for (const id of requested) {
     const record = await loadRetainedSyncNodeVersionFact(db, id, false);
@@ -45,11 +44,16 @@ export async function writeRequestSyncSnapshot(db: DbPort, difference: FramedSyn
   if (difference.direction !== 'local_to_remote') throw new Error('request_sync_direction_invalid');
   await assertSyncGroupLocalPublicationAllowed(db);
   const entry = await readFramedSyncInventoryEntry(db, difference);
-  const validation = revalidateFramedSyncInventorySource({ currentSource: entry ? [entry] : [],
+  if (!entry) throw new Error('framed_sync_source_changed');
+  if (difference.objectType === 'node') {
+    const selected = await selectRequestSyncNodeSource(db, entry, difference);
+    await writeNodes(db, { ...difference, sourceSnapshot: selected }, files);
+    return selected;
+  }
+  const validation = revalidateFramedSyncInventorySource({ currentSource: [entry],
     differences: [difference], direction: 'local_to_remote' });
   if (validation.deferredObjects.length || !entry) throw new Error('framed_sync_source_changed');
-  if (difference.objectType === 'node') await writeNodes(db, difference, files);
-  else for (const id of difference.need.stateFactIds?.length ? difference.need.stateFactIds : entry.stateFactIds ?? []) {
+  for (const id of difference.need.stateFactIds?.length ? difference.need.stateFactIds : entry.stateFactIds ?? []) {
     const fact = await selectFramedSyncObjectStateFact(db, difference, id);
     for (const blob of fact.blobs) {
       if (blob.role !== 5) throw new Error('request_sync_body_role_invalid');

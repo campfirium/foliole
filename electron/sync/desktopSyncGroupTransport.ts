@@ -32,7 +32,7 @@ export function loadDesktopSyncGroupPeers() {
 export async function continueDesktopSyncGroupSync(
   peer?: DesktopSyncGroupPeer,
   activity?: DesktopSyncActivityContext
-): Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: boolean } | null> {
+): Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: boolean; dynamicBacklog?: boolean } | null> {
   const target = peer ?? loadDesktopSyncGroupPeers()[0];
   if (!target) return null;
   if (isMobileSyncPlatform(target.peer_platform)) return null;
@@ -107,11 +107,11 @@ async function continuePeerSync(
       activity
     );
   }
-  return { complete: result.complete, attachmentProgress: result.attachmentProgress ?? 0, attachmentYielded: result.attachmentYielded };
+  return { complete: result.complete, ...(result.dynamicBacklog ? { dynamicBacklog: true } : {}), attachmentProgress: result.attachmentProgress ?? 0, attachmentYielded: result.attachmentYielded };
 }
 
 async function continueDatabaseAndResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]):
-Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: boolean }> {
+Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: boolean; dynamicBacklog?: boolean }> {
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(input.peer.group_id));
   if (!key || !input.peerRound) throw new Error('sync_round_context_missing');
   const context = { groupId: input.peer.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,

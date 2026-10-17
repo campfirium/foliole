@@ -109,9 +109,10 @@ async function persistConfirmedSyncTime(confirmedAt: string | undefined) {
   }
 }
 
-function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionRequestSyncDatabaseRound>>, 'received' | 'sent' | 'madeProgress'>) {
+function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionRequestSyncDatabaseRound>>, 'received' | 'sent' | 'madeProgress'> & { dynamicBacklog?: boolean }) {
   return {
     madeDatabaseProgress: round.madeProgress,
+    ...(round.dynamicBacklog ? { dynamicDatabaseBacklog: true } : {}),
     appliedNodeIds: round.received,
     appliedObjectIds: round.received,
     appliedPackBlobCount: 0,

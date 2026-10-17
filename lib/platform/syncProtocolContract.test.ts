@@ -19,10 +19,10 @@ const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities]
 
 it('rejects a same-version peer lacking the current request transport', () => {
   const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-    .filter(value => value !== 'framed-sync-v25') });
+    .filter(value => value !== 'framed-sync-v26') });
   expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
     status: 'incompatible', reason: 'required_capability_missing',
-    missing_capabilities: ['framed-sync-v25']
+    missing_capabilities: ['framed-sync-v26']
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).status).toBe('compatible');
 });

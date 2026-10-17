@@ -3,11 +3,12 @@ import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMember
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSyncContract.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
-import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
+import type { FramedSyncInventoryDifference, FramedSyncInventoryNeed } from './framedSyncInventory.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from './requestSyncFiles.js';
 import { applyRequestSyncObject } from './requestSyncObjectApply.js';
 import { assertRequestSyncObjectSource, requestSyncObjectMessages, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages } from './requestSyncObjectReceiver.js';
+import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
 import { writeRequestSyncSnapshot } from './requestSyncSnapshot.js';
 import { prepareRequestSyncWire, readRequestSyncWire,
   type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
@@ -49,7 +50,7 @@ export async function receiveRequestSyncObject(host: RequestSyncDatabaseHost, in
   peerState: SyncGroupMemberStatePayload;
   preamble: Uint8Array;
   frames: AsyncIterable<RequestSyncWireFrame>;
-  expectedObject: { objectType: string; globalId: string; sourceSnapshot?: FramedSyncInventoryDifference['sourceSnapshot'] };
+  expectedObject: { objectType: string; globalId: string; sourceSnapshot?: FramedSyncInventoryDifference['sourceSnapshot']; need?: FramedSyncInventoryNeed };
   signal?: AbortSignal;
   objectOptions?: ApplySyncObjectsWithDbPortOptions;
 }) {
@@ -60,6 +61,7 @@ export async function receiveRequestSyncObject(host: RequestSyncDatabaseHost, in
       throw new Error('request_sync_object_identity_mismatch');
     }
     assertRequestSyncObjectSource(header, input.expectedObject.sourceSnapshot);
+    if (input.expectedObject.need) await assertReceivedRequestFacts(files, input.expectedObject.need);
     return applyReceivedRequestSyncObject(host, input, header, files);
   }, input.signal);
 }

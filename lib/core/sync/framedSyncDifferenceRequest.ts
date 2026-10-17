@@ -96,11 +96,11 @@ export function resolveFramedSyncDifferenceRequest(
   request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
 ): FramedSyncInventoryDifference {
   if (request.resources.length) throw new Error('framed_sync_database_request_required');
-  if (request.currentVersionId !== (current.currentVersionId ?? '')) throw new Error('framed_sync_difference_request_source_changed');
   if (request.globalId !== current.globalId || request.objectType !== current.objectType) {
     throw new Error('framed_sync_difference_request_identity_mismatch');
   }
-  if (!request.sourceStateHash || hex(request.sourceStateHash) !== hex(current.sharedStateHash)) {
+  if (current.objectType !== 'node' && (request.currentVersionId !== (current.currentVersionId ?? '') ||
+      !request.sourceStateHash || hex(request.sourceStateHash) !== hex(current.sharedStateHash))) {
     throw new Error('framed_sync_difference_request_source_changed');
   }
   if (request.facts.some((fact) =>
@@ -130,7 +130,7 @@ export function resolveFramedSyncDifferenceRequest(
       sharedState: frontierFactIds.length > 0 || (current.objectType !== 'node' && stateFactIds.length > 0)
     },
     objectType: current.objectType,
-    sourceSnapshot: current
+    sourceSnapshot: current.objectType === 'node' ? { ...current, currentVersionId: request.currentVersionId } : current
   };
 }
 

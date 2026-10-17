@@ -47,7 +47,7 @@ async function pullBatch(host: RequestSyncDatabaseHost, exchange: RequestSyncExc
   options: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'peerState' | 'objectOptions'>) {
   const requestId = crypto.getRandomValues(new Uint8Array(16));
   const expected = differences.map(difference => ({ requestId: crypto.getRandomValues(new Uint8Array(16)),
-    objectType: difference.objectType, globalId: difference.globalId, sourceSnapshot: difference.sourceSnapshot }));
+    objectType: difference.objectType, globalId: difference.globalId, sourceSnapshot: difference.sourceSnapshot, need: difference.need }));
   return withControlRequest(exchange, '/companion/framed-sync?request=pulls',
     requestSyncBatchDifferences(differences, expected.map(identity => identity.requestId), requestId), async response => {
       const result = await receiveRequestSyncBatch(host, { ...exchange, ...response, ...options,

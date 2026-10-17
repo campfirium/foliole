@@ -18,7 +18,7 @@ import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from './numberedMigrationLatestRegi
 let sqlite: Database.Database;
 afterEach(() => sqlite?.close());
 
-async function setup(protocolVersion = 25, selected?: CanonicalManifest) {
+async function setup(protocolVersion = 26, selected?: CanonicalManifest) {
   sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
@@ -87,7 +87,7 @@ it.each([22, 23])('upgrades protocol %s publication payloads from schema 147', a
 it('keeps the selected node version set when a legacy publication has no version states', async () => {
   const record = identity(branch('selected', 'Body', branch('known-parent', 'Parent')));
   const manifest = { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] };
-  const { db } = await setup(25, manifest);
+  const { db } = await setup(26, manifest);
   migrate();
   const [row] = await db.query<DbRow>('SELECT * FROM framed_sync_outbound_publications');
   const restored = readFramedSyncPublication(row!);

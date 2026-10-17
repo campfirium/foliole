@@ -38,7 +38,8 @@ import { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js'
 import { pullDesktopRequestSyncObject } from './desktopRequestSyncPullHttp.js';
 import { clearDesktopSyncGroupMemberStateReadiness, markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
-it.each([false, true])('persists through signed HTTP without transfer bookkeeping when response lost=%s', async loseResponse => {
+it.each([{ loseResponse: false, advance: false }, { loseResponse: true, advance: false },
+  { loseResponse: false, advance: true }])('persists through signed HTTP: $loseResponse response lost, $advance source advanced', async ({ loseResponse, advance }) => {
   await mkdir('.tmp/artifacts', { recursive: true });
   sandbox.root = await mkdtemp(path.resolve('.tmp/artifacts/request-sync-http-'));
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(sandbox.root, 'target'));
@@ -59,7 +60,8 @@ it.each([false, true])('persists through signed HTTP without transfer bookkeepin
   try {
     await seedTarget();
     const base = textBranch('base', 'Original');
-    await applyConvergentSyncNodesWithDbPort(sourceDb, [base, textBranch('head', 'Current', base)]);
+    const head = textBranch('head', 'Current', base);
+    await applyConvergentSyncNodesWithDbPort(sourceDb, [base, head]);
     const entry = await readFramedSyncInventoryEntry(sourceDb, { objectType: 'node', globalId: 'topic' });
     if (!entry) throw new Error('test_entry_missing');
     const difference = compareFramedSyncInventories({ local: [entry], remote: [] })[0]!;
@@ -69,6 +71,8 @@ it.each([false, true])('persists through signed HTTP without transfer bookkeepin
     const groupKey = new Uint8Array(32).fill(7);
     const relayResult = await startRelay(`http://127.0.0.1:${address.port}`, loseResponse);
     relay = relayResult.server;
+    if (advance) await applyConvergentSyncNodesWithDbPort(sourceDb, [textBranch('next', 'Newer content', head)],
+      { collectVersionPayloads: false });
     const posting = postDesktopRequestSyncObject(host, { difference, groupKey, groupSecret: Buffer.from(groupKey).toString('base64url'),
       endpointUrl: relayResult.url, context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
         initiatorDeviceId: 'peer', initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
@@ -77,7 +81,7 @@ it.each([false, true])('persists through signed HTTP without transfer bookkeepin
     const databasePath = await assertCommitted();
     const remote = await withRequestSyncReadonlySnapshot(databasePath, db => readFramedSyncInventoryEntry(db, difference));
     expect(compareFramedSyncInventories({ local: [entry], remote: remote ? [remote] : [] })).toEqual([]);
-    await pullBack(host, `http://127.0.0.1:${address.port}`, sourcePath);
+    if (!advance) await pullBack(host, `http://127.0.0.1:${address.port}`, sourcePath);
     await completeRound(host, `http://127.0.0.1:${address.port}`);
     expect(await files.list('requests')).toEqual([]);
     expect(await files.list('sessions')).toEqual([]);

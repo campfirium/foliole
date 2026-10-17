@@ -47,5 +47,5 @@ export function hasRetryWork(result: CompanionDesktopSyncResult) {
 
 export function hasFastRetryWork(result: CompanionDesktopSyncResult) {
   return hasRetryWork(result) && (madeResourceProgress(result)
-    || result.madeDatabaseProgress === true);
+    || result.madeDatabaseProgress === true || result.dynamicDatabaseBacklog === true);
 }

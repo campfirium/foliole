@@ -3,10 +3,12 @@ import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
+import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
   remote: readonly FramedSyncInventoryEntry[];
+  inventoryDeferred?: number;
 };
 
 export interface RequestSyncDatabaseRoundPort {
@@ -21,25 +23,33 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   let inventories = await port.exchangeInventory();
   let transferred = 0;
   const initialPending = pendingObjects(inventories);
+  let sourceChanged = Boolean(inventories.inventoryDeferred);
+  let committed = false;
+  const result = (pending: number) => ({ complete: pending === 0, pending, transferred,
+    madeProgress: pending < initialPending,
+    ...(pending > 0 && pending >= initialPending && sourceChanged && committed ? { dynamicBacklog: true as const } : {}) });
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const differences = compareFramedSyncDatabaseInventories(inventories);
-    if (!differences.length) {
+    if (!differences.length && !inventories.inventoryDeferred) {
       const pending = pendingObjects(inventories);
-      return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
+      return result(pending);
     }
     const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal);
     transferred += round.delivered.length;
     const next = await port.exchangeInventory();
+    sourceChanged ||= round.sourceChanged || Boolean(next.inventoryDeferred);
+    committed ||= hasConfirmedRequestSyncCommit(inventories, next, round.delivered);
     if (JSON.stringify(next.local) === JSON.stringify(inventories.local) &&
-        JSON.stringify(next.remote) === JSON.stringify(inventories.remote)) {
+        JSON.stringify(next.remote) === JSON.stringify(inventories.remote) &&
+        !next.inventoryDeferred && !inventories.inventoryDeferred) {
       const pending = Math.max(pendingObjects(next), round.deferred.length);
-      return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
+      return result(pending);
     }
     inventories = next;
   }
   const pending = pendingObjects(inventories);
-  return { complete: pending === 0, pending, transferred, madeProgress: pending < initialPending };
+  return result(pending);
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
@@ -53,6 +63,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   }
   const delivered: FramedSyncInventoryDifference[] = [];
   const completed = new Set<string>();
+  let sourceChanged = false;
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async difference => {
     signal?.throwIfAborted();
     try {
@@ -76,10 +87,11 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       const changed = detail === 'framed_sync_source_changed' || detail === 'framed_sync_difference_request_source_changed';
       if (!badGraph && !changed) throw error;
       if (badGraph) port.reportObjectError(difference, error);
+      sourceChanged ||= changed;
       return 'deferred';
     }
   }, createFramedSyncInventoryDependencyLookup(inventories));
-  return { delivered, deferred };
+  return { delivered, deferred, sourceChanged };
 }
 
 function* directionBatches(differences: readonly FramedSyncInventoryDifference[]) {
@@ -96,6 +108,6 @@ function key(difference: FramedSyncInventoryDifference) {
 }
 
 function pendingObjects(inventories: RequestSyncInventories) {
-  return Math.max(compareFramedSyncDatabaseInventories(inventories).length,
+  return (inventories.inventoryDeferred ?? 0) + Math.max(compareFramedSyncDatabaseInventories(inventories).length,
     unreadyFramedSyncDatabaseObjectCount(inventories));
 }

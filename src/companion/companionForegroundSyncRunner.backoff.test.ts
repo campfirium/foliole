@@ -54,6 +54,16 @@ it('resumes fast continuation after real progress and clears retry after complet
   expect(run).toHaveBeenCalledTimes(3);
 });
 
+it('keeps successive backlog rounds at one second without increasing retry attempts', async () => {
+  const { run, runner, retryAttempt } = setup('backlog');
+  await runner('foreground');
+  for (let index = 0; index < 5; index++) {
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(run).toHaveBeenCalledTimes(index + 2);
+    expect(retryAttempt.current).toBe(0);
+  }
+});
+
 it('does not let freshness or repeated endpoint events shorten scheduled backoff', async () => {
   const { run, runner } = setup();
   await runner('foreground');

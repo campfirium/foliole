@@ -63,9 +63,7 @@ export async function* requestSyncObjectMessages(header: RequestSyncObjectHeader
 export function assertRequestSyncObjectSource(header: RequestSyncObjectHeader,
   expected?: { sharedStateHash: Uint8Array; currentVersionId?: string | undefined }) {
   if (!expected) return;
-  if (header.currentVersionId !== (expected.currentVersionId ?? '') ||
-      header.sourceStateHash.length !== expected.sharedStateHash.length ||
-      !header.sourceStateHash.every((value, index) => value === expected.sharedStateHash[index])) {
+  if (header.currentVersionId !== (expected.currentVersionId ?? '')) {
     throw new Error('request_sync_object_source_mismatch');
   }
 }

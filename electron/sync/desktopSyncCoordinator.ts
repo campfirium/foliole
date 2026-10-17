@@ -123,7 +123,7 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer: DesktopSyn
         const outcome = await continueDesktopSyncGroupSync(peer, activity);
         if (!outcome?.complete) {
           complete = false;
-          if ((outcome?.attachmentProgress ?? 0) > 0 || outcome?.attachmentYielded) continuations.push(peer);
+          if ((outcome?.attachmentProgress ?? 0) > 0 || outcome?.attachmentYielded || outcome?.dynamicBacklog) continuations.push(peer);
         }
       } catch (error) {
         if (!isSyncPeerRoundRetryableError(error)) throw error;

@@ -53,7 +53,7 @@ it('authenticates an empty fact stream and binds its source reference', async ()
       expect(() => assertRequestSyncObjectSource(received,
         { currentVersionId: 'other', sharedStateHash: header.sourceStateHash })).toThrow('request_sync_object_source_mismatch');
       expect(() => assertRequestSyncObjectSource(received,
-        { currentVersionId: 'known', sharedStateHash: new Uint8Array(32).fill(4) })).toThrow('request_sync_object_source_mismatch');
+        { currentVersionId: 'known', sharedStateHash: new Uint8Array(32).fill(4) })).not.toThrow();
     });
   });
 });

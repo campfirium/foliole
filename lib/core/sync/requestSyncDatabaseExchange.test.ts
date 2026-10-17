@@ -17,7 +17,7 @@ import { exchangeRequestSyncInventory, type RequestSyncExchange } from './reques
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.js';
 
-it.each([false, true])('retrieves complete details or rejects a changing source (changed=%s)', async sourceChanges => {
+it.each([false, true])('retrieves complete details including a newer bucket snapshot (changed=%s)', async sourceChanges => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'request-detail-'));
   const files = createDesktopFramedSyncFiles(root);
   const entries: FramedSyncInventoryEntry[] = Array.from({ length: 2100 }, (_, index) => ({
@@ -50,7 +50,6 @@ it.each([false, true])('retrieves complete details or rejects a changing source 
       readSnapshot: async () => { throw new Error('unexpected_snapshot'); },
       write: async () => { throw new Error('unexpected_write'); }
     }, exchange, entries.map(entry => ({ ...entry, sharedStateHash: new Uint8Array(32).fill(1) })));
-    if (sourceChanges) await expect(result).rejects.toThrow('framed_sync_source_changed');
-    else expect((await result).remote).toEqual(entries);
+    expect((await result).remote).toEqual(entries);
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 30_000);

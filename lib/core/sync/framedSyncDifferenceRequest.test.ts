@@ -61,7 +61,7 @@ it('requests only the differences from the observed Node snapshot', () => {
     .toEqual([JSON.stringify(['version-2', 'version-1', 0])]);
 });
 
-it('rejects when the Node inventory changes after the requester observed it', () => {
+it('rejects missing requested facts but accepts later unrelated facts', () => {
   const projected = projectFramedSyncDifferenceRequest({ difference: difference(), roundId: hash(8, 16) });
   const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
     projected.encoded, FRAMED_SYNC_FRAME_TYPES.sessionControl
@@ -75,7 +75,7 @@ it('rejects when the Node inventory changes after the requester observed it', ()
   expect(() => resolveFramedSyncDifferenceRequest({
     ...difference().sourceSnapshot,
     sharedStateHash: hash(9), requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0]), 'relation-added-after-inventory']
-  }, decoded)).toThrow('framed_sync_difference_request_source_changed');
+  }, decoded)).not.toThrow();
 });
 
 it('rejects a local-to-remote difference because it does not need a pull request', () => {
@@ -84,7 +84,7 @@ it('rejects a local-to-remote difference because it does not need a pull request
   })).toThrow('framed_sync_difference_request_direction_invalid');
 });
 
-it('binds an empty fact selection to its object, current reference and actual source hash', () => {
+it('preserves the selected reference for snapshot validation independently of the current hash', () => {
   const input = difference();
   const source = { ...input.sourceSnapshot, currentVersionId: 'version-2', versionStates: [], unready: true };
   const projected = projectFramedSyncDifferenceRequest({ roundId: hash(8, 16), difference: {
@@ -97,8 +97,8 @@ it('binds an empty fact selection to its object, current reference and actual so
   expect(resolveFramedSyncDifferenceRequest(source, request).need.frontierFactIds).toEqual([]);
   expect(() => resolveFramedSyncDifferenceRequest(source, { ...request, globalId: 'other' }))
     .toThrow('framed_sync_difference_request_identity_mismatch');
-  expect(() => resolveFramedSyncDifferenceRequest(source, { ...request, currentVersionId: 'version-1' }))
-    .toThrow('framed_sync_difference_request_source_changed');
+  expect(resolveFramedSyncDifferenceRequest(source, { ...request, currentVersionId: 'version-1' })
+    .sourceSnapshot.currentVersionId).toBe('version-1');
   expect(() => resolveFramedSyncDifferenceRequest({ ...source, sharedStateHash: hash(9) }, request))
-    .toThrow('framed_sync_difference_request_source_changed');
+    .not.toThrow();
 });

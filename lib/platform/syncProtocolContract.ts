@@ -24,7 +24,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'relayed-node-member-positions-v1',
     'canonical-attachment-storage-key-v1',
     'device-sync-groups-v1',
-    'framed-sync-v25',
+    'framed-sync-v26',
     'bucket-inventory-v1',
     'topic-text-attachments-v1',
     'group-key-routing-v1',

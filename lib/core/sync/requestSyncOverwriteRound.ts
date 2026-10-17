@@ -26,7 +26,7 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
     { local: [], remote: inventories.remote }, differences, signal);
   const confirmed = await port.exchangeInventory();
   const transferred = round.delivered.length;
-  const pending = Math.max(round.deferred.length, unreadyFramedSyncDatabaseObjectCount(confirmed),
+  const pending = (confirmed.inventoryDeferred ?? 0) + Math.max(round.deferred.length, unreadyFramedSyncDatabaseObjectCount(confirmed),
     pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences: round.delivered }).length);
   const madeProgress = pending < differences.length;
   if (pending) return { complete: false, pending, transferred, madeProgress };

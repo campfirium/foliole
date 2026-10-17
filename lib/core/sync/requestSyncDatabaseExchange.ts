@@ -2,9 +2,10 @@ import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBina
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { differingInventoryBuckets, inventoryBucket, summarizeInventoryBuckets } from './framedSyncInventoryBuckets.js';
-import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
+import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
 import { differingNodeIds } from './framedSyncInventorySummary.js';
 import { requestSyncDifferenceMessages } from './requestSyncDifferenceWire.js';
+import { mergeRequestSyncNodeDetails, readRequestSyncNodeDetails } from './requestSyncInventoryExpansion.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
@@ -49,31 +50,27 @@ export async function exchangeRequestSyncInventory(host: RequestSyncDatabaseHost
   if (summaries.entries.some(entry => !selectedBuckets.includes(inventoryBucket(entry)))) {
     throw new Error('inventory_bucket_selection_invalid');
   }
-  const actual = summarizeInventoryBuckets(summaries.entries);
-  for (const bucket of selectedBuckets) {
-    if (!sameBytes(actual.hashes.subarray(bucket * 32, (bucket + 1) * 32),
-      buckets.bucketHashes.subarray(bucket * 32, (bucket + 1) * 32))) throw new Error('framed_sync_source_changed');
-  }
   summaries.entries.push(...local.filter(entry => !selectedBuckets.includes(inventoryBucket(entry))));
   summaries.entries.sort((a, b) => compareSyncFactText(a.objectType, b.objectType) || compareSyncFactText(a.globalId, b.globalId));
   const ids = differingNodeIds(local, summaries.entries);
   if (!ids.length) return { local, remote: summaries.entries, roundId: summaries.roundId };
-  if (!localInventory) local = await host.readSnapshot(db => expandRequestSyncNodeSummaries(db, local, ids), exchange.signal);
-  const byId = new Map<string, FramedSyncInventoryEntry>();
+  const deferred = new Set<string>();
+  if (!localInventory) {
+    const details = await host.readSnapshot(db => readRequestSyncNodeDetails(db, ids), exchange.signal);
+    local = mergeRequestSyncNodeDetails(local, ids, details, deferred);
+  }
+  const remoteDetails: FramedSyncInventoryEntry[] = [];
   for (const batch of detailBatches(ids)) {
     const details = await inventoryRequest(exchange, batch);
-    for (const entry of details.entries) {
-      const summary = summaries.entries.find(value => value.objectType === 'node' && value.globalId === entry.globalId);
-      if (entry.objectType !== 'node' || !batch.includes(entry.globalId) || byId.has(entry.globalId) ||
-          !summary || !sameBytes(summary.sharedStateHash, entry.sharedStateHash)) throw new Error('framed_sync_source_changed');
-      byId.set(entry.globalId, entry);
+    if (details.entries.some(entry => entry.objectType !== 'node' || !batch.includes(entry.globalId))) {
+      throw new Error('inventory_node_detail_identity_invalid');
     }
+    remoteDetails.push(...details.entries);
   }
-  if (summaries.entries.some(entry => entry.objectType === 'node' && ids.includes(entry.globalId) && !byId.has(entry.globalId))) {
-    throw new Error('framed_sync_source_changed');
-  }
-  return { local, remote: summaries.entries.map(entry => entry.objectType === 'node'
-    ? byId.get(entry.globalId) ?? entry : entry), roundId: summaries.roundId };
+  const remote = mergeRequestSyncNodeDetails(summaries.entries, ids, remoteDetails, deferred);
+  const comparable = (entry: FramedSyncInventoryEntry) => entry.objectType !== 'node' || !deferred.has(entry.globalId);
+  return { local: local.filter(comparable), remote: remote.filter(comparable),
+    inventoryDeferred: deferred.size, roundId: summaries.roundId };
 }
 
 function* detailBatches(ids: readonly string[]) {

@@ -205,13 +205,13 @@ it('releases the coordinator and persists mobile waiting when an active phone do
 });
 
 
-it('queues attachment continuation behind a waiting peer after releasing the current slice', async () => {
-  const slice = deferred<{ complete: boolean; attachmentProgress: number }>();
+it.each([{ attachmentProgress: 1 }, { dynamicBacklog: true }])('queues continuation behind a waiting peer: %j', async progress => {
+  const slice = deferred<{ complete: boolean; attachmentProgress?: number; dynamicBacklog?: boolean }>();
   transport.continueDesktopSyncGroupSync.mockImplementationOnce(() => slice.promise);
   const first = runDesktopSyncCoordinator('automatic', peer);
   await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1));
   const waiting = runDesktopSyncCoordinator('manual', peerB);
-  slice.resolve({ complete: false, attachmentProgress: 1 });
+  slice.resolve({ complete: false, ...progress });
   await expect(first).resolves.toMatchObject({ status: 'pending' });
   await waiting;
   await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(3));

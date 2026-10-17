@@ -9,13 +9,13 @@ import org.junit.Test;
 public final class FramedSyncSessionContextTest {
     private static final byte[] SESSION_ID = hex("00112233445566778899aabbccddeeff");
     private static final byte[] PREAMBLE = hex(
-        "464f4c53594e43320060001901000000285da57a1b205b932847e209b450c6f5e7f9afbdc6ef7ef7e203f6f77f2c9075" +
+        "464f4c53594e43320060001a010000009cd98dcbdf193c29fa6e2b9016bf3703ddeae6479ca9e510c79031392209a7ee" +
         "00112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000");
 
     @Test public void derivesAndValidatesTheFrozenSessionContext() throws Exception {
         FramedSyncSessionContext context = context();
         assertArrayEquals(
-            hex("285da57a1b205b932847e209b450c6f5e7f9afbdc6ef7ef7e203f6f77f2c9075"),
+            hex("9cd98dcbdf193c29fa6e2b9016bf3703ddeae6479ca9e510c79031392209a7ee"),
             context.deriveContextId(SESSION_ID));
         assertArrayEquals(SESSION_ID, context.validate(FramedSyncPreamble.decode(PREAMBLE)));
     }
