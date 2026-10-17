@@ -7,6 +7,7 @@ import {
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES as REPAIRS,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
+import { migrateCompanionAttachmentDemands } from './attachmentDemandSchema.js';
 import { retireCompanionAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { retireCompanionAttachmentRegistry } from './companionAttachmentRegistryRetirement.js';
 import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
@@ -126,6 +127,7 @@ export async function migrateCompanionDatabase(
       await db.run('ALTER TABLE node_version_local_origins ADD COLUMN content_edit_image_input_hash TEXT');
     }
   }
+  if (currentVersion < 93 && targetVersion >= 93) await migrateCompanionAttachmentDemands(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

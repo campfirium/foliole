@@ -9,6 +9,7 @@ import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthentica
 
 export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, AttachmentBlockSource {
   needs(): Promise<string[]>;
+  attempted?(storageKey: string): Promise<void>;
   derivePdfText?(pdfKey: string, version: number): Promise<string | null>;
   importPdfText?(pdfKey: string, artifactKey: string): Promise<void>;
   needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; pdfTextKeys?: string[] }>;
@@ -63,6 +64,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, request: Attac
   if (request.operation === 'needs') {
     const demand = await host.needsSlice(attachmentWorkBudget());
     const needs = demand.keys;
+    for (const key of needs) await host.attempted?.(key);
     for (let index = 0; index < needs.length; index += 256) {
       yield attachmentMessage({ ...request, storageKeys: needs.slice(index, index + 256), state: 'partial' });
     }
@@ -70,6 +72,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, request: Attac
     return;
   }
   const resource = attachmentBlockResourceSchema.parse(request);
+  await host.attempted?.(resource.storageKey);
   const result = request.operation === 'status' ? await host.status(resource)
     : await host.receive(resource, request.offset, request.data);
   yield attachmentMessage({ ...request, data: new Uint8Array(), state: result.kind, offset: result.offset });

@@ -1,3 +1,4 @@
+import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
@@ -27,5 +28,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 161, migrate: migrateMissingCurrentVersionInventory },
   { version: 162, migrate: db => { db.exec(INVALIDATE_UNREADY_SYNC_DIGESTS); } },
   { version: 163, migrate: db => addColumnIfMissing(db,
-    'node_version_local_origins', 'content_edit_image_input_hash', 'TEXT') }
+    'node_version_local_origins', 'content_edit_image_input_hash', 'TEXT') },
+  { version: 164, migrate: migrateAttachmentDemands }
 ];

@@ -92,7 +92,7 @@ it.each([false, true])('pulls only the opened attachment without changing busine
 });
 
 
-it('recomputes needs after actual file loss and ignores deleted nodes without changing their version facts', async () => {
+it('ignores external file loss until content changes and ignores deleted nodes without changing version facts', async () => {
   const directory = await attachmentHttpDirectory();
   const item = attachment('Original attachment');
   const local = await attachmentHttpSource([item.key], directory.root);
@@ -101,6 +101,8 @@ it('recomputes needs after actual file loss and ignores deleted nodes without ch
     await writeFile(path.join(local.assetsDir, item.key), item.bytes);
     expect(await local.host.needs()).toEqual([]);
     await unlink(path.join(local.assetsDir, item.key));
+    expect(await local.host.needs()).toEqual([]);
+    local.sqlite.prepare("UPDATE nodes SET content = content || ' edited' WHERE id = 'topic'").run();
     expect(await local.host.needs()).toEqual([item.key]);
     expect(local.sqlite.prepare('SELECT hash, available FROM framed_sync_resource_availability').all())
       .toEqual([{ hash: item.key.slice(0, 64), available: 0 }]);

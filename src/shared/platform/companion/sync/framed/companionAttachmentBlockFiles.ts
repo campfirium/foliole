@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
-import { createAttachmentDemandCache } from '../../../../../../lib/core/sync/attachmentDemandCache.js';
+import { completeAttachmentDemand, recordAttachmentDemandAttempt } from '../../../../../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
-import { missingPdfTextArtifacts } from '../../../../../../lib/core/sync/pdfTextArtifact.js';
-import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
+import { readRequestSyncAttachmentNeedsSlice } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract.js';
@@ -57,18 +57,24 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     publish: async resource => { attachmentSourceVerification.invalidate(resource.storageKey); await call({ key: resource.storageKey, action: 'publish' }); },
     availability: (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))
   });
-  const demand = createAttachmentDemandCache();
   const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
     (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
+  const completed = async <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => {
+    const result = await notifyComplete(key, pending);
+    if (result.kind === 'complete' && !key.endsWith('.pdf')) await db.write(port => completeAttachmentDemand(port, key));
+    return result;
+  };
   const host: RequestSyncAttachmentHost = {
-    importPdfText: (pdf, artifact) => importCompanionPdfTextArtifact(db, host, pdf, artifact),
-    async needsSlice(shouldYield) {
-      const result = await demand(db, shouldYield);
-      return { keys: await inspectAttachmentNeeds(db, result.keys, inspect), pending: result.pending,
-        pdfTextKeys: await db.readSnapshot(port => missingPdfTextArtifacts(port, result.keys)) };
+    attempted: key => db.write(port => recordAttachmentDemandAttempt(port, key)),
+    async importPdfText(pdf, artifact) {
+      await importCompanionPdfTextArtifact(db, host, pdf, artifact);
+      if ((await stat(pdf)).present) await db.write(port => completeAttachmentDemand(port, pdf));
     },
-    status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
-    receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),
+    async needsSlice(shouldYield) {
+      return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true);
+    },
+    status: resource => completed(resource.storageKey, receiver.status(resource)),
+    receive: (resource, offset, bytes) => completed(resource.storageKey, receiver.receive(resource, offset, bytes)),
     withFile: (key, consume, options) => files.exclusive(`send-${key}`, async () => {
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
       if (!info.present) throw new Error('attachment_source_missing');
@@ -82,7 +88,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
           JSON.stringify([owner.library_key, owner.generation_id]), file, options?.shouldYield));
       } finally { await call({ key, action: 'source-close' }); }
     }),
-    needs: () => readRequestSyncAttachmentNeeds(db, inspect)
+    needs: async () => (await readRequestSyncAttachmentNeedsSlice(db, inspect, attachmentWorkBudget(), true)).keys
   };
   return host;
 }

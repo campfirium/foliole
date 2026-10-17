@@ -1,6 +1,8 @@
 import { recordFramedSyncResourceAvailability } from '../database/framedSyncResourceAvailability.js';
 
-import { loadNodeOwnedArticleResourceNeeds } from './nodeOwnedArticleResourceNeeds.js';
+import { completeAttachmentDemand, hasAttachmentDemand, parseChangedAttachmentArticles, selectPendingAttachments } from './attachmentDemandQueue.js';
+import { attachmentWorkBudget } from './attachmentWorkBudget.js';
+import { missingPdfTextArtifacts } from './pdfTextArtifact.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 
 export const ATTACHMENT_STAT_BATCH_COUNT = 64;
@@ -23,32 +25,34 @@ export function* attachmentStatBatches(keys: readonly string[]) {
   if (batch.length) yield batch;
 }
 
-/** Current references and actual files are authoritative; availability is only a rebuildable index. */
+/** Both request directions consume the same durable, bounded demand. */
 export async function readRequestSyncAttachmentNeeds(host: Pick<RequestSyncDatabaseHost, 'readSnapshot' | 'write'>,
   inspect: (storageKeys: string[]) => Promise<boolean[]>) {
-  const missing = new Set<string>();
-  const seen = new Set<string>();
-  let after: string | null = null;
-  while (true) {
-    const page = await readPage(host, after);
-    for (const keys of attachmentStatBatches(page.keys.filter(key => !seen.has(key)))) {
-      for (const key of await inspectAttachmentNeeds(host, keys, inspect)) missing.add(key);
-      keys.forEach(key => seen.add(key));
-    }
-    if (page.last === null) break;
-    after = page.last;
-  }
-  return [...missing];
+  return (await readRequestSyncAttachmentNeedsSlice(host, inspect, attachmentWorkBudget())).keys;
 }
 
-async function readPage(host: Pick<RequestSyncDatabaseHost, 'readSnapshot'>, after: string | null) {
-  return host.readSnapshot(async db => {
-    const nodes = await db.query<{ id: string }>(`SELECT id FROM nodes WHERE deleted_at IS NULL
-      ${after === null ? '' : 'AND id > ?'} ORDER BY id LIMIT 128`, after === null ? [] : [after]);
-    const result = await loadNodeOwnedArticleResourceNeeds(db, nodes.map(node => node.id));
-    if (result.unreadableArticleIds.length) throw new Error('attachment_current_body_unavailable');
-    return { keys: result.needs.map(need => need.storageKey), last: nodes.length === 128 ? nodes.at(-1)!.id : null };
+export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSyncDatabaseHost, 'readSnapshot' | 'write'>,
+  inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false) {
+  if (!await host.readSnapshot(hasAttachmentDemand)) return { keys: [], pdfTextKeys: [], pending: false };
+  await parseChangedAttachmentArticles(host, shouldYield);
+  const keys = await host.readSnapshot(selectPendingAttachments);
+  if (!keys.length) return { keys: [], pdfTextKeys: [], pending: await host.readSnapshot(hasAttachmentDemand) };
+  const pdfTextKeys = requirePdfText ? await host.readSnapshot(db => missingPdfTextArtifacts(db, keys)) : [];
+  const missing = await inspectAttachmentNeeds(host, keys, inspect);
+  const retained = new Set([...missing, ...pdfTextKeys]);
+  await host.write(db => db.transaction(async tx => {
+    for (const key of keys) {
+      if (!retained.has(key)) await completeAttachmentDemand(tx, key);
+    }
+  }));
+  // Selected missing files are reported separately by the exchange; pending means work beyond this slice.
+  const pending = await host.readSnapshot(async db => {
+    const [queued] = await db.query('SELECT 1 FROM attachment_parse_queue LIMIT 1');
+    const [remaining] = await db.query(`SELECT 1 FROM attachment_pending
+      WHERE storage_key NOT IN (${keys.map(() => '?').join(',')}) LIMIT 1`, keys);
+    return Boolean(queued || remaining);
   });
+  return { keys: missing, pdfTextKeys, pending };
 }
 
 export async function inspectAttachmentNeeds(host: Pick<RequestSyncDatabaseHost, 'write'>, resources: readonly string[],

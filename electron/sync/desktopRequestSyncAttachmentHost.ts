@@ -1,9 +1,10 @@
 import path from 'node:path';
 
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
-import { createAttachmentDemandCache } from '../../lib/core/sync/attachmentDemandCache.js';
+import type { AttachmentBlockResult } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { completeAttachmentDemand, recordAttachmentDemandAttempt } from '../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
-import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { readRequestSyncAttachmentNeedsSlice, readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -14,12 +15,10 @@ import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from '
 import { createDesktopPdfTextArtifact } from './desktopPdfTextArtifact.js';
 
 type Receiver = Extract<Awaited<ReturnType<typeof openDesktopAttachmentBlockReceiver>>, { kind: 'acquired' }>;
-const demands = new Map<string, ReturnType<typeof createAttachmentDemandCache>>();
 const receivers = new Map<string, Promise<Receiver>>();
 registerDatabaseConnectionCleanup(() => {
   const closing = [...receivers.values()];
   receivers.clear();
-  demands.clear();
   attachmentSourceVerification.invalidate();
   for (const pending of closing) void pending.then(receiver => receiver.close()).catch(error => {
     console.error('[sync] attachment receiver close failed', error);
@@ -29,9 +28,6 @@ registerDatabaseConnectionCleanup(() => {
 export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDatabaseHost): Promise<RequestSyncAttachmentHost> {
   const { databasePath, assetsDir } = await runWithDatabaseConnectionOwner(resolveRuntimeDataPaths);
   const source = createDesktopAttachmentBlockSource(assetsDir, databasePath);
-  let demand = demands.get(databasePath);
-  if (!demand) { demand = createAttachmentDemandCache(); demands.set(databasePath, demand); }
-  const readDemand = demand;
   const inspect = (keys: string[]) => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
   const checkLibrary = async () => {
     const current = await runWithDatabaseConnectionOwner(resolveRuntimeDataPaths);
@@ -53,15 +49,20 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     }
     return pending;
   };
+  const completed = async <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => {
+    const result = await pending;
+    if (result.kind === 'complete') await host.write(db => completeAttachmentDemand(db, key));
+    return result;
+  };
   return {
+    attempted: key => host.write(db => recordAttachmentDemandAttempt(db, key)),
     derivePdfText: (key, version) => createDesktopPdfTextArtifact(host, assetsDir, key, version),
     async withFile(key, consume, options) { await checkLibrary(); return source.withFile(key, consume, options); },
-    async status(resource) { return (await receiver()).status(resource); },
-    async receive(resource, offset, bytes) { return (await receiver()).receive(resource, offset, bytes); },
+    async status(resource) { return completed(resource.storageKey, (await receiver()).status(resource)); },
+    async receive(resource, offset, bytes) { return completed(resource.storageKey, (await receiver()).receive(resource, offset, bytes)); },
     async needsSlice(shouldYield) {
       await checkLibrary();
-      const result = await readDemand(host, shouldYield);
-      return { keys: await inspectAttachmentNeeds(host, result.keys, inspect), pending: result.pending };
+      return readRequestSyncAttachmentNeedsSlice(host, inspect, shouldYield);
     },
     async needs() {
       await checkLibrary();

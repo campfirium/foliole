@@ -1,5 +1,6 @@
 import { PDF_TEXT_ARTIFACT_SCHEMA } from '../sync/pdfTextArtifact.js';
 
+import { ATTACHMENT_DEMAND_SCHEMA } from './attachmentDemandSchema.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DATA_MIGRATION_STATE_SCHEMA_STATEMENTS } from './dataMigrationState.js';
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from './desktopCoreSchemaStatements.js';
@@ -48,6 +49,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...CURRENT_PARENT_ORDER_SCHEMA,
+  ...ATTACHMENT_DEMAND_SCHEMA,
 
   ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS,
   ...LOCAL_FILE_SCHEMA_STATEMENTS,

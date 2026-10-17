@@ -32,7 +32,7 @@ import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
 it.each([false, true])('refreshes an open missing image after complete bytes and index commit (retry=%s)', async retry => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-image-'));
   const sqlite = new Database(path.join(root, 'library.db'));
-  sqlite.exec('CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER)');
+  initializeDatabaseSchema(sqlite);
   const port = createBetterSqliteDbPort(sqlite);
   const bytes = Buffer.alloc(BLOCK + 19, 0x78);
   const hash = digest(bytes), key = `${hash}.png`, final = path.join(root, key);
@@ -96,7 +96,7 @@ function fileOperations(root: string) {
   };
 }
 
-it('recomputes needs using metadata without opening or hashing present attachments', async () => {
+it('checks only pending needs without opening or hashing present attachments', async () => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-needs-'));
   const sqlite = new Database(path.join(root, 'library.db'));
   initializeDatabaseSchema(sqlite);
@@ -117,6 +117,8 @@ it('recomputes needs using metadata without opening or hashing present attachmen
     await writeFile(path.join(root, key), 'presence does not validate content');
     expect(await host.needs()).toEqual([]);
     await rm(path.join(root, key));
+    expect(await host.needs()).toEqual([]);
+    sqlite.exec("UPDATE nodes SET content = content || ' edited'");
     expect(await host.needs()).toEqual([key]);
     native.access.mockResolvedValue({ presence: [] });
     await expect(host.needs()).rejects.toThrow('attachment_stat_response_invalid');
@@ -126,7 +128,7 @@ it('recomputes needs using metadata without opening or hashing present attachmen
 it('retains corrupt published bytes through failed replacement and marks only verified bytes available', async () => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-corrupt-'));
   const sqlite = new Database(path.join(root, 'library.db'));
-  sqlite.exec('CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER)');
+  initializeDatabaseSchema(sqlite);
   const port = createBetterSqliteDbPort(sqlite);
   const bytes = Buffer.alloc(BLOCK + 19, 0x63), corrupt = Buffer.alloc(bytes.length, 0x64);
   const key = `${digest(bytes)}.png`, final = path.join(root, key);

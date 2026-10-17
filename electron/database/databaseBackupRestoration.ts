@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { SEED_ATTACHMENT_PARSE_QUEUE } from '../../lib/core/database/attachmentDemandSchema.js';
 import { readForegroundTimePreservation } from '../../lib/core/database/foregroundTimeRestore.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
@@ -74,7 +75,7 @@ async function restoreBackup(sourcePath: string, restoredAt: string, choice?: Ba
       sourcePath: databasePath, targetPath, onTemporaryDatabase: artifacts.trackCandidate
     });
     replacementComplete = true;
-    const restored = initializeDatabase(undefined, { recovery: 'fail' });
+    const restored = initializeRestoredLibrary();
     if (selection.snapshot) finishSyncGroupBackupRestore(restored.driver, selection.snapshot, restoredAt,
       selection.mode === 'pause' ? 'pause' : 'overwrite');
     else finishLocalOnlyBackupRestore(restored.driver, selection.host);
@@ -125,4 +126,10 @@ async function finishRestoreArtifacts(artifacts: DatabaseRestoreArtifacts,
     args.snapshot?.release();
     console.error('[backup] restore outcome preserved; temporary cleanup failed', error);
   });
+}
+
+function initializeRestoredLibrary() {
+  const restored = initializeDatabase(undefined, { recovery: 'fail' });
+  restored.sqlite.exec(SEED_ATTACHMENT_PARSE_QUEUE);
+  return restored;
 }

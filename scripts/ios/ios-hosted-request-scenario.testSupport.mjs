@@ -1,9 +1,8 @@
+import { recordAttachmentDemandAttempt } from '../../lib/core/sync/attachmentDemandQueue.js';
 import { randomUUID } from 'node:crypto';
 import { desktopSyncChangeSessions } from '../../electron/sync/desktopSyncChangeSessions.ts';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.ts';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.ts';
-import { createAttachmentDemandCache } from '../../lib/core/sync/attachmentDemandCache.ts';
-import { missingPdfTextArtifacts } from '../../lib/core/sync/pdfTextArtifact.ts';
 import { importCompanionPdfTextArtifact } from '../../src/shared/platform/companion/sync/framed/companionPdfTextArtifact.ts';
 import { mkdir } from 'node:fs/promises';
 import { Buffer } from 'node:buffer';
@@ -30,7 +29,7 @@ import { openDesktopAttachmentBlockReceiver } from '../../electron/sync/desktopA
 import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from '../../electron/sync/desktopAttachmentBlockSource.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
-import { readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { readRequestSyncAttachmentNeeds, readRequestSyncAttachmentNeedsSlice } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import { createIosHostedRequestLibrary } from './ios-hosted-request-library.ts';
 import { createIosHostedRequestScenario } from './ios-hosted-request-scenario.ts';
 import { createIosSyncPackAcceptanceObservations } from './ios-sync-pack-acceptance-observations.ts';
@@ -121,15 +120,13 @@ async function phoneAttachments({ root, db, host, exchange, ownership, sessionId
   if (receiver.kind !== 'acquired') throw new Error('fixture_attachment_owner_busy');
   try {
     const failures = [];
-    const source = createDesktopAttachmentBlockSource(assetsDir);
+    const source = createDesktopAttachmentBlockSource(assetsDir, path.join(root, 'phone.db'));
     const inspect = keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
-    const demand = createAttachmentDemandCache();
     const attachmentHost = { ...receiver, ...source,
+      attempted: key => host.write(port => recordAttachmentDemandAttempt(port, key)),
       importPdfText: (pdf, artifact) => importCompanionPdfTextArtifact(host, source, pdf, artifact),
       async needsSlice(shouldYield) {
-        const result = await demand(host, shouldYield);
-        return { pending: result.pending, keys: await readRequestSyncAttachmentNeeds(host, inspect),
-          pdfTextKeys: await missingPdfTextArtifacts(db, result.keys) };
+        return readRequestSyncAttachmentNeedsSlice(host, inspect, shouldYield, true);
       },
       needs: () => readRequestSyncAttachmentNeeds(host, inspect)
     };

@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort';
 import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles';
+import { ATTACHMENT_DEMAND_SCHEMA } from '../../../../../../lib/core/database/attachmentDemandSchema.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from '../../../../../features/editor/adapters/liveMarkdownImages';
@@ -48,6 +49,7 @@ function seed(sqlite: Database.Database) {
       content TEXT, resource_references TEXT, deleted_at TEXT);
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT,
       content_hash TEXT, snapshot_json TEXT)`);
+  for (const sql of ATTACHMENT_DEMAND_SCHEMA) sqlite.exec(sql);
   sqlite.prepare('INSERT INTO nodes VALUES (?, ?, ?, ?, ?, NULL)').run('article', 'version', bodyHash, body, '[]');
   sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?, ?, ?)')
     .run('version', 'article', 'c'.repeat(64), JSON.stringify({ body_blob_hash: bodyHash }));

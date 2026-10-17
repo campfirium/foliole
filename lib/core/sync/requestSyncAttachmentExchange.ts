@@ -93,28 +93,36 @@ async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
   return { complete: slice.complete, blocks, verificationPending: slice.verificationPending };
 }
 
+const retryFirstRounds = new Set<string>();
+
 /** Reuse one demand list while streaming; yield only at recoverable boundaries. */
 export async function exchangeRequestSyncAttachments(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   report: (storageKey: string, error: unknown) => void, shouldYield = attachmentWorkBudget()) {
   exchange.signal?.throwIfAborted();
-  const remoteNeeds = new Set<string>();
+  let remoteNeeds = new Set<string>();
   let pendingScan = false;
   await request(exchange, { operation: 'needs' }, async message => {
     if (message.state !== 'partial' && message.state !== 'end') throw new Error('attachment_needs_invalid');
     for (const key of message.storageKeys) remoteNeeds.add(key);
     pendingScan ||= message.pending;
   });
-  const local = await host.needsSlice(shouldYield);
+  const roundKey = JSON.stringify(exchange.context);
+  const retryFirst = retryFirstRounds.has(roundKey);
+  if (retryFirst) retryFirstRounds.delete(roundKey); else retryFirstRounds.add(roundKey);
+  remoteNeeds = new Set(prioritizeRetryPairs([...remoteNeeds], retryFirst));
+  const demand = await host.needsSlice(shouldYield);
+  const local = { ...demand, keys: prioritizeRetryPairs(demand.keys, retryFirst),
+    pdfTextKeys: prioritizeRetryPairs(demand.pdfTextKeys ?? [], retryFirst) };
   pendingScan ||= local.pending;
-  const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(exchange, report);
+  const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report);
   let textPending = 0;
   const stages = [
     { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
       const pullBudget = attachmentWorkBudget(remoteNeeds.size ? 1000 : 2000);
-      const initialBlocks = result.blocks;
-      const initialPending = pendingKeys.size;
+      let attempted = false;
       for (const key of local.keys) {
-        if (pendingKeys.size > initialPending || (result.blocks > initialBlocks && (shouldYield() || pullBudget()))) { pendingKeys.add(key); continue; }
+        if (attempted && (shouldYield() || pullBudget())) { pendingKeys.add(key); continue; }
+        attempted = true;
         await attempt(key, () => pullBudgeted(host, exchange, key, () => shouldYield() || pullBudget()));
       }
     } },
@@ -129,10 +137,10 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
       textPending = text.pending;
     } },
     { name: 'push' as const, defer: () => { remoteNeeds.forEach(key => pendingKeys.add(key)); }, run: async () => {
-      const initialBlocks = result.blocks;
-      const initialPending = pendingKeys.size;
+      let attempted = false;
       for (const key of remoteNeeds) {
-        if (pendingKeys.size > initialPending || (result.blocks > initialBlocks && shouldYield())) { pendingKeys.add(key); continue; }
+        if (attempted && shouldYield()) { pendingKeys.add(key); continue; }
+        attempted = true;
         await attempt(key, () => pushBudgeted(host, exchange, key, shouldYield));
       }
     } }
@@ -140,6 +148,7 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   await runRequestSyncAttachmentStages(exchange.context, stages.filter(stage =>
     stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
       : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
+  if (!pendingScan && !pendingKeys.size && !textPending) retryFirstRounds.delete(roundKey);
   return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending,
     yielded: verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
@@ -159,13 +168,14 @@ async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
     } });
 }
 
-function createAttachmentProgress(exchange: RequestSyncExchange, report: (key: string, error: unknown) => void) {
+function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, report: (key: string, error: unknown) => void) {
   const result = { transferred: 0, blocks: 0 };
   const pendingKeys = new Set<string>();
   let verifying = false;
   const attempt = async (key: string, execute: () => Promise<{ complete: boolean; blocks: number; verificationPending?: boolean | undefined }>) => {
     exchange.signal?.throwIfAborted();
     try {
+      await host.attempted?.(key);
       const slice = await execute();
       result.blocks += slice.blocks;
       verifying ||= slice.verificationPending === true;
@@ -179,4 +189,12 @@ function createAttachmentProgress(exchange: RequestSyncExchange, report: (key: s
     }
   };
   return { result, pendingKeys, attempt, verificationPending: () => verifying };
+}
+
+// Interleaved new/retry pairs alternate their first chance when a data round leaves only one attempt.
+function prioritizeRetryPairs(keys: readonly string[], retryFirst: boolean) {
+  if (!retryFirst) return [...keys];
+  const ordered = [...keys];
+  for (let i = 0; i + 1 < ordered.length; i += 2) [ordered[i], ordered[i + 1]] = [ordered[i + 1]!, ordered[i]!];
+  return ordered;
 }

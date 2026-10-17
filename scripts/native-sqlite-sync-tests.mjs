@@ -1,5 +1,8 @@
 export const controlledSyncSqliteTests = [
-  'electron/sync/attachmentDemandCache.integration.test.ts',
+  'electron/sync/attachmentDemandQueue.integration.test.ts',
+  'electron/sync/attachmentDemandFairness.integration.test.ts',
+  'electron/sync/attachmentDemandPeers.integration.test.ts',
+  'electron/database/attachmentDemandMigration.integration.test.ts',
   'electron/sync/attachmentNeedsBatch.integration.test.ts',
   'electron/sync/desktopAttachmentPendingData.integration.test.ts',
   'electron/sync/desktopAttachmentSlices.integration.test.ts',

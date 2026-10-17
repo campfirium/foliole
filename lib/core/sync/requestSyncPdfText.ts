@@ -21,6 +21,7 @@ export async function exchangePdfTextArtifacts(input: {
     attempted = true;
     lastAttempted.set(input.host, key);
     try {
+      await input.host.attempted?.(key);
       const description = await input.describe(key);
       if (description.state === 'end') { pending++; continue; }
       const [artifact] = description.storageKeys;

@@ -40,7 +40,7 @@ it('transfers the original PDF through current resource owners while corrupt and
     return resolveRuntimeDataPaths();
   });
   await prepareIosHostedRequestResources(sourcePaths.databasePath);
-  const source = createDesktopAttachmentBlockSource(sourcePaths.assetsDir);
+  const source = createDesktopAttachmentBlockSource(sourcePaths.assetsDir, sourcePaths.databasePath);
   const assetsDir = path.join(sandbox.root, 'phone', 'Assets');
   fs.mkdirSync(assetsDir, { recursive: true });
   destination = new Database(':memory:'); initializeDatabaseSchema(destination);

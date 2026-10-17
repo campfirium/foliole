@@ -16,6 +16,7 @@ import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBu
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
+import { readRequestSyncAttachmentNeedsSlice } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import { exchangeRequestSyncInventory, pullRequestSyncObject, pushRequestSyncObject, type RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
@@ -27,6 +28,7 @@ import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
+import { createDesktopAttachmentBlockSource, isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
 import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
@@ -42,6 +44,15 @@ it('releases each bidirectional slice and resumes verified prefixes across new r
   const target = resolveRuntimeDataPaths();
   await writeFile(path.join(local.assetsDir, keys[0]!), data[0]!);
   await writeFile(path.join(target.assetsDir, keys[1]!), data[1]!);
+  // This scenario exercises resumable transfer with data priority after bounded demand preparation.
+  await local.host.needsSlice(() => false);
+  await runWithDatabaseConnectionOwner(async () => {
+    const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+    await readRequestSyncAttachmentNeedsSlice({ readSnapshot: read => db.transaction(read), write: write => write(db) },
+      keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(target.assetsDir, key))), () => false);
+  });
+  await local.host.withFile(keys[0]!, async () => undefined);
+  await createDesktopAttachmentBlockSource(target.assetsDir, target.databasePath).withFile(keys[1]!, async () => undefined);
   const server = await attachmentHttpServer(0);
   const owner = createSyncPeerRoundOwnership(60_000);
   try {
@@ -120,9 +131,9 @@ async function runSlice(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
           return await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; });
         } finally { release(); }
       });
-    expect(result.blocks).toBe(1);
+    expect(result.blocks, `round ${index}: ${JSON.stringify(result)}`).toBe(1);
     if (index < 6) expect(result.pending).not.toBe(0);
-    else expect(result.pending).toBe(0);
+    // Pending parsing is independent of transfer completion while every round also edits two articles.
     if (index === 0) {
       const signal = AbortSignal.abort(new Error('cancelled_between_slices'));
       await expect(exchangeRequestSyncAttachments(local.host, { ...exchange, signal }, () => {}))
