@@ -1,4 +1,4 @@
-/* global atob, ClipboardEvent, DataTransfer, File */
+/* global atob, ClipboardEvent, DataTransfer, File, setTimeout, clearTimeout */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -16,15 +16,55 @@ export async function pasteMacImage(session, args, nodeId) {
   await page.locator(`[role="treeitem"][data-node-id="${nodeId}"]`).click();
   await page.locator('.prompt-editor-host').getByText(INITIAL_BODY, { exact: true }).waitFor();
   const bytes = fs.readFileSync(path.join(args.paths.buildRoot, 'assets/brand/foliole-leaf-tight.png')).toString('base64');
-  const waiting = session.waitForState({ command: 'load_node_document', commandArgs: { nodeId },
-    condition: { kind: 'node-content-includes', nodeId, fragments: ['![T363 original image]', INITIAL_BODY] },
-    eventName: 'onWorkspaceContentChanged' });
-  await page.locator('.prompt-editor-host .cm-content').evaluate((element, { bytes, name }) => {
-    const data = new DataTransfer();
-    data.items.add(new File([Uint8Array.from(atob(bytes), value => value.charCodeAt(0))], name, { type: 'image/png' }));
-    element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }));
-  }, { bytes, name: IMAGE_NAME });
-  return waiting;
+  const previousFlags = await page.evaluate(() => {
+    const previous = [globalThis.__FOLIOLE_EDITOR_INPUT_DIAG, globalThis.__FOLIOLE_EDITOR_INPUT_DIAG_CONSOLE];
+    globalThis.__FOLIOLE_EDITOR_INPUT_DIAG = true;
+    globalThis.__FOLIOLE_EDITOR_INPUT_DIAG_CONSOLE = true;
+    return previous;
+  });
+  const waiting = observeImageSave(page, nodeId);
+  try {
+    await page.locator('.prompt-editor-host .cm-content').evaluate((element, { bytes, name }) => {
+      const data = new DataTransfer();
+      data.items.add(new File([Uint8Array.from(atob(bytes), value => value.charCodeAt(0))], name, { type: 'image/png' }));
+      element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }));
+    }, { bytes, name: IMAGE_NAME });
+    const applied = await waiting.result;
+    if (!applied) throw new Error('image_content_local_save_rejected');
+    const saved = await session.invoke('load_node_document', { nodeId });
+    if (saved?.nodeId !== nodeId || !['![T363 original image]', INITIAL_BODY].every(text => saved.content?.includes(text))) {
+      throw new Error('image_content_saved_body_mismatch');
+    }
+    return saved;
+  } finally {
+    waiting.close();
+    await page.evaluate(([enabled, consoleEnabled]) => {
+      if (enabled === undefined) delete globalThis.__FOLIOLE_EDITOR_INPUT_DIAG;
+      else globalThis.__FOLIOLE_EDITOR_INPUT_DIAG = enabled;
+      if (consoleEnabled === undefined) delete globalThis.__FOLIOLE_EDITOR_INPUT_DIAG_CONSOLE;
+      else globalThis.__FOLIOLE_EDITOR_INPUT_DIAG_CONSOLE = consoleEnabled;
+    }, previousFlags);
+  }
+}
+
+function observeImageSave(page, nodeId) {
+  let listener;
+  let timer;
+  const close = () => { clearTimeout(timer); page.off('console', listener); };
+  const result = new Promise((resolve, reject) => {
+    timer = setTimeout(() => { close(); reject(new Error('image_content_local_save_timeout')); }, 90_000);
+    listener = async message => {
+      if (!message.text().startsWith('[foliole-editor-input] update-node-content-runtime-persist ')) return;
+      try {
+        const details = await message.args()[3].jsonValue();
+        if (details.nodeId !== nodeId) return;
+        close(); resolve(details.applied === true);
+      } catch (error) { close(); reject(error); }
+    };
+    page.on('console', listener);
+  });
+  void result.catch(() => undefined);
+  return { result, close };
 }
 
 export async function connectImageWebView(args, device) {
