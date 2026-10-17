@@ -25,6 +25,12 @@ export function companionDesktopSessionPeer() { return current?.peer; }
 
 export function companionDesktopSessionId(peer: string) { return current?.peer === peer ? current.reply.session : undefined; }
 
+export async function recoverCompanionDesktopRound(peer: string, sessionId: string) {
+  if (current?.peer !== peer || current.reply.session !== sessionId) return;
+  await closeCompanionDesktopSession();
+  void wake?.().catch(() => undefined);
+}
+
 export function captureCompanionDesktopRound(endpoint: string) {
   const session = current;
   if (!session || session.endpoint !== endpoint) return async () => {};

@@ -1,15 +1,14 @@
 // @vitest-environment node
-import { createHash } from 'node:crypto';
 
 import { expect, it, vi } from 'vitest';
 
-import { decryptWorkgroupPayloadNode } from '../../../../../electron/sync/workgroupAeadNode.js';
 import { hasWaitingSyncData, waitForAttachmentWorkYield } from '../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { createMemberSyncCadence } from '../../../../../lib/core/sync/memberSyncCadence.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 import { syncSessionReplySchema } from '../../../../../lib/platform/syncSessionContract.js';
 import type { ForegroundSyncReason } from '../../../../companion/companionForegroundSyncRunner.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
+import { installSessionHttpBoundary } from '../../../../test/companionSessionHttp.testSupport.js';
 
 import { captureCompanionDesktopRound, closeCompanionDesktopSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
   subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession.js';
@@ -21,24 +20,10 @@ vi.mock('./signedRequest.js', () => ({ createSignedRequestHeaders: async (input:
 }) => (await native.sign({ endpoint_url: input.endpointUrl, method: input.method,
   path_with_query: input.pathWithQuery, sync_group_id: 't326-group' })).headers }));
 
-function installHttpBoundary() {
-  native.http.mockImplementation(async (input: { url: string; method: string; headers: Record<string, string> }) => {
-    const response = await fetch(input.url, { method: input.method, headers: input.headers });
-    const url = new URL(input.url);
-    const body = decryptWorkgroupPayloadNode({
-      context: { contentType: 'application/json; charset=utf-8', direction: 'response', method: input.method,
-        pathWithQuery: `${url.pathname}${url.search}`,
-        groupTag: createHash('sha256').update(Buffer.alloc(32, 7)).digest('hex').slice(0, 32) },
-      envelope: await response.json(), groupKey: Buffer.alloc(32, 7).toString('base64url')
-    });
-    return { status: response.status, body: body.toString('utf8') };
-  });
-}
-
 it('notifies queued desktop data while the previous round is still handling attachments', async () => {
   const { subscribeDesktopSyncCadence } = await import('../../../../companion/companionDesktopSyncCadence.js');
   const mobile = await createCompanionRequestFixture();
-  installHttpBoundary();
+  installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release = resolve; });
@@ -92,7 +77,7 @@ it('notifies queued desktop data while the previous round is still handling atta
 
 it('delivers an edit committed after final inventory but before finish, using the pre-round marker', async () => {
   const mobile = await createCompanionRequestFixture();
-  installHttpBoundary();
+  installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
   try {
     await mobile.fixture.right.seed({ nodeId: 'late-edit', title: 'Late edit', content: 'Before' });
@@ -128,7 +113,7 @@ it('delivers an edit committed after final inventory but before finish, using th
 
 it('joins a desktop manual request to phone scheduling and persists concurrent changes without reverse HTTP', async () => {
   const mobile = await createCompanionRequestFixture();
-  installHttpBoundary();
+  installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
   let unsubscribe = () => {};
   try {
@@ -154,7 +139,7 @@ it('joins a desktop manual request to phone scheduling and persists concurrent c
 
 it('automatically pulls desktop changes while the phone waits and reconciles after reconnecting', async () => {
   const mobile = await createCompanionRequestFixture();
-  installHttpBoundary();
+  installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
   let unsubscribe = () => {};
   try {
@@ -194,7 +179,7 @@ it('automatically pulls desktop changes while the phone waits and reconciles aft
 
 it('confirms desktop manual data synchronization before stalled attachments finish', async () => {
   const mobile = await createCompanionRequestFixture();
-  installHttpBoundary();
+  installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release = resolve; });

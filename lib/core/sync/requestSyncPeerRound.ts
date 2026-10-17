@@ -5,7 +5,10 @@ import { withControlRequest, type RequestSyncExchange } from './requestSyncDatab
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import type { SyncPeerRoundLease } from './syncPeerRoundOwnership.js';
 
-export type RequestSyncPeerRound = { id: string; lease: SyncPeerRoundLease; admitted: boolean; sessionId?: string };
+export type RequestSyncPeerRound = {
+  id: string; lease: SyncPeerRoundLease; admitted: boolean; sessionId?: string;
+  onUnconfirmedFinish?(): Promise<void>;
+};
 const roundIdSchema = z.string().uuid();
 const modeSchema = z.enum(['start', 'continue', 'finish', 'single']);
 
@@ -35,8 +38,8 @@ export async function withRequestSyncPeerRound<T>(exchange: RequestSyncExchange,
   try { return await run(); }
   finally {
     if (round.admitted && !exchange.signal?.aborted) {
-      // A lost finish response cannot invalidate already committed objects; the receiver also expires idle rounds.
-      await roundControl(exchange, round.id).catch(() => undefined);
+      // Preserve committed data while retiring any session that may still hold the remote round.
+      await roundControl(exchange, round.id).catch(() => round.onUnconfirmedFinish?.());
     }
   }
 }

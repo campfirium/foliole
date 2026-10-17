@@ -4,7 +4,7 @@ import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core
 import { runSyncPeerRound } from '../../../../../../lib/core/sync/runSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../../../../../lib/core/sync/syncPeerRoundOwnership.js';
 import { subscribeNativeAppBackground } from '../../../appLifecycle.js';
-import { companionDesktopSessionId } from '../../network/companionDesktopSession.js';
+import { companionDesktopSessionId, recoverCompanionDesktopRound } from '../../network/companionDesktopSession.js';
 import type { CapacitorCompanionDatabaseOwner } from '../../runtime/capacitorCompanionDatabaseOwner.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
@@ -32,7 +32,10 @@ export function withCompanionSyncPeerRound<T>(peerId: string,
         owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
         execute: (id, lease) => {
           const sessionId = companionDesktopSessionId(peerId);
-          return run({ id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }, lease.signal);
+          return run({ id, lease, admitted: false, ...(sessionId ? {
+            sessionId,
+            onUnconfirmedFinish: () => recoverCompanionDesktopRound(peerId, sessionId)
+          } : {}) }, lease.signal);
         }
       });
     } finally { releasePriority(); }
