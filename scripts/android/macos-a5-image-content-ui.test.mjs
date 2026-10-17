@@ -98,7 +98,7 @@ it.each([true, false])('opens the image topic from review=%s without exiting ano
   });
   const page = { getByTestId: locator, getByText: locator, locator };
   const args = { paths: { adb: '/adb' }, serial: 'fixed', checked: vi.fn(() => { reviewing = false; }) };
-  await openAndroidImageTopic(page, 'Image topic', 'image-node', args);
+  await openAndroidImageTopic(page, 'Image topic', 'image-node', initiallyReviewing ? args : undefined);
   expect(args.checked).toHaveBeenCalledTimes(initiallyReviewing ? 1 : 0);
   if (initiallyReviewing) expect(args.checked).toHaveBeenCalledWith('/adb', ['-s', 'fixed', 'shell', 'input', 'keyevent', 'KEYCODE_BACK']);
   expect(calls).toEqual(['companion-tab-browse', 'Image topic']);
@@ -131,4 +131,24 @@ it('binds the new process socket when a closed WebView for the same package rema
   expect(binding.page).toBe(page);
   expect(binding.pid).toBe(20);
   expect(binding.socket).toBe('webview_devtools_remote_20');
+});
+
+it('waits for the cold-start review task before leaving it, even when tabs appear during bootstrap', async () => {
+  let reviewReady = false;
+  let leftReview = false;
+  const args = { paths: { adb: '/adb' }, serial: 'fixed', checked: () => {
+    if (!reviewReady) throw new Error('back_before_review_ready');
+    leftReview = true;
+  } };
+  const locator = id => ({
+    or: () => ({ first: () => ({ waitFor: async () => {} }) }),
+    isVisible: async () => reviewReady,
+    waitFor: async () => {
+      if (id === 'companion-review-action-read') reviewReady = true;
+      else if (!leftReview) throw new Error('review_replaced_bootstrap_tabs');
+    },
+    click: async () => { if (!leftReview) throw new Error('review_replaced_bootstrap_tabs'); }
+  });
+  const page = { getByTestId: locator, getByText: locator, locator };
+  await expect(openAndroidImageTopic(page, 'Image topic', 'image-node', args)).resolves.toBeUndefined();
 });

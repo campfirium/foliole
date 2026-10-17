@@ -60,8 +60,8 @@ async function requestAndroidImageSync(page, evidenceRoot, args) {
   }
 }
 
-async function openImageTopicWithEvidence(page, title, nodeId, args, evidenceRoot) {
-  try { await openAndroidImageTopic(page, title, nodeId, args); }
+async function openImageTopicWithEvidence(page, title, nodeId, args, evidenceRoot, afterRestart = false) {
+  try { await openAndroidImageTopic(page, title, nodeId, afterRestart ? args : undefined); }
   catch (error) {
     await page.screenshot({ path: path.join(evidenceRoot, 'android-navigation-failure.png') });
     fs.writeFileSync(path.join(evidenceRoot, 'android-navigation-failure.txt'),
@@ -100,7 +100,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   binding = await connectImageWebView(args, device);
   receipt.restartedWebView = { pid: binding.pid, socket: binding.socket };
   assert.notEqual(receipt.restartedWebView.pid, receipt.firstWebView.pid);
-  await openImageTopicWithEvidence(binding.page, title, nodeId, args, evidenceRoot);
+  await openImageTopicWithEvidence(binding.page, title, nodeId, args, evidenceRoot, true);
   await binding.page.getByText(ANDROID_MARKER, { exact: true }).waitFor();
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-restarted-image.png') });

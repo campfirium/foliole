@@ -91,15 +91,13 @@ export async function imageDevice(serial) {
 export async function showAndroidImageNavigation(page, args) {
   const review = page.getByTestId('companion-review-action-read');
   const browse = page.getByTestId('companion-tab-browse');
-  await review.or(browse).first().waitFor({ state: 'visible' });
-  if (await review.isVisible()) {
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']);
-  }
+  await review.waitFor({ state: 'visible' });
+  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'input', 'keyevent', 'KEYCODE_BACK']);
   await browse.waitFor({ state: 'visible' });
 }
 
 export async function openAndroidImageTopic(page, title, nodeId, args) {
-  await showAndroidImageNavigation(page, args);
+  if (args) await showAndroidImageNavigation(page, args);
   await page.getByTestId('companion-tab-browse').click();
   await page.getByText(title, { exact: true }).click();
   await page.locator(`[data-companion-readable-document][data-node-id="${nodeId}"]`).waitFor();
