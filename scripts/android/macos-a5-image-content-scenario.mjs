@@ -60,6 +60,16 @@ async function requestAndroidImageSync(page, evidenceRoot, args) {
   }
 }
 
+async function openImageTopicWithEvidence(page, title, nodeId, args, evidenceRoot) {
+  try { await openAndroidImageTopic(page, title, nodeId, args); }
+  catch (error) {
+    await page.screenshot({ path: path.join(evidenceRoot, 'android-navigation-failure.png') });
+    fs.writeFileSync(path.join(evidenceRoot, 'android-navigation-failure.txt'),
+      `${page.url()}\n${await page.locator('body').innerText()}`);
+    throw error;
+  }
+}
+
 async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartMacos, session }) {
   const { nodeId } = receipt;
   receipt.stage = 'mac-insert';
@@ -73,7 +83,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   receipt.stage = 'android-receive';
   receipt.firstWebView = { pid: binding.pid, socket: binding.socket };
   await requestAndroidImageSync(binding.page, evidenceRoot, args);
-  await openAndroidImageTopic(binding.page, title, nodeId, args);
+  await openImageTopicWithEvidence(binding.page, title, nodeId, args, evidenceRoot);
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-received-image.png') });
   const waiting = session.waitForState({ command: 'load_node_document', commandArgs: { nodeId },
@@ -90,7 +100,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   binding = await connectImageWebView(args, device);
   receipt.restartedWebView = { pid: binding.pid, socket: binding.socket };
   assert.notEqual(receipt.restartedWebView.pid, receipt.firstWebView.pid);
-  await openAndroidImageTopic(binding.page, title, nodeId, args);
+  await openImageTopicWithEvidence(binding.page, title, nodeId, args, evidenceRoot);
   await binding.page.getByText(ANDROID_MARKER, { exact: true }).waitFor();
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-restarted-image.png') });
