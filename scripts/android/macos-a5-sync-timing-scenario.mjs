@@ -52,9 +52,12 @@ export async function replaceAndroidTimingBody(page, content) {
   const editor = page.locator('[data-companion-readable-document] .cm-content[contenteditable="true"]');
   await editor.waitFor();
   await editor.press('Control+A');
-  const selection = await editor.evaluate(element => ({
-    selected: window.getSelection()?.toString() ?? '', body: element.innerText
-  }));
+  const selection = await editor.evaluate(element => {
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    const selected = window.getSelection();
+    return { selected: selected?.rangeCount ? selected.getRangeAt(0).toString() : '', body: range.toString() };
+  });
   assert.equal(selection.selected, selection.body, 'timing_input_requires_full_body_selection');
   await page.keyboard.insertText(content);
   return selection;
