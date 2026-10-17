@@ -1,6 +1,7 @@
 let priorityRevision = 0;
 let waiters = 0;
 let dataRounds = 0;
+let resourceRounds = 0;
 const listeners = new Set<() => void>();
 
 /** A queued data run takes precedence at the next recoverable attachment boundary. */
@@ -25,14 +26,32 @@ export function attachmentWorkBudget(milliseconds = 2000) {
 
 
 export function waitForAttachmentWorkOpportunity(signal: AbortSignal) {
+  return waitUntil(() => !hasWaitingSyncData() && !dataRounds, signal);
+}
+
+export async function holdAttachmentResourceRound(signal: AbortSignal) {
+  while (hasWaitingSyncData() || dataRounds) await waitForAttachmentWorkOpportunity(signal);
   signal.throwIfAborted();
-  if (!hasWaitingSyncData() && !dataRounds) return Promise.resolve();
+  resourceRounds++;
+  return () => {
+    resourceRounds--;
+    if (!resourceRounds) for (const listener of [...listeners]) listener();
+  };
+}
+
+export function waitForAttachmentResourceRounds(signal: AbortSignal) {
+  return waitUntil(() => !resourceRounds, signal);
+}
+
+function waitUntil(isReady: () => boolean, signal: AbortSignal) {
+  signal.throwIfAborted();
+  if (isReady()) return Promise.resolve();
   return new Promise<void>((resolve, reject) => {
     const cleanup = () => {
       listeners.delete(ready);
       signal.removeEventListener('abort', cancel);
     };
-    const ready = () => { if (!hasWaitingSyncData() && !dataRounds) { cleanup(); resolve(); } };
+    const ready = () => { if (isReady()) { cleanup(); resolve(); } };
     const cancel = () => { cleanup(); reject(signal.reason); };
     listeners.add(ready);
     signal.addEventListener('abort', cancel, { once: true });

@@ -1,4 +1,4 @@
-import { holdSyncDataRound, waitForAttachmentWorkOpportunity } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
+import { holdAttachmentResourceRound, holdSyncDataRound, waitForAttachmentResourceRounds } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import { runSyncPeerRound } from '../../../../../../lib/core/sync/runSyncPeerRound.js';
@@ -25,15 +25,17 @@ export function withCompanionSyncPeerRound<T>(peerId: string,
   run: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<T>,
   options: { waitForInbound?: () => boolean; onWaiting?(waiting: boolean): void; signal?: AbortSignal; resourceOnly?: boolean } = {}) {
   return withCompanionRequestSyncLifecycle(async signal => {
-    if (options.resourceOnly) await waitForAttachmentWorkOpportunity(signal);
-    const releasePriority = options.resourceOnly ? undefined : holdSyncDataRound();
-    try { return await runSyncPeerRound({
-      owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
-      execute: (id, lease) => {
-        const sessionId = companionDesktopSessionId(peerId);
-        return run({ id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }, lease.signal);
-      }
-    }); } finally { releasePriority?.(); }
+    const releasePriority = options.resourceOnly ? await holdAttachmentResourceRound(signal) : holdSyncDataRound();
+    try {
+      if (!options.resourceOnly) await waitForAttachmentResourceRounds(signal);
+      return await runSyncPeerRound({
+        owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
+        execute: (id, lease) => {
+          const sessionId = companionDesktopSessionId(peerId);
+          return run({ id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }, lease.signal);
+        }
+      });
+    } finally { releasePriority(); }
   }, options.signal);
 }
 

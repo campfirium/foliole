@@ -19,6 +19,54 @@ afterEach(() => {
   closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
   runtime.active = true;
   runtime.listeners.clear();
+  vi.useRealTimers();
+});
+
+it('waits for a draining resource slice instead of exhausting busy retries before it releases', async () => {
+  vi.useFakeTimers();
+  let finishResource!: () => void;
+  let entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const resource = withCompanionSyncPeerRound('peer', async () => {
+    entered();
+    await new Promise<void>(resolve => { finishResource = resolve; });
+  }, { resourceOnly: true });
+  await started;
+  const execute = vi.fn(async () => 'persisted');
+  const data = withCompanionSyncPeerRound('peer', execute).catch(error => String(error));
+  await vi.advanceTimersByTimeAsync(2500);
+  expect(execute).not.toHaveBeenCalled();
+  finishResource();
+  await resource;
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(await data).toBe('persisted');
+  expect(execute).toHaveBeenCalledOnce();
+});
+
+it.each(['background', 'cancel'])('cancels data waiting for a resource slice on %s', async mode => {
+  let entered!: () => void;
+  let finish!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const resource = withCompanionSyncPeerRound('peer', async () => {
+    entered();
+    await new Promise<void>(resolve => { finish = resolve; });
+  }, { resourceOnly: true }).catch(error => String(error));
+  await started;
+  const controller = new AbortController();
+  const execute = vi.fn();
+  const data = withCompanionSyncPeerRound('peer', execute, { signal: controller.signal });
+  const outcome = data.catch(error => String(error));
+  if (mode === 'background') {
+    runtime.active = false;
+    for (const listener of [...runtime.listeners]) listener();
+  } else controller.abort(new Error('cancelled'));
+  expect(await outcome).toContain(mode === 'background' ? 'foreground_ended' : 'cancelled');
+  expect(execute).not.toHaveBeenCalled();
+  finish();
+  await resource;
+  runtime.active = true;
+  await expect(withCompanionSyncPeerRound('peer', async () => 'resumed', { resourceOnly: true }))
+    .resolves.toBe('resumed');
 });
 
 it('releases inbound and outbound ownership on background and admits fresh foreground work', async () => {
