@@ -1,3 +1,4 @@
+import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { classifyAttachmentBytes } from '../../../../../lib/platform/attachmentByteClassification';
 import { buildCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
 import { REMOTE_IMAGE_MAX_BYTES, REMOTE_IMAGE_MAX_REDIRECTS } from '../../../../../lib/platform/remoteImageResourceContract';
@@ -39,6 +40,7 @@ export async function importCompanionImageResource(sourceUrl: string) {
   const contentHash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
   const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
   if (!storageKey) throw new Error('remote_image_identity_rejected');
+  attachmentSourceVerification.invalidate(storageKey);
   const stored = await FolioleCompanionSync.writeImageAttachment({ bytesBase64, contentHash, mimeType, storageKey });
   const originalName = decodeURIComponent(new URL(sourceUrl).pathname.split('/').at(-1) ?? '') || storageKey;
   return { contentHash, mimeType, originalName, sizeBytes: bytes.length, storageKey, storedFile: stored.storedFile };

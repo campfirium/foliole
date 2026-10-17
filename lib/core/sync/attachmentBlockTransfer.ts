@@ -1,5 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, type AttachmentBlockResource, type AttachmentBlockResult,
   type AttachmentBlockStatus } from './attachmentBlockReceiver.js';
+import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 
 export interface AttachmentBlockDestination {
   status(resource: AttachmentBlockResource): Promise<AttachmentBlockStatus>;
@@ -11,12 +12,13 @@ export interface AttachmentBlockSource {
   withFile<T>(storageKey: string, consume: (file: {
     resource: AttachmentBlockResource;
     read(offset: number, length: number): Promise<Uint8Array>;
-  }) => Promise<T>): Promise<T>;
+  }) => Promise<T>, options?: { shouldYield: () => boolean }): Promise<T>;
 }
 
 export async function transferAttachmentSlice(input: {
   storageKey: string; source: AttachmentBlockSource; destination: AttachmentBlockDestination; signal?: AbortSignal; maxBlocks?: number; shouldYield?: () => boolean;
 }) {
+  const verificationBudget = attachmentWorkBudget(250);
   return input.source.withFile(input.storageKey, async file => {
     let current = await input.destination.status(file.resource);
     let blocks = 0;
@@ -41,7 +43,10 @@ export async function transferAttachmentSlice(input: {
     }
     if (current.kind === 'complete' && current.offset !== file.resource.byteLength) throw new Error('attachment_receiver_length_invalid');
     return { resource: file.resource, complete: current.kind === 'complete', blocks };
-  });
+  }, input.shouldYield ? { shouldYield: () => {
+    input.signal?.throwIfAborted();
+    return verificationBudget() || input.shouldYield!();
+  } } : undefined);
 }
 
 export async function transferAttachmentBlocks(input: Parameters<typeof transferAttachmentSlice>[0]) {

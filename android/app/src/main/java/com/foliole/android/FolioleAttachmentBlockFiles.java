@@ -115,7 +115,7 @@ public final class FolioleAttachmentBlockFiles {
             File file = resolve(key, false);
             if (!file.exists()) file = new File(FolioleAttachmentMaintenanceFiles.directory(context, true), key);
             if (action.equals("source-stat")) return info(file, false);
-            JSObject result = info(file, true);
+            JSObject result = info(file, false);
             if (file.exists()) sources.put(key, new RandomAccessFile(file, "r"));
             return result;
         }

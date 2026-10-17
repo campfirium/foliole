@@ -143,6 +143,6 @@ function configureAttachmentReads(stateRoot: string) {
       if (error.code !== 'ENOENT') throw error;
       return null;
     });
-    return { present: Boolean(info), length: info?.size ?? 0, hash: info ? createHash('sha256').update(await fs.readFile(file)).digest('hex') : '' };
+    return { present: Boolean(info), length: info?.size ?? 0, hash: info && input.action === 'stat' ? createHash('sha256').update(await fs.readFile(file)).digest('hex') : '' };
   });
 }

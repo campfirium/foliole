@@ -1,5 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import { transferAttachmentSlice } from './attachmentBlockTransfer.js';
+import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
@@ -43,6 +44,7 @@ function receiveResult(message: AttachmentRequest): AttachmentBlockResult {
 
 async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string, maxBlocks = 1, shouldYield = () => false) {
   const description = await single(exchange, { operation: 'describe', storageKey });
+  if (description.state === 'end' && description.pending) return { complete: false, blocks: 0, verificationPending: true };
   if (description.state !== 'complete') throw new Error('attachment_description_invalid');
   const resource = attachmentBlockResourceSchema.parse(description);
   const initial = await host.status(resource);
@@ -55,7 +57,7 @@ async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncE
   await request(exchange, { ...resource, operation: 'pull', offset, maxBlocks }, async message => {
     if (message.byteLength !== resource.byteLength || message.offset !== offset) throw new Error('attachment_pull_offset_invalid');
     if (message.state === 'end') {
-      if (!wireBlocks && offset !== resource.byteLength) throw new Error('attachment_pull_incomplete');
+      if (!wireBlocks && !message.pending && offset !== resource.byteLength) throw new Error('attachment_pull_incomplete');
     } else if (message.state === 'block') {
       if (wireBlocks >= maxBlocks || message.data.length !== Math.min(ATTACHMENT_BLOCK_BYTES, resource.byteLength - offset)) {
         throw new Error('attachment_pull_block_limit_invalid');
@@ -74,7 +76,7 @@ async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncE
       wireBlocks++;
     } else throw new Error('attachment_pull_state_invalid');
   });
-  return { complete: receivedOffset === resource.byteLength, blocks };
+  return { complete: receivedOffset === resource.byteLength, blocks, verificationPending: !wireBlocks && receivedOffset !== resource.byteLength };
 }
 
 export async function pullRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string) {
@@ -87,8 +89,8 @@ async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
   do {
     slice = await pullSlice(host, exchange, key, 1, shouldYield);
     blocks += slice.blocks;
-  } while (!slice.complete && !shouldYield());
-  return { complete: slice.complete, blocks };
+  } while (!slice.complete && slice.blocks > 0 && !shouldYield());
+  return { complete: slice.complete, blocks, verificationPending: slice.verificationPending };
 }
 
 /** Reuse one demand list while streaming; yield only at recoverable boundaries. */
@@ -104,14 +106,15 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   });
   const local = await host.needsSlice(shouldYield);
   pendingScan ||= local.pending;
-  const { result, pendingKeys, attempt } = createAttachmentProgress(exchange, report);
+  const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(exchange, report);
   let textPending = 0;
   const stages = [
     { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
       const pullBudget = attachmentWorkBudget(remoteNeeds.size ? 1000 : 2000);
       const initialBlocks = result.blocks;
+      const initialPending = pendingKeys.size;
       for (const key of local.keys) {
-        if (result.blocks > initialBlocks && (shouldYield() || pullBudget())) { pendingKeys.add(key); continue; }
+        if (pendingKeys.size > initialPending || (result.blocks > initialBlocks && (shouldYield() || pullBudget()))) { pendingKeys.add(key); continue; }
         await attempt(key, () => pullBudgeted(host, exchange, key, () => shouldYield() || pullBudget()));
       }
     } },
@@ -127,17 +130,18 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
     } },
     { name: 'push' as const, defer: () => { remoteNeeds.forEach(key => pendingKeys.add(key)); }, run: async () => {
       const initialBlocks = result.blocks;
+      const initialPending = pendingKeys.size;
       for (const key of remoteNeeds) {
-        if (result.blocks > initialBlocks && shouldYield()) { pendingKeys.add(key); continue; }
+        if (pendingKeys.size > initialPending || (result.blocks > initialBlocks && shouldYield())) { pendingKeys.add(key); continue; }
         await attempt(key, () => pushBudgeted(host, exchange, key, shouldYield));
       }
     } }
   ];
   await runRequestSyncAttachmentStages(exchange.context, stages.filter(stage =>
     stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
-      : Boolean(local.pdfTextKeys?.length)), () => result.blocks);
+      : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
   return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending,
-    yielded: result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield())) };
+    yielded: verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
 
 async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
@@ -158,15 +162,21 @@ async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
 function createAttachmentProgress(exchange: RequestSyncExchange, report: (key: string, error: unknown) => void) {
   const result = { transferred: 0, blocks: 0 };
   const pendingKeys = new Set<string>();
-  const attempt = async (key: string, execute: () => Promise<{ complete: boolean; blocks: number }>) => {
+  let verifying = false;
+  const attempt = async (key: string, execute: () => Promise<{ complete: boolean; blocks: number; verificationPending?: boolean | undefined }>) => {
     exchange.signal?.throwIfAborted();
     try {
       const slice = await execute();
       result.blocks += slice.blocks;
+      verifying ||= slice.verificationPending === true;
       if (slice.complete) result.transferred++;
       else pendingKeys.add(key);
     }
-    catch (error) { exchange.signal?.throwIfAborted(); pendingKeys.add(key); report(key, error); }
+    catch (error) {
+      exchange.signal?.throwIfAborted(); pendingKeys.add(key);
+      if (error instanceof AttachmentVerificationPending) verifying = true;
+      else report(key, error);
+    }
   };
-  return { result, pendingKeys, attempt };
+  return { result, pendingKeys, attempt, verificationPending: () => verifying };
 }

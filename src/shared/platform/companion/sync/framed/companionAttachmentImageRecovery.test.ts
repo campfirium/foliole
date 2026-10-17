@@ -78,7 +78,9 @@ function fileOperations(root: string) {
     const partial = path.join(root, `.attachment-${input.key.slice(0, 64)}.partial`);
     const file = input.partial ? partial : path.join(root, input.key);
     switch (input.action) {
-      case 'acquire': return {};
+      case 'acquire': case 'source-close': return {};
+      case 'source-open': return { present: true, length: (await stat(file)).size, hash: '' };
+      case 'source-read': return { base64: (await readFile(file)).subarray(input.offset, input.offset! + input.length!).toString('base64') };
       case 'stat': {
         try { const info = await stat(file); return { present: true, length: info.size,
           hash: input.partial ? '' : digest(await readFile(file)) }; }
@@ -146,5 +148,34 @@ it('retains corrupt published bytes through failed replacement and marks only ve
     await host.receive(resource, BLOCK, bytes.subarray(BLOCK));
     expect(await readFile(final)).toEqual(bytes);
     expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().get()).toBe(1);
+  } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+it('verifies companion source bytes in the shared core and rejects corruption after reuse', async () => {
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-source-'));
+  const sqlite = new Database(path.join(root, 'library.db'));
+  const port = createBetterSqliteDbPort(sqlite);
+  const bytes = Buffer.alloc(4 * BLOCK + 19, 0x63), key = `${digest(bytes)}.png`;
+  let reads = 0;
+  const operations = fileOperations(root);
+  native.access.mockImplementation(async input => {
+    if (input.action === 'source-read') reads += input.length;
+    return operations(input);
+  });
+  try {
+    await writeFile(path.join(root, key), bytes);
+    const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
+      readSnapshot: read => read(port), write: write => write(port)
+    }, { library_key: root, generation_id: 'generation' });
+    await expect(host.withFile(key, async () => { throw new Error('Must not send before full verification'); },
+      { shouldYield: () => true })).rejects.toThrow('attachment_verification_pending');
+    expect(reads).toBe(BLOCK);
+    await host.withFile(key, async file => { expect(await file.read(BLOCK, BLOCK)).toEqual(new Uint8Array(bytes.subarray(BLOCK, 2 * BLOCK))); });
+    expect(reads).toBe(bytes.length + BLOCK);
+    await host.withFile(key, async file => { await file.read(0, BLOCK); });
+    expect(reads).toBe(bytes.length + 2 * BLOCK);
+    bytes[0] = 0;
+    await writeFile(path.join(root, key), bytes);
+    await expect(host.withFile(key, file => file.read(0, BLOCK))).rejects.toThrow('attachment_source_invalid');
   } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });

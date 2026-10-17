@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
 import { createAttachmentDemandCache } from '../../../../../../lib/core/sync/attachmentDemandCache.js';
+import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { missingPdfTextArtifacts } from '../../../../../../lib/core/sync/pdfTextArtifact.js';
 import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
@@ -53,7 +54,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     append: async (key, offset, bytes) => { await call({ key, offset, base64: encode(bytes), action: 'append' }); },
     verifyPartial: async key => (await call({ key, partial: true, action: 'hash' })).hash === key,
     discardPartial: async key => { await call({ key, action: 'discard' }); },
-    publish: async resource => { await call({ key: resource.storageKey, action: 'publish' }); },
+    publish: async resource => { attachmentSourceVerification.invalidate(resource.storageKey); await call({ key: resource.storageKey, action: 'publish' }); },
     availability: (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))
   });
   const demand = createAttachmentDemandCache();
@@ -68,16 +69,17 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     },
     status: resource => notifyComplete(resource.storageKey, receiver.status(resource)),
     receive: (resource, offset, bytes) => notifyComplete(resource.storageKey, receiver.receive(resource, offset, bytes)),
-    withFile: (key, consume) => files.exclusive(`send-${key}`, async () => {
+    withFile: (key, consume, options) => files.exclusive(`send-${key}`, async () => {
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
       if (!info.present) throw new Error('attachment_source_missing');
       try {
-        if (info.hash !== key.slice(0, 64)) throw new Error('attachment_source_invalid');
-        return await consume({ resource: { storageKey: key, byteLength: info.length }, async read(offset, length) {
+        const file = { resource: { storageKey: key, byteLength: info.length }, async read(offset: number, length: number) {
           const result = await call({ key, action: 'source-read', offset, length });
           if (typeof result.base64 !== 'string') throw new Error('attachment_source_response_invalid');
           return Uint8Array.from(atob(result.base64), char => char.charCodeAt(0));
-        } });
+        } };
+        return await consume(await attachmentSourceVerification.verify(
+          JSON.stringify([owner.library_key, owner.generation_id]), file, options?.shouldYield));
       } finally { await call({ key, action: 'source-close' }); }
     }),
     needs: () => readRequestSyncAttachmentNeeds(db, inspect)

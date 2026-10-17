@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentDemandCache } from '../../lib/core/sync/attachmentDemandCache.js';
+import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 import { inspectAttachmentNeeds, readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -19,6 +20,7 @@ registerDatabaseConnectionCleanup(() => {
   const closing = [...receivers.values()];
   receivers.clear();
   demands.clear();
+  attachmentSourceVerification.invalidate();
   for (const pending of closing) void pending.then(receiver => receiver.close()).catch(error => {
     console.error('[sync] attachment receiver close failed', error);
   });
@@ -26,7 +28,7 @@ registerDatabaseConnectionCleanup(() => {
 
 export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDatabaseHost): Promise<RequestSyncAttachmentHost> {
   const { databasePath, assetsDir } = await runWithDatabaseConnectionOwner(resolveRuntimeDataPaths);
-  const source = createDesktopAttachmentBlockSource(assetsDir);
+  const source = createDesktopAttachmentBlockSource(assetsDir, databasePath);
   let demand = demands.get(databasePath);
   if (!demand) { demand = createAttachmentDemandCache(); demands.set(databasePath, demand); }
   const readDemand = demand;
@@ -53,7 +55,7 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
   };
   return {
     derivePdfText: (key, version) => createDesktopPdfTextArtifact(host, assetsDir, key, version),
-    async withFile(key, consume) { await checkLibrary(); return source.withFile(key, consume); },
+    async withFile(key, consume, options) { await checkLibrary(); return source.withFile(key, consume, options); },
     async status(resource) { return (await receiver()).status(resource); },
     async receive(resource, offset, bytes) { return (await receiver()).receive(resource, offset, bytes); },
     async needsSlice(shouldYield) {

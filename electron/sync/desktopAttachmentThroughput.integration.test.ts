@@ -12,6 +12,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 } }));
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 import { requestAttachmentWorkYield, waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
@@ -52,7 +53,7 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
   const { local, target, keys } = await prepareScale(directory.root);
   const server = await attachmentHttpServer(0);
   const owner = createSyncPeerRoundOwnership(60000);
-  const hashCalls = vi.spyOn(resourceFileHash, 'hashResourceFile');
+  const measurement = measureSourceWork();
   const started = performance.now();
   let rounds = 0;
   let totalBlocks = 0;
@@ -92,11 +93,11 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
     expect(editLatencyMs).toBeGreaterThan(0);
     expect(editLatencyMs).toBeLessThan(5000);
     const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, rounds, totalBlocks,
-      sourceHashCalls: hashCalls.mock.calls.length,
+      ...measurement.metrics(),
       elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };
     await writeFile(path.resolve('.tmp/artifacts/t357-attachment-throughput.json'), JSON.stringify(metrics, null, 2));
   } finally {
-    hashCalls.mockRestore();
+    measurement.close();
     releaseWaiter?.(); requestAttachmentWorkYield(); owner.close(); await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
@@ -151,4 +152,25 @@ function openScaleRound(owner: ReturnType<typeof createSyncPeerRoundOwnership>, 
     context: { protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: 'group', initiatorDeviceId: 'peer',
       initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
   return { lease, peerRound, exchange };
+}
+
+function measureSourceWork() {
+  attachmentSourceVerification.invalidate();
+  let sourceReadBytes = 0, sourceHashCalls = 0, sourceHashedBytes = 0, sourceFullHashes = 0;
+  const receiverHashes = vi.spyOn(resourceFileHash, 'hashResourceFile');
+  const verify = attachmentSourceVerification.verify.bind(attachmentSourceVerification);
+  const hashCalls = vi.spyOn(attachmentSourceVerification, 'verify').mockImplementation((identity, file, yieldWork, createDigest) =>
+    verify(identity, { ...file, async read(offset, length) {
+      const bytes = await file.read(offset, length); sourceReadBytes += bytes.length; return bytes;
+    } }, yieldWork, () => {
+      sourceHashCalls++;
+      const digest = createDigest!();
+      let hashedBytes = 0;
+      return { update(bytes) { sourceHashedBytes += bytes.length; hashedBytes += bytes.length; return digest.update(bytes); },
+        digest() { if (hashedBytes > 512 * 1024) sourceFullHashes++; return digest.digest(); } };
+
+    }));
+  return { close: () => { hashCalls.mockRestore(); receiverHashes.mockRestore(); }, metrics: () => ({
+    sourceHashCalls, sourceReadBytes, sourceHashedBytes, sourceFullHashes, receiverFullHashes: receiverHashes.mock.calls.length, sourceOpens: hashCalls.mock.calls.length
+  }) };
 }

@@ -57,7 +57,7 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
   const receiver = await openDesktopAttachmentBlockReceiver({ libraryRoot: directory, assetsDir,
     availability: (hash, available) => recordFramedSyncResourceAvailability(db, [hash], available) });
   if (receiver.kind !== 'acquired') throw new Error('test_owner_busy');
-  const source = createDesktopAttachmentBlockSource(assetsDir);
+  const source = createDesktopAttachmentBlockSource(assetsDir, databasePath);
   const demand = createAttachmentDemandCache();
   const inspect = (keys: string[]) => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,

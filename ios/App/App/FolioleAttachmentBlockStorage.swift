@@ -85,7 +85,7 @@ final class FolioleAttachmentBlockStorage {
                 file = try trash().appendingPathComponent(key)
             }
             if action == "source-stat" { return try info(file, hash: false) }
-            let result = try info(file, hash: true)
+            let result = try info(file, hash: false)
             if FileManager.default.fileExists(atPath: file.path) { sources[key] = try FileHandle(forReadingFrom: file) }
             return result
         }

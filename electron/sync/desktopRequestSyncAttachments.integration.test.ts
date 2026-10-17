@@ -13,6 +13,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { exchangeRequestSyncAttachments as exchangeSlice } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -164,5 +165,34 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.restoreAllMocks(); vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
+  }
+});
+
+it('does not signal immediate continuation when a corrupt source prevents progress', async () => {
+  const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
+  vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
+  const bytes = Buffer.alloc(1024, 31), key = `${createHash('sha256').update(bytes).digest('hex')}.pdf`;
+  const local = await attachmentHttpSource([key], directory.root);
+  await seedAttachmentTarget([key]);
+  await writeFile(path.join(local.assetsDir, key), Buffer.alloc(bytes.length, 32));
+  const server = await attachmentHttpServer(0), owner = createSyncPeerRoundOwnership(60000);
+  const id = crypto.randomUUID(), lease = owner.acquireOutbound('local', id)!;
+  const peerRound = { id, lease, admitted: false };
+  const exchange = createDesktopRequestSyncExchange({ peerRound, endpointUrl: server.url, groupKey: attachmentGroupKey,
+    groupSecret: Buffer.from(attachmentGroupKey).toString('base64url'),
+    context: { protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: 'group', initiatorDeviceId: 'peer',
+      initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
+  try {
+    const failures: unknown[] = [];
+    const result = await withRequestSyncPeerRound(exchange, peerRound,
+      () => exchangeSlice(local.host, exchange, (_key, error) => failures.push(error)));
+    expect(failures).toHaveLength(1);
+    expect(String(failures[0])).toContain('attachment_source_invalid');
+    expect(result).toMatchObject({ pending: 1, blocks: 0, yielded: false });
+  } finally {
+    lease.release(); owner.close(); await server.close(); await local.close();
+    await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
+    clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
+    vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
 });

@@ -1,5 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
+import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import { attachmentMessage, attachmentRequestSchema, type AttachmentRequest } from './requestSyncAttachmentContract.js';
@@ -28,20 +29,34 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
     try { return await consume(stream); }
     finally { await stream.frames.return(undefined); }
   };
+  const withSource: AttachmentBlockSource['withFile'] = (key, action) => {
+    const budget = attachmentWorkBudget(250);
+    return host.withFile(key, action, { shouldYield: () => { input.signal?.throwIfAborted(); return budget(); } });
+  };
   if (request.derive) {
     if (request.operation !== 'describe' || !request.storageKey.endsWith('.pdf')) throw new Error('attachment_derivation_invalid');
     const selected = request;
     const key = await host.derivePdfText?.(selected.storageKey, selected.extractorVersion);
     if (!key) return reply((async function* () { yield attachmentMessage({ ...selected, state: 'end' }); })());
-    return host.withFile(key, file => reply((async function* () {
+    return withPendingReply(() => withSource(key, file => reply((async function* () {
       yield attachmentMessage({ ...selected, storageKeys: [key], byteLength: file.resource.byteLength, state: 'complete' });
-    })()));
+    })())), selected, reply);
   }
   if (request.operation === 'pull' || request.operation === 'describe') {
     const selected = request;
-    return host.withFile(selected.storageKey, file => reply(sourceMessages(selected, file, input.signal, input.onProgress)));
+    return withPendingReply(() => withSource(selected.storageKey,
+      file => reply(sourceMessages(selected, file, input.signal, input.onProgress))), selected, reply);
   }
   return reply(responseMessages(host, request));
+}
+
+async function withPendingReply<T>(execute: () => Promise<T>, request: AttachmentRequest,
+  reply: (messages: AsyncIterable<RequestSyncMessage>) => Promise<T>) {
+  try { return await execute(); }
+  catch (error) {
+    if (!(error instanceof AttachmentVerificationPending)) throw error;
+    return reply((async function* () { yield attachmentMessage({ ...request, state: 'end', pending: true }); })());
+  }
 }
 
 async function* responseMessages(host: RequestSyncAttachmentHost, request: AttachmentRequest) {

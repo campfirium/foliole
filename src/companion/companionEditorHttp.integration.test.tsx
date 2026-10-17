@@ -18,10 +18,10 @@ import { readCompanionContentSource, releaseCompanionContentBase, retainCompanio
   saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
 import { closeCompanionDesktopSession } from '../shared/platform/companion/network/companionDesktopSession';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { seedEditorHttpAttachment } from '../test/companionEditorHttp.testSupport';
 import { approveJoiningMobile, createJoiningMobile, syncJoinedMobile } from '../test/companionJoinedMobile.testSupport';
 
 import { CompanionDraftProvider } from './CompanionDraftProvider';
-import { seedEditorHttpAttachment } from './companionEditorHttp.testSupport';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 vi.mock('@capacitor/core', async original => {

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 import type { AttachmentFileEntry } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
@@ -29,6 +30,7 @@ export function restoreAttachmentFromTrash(assetsDir: string, storageKey: string
 
 function moveAttachment(assetsDir: string, storageKey: string, toTrash: boolean) {
   if (!parseCanonicalAttachmentStorageKey(storageKey)) throw new Error('attachment_storage_key_invalid');
+  attachmentSourceVerification.invalidate(storageKey);
   const trash = attachmentTrashDirectory(assetsDir);
   const source = path.join(toTrash ? assetsDir : trash, storageKey);
   const destination = path.join(toTrash ? trash : assetsDir, storageKey);
@@ -50,6 +52,7 @@ function moveAttachment(assetsDir: string, storageKey: string, toTrash: boolean)
 
 export function removeTrashedAttachment(assetsDir: string, storageKey: string) {
   if (!parseCanonicalAttachmentStorageKey(storageKey)) throw new Error('attachment_storage_key_invalid');
+  attachmentSourceVerification.invalidate(storageKey);
   const file = path.join(attachmentTrashDirectory(assetsDir), storageKey);
   assertAttachmentFileNotLeased(path.join(assetsDir, storageKey));
   assertRegularFile(file);

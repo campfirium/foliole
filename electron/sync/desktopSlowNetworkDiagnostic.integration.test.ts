@@ -11,6 +11,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${sandbox.root}/host/${name}`, isPackaged: false
 } }));
 
+import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 import { requestAttachmentWorkYield, waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
@@ -33,11 +34,11 @@ import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMem
 import { slowNetworkRelay } from './slowNetworkDiagnostic.testSupport.js';
 
 
-it.each([{ mbps: 20, rttMs: 40 }, { mbps: 5, rttMs: 80 }, { mbps: 1, rttMs: 150 }])(
-  'records diagnostic timings for $mbps Mbps and $rttMs ms RTT', async profile => {
+it.each([{ mbps: 5, rttMs: 80, initialScan: false }, { mbps: 5, rttMs: 80, initialScan: true }])(
+  'admits text at $mbps Mbps / $rttMs ms during initial scan=$initialScan', async profile => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
-  const { local, target } = await prepareScale(directory.root);
+  const { local, target } = await prepareScale(directory.root, profile.initialScan ? 64 : 4);
   const server = await attachmentHttpServer(0);
 
   const owner = createSyncPeerRoundOwnership(60000);
@@ -49,26 +50,27 @@ it.each([{ mbps: 20, rttMs: 40 }, { mbps: 5, rttMs: 80 }, { mbps: 1, rttMs: 150 
   let requestedAt = 0;
   let editLatencyMs = 0;
   let releaseWaiter: (() => void) | undefined;
-  const sourceSpy = observeFirstSourceRead(() => {
-    if (!requestedAt) { requestedAt = performance.now(); releaseWaiter = waitForAttachmentWorkYield(); }
-  });
+  let pendingRecord: ReturnType<typeof textBranch> | undefined;
+  const onRead = async () => {
+    if (requestedAt) return;
+    requestedAt = performance.now(); releaseWaiter = waitForAttachmentWorkYield();
+    pendingRecord = textBranch(crypto.randomUUID(), `Body changed during initial scan ${crypto.randomUUID()}`);
+    pendingRecord.object_id = 'scan-edit'; pendingRecord.snapshot.id = 'scan-edit';
+    await local.database.write(db => applyConvergentSyncNodesWithDbPort(db, [pendingRecord!]));
+  };
+  attachmentSourceVerification.invalidate();
+  const sourceSpy = profile.initialScan ? observeInitialScan(onRead) : observeFirstSourceRead(onRead);
   const relay = await slowNetworkRelay(server.url, profile);
   const host = local.host;
   try {
-    const baseline = openScaleRound(owner, relay.url);
-    try {
-      const start = performance.now();
-      await withRequestSyncPeerRound(baseline.exchange, baseline.peerRound,
-        () => syncDataDuringAttachment(local.database, baseline.exchange, target.databasePath));
-      baselineMs = performance.now() - start;
-    } finally { baseline.lease.release(); }
+    baselineMs = await measureBaseline(owner, relay.url, local.database, target.databasePath);
     while (!editLatencyMs) {
       const { lease, peerRound, exchange } = openScaleRound(owner, relay.url);
       try {
         await withRequestSyncPeerRound(exchange, peerRound, async () => {
           if (requestedAt && !editLatencyMs) {
             releaseWaiter?.(); releaseWaiter = undefined;
-            await syncDataDuringAttachment(local.database, exchange, target.databasePath);
+            await syncDataDuringAttachment(local.database, exchange, target.databasePath, pendingRecord);
             editLatencyMs = performance.now() - requestedAt;
           }
           if (editLatencyMs) return;
@@ -79,14 +81,8 @@ it.each([{ mbps: 20, rttMs: 40 }, { mbps: 5, rttMs: 80 }, { mbps: 1, rttMs: 150 
       } finally { lease.release(); }
       if (++rounds > 100) throw new Error('attachment_throughput_round_budget_exceeded');
     }
-    expect(editLatencyMs).toBeGreaterThan(0);
-    expect(totalBlocks).toBeGreaterThan(0);
-    const metrics = { profile, attachmentNodeCount: 1, textEdits: 2, fixtureBytes: 16 * 1024 * 1024, rounds, totalBlocks,
-      baselineMs: Math.round(baselineMs), attachmentBoundaryWaitMs: Math.round(releasedAt - requestedAt),
-      editLatencyMs: Math.round(editLatencyMs), elapsedMs: Math.round(performance.now() - started),
-      transport: relay.metrics, note: 'Demand begins before the first source block read; excludes editor save and cadence; no packet loss injection' };
-    await mkdir('.tmp/artifacts/t357-single-wait', { recursive: true });
-    await writeFile(path.resolve(`.tmp/artifacts/t357-single-wait/network-${profile.mbps}mbps.json`), JSON.stringify(metrics, null, 2));
+    await recordDiagnostic({ profile, baselineMs, rounds, totalBlocks, releasedAt, requestedAt,
+      editLatencyMs, elapsedMs: performance.now() - started, transport: relay.metrics });
   } finally {
     sourceSpy.mockRestore();
     releaseWaiter?.(); requestAttachmentWorkYield(); owner.close(); await relay.close(); await server.close(); await local.close();
@@ -96,13 +92,13 @@ it.each([{ mbps: 20, rttMs: 40 }, { mbps: 5, rttMs: 80 }, { mbps: 1, rttMs: 150 
   }
 }, 240000);
 
-async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange, targetPath: string) {
-  const objectId = `timing-${crypto.randomUUID()}`;
-  const body = `Complete diagnostic body ${crypto.randomUUID()}\nEnd of body.`;
-  const record = textBranch(crypto.randomUUID(), body);
+async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange, targetPath: string, existing?: ReturnType<typeof textBranch>) {
+  const objectId = existing?.object_id ?? `timing-${crypto.randomUUID()}`;
+  const body = existing?.snapshot.content ?? `Complete diagnostic body ${crypto.randomUUID()}\nEnd of body.`;
+  const record = existing ?? textBranch(crypto.randomUUID(), body);
   record.object_id = objectId;
   record.snapshot.id = objectId;
-  await host.write(db => applyConvergentSyncNodesWithDbPort(db, [record]));
+  if (!existing) await host.write(db => applyConvergentSyncNodesWithDbPort(db, [record]));
   const inventories = await exchangeRequestSyncInventory(host, exchange);
   const difference = compareFramedSyncDatabaseInventories(inventories).find(item => item.globalId === objectId);
   expect(difference).toBeDefined();
@@ -116,8 +112,8 @@ async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange:
 
 
 
-async function prepareScale(root: string) {
-  const bytes = Buffer.alloc(4 * 1024 * 1024, 0x43);
+async function prepareScale(root: string, mebibytes: number) {
+  const bytes = Buffer.alloc(mebibytes * 1024 * 1024, 0x43);
   const keys: string[] = [];
   for (let i = 0; i < 4; i++) { bytes[0] = i; keys.push(`${createHash('sha256').update(bytes).digest('hex')}.pdf`); }
   const local = await attachmentHttpSource(keys, root);
@@ -142,15 +138,54 @@ function openScaleRound(owner: ReturnType<typeof createSyncPeerRoundOwnership>, 
   return { lease, peerRound, exchange };
 }
 
-function observeFirstSourceRead(onRead: () => void) {
+function observeFirstSourceRead(onRead: () => Promise<void>) {
   const originalSource = attachmentSource.createDesktopAttachmentBlockSource;
-  return vi.spyOn(attachmentSource, 'createDesktopAttachmentBlockSource').mockImplementation(assets => {
-    const source = originalSource(assets);
-    return { withFile(key, consume) {
+  return vi.spyOn(attachmentSource, 'createDesktopAttachmentBlockSource').mockImplementation((assets, libraryIdentity) => {
+    const source = originalSource(assets, libraryIdentity);
+    return { withFile(key, consume, options) {
       return source.withFile(key, file => consume({ ...file, async read(offset, length) {
-        onRead();
+        await onRead();
         return file.read(offset, length);
-      } }));
+      } }), options);
     } };
   });
+}
+
+function observeInitialScan(onRead: () => Promise<void>) {
+  const verify = attachmentSourceVerification.verify.bind(attachmentSourceVerification);
+  return vi.spyOn(attachmentSourceVerification, 'verify').mockImplementation((identity, file, shouldYield, hash) =>
+    verify(identity, { ...file, async read(offset, length) {
+      await onRead();
+      return file.read(offset, length);
+    } }, shouldYield, hash));
+}
+
+async function recordDiagnostic(input: {
+  profile: { mbps: number; rttMs: number; initialScan: boolean }; baselineMs: number; rounds: number;
+  totalBlocks: number; releasedAt: number; requestedAt: number; editLatencyMs: number; elapsedMs: number;
+  transport: Awaited<ReturnType<typeof slowNetworkRelay>>['metrics'];
+}) {
+  const { profile, baselineMs, rounds, totalBlocks, releasedAt, requestedAt, editLatencyMs } = input;
+    expect(editLatencyMs).toBeGreaterThan(0);
+    expect(editLatencyMs).toBeLessThan(5000);
+    expect(releasedAt - requestedAt).toBeLessThan(1100);
+    if (profile.initialScan) expect(totalBlocks).toBe(0);
+    else expect(totalBlocks).toBeGreaterThan(0);
+    const metrics = { profile, attachmentNodeCount: 1, textEdits: 2, fixtureBytes: (profile.initialScan ? 256 : 16) * 1024 * 1024, rounds, totalBlocks,
+      baselineMs: Math.round(baselineMs), attachmentBoundaryWaitMs: Math.round(releasedAt - requestedAt),
+      editLatencyMs: Math.round(editLatencyMs), elapsedMs: Math.round(input.elapsedMs),
+      transport: input.transport, note: 'Demand begins before the first source block read; excludes editor save and cadence; no packet loss injection' };
+    await mkdir('.tmp/artifacts/t357-single-wait', { recursive: true });
+    await writeFile(path.resolve(`.tmp/artifacts/t357-single-wait/network-${profile.mbps}mbps-${profile.initialScan ? 'initial' : 'send'}.json`), JSON.stringify(metrics, null, 2));
+}
+
+async function measureBaseline(owner: ReturnType<typeof createSyncPeerRoundOwnership>, url: string,
+  host: RequestSyncDatabaseHost, databasePath: string) {
+  const baseline = openScaleRound(owner, url);
+  try {
+    const start = performance.now();
+    await withRequestSyncPeerRound(baseline.exchange, baseline.peerRound,
+      () => syncDataDuringAttachment(host, baseline.exchange, databasePath));
+    return performance.now() - start;
+  } finally { baseline.lease.release(); }
 }

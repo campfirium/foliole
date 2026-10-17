@@ -16,7 +16,7 @@ async function setup(bytes: Uint8Array) {
   const fixture = await createBlockReceiverFixture(bytes);
   fixtures.push(fixture);
   const receiver = await fixture.open();
-  return { ...fixture, ...receiver, ...createDesktopAttachmentBlockSource(fixture.assetsDir) };
+  return { ...fixture, ...receiver, ...createDesktopAttachmentBlockSource(fixture.assetsDir, fixture.assetsDir) };
 }
 afterEach(async () => {
   for (const fixture of fixtures.splice(0)) await fixture.close();

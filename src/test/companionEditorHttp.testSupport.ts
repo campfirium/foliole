@@ -6,7 +6,8 @@ import { vi } from 'vitest';
 
 import type { NativeCompanionFramedFileRequest } from '../../lib/platform/nativeCompanionFramedFilesContract';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import type { createJoiningMobile } from '../test/companionJoinedMobile.testSupport';
+
+import type { createJoiningMobile } from './companionJoinedMobile.testSupport';
 
 export async function seedEditorHttpAttachment(host: Awaited<ReturnType<typeof createJoiningMobile>>) {
   const bytes = Buffer.alloc(2 * 1024 * 1024, 0x37);
@@ -36,7 +37,7 @@ function attachmentFiles(root: string) {
       })) };
       case 'stat': case 'source-open': {
         try { const info = await stat(file); return { present: true, length: info.size,
-          hash: input.partial ? '' : digest(await readFile(file)) }; }
+          hash: input.partial || input.action === 'source-open' ? '' : digest(await readFile(file)) }; }
         catch { return { present: false, length: 0, hash: '' }; }
       }
       case 'source-read': return { base64: (await readFile(file)).subarray(input.offset, input.offset! + input.length!).toString('base64') };

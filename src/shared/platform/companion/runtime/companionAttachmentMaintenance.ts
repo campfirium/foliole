@@ -1,6 +1,7 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
 import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
+import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
@@ -11,6 +12,7 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
   return owner.runWriter(async (db) => {
     const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
     const updateAvailability = async (operation: 'move' | 'remove-trash', storageKey: string, trash?: boolean) => {
+      attachmentSourceVerification.invalidate(storageKey);
       const result = await files({ operation, storageKey, ...(trash === undefined ? {} : { trash }) });
       if (typeof result.available !== 'boolean') throw new Error('attachment_availability_missing');
       await recordFramedSyncResourceAvailability(db, [storageKey.slice(0, 64)], result.available);
