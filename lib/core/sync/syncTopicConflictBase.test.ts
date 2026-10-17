@@ -18,6 +18,10 @@ function createPort(bodies: [string | null, string | null]) {
     snapshot_json: JSON.stringify({ content: bodies[index] })
   }));
   return { query: async (sql: string, args: unknown[]) => {
+    if (sql.includes('WITH RECURSIVE')) {
+      return Object.entries(graph).flatMap(([version_id, parents]) =>
+        (parents.length ? parents : [null]).map(parent_version_id => ({ version_id, parent_version_id })));
+    }
     if (sql.includes('FROM node_sync_version_parents')) {
       return graph[String(args[0])]!.map((parent_version_id) => ({ parent_version_id }));
     }

@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { loadSyncNodeAncestorGraph, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 import { cachedSyncNodeParents, loadAncestorDistances, loadSyncNodeVersionAncestors, loadSyncNodeVersionParents } from './syncNodeLineage.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
 import { readTopicTextSnapshot } from './topicTextBodies.js';
@@ -136,8 +137,8 @@ export async function loadMergeBase(port: DbPort, leftId: string, rightId: strin
   return row ?? null;
 }
 
-export async function loadMergeBaseCandidates(port: DbPort, leftId: string, rightId: string) {
-  const parents = new Map<string, string[]>();
+export async function loadMergeBaseCandidates(port: DbPort, leftId: string, rightId: string, graph?: SyncNodeAncestorGraph) {
+  const { parents } = graph ?? await loadSyncNodeAncestorGraph(port, [leftId, rightId]);
   const [left, right] = await Promise.all([
     loadAncestorDistances(port, leftId, parents),
     loadAncestorDistances(port, rightId, parents)

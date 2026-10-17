@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { loadAncestorMetadata, loadSyncNodeAncestorGraph, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 import { loadMergeBaseCandidates } from './syncNodeGraph.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { selectChangedTopicMain } from './topicTextConflictMetadata.js';
@@ -13,16 +14,17 @@ export function mergeTopicTextAttachments(db: DbPort, records: NativeSyncNodeRec
 }
 
 export async function mergeTopicTextSourceAttachments<M extends SyncNodeRecordMetadata>(db: DbPort, source: SyncNodeRecordSource<M>,
-  winner: NativeSyncNodeRecord, formedAt: string) {
+  winner: NativeSyncNodeRecord, formedAt: string, graph?: SyncNodeAncestorGraph) {
+  graph ??= await loadSyncNodeAncestorGraph(db, source.records.map(record => record.version_id!));
   const records = source.records;
-  const removed = await removedTopicTextAttachments(db, records);
+  const removed = await removedTopicTextAttachments(db, records, graph);
   const winnerBody = winner.body_text ?? winner.snapshot.content ?? '';
   const entries = records.flatMap(textAlternatives).filter((entry) => !removed.has(entry.id));
   for (const metadata of records) {
     const record = await source.load(db, metadata);
     const body = record.body_text ?? record.snapshot.content ?? '';
     if (body === winnerBody) continue;
-    if (await selectChangedTopicMain(db, record, winner) === winner) continue;
+    if (await selectChangedTopicMain(db, record, winner, graph) === winner) continue;
     const entry = alternativeForBody(record, formedAt);
     const sourceId = record.snapshot.text_selection?.version_id;
     if (sourceId && sourceId !== record.version_id) {
@@ -36,16 +38,14 @@ export async function mergeTopicTextSourceAttachments<M extends SyncNodeRecordMe
   return normalizeTextAlternatives(entries, winnerBody, formedAt);
 }
 
-export async function removedTopicTextAttachments(db: DbPort, records: readonly SyncNodeRecordMetadata[]) {
+export async function removedTopicTextAttachments(db: DbPort, records: readonly SyncNodeRecordMetadata[], graph?: SyncNodeAncestorGraph) {
+  graph ??= await loadSyncNodeAncestorGraph(db, records.map(record => record.version_id!));
   const removed = new Set<string>();
   for (let index = 0; index < records.length; index++) {
     const left = records[index]!;
     for (const right of records.slice(index + 1)) {
-      const bases = await loadMergeBaseCandidates(db, left.version_id!, right.version_id!);
-      for (const versionId of bases) {
-        const [row] = await db.query<{ alternatives: string | null }>(
-          "SELECT json_extract(snapshot_json, '$.text_alternatives') AS alternatives FROM node_sync_versions WHERE version_id = ?", [versionId]);
-        if (!row) continue;
+      const bases = await loadMergeBaseCandidates(db, left.version_id!, right.version_id!, graph);
+      for (const row of await loadAncestorMetadata(db, bases, graph)) {
         const entries: NativeSyncNodeRecord['snapshot']['text_alternatives'] = JSON.parse(row.alternatives ?? '[]');
         const leftIds = new Set(textAlternatives(left).map((entry) => entry.id));
         const rightIds = new Set(textAlternatives(right).map((entry) => entry.id));

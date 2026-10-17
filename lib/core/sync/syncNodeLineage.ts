@@ -1,4 +1,5 @@
 import type { DbPort } from './dbPort.js';
+import { loadSyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 
 export async function loadSyncNodeVersionParents(port: DbPort, versionId: string) {
   const rows = await port.query<{ parent_version_id: string }>(
@@ -16,7 +17,8 @@ export async function loadSyncNodeVersionAncestors(port: DbPort, versionId: stri
   return [...(await loadAncestorDistances(port, versionId)).keys()].filter((id) => id !== versionId);
 }
 
-export async function loadAncestorDistances(port: DbPort, versionId: string, parents = new Map<string, string[]>()) {
+export async function loadAncestorDistances(port: DbPort, versionId: string, parents?: Map<string, string[]>) {
+  parents ??= (await loadSyncNodeAncestorGraph(port, [versionId])).parents;
   const distances = new Map<string, number>([[versionId, 0]]);
   const pending: Array<{ distance: number; id: string }> = [{ distance: 0, id: versionId }];
   while (pending.length > 0) {
