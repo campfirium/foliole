@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { prepareAndroidEdit } from './macos-a5-sync-timing-scenario.mjs';
+import { prepareAndroidEdit, replaceAndroidTimingBody } from './macos-a5-sync-timing-scenario.mjs';
 import { assertTimingOverlap, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
 
 it('accepts only the complete persisted body and records its version', async () => {
@@ -69,8 +69,9 @@ it.each([true, false])('opens editing without hiding already visible controls: %
   } };
   const page = { getByTestId: () => edit, locator: () => ({
     click: async () => { visible = !visible; },
-    fill: async value => { if (!editing) throw new Error('not_editing'); body = value; }
-  }) };
-  await prepareAndroidEdit(page, 'Complete body');
+    press: async () => { if (!editing) throw new Error('not_editing'); }
+  }), keyboard: { insertText: async value => { body = value; } } };
+  await prepareAndroidEdit(page);
+  await replaceAndroidTimingBody(page, 'Complete body');
   expect(body).toBe('Complete body');
 });

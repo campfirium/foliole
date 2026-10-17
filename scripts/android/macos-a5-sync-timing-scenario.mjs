@@ -42,11 +42,15 @@ async function seedAttachmentBacklog(session, args, direction) {
   return { nodeId: topic.nodeId, references };
 }
 
-export async function prepareAndroidEdit(page, content) {
+export async function prepareAndroidEdit(page) {
   const edit = page.getByTestId('companion-reading-edit');
   if (!await edit.isVisible()) await page.locator('[data-companion-readable-document]').click();
   await edit.click();
-  await page.locator('[data-companion-readable-document] .cm-content').fill(content);
+}
+
+export async function replaceAndroidTimingBody(page, content) {
+  await page.locator('[data-companion-readable-document] .cm-content').press('Control+A');
+  await page.keyboard.insertText(content);
 }
 
 async function sample({ direction, index, topic, session, page, reader, evidenceRoot, samples, save, requests }) {
@@ -54,7 +58,7 @@ async function sample({ direction, index, topic, session, page, reader, evidence
   if (direction === 'a5-to-mac') {
     const previous = samples.at(-1);
     if (previous) await page.getByText(previous.content.split('\n')[2], { exact: true }).waitFor();
-    await prepareAndroidEdit(page, content);
+    await prepareAndroidEdit(page);
   }
   if (requests) {
     const deadline = Date.now() + 30_000;
@@ -65,15 +69,19 @@ async function sample({ direction, index, topic, session, page, reader, evidence
   }
   const startedAt = Date.now();
   const record = { direction, index, nodeId: topic.nodeId, startedAt, content, status: 'started',
-    clock: 'controller wall clock', boundary: 'save request to committed full-body readback; upper bound includes save latency' };
+    clock: 'controller wall clock', boundary: 'first text-input request to committed full-body readback; includes input and save latency' };
   samples.push(record); save();
   if (direction === 'mac-to-a5') {
     await session.invoke('update_node_content', { ...topic, content, updatedAt: new Date().toISOString() });
   } else {
+    await replaceAndroidTimingBody(page, content);
     await page.getByTestId('companion-reading-edit-done').click();
   }
   record.saveReturnedAt = Date.now();
   const read = direction === 'mac-to-a5' ? () => reader.read(topic.nodeId) : () => readMacImageFact(evidenceRoot, topic.nodeId);
+  const sourceRead = direction === 'mac-to-a5' ? () => readMacImageFact(evidenceRoot, topic.nodeId) : () => reader.read(topic.nodeId);
+  const source = await waitForTimingBody(sourceRead, content, { startedAt });
+  record.source = source;
   Object.assign(record, await waitForTimingBody(read, content, { startedAt }));
   await waitForTimingBody(() => reader.read(topic.nodeId), content, { startedAt });
   const mac = await readMacImageFact(evidenceRoot, topic.nodeId);
