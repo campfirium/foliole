@@ -1,4 +1,4 @@
-/* global setTimeout */
+/* global setTimeout, window */
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
@@ -49,8 +49,15 @@ export async function prepareAndroidEdit(page) {
 }
 
 export async function replaceAndroidTimingBody(page, content) {
-  await page.locator('[data-companion-readable-document] .cm-content').press('Control+A');
+  const editor = page.locator('[data-companion-readable-document] .cm-content[contenteditable="true"]');
+  await editor.waitFor();
+  await editor.press('Control+A');
+  const selection = await editor.evaluate(element => ({
+    selected: window.getSelection()?.toString() ?? '', body: element.innerText
+  }));
+  assert.equal(selection.selected, selection.body, 'timing_input_requires_full_body_selection');
   await page.keyboard.insertText(content);
+  return selection;
 }
 
 async function sample({ direction, index, topic, session, page, reader, evidenceRoot, samples, save, requests }) {
@@ -74,7 +81,8 @@ async function sample({ direction, index, topic, session, page, reader, evidence
   if (direction === 'mac-to-a5') {
     await session.invoke('update_node_content', { ...topic, content, updatedAt: new Date().toISOString() });
   } else {
-    await replaceAndroidTimingBody(page, content);
+    record.inputSelection = await replaceAndroidTimingBody(page, content);
+    save();
     await page.getByTestId('companion-reading-edit-done').click();
   }
   record.saveReturnedAt = Date.now();

@@ -69,9 +69,20 @@ it.each([true, false])('opens editing without hiding already visible controls: %
   } };
   const page = { getByTestId: () => edit, locator: () => ({
     click: async () => { visible = !visible; },
+    waitFor: async () => { if (!editing) throw new Error('not_editing'); },
+    evaluate: async () => ({ selected: 'Old body', body: 'Old body' }),
     press: async () => { if (!editing) throw new Error('not_editing'); }
   }), keyboard: { insertText: async value => { body = value; } } };
   await prepareAndroidEdit(page);
   await replaceAndroidTimingBody(page, 'Complete body');
   expect(body).toBe('Complete body');
+});
+
+it('refuses to type over a partial selection instead of corrupting the timing fixture', async () => {
+  let typed = false;
+  const page = { locator: () => ({ waitFor: async () => {}, press: async () => {},
+    evaluate: async () => ({ selected: 'Sync', body: 'Sync timing old body' })
+  }), keyboard: { insertText: async () => { typed = true; } } };
+  await expect(replaceAndroidTimingBody(page, 'New body')).rejects.toThrow('timing_input_requires_full_body_selection');
+  expect(typed).toBe(false);
 });
