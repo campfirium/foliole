@@ -30,8 +30,8 @@ final class FolioleAcceptanceSyncEventProjection {
                 throw new IllegalStateException("acceptance_sync_projection_device_missing");
             }
             JSONArray source = new JSONArray(scalar(database,
-                "SELECT value FROM companion_meta " +
-                    "WHERE key = 'workspace_sync_events' LIMIT 1"));
+                "SELECT COALESCE((SELECT value FROM companion_meta " +
+                    "WHERE key = 'workspace_sync_events' LIMIT 1), '[]')"));
             JSONArray events = new JSONArray();
             JSONArray sourceRuns = new JSONArray();
             JSONArray diagnosticEvents = new JSONArray();
