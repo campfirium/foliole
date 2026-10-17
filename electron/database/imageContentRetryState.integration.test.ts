@@ -4,6 +4,7 @@ import { afterEach, expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { applyEditorSyncNodeRecord } from '../../lib/core/sync/localContentEditBranch.js';
 import { localContentEditResources } from '../../lib/core/sync/localContentEditResources.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
@@ -92,4 +93,28 @@ it.each(['desktop', 'companion'] as const)('adds local retry storage without cha
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(facts);
   expect(host.sqlite.pragma('user_version', { simple: true }))
     .toBe(platform === 'desktop' ? DATABASE_SCHEMA_VERSION : COMPANION_DATABASE_VERSION);
+});
+
+it.each(['desktop', 'companion'] as const)('acknowledges an empty-image retry saved on the previous %s schema', async platform => {
+  const host = device(); const peer = device(); const base = textBranch('base', 'Original');
+  await host.receive([base]); await peer.receive([base]);
+  host.sqlite.exec(`ALTER TABLE node_version_local_origins DROP COLUMN content_edit_image_input_hash`);
+  host.sqlite.pragma(`user_version = ${platform === 'desktop' ? 162 : 91}`);
+  const saved = textBranch('old-edit', 'Saved before upgrade', base, now);
+  await applyEditorSyncNodeRecord(host.db, saved);
+  const facts = host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  if (platform === 'desktop') initializeDatabaseSchema(host.sqlite);
+  else await migrateCompanionDatabase(host.db, 91, COMPANION_DATABASE_VERSION);
+  const input = { nodeId: 'topic', baseContent: 'Original', baseVersionId: 'base', versionId: 'old-edit',
+    content: 'Saved before upgrade', title: 'Topic', hideTitleHeading: false, hostName: 'old-edit', updatedAt: now };
+  const result = await applyLocalContentEdit(host.db, input);
+  expect(result.submittedVersionId).toBe('old-edit');
+  expect(result.current.version_id).toBe('old-edit');
+  expect(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(facts);
+  await expect(applyLocalContentEdit(host.db, { ...input, newImageReferences: [image] }))
+    .rejects.toThrow('content_edit_version_mismatch');
+  await expect(applyLocalContentEdit(host.db, { ...input, content: 'Different body' }))
+    .rejects.toThrow('content_edit_version_mismatch');
+  await peer.receive([saved]);
+  await expect(applyLocalContentEdit(peer.db, input)).rejects.toThrow('content_edit_version_mismatch');
 });

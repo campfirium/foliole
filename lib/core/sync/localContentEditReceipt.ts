@@ -1,10 +1,14 @@
 import type { DbPort } from './dbPort.js';
+import { contentEditImageInputHash } from './localContentEditResources.js';
 
 /** Retry inputs belong to this device, independently of immutable version facts. */
 export async function assertLocalContentEditReceipt(db: DbPort, versionId: string, imageInputHash: string) {
   const [receipt] = await db.query<{ content_edit_image_input_hash: string | null }>(
     'SELECT content_edit_image_input_hash FROM node_version_local_origins WHERE version_id = ?', [versionId]);
-  if (receipt?.content_edit_image_input_hash !== imageInputHash) throw new Error('content_edit_version_mismatch');
+  // Before image descriptions joined save requests, a local origin implied an empty image input.
+  if (!receipt || (receipt.content_edit_image_input_hash ?? contentEditImageInputHash([])) !== imageInputHash) {
+    throw new Error('content_edit_version_mismatch');
+  }
 }
 
 export async function recordLocalContentEditReceipt(db: DbPort, versionId: string, imageInputHash: string) {
