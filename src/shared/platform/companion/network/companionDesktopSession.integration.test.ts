@@ -4,8 +4,11 @@ import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 
 import { decryptWorkgroupPayloadNode } from '../../../../../electron/sync/workgroupAeadNode.js';
+import { hasWaitingSyncData, waitForAttachmentWorkYield } from '../../../../../lib/core/sync/attachmentWorkBudget.js';
+import { createMemberSyncCadence } from '../../../../../lib/core/sync/memberSyncCadence.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 import { syncSessionReplySchema } from '../../../../../lib/platform/syncSessionContract.js';
+import type { ForegroundSyncReason } from '../../../../companion/companionForegroundSyncRunner.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 
 import { captureCompanionDesktopRound, closeCompanionDesktopSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
@@ -31,6 +34,61 @@ function installHttpBoundary() {
     return { status: response.status, body: body.toString('utf8') };
   });
 }
+
+it('notifies queued desktop data while the previous round is still handling attachments', async () => {
+  const { subscribeDesktopSyncCadence } = await import('../../../../companion/companionDesktopSyncCadence.js');
+  const mobile = await createCompanionRequestFixture();
+  installHttpBoundary();
+  const endpoint = mobile.fixture.rightSnapshot.origin;
+  let release!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  let attachmentStarted = false;
+  const active: { current: Promise<unknown> | null } = { current: null };
+  const cadence = createMemberSyncCadence<ForegroundSyncReason>({
+    holdPendingMutation: waitForAttachmentWorkYield,
+    run: () => {
+      active.current = mobile.sync({ onDatabaseConfirmed: captureCompanionDesktopRound(endpoint) });
+      return active.current;
+    }
+  });
+  let unsubscribe = () => {};
+  let manual: Promise<unknown> | undefined;
+  try {
+    await mobile.fixture.right.seed({ nodeId: 'during-attachments', title: 'Text', content: 'First body' });
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    cadence.updateFreshness({ eligible: true, input: 'freshness' });
+    native.post.mockImplementation(async input => {
+      if (!attachmentStarted && new URL(input.url).searchParams.get('request') === 'attachments') {
+        attachmentStarted = true;
+        await blocked;
+      }
+      return mobile.post(input);
+    });
+    unsubscribe = subscribeDesktopSyncCadence(cadence);
+    waitForCompanionDesktopChanges();
+    manual = mobile.fixture.right.invoke('activation_manual');
+    await vi.waitFor(() => expect(attachmentStarted).toBe(true), { timeout: 3000 });
+    const baseVersionId = mobile.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id=?')
+      .pluck().get('during-attachments');
+    await mobile.fixture.right.invoke('local_content_edit', { nodeId: 'during-attachments', baseVersionId,
+      versionId: 'during-attachments-next', content: 'New desktop body', hostName: 'Desktop',
+      updatedAt: '2026-10-17T02:00:00Z' });
+    await vi.waitFor(() => expect(hasWaitingSyncData()).toBe(true), { timeout: 1000 });
+    release();
+    await vi.waitFor(() => {
+      expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('during-attachments'))
+        .toBe('New desktop body');
+    }, { timeout: 8000 });
+  } finally {
+    cadence.stop();
+    unsubscribe();
+    release();
+    await active.current?.catch(() => undefined);
+    await closeCompanionDesktopSession();
+    await manual?.catch(() => undefined);
+    await mobile.close();
+  }
+}, 60_000);
 
 it('delivers an edit committed after final inventory but before finish, using the pre-round marker', async () => {
   const mobile = await createCompanionRequestFixture();

@@ -8,10 +8,11 @@ import {
   subscribeNativeAppBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
-import { closeCompanionDesktopSession, subscribeCompanionDesktopChanges } from '../shared/platform/companion/network/companionDesktopSession.js';
+import { closeCompanionDesktopSession } from '../shared/platform/companion/network/companionDesktopSession.js';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
+import { subscribeDesktopSyncCadence } from './companionDesktopSyncCadence';
 import {
   clearRetryTimer,
   createForegroundSyncRunner,
@@ -130,7 +131,7 @@ export function useForegroundAutoSync(
     runForegroundSyncCheck('endpoint-ready');
     const unsubscribe = subscribeForegroundSyncEvents(refs, cadence, () => cancelled);
     const unsubscribeChanges = isSyncGroupReady
-      ? subscribeCompanionDesktopChanges(async () => { await cadence.requestMutation('mutation'); })
+      ? subscribeDesktopSyncCadence(cadence)
       : () => {};
     return () => {
       cancelled = true;
