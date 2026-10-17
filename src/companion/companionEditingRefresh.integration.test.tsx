@@ -6,12 +6,17 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionDraftProvider } from './CompanionDraftProvider';
+import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
@@ -87,4 +92,34 @@ it('keeps editing mounted across actual SQLite autosave refreshes and persists c
   expect(parents).toHaveLength(2);
   expect(parents).toContainEqual({ parent_version_id: 'base' });
   view.unmount();
+});
+
+it('commits immediate Done input from the real editor to SQLite before returning', async () => {
+  library = await createSearchLibrary(0);
+  const node = { id: 'topic', content: 'Original body', kind: 'topic' as const, title: 'Topic',
+    isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
+    reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
+  const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  const initial = await loadCompanionWorkspaceSyncState();
+  const save = createCompanionTopicContentSaveHandler({ state: initial,
+    refreshAfterMutation: async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot
+  } as ReturnType<typeof useCompanionWorkspaceSync>);
+  const activity = new CompanionReadingActivity('topic', () => {});
+  let editor: EditorAdapter | null = null;
+  render(<LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider><CompanionDraftProvider>
+    <ReadableArticleDocument activity={activity} allowContentEditing onSaveContent={save}
+      onEditorReady={value => { editor = value; }}
+      readableArticle={{ content: node.content, currentVersionId: 'base', hideTitleHeading: false,
+        nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
+        textAnchorDecorations: [], title: 'Topic' }}
+      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+  </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>);
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));
+  act(() => editor!.replaceRange(0, 0, 'Immediate input '));
+  await act(() => activity.flush());
+  expect(library.database.prepare('SELECT content FROM nodes WHERE id=?').get('topic'))
+    .toEqual({ content: 'Immediate input Original body' });
+  expect(library.database.prepare('SELECT parent_version_id FROM node_sync_version_parents').all())
+    .toContainEqual({ parent_version_id: 'base' });
 });

@@ -12,6 +12,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import { readingFontCssFamily } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionEditorDraftFlush } from './useCompanionEditorDraftFlush';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
@@ -175,7 +176,7 @@ export function ReadableArticleDocument(props: {
 }) {
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
   const pdfReading = useCompanionPdfReadingEntry(props.readableArticle);
-  const { canEdit, editorState } = useReadableArticleEditorState({
+  const { canEdit, editorState: draft } = useReadableArticleEditorState({
     isViewingPdfOriginal: pdfReading.isViewingOriginal,
     readableArticle: props.readableArticle,
     ...definedProps({
@@ -183,6 +184,7 @@ export function ReadableArticleDocument(props: {
       onSaveContent: props.onSaveContent
     })
   });
+  const { editorState, onEditorReady } = useCompanionEditorDraftFlush(draft, canEdit, props.onEditorReady);
   const syncMissingAttachmentResource = useReadableDocumentActivity(props, editorState);
 
   if (pdfAttachmentId && pdfReading.isViewingOriginal) {
@@ -204,11 +206,11 @@ export function ReadableArticleDocument(props: {
       <ReadableArticleTextDocument
         canEdit={canEdit}
         editorState={editorState}
+        onEditorReady={onEditorReady}
         readableArticle={props.readableArticle}
         readingTypographySettings={props.readingTypographySettings}
         syncMissingAttachmentResource={syncMissingAttachmentResource}
         {...definedProps({
-          onEditorReady: props.onEditorReady,
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           scrollContainer: props.scrollContainer
