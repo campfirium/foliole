@@ -159,9 +159,8 @@ describe('workspaceStoreNodeActions extra sync coverage', () => {
     const actions = createWorkspaceNodeActions(harness.setState);
 
     await actions.updateNodeContent('node-1', 'First draft');
-    await vi.advanceTimersByTimeAsync(700);
     deferNodeContentRuntimePersist('node-1');
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(10_000);
 
     expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
 

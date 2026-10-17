@@ -7,8 +7,7 @@ import {
   runPendingTitleRefresh,
   usePendingDraftCommit
 } from './useEditorDraftPendingCommit';
-
-const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
+import type { EditorInputBase } from './useEditorDraftUserInputEvidence';
 
 export interface EditorDraftCommitOptions {
   baseContent?: string;
@@ -31,6 +30,7 @@ export type EditorDraftFlushRegistration = (
 ) => void;
 
 interface DraftFlushCallbacksArgs {
+  readInputBase: (nodeId: string | null) => EditorInputBase | null;
   committedVersionId?: string | null | undefined;
   clearFreshDraftEvidence: (nodeId: string | null) => void;
   flushDraft: ReturnType<typeof usePendingDraftCommit>['flushDraft'];
@@ -50,10 +50,11 @@ function useFreshDraftFlushCallback(args: DraftFlushCallbacksArgs) {
     if (!effectiveNodeId || !args.hasFreshDraftEvidence(effectiveNodeId, content)) {
       return false;
     }
-    const committedContent = effectiveNodeId === args.nodeId ? args.latestCommittedContentRef.current : null;
+    const inputBase = args.readInputBase(effectiveNodeId);
+    const committedContent = inputBase?.content ?? (effectiveNodeId === args.nodeId ? args.latestCommittedContentRef.current : null);
     const result = args.flushFreshDraftForNode({
       committedContent,
-      baseVersionId: args.committedVersionId,
+      baseVersionId: inputBase ? inputBase.versionId : args.committedVersionId,
       content,
       nodeId: effectiveNodeId,
       onCommit: args.onCommit
@@ -81,7 +82,7 @@ export function useDraftFlushCallbacks(args: DraftFlushCallbacksArgs) {
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
       flushDraft(false);
-    }, EDITOR_DRAFT_FLUSH_DEBOUNCE_MS);
+    }, 0);
   }, [flushDraft, timerRef]);
 
   useEffect(() => () => {

@@ -21,7 +21,7 @@ describe('useEditorDraftSync history boundaries', () => {
     rerender({ committedContent: 'Alpha remote refresh' });
     expect(result.current.editorContent).toBe('Alpha local draft');
     act(() => vi.advanceTimersByTime(1200));
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha local draft', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
   it('replaces an older pending draft and title refresh with the replayed body', () => {

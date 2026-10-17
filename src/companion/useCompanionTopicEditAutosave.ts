@@ -6,7 +6,7 @@ import { ContentDraftSession } from '../shared/platform/companion/editing/conten
 
 import { useCompanionDrafts } from './CompanionDraftProvider';
 
-export const COMPANION_TOPIC_EDIT_AUTOSAVE_DELAY_MS = 1200;
+export const COMPANION_TOPIC_EDIT_AUTOSAVE_DELAY_MS = 0;
 
 interface UseCompanionTopicEditAutosaveArgs {
   canEdit: boolean;

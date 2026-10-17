@@ -2,8 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import {
   createMemberSyncCadence,
-  MEMBER_SYNC_FRESHNESS_MS,
-  MEMBER_SYNC_TRAILING_WINDOW_MS
+  MEMBER_SYNC_FRESHNESS_MS
 } from './memberSyncCadence.js';
 
 function deferred() {
@@ -14,7 +13,7 @@ function deferred() {
 
 afterEach(() => vi.useRealTimers());
 
-it('runs the leading mutation immediately and merges a burst into one trailing run', async () => {
+it('starts idle mutations immediately and merges only input received during an active run', async () => {
   vi.useFakeTimers();
   const run = vi.fn<(input: string) => Promise<void>>(async () => undefined);
   const cadence = createMemberSyncCadence({ run });
@@ -24,9 +23,9 @@ it('runs the leading mutation immediately and merges a burst into one trailing r
   await vi.advanceTimersByTimeAsync(1_000);
   cadence.requestMutation('second');
   cadence.requestMutation('third');
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS - 1_000);
+  await vi.advanceTimersByTimeAsync(5_000 - 1_000);
 
-  expect(run.mock.calls.map(([input]) => input)).toEqual(['first', 'third']);
+  expect(run.mock.calls.map(([input]) => input)).toEqual(['first', 'second', 'third']);
 });
 
 it('does not create a trailing run without a later mutation', async () => {
@@ -36,7 +35,7 @@ it('does not create a trailing run without a later mutation', async () => {
   cadence.updateFreshness({ eligible: true, input: 'freshness' });
   cadence.requestMutation('only');
 
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  await vi.advanceTimersByTimeAsync(5_000);
   expect(run).toHaveBeenCalledOnce();
 });
 
@@ -50,7 +49,7 @@ it('waits for a long active run before starting the single trailing run', async 
   cadence.requestMutation('first');
   cadence.requestMutation('later');
 
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS * 2);
+  await vi.advanceTimersByTimeAsync(5_000 * 2);
   expect(run).toHaveBeenCalledOnce();
   first.resolve();
   await vi.advanceTimersByTimeAsync(0);
@@ -67,7 +66,7 @@ it('joins an external manual run and trails a mutation after it', async () => {
 
   expect(cadence.requestImmediate('foreground')).toBe(manual.promise);
   cadence.requestMutation('mutation');
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  await vi.advanceTimersByTimeAsync(5_000);
   expect(run).not.toHaveBeenCalled();
   external = null;
   manual.resolve();
@@ -87,12 +86,12 @@ it('retains a trailing mutation while ineligible and consumes it on the next imm
 
   cadence.updateFreshness({ eligible: false, input: null });
   first.resolve();
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  await vi.advanceTimersByTimeAsync(5_000);
   expect(run).toHaveBeenCalledOnce();
 
   cadence.updateFreshness({ eligible: true, input: 'freshness' });
   cadence.requestImmediate('foreground');
-  await vi.advanceTimersByTimeAsync(MEMBER_SYNC_TRAILING_WINDOW_MS);
+  await vi.advanceTimersByTimeAsync(5_000);
   expect(run.mock.calls.map(([input]) => input)).toEqual(['first', 'foreground']);
 });
 

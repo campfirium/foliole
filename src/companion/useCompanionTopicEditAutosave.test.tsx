@@ -16,14 +16,19 @@ function mount(save = createContentSaveMock()) {
   return { ...hook, save };
 }
 
-it('debounces input and preserves its original baseline across source refreshes', async () => {
+it('saves delivered input immediately and preserves its baseline during an in-flight source refresh', async () => {
   vi.useFakeTimers();
-  const { result, rerender, save } = mount();
+  const save = createContentSaveMock();
+  const complete = save.getMockImplementation()!;
+  const gate = deferred<void>();
+  save.mockImplementationOnce((...args) => gate.promise.then(() => complete(...args)));
+  const { result, rerender } = mount(save);
   act(() => result.current.handleChange('Draft'));
   save.setSource({ content: 'Remote', versionId: 'remote' });
   rerender({ content: 'Remote', nodeId: 'n1', canEdit: true });
   expect(result.current.value).toBe('Draft');
-  await act(async () => { await vi.advanceTimersByTimeAsync(1200); });
+  expect(save).toHaveBeenCalledTimes(1);
+  await act(async () => { gate.resolve(); });
   expect(save).toHaveBeenCalledWith('n1', 'Draft', expect.objectContaining({ baseVersionId: 'base' }));
   expect(result.current.value).toBe('Draft');
 });
@@ -91,6 +96,8 @@ it('ignores a read that resolves after newer input and flushes when editing ends
   const read = deferred<{ content: string; versionId: string }>();
   save.readSource.mockImplementationOnce(() => read.promise);
   const { result, rerender } = mount(save);
+  await act(async () => undefined);
+  expect(save.readSource).toHaveBeenCalledTimes(1);
   act(() => result.current.handleChange('Typed during read'));
   await act(async () => { read.resolve({ content: 'Stale', versionId: 'stale' }); });
   expect(result.current.value).toBe('Typed during read');

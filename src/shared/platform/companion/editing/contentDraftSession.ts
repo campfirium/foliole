@@ -23,7 +23,7 @@ export class ContentDraftSession {
   private bufferedInput = false;
 
   constructor(readonly nodeId: string, private base: CompanionContentSource,
-    public save: CompanionContentSaveHandler, private delay = 1200) {
+    public save: CompanionContentSaveHandler, private delay = 0) {
     this.value = base.content;
     this.ready = !save.retainHold;
   }
@@ -31,7 +31,11 @@ export class ContentDraftSession {
   get dirty() { return this.bufferedInput || this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
   get attached() { return this.listeners.size > 0; }
 
-  markBufferedInput() { if (this.ready) this.bufferedInput = true; }
+  markBufferedInput() {
+    if (!this.ready) return;
+    this.bufferedInput = true;
+    this.clearTimer();
+  }
 
   subscribe(listener: () => void) {
     this.listeners.add(listener);
@@ -99,12 +103,20 @@ export class ContentDraftSession {
       if (!this.imageReferences.has(reference.storage_key)) this.imageReferences.set(reference.storage_key, reference);
     }
     this.bufferedInput = false;
-    if (value === this.value) return;
+    if (value === this.value) {
+      if (this.dirty) this.scheduleSave();
+      return;
+    }
     this.value = value;
     this.sequence += 1;
-    this.clearTimer();
-    this.timer = setTimeout(() => { void this.flush().catch(() => undefined); }, this.delay);
     this.publish();
+    this.scheduleSave();
+  }
+
+  private scheduleSave() {
+    this.clearTimer();
+    if (this.delay === 0) void this.flush(false).catch(() => undefined);
+    else this.timer = setTimeout(() => { void this.flush(false).catch(() => undefined); }, this.delay);
   }
 
   private clearTimer() {
@@ -112,7 +124,7 @@ export class ContentDraftSession {
     this.timer = null;
   }
 
-  async flush() {
+  async flush(explicit = true) {
     if (!this.ready) await this.start();
     this.clearTimer();
     if (this.refreshSaved) {
@@ -123,6 +135,7 @@ export class ContentDraftSession {
     }
     const target = this.sequence;
     while (this.acknowledged < target) {
+      if (!explicit && this.bufferedInput) return;
       if (!this.running) this.running = this.commit().finally(() => { this.running = null; });
       await this.running;
     }

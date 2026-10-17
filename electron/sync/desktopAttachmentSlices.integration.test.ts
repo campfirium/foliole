@@ -11,20 +11,20 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${sandbox.root}/host/${name}`, isPackaged: false
 } }));
 
-import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
 import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
-import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
-import { exchangeRequestSyncInventory, pushRequestSyncObject, type RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
-import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
+import { exchangeRequestSyncInventory, pullRequestSyncObject, pushRequestSyncObject, type RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
-import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
-import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
@@ -45,13 +45,13 @@ it('releases each bidirectional slice and resumes verified prefixes across new r
   const server = await attachmentHttpServer(0);
   const owner = createSyncPeerRoundOwnership(60_000);
   try {
-    for (let index = 0; index < 4; index++) {
+    for (let index = 0; index < 7; index++) {
       await runSlice(local, owner, server.url, target.databasePath, index);
       if (index === 0) {
-        for (const [dir, key] of [[local.assetsDir, keys[1]!], [target.assetsDir, keys[0]!]]) {
-          const prefix = await readFile(path.join(dir!, `.attachment-${key!.slice(0, 64)}.partial`));
-          expect(prefix.length).toBe(ATTACHMENT_BLOCK_BYTES);
-        }
+        const prefix = await readFile(path.join(local.assetsDir, `.attachment-${keys[1]!.slice(0, 64)}.partial`));
+        expect(prefix.length).toBe(ATTACHMENT_BLOCK_BYTES);
+        await expect(readFile(path.join(target.assetsDir, `.attachment-${keys[0]!.slice(0, 64)}.partial`)))
+          .rejects.toMatchObject({ code: 'ENOENT' });
         await local.close();
         local = await attachmentHttpSource(keys, directory.root, true);
         // Existing crash recovery distrusts the last block after reopening.
@@ -72,23 +72,32 @@ it('releases each bidirectional slice and resumes verified prefixes across new r
 });
 
 
-async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange, targetPath: string) {
-  const objectId = 'user_space:mac:desktop:*:search_aliases_document';
-  const payload = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
-    key: 'search_aliases_document', platform: 'mac', scope: 'user_space', value_json: '"Changed between slices"' });
-  await host.write(db => db.transaction(tx => applySyncObjectInTransaction(tx, {
-    object_type: 'setting', object_id: objectId, content_hash: computeSyncContentHash('setting', payload),
-    deleted_at: null, payload_json: JSON.stringify(payload), updated_at: '2026-10-16'
-  })));
-  const inventories = await exchangeRequestSyncInventory(host, exchange);
-  const difference = compareFramedSyncDatabaseInventories(inventories).find(item => item.globalId === objectId);
-  expect(difference).toBeDefined();
-  await pushRequestSyncObject(host, exchange, difference!);
-  const target = new Database(targetPath, { readonly: true });
-  try {
-    expect(target.prepare('SELECT value_json FROM setting_records WHERE key = ?').get('search_aliases_document'))
-      .toEqual({ value_json: '"Changed between slices"' });
-  } finally { target.close(); }
+async function syncDataDuringAttachment(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
+  exchange: RequestSyncExchange, targetPath: string, index: number) {
+  const bodies = [`Local edit ${index}\nComplete body.`, `Remote edit ${index}\nComplete body.`];
+  const write = async (db: ReturnType<typeof createBetterSqliteDbPort>, side: number) => {
+    const id = `text-${side}`;
+    const parent = await loadCurrentSyncNodeRecord(db, id);
+    const record = textBranch(`v-${side}-${index}`, bodies[side]!, parent ?? undefined);
+    record.object_id = id; record.snapshot.id = id;
+    await applyConvergentSyncNodesWithDbPort(db, [record]);
+  };
+  await local.database.write(db => write(db, 0));
+  await runWithDatabaseConnectionOwner(() => write(createBetterSqliteDbPort(openDatabaseConnection().sqlite), 1));
+  const differences = compareFramedSyncDatabaseInventories(await exchangeRequestSyncInventory(local.database, exchange));
+  await pushRequestSyncObject(local.database, exchange, differences.find(item => item.globalId === 'text-0' && item.direction === 'local_to_remote')!);
+  await pullRequestSyncObject(local.database, exchange, differences.find(item => item.globalId === 'text-1' && item.direction === 'remote_to_local')!, { peerState: {
+    contract_version: 3, group_id: 'group', sender_device_identity_key: 'local',
+    library_epoch: 'local-epoch', proof_revision: 0, source_proof_revisions: {},
+    devices: [], removals: [], restore: null
+  } });
+  for (const databasePath of [local.databasePath, targetPath]) {
+    const reader = new Database(databasePath, { readonly: true });
+    try {
+      for (let side = 0; side < 2; side++) expect(reader.prepare('SELECT content FROM nodes WHERE id=?').get(`text-${side}`))
+        .toEqual({ content: bodies[side] });
+    } finally { reader.close(); }
+  }
 }
 
 
@@ -105,16 +114,15 @@ async function runSlice(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
   try {
     const result = await withRequestSyncPeerRound(exchange, peerRound,
       async () => {
-        if (index === 1) await syncDataDuringAttachment(local.database, exchange, targetPath);
+        await syncDataDuringAttachment(local, exchange, targetPath, index);
         const release = waitForAttachmentWorkYield();
         try {
           return await exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => { throw error; });
         } finally { release(); }
       });
-    expect(result).toMatchObject([
-      { blocks: 2, pending: 2, transferred: 0 }, { blocks: 2, pending: 2, transferred: 0 },
-      { blocks: 2, pending: 1, transferred: 1 }, { blocks: 1, pending: 0, transferred: 1 }
-    ][index]!);
+    expect(result.blocks).toBe(1);
+    if (index < 6) expect(result.pending).not.toBe(0);
+    else expect(result.pending).toBe(0);
     if (index === 0) {
       const signal = AbortSignal.abort(new Error('cancelled_between_slices'));
       await expect(exchangeRequestSyncAttachments(local.host, { ...exchange, signal }, () => {}))

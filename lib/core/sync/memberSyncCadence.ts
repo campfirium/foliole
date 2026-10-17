@@ -1,4 +1,3 @@
-export const MEMBER_SYNC_TRAILING_WINDOW_MS = 5_000;
 export const MEMBER_SYNC_FRESHNESS_MS = 60_000;
 
 type Timer = ReturnType<typeof setTimeout>;
@@ -32,7 +31,6 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   private stopped = false;
   private trailingInput: Input | null = null;
   private trailingTimer: Timer | null = null;
-  private trailingWindowUntil = 0;
 
   constructor(private readonly args: CadenceArgs<Input>) {
     this.now = args.now ?? (() => Date.now());
@@ -52,7 +50,7 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
   requestMutation(input: Input) {
     if (this.stopped || !this.eligible) return null;
     const external = this.externalActiveRun();
-    if (external || this.now() < this.trailingWindowUntil) {
+    if (external) {
       this.trailingInput = input;
       if (external && !this.activeRun) this.trackRun(external);
       this.scheduleTrailingCheck();
@@ -134,11 +132,10 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
     this.trailingTimer = null;
     if (!this.trailingInput || this.stopped || !this.eligible) return;
     this.releasePendingMutation ??= this.args.holdPendingMutation?.() ?? null;
-    const delay = Math.max(0, this.trailingWindowUntil - this.now());
     this.trailingTimer = setTimeout(() => {
       this.trailingTimer = null;
       void this.flushTrailing().catch(() => undefined);
-    }, delay);
+    }, 0);
   }
 
   private async flushTrailing() {
@@ -149,14 +146,12 @@ class DefaultMemberSyncCadence<Input> implements MemberSyncCadence<Input> {
       if (this.trailingInput) this.scheduleTrailingCheck();
       return;
     }
-    if (this.now() < this.trailingWindowUntil) return this.scheduleTrailingCheck();
     const input = this.trailingInput;
     this.clearTrailing();
     await this.startMutationRun(input);
   }
 
   private startMutationRun(input: Input) {
-    this.trailingWindowUntil = this.now() + MEMBER_SYNC_TRAILING_WINDOW_MS;
     return this.requestImmediate(input);
   }
 

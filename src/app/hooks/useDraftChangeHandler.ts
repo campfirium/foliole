@@ -1,12 +1,14 @@
 import { startTransition, useCallback, type MutableRefObject } from 'react';
 
 import type { EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
-import { deferNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
+import { deferNodeContentRuntimePersist, resumeNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 import { applyEditorDraftHistoryReplay, type EditorDraftHistoryReplayArgs } from './editorDraftHistoryReplay';
 import { clearDraftTimer, type PendingDraftCommit } from './useEditorDraftPendingCommit';
+import type { EditorInputBase } from './useEditorDraftUserInputEvidence';
 
 interface DraftChangeHandlerArgs extends Omit<EditorDraftHistoryReplayArgs, 'content'> {
+  readInputBase: (nodeId: string | null) => EditorInputBase | null;
   committedVersionId?: string | null | undefined;
   getPendingDraftCommit: () => PendingDraftCommit | null;
   hasPendingUserInputEvidence: (nodeId: string | null, content: string) => boolean;
@@ -41,15 +43,17 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
         args.setDraftState({ content, nodeId: sourceNodeId });
       });
     }
+    const inputBase = args.readInputBase(sourceNodeId);
     args.clearPendingUserInputEvidence(sourceNodeId);
     deferNodeContentRuntimePersist(sourceNodeId);
     args.setPendingTitleRefresh({ content, nodeId: sourceNodeId });
     if (committedContent !== null && content === committedContent) {
       clearDraftTimer(args.timerRef);
       args.clearPendingDraftCommit();
+      resumeNodeContentRuntimePersist(sourceNodeId);
       return;
     }
-    args.setPendingDraftCommit(buildPendingDraftCommit(args, sourceNodeId, content, committedContent, meta));
+    args.setPendingDraftCommit(buildPendingDraftCommit(args, sourceNodeId, content, committedContent, meta, inputBase));
     args.scheduleFlush();
   }, [
     args.clearPendingDraftCommit,
@@ -60,6 +64,7 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     args.latestCommittedContentRef,
     args.nodeId,
     args.onCommit,
+    args.readInputBase,
     args.scheduleFlush,
     args.setDraftState,
     args.setPendingDraftCommit,
@@ -69,13 +74,13 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
 }
 
 function buildPendingDraftCommit(args: DraftChangeHandlerArgs, sourceNodeId: string, content: string,
-  committedContent: string | null, meta?: EditorContentChangeMeta): PendingDraftCommit {
+  committedContent: string | null, meta: EditorContentChangeMeta | undefined, inputBase: EditorInputBase | null): PendingDraftCommit {
   const previous = args.getPendingDraftCommit();
   return {
     baseVersionId: previous?.nodeId === sourceNodeId ? previous.baseVersionId
-      : sourceNodeId === args.nodeId ? args.committedVersionId : undefined,
+      : inputBase ? inputBase.versionId : sourceNodeId === args.nodeId ? args.committedVersionId : undefined,
     newImageReferences: meta?.newImageReferences ?? (previous?.nodeId === sourceNodeId ? previous.newImageReferences : undefined),
-    committedContent,
+    committedContent: previous?.nodeId === sourceNodeId ? previous.committedContent : inputBase?.content ?? committedContent,
     content,
     nodeId: sourceNodeId,
     onCommit: args.onCommit

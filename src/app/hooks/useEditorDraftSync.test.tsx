@@ -4,67 +4,43 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEditorDraftSync } from './useEditorDraftSync';
 
 function registerDebouncePersistenceTest() {
-  it('keeps editor changes in draft state until the debounce fires', () => {
+  it('commits delivered editor content in the next task without another idle wait', () => {
     const onCommit = vi.fn();
-    const { result } = renderHook(() =>
-      useEditorDraftSync({
-        committedContent: 'Alpha body',
-        nodeId: 'node-1',
-        onCommit
-      })
-    );
-
+    const { result } = renderHook(() => useEditorDraftSync({
+      committedContent: 'Alpha body', nodeId: 'node-1', onCommit
+    }));
     act(() => {
       result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
       result.current.handleEditorChange('Alpha body updated');
     });
-
     expect(result.current.editorContent).toBe('Alpha body updated');
-    expect(onCommit).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(1199);
+    act(() => vi.advanceTimersByTime(0));
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', {
+      publishLocal: false, baseContent: 'Alpha body'
     });
-
-    expect(onCommit).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(1);
-    });
-
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
-  it('defers pending draft flush while raw editor input keeps arriving', () => {
+  it('holds outdated delivered content until newer raw input is delivered', () => {
     const onCommit = vi.fn();
-    const { result } = renderHook(() =>
-      useEditorDraftSync({
-        committedContent: 'Alpha body',
-        nodeId: 'node-1',
-        onCommit
-      })
-    );
-
+    const { result } = renderHook(() => useEditorDraftSync({
+      committedContent: 'Alpha body', nodeId: 'node-1', onCommit
+    }));
     act(() => {
-      result.current.handleEditorInput({ contentLength: 'Alpha body updated'.length, nodeId: 'node-1' });
-      result.current.handleEditorChange('Alpha body updated');
+      result.current.handleEditorInput({ contentLength: 'Alpha old'.length, nodeId: 'node-1' });
+      result.current.handleEditorChange('Alpha old');
+      result.current.handleEditorInput({ contentLength: 'Alpha latest'.length, nodeId: 'node-1' });
+      vi.advanceTimersByTime(10_000);
     });
-
-    act(() => {
-      vi.advanceTimersByTime(1199);
-      result.current.handleEditorInput({ nodeId: 'node-1' });
-      vi.advanceTimersByTime(1);
-    });
-
     expect(onCommit).not.toHaveBeenCalled();
-
     act(() => {
-      vi.advanceTimersByTime(1200);
+      result.current.handleEditorChange('Alpha latest');
+      vi.advanceTimersByTime(0);
     });
-
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha latest', {
+      publishLocal: false, baseContent: 'Alpha body'
+    });
   });
-
 }
 
 function registerCloseFlushTest() {
@@ -221,7 +197,7 @@ function registerStaleNodeChangeTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha late draft', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onCommit).not.toHaveBeenCalledWith('node-2', 'Alpha late draft');
   });
 

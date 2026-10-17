@@ -110,9 +110,12 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
   const timerRef = useRef<number | null>(null);
   const pending = usePendingDraftCommit(timerRef);
   const { getPendingDraftCommit, flushDraft } = pending;
-  const userInputEvidence = useEditorDraftUserInputEvidence(getPendingDraftCommit);
+  const userInputEvidence = useEditorDraftUserInputEvidence(getPendingDraftCommit, {
+    nodeId, content: committedContent, versionId: args.committedVersionId
+  });
 
   const { scheduleFlush } = useDraftFlushCallbacks({
+    readInputBase: userInputEvidence.readInputBase,
     committedVersionId: args.committedVersionId,
     clearFreshDraftEvidence: userInputEvidence.clearPendingUserInputEvidence,
     flushDraft,
@@ -127,6 +130,7 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
   });
 
   const handleEditorChange = useDraftChangeHandler({
+    readInputBase: userInputEvidence.readInputBase,
     committedVersionId: args.committedVersionId,
     getPendingDraftCommit,
     clearPendingDraftCommit: pending.clearPendingDraftCommit,
@@ -142,9 +146,8 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     timerRef
   });
   const handleEditorInput = useEditorDraftInputWithEvidence({
-    getPendingDraftCommit,
     nodeId,
-    scheduleFlush,
+    timerRef,
     userInputEvidence
   });
 

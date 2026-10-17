@@ -1,17 +1,16 @@
+import type { MutableRefObject } from 'react';
+
 import { useEditorDraftInputHandler } from './useEditorDraftInputHandler';
-import type { PendingDraftCommit } from './useEditorDraftPendingCommit';
+import { clearDraftTimer } from './useEditorDraftPendingCommit';
 import { useEditorDraftUserInputEvidence } from './useEditorDraftUserInputEvidence';
 
 export function useEditorDraftInputWithEvidence(args: {
-  getPendingDraftCommit: () => PendingDraftCommit | null;
   nodeId: string | null;
-  scheduleFlush: () => void;
+  timerRef: MutableRefObject<number | null>;
   userInputEvidence: ReturnType<typeof useEditorDraftUserInputEvidence>;
 }) {
   return useEditorDraftInputHandler(args.nodeId, (sourceNodeId, contentLength) => {
     args.userInputEvidence.markPendingUserInputEvidence(sourceNodeId, contentLength);
-    if (args.getPendingDraftCommit()) {
-      args.scheduleFlush();
-    }
+    clearDraftTimer(args.timerRef);
   });
 }

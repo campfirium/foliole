@@ -22,7 +22,7 @@ function registerDebounceTitleFinalizationTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).not.toHaveBeenCalled();
   });
 }
@@ -54,7 +54,7 @@ function registerBoundaryTitleFinalizationTests() {
       await closeFlush?.();
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 
@@ -87,7 +87,7 @@ function registerBoundaryTitleFinalizationTests() {
       nodeId: 'node-2'
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha draft');
   });
 }
@@ -121,7 +121,7 @@ function registerTitleFinalizationFailureTests() {
       await expect(closeFlush?.()).resolves.toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 
@@ -154,7 +154,7 @@ function registerTitleFinalizationFailureTests() {
       await Promise.resolve();
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).toHaveBeenCalledWith('node-1', 'Alpha body updated');
   });
 }

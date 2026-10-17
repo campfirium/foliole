@@ -27,10 +27,9 @@ import type { WorkspaceState } from './workspaceStore';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceNode = WorkspaceState['nodesById'][string];
-const NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS = 800;
 
 const contentPersistQueue = createNodeContentPersistQueue({
-  delayMs: NODE_CONTENT_RUNTIME_PERSIST_IDLE_DELAY_MS,
+  delayMs: 0,
   isBlocked: isNodeCreatePending,
   persist: runNodeContentRuntimePersist
 });
@@ -143,6 +142,7 @@ export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNod
 }
 
 export const deferNodeContentRuntimePersist = contentPersistQueue.defer;
+export const resumeNodeContentRuntimePersist = contentPersistQueue.resume;
 export const drainPendingNodeContentRuntimePersist = contentPersistQueue.drain;
 
 export async function completeNodeCreateRuntimePersist(nodeId: string) {
@@ -159,7 +159,7 @@ export async function drainPendingNodeContentRuntimePersists() {
   const nodeIds = contentPersistQueue.nodeIds();
   const blocked = nodeIds.filter(isNodeCreatePending);
   if (blocked.length) await waitForNodeCreateConfirmations(blocked);
-  const results = await Promise.all(nodeIds.map(contentPersistQueue.drain));
+  const results = await Promise.all(nodeIds.map(nodeId => contentPersistQueue.drain(nodeId)));
   return results.every(Boolean);
 }
 

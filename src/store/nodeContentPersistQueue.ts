@@ -15,19 +15,20 @@ function clearTimer<T>(entry: Entry<T>) {
 class NodeContentPersistQueue<T> {
   private readonly pending = new Map<string, Entry<T>>();
   private readonly running = new Map<string, { entry: Entry<T>; promise: Promise<boolean> }>();
+  private readonly buffered = new Set<string>();
 
   constructor(private readonly options: PersistQueueOptions<T>) {}
 
   private arm(nodeId: string, entry: Entry<T>) {
     clearTimer(entry);
-    if (this.options.isBlocked(nodeId)) return;
+    if (this.options.isBlocked(nodeId) || this.buffered.has(nodeId)) return;
     entry.timer = setTimeout(() => {
       entry.timer = null;
-      void this.drain(nodeId);
+      void this.drain(nodeId, false);
     }, this.options.delayMs);
   }
 
-  drain = async (nodeId: string): Promise<boolean> => {
+  drain = async (nodeId: string, explicit = true): Promise<boolean> => {
     const target = this.pending.get(nodeId);
     const active = this.running.get(nodeId);
     if (!target) return active?.promise ?? true;
@@ -35,10 +36,11 @@ class NodeContentPersistQueue<T> {
     if (active) {
       if (active.entry === target) return active.promise;
       await active.promise;
-      if (this.running.has(nodeId)) return this.drain(nodeId);
+      if (this.running.has(nodeId)) return this.drain(nodeId, explicit);
     }
     if (this.options.isBlocked(nodeId)) return false;
-    if (this.pending.get(nodeId) !== target) return this.drain(nodeId);
+    if (!explicit && this.buffered.has(nodeId)) return false;
+    if (this.pending.get(nodeId) !== target) return this.drain(nodeId, explicit);
     const promise = this.options.persist(target.snapshot).catch(() => false).then((accepted) => {
       if (accepted && this.pending.get(nodeId) === target) this.pending.delete(nodeId);
       return accepted;
@@ -50,12 +52,20 @@ class NodeContentPersistQueue<T> {
   };
 
   cancel = (nodeId: string) => {
+    this.buffered.delete(nodeId);
     const entry = this.pending.get(nodeId);
     if (entry) clearTimer(entry);
     this.pending.delete(nodeId);
   };
 
   defer = (nodeId: string) => {
+    this.buffered.add(nodeId);
+    const entry = this.pending.get(nodeId);
+    if (entry) clearTimer(entry);
+  };
+
+  resume = (nodeId: string) => {
+    this.buffered.delete(nodeId);
     const entry = this.pending.get(nodeId);
     if (entry && this.running.get(nodeId)?.entry !== entry) this.arm(nodeId, entry);
   };
@@ -66,9 +76,11 @@ class NodeContentPersistQueue<T> {
     this.pending.forEach(clearTimer);
     this.pending.clear();
     this.running.clear();
+    this.buffered.clear();
   };
 
   schedule(nodeId: string, snapshot: T) {
+    this.buffered.delete(nodeId);
     const previous = this.pending.get(nodeId);
     if (previous) clearTimer(previous);
     const entry: Entry<T> = { snapshot, timer: null };

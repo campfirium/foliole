@@ -50,7 +50,7 @@ function registerPendingDraftBoundaryTest() {
     });
 
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha fresh boundary');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha fresh boundary', { baseContent: 'Alpha body' });
     expect(onCommit).not.toHaveBeenCalledWith('node-1', 'Alpha stale pending', expect.anything());
   });
 
@@ -72,7 +72,7 @@ function registerPendingDraftBoundaryTest() {
       expect(result.current.flushDraftSynchronously()).toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha undo candidate', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha undo candidate', { publishLocal: false, baseContent: 'Alpha body' });
     expect(onFinalizeNode).not.toHaveBeenCalled();
   });
 }
@@ -128,7 +128,7 @@ function registerRawInputBoundaryTest() {
       expect(getFreshFlush()?.(null, 'Alpha close body')).toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha close body');
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha close body', { baseContent: 'Alpha body' });
   });
 }
 
@@ -144,7 +144,7 @@ function registerEmptyBodyBoundaryTest() {
     });
 
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit).toHaveBeenCalledWith('node-1', '');
+    expect(onCommit).toHaveBeenCalledWith('node-1', '', { baseContent: 'Alpha body' });
   });
 }
 
@@ -185,7 +185,7 @@ function registerEmptyChangeGuardTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', '', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', '', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
   it('does not let a stale non-current node empty change overwrite saved content', () => {

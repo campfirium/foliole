@@ -5,6 +5,7 @@ import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
 import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
+import { runRequestSyncAttachmentStages } from './requestSyncAttachmentStages.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 import { exchangePdfTextArtifacts } from './requestSyncPdfText.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
@@ -40,7 +41,7 @@ function receiveResult(message: AttachmentRequest): AttachmentBlockResult {
   return { kind: message.state, offset: message.offset };
 }
 
-async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string, maxBlocks = 8, shouldYield = () => false) {
+async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string, maxBlocks = 1, shouldYield = () => false) {
   const description = await single(exchange, { operation: 'describe', storageKey });
   if (description.state !== 'complete') throw new Error('attachment_description_invalid');
   const resource = attachmentBlockResourceSchema.parse(description);
@@ -84,7 +85,7 @@ async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSy
   key: string, shouldYield: () => boolean) {
   let blocks = 0; let slice;
   do {
-    slice = await pullSlice(host, exchange, key, shouldYield() ? 1 : 8, shouldYield);
+    slice = await pullSlice(host, exchange, key, 1, shouldYield);
     blocks += slice.blocks;
   } while (!slice.complete && !shouldYield());
   return { complete: slice.complete, blocks };
@@ -103,6 +104,58 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   });
   const local = await host.needsSlice(shouldYield);
   pendingScan ||= local.pending;
+  const { result, pendingKeys, attempt } = createAttachmentProgress(exchange, report);
+  let textPending = 0;
+  const stages = [
+    { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
+      const pullBudget = attachmentWorkBudget(remoteNeeds.size ? 1000 : 2000);
+      const initialBlocks = result.blocks;
+      for (const key of local.keys) {
+        if (result.blocks > initialBlocks && (shouldYield() || pullBudget())) { pendingKeys.add(key); continue; }
+        await attempt(key, () => pullBudgeted(host, exchange, key, () => shouldYield() || pullBudget()));
+      }
+    } },
+    { name: 'text' as const, defer: () => { textPending = local.pdfTextKeys?.length ?? 0; }, run: async () => {
+      const text = await exchangePdfTextArtifacts({ host, ...(exchange.signal ? { signal: exchange.signal } : {}),
+        keys: local.pdfTextKeys ?? [], shouldYield, report,
+        describe: storageKey => single(exchange, { operation: 'describe', storageKey, derive: 'pdf_text',
+          extractorVersion: PDF_TEXT_EXTRACTOR_VERSION }),
+        pull: key => pullBudgeted(host, exchange, key, shouldYield) });
+      result.blocks += text.blocks;
+      result.transferred += text.transferred;
+      textPending = text.pending;
+    } },
+    { name: 'push' as const, defer: () => { remoteNeeds.forEach(key => pendingKeys.add(key)); }, run: async () => {
+      const initialBlocks = result.blocks;
+      for (const key of remoteNeeds) {
+        if (result.blocks > initialBlocks && shouldYield()) { pendingKeys.add(key); continue; }
+        await attempt(key, () => pushBudgeted(host, exchange, key, shouldYield));
+      }
+    } }
+  ];
+  await runRequestSyncAttachmentStages(exchange.context, stages.filter(stage =>
+    stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
+      : Boolean(local.pdfTextKeys?.length)), () => result.blocks);
+  return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending,
+    yielded: result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield())) };
+}
+
+async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
+  storageKey: string, shouldYield: () => boolean) {
+  return transferAttachmentSlice({ storageKey, source: host, maxBlocks: Infinity, shouldYield,
+    ...(exchange.signal ? { signal: exchange.signal } : {}), destination: {
+      async status(resource) {
+        const result = receiveResult(await single(exchange, { ...resource, operation: 'status' }));
+        if (result.kind === 'offset') throw new Error('attachment_status_invalid');
+        return result;
+      },
+      async receive(resource, offset, data) {
+        return receiveResult(await single(exchange, { ...resource, operation: 'push', offset, data }));
+      }
+    } });
+}
+
+function createAttachmentProgress(exchange: RequestSyncExchange, report: (key: string, error: unknown) => void) {
   const result = { transferred: 0, blocks: 0 };
   const pendingKeys = new Set<string>();
   const attempt = async (key: string, execute: () => Promise<{ complete: boolean; blocks: number }>) => {
@@ -115,34 +168,5 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
     }
     catch (error) { exchange.signal?.throwIfAborted(); pendingKeys.add(key); report(key, error); }
   };
-  // Reserve half the time for each direction when both have work.
-  const pullBudget = attachmentWorkBudget(remoteNeeds.size ? 1000 : 2000);
-  for (const key of local.keys) {
-    if (result.blocks && (shouldYield() || pullBudget())) { pendingKeys.add(key); continue; }
-    await attempt(key, () => pullBudgeted(host, exchange, key, () => shouldYield() || pullBudget()));
-  }
-  const text = await exchangePdfTextArtifacts({ host, ...(exchange.signal ? { signal: exchange.signal } : {}), keys: local.pdfTextKeys ?? [], shouldYield, report,
-    describe: storageKey => single(exchange, { operation: 'describe', storageKey, derive: 'pdf_text',
-      extractorVersion: PDF_TEXT_EXTRACTOR_VERSION }),
-    pull: key => pullBudgeted(host, exchange, key, shouldYield) });
-  result.blocks += text.blocks;
-  result.transferred += text.transferred;
-  const pulledBlocks = result.blocks;
-  for (const key of remoteNeeds) {
-    if (result.blocks > pulledBlocks && shouldYield()) { pendingKeys.add(key); continue; }
-    await attempt(key, () => transferAttachmentSlice({ storageKey: key, source: host,
-      maxBlocks: Infinity, shouldYield,
-      ...(exchange.signal ? { signal: exchange.signal } : {}), destination: {
-        async status(resource) {
-          const result = receiveResult(await single(exchange, { ...resource, operation: 'status' }));
-          if (result.kind === 'offset') throw new Error('attachment_status_invalid');
-          return result;
-        },
-        async receive(resource, offset, data) {
-          return receiveResult(await single(exchange, { ...resource, operation: 'push', offset, data }));
-        }
-      } }));
-  }
-  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending,
-    yielded: result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield())) };
+  return { result, pendingKeys, attempt };
 }

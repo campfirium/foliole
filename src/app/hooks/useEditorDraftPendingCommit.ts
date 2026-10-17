@@ -119,14 +119,15 @@ function flushFreshDraft(args: FlushFreshDraftArgs): DraftFlushResult {
   clearDraftTimer(args.timerRef);
   const pending = args.pendingCommitRef.current;
   const baseVersionId = pending?.nodeId === args.nodeId ? pending.baseVersionId : args.baseVersionId;
+  const committedContent = pending?.nodeId === args.nodeId ? pending.committedContent : args.committedContent;
   clearPendingCommitForNode(args);
   const pendingTitle = args.finalizeTitle ? args.finalizeTitleRefresh(args.nodeId) : null;
-  if (!args.nodeId || args.content === args.committedContent) {
+  if (!args.nodeId || args.content === committedContent) {
     return { flushed: false, pendingTitle };
   }
   const newImageReferences = pending?.nodeId === args.nodeId ? pending.newImageReferences : undefined;
   args.onCommit(args.nodeId, args.content, {
-    ...(args.committedContent !== null ? { baseContent: args.committedContent } : {}),
+    ...(committedContent !== null ? { baseContent: committedContent } : {}),
     ...(baseVersionId !== undefined ? { baseVersionId } : {}),
     ...(newImageReferences?.length ? { newImageReferences } : {})
   });

@@ -2,8 +2,11 @@ import { useCallback, useRef } from 'react';
 
 import type { PendingDraftCommit } from './useEditorDraftPendingCommit';
 
-export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => PendingDraftCommit | null) {
-  const pendingUserInputRef = useRef<{ contentLength: number | null; nodeId: string | null } | null>(null);
+export interface EditorInputBase { content: string; versionId: string | null | undefined }
+
+export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => PendingDraftCommit | null,
+  source: EditorInputBase & { nodeId: string | null }) {
+  const pendingUserInputRef = useRef<{ contentLength: number | null; nodeId: string | null; base: EditorInputBase | null } | null>(null);
   const clearPendingUserInputEvidence = useCallback((sourceNodeId: string | null) => {
     if (!sourceNodeId || pendingUserInputRef.current?.nodeId === sourceNodeId) {
       pendingUserInputRef.current = null;
@@ -27,13 +30,19 @@ export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => Pen
       && (pendingInput.contentLength === null || pendingInput.contentLength === content.length));
   }, []);
   const markPendingUserInputEvidence = useCallback((sourceNodeId: string | null, contentLength: number | null) => {
-    pendingUserInputRef.current = { contentLength, nodeId: sourceNodeId };
-  }, []);
+    const previous = pendingUserInputRef.current;
+    const base = previous?.nodeId === sourceNodeId ? previous.base
+      : sourceNodeId === source.nodeId ? { content: source.content, versionId: source.versionId } : null;
+    pendingUserInputRef.current = { contentLength, nodeId: sourceNodeId, base };
+  }, [source.nodeId, source.content, source.versionId]);
+  const readInputBase = useCallback((nodeId: string | null) =>
+    pendingUserInputRef.current?.nodeId === nodeId ? pendingUserInputRef.current.base : null, []);
 
   return {
     clearPendingUserInputEvidence,
     hasFreshDraftEvidence,
     hasPendingUserInputEvidence,
-    markPendingUserInputEvidence
+    markPendingUserInputEvidence,
+    readInputBase
   };
 }
