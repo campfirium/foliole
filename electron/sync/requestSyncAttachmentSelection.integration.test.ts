@@ -10,14 +10,21 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${sandbox.root}/host/${name}`, isPackaged: false
 } }));
 
+import { requestAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { pullRequestSyncAttachment } from '../../lib/core/sync/requestSyncAttachmentExchange.js';
 import { readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
+import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
+import { exchangeRequestSyncInventory } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
+import { loadDesktopSyncGroupMemberState } from '../database/syncGroupMemberStateStore.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 import { isDesktopAttachmentPresent } from './desktopAttachmentBlockSource.js';
@@ -128,3 +135,60 @@ it('keeps availability and original facts unchanged when a file check fails and 
       .sort((a, b) => a.hash.localeCompare(b.hash)));
   } finally { await local.close(); await directory.remove(); }
 });
+
+
+it('releases a selected attachment after a block when new data is waiting, then resumes intact', async () => {
+  const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
+  vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
+  const selected = attachment('Selected image bytes'.repeat(300000));
+  const local = await attachmentHttpSource([selected.key], directory.root);
+  await seedAttachmentTarget([selected.key]);
+  await writeFile(path.join(resolveRuntimeDataPaths().assetsDir, selected.key), selected.bytes);
+  const server = await attachmentHttpServer(0);
+  const owner = createSyncPeerRoundOwnership(60_000);
+  let received = 0;
+  const host = { ...local.host, async receive(...input: Parameters<typeof local.host.receive>) {
+    const result = await local.host.receive(...input);
+    if (++received === 1) {
+      await applyConvergentSyncNodesWithDbPort(createBetterSqliteDbPort(local.sqlite),
+        [textBranch('edited', 'Edited while the image downloads', textBranch('v1', 'Attachments'))]);
+      requestAttachmentWorkYield();
+    }
+    return result;
+  } };
+  const pull = async (data = false) => {
+    const id = crypto.randomUUID();
+    const lease = owner.acquireOutbound('local', id);
+    if (!lease) throw new Error('test_round_busy');
+    const peerRound = { id, lease, admitted: false };
+    const exchange = createDesktopRequestSyncExchange({ peerRound, endpointUrl: server.url, groupKey: attachmentGroupKey,
+      groupSecret: Buffer.from(attachmentGroupKey).toString('base64url'),
+      context: { protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: 'group', initiatorDeviceId: 'peer',
+        initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
+    try { await withRequestSyncPeerRound(exchange, peerRound, async () => {
+      if (data) await runRequestSyncDatabaseRound({
+        exchangeInventory: () => exchangeRequestSyncInventory(local.database, exchange),
+        transferObjects: async differences => transferRequestSyncBatch(local.database, exchange, differences,
+          { peerState: await runWithDatabaseConnectionOwner(loadDesktopSyncGroupMemberState) }),
+        reportObjectError: (_difference, error) => { throw error; }
+      });
+      else await pullRequestSyncAttachment(host, exchange, selected.key);
+    }); }
+    finally { lease.release(); }
+  };
+  try {
+    await pull();
+    expect(received).toBe(1);
+    await expect(stat(path.join(local.assetsDir, selected.key))).rejects.toMatchObject({ code: 'ENOENT' });
+    await pull(true);
+    await runWithDatabaseConnectionOwner(() => expect(openDatabaseConnection().sqlite
+      .prepare("SELECT current_version_id FROM nodes WHERE id = 'topic'").pluck().get()).toBe('edited'));
+    for (let attempt = 0; attempt < 20 && (await local.host.status({ storageKey: selected.key, byteLength: selected.bytes.length })).kind !== 'complete'; attempt++) await pull();
+    expect(await readFile(path.join(local.assetsDir, selected.key))).toEqual(selected.bytes);
+  } finally {
+    owner.close(); await server.close(); await local.close();
+    await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
+    clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
+    vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
+  }
+}, 15000);

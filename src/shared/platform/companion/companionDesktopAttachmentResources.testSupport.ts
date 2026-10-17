@@ -37,7 +37,7 @@ export function resetAttachmentFixture() {
   attachment.missing.mockResolvedValue({ attachment_id: 'a'.repeat(64), storage_key: key });
   attachment.providers.mockResolvedValue({ providers: peers });
   attachment.exchange.mockResolvedValue(readyState);
-  attachment.pull.mockResolvedValue(undefined);
+  attachment.pull.mockResolvedValue({ complete: true, blocks: 1 });
   attachment.round.mockImplementation((id: string, execute: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<unknown>) =>
     withCompanionRequestSyncLifecycle(async signal => {
       const owner = createSyncPeerRoundOwnership(60_000);

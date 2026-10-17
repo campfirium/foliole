@@ -23,11 +23,16 @@ export async function syncCompanionAttachmentResourceFromDesktop(endpointUrl: st
         if (state.localExited) return false;
         if (state.peerRemoved || !state.normalSyncReady || !state.peerLibraryEpoch) continue;
         const peerEpoch = state.peerLibraryEpoch;
-        await withCompanionSyncPeerRound(provider.deviceId, (peerRound, roundSignal) =>
+        let complete = false;
+        while (!complete) {
+          const slice = await withCompanionSyncPeerRound(provider.deviceId, (peerRound, roundSignal) =>
           pullCompanionRequestSyncResource({ endpoint_url: provider.endpointUrl,
             sync_group_id: provider.groupId, receiver_device_id: provider.deviceId,
             receiver_library_epoch: peerEpoch, storageKey: request.storage_key,
-            peerRound, signal: roundSignal }));
+            peerRound, signal: roundSignal }), { resourceOnly: true, signal });
+          complete = slice.complete;
+          if (!complete) await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
         signal.throwIfAborted();
         return true;
       } catch (error) {

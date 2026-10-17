@@ -77,7 +77,7 @@ async function pullSlice(host: RequestSyncAttachmentHost, exchange: RequestSyncE
 }
 
 export async function pullRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange, storageKey: string) {
-  while (!(await pullSlice(host, exchange, storageKey)).complete) exchange.signal?.throwIfAborted();
+  return pullBudgeted(host, exchange, storageKey, attachmentWorkBudget());
 }
 
 async function pullBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,

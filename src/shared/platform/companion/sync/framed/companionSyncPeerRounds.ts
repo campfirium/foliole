@@ -1,3 +1,4 @@
+import { holdSyncDataRound, waitForAttachmentWorkOpportunity } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import { runSyncPeerRound } from '../../../../../../lib/core/sync/runSyncPeerRound.js';
@@ -22,14 +23,18 @@ const states = new WeakMap<CapacitorCompanionDatabaseOwner, State>();
 
 export function withCompanionSyncPeerRound<T>(peerId: string,
   run: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<T>,
-  options: { waitForInbound?: () => boolean; onWaiting?(waiting: boolean): void; signal?: AbortSignal } = {}) {
-  return withCompanionRequestSyncLifecycle(async signal => runSyncPeerRound({
-    owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
-    execute: (id, lease) => {
-      const sessionId = companionDesktopSessionId(peerId);
-      return run({ id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }, lease.signal);
-    }
-  }), options.signal);
+  options: { waitForInbound?: () => boolean; onWaiting?(waiting: boolean): void; signal?: AbortSignal; resourceOnly?: boolean } = {}) {
+  return withCompanionRequestSyncLifecycle(async signal => {
+    if (options.resourceOnly) await waitForAttachmentWorkOpportunity(signal);
+    const releasePriority = options.resourceOnly ? undefined : holdSyncDataRound();
+    try { return await runSyncPeerRound({
+      owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
+      execute: (id, lease) => {
+        const sessionId = companionDesktopSessionId(peerId);
+        return run({ id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }, lease.signal);
+      }
+    }); } finally { releasePriority?.(); }
+  }, options.signal);
 }
 
 export async function withCompanionRequestSyncPeerRound<T>(context: RequestSyncAuthenticatedContext,

@@ -10,6 +10,7 @@ vi.mock('../../../appLifecycle.js', () => ({
   }
 }));
 
+import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { closeCompanionSyncPeerRounds, companionSyncPeerRoundOwner, withCompanionSyncPeerRound } from './companionSyncPeerRounds.js';
@@ -51,6 +52,32 @@ it('rejects background work before its sync operation begins', async () => {
   const execute = vi.fn();
   await expect(withCompanionSyncPeerRound('peer', execute)).rejects.toThrow('request_sync_foreground_ended');
   expect(execute).not.toHaveBeenCalled();
+});
+
+it('gives data ownership before a selected attachment resumes and releases waiting resources afterward', async () => {
+  let finishResource!: () => void;
+  let finishData!: () => void;
+  let budget: (() => boolean) | undefined;
+  const order: string[] = [];
+  const resource = withCompanionSyncPeerRound('peer', async () => {
+    budget = attachmentWorkBudget();
+    await new Promise<void>(resolve => { finishResource = resolve; });
+  }, { resourceOnly: true });
+  await vi.waitFor(() => expect(budget).toBeDefined());
+  const data = withCompanionSyncPeerRound('peer', async () => {
+    order.push('data');
+    await new Promise<void>(resolve => { finishData = resolve; });
+  });
+  await vi.waitFor(() => expect(budget?.()).toBe(true));
+  const resumed = withCompanionSyncPeerRound('peer', async () => {
+    order.push('resource');
+  }, { resourceOnly: true });
+  finishResource();
+  await resource;
+  await vi.waitFor(() => expect(order).toEqual(['data']), { timeout: 2000 });
+  finishData();
+  await Promise.all([data, resumed]);
+  expect(order).toEqual(['data', 'resource']);
 });
 
 it.each(['background', 'cancel'])('cancels a queued manual round on %s without executing after inbound release', async mode => {

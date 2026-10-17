@@ -35,7 +35,7 @@ export function seedAttachmentMembership(sqlite: Database.Database, device: 'pee
 
 export async function seedAttachmentReferences(sqlite: Database.Database, storageKeys: string[]) {
   const db = createBetterSqliteDbPort(sqlite);
-  await applyConvergentSyncNodesWithDbPort(db, [textBranch('v1', 'Attachments')]);
+  await applyConvergentSyncNodesWithDbPort(db, [textBranch('v1', 'Attachments', undefined, '2026-10-17T00:00:00.000Z')]);
   await db.run('UPDATE nodes SET resource_references = ? WHERE id = ?', [JSON.stringify(storageKeys.map(storage_key =>
     ({ storage_key, role: 'reference', original_name: null }))), 'topic']);
 }

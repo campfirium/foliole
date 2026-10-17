@@ -44,7 +44,7 @@ it('leaves a missing attachment pending outside native runtimes', async () => {
 
 it('does not report cached or refresh while the selected transfer is unfinished', async () => {
   const started = deferred(), finish = deferred();
-  attachment.pull.mockImplementation(async () => { started.resolve(); await finish.promise; });
+  attachment.pull.mockImplementation(async () => { started.resolve(); await finish.promise; return { complete: true, blocks: 1 }; });
   let settled = false;
   const pending = syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected')
     .then(result => { settled = true; return result; });
@@ -54,5 +54,16 @@ it('does not report cached or refresh while the selected transfer is unfinished'
     expect(attachment.invalidate).not.toHaveBeenCalled();
   } finally { finish.resolve(); }
   expect(await pending).toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
+});
+
+
+it('releases each partial resource round and reports cached only after the selected file completes', async () => {
+  attachment.pull.mockResolvedValueOnce({ complete: false, blocks: 1 });
+  expect(await syncCompanionAttachmentResourceFromDesktop('http://preferred', 'selected'))
+    .toEqual({ attachmentId: 'selected', status: 'cached' });
+  expect(attachment.round).toHaveBeenCalledTimes(2);
+  expect(attachment.round.mock.calls.every(([, , options]) => options.resourceOnly)).toBe(true);
+  expect(attachment.pull.mock.calls.map(([input]) => input.storageKey)).toEqual([key, key]);
   expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
 });
