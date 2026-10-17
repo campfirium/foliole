@@ -66,6 +66,11 @@ it('dispatches formal deploy without a pre-install backup', async () => {
   expect(state.events).toEqual(['lease', 'dispatch', 'cleanup']);
 });
 
+it('runs isolated database performance acceptance without stopping or backing up the main app', async () => {
+  await runMacosA5Action('database-performance', '/repo', { formal: true });
+  expect(state.events).toEqual(['lease', 'dispatch', 'cleanup']);
+});
+
 it('still protects other fixed-device mutations before dispatch', async () => {
   await runMacosA5Action('device-profile', '/repo', { formal: true });
   expect(state.events).toEqual(['lease', 'stop', 'backup', 'backup-validated', 'dispatch', 'cleanup']);
