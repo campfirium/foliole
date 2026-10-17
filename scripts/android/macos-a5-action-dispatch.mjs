@@ -200,10 +200,11 @@ export async function dispatchMacosA5Action({
   if (action === 'sync-group-join-prepare') {
     await runMacosA5SyncGroupJoinPrepareEntry(productArgs);
   }
-  if (action === 'single-principal-sync-group') {
+  if (action === 'single-principal-sync-group' || action === 'image-content-sync') {
     await (await import(pathToFileURL(path.join(paths.buildRoot,
       'scripts/android/macos-a5-single-principal-sync-group-entry.mjs')).href))
-      .runMacosA5SinglePrincipalSyncGroupEntry(productArgs);
+      .runMacosA5SinglePrincipalSyncGroupEntry({ ...productArgs,
+        ...(action === 'image-content-sync' ? { scenario: 'image-content' } : {}) });
   }
   if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
   if (action === 'sync-group-rejoin-recover') {

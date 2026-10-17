@@ -31,6 +31,7 @@ import { runMacosA5IosResourceFailover } from './macos-a5-ios-resource-failover.
 import { assertA5UseGroupReplacement, waitForMacFact
 } from './macos-a5-single-principal-sync-group-facts.mjs';
 import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
+import { runImageContentScenario } from './macos-a5-image-content-scenario.mjs';
 
 const PRODUCT_APP_ID = 'com.campfirium.foliole.android';
 const TEST_CLASS = `com.foliole.android.FolioleCompanionSyncGroupJoinTest`;
@@ -40,13 +41,14 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   const openSession = dependencies.openSession ?? openMacosSyncGroupDesktopSession;
   args.assertFixed();
   const env = buildA5TwoDeviceAcceptance(args);
+  const imageContent = args.scenario === 'image-content';
   const buildIdentity = args.buildIdentity();
   const evidenceRoot = path.join(
-    args.paths.artifactsRoot, 'a5-single-principal-sync-group', buildIdentity
+    args.paths.artifactsRoot, imageContent ? 'a5-image-content-sync' : 'a5-single-principal-sync-group', buildIdentity
   );
-  const sharedRoot = process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
+  const sharedRoot = imageContent ? evidenceRoot : process.env.FOLIOLE_T152_ACCEPTANCE_ROOT?.trim() || evidenceRoot;
   fs.mkdirSync(evidenceRoot, { recursive: true });
-  if (process.env.FOLIOLE_T152_SYNC_CREATOR === 'windows') {
+  if (!imageContent && process.env.FOLIOLE_T152_SYNC_CREATOR === 'windows') {
     return runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env, evidenceRoot });
   }
   args.markMutationBoundary?.();
@@ -62,6 +64,16 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime'),
     runtimeLogPath: path.join(evidenceRoot, 'macos-runtime.log') });
   try {
+    if (imageContent) {
+      await (dependencies.imageScenario ?? runImageContentScenario)({ args, env, evidenceRoot, mechanics, session,
+        restartMacos: async (expectedGroupId) => {
+          const restarted = await verifyMacosA5Restart({ env, expectedGroupId, openSession,
+            repoRoot: args.paths.buildRoot, session, sharedRoot });
+          session = restarted.session;
+          return session;
+        } });
+      return;
+    }
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
@@ -211,7 +223,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     resourceFixture?.restore();
     await session.close().catch(() => undefined);
     await removeA5AcceptanceApplication(args);
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
+    if (!imageContent) args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
       `${PRODUCT_APP_ID}/com.foliole.android.MainActivity`]);
   }
   if (process.env.FOLIOLE_T152_CELL_ID) {

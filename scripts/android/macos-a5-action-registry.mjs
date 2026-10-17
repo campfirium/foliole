@@ -45,6 +45,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
   'single-principal-sync-group': { formalEvidenceRetention: 'latest-terminal-per-task',
     requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
+  'image-content-sync': { requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-now': { requiresHiddenDesktopRuntime: true },
@@ -67,6 +68,7 @@ const FORMAL_EVIDENCE = Object.freeze({
   'single-principal-sync-group': {
     kind: 'run-directory', root: 'a5-single-principal-sync-group'
   },
+  'image-content-sync': { kind: 'run-directory', root: 'a5-image-content-sync' },
   'system-entry-sync': { kind: 'run-directory', root: 'a5-system-entry-sync' },
   'sync-group-join-prepare': { kind: 'run-directory', root: 'a5-sync-group-join-prepare' },
   'sync-existing': { kind: 'run-directory', root: 'a5-existing-sync' },

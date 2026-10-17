@@ -137,6 +137,7 @@ export async function openMacosSyncGroupDesktopSession({
       loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
       loadSyncTriggerResult: () => readMacosSyncTriggerResult(() => loadSyncTriggerResult(app)),
       processId: app.process().pid,
+      page,
       invoke: (command, args) => invoke(page, command, args),
       waitForEvent: (eventName, options) => waitForDesktopProductEvent(page, eventName, options),
       waitForState: (options) => waitForDesktopProductState(page, options),
