@@ -30,13 +30,17 @@ function attachmentBytes(index, size) {
   return bytes;
 }
 
-async function createNodes(session, dataset, now, onProgress) {
+async function createNodes(session, dataset, now, onProgress, attachments) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   if (!Array.isArray(snapshot?.nodeOrder)) throw new Error('Desktop workspace snapshot is unavailable.');
   const order = [...snapshot.nodeOrder];
   const nodes = [];
   for (let index = 0; index < dataset.nodeCount; index += 1) {
     const payload = nodePayload(index, order, dataset, now);
+    payload.newImageReferences = attachments.filter(item => item.nodeIndex === index).map(item => item.reference);
+    for (const reference of payload.newImageReferences) {
+      payload.content += `\n\n![Dataset image](asset://${reference.storage_key})`;
+    }
     const result = await session.invoke('create_topic', payload);
     if (!result?.createdNodeIds?.includes(payload.nodeId)) {
       throw new Error('Desktop product command did not persist the sync-from-zero topic.');
@@ -51,19 +55,20 @@ async function createNodes(session, dataset, now, onProgress) {
   return nodes;
 }
 
-async function createAttachments(session, nodes, dataset, onProgress) {
+async function createAttachments(session, dataset, onProgress) {
   const attachments = [];
   for (let index = 0; index < dataset.attachmentCount; index += 1) {
     const bytes = attachmentBytes(index, dataset.attachmentBytes);
-    const nodeId = nodes[index % nodes.length].nodeId;
     const result = await session.invoke('import_clipboard_image_attachment', {
-      bytesBase64: bytes.toString('base64'), mimeType: 'image/png', nodeId,
+      bytesBase64: bytes.toString('base64'), mimeType: 'image/png',
       originalName: `sync-from-zero-${String(index + 1).padStart(3, '0')}.png`
     });
     if (result?.status !== 'imported') {
       throw new Error('Desktop product command did not persist a sync-from-zero attachment.');
     }
-    attachments.push({ attachmentId: result.attachment_id, sizeBytes: bytes.length });
+    attachments.push({ attachmentId: result.attachment_id, sizeBytes: bytes.length,
+      nodeIndex: index % dataset.nodeCount, reference: { storage_key: result.storage_key,
+        original_name: result.original_name, role: 'image' } });
     if ((index + 1) % 8 === 0 || index + 1 === dataset.attachmentCount) {
       onProgress?.({ completed: index + 1, phase: 'attachments', total: dataset.attachmentCount });
     }
@@ -73,8 +78,8 @@ async function createAttachments(session, nodes, dataset, onProgress) {
 
 export async function createSyncFromZeroDataset({ dataset = SYNC_FROM_ZERO_DATASET, evidenceRoot,
   now = () => new Date(), onProgress, session }) {
-  const nodes = await createNodes(session, dataset, now, onProgress);
-  const attachments = await createAttachments(session, nodes, dataset, onProgress);
+  const attachments = await createAttachments(session, dataset, onProgress);
+  const nodes = await createNodes(session, dataset, now, onProgress, attachments);
   for (const { attachmentId } of attachments) {
     const resolved = await session.invoke('resolve_attachment_resource', { attachment_id: attachmentId });
     if (resolved?.status !== 'ready') throw new Error('Desktop dataset attachment resource is unavailable.');

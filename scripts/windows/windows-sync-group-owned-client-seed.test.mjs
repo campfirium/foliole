@@ -36,7 +36,7 @@ it('creates C material through product commands before inspecting the pre-join d
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
     if (command === 'import_clipboard_image_attachment') {
-      return { attachment_id: 'hash-c', status: 'imported' };
+      return { storage_key: 'hash-c.png', original_name: 'fixture.png', attachment_id: 'hash-c', status: 'imported' };
     }
     throw new Error(`unexpected command: ${command}`);
   };
@@ -45,8 +45,8 @@ it('creates C material through product commands before inspecting the pre-join d
       inspect: async ([factId]) => { events.push('inspected'); return seededFacts(factId); },
       invoke, openSession: async () => ({ app, page: {} }) });
     expect(result.material).toMatchObject({ attachmentId: 'hash-c' });
-    expect(events).toEqual(['load_workspace_list_snapshot', 'create_topic',
-      'import_clipboard_image_attachment', 'closed', 'inspected']);
+    expect(events).toEqual(['load_workspace_list_snapshot', 'import_clipboard_image_attachment',
+      'create_topic', 'closed', 'inspected']);
   } finally {
     await rm(evidenceRoot, { force: true, recursive: true });
   }

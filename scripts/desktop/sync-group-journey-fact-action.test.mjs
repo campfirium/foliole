@@ -27,16 +27,19 @@ it('can attach a deterministic resource through the registered desktop product c
   const invoke = vi.fn(async (command, args) => {
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
-    return { attachment_id: 'attachment-1', status: 'imported' };
+    return { attachment_id: 'attachment-1', storage_key: 'attachment-1.png', original_name: 'fixture.png', status: 'imported' };
   });
   const result = await createDesktopSyncGroupJourneyFact({ device: 'A', evidenceRoot: root,
     now: () => new Date('2026-08-10T00:00:00.000Z'), session: { invoke }, withAttachment: true });
   expect(invoke.mock.calls.map(([command]) => command)).toEqual([
-    'load_workspace_list_snapshot', 'create_topic', 'import_clipboard_image_attachment'
+    'load_workspace_list_snapshot', 'import_clipboard_image_attachment', 'create_topic'
   ]);
-  expect(Buffer.from(invoke.mock.calls[2][1].bytesBase64, 'base64').subarray(0, 8))
+  expect(Buffer.from(invoke.mock.calls.find(([command]) => command === 'import_clipboard_image_attachment')[1].bytesBase64, 'base64').subarray(0, 8))
     .toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   expect(result.attachmentId).toBe('attachment-1');
+  const payload = invoke.mock.calls.find(([command]) => command === 'create_topic')[1];
+  expect(payload.newImageReferences).toEqual([{ storage_key: 'attachment-1.png', original_name: 'fixture.png', role: 'image' }]);
+  expect(payload.content).toContain('asset://attachment-1.png');
 });
 
 it('uses distinct attachment resources for A and C continuity facts', async () => {
@@ -44,7 +47,7 @@ it('uses distinct attachment resources for A and C continuity facts', async () =
   const invoke = vi.fn(async (command, args) => {
     if (command === 'load_workspace_list_snapshot') return { nodeOrder: ['special-inbox'] };
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
-    return { attachment_id: `attachment-${invoke.mock.calls.length}`, status: 'imported' };
+    return { storage_key: 'fixture.png', original_name: 'fixture.png', attachment_id: `attachment-${invoke.mock.calls.length}`, status: 'imported' };
   });
   for (const device of ['A', 'C']) {
     await createDesktopSyncGroupJourneyFact({ device, evidenceRoot: root,

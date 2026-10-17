@@ -22,16 +22,21 @@ export async function createDesktopSyncGroupJourneyFact({ device, evidenceRoot, 
   const snapshot = await session.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
   if (!Array.isArray(snapshot?.nodeOrder)) throw new Error('Desktop workspace snapshot is unavailable.');
   const payload = factPayload(device, snapshot, now);
-  const result = await session.invoke('create_topic', payload);
-  if (!result?.createdNodeIds?.includes(payload.nodeId)) {
-    throw new Error('Desktop product command did not persist the journey fact.');
-  }
   const attachment = withAttachment ? await session.invoke('import_clipboard_image_attachment', {
-    bytesBase64: JOURNEY_PNG_BASE64[device], mimeType: 'image/png', nodeId: payload.nodeId,
+    bytesBase64: JOURNEY_PNG_BASE64[device], mimeType: 'image/png',
     originalName: `${payload.nodeId}.png`
   }) : null;
   if (withAttachment && attachment?.status !== 'imported') {
     throw new Error('Desktop product command did not persist the journey attachment.');
+  }
+  if (attachment) {
+    payload.content += `\n\n![Journey image](asset://${attachment.storage_key})`;
+    payload.newImageReferences = [{ storage_key: attachment.storage_key,
+      original_name: attachment.original_name, role: 'image' }];
+  }
+  const result = await session.invoke('create_topic', payload);
+  if (!result?.createdNodeIds?.includes(payload.nodeId)) {
+    throw new Error('Desktop product command did not persist the journey fact.');
   }
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const receiptPath = path.join(evidenceRoot, `${device.toLowerCase()}-fact-receipt.json`);

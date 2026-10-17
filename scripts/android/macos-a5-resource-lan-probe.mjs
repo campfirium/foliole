@@ -34,17 +34,19 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
     createdAt: now, isTitleManual: true, kind: 'topic', nodeId,
     nodeOrder: [...snapshot.nodeOrder, nodeId], parentNodeId: 'special-inbox',
     position: snapshot.nodeOrder.length, reveal: null, title: 'Resource LAN', updatedAt: now };
-  await session.invoke('create_topic', payload);
+  const newImageReferences = [];
   for (const bytesBase64 of IMAGES) {
     const result = await session.invoke('import_clipboard_image_attachment', {
-      bytesBase64, mimeType: 'image/png', nodeId, originalName: 'resource-lan.png'
+      bytesBase64, mimeType: 'image/png', originalName: 'resource-lan.png'
     });
     if (result?.status !== 'imported') {
       throw new Error(`Resource LAN image import failed: ${JSON.stringify(result)}`);
     }
+    newImageReferences.push({ storage_key: result.storage_key, original_name: result.original_name, role: 'image' });
     const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
     if (result.attachment_id !== hash) throw new Error('Resource LAN fixture bytes changed on import.');
   }
+  await session.invoke('create_topic', { ...payload, newImageReferences });
   const paths = await session.invoke('load_library_path_settings');
   const missingPath = assertOwnedResourcePath(libraryHome, paths.assets_dir, images[1].storageKey);
   const savedBytes = fs.readFileSync(missingPath);

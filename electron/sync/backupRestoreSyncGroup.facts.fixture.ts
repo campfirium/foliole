@@ -1,13 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
+import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { loadBackupSettings, resolveManagedBackupDirectory } from '../database/backupSettings.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { materializeCompressedSqliteBackup } from '../database/compressedSqliteBackup.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { softDeleteNodes } from '../database/nodeMutations.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
 import { loadNodeResourceReferences } from '../database/nodeResources.js';
@@ -26,6 +31,15 @@ export async function appendRestoreFacts() {
   const result = await importImageAttachmentBytes({ nodeId: 'topic', bytes, mimeType: 'image/png',
     originalName: 'Restore image.png', errorSource: 'fixture' });
   if (result.status === 'error') throw new Error(result.message);
+  const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  const current = await loadCurrentSyncNodeRecord(db, 'topic');
+  if (!current?.version_id || typeof current.body_text !== 'string') throw new Error('Restore fixture body unavailable.');
+  const image = `![Restore image](asset://${result.storage_key})`;
+  await applyLocalContentEdit(db, { nodeId: 'topic', baseVersionId: current.version_id,
+    versionId: randomUUID(), updatedAt: now, hostName: loadOrCreateDesktopHostName(now),
+    title: current.snapshot.title, hideTitleHeading: current.snapshot.hide_title_heading,
+    content: current.body_text.includes(image) ? current.body_text : `${current.body_text}\n\n${image}`,
+    newImageReferences: [{ storage_key: result.storage_key, original_name: result.original_name, role: 'image' }] });
 }
 
 export function deletePausedNode() {

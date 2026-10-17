@@ -89,6 +89,7 @@ for (const pause of [false, true]) {
     await source.send('seed', { content: 'Chosen backup' });
     await source.send('seed', { id: 'delete-me', content: 'Delete while paused' });
     await source.send('facts');
+    expect(await source.send('readFacts')).toMatchObject({ resources: [expect.objectContaining({ original_name: 'Restore image.png' })] });
     await source.send('batch');
     const backup = await source.send('backup');
     await source.send('seed', { content: 'Source before restore' });

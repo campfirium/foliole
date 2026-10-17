@@ -14,7 +14,7 @@ it('creates every bounded fixture only through registered desktop product comman
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
     if (command === 'import_clipboard_image_attachment') {
       attachmentBytes.push(args.bytesBase64);
-      return { attachment_id: `attachment-${attachmentBytes.length}`, status: 'imported' };
+      return { storage_key: `attachment-${attachmentBytes.length}.png`, original_name: args.originalName, attachment_id: `attachment-${attachmentBytes.length}`, status: 'imported' };
     }
     return { status: 'ready' };
   });
@@ -27,14 +27,19 @@ it('creates every bounded fixture only through registered desktop product comman
   });
   expect(result).toMatchObject({ attachmentCount: 3, nodeCount: 2, resultStatus: 'success' });
   expect(invoke.mock.calls.map(([command]) => command)).toEqual([
-    'load_workspace_list_snapshot', 'create_topic', 'create_topic',
     'import_clipboard_image_attachment', 'import_clipboard_image_attachment',
-    'import_clipboard_image_attachment', 'resolve_attachment_resource',
+    'import_clipboard_image_attachment', 'load_workspace_list_snapshot',
+    'create_topic', 'create_topic', 'resolve_attachment_resource',
     'resolve_attachment_resource', 'resolve_attachment_resource'
   ]);
   expect(new Set(attachmentBytes).size).toBe(3);
+  const nodes = invoke.mock.calls.filter(([command]) => command === 'create_topic').map(([, args]) => args);
+  expect(nodes.flatMap(node => node.newImageReferences ?? [])).toHaveLength(3);
+  for (const node of nodes) for (const reference of node.newImageReferences ?? []) {
+    expect(node.content).toContain(`asset://${reference.storage_key}`);
+  }
   expect(progress).toEqual([
-    { completed: 2, phase: 'nodes', total: 2 },
-    { completed: 3, phase: 'attachments', total: 3 }
+    { completed: 3, phase: 'attachments', total: 3 },
+    { completed: 2, phase: 'nodes', total: 2 }
   ]);
 });
