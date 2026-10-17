@@ -31,6 +31,12 @@ export function continueContentEdit(nodeId: string, edit: LocalContentEdit | und
   }
 }
 
+/** Local save transactions already retain submitted descendants of an editor's held base. */
+export function isAcknowledgedContentSuccessor(nodeId: string, baseVersionId: string, versionId: string) {
+  const confirmed = confirmedBranches.get(nodeId);
+  return confirmed?.submittedVersionId === versionId && confirmed.baseVersionIds.has(baseVersionId);
+}
+
 export function acknowledgeContentEdit(args: {
   edit: LocalContentEdit | undefined;
   node: Node;

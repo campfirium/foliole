@@ -94,3 +94,26 @@ it.each(['folder', 'item'])('preserves all %s historical bodies', async kind => 
   expect(await collectNodeVersionPayloads(host.db, 'topic')).toEqual({ released: 0, skipped: 'non_topic' });
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.body_text).toBe('Original');
 });
+
+it('continues sequential saved input with its alternatives before the editor advances its hold', async () => {
+  const { host, base } = await history(true, true);
+  await retainLocalEditBase(host.db, { holdId: 'editor', nodeId: 'topic', versionId: 'head' });
+  for (const [baseVersionId, versionId] of [['head', 'first'], ['first', 'second']]) {
+    await applyLocalContentEdit(host.db, { nodeId: 'topic', baseVersionId: baseVersionId!, versionId: versionId!,
+      content: versionId!, title: 'Topic', hideTitleHeading: false, hostName: 'editor', updatedAt: new Date().toISOString() });
+  }
+  const remote = textBranch('remote-after-second', 'Remote continued', await host.current());
+  remote.snapshot.text_alternatives = [];
+  delete remote.alternative_bodies;
+  await host.receive([remote]);
+  await collectNodeVersionPayloads(host.db, 'topic');
+  expect((await loadRetainedSyncNodeVersionFact(host.db, 'second'))!.alternative_bodies)
+    .toEqual(expect.arrayContaining(base.alternative_bodies!));
+  await applyLocalContentEdit(host.db, { nodeId: 'topic', baseVersionId: 'second', baseContent: 'second',
+    versionId: 'third', content: 'Third input', title: 'Topic', hideTitleHeading: false,
+    hostName: 'editor', updatedAt: new Date().toISOString() });
+  await releaseLocalEditBase(host.db, 'editor', 'topic');
+  const current = await host.current();
+  expect([current.body_text, ...(current.alternative_bodies ?? []).map(body => body.text)].sort())
+    .toEqual(['Remote continued', 'Third input'].sort());
+});

@@ -3,7 +3,7 @@ import { beforeEach, expect, it } from 'vitest';
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
 
 import {
-  acknowledgeContentEdit, captureContentEdit, continueContentEdit,
+  acknowledgeContentEdit, captureContentEdit, continueContentEdit, isAcknowledgedContentSuccessor,
   rememberCreatedContentVersion,
   resetContentEditAcknowledgementsForTests
 } from './workspaceContentEditAcknowledgements';
@@ -99,4 +99,8 @@ it('continues a draft captured before several local acknowledgements', () => {
   const next = { baseVersionId: 'ver_one', versionId: 'ver_four' };
   continueContentEdit(node.id, next);
   expect(next.baseVersionId).toBe('ver_three');
+  expect(isAcknowledgedContentSuccessor(node.id, 'ver_base', 'ver_three')).toBe(true);
+  expect(isAcknowledgedContentSuccessor(node.id, 'ver_one', 'ver_remote')).toBe(false);
+  expect(isAcknowledgedContentSuccessor('other', 'ver_base', 'ver_three')).toBe(false);
+  expect(isAcknowledgedContentSuccessor(node.id, 'unheld', 'ver_three')).toBe(false);
 });
