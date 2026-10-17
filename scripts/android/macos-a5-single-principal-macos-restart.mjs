@@ -9,7 +9,8 @@ export async function verifyMacosA5Restart({ env, expectedGroupId, openSession, 
   await session.close();
   const restartedSession = await openSession({ env,
     libraryHome: `${sharedRoot}/macos-library`, repoRoot,
-    runtimeRoot: `${sharedRoot}/macos-runtime` });
+    runtimeRoot: `${sharedRoot}/macos-runtime`,
+    runtimeLogPath: `${sharedRoot}/macos-restart-runtime.log` });
   try {
     const restarted = await readSyncGroupControllerState(() => restartedSession.load());
     if (restarted.sync_group?.group_id !== expectedGroupId) {

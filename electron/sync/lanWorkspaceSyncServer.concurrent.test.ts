@@ -5,6 +5,7 @@ const runtime = vi.hoisted(() => {
   let releaseAdvertisement = () => {};
   return {
     advertise: vi.fn(() => new Promise<void>((resolve) => { releaseAdvertisement = resolve; })),
+    overviewChanged: vi.fn(),
     startAutoSync: vi.fn(),
     stopAutoSync: vi.fn(),
     loadGroup: vi.fn(() => ({ devices: [], group_id: 'group-test' })),
@@ -16,6 +17,10 @@ const runtime = vi.hoisted(() => {
     }
   };
 });
+
+vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
+  notifyDesktopSyncGroupOverviewChanged: runtime.overviewChanged
+}));
 
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
@@ -61,7 +66,7 @@ vi.mock('./lanWorkspaceSyncNetwork.js', () => ({ collectLanWorkspaceSyncUrls: ()
 vi.mock('./workgroupKeyStore.js', () => ({ loadDesktopWorkgroupKey: () => ({}) }));
 
 import {
-  ensureLanWorkspaceSyncServer, stopLanWorkspaceSyncServer
+  ensureLanWorkspaceSyncServer, getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer
 } from './lanWorkspaceSyncServer.js';
 
 afterEach(async () => {
@@ -106,4 +111,18 @@ it('honors stop before the asynchronous startup check returns', async () => {
   expect(runtime.server.close).toHaveBeenCalledOnce();
   expect(runtime.stopAutoSync.mock.invocationCallOrder.at(-1))
     .toBeGreaterThan(runtime.startAutoSync.mock.invocationCallOrder.at(-1)!);
+});
+
+it('notifies a waiting observer after the provider becomes ready', async () => {
+  const observed: string[] = [];
+  runtime.overviewChanged.mockImplementation(() => {
+    observed.push(getLanWorkspaceSyncServerStatus().topology_status);
+  });
+  const starting = ensureLanWorkspaceSyncServer({ appVersion: '1.0.0', deviceId: 'desktop-a' });
+  await vi.waitFor(() => expect(runtime.advertise).toHaveBeenCalledOnce());
+  expect(getLanWorkspaceSyncServerStatus().topology_status).toBe('observing');
+  runtime.releaseAdvertisement();
+  await starting;
+  expect(getLanWorkspaceSyncServerStatus().topology_status).toBe('ready');
+  expect(observed).toContain('ready');
 });

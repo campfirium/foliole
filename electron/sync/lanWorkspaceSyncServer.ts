@@ -188,6 +188,7 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
       onRecovered: clearMdnsWarning, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port, groupStatus);
+    notifyDesktopSyncGroupOverviewChanged();
     logRunningStatus();
     return activeStatus;
   } catch (error) {
