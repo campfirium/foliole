@@ -67,7 +67,7 @@ it.each([true, false])('opens editing without hiding already visible controls: %
     if (!visible) throw new Error('edit_controls_hidden');
     editing = true;
   } };
-  const page = { getByTestId: () => edit, locator: () => ({
+  const page = { waitForFunction: async () => {}, getByTestId: () => edit, locator: () => ({
     click: async () => { visible = !visible; },
     waitFor: async () => { if (!editing) throw new Error('not_editing'); },
     evaluate: async () => ({ selected: 'Old body', body: 'Old body' }),

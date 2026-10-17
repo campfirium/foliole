@@ -1,10 +1,11 @@
-/* global setTimeout, window */
+/* global setTimeout, window, document */
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { observeTimingEditor } from './macos-a5-sync-timing-editor-evidence.mjs';
 import { readMacImageFact } from './macos-a5-image-content-evidence.mjs';
 import { connectImageWebView, openAndroidImageTopic, showAndroidImageNavigation } from './macos-a5-image-content-ui.mjs';
 import { assertTimingOverlap, hasActiveTimingTransfer, observeTimingAttachments, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
@@ -59,6 +60,10 @@ export async function replaceAndroidTimingBody(page, content) {
     return { selected: selected?.rangeCount ? selected.getRangeAt(0).toString() : '', body: range.toString() };
   });
   assert.equal(selection.selected, selection.body, 'timing_input_requires_full_body_selection');
+  // An active IME range can override select-all when insertText commits its candidate.
+  await editor.press('Backspace');
+  await page.waitForFunction(() => document.querySelector(
+    '[data-companion-readable-document] .cm-content[contenteditable="true"]')?.textContent === '', null, { timeout: 5000 });
   await page.keyboard.insertText(content);
   return selection;
 }
@@ -119,6 +124,7 @@ export async function runSyncTimingScenario({ args, device, evidenceRoot, sessio
   const { page } = await connectImageWebView(args, device);
   let reader;
   let observation;
+  const editorEvidence = await observeTimingEditor(page);
   try {
     save();
     await showAndroidImageNavigation(page, args);
@@ -146,6 +152,8 @@ export async function runSyncTimingScenario({ args, device, evidenceRoot, sessio
   }
   finally {
     receipt.requests = observation?.requests;
-    try { await observation?.close(); } finally { try { await reader?.close(); } finally { save(); } }
+    try { await observation?.close(); } finally { try { await reader?.close(); } finally {
+      receipt.editorEvidence = await editorEvidence.close(); save();
+    } }
   }
 }
