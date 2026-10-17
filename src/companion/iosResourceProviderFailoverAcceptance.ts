@@ -3,11 +3,10 @@ import { loadCompanionResourceProviders } from '../shared/platform/companion/net
 import { exchangeCompanionSyncGroupMemberState } from '../shared/platform/companion/network/companionSyncGroupMemberState';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from '../shared/platform/companionBootstrap';
-import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
 import { completeCompanionSyncGroupJoin, requestCompanionSyncGroupJoin } from '../shared/platform/companionSyncGroupJoinClient';
 import { loadCompanionDiscoveryCandidates } from '../shared/platform/companionWorkspaceDiscovery';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
+import { loadCompanionReadableArticle, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
 
 import { syncIosAcceptanceRequest } from './iosAcceptanceRequestSync';
 import { postResult } from './iosBridgeAcceptance';
@@ -73,8 +72,7 @@ class ReadEvidenceError extends Error {
 }
 
 async function verifyRead(expected: 'ready' | 'missing_file' = 'ready') {
-  const workspace = await loadCompanionWorkspaceSyncState();
-  const article = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, NODE_ID);
+  const article = await loadCompanionReadableArticle(undefined, NODE_ID);
   const resource = await resolveRuntimeAttachmentResource(`asset://${IMAGE_HASH}.png`, { refresh: true });
   if (expected === 'missing_file' && resource?.status === 'ready') {
     throw new Error('acceptance_attachment_already_available');

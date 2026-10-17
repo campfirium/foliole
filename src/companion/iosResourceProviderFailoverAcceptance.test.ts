@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ sync: vi.fn(), resource: vi.fn(), providers: vi.fn(),
   member: vi.fn(), group: vi.fn(), bootstrap: vi.fn(), article: vi.fn(),
   join: vi.fn(), complete: vi.fn(), discovery: vi.fn(), native: vi.fn(), workspace: vi.fn(),
-  endpoint: vi.fn(), result: vi.fn() }));
+  endpoint: vi.fn(), readArticle: vi.fn(), result: vi.fn() }));
 vi.mock('./iosAcceptanceRequestSync', () => ({ syncIosAcceptanceRequest: mocks.sync }));
 vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.result }));
 vi.mock('../shared/platform/attachmentResources', () => ({ resolveRuntimeAttachmentResource: mocks.resource }));
@@ -18,7 +18,7 @@ vi.mock('../shared/platform/companionSyncGroupJoinClient', () => ({ requestCompa
 vi.mock('../shared/platform/companionWorkspaceDiscovery', () => ({ loadCompanionDiscoveryCandidates: mocks.discovery }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: { loadDiscoveryCandidates: mocks.native } }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({ loadCompanionWorkspaceSyncState: mocks.workspace,
-  saveCompanionWorkspaceSyncEndpoint: mocks.endpoint }));
+  saveCompanionWorkspaceSyncEndpoint: mocks.endpoint, loadCompanionReadableArticle: mocks.readArticle }));
 const hash = 'a'.repeat(64);
 async function run() {
   const { runIosResourceProviderFailoverAcceptance } = await import('./iosResourceProviderFailoverAcceptance');
@@ -37,6 +37,7 @@ beforeEach(() => {
   mocks.providers.mockResolvedValue({ providers: ['mac', 'a5'].map(deviceId => ({ deviceId, endpointUrl: `http://${deviceId}`, groupId: 'group' })) });
   mocks.workspace.mockResolvedValue({ workspace_snapshot: {} });
   mocks.article.mockReturnValue({ bodyStatus: 'ready', content: `Resource LAN body remains readable. asset://${hash}.png` });
+  mocks.readArticle.mockImplementation(async () => mocks.article());
   mocks.resource.mockResolvedValue({ status: 'missing_file', resource_url: null });
   mocks.sync.mockImplementation(async (_endpoint, _peer, resourcesOnly) => {
     if (resourcesOnly) mocks.resource.mockResolvedValue({ status: 'ready', resource_url: 'capacitor://localhost/image.png' });
@@ -96,4 +97,21 @@ it('keeps the failed read values and stage without weakening the acceptance crit
     evidence: { expected: 'missing_file', bodyStatus: 'ready', content: 'Wrong adopted body',
       resourceStatus: 'missing_file', resourceUrl: null }
   }));
+});
+
+it('reads the adopted body separately when the native workspace snapshot contains only structure', async () => {
+  const { resolveReadableCompanionArticleByNodeId } = await vi.importActual<
+    typeof import('../shared/platform/companionReadableArticle')>('../shared/platform/companionReadableArticle');
+  const snapshot = { activeNodeId: 'node', nodeOrder: ['node'], trashedNodeIds: [],
+    untitledSequenceByParent: {}, nodesById: { node: { id: 'node', kind: 'topic' as const,
+      content: '', hasContent: true, title: 'Resource', parentNodeId: null,
+      createdAt: '2026-10-18T00:00:00Z', updatedAt: '2026-10-18T00:00:00Z',
+      anchorLink: null, reading: null, review: null, reveal: null,
+      hideTitleHeading: false, isTitleManual: false } } };
+  mocks.workspace.mockResolvedValue({ workspace_snapshot: snapshot });
+  mocks.article.mockImplementation(resolveReadableCompanionArticleByNodeId);
+  mocks.readArticle.mockResolvedValue({ bodyStatus: 'ready',
+    content: `Resource LAN body remains readable. asset://${hash}.png` });
+  await run();
+  expect(mocks.result).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'passed', phase: 'provider-selected' }));
 });
