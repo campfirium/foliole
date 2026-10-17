@@ -24,7 +24,7 @@ exports.startResourceProvider = async function startResourceProvider(nativeImage
   await mkdir(path.join(process.cwd(), '.tmp/artifacts'), { recursive: true });
   state.directory = await mkdtemp(path.join(process.cwd(), '.tmp/artifacts/s203-request-source-'));
   for (const [index, bytes] of files.entries()) await writeFile(path.join(state.directory, state.keys[index]), bytes);
-  state.source = production('electron/sync/desktopAttachmentBlockSource.js').createDesktopAttachmentBlockSource(state.directory);
+  state.source = production('electron/sync/desktopAttachmentBlockSource.js').createDesktopAttachmentBlockSource(state.directory, state.directory);
   state.server = http.createServer((request, response) => {
     handle(state, request, response).catch(error => response.destroy(error));
   });
@@ -42,6 +42,7 @@ exports.closeResourceProvider = async function closeResourceProvider(state) {
 function attachmentHost(state, request, response) {
   return {
     needs: async () => [],
+    needsSlice: async () => ({ keys: [], pending: false }),
     status: async () => { throw new Error('unexpected_attachment_push'); },
     receive: async () => { throw new Error('unexpected_attachment_push'); },
     async withFile(key, consume) {

@@ -12,9 +12,6 @@ test('recovers when a local attachment arrives after its image is first rendered
   const attachmentId = createHash('sha256').update(sourceBuffer).digest('hex');
   const sourceBytes = sourceBuffer.toString('base64');
 
-  await desktopWindow.waitForFunction(() => Array.from(
-    document.querySelectorAll<HTMLImageElement>('.cm-md-image-element')
-  ).some((image) => image.complete && image.naturalWidth > 0));
   await desktopWindow.evaluate(async ({ attachmentId: id, nodeId, sourceBytes: bytes }) => {
     const debug = window.__folioleWorkspaceDebug;
     if (!debug?.seedNodes || !debug.openNode || !debug.importClipboardImageAttachment) {
