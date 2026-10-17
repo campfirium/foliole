@@ -8,7 +8,7 @@ import { resetPendingNodeContentRuntimePersistsForTests, scheduleNodeContentRunt
   drainPendingNodeContentRuntimePersists } from '../../src/store/workspaceStoreContentRuntimePersist';
 import { syncNodeContentWithAnchorsMutationToRuntime } from '../../src/store/workspaceRuntimeSync';
 import { waitForDesktopProductState } from '../acceptance/desktop-product-event.mjs';
-import { INITIAL_BODY, openAndroidImageTopic, pasteMacImage } from './macos-a5-image-content-ui.mjs';
+import { INITIAL_BODY, assertLoadedImages, openAndroidImageTopic, pasteMacImage } from './macos-a5-image-content-ui.mjs';
 
 vi.mock('../../src/store/workspaceRuntimeSync', () => ({
   hasWorkspaceNodeMutationRuntime: () => true,
@@ -102,4 +102,20 @@ it.each([true, false])('opens the image topic from review=%s without exiting ano
   expect(args.checked).toHaveBeenCalledTimes(initiallyReviewing ? 1 : 0);
   if (initiallyReviewing) expect(args.checked).toHaveBeenCalledWith('/adb', ['-s', 'fixed', 'shell', 'input', 'keyevent', 'KEYCODE_BACK']);
   expect(calls).toEqual(['companion-tab-browse', 'Image topic']);
+});
+
+it('checks the loaded content image while ignoring editor decoration images', async () => {
+  const root = document.createElement('article');
+  root.innerHTML = '<img aria-hidden="true"><img src="asset://image.png">';
+  const image = root.querySelector('img[src]');
+  Object.defineProperties(image, { complete: { value: true }, naturalWidth: { value: 64 } });
+  const page = { locator: selector => {
+    const images = [...root.querySelectorAll(selector)];
+    return { first: () => ({ waitFor: async () => {
+      if (!images[0] || images[0].getAttribute('aria-hidden') === 'true') throw new Error('hidden_decoration_image');
+    } }), evaluateAll: callback => callback(images) };
+  } };
+  await expect(assertLoadedImages(page, 'img')).resolves.toBeUndefined();
+  image.remove();
+  await expect(assertLoadedImages(page, 'img')).rejects.toThrow();
 });

@@ -102,7 +102,7 @@ export async function openAndroidImageTopic(page, title, nodeId, args) {
 }
 
 export async function assertLoadedImages(page, selector) {
-  const images = page.locator(selector);
+  const images = page.locator(`${selector}:not([aria-hidden="true"])`);
   await images.first().waitFor({ state: 'visible' });
   const loaded = await images.evaluateAll(elements => Promise.all(elements.map(image => image.complete
     ? image.naturalWidth > 0 : new Promise(resolve => {
