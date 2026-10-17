@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { readMacImageFact } from './macos-a5-image-content-evidence.mjs';
-import { connectImageWebView, openAndroidImageTopic } from './macos-a5-image-content-ui.mjs';
+import { connectImageWebView, openAndroidImageTopic, showAndroidImageNavigation } from './macos-a5-image-content-ui.mjs';
 import { assertTimingOverlap, observeTimingAttachments, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
 
 async function createTopic(session, suffix) {
@@ -91,10 +91,12 @@ export async function runSyncTimingScenario({ args, device, evidenceRoot, sessio
   let reader;
   let observation;
   try {
-    save(); reader = await openTimingReader(page);
+    save();
+    await showAndroidImageNavigation(page, args);
+    reader = await openTimingReader(page);
     const topic = await createTopic(session, 'ordinary');
     await waitForTimingBody(() => reader.read(topic.nodeId), topic.content, { limitMs: 30_000 });
-    await openAndroidImageTopic(page, topic.title, topic.nodeId, args);
+    await openAndroidImageTopic(page, topic.title, topic.nodeId);
     const context = { topic, session, page, reader, evidenceRoot, samples: receipt.samples, save };
     for (let index = 1; index <= 10; index++) {
       for (const direction of ['mac-to-a5', 'a5-to-mac']) await sample({ ...context, direction, index });
