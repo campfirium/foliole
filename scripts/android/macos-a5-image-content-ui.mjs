@@ -72,7 +72,11 @@ export async function connectImageWebView(args, device) {
   if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error('image_content_pid_unavailable');
   const socket = webViewSocketForPid(args.captured(args.paths.adb,
     ['-s', args.serial, 'shell', 'cat', '/proc/net/unix']), pid);
-  const page = await (await device.webView({ pkg: ACCEPTANCE_APP_ID, socketName: socket }, { timeout: 30_000 })).page();
+  const webView = await device.webView({ socketName: socket }, { timeout: 30_000 });
+  if (webView.pkg() !== ACCEPTANCE_APP_ID || webView.pid() !== pid) {
+    throw new Error('image_content_webview_identity_mismatch');
+  }
+  const page = await webView.page();
   page.setDefaultTimeout(30_000);
   return { page, pid, socket };
 }

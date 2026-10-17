@@ -8,7 +8,7 @@ import { resetPendingNodeContentRuntimePersistsForTests, scheduleNodeContentRunt
   drainPendingNodeContentRuntimePersists } from '../../src/store/workspaceStoreContentRuntimePersist';
 import { syncNodeContentWithAnchorsMutationToRuntime } from '../../src/store/workspaceRuntimeSync';
 import { waitForDesktopProductState } from '../acceptance/desktop-product-event.mjs';
-import { INITIAL_BODY, assertLoadedImages, openAndroidImageTopic, pasteMacImage } from './macos-a5-image-content-ui.mjs';
+import { INITIAL_BODY, assertLoadedImages, connectImageWebView, openAndroidImageTopic, pasteMacImage } from './macos-a5-image-content-ui.mjs';
 
 vi.mock('../../src/store/workspaceRuntimeSync', () => ({
   hasWorkspaceNodeMutationRuntime: () => true,
@@ -118,4 +118,17 @@ it('checks the loaded content image while ignoring editor decoration images', as
   await expect(assertLoadedImages(page, 'img')).resolves.toBeUndefined();
   image.remove();
   await expect(assertLoadedImages(page, 'img')).rejects.toThrow();
+});
+
+it('binds the new process socket when a closed WebView for the same package remains discoverable', async () => {
+  const page = { setDefaultTimeout: vi.fn(), closed: false };
+  const oldPage = { setDefaultTimeout: vi.fn(), closed: true };
+  const view = (pid, value) => ({ pid: () => pid, pkg: () => 'com.campfirium.foliole.android.acceptance', page: async () => value });
+  const device = { webView: async selector => selector.pkg ? view(10, oldPage) : view(20, page) };
+  const args = { paths: { adb: '/adb' }, serial: 'fixed', captured: (_command, argv) =>
+    argv.includes('pidof') ? '20' : 'socket webview_devtools_remote_20' };
+  const binding = await connectImageWebView(args, device);
+  expect(binding.page).toBe(page);
+  expect(binding.pid).toBe(20);
+  expect(binding.socket).toBe('webview_devtools_remote_20');
 });
