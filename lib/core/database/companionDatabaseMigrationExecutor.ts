@@ -120,6 +120,12 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 89 && targetVersion >= 89) await retireCompanionForegroundIdentityTriggers(db);
   if (currentVersion < 90 && targetVersion >= 90) await migrateCompanionMissingCurrentVersionInventory(db);
   if (currentVersion < 91 && targetVersion >= 91) await db.run(INVALIDATE_UNREADY_SYNC_DIGESTS);
+  if (currentVersion < 92 && targetVersion >= 92) {
+    const columns = await db.query<{ name: string }>('PRAGMA table_info(node_version_local_origins)');
+    if (!columns.some(column => column.name === 'content_edit_image_input_hash')) {
+      await db.run('ALTER TABLE node_version_local_origins ADD COLUMN content_edit_image_input_hash TEXT');
+    }
+  }
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

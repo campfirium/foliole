@@ -32,7 +32,7 @@ function oldDatabase(host: string) {
       ('base', 'node', NULL, 'local', '1', 'hash1', 'base', '{"content":"base"}'),
       ('head', 'node', 'base', 'local', '2', 'hash2', 'head', '{"content":"head"}');
     INSERT INTO node_sync_version_parents VALUES ('head', 'base', 0);
-    INSERT INTO node_version_local_origins VALUES ('base'), ('head');
+    INSERT INTO node_version_local_origins (version_id) VALUES ('base'), ('head');
     INSERT INTO node_sync_conflicts (conflict_version_id, object_id, parent_version_id, snapshot_json, detected_at)
       VALUES ('head', 'node', 'base', '{}', 'now');`);
   return db;

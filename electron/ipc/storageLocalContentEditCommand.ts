@@ -37,8 +37,6 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
     driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ? WHERE id = ?',
       [record.snapshot.resource_references!, record.snapshot.image_sources ?? null, parent.nodeId]);
     upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, { versionId });
-    driver.execute("UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.local_edit_image_input_hash', ?) WHERE version_id = ?",
-      [record.snapshot.local_edit_image_input_hash!, versionId]);
   });
   await collectNodeVersionPayloads(port, parent.nodeId).catch((error: unknown) => {
     console.warn('[node-version-retention] local collection failed', error);

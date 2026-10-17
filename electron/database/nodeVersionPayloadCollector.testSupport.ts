@@ -34,7 +34,7 @@ export function setupVersionCollectionFixture() {
       id, parent, `2026-09-27T00:00:0${index}Z`, `hash-${id}`, `body-${id}`,
       JSON.stringify({ id: 'node', content: `body-${id}` })
       );
-      sqlite.prepare('INSERT INTO node_version_local_origins VALUES (?)').run(id);
+      sqlite.prepare('INSERT INTO node_version_local_origins (version_id) VALUES (?)').run(id);
       if (parent) sqlite.prepare(`INSERT INTO node_sync_version_parents VALUES (?, ?, 0)`).run(id, parent);
     }
   });

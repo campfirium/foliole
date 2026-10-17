@@ -6,6 +6,7 @@ import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionIn
 import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { retireNodePositions } from './nodePositionRetirementMigration.js';
+import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
@@ -24,5 +25,7 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 159, migrate: migratePdfTextArtifacts },
   { version: 160, migrate: retireForegroundIdentityTriggers },
   { version: 161, migrate: migrateMissingCurrentVersionInventory },
-  { version: 162, migrate: db => { db.exec(INVALIDATE_UNREADY_SYNC_DIGESTS); } }
+  { version: 162, migrate: db => { db.exec(INVALIDATE_UNREADY_SYNC_DIGESTS); } },
+  { version: 163, migrate: db => addColumnIfMissing(db,
+    'node_version_local_origins', 'content_edit_image_input_hash', 'TEXT') }
 ];

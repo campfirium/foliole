@@ -2,7 +2,8 @@ import { NODE_VERSION_CONFIRMATION_SCHEMA } from './nodeVersionConfirmationSchem
 
 export const NODE_VERSION_RETENTION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS node_version_local_origins (
-    version_id TEXT PRIMARY KEY REFERENCES node_sync_versions(version_id) ON DELETE CASCADE
+    version_id TEXT PRIMARY KEY REFERENCES node_sync_versions(version_id) ON DELETE CASCADE,
+    content_edit_image_input_hash TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS node_version_device_bases (
     group_id TEXT NOT NULL,

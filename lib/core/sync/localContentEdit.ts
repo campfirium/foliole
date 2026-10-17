@@ -7,6 +7,7 @@ import { normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 
 import type { DbPort } from './dbPort.js';
 import { applyLocalContentEditBranch, type LocalContentEditOptions } from './localContentEditBranch.js';
+import { assertLocalContentEditReceipt, recordLocalContentEditReceipt } from './localContentEditReceipt.js';
 import { contentEditImageInputHash, localContentEditResources, localContentEditImageSources, parseNewImageReferences, type ContentImageReference } from './localContentEditResources.js';
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
@@ -53,8 +54,8 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     }
     const added = parseNewImageReferences(input.newImageReferences);
     const imageInputHash = contentEditImageInputHash(added);
-    if (stored && stored.snapshot.local_edit_image_input_hash !== imageInputHash) throw new Error('content_edit_version_mismatch');
     if (stored) {
+      await assertLocalContentEditReceipt(tx, input.versionId, imageInputHash);
       if (!matchesEdit(stored, createEditRecord(base, input, stored.snapshot.resource_references))) throw new Error('content_edit_version_mismatch');
       if (current.version_id === input.versionId || current.ancestor_version_ids.includes(input.versionId)) {
         return { current, submittedVersionId: input.versionId };
@@ -69,6 +70,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward(record);
     else await applyLocalContentEditBranch(tx, stored?.body_text === null ? record : stored ?? record, options);
+    await recordLocalContentEditReceipt(tx, input.versionId, imageInputHash);
     await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
     await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
     const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
@@ -84,7 +86,6 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
     ...base.snapshot,
     ...(resources === undefined ? {} : { resource_references: resources, attachments: projectNodeResourceLinks(resources) }),
     image_sources: localContentEditImageSources(base, input.content, parseNewImageReferences(input.newImageReferences)),
-    local_edit_image_input_hash: contentEditImageInputHash(input.newImageReferences),
     body_blob_hash: null,
     content: input.content,
     hide_title_heading: input.hideTitleHeading,

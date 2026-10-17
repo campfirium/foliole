@@ -22,10 +22,8 @@ export function canonicalResolutionJson(value: unknown): string {
 export function normalizeResolutionMetadataSnapshot(
   snapshot: FramedSyncNodeMetadata['snapshot'], updatedAt: string
 ): FramedSyncNodeMetadata['snapshot'] {
-  const metadata = { ...snapshot };
-  delete metadata.local_edit_image_input_hash;
   return {
-    ...metadata,
+    ...snapshot,
     anchor_resolution_status: snapshot.anchor_resolution_status ?? null,
     anchor_source_version_id: snapshot.anchor_source_version_id ?? null,
     attachments: [...snapshot.attachments].sort((left, right) => {

@@ -161,6 +161,9 @@ it('prepares files without versions and atomically saves image names through the
   const request = { parent: nodeInput(`![image](asset://${imported.storage_key})`, '2026-07-25T04:32:00.000Z'),
     affectedAnchors: [], edit: { baseVersionId: base, baseContent: 'Original', versionId: 'image-edit',
       newImageReferences: [{ storage_key: imported.storage_key, original_name: imported.original_name, role: 'image' }] } };
+  sqlite.exec(`CREATE TRIGGER reject_local_receipt_in_version BEFORE UPDATE OF snapshot_json ON node_sync_versions
+    WHEN json_type(NEW.snapshot_json, '$.local_edit_image_input_hash') IS NOT NULL
+    BEGIN SELECT RAISE(ABORT, 'local_receipt_changed_version_fact'); END`);
   await handleLocalContentEditCommand(request, null);
   expect(JSON.parse(String(sqlite.prepare("SELECT resource_references FROM nodes WHERE id = 'node-1'").pluck().get())))
     .toEqual(request.edit.newImageReferences);
@@ -170,4 +173,10 @@ it('prepares files without versions and atomically saves image names through the
   await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [] } }, null))
     .rejects.toThrow('content_edit_version_mismatch');
   await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [{ storage_key: '../x', role: 'image', original_name: 'X' }] } }, null)).rejects.toThrow('node_resource_reference_invalid');
+  closeDatabaseConnection();
+  await initializeDatabase();
+  await handleLocalContentEditCommand(request, null);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(2);
+  await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [] } }, null))
+    .rejects.toThrow('content_edit_version_mismatch');
 });

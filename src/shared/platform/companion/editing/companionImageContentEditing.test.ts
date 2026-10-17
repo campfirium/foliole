@@ -38,5 +38,9 @@ it.each(['android', 'ios'] as const)('%s retains image descriptions through draf
   const saved = await host.owner.read(db => loadCurrentSyncNodeRecord(db, 'topic'));
   expect(saved?.body_text).toBe(content);
   expect(JSON.parse(saved!.snapshot.resource_references!)).toEqual([image]);
+  expect(saved?.snapshot).not.toHaveProperty('local_edit_image_input_hash');
+  await saveCompanionContentEdit(JSON.parse(inputs.at(-1)!));
+  await expect(saveCompanionContentEdit({ ...JSON.parse(inputs.at(-1)!), newImageReferences: [] }))
+    .rejects.toThrow('content_edit_version_mismatch');
   expect(host.sqlite.prepare("SELECT count(*) FROM node_sync_versions WHERE object_id = 'topic'").pluck().get()).toBe(2);
 });

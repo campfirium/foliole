@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { parseImageSources, serializeImageSources } from '../database/imageSources.js';
 import { parseNodeResourceReferences, projectNodeResourceLinks, serializeNodeResourceReferences, type NodeResourceReference } from '../database/nodeResourceReferences.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 import { collectArticleImageStorageKeys } from '../import/replaceArticleImageSource.js';
 
 import { hashText } from './syncNodeResolution.js';
@@ -32,7 +33,9 @@ export function localContentEditResources(base: NativeSyncNodeRecord, current: N
   }
   const removed = new Set(collectArticleImageStorageKeys(base.body_text ?? base.snapshot.content ?? '')
     .filter(key => !submitted.has(key)));
-  const concurrentBodies = current.snapshot.body_blob_hash !== base.snapshot.body_blob_hash && current.body_text !== base.body_text
+  const currentHash = current.snapshot.body_blob_hash ?? (typeof current.body_text === 'string' ? hashTextBody(current.body_text) : null);
+  const baseHash = base.snapshot.body_blob_hash ?? (typeof base.body_text === 'string' ? hashTextBody(base.body_text) : null);
+  const concurrentBodies = currentHash !== baseHash
     && typeof current.body_text === 'string' ? [{ text: current.body_text }] : [];
   const protectedKeys = new Set([...base.alternative_bodies ?? [], ...current.alternative_bodies ?? [], ...concurrentBodies]
     .flatMap(body => collectArticleImageStorageKeys(body.text)));

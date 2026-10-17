@@ -127,8 +127,6 @@ export interface NativeSyncNodeRecord {
     anchor_source_version_id?: string | null;
     attachments: NativeSyncNodeAttachmentRef[];
     resource_references?: string;
-    /** Local retry receipt; excluded from remote facts and resolution identity. */
-    local_edit_image_input_hash?: string;
     body_blob_hash?: string | null;
     body_deleted?: boolean;
     content?: string | null;
