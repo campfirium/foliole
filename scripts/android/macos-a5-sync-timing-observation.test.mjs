@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { prepareAndroidEdit } from './macos-a5-sync-timing-scenario.mjs';
 import { assertTimingOverlap, openTimingReader, waitForTimingBody } from './macos-a5-sync-timing-observation.mjs';
 
 it('accepts only the complete persisted body and records its version', async () => {
@@ -56,4 +57,20 @@ it('opens a separate readonly connection only for the isolated Android database'
     sqlite.getUrl = async () => ({ url: '/data/user/0/com.campfirium.foliole.android/databases/foliole-companionSQLite.db' });
     await expect(openTimingReader(page)).rejects.toThrow('timing_reader_requires_isolated_application');
   } finally { globalThis.Capacitor = previous; }
+});
+
+it.each([true, false])('opens editing without hiding already visible controls: %s', async initiallyVisible => {
+  let visible = initiallyVisible;
+  let editing = false;
+  let body;
+  const edit = { isVisible: async () => visible, click: async () => {
+    if (!visible) throw new Error('edit_controls_hidden');
+    editing = true;
+  } };
+  const page = { getByTestId: () => edit, locator: () => ({
+    click: async () => { visible = !visible; },
+    fill: async value => { if (!editing) throw new Error('not_editing'); body = value; }
+  }) };
+  await prepareAndroidEdit(page, 'Complete body');
+  expect(body).toBe('Complete body');
 });

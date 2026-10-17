@@ -42,9 +42,10 @@ async function seedAttachmentBacklog(session, args, direction) {
   return { nodeId: topic.nodeId, references };
 }
 
-async function prepareAndroidEdit(page, content) {
-  await page.locator('[data-companion-readable-document]').click();
-  await page.getByTestId('companion-reading-edit').click();
+export async function prepareAndroidEdit(page, content) {
+  const edit = page.getByTestId('companion-reading-edit');
+  if (!await edit.isVisible()) await page.locator('[data-companion-readable-document]').click();
+  await edit.click();
   await page.locator('[data-companion-readable-document] .cm-content').fill(content);
 }
 
@@ -104,7 +105,12 @@ export async function runSyncTimingScenario({ args, device, evidenceRoot, sessio
       await sample({ ...context, direction, index: 'attachment-in-flight', requests: observation.requests });
     }
     receipt.status = 'passed';
-  } catch (error) { receipt.status = 'failed'; receipt.error = error.message; throw error; }
+  } catch (error) {
+    receipt.status = 'failed'; receipt.error = error.message;
+    await page.screenshot({ path: path.join(evidenceRoot, 'timing-failure.png') }).catch(() => undefined);
+    fs.writeFileSync(path.join(evidenceRoot, 'timing-failure.txt'), await page.locator('body').innerText().catch(() => 'page unavailable'));
+    throw error;
+  }
   finally {
     receipt.requests = observation?.requests;
     try { await observation?.close(); } finally { try { await reader?.close(); } finally { save(); } }
