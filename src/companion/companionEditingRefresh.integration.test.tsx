@@ -121,8 +121,11 @@ it.each([false, true])('commits immediate Done input to SQLite with concurrent r
   if (remoteChange) {
     const remote = await toWorkspaceNativeNodeVersion({ ...node, content: node.content + '\nRemote suffix',
       currentVersionId: 'base', updatedAt: '2026-10-11T00:00:00Z' }, 'remote', 'remote-edit');
+    if (!remote.version_id || typeof remote.body_text !== 'string') throw new Error('Expected a complete remote version');
+    const remoteVersionId = remote.version_id;
+    const remoteBody = remote.body_text;
     await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [remote], { enqueueSearchInvalidations: false }));
-    await act(async () => { view.rerender(document(remote.body_text!, remote.version_id)); });
+    await act(async () => { view.rerender(document(remoteBody, remoteVersionId)); });
     expect(editor!.getContent()).toBe('Immediate input Original body');
   }
   await act(() => activity.flush());
