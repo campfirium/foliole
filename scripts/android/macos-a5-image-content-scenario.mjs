@@ -46,6 +46,19 @@ function startAndroid(args) {
     `${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`]);
 }
 
+async function requestAndroidImageSync(page, evidenceRoot) {
+  try {
+    await page.getByTestId('companion-tab-settings').click();
+    await page.getByTestId('companion-settings-sync').click();
+    await page.getByTestId('companion-sync-now').click();
+  } catch (error) {
+    await page.screenshot({ path: path.join(evidenceRoot, 'android-navigation-failure.png') });
+    fs.writeFileSync(path.join(evidenceRoot, 'android-navigation-failure.txt'),
+      `${page.url()}\n${await page.locator('body').innerText()}`);
+    throw error;
+  }
+}
+
 async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartMacos, session }) {
   const { nodeId } = receipt;
   receipt.stage = 'mac-insert';
@@ -58,9 +71,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   let binding = await connectImageWebView(args, device);
   receipt.stage = 'android-receive';
   receipt.firstWebView = { pid: binding.pid, socket: binding.socket };
-  await binding.page.getByTestId('companion-tab-settings').click();
-  await binding.page.getByTestId('companion-settings-sync').click();
-  await binding.page.getByTestId('companion-sync-now').click();
+  await requestAndroidImageSync(binding.page, evidenceRoot);
   await openAndroidImageTopic(binding.page, title, nodeId);
   await assertLoadedImages(binding.page, '[data-companion-readable-document] img');
   await binding.page.screenshot({ path: path.join(evidenceRoot, 'android-received-image.png') });
