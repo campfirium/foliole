@@ -143,6 +143,7 @@ function ReadableArticleTextDocument(props: {
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
         onBlurCapture={() => void props.editorState.flushPendingSave().catch(() => undefined)}
+        onDocumentInput={props.editorState.markBufferedInput}
         onMissingAttachmentResource={props.syncMissingAttachmentResource}
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}

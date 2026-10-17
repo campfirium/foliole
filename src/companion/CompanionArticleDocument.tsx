@@ -25,6 +25,7 @@ export function CompanionArticleDocument(props: {
   nodeViewState?: EditorViewState;
   onBlurCapture?: () => void;
   onChange?: (content: string) => void;
+  onDocumentInput?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingRestoreCommandId?: string | null;
@@ -60,6 +61,7 @@ export function CompanionArticleDocument(props: {
           hideTitleHeading: props.hideTitleHeading,
           nodeViewState: props.nodeViewState,
           onBlurCapture: props.onBlurCapture,
+          onDocumentInput: props.onDocumentInput,
           onMissingAttachmentResource: props.onMissingAttachmentResource,
           onReady: props.onEditorReady,
           readingRestoreCommandId: props.readingRestoreCommandId,

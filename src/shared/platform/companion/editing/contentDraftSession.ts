@@ -18,6 +18,7 @@ export class ContentDraftSession {
   private listeners = new Set<() => void>();
   private holdId: string | null = null;
   private starting: Promise<void> | null = null;
+  private bufferedInput = false;
 
   constructor(readonly nodeId: string, private base: CompanionContentSource,
     public save: CompanionContentSaveHandler, private delay = 1200) {
@@ -25,8 +26,10 @@ export class ContentDraftSession {
     this.ready = !save.retainHold;
   }
 
-  get dirty() { return this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
+  get dirty() { return this.bufferedInput || this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
   get attached() { return this.listeners.size > 0; }
+
+  markBufferedInput() { if (this.ready) this.bufferedInput = true; }
 
   subscribe(listener: () => void) {
     this.listeners.add(listener);
@@ -90,6 +93,7 @@ export class ContentDraftSession {
 
   change(value: string) {
     if (!this.ready) return;
+    this.bufferedInput = false;
     if (value === this.value) return;
     this.value = value;
     this.sequence += 1;
@@ -137,12 +141,12 @@ export class ContentDraftSession {
       this.acknowledged = edit.sequence;
       this.pending = null;
       this.error = null;
-      if (this.sequence === edit.sequence) {
+      if (this.sequence === edit.sequence && !this.bufferedInput) {
         let nextHoldId: string | null = null;
         try {
           nextHoldId = this.holdId && ack.currentVersionId !== ack.submittedVersionId
             ? await this.stageNextBase(ack.currentVersionId) : null;
-          if (this.sequence === edit.sequence) {
+          if (this.sequence === edit.sequence && !this.bufferedInput) {
             this.base = { content: ack.content, versionId: ack.currentVersionId };
             this.value = ack.content;
             await this.replaceHold(nextHoldId);
@@ -152,7 +156,7 @@ export class ContentDraftSession {
           // The committed input remains protected; a later refresh may adopt the merged head.
         }
       }
-      if (this.sequence === edit.sequence) {
+      if (this.sequence === edit.sequence && !this.bufferedInput) {
         if (!this.holdId || ack.currentVersionId === ack.submittedVersionId ||
             this.holdId !== edit.holdId) {
           this.base = { content: ack.content, versionId: ack.currentVersionId };

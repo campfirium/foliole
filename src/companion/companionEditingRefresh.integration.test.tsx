@@ -94,7 +94,7 @@ it('keeps editing mounted across actual SQLite autosave refreshes and persists c
   view.unmount();
 });
 
-it('commits immediate Done input from the real editor to SQLite before returning', async () => {
+it.each([false, true])('commits immediate Done input to SQLite with concurrent remote change=%s', async remoteChange => {
   library = await createSearchLibrary(0);
   const node = { id: 'topic', content: 'Original body', kind: 'topic' as const, title: 'Topic',
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
@@ -107,19 +107,31 @@ it('commits immediate Done input from the real editor to SQLite before returning
   } as ReturnType<typeof useCompanionWorkspaceSync>);
   const activity = new CompanionReadingActivity('topic', () => {});
   let editor: EditorAdapter | null = null;
-  render(<LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider><CompanionDraftProvider>
+  const document = (content: string, currentVersionId: string) => <LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider><CompanionDraftProvider>
     <ReadableArticleDocument activity={activity} allowContentEditing onSaveContent={save}
       onEditorReady={value => { editor = value; }}
-      readableArticle={{ content: node.content, currentVersionId: 'base', hideTitleHeading: false,
+      readableArticle={{ content, currentVersionId, hideTitleHeading: false,
         nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
         textAnchorDecorations: [], title: 'Topic' }}
       readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
-  </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>);
+  </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>;
+  const view = render(document(node.content, 'base'));
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));
   act(() => editor!.replaceRange(0, 0, 'Immediate input '));
+  if (remoteChange) {
+    const remote = await toWorkspaceNativeNodeVersion({ ...node, content: node.content + '\nRemote suffix',
+      currentVersionId: 'base', updatedAt: '2026-10-11T00:00:00Z' }, 'remote', 'remote-edit');
+    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [remote], { enqueueSearchInvalidations: false }));
+    await act(async () => { view.rerender(document(remote.body_text!, remote.version_id)); });
+    expect(editor!.getContent()).toBe('Immediate input Original body');
+  }
   await act(() => activity.flush());
-  expect(library.database.prepare('SELECT content FROM nodes WHERE id=?').get('topic'))
-    .toEqual({ content: 'Immediate input Original body' });
+  const bodies = library.database.prepare(`SELECT n.content FROM nodes n WHERE n.id=?
+    UNION SELECT json_extract(body.value, '$.text') AS content FROM nodes n
+    JOIN node_sync_versions v ON v.version_id=n.current_version_id,
+    json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id=?`).all('topic', 'topic');
+  expect(bodies).toContainEqual({ content: 'Immediate input Original body' });
+  if (remoteChange) expect(bodies).toContainEqual({ content: 'Original body\nRemote suffix' });
   expect(library.database.prepare('SELECT parent_version_id FROM node_sync_version_parents').all())
     .toContainEqual({ parent_version_id: 'base' });
 });

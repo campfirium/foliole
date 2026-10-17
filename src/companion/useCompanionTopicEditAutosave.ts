@@ -53,7 +53,8 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
     if (args.canEdit) session?.change(value);
   }, [args.canEdit, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
-  return { error: session?.error ?? null, flushPendingSave, handleChange,
+  const markBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput(); }, [args.canEdit, session]);
+  return { error: session?.error ?? null, flushPendingSave, handleChange, markBufferedInput,
     ready: session?.ready ?? false,
     value: session?.value ?? args.initialContent };
 }
