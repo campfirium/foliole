@@ -131,11 +131,12 @@ function prepareRootNodeCreation(args: {
     : [...args.state.nodeOrder, args.nodeId];
   const nodesById = { ...args.state.nodesById, [args.nodeId]: created.node };
   const patch: Partial<WorkspaceState> = {
-    activeNodeId: args.nodeId,
+    activeNodeId: args.options?.activate === false ? args.state.activeNodeId : args.nodeId,
     nodeOrder,
     nodesById,
     untitledSequenceByParent: created.untitledState.untitledSequenceByParent,
-    reviewSession: reconcileReviewSession({ ...args.state, activeNodeId: args.nodeId, nodeOrder, nodesById }, args.nodeId)
+    reviewSession: args.options?.activate === false ? args.state.reviewSession
+      : reconcileReviewSession({ ...args.state, activeNodeId: args.nodeId, nodeOrder, nodesById }, args.nodeId)
   };
   const pending = beginStructureCreateHistory({
     afterState: { ...args.state, ...patch },

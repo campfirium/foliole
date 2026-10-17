@@ -21,12 +21,14 @@ function createCreatedChildNode(args: {
   nodeId: string;
   parentNodeId: string;
   priority?: number | null;
+  pendingImageReferences?: NodeSnapshot['pendingImageReferences'];
   review: NodeSnapshot['review'];
   specialKind?: NodeSnapshot['specialKind'];
   timestamp: string;
   title: string;
 }) {
   return {
+    ...(args.pendingImageReferences?.length ? { pendingImageReferences: args.pendingImageReferences } : {}),
     id: args.nodeId,
     parentNodeId: args.parentNodeId,
     kind: args.kind,
@@ -67,42 +69,42 @@ export function buildCreatedChildState(
     nodeId,
     parentNodeId,
     ...(options?.priority !== undefined ? { priority: options.priority } : {}),
+    ...(options?.newImageReferences?.length ? { pendingImageReferences: options.newImageReferences } : {}),
     review: reviewProfiles[0] ?? null,
     ...(specialKind ? { specialKind } : {}),
     timestamp,
     title: untitledState.title
   });
-  const nextNodeWithImages = options?.newImageReferences?.length
-    ? { ...nextNode, pendingImageReferences: options.newImageReferences } : nextNode;
   const nextNodeOrder =
     parentNodeId === INBOX_NODE_ID
       ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
       : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
   const sequentialState = applySequentialReadingCreatedChild({
-    nextNode: nextNodeWithImages,
+    nextNode,
     nextNodeOrder,
-    nextNodesById: { ...state.nodesById, [nodeId]: nextNodeWithImages },
+    nextNodesById: { ...state.nodesById, [nodeId]: nextNode },
     nodeId,
     state,
     timestamp
   });
+  const activeNodeId = options?.activate === false ? state.activeNodeId : nodeId;
   return {
     nextNode: sequentialState.nextNode,
     nextNodeOrder,
     patch: {
-      activeNodeId: nodeId,
+      activeNodeId,
       nodeOrder: nextNodeOrder,
       nodesById: sequentialState.nodesById,
       untitledSequenceByParent: untitledState.untitledSequenceByParent,
       reviewSession: reconcileReviewSession(
         {
           ...state,
-          activeNodeId: nodeId,
+          activeNodeId,
           nodeOrder: nextNodeOrder,
           nodesById: sequentialState.nodesById,
           untitledSequenceByParent: untitledState.untitledSequenceByParent
         },
-        nodeId
+        activeNodeId
       )
     }
   };

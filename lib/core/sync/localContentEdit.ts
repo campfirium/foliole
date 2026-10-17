@@ -64,6 +64,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     if (!stored && sameBody && added.length === 0) return { current, submittedVersionId: base.version_id! };
     const record = createEditRecord(base, input, stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added));
     record.snapshot.image_sources = stored?.snapshot.image_sources ?? localContentEditImageSources(current, input.content, added);
+    record.content_hash = hashText(JSON.stringify(record.snapshot));
     record.alternative_bodies = mergedTopicTextBodies(record.snapshot.text_alternatives ?? [], [base, current]);
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward(record);

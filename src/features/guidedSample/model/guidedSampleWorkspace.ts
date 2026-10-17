@@ -148,6 +148,7 @@ export async function ensureGuidedSampleTopicTree(
   const content = getGuidedSampleContent(locale);
   const rootImages = await importTopicAssets('', content.root, options) ?? [];
   const createdRootNodeId = await beforeState.createRootNode(content.root.content, 'topic', {
+    activate: false,
     priority: GUIDED_SAMPLE_PRIORITY,
     ...(rootImages.length ? { newImageReferences: rootImages } : {})
   });
@@ -159,6 +160,7 @@ export async function ensureGuidedSampleTopicTree(
   for (const childTopic of content.children) {
     const images = await importTopicAssets('', childTopic, options) ?? [];
     const createdChildNodeId = await getState().createChildNode(rootNodeId, childTopic.content, 'topic', {
+      activate: false,
       priority: GUIDED_SAMPLE_PRIORITY,
       ...(images.length ? { newImageReferences: images } : {})
     });

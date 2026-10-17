@@ -4,6 +4,9 @@ import type {
   NodeReadingProfile,
   NodeReviewProfile
 } from '../../features/nodes/model/nodeTypes';
+import { syncWorkspaceNodeDocumentCacheFromNode } from '../../store/workspaceNodeDocumentCache';
+import { createWorkspaceNodeCreateAckPatch } from '../../store/workspaceNodeMutationPatch';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import {
   saveCreatedWorkspaceNodeMutationSnapshot,
   saveWorkspaceNodeOrder
@@ -54,12 +57,16 @@ function createSeedRuntimeNode(node: DebugNodeSeed, index: number): WorkspaceRun
 export async function persistSeedNodes(nodes: DebugNodeSeed[]) {
   const nodeOrder = nodes.map((node) => node.id);
   for (const [index, node] of nodes.entries()) {
-    await saveCreatedWorkspaceNodeMutationSnapshot({
+    const result = await saveCreatedWorkspaceNodeMutationSnapshot({
       activeNodeId: nodes[0]?.id ?? null,
       node: createSeedRuntimeNode(node, index),
       nodeOrder,
       position: index
     });
+    if (result) {
+      useWorkspaceStore.setState(state => createWorkspaceNodeCreateAckPatch(state, result, [node.id]));
+      syncWorkspaceNodeDocumentCacheFromNode(useWorkspaceStore.getState().nodesById[node.id]);
+    }
   }
   saveWorkspaceNodeOrder(nodeOrder);
 }

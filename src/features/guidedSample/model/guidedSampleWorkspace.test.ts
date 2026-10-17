@@ -161,8 +161,8 @@ describe('ensureGuidedSampleTopicTree runtime refresh', () => {
 
     expect(result.rootNodeId).toBe('runtime-root');
     expect(refreshWorkspaceState).toHaveBeenCalled();
-    expect(rendererState.createRootNode).toHaveBeenCalledWith(expect.any(String), 'topic', { priority: 0 });
-    expect(rendererState.createChildNode).toHaveBeenCalledWith('runtime-root', expect.any(String), 'topic', { priority: 0 });
+    expect(rendererState.createRootNode).toHaveBeenCalledWith(expect.any(String), 'topic', { activate: false, priority: 0 });
+    expect(rendererState.createChildNode).toHaveBeenCalledWith('runtime-root', expect.any(String), 'topic', { activate: false, priority: 0 });
     expect(rendererState.createChildNode).toHaveBeenCalledTimes(7);
   });
 });

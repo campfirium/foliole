@@ -130,6 +130,7 @@ export interface WorkspaceNodeContentOptions {
 }
 
 export interface WorkspaceNodeCreationOptions {
+  activate?: boolean;
   newImageReferences?: readonly import('../../lib/core/sync/localContentEditResources').ContentImageReference[] | undefined;
   priority?: number | null;
 }
