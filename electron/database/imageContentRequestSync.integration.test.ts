@@ -1,17 +1,68 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
-import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 const sync = (a: Peer, b: Peer) => withLibraryRequestSnapshot(a, b, replay => replay());
 const head = (peer: Peer) => loadCurrentSyncNodeRecord(peer.port, 'topic');
+
+async function createSeparateImageTopic(peer: Peer) {
+  const key = `${'b'.repeat(64)}.png`;
+  const base = peer.driver.transaction(driver => {
+    upsertNodeSnapshot(driver, { anchorLink: null, content: 'Separate image',
+      createdAt: '2026-09-30T00:00:00.000Z', updatedAt: '2026-09-30T00:00:00.000Z',
+      hostName: peer.name, isTitleManual: true, kind: 'topic', nodeId: 'separate-image-topic',
+      parentNodeId: null, position: null, reveal: null, title: 'Separate image' });
+    return flushNodeSyncVersionWithDriver(driver, 'separate-image-topic', peer.name)!;
+  });
+  await applyLocalContentEdit(peer.port, { nodeId: 'separate-image-topic', baseVersionId: base,
+    baseContent: 'Separate image', versionId: 'separate-image-saved', title: 'Separate image',
+    content: `Separate image\n![Separate image](asset://${key})`, hideTitleHeading: false,
+    hostName: peer.name, updatedAt: '2026-10-17T04:00:00.000Z',
+    newImageReferences: [{ storage_key: key, role: 'image', original_name: 'Separate.png' }] });
+}
+
+it.each(['desktop', 'phone'])('preserves edits after a prepared snapshot with independent image ownership: %s', async sourceName => {
+  const source = createPeer(sourceName);
+  const target = createPeer(sourceName === 'desktop' ? 'phone' : 'desktop');
+  joinPeers(source, target);
+  edit(source, 'Initial clean text');
+  await sync(source, target);
+  const original = (await head(source))!;
+  await createSeparateImageTopic(source);
+  expect((await head(source))!.version_id).toBe(original.version_id);
+  edit(source, 'Source branch');
+  await withLibraryRequestSnapshot(source, target, async replay => {
+    for (let index = 1; index <= 3; index++) edit(target, `Target branch ${index}`);
+    await replay();
+  });
+  await sync(target, source); await sync(source, target);
+  const converged = (await head(source))!;
+  const bodies = [converged.body_text, ...converged.alternative_bodies?.map(body => body.text) ?? []];
+  expect(bodies).toContain('Source branch');
+  expect(bodies).toContain('Target branch 3');
+  const counts = [history(source).length, history(target).length];
+  for (let round = 0; round < 3; round++) { await sync(source, target); await sync(target, source); }
+  expect([history(source).length, history(target).length]).toEqual(counts);
+  for (const peer of [source, target]) {
+    const current = (await head(peer))!;
+    expect(current.version_id).toBe(converged.version_id);
+    expect(JSON.parse(current.snapshot.resource_references ?? '[]')).toEqual([]);
+    const image = await loadCurrentSyncNodeRecord(peer.port, 'separate-image-topic');
+    expect(JSON.parse(image!.snapshot.resource_references!)).toEqual([
+      { storage_key: `${'b'.repeat(64)}.png`, role: 'image', original_name: 'Separate.png' }
+    ]);
+    assertPersisted(peer, converged.body_text!, converged.version_id!);
+  }
+});
 
 it('does not create new versions during empty exchanges or sequential acknowledged edits', async () => {
   const a = createPeer('desktop');

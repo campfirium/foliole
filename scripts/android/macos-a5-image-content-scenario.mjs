@@ -10,6 +10,7 @@ import {
   ANDROID_MARKER, IMAGE_NAME, INITIAL_BODY, assertLoadedImages, connectImageWebView,
   editAndroidBody, imageDevice, openAndroidImageTopic, pasteMacImage, showAndroidImageNavigation
 } from './macos-a5-image-content-ui.mjs';
+import { runSyncTimingScenario } from './macos-a5-sync-timing-scenario.mjs';
 import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
 
 async function joinImageGroup({ args, env, evidenceRoot, mechanics, session }) {
@@ -117,6 +118,7 @@ async function runImageRoundTrip({ args, device, evidenceRoot, receipt, restartM
   assertImageContentFact(finalAndroid, returned.content, IMAGE_NAME);
   startAndroid(args);
   receipt.facts = { macInserted: mac, androidSaved: android, macRestarted: finalMac, androidRestarted: finalAndroid };
+  return session;
 }
 
 export async function runImageContentScenario(context) {
@@ -129,7 +131,9 @@ export async function runImageContentScenario(context) {
     receipt.groupId = await joinImageGroup(context);
     receipt.status = 'editing'; save();
     connection = await imageDevice(args.serial);
-    await runImageRoundTrip({ ...context, device: connection.device, receipt });
+    const session = await runImageRoundTrip({ ...context, device: connection.device, receipt });
+    receipt.stage = 'sync-timing'; save();
+    await runSyncTimingScenario({ ...context, session, device: connection.device });
     receipt.status = 'passed';
   } catch (error) {
     receipt.status = 'failed'; receipt.error = error.message;
