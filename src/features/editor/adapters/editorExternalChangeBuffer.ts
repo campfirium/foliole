@@ -1,3 +1,4 @@
+import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
 import {
   isEditorInputDiagnosticEnabled,
   logEditorInputDiagnostic,
@@ -11,12 +12,12 @@ export interface EditorExternalChangeBufferArgs {
   getCurrentContent: () => string;
   getCurrentNodeId: () => string | null;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string, nodeId: string | null) => void;
+  onFlush: (content: string, nodeId: string | null, references?: readonly ContentImageReference[]) => void;
 }
 
 export class EditorExternalChangeBuffer {
   private inputChangeSequence = 0;
-  private pendingChange: { changedAtMs: number; content: string | null; nodeId: string | null; sampleId: number } | null = null;
+  private pendingChange: { newImageReferences?: readonly ContentImageReference[] | undefined; changedAtMs: number; content: string | null; nodeId: string | null; sampleId: number } | null = null;
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly args: EditorExternalChangeBufferArgs) {}
@@ -33,7 +34,7 @@ export class EditorExternalChangeBuffer {
     if (diagnosticsEnabled) {
       this.inputChangeSequence = sampleId;
     }
-    this.pendingChange = { changedAtMs, content, nodeId: meta.nodeId, sampleId };
+    this.pendingChange = { changedAtMs, content, nodeId: meta.nodeId, sampleId, newImageReferences: meta.newImageReferences };
     if (diagnosticsEnabled) {
       this.logInputChange({
         changedAtMs,
@@ -103,7 +104,8 @@ export class EditorExternalChangeBuffer {
     if (content === null) {
       return;
     }
-    this.args.onFlush(content, nextChange.nodeId);
+    if (nextChange.newImageReferences?.length) this.args.onFlush(content, nextChange.nodeId, nextChange.newImageReferences);
+    else this.args.onFlush(content, nextChange.nodeId);
     this.logInputFlush({ ...nextChange, content }, flushStartedAt);
   }
 

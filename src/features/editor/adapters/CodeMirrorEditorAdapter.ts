@@ -37,7 +37,7 @@ import {
   revealEditorSelectionCentered,
   revealEditorSelectionNearest
 } from './codeMirrorSelectionActions';
-import { toEditorSelectionRanges } from './codeMirrorSelectionRanges';
+import { toEditorPrimarySelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
 import { CodeMirrorTextHistoryController } from './codeMirrorTextHistory';
 import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import {
@@ -140,6 +140,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.view.destroy();
   }
   focus() { this.view.focus(); }
+  flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
   applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
     return this.textHistory.apply(entry, mode, this.view);
@@ -208,10 +209,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       view: this.view
     });
   }
-  getSelection(): EditorSelection {
-    const { from, to } = this.view.state.selection.main;
-    return { from, to };
-  }
+  getSelection(): EditorSelection { return toEditorPrimarySelection(this.view.state.selection); }
   getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }
   setSelection(selection: EditorSelection) { this.setSelectionRanges([selection]); }
   setSelectionRanges(selections: EditorSelection[]) {

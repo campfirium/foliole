@@ -17,3 +17,8 @@ export function createCodeMirrorSelection(
     ? CodeMirrorSelection.create(ranges, ranges.length - 1)
     : CodeMirrorSelection.single(clampPosition(0));
 }
+
+export function toEditorPrimarySelection(selection: { main: { from: number; to: number } }): EditorSelection {
+  const { from, to } = selection.main;
+  return { from, to };
+}

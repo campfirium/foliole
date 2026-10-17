@@ -67,7 +67,7 @@ it('localizes only the remote image targeted for an excerpt', async () => {
   expect(adapter.getContent()).toBe(`${first}\n![Second](${IMAGE_URL})`);
   expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/second.png');
-  expect(onChange).toHaveBeenLastCalledWith(`${first}\n![Second](${IMAGE_URL})`, { nodeId: 'node-1' });
+  expect(onChange).toHaveBeenLastCalledWith(`${first}\n![Second](${IMAGE_URL})`, expect.objectContaining({ nodeId: 'node-1' }));
   const localizedSurface = document.querySelector<HTMLElement>(
     `[data-md-image-attachment-id="${IMAGE_HASH}"] .cm-md-image-surface`
   );

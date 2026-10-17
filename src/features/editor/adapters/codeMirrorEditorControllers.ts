@@ -1,3 +1,5 @@
+import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
+
 import { RemoteImageLocalizationController } from './codeMirrorEditorAdapterSupport';
 import {
   EditorExternalChangeBuffer
@@ -12,7 +14,7 @@ export function createCodeMirrorEditorControllers(args: {
   getNodeId: () => string | null;
   host: HTMLElement;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string, nodeId: string | null) => void;
+  onFlush: (content: string, nodeId: string | null, references?: readonly ContentImageReference[]) => void;
 }) {
   return {
     externalChangeBuffer: new EditorExternalChangeBuffer({
@@ -43,7 +45,7 @@ export function createExternalChangeBuffer(args: {
   getCurrentContent: () => string;
   getCurrentNodeId: () => string | null;
   isApplyingExternalContent: () => boolean;
-  onFlush: (content: string, nodeId: string | null) => void;
+  onFlush: (content: string, nodeId: string | null, references?: readonly ContentImageReference[]) => void;
 }) {
   return new EditorExternalChangeBuffer(args);
 }

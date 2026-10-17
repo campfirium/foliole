@@ -147,3 +147,27 @@ it('retains the persisted edit basis after reopening through the workspace list'
   expect(connection.sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
     .pluck().get('ver_reopened')).toBe(basis);
 });
+
+it('prepares files without versions and atomically saves image names through the IPC fast path', async () => {
+  const { importClipboardImageAttachment } = await import('../attachments/importClipboardImageAttachment.js');
+  const sqlite = openDatabaseConnection().sqlite;
+  upsertVersionedNodeSnapshot(nodeInput('Original', '2026-07-25T04:30:00.000Z'));
+  const base = String(sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get());
+  const bytes = Buffer.from('89504e470d0a1a0a0000000d494844520000000100000001', 'hex');
+  const imported = await importClipboardImageAttachment({ nodeId: 'node-1', bytesBase64: bytes.toString('base64'),
+    mimeType: 'image/png', originalName: 'Original source.png' });
+  if (imported.status !== 'imported') throw new Error('image_prepare_failed');
+  expect(sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(1);
+  const request = { parent: nodeInput(`![image](asset://${imported.storage_key})`, '2026-07-25T04:32:00.000Z'),
+    affectedAnchors: [], edit: { baseVersionId: base, baseContent: 'Original', versionId: 'image-edit',
+      newImageReferences: [{ storage_key: imported.storage_key, original_name: imported.original_name, role: 'image' }] } };
+  await handleLocalContentEditCommand(request, null);
+  expect(JSON.parse(String(sqlite.prepare("SELECT resource_references FROM nodes WHERE id = 'node-1'").pluck().get())))
+    .toEqual(request.edit.newImageReferences);
+  expect(sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(2);
+  await handleLocalContentEditCommand(request, null);
+  expect(sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(2);
+  await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [] } }, null))
+    .rejects.toThrow('content_edit_version_mismatch');
+  await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [{ storage_key: '../x', role: 'image', original_name: 'X' }] } }, null)).rejects.toThrow('node_resource_reference_invalid');
+});

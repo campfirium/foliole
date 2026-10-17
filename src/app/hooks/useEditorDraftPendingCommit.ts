@@ -1,5 +1,7 @@
 import { startTransition, useCallback, useRef, type MutableRefObject } from 'react';
 
+import type { ContentImageReference } from '../../../lib/core/sync/localContentEditResources';
+
 import type { EditorDraftCommitOptions } from './useEditorDraftFlushCallbacks';
 import {
   isEditorInputDiagnosticEnabled,
@@ -8,6 +10,7 @@ import {
 } from './useEditorDraftFlushDiagnostics';
 
 export interface PendingDraftCommit {
+  newImageReferences?: readonly ContentImageReference[] | undefined;
   baseVersionId?: string | null | undefined;
   committedContent: string | null;
   content: string;
@@ -80,6 +83,8 @@ function flushPendingDraft(args: FlushPendingDraftArgs): DraftFlushResult {
   const commitPendingDraft = (options?: EditorDraftCommitOptions) =>
     pendingCommit.onCommit(pendingCommit.nodeId, pendingCommit.content, {
       ...options,
+      ...(pendingCommit.committedContent !== null ? { baseContent: pendingCommit.committedContent } : {}),
+      ...(pendingCommit.newImageReferences?.length ? { newImageReferences: pendingCommit.newImageReferences } : {}),
       ...(pendingCommit.baseVersionId !== undefined ? { baseVersionId: pendingCommit.baseVersionId } : {})
     });
   if (args.finalizeTitle || args.syncCommit === true) {
@@ -119,8 +124,12 @@ function flushFreshDraft(args: FlushFreshDraftArgs): DraftFlushResult {
   if (!args.nodeId || args.content === args.committedContent) {
     return { flushed: false, pendingTitle };
   }
-  if (baseVersionId !== undefined) args.onCommit(args.nodeId, args.content, { baseVersionId });
-  else args.onCommit(args.nodeId, args.content);
+  const newImageReferences = pending?.nodeId === args.nodeId ? pending.newImageReferences : undefined;
+  args.onCommit(args.nodeId, args.content, {
+    ...(args.committedContent !== null ? { baseContent: args.committedContent } : {}),
+    ...(baseVersionId !== undefined ? { baseVersionId } : {}),
+    ...(newImageReferences?.length ? { newImageReferences } : {})
+  });
   return { flushed: true, pendingTitle: pendingTitle ?? args.finalizeTitleRefresh(args.nodeId) };
 }
 

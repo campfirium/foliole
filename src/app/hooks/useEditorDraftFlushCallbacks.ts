@@ -1,5 +1,7 @@
 import { useCallback, useEffect, type MutableRefObject } from 'react';
 
+import type { ContentImageReference } from '../../../lib/core/sync/localContentEditResources';
+
 import {
   clearDraftTimer,
   runPendingTitleRefresh,
@@ -9,6 +11,8 @@ import {
 const EDITOR_DRAFT_FLUSH_DEBOUNCE_MS = 1200;
 
 export interface EditorDraftCommitOptions {
+  baseContent?: string;
+  newImageReferences?: readonly ContentImageReference[] | undefined;
   baseVersionId?: string | null;
   historyReplay?: boolean;
   publishLocal?: boolean;

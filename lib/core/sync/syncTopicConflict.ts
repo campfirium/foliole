@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { retainAlternativeImageResources } from './localContentEditResources.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
@@ -40,8 +41,12 @@ export async function resolveTopicSourceConflict<M extends SyncNodeRecordMetadat
   });
   resolution.snapshot.text_alternatives = resolution.snapshot.deleted_at ? [] :
     await mergeTopicTextSourceAttachments(port, completeSource, winner, new Date().toISOString());
-  const complete = buildResolutionRecord(records, winner, body, resolution.snapshot);
-  complete.alternative_bodies = await mergedTopicTextSourceBodies(port, complete.snapshot.text_alternatives ?? [], completeSource);
+  resolution.alternative_bodies = await mergedTopicTextSourceBodies(port, resolution.snapshot.text_alternatives ?? [], completeSource);
+  const resourceSources = await Promise.all(records.map(metadata => completeSource.load(port, metadata)));
+  const complete = buildResolutionRecord(records, winner, body, {
+    ...resolution.snapshot, ...retainAlternativeImageResources(resolution, resourceSources)
+  });
+  complete.alternative_bodies = resolution.alternative_bodies;
   const applied = await applySyncNodesWithDbPort(port, [complete], {
     enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation: 'local_mutation'
   });

@@ -90,7 +90,7 @@ export function createChildNodeAction(
         content,
         kind,
         timestamp,
-        options && 'priority' in options ? options.priority : undefined
+        options
       );
       if (!canSaveNodeText(nextChildState.nextNode)) return state;
       createdNode = nextChildState.nextNode;

@@ -114,5 +114,5 @@ it('does not acquire the sqlite owner while a shared remote fetch is pending', a
     null,
     { status: 'imported', attachment_id: 'hash-1' }
   ]);
-  expect(runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
+  expect(runWithDatabaseConnectionOwner).not.toHaveBeenCalled();
 });

@@ -3,7 +3,6 @@ import type {
   NativeImportRemoteImageAttachmentArgs
 } from '../../lib/platform/nativeStorageContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { registerNodeImageSources } from '../database/nodeImageSources.js';
 import type { ImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { importImageAttachmentBytes } from './importImageAttachmentBytes.js';
@@ -224,9 +223,6 @@ export async function importRemoteImageAttachment(
         nodeId: normalizedNodeId,
         originalName: fetchResult.resource.originalName
       });
-      if (result.status === 'imported') {
-        await runWithDatabaseConnectionOwner(() => registerNodeImageSources(normalizedNodeId, { [result.storage_key]: args.sourceUrl }));
-      }
       return result;
     })();
     importByNodeAndCacheKey.set(importKey, promise);

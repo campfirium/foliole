@@ -1,3 +1,4 @@
+import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
 import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
@@ -11,7 +12,7 @@ import { restoreNodesWithParents, softDeleteNodesWithParents } from '../database
 import {
   upsertVersionedNodeContentWithAnchors,
   upsertVersionedNodeSnapshot,
-  upsertVersionedNodeSnapshotWithOrder
+  upsertVersionedNodeSnapshotWithOrder,
 } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { splitTopic } from '../database/splitTopicMutation.js';
@@ -63,7 +64,10 @@ function buildNodeContentWithAnchorsResult(args: {
 
 function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' | 'topic' | 'item', originWindow: OriginWindow) {
   const parsed = parseNodeCreationMutationArgs(args, kind);
-  const currentVersionId = upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
+  const added = parseNewImageReferences(args.newImageReferences);
+  const currentVersionId = added.length
+    ? upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder, { newImageReferences: added })
+    : upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
   scheduleMirrorSync([parsed.node.nodeId]);
   return completeCreatedNodeCreation(parsed, originWindow, currentVersionId);
 }

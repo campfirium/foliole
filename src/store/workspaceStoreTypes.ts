@@ -49,7 +49,7 @@ export interface WorkspaceState {
   setBrowseRootNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
   updateNodeDerivedTitle: (nodeId: string, content?: string) => Promise<boolean>;
-  updateNodeContent: (nodeId: string, content: string, options?: { baseVersionId?: string | null; deriveTitle?: boolean; preserveTitle?: boolean; publishLocal?: boolean }) => Promise<boolean>;
+  updateNodeContent: (nodeId: string, content: string, options?: WorkspaceNodeContentOptions) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
   updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
@@ -120,7 +120,17 @@ export interface ReadReviewTopicOptions {
   releaseSequentialReading?: boolean;
 }
 
+export interface WorkspaceNodeContentOptions {
+  baseContent?: string;
+  baseVersionId?: string | null;
+  newImageReferences?: readonly import('../../lib/core/sync/localContentEditResources').ContentImageReference[] | undefined;
+  deriveTitle?: boolean;
+  preserveTitle?: boolean;
+  publishLocal?: boolean;
+}
+
 export interface WorkspaceNodeCreationOptions {
+  newImageReferences?: readonly import('../../lib/core/sync/localContentEditResources').ContentImageReference[] | undefined;
   priority?: number | null;
 }
 

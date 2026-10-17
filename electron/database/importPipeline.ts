@@ -4,6 +4,7 @@ import {
   type RunPreparedImportOptions
 } from '../../lib/core/database/index.js';
 import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
+import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
@@ -15,7 +16,6 @@ import { openDatabaseConnection } from './connection.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { importMarkdownImageAttachment, importPdfSourceAttachment } from './importPipelineAttachments.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
-import { persistNodeResourceReference } from './nodeResources.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
@@ -162,7 +162,11 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
 function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
   if (!record.nodeId) return;
   for (const reference of prepared.localizedImageResources ?? []) {
-    persistNodeResourceReference(record.nodeId, reference);
+    const driver = openDatabaseConnection().driver;
+    const row = driver.queryOne<{ resource_references: string }>('SELECT resource_references FROM nodes WHERE id = ?', [record.nodeId]);
+    if (!row) throw new Error('image_import_node_unavailable');
+    driver.execute('UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = ?',
+      [upsertNodeResourceReference(row.resource_references, reference), record.nodeId]);
   }
 }
 

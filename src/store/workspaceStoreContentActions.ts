@@ -41,9 +41,9 @@ function resolveNodeContentUpdateBlockReason(state: WorkspaceState, nodeId: stri
   return null;
 }
 
-function prepareNodeContentLocalState(args: {
-  baseVersionId?: string | null | undefined;
-  deriveTitle?: boolean | undefined;
+type ContentUpdateOptions = NonNullable<Parameters<WorkspaceState['updateNodeContent']>[2]>;
+
+function prepareNodeContentLocalState(args: ContentUpdateOptions & {
   buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
@@ -71,6 +71,9 @@ function prepareNodeContentLocalState(args: {
   const timestamp = new Date().toISOString();
   const nextNode = prepareNextContentNode(node, args.content, timestamp, args);
   if (!canSaveNodeText(nextNode)) return args.state;
+  nextNode.contentEditBaseContent = args.baseContent ?? node.contentEditBaseContent ?? node.content;
+  if (args.newImageReferences?.length) nextNode.pendingImageReferences = [...new Map(
+    [...node.pendingImageReferences ?? [], ...args.newImageReferences].map(reference => [reference.storage_key, reference])).values()];
   if (args.baseVersionId !== undefined) nextNode.currentVersionId = args.baseVersionId;
   args.localState.nextNodeForSync = nextNode;
   args.localState.nodeOrderForSync = args.state.nodeOrder;
@@ -138,9 +141,7 @@ function syncTextAnchorLocatorsForNextContentNode(
   return locatorSync;
 }
 
-function collectUpdateNodeContentLocalState(args: {
-  baseVersionId?: string | null | undefined;
-  deriveTitle?: boolean | undefined;
+function collectUpdateNodeContentLocalState(args: ContentUpdateOptions & {
   buildHeavyPatch: boolean;
   content: string;
   diagnosticsEnabled: boolean;
@@ -160,14 +161,13 @@ async function updateNodeContent(
   set: WorkspaceSet,
   nodeId: string,
   content: string,
-  options: { baseVersionId?: string | null | undefined; deriveTitle?: boolean; preserveTitle?: boolean; publishLocal?: boolean } = {}
+  options: ContentUpdateOptions = {}
 ) {
   const diagnosticsEnabled = isEditorInputDiagnosticEnabled();
   const metrics = createUpdateNodeContentMetrics(diagnosticsEnabled);
   const publishLocal = options.publishLocal !== false;
   const localState = collectUpdateNodeContentLocalState({
-    baseVersionId: options.baseVersionId,
-    deriveTitle: options.deriveTitle,
+    ...options,
     buildHeavyPatch: publishLocal,
     content,
     diagnosticsEnabled,

@@ -12,6 +12,7 @@ import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorBodyOverflow, EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
+import { editorImageReferences } from './editorImageReferences';
 import type { LocalizedImageChange } from './localizeRemoteMarkdownImages';
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
@@ -51,18 +52,19 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
         isComposing: false,
         nodeId: args.getNodeId()
       });
-      args.getOnChange()?.(localized, { nodeId: args.getNodeId() });
+      const newImageReferences = changes?.flatMap(change => change.resource ? [change.resource] : []);
+      args.getOnChange()?.(localized, { nodeId: args.getNodeId(), ...(newImageReferences?.length ? { newImageReferences } : {}) });
     },
     getContent: args.getContent,
     getNodeId: args.getNodeId,
     host: args.host,
     isApplyingExternalContent: args.isApplyingExternalContent,
-    onFlush: (content, nodeId) => {
+    onFlush: (content, nodeId, newImageReferences) => {
       const onChange = args.getOnChange();
       if (!onChange) {
         return;
       }
-      onChange(content, { nodeId });
+      onChange(content, { nodeId, ...(newImageReferences?.length ? { newImageReferences } : {}) });
       controllers.remoteImageLocalization.schedule();
     }
   });
@@ -107,6 +109,8 @@ function createEditorViewRuntime(
         ...meta,
         nodeId,
         origin: 'user' as const,
+        ...(update.state.field(editorImageReferences, false)?.length
+          ? { newImageReferences: update.state.field(editorImageReferences) } : {}),
         ...(textTransactions.length ? { textTransactions } : {})
       };
       args.options.onDocumentInput?.(inputMeta);

@@ -79,7 +79,7 @@ it('rewrites remote markdown images by default after editor content changes', as
 
   expect(adapter.getContent()).toBe(`![Remote](${IMAGE_URL})`);
   expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/cover.png');
-  expect(onChange).toHaveBeenLastCalledWith(`![Remote](${IMAGE_URL})`, { nodeId: 'node-1' });
+  expect(onChange).toHaveBeenLastCalledWith(`![Remote](${IMAGE_URL})`, expect.objectContaining({ nodeId: 'node-1' }));
   expect(window.confirm).not.toHaveBeenCalled();
 
   adapter.destroy();
@@ -165,7 +165,7 @@ it('does not rewrite surrounding whitespace when localizing a large remote image
   await waitForLocalization();
 
   expect(adapter.getContent()).toBe(`Before ![Remote](${IMAGE_URL}) after`);
-  expect(onChange).toHaveBeenLastCalledWith(`Before ![Remote](${IMAGE_URL}) after`, { nodeId: 'node-1' });
+  expect(onChange).toHaveBeenLastCalledWith(`Before ![Remote](${IMAGE_URL}) after`, expect.objectContaining({ nodeId: 'node-1' }));
 
   adapter.destroy();
 });

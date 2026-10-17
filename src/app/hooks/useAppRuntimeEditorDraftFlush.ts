@@ -15,6 +15,7 @@ export interface EditorDraftFlushRefs {
 
 function useFlushActiveEditorTransaction(refs: EditorDraftFlushRefs) {
   return useCallback((sourceNodeId: string | null = null) => {
+    refs.editorRef.current?.flushContentChanges?.();
     const content = refs.editorRef.current?.getContent();
     if (content === undefined) {
       return false;

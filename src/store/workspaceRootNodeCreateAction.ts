@@ -125,6 +125,7 @@ function prepareRootNodeCreation(args: {
     content: args.content, kind: args.kind, nodeId: args.nodeId, parentNodeId,
     ...resolveCreationPriority(args.options), state: args.state, timestamp: args.timestamp
   });
+  if (args.options?.newImageReferences?.length) created.node.pendingImageReferences = args.options.newImageReferences;
   const nodeOrder = parentNodeId === INBOX_NODE_ID
     ? [INBOX_NODE_ID, args.nodeId, ...args.state.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]
     : [...args.state.nodeOrder, args.nodeId];

@@ -25,7 +25,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { importLocalImageAttachment } from './importLocalImageAttachment.js';
-import { countResourceReferences, createPngBytes, expectAttachmentSyncState, hashBytes, seedNode } from './importLocalImageAttachment.testSupport.js';
+import { countResourceReferences, createPngBytes, hashBytes, seedNode } from './importLocalImageAttachment.testSupport.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 
 let tempRoot = '';
@@ -42,7 +42,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('imports a local png into the app attachment directory and links it to the node', async () => {
+it('prepares a local png without changing its target node', async () => {
   seedNode('node-1');
   const sourcePath = path.join(tempRoot, 'cover.png');
   const imageBytes = createPngBytes();
@@ -63,19 +63,8 @@ it('imports a local png into the app attachment directory and links it to the no
     stored_file: 'created'
   });
 
-  const [nodeAttachment] = listNodeAttachments('node-1');
-  expect(nodeAttachment).toEqual({
-    nodeId: 'node-1',
-    attachmentId: hashBytes(imageBytes),
-    role: 'image',
-    attachment: {
-      id: hashBytes(imageBytes),
-      originalName: 'cover.png',
-      mimeType: 'image/png',
-      sizeBytes: null,
-      createdAt: '2026-03-29T00:00:00.000Z'
-    }
-  });
+  expect(listNodeAttachments('node-1')).toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(0);
 
   await expect(
     fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
@@ -89,7 +78,7 @@ it('imports a local png into the app attachment directory and links it to the no
     availability: 'local',
     libraryScope: expect.any(String)
   });
-  await expectAttachmentSyncState('node-1', hashBytes(imageBytes), imageBytes.byteLength);
+
 });
 
 it('reuses the same stored file across nodes and the resource reference for identical repeated imports', async () => {
@@ -113,7 +102,7 @@ it('reuses the same stored file across nodes and the resource reference for iden
   expect(secondResult).toMatchObject({
     status: 'imported',
     attachment_id: (firstResult as { attachment_id: string }).attachment_id,
-    attachment_record: 'created',
+    attachment_record: 'reused',
     stored_file: 'reused'
   });
 
@@ -122,17 +111,14 @@ it('reuses the same stored file across nodes and the resource reference for iden
   });
   expect(await fs.readdir(path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual([`${hashBytes(sharedBytes)}.png`]);
 
-  expect(countResourceReferences()).toBe(1);
+  expect(countResourceReferences()).toBe(0);
   expect(loadAttachmentResourceDescription(`${hashBytes(sharedBytes)}.png`)).toMatchObject({
     attachmentId: (firstResult as { attachment_id: string }).attachment_id,
     contentHash: (firstResult as { attachment_id: string }).attachment_id,
     storageKey: `${(firstResult as { attachment_id: string }).attachment_id}.png`,
     availability: 'local'
   });
-  expect(listAttachmentNodeLinks((firstResult as { attachment_id: string }).attachment_id)).toEqual([
-    { nodeId: 'node-1', attachmentId: (firstResult as { attachment_id: string }).attachment_id, role: 'image' },
-    { nodeId: 'node-2', attachmentId: (firstResult as { attachment_id: string }).attachment_id, role: 'image' }
-  ]);
+  expect(listAttachmentNodeLinks(hashBytes(sharedBytes))).toEqual([]);
 });
 
 it('uses JPEG bytes as truth when the source file is named png', async () => {

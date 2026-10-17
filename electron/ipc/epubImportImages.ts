@@ -1,4 +1,5 @@
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { parseNodeResourceReferences, serializeNodeResourceReferences, type NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
@@ -19,6 +20,7 @@ interface PreparedImportNodeContent {
 async function rewriteEmbeddedImages(nodeId: string, node: PreparedImportNodeContent) {
   const imagesByDestination = new Map(node.embeddedImages.map((image) => [image.destination, image] as const));
   const degradedMessages: string[] = [];
+  const resources: NodeResourceReference[] = [];
   let rewrittenContent = '';
   let previousEnd = 0;
 
@@ -49,12 +51,13 @@ async function rewriteEmbeddedImages(nodeId: string, node: PreparedImportNodeCon
       continue;
     }
 
+    resources.push({ storage_key: importedImage.storage_key, original_name: importedImage.original_name, role: 'image' });
     const suffix = parsedTarget.suffix ? ` ${parsedTarget.suffix}` : '';
     rewrittenContent += `![${reference.altText}](${buildAssetMarkdownUrl(importedImage.storage_key)}${suffix})`;
   }
 
   rewrittenContent += node.content.slice(previousEnd);
-  return { rewrittenContent, degradedMessages };
+  return { rewrittenContent, degradedMessages, resources };
 
 }
 
@@ -63,12 +66,17 @@ export async function importEmbeddedImagesForNode<T extends PreparedImportNodeCo
     return node;
   }
 
-  const { rewrittenContent, degradedMessages } = await rewriteEmbeddedImages(nodeId, node);
+  const { rewrittenContent, degradedMessages, resources } = await rewriteEmbeddedImages(nodeId, node);
   if (rewrittenContent === node.content && degradedMessages.length === 0) return node;
 
   await runWithDatabaseConnectionOwner(() => {
     const connection = openDatabaseConnection();
     connection.driver.transaction(() => {
+      const row = connection.driver.queryOne<{ resource_references: string }>('SELECT resource_references FROM nodes WHERE id = ?', [nodeId]);
+      if (!row) throw new Error('image_import_node_unavailable');
+      const existing = parseNodeResourceReferences(row.resource_references);
+      connection.driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?',
+        [serializeNodeResourceReferences([...new Map([...resources, ...existing].map(reference => [reference.storage_key + reference.role, reference])).values()]), nodeId]);
       writeNodeBody({ driver: connection.driver, content: rewrittenContent, nodeId: nodeId,
         title: node.title, updatedAt: importedAt });
     });

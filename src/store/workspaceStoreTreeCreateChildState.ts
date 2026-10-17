@@ -54,7 +54,7 @@ export function buildCreatedChildState(
   content: string,
   kind: NodeKind,
   timestamp: string,
-  priority?: number | null,
+  options?: import('./workspaceStoreTypes').WorkspaceNodeCreationOptions,
   specialKind?: NodeSnapshot['specialKind']
 ) {
   const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(content), parentNodeId, state);
@@ -66,20 +66,22 @@ export function buildCreatedChildState(
     kind,
     nodeId,
     parentNodeId,
-    ...(priority !== undefined ? { priority } : {}),
+    ...(options?.priority !== undefined ? { priority: options.priority } : {}),
     review: reviewProfiles[0] ?? null,
     ...(specialKind ? { specialKind } : {}),
     timestamp,
     title: untitledState.title
   });
+  const nextNodeWithImages = options?.newImageReferences?.length
+    ? { ...nextNode, pendingImageReferences: options.newImageReferences } : nextNode;
   const nextNodeOrder =
     parentNodeId === INBOX_NODE_ID
       ? insertNodeBlockAsFirstChild(state.nodeOrder, [nodeId], parentNodeId, state.nodesById)
       : insertNodeBlockUnderParent(state.nodeOrder, [nodeId], parentNodeId, state.nodesById);
   const sequentialState = applySequentialReadingCreatedChild({
-    nextNode,
+    nextNode: nextNodeWithImages,
     nextNodeOrder,
-    nextNodesById: { ...state.nodesById, [nodeId]: nextNode },
+    nextNodesById: { ...state.nodesById, [nodeId]: nextNodeWithImages },
     nodeId,
     state,
     timestamp

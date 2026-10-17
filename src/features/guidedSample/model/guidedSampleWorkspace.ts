@@ -47,9 +47,10 @@ async function importTopicAssets(
   options: GuidedSampleCreationOptions
 ) {
   try {
-    await importGuidedSampleTopicAssets(nodeId, topic);
+    return await importGuidedSampleTopicAssets(nodeId, topic);
   } catch (error) {
     options.onAssetImportError?.(error);
+    return [];
   }
 }
 
@@ -145,18 +146,21 @@ export async function ensureGuidedSampleTopicTree(
     };
   }
   const content = getGuidedSampleContent(locale);
+  const rootImages = await importTopicAssets('', content.root, options) ?? [];
   const createdRootNodeId = await beforeState.createRootNode(content.root.content, 'topic', {
-    priority: GUIDED_SAMPLE_PRIORITY
+    priority: GUIDED_SAMPLE_PRIORITY,
+    ...(rootImages.length ? { newImageReferences: rootImages } : {})
   });
   const rootNodeId = await refreshCreatedRootNodeId(createdRootNodeId, getState, options);
   if (!rootNodeId) {
     return { locale, queueNodeIds: [], rootNodeId: null, wasCreated: false, wasWorkspaceEmpty };
   }
 
-  const topicAssets = [{ nodeId: rootNodeId, topic: content.root }];
   for (const childTopic of content.children) {
+    const images = await importTopicAssets('', childTopic, options) ?? [];
     const createdChildNodeId = await getState().createChildNode(rootNodeId, childTopic.content, 'topic', {
-      priority: GUIDED_SAMPLE_PRIORITY
+      priority: GUIDED_SAMPLE_PRIORITY,
+      ...(images.length ? { newImageReferences: images } : {})
     });
     const childNodeId = await refreshCreatedChildNodeId(
       createdChildNodeId,
@@ -165,12 +169,7 @@ export async function ensureGuidedSampleTopicTree(
       options,
       rootNodeId
     );
-    if (childNodeId) {
-      topicAssets.push({ nodeId: childNodeId, topic: childTopic });
-    }
-  }
-  for (const assetImport of topicAssets) {
-    await importTopicAssets(assetImport.nodeId, assetImport.topic, options);
+    if (!childNodeId) continue;
   }
   return {
     locale,

@@ -1,3 +1,4 @@
+import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
 import { importClipboardImageAttachmentBytes } from '../../../shared/platform/attachmentImports';
 
 import type { GuidedSampleTopicTemplate } from './guidedSampleContent';
@@ -31,16 +32,21 @@ export async function importGuidedSampleTopicAssets(
   nodeId: string,
   topic: Pick<GuidedSampleTopicTemplate, 'attachmentIds'>
 ) {
+  const references: ContentImageReference[] = [];
   for (const assetId of topic.attachmentIds ?? []) {
     const bytes = await fetchAssetBytes(assetId);
     if (!bytes) {
       continue;
     }
-    await importClipboardImageAttachmentBytes({
+    const result = await importClipboardImageAttachmentBytes({
       bytesBase64: encodeBytesToBase64(bytes),
       mimeType: 'image/png',
       nodeId,
       originalName: `${assetId}.png`
     });
+    if (result?.status === 'imported' && result.storage_key) references.push({
+      storage_key: result.storage_key, original_name: result.original_name, role: 'image'
+    });
   }
+  return references;
 }

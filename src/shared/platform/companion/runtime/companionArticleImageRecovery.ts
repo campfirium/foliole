@@ -39,8 +39,9 @@ export async function importCompanionArticleImage(nodeId: string, sourceUrl: str
   const before = await readCompanionImageArticle(nodeId);
   if (!before) return null;
   const image = await importCompanionImageResource(sourceUrl);
-  const saved = await commitCompanionImageArticle(nodeId, before, {
-    content: localizeArticleImageSource(before.content, sourceUrl, image.storageKey),
+  const localizedContent = localizeArticleImageSource(before.content, sourceUrl, image.storageKey);
+  const saved = localizedContent === before.content || await commitCompanionImageArticle(nodeId, before, {
+    content: localizedContent,
     imageSources: { ...before.imageSources, [image.storageKey]: sourceUrl }
   }, { storage_key: image.storageKey, original_name: image.originalName, role: 'image' });
   if (!saved) return null;

@@ -49,14 +49,7 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
       args.clearPendingDraftCommit();
       return;
     }
-    const previous = args.getPendingDraftCommit();
-    args.setPendingDraftCommit({
-      baseVersionId: previous?.nodeId === sourceNodeId ? previous.baseVersionId : args.committedVersionId,
-      committedContent,
-      content,
-      nodeId: sourceNodeId,
-      onCommit: args.onCommit
-    });
+    args.setPendingDraftCommit(buildPendingDraftCommit(args, sourceNodeId, content, committedContent, meta));
     args.scheduleFlush();
   }, [
     args.clearPendingDraftCommit,
@@ -73,4 +66,18 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
     args.setPendingTitleRefresh,
     args.timerRef
   ]);
+}
+
+function buildPendingDraftCommit(args: DraftChangeHandlerArgs, sourceNodeId: string, content: string,
+  committedContent: string | null, meta?: EditorContentChangeMeta): PendingDraftCommit {
+  const previous = args.getPendingDraftCommit();
+  return {
+    baseVersionId: previous?.nodeId === sourceNodeId ? previous.baseVersionId
+      : sourceNodeId === args.nodeId ? args.committedVersionId : undefined,
+    newImageReferences: meta?.newImageReferences ?? (previous?.nodeId === sourceNodeId ? previous.newImageReferences : undefined),
+    committedContent,
+    content,
+    nodeId: sourceNodeId,
+    onCommit: args.onCommit
+  };
 }

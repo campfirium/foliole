@@ -47,7 +47,8 @@ const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'updated_at',
   'virtual_filter',
   'text_alternatives',
-  'text_selection'
+  'text_selection',
+  'local_edit_image_input_hash'
 ] as const);
 
 it('keeps node sync field coverage explicit across schema, hash, snapshot, and apply paths', () => {
@@ -135,7 +136,7 @@ function desktopSnapshotFields() {
 }
 
 function wireSnapshotFields() {
-  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position' && field !== 'text_alternatives' && field !== 'text_selection' && field !== 'body_deleted').sort();
+  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'local_edit_image_input_hash' && field !== 'position' && field !== 'text_alternatives' && field !== 'text_selection' && field !== 'body_deleted').sort();
 }
 
 function remoteNodeUpsertColumns() {

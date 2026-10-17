@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
+import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../lib/platform/markdownImageDataUrl.js';
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
@@ -9,7 +11,7 @@ import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js
 import { openDatabaseConnection } from './connection.js';
 import { resolveExternalSearchFolder } from './externalSearchFolderOwnership.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
-import { persistNodeResourceReference, replaceNodePdfResourceReference } from './nodeResources.js';
+import { replaceNodePdfResourceReference } from './nodeResources.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
 
 const IMAGE_ATTACHMENT_ROLE = 'image';
@@ -86,10 +88,13 @@ function importLocalImageAttachment(nodeId: string, sourcePath: string) {
     if (!prepared) return { message: `Unsupported local image: ${sourcePath}`, status: 'error' as const };
     storagePath = resolveAttachmentStoragePath(prepared.hash, undefined, prepared.mimeType);
     createdFile = persistAttachmentFile(storagePath, sourceBytes);
+    openDatabaseConnection().driver.execute(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [prepared.hash, 1]);
     openDatabaseConnection().driver.transaction(() => {
-      persistNodeResourceReference(nodeId, {
-        storage_key: prepared.storageKey, original_name: path.basename(sourcePath), role: IMAGE_ATTACHMENT_ROLE
-      });
+      const driver = openDatabaseConnection().driver;
+      const row = driver.queryOne<{ resource_references: string }>('SELECT resource_references FROM nodes WHERE id = ?', [nodeId]);
+      if (!row) throw new Error('image_import_node_unavailable');
+      driver.execute('UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = ?',
+        [upsertNodeResourceReference(row.resource_references, { storage_key: prepared.storageKey, original_name: path.basename(sourcePath), role: IMAGE_ATTACHMENT_ROLE }), nodeId]);
     });
     return {
       attachmentId: prepared.hash, mimeType: prepared.mimeType, originalName: path.basename(sourcePath),

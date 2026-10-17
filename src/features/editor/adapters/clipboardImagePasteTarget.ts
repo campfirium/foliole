@@ -1,6 +1,9 @@
 import { StateEffect, type ChangeDesc } from '@codemirror/state';
 import { ViewPlugin, type EditorView, type ViewUpdate } from '@codemirror/view';
 
+import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
+
+import { addEditorImageReferences, editorImageReferences } from './editorImageReferences';
 import { activeNodeIdFacet } from './liveMarkdownState';
 
 interface PasteTarget {
@@ -53,13 +56,17 @@ export function trackClipboardImagePaste(view: EditorView) {
   };
   return {
     release,
-    apply(content: string) {
+    apply(content: string, references: readonly ContentImageReference[] = []) {
       if (!target.valid) return false;
       const { from, to } = target;
       const selection = view.state.selection;
       const stillSelected = selection.ranges.length === 1 && selection.main.from === from && selection.main.to === to;
       release();
       view.dispatch({
+        effects: [
+          ...(!view.state.field(editorImageReferences, false) ? [StateEffect.appendConfig.of(editorImageReferences)] : []),
+          addEditorImageReferences.of(references)
+        ],
         changes: { from, to, insert: content },
         ...(stillSelected ? { selection: { anchor: from + content.length } } : {}),
         userEvent: 'input.paste'

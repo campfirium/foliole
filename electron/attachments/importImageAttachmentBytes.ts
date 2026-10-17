@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
 import { runWithDatabaseConnectionOwner, openDatabaseConnection } from '../database/connection.js';
-import { persistNodeResourceReference } from '../database/nodeResources.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { runWithImageAttachmentHashOwner } from './imageAttachmentHashOwner.js';
@@ -13,7 +13,6 @@ import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
-const IMAGE_ATTACHMENT_ROLE = 'image';
 const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 
 const MIME_TYPE_EXTENSION_MAP = new Map([
@@ -141,6 +140,8 @@ async function importPreparedImageAttachmentBytes(
   let storedFile: 'created' | 'reused';
   try {
     storedFile = await persistAttachmentFile(storagePath, input.bytes);
+    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.execute(
+      FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [prepared.hash, 1]));
   } catch {
     return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
   }
@@ -150,23 +151,10 @@ async function importPreparedImageAttachmentBytes(
     originalName: normalizedOriginalName,
     createdAt: (await fs.stat(storagePath)).birthtime.toISOString()
   };
-  let attachmentRecord: 'created' | 'reused' = storedFile;
-  try {
-    if (normalizedNodeId) {
-      attachmentRecord = await runWithDatabaseConnectionOwner(() => persistNodeResourceReference(normalizedNodeId, {
-        storage_key: prepared.storageKey,
-        original_name: normalizedOriginalName,
-        role: IMAGE_ATTACHMENT_ROLE
-      }));
-    }
-  } catch {
-    if (storedFile === 'created') await fs.unlink(storagePath).catch(() => undefined);
-    return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
-  }
 
   return toImportedResult({
     attachment,
-    attachmentRecord,
+    attachmentRecord: storedFile,
     intrinsicSize: readImageIntrinsicSize(input.bytes),
     mimeType: prepared.mimeType,
     sizeBytes: prepared.sizeBytes,

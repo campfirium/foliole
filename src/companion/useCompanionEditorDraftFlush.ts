@@ -16,7 +16,10 @@ export function useCompanionEditorDraftFlush(
     onReady?.(value);
   }, [onReady]);
   const flushPendingSave = useCallback(async () => {
-    if (canEdit && editor.current) state.handleChange(editor.current.getContent());
+    if (canEdit && editor.current) {
+      editor.current.flushContentChanges?.();
+      state.handleChange(editor.current.getContent());
+    }
     await state.flushPendingSave();
   }, [canEdit, state.handleChange, state.flushPendingSave]);
   return { editorState: { ...state, flushPendingSave }, onEditorReady };

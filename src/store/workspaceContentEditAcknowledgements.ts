@@ -9,18 +9,26 @@ import type { WorkspaceState } from './workspaceStore';
 type Node = WorkspaceState['nodesById'][string];
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
 const createdVersions = new Map<string, string>();
-const confirmedBranches = new Map<string, { baseVersionIds: Set<string>; submittedVersionId: string }>();
+const confirmedBranches = new Map<string, { baseVersionIds: Set<string>; submittedVersionId: string; content: string }>();
 
 export function captureContentEdit(node: Node): LocalContentEdit | undefined {
   const baseVersionId = node.currentVersionId ?? createdVersions.get(node.id);
   if (!baseVersionId) return undefined;
-  return { baseVersionId, versionId: createOpaqueVersionRef(crypto.randomUUID()) };
+  return {
+    baseVersionId,
+    ...(node.contentEditBaseContent !== undefined ? { baseContent: node.contentEditBaseContent } : {}),
+    ...(node.pendingImageReferences?.length ? { newImageReferences: node.pendingImageReferences } : {}),
+    versionId: createOpaqueVersionRef(crypto.randomUUID())
+  };
 }
 
 export function continueContentEdit(nodeId: string, edit: LocalContentEdit | undefined) {
   if (!edit) return;
   const confirmed = confirmedBranches.get(nodeId);
-  if (confirmed?.baseVersionIds.has(edit.baseVersionId)) edit.baseVersionId = confirmed.submittedVersionId;
+  if (confirmed?.baseVersionIds.has(edit.baseVersionId)) {
+    edit.baseVersionId = confirmed.submittedVersionId;
+    edit.baseContent = confirmed.content;
+  }
 }
 
 export function acknowledgeContentEdit(args: {
@@ -40,6 +48,7 @@ export function acknowledgeContentEdit(args: {
   baseVersionIds.add(args.edit.baseVersionId);
   confirmedBranches.set(args.node.id, {
     baseVersionIds,
+    content: args.node.content,
     submittedVersionId: acknowledgement.submittedVersionId
   });
   args.set((state) => {
@@ -49,12 +58,15 @@ export function acknowledgeContentEdit(args: {
       ...current,
       bodyStatus: persisted.content.trim().length > 0 ? 'ready' : 'empty',
       content: persisted.content,
+      contentEditBaseContent: persisted.content,
       currentVersionId: acknowledgement.currentVersionId,
+      pendingImageReferences: (current.pendingImageReferences ?? []).filter(reference => !args.edit?.newImageReferences?.some(
+        saved => saved.storage_key === reference.storage_key && saved.original_name === reference.original_name)),
       hasContent: persisted.content.trim().length > 0,
       hideTitleHeading: persisted.hideTitleHeading ?? false,
       title: persisted.title,
       updatedAt: persisted.updatedAt
-    } : { ...current, currentVersionId: acknowledgement.submittedVersionId };
+    } : { ...current, currentVersionId: acknowledgement.submittedVersionId, contentEditBaseContent: args.node.content };
     syncWorkspaceNodeDocumentCacheFromNode(node);
     return { nodesById: { ...state.nodesById, [node.id]: node } };
   });

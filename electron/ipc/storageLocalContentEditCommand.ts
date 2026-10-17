@@ -1,6 +1,7 @@
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCodec.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -21,16 +22,23 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
   const result = await applyLocalContentEdit(port, {
+    ...(edit.baseContent !== undefined ? { baseContent: asString(edit.baseContent, 'baseContent') } : {}),
     baseVersionId: asString(edit.baseVersionId, 'baseVersionId'),
     versionId,
+    newImageReferences: parseNewImageReferences(edit.newImageReferences),
     content: parent.content,
     hideTitleHeading: parent.hideTitleHeading ?? false,
     hostName,
     nodeId: parent.nodeId,
     title: parent.title,
     updatedAt: parent.updatedAt
-  }, () => {
+  }, (record) => {
+    const { driver } = openDatabaseConnection();
+    driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ? WHERE id = ?',
+      [record.snapshot.resource_references!, record.snapshot.image_sources ?? null, parent.nodeId]);
     upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, { versionId });
+    driver.execute("UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.local_edit_image_input_hash', ?) WHERE version_id = ?",
+      [record.snapshot.local_edit_image_input_hash!, versionId]);
   });
   await collectNodeVersionPayloads(port, parent.nodeId).catch((error: unknown) => {
     console.warn('[node-version-retention] local collection failed', error);

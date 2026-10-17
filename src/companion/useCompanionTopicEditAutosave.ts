@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 
+import type { EditorContentChangeMeta } from '../features/editor/adapters/EditorAdapter';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import { ContentDraftSession } from '../shared/platform/companion/editing/contentDraftSession';
 
@@ -49,8 +50,8 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
     if (!args.canEdit) void session?.flush().catch(() => undefined);
   }, [args.canEdit, session]);
 
-  const handleChange = useCallback((value: string) => {
-    if (args.canEdit) session?.change(value);
+  const handleChange = useCallback((value: string, meta?: EditorContentChangeMeta) => {
+    if (args.canEdit) session?.change(value, meta?.newImageReferences);
   }, [args.canEdit, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
   const markBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput(); }, [args.canEdit, session]);

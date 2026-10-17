@@ -69,7 +69,7 @@ function createPngBytes() {
   ]);
 }
 
-it('imports pasted clipboard image bytes into attachments and links them to the node', async () => {
+it('prepares pasted image files without changing either target topic', async () => {
   seedNode('node-1');
   const imageBytes = createPngBytes();
   const hash = createHash('sha256').update(imageBytes).digest('hex');
@@ -95,8 +95,9 @@ it('imports pasted clipboard image bytes into attachments and links them to the 
     stored_file: 'created'
   });
 
-  const [nodeAttachment] = listNodeAttachments('node-1');
-  expect(nodeAttachment?.attachment.originalName).toBe('pasted-image.png');
+  expect(listNodeAttachments('node-1')).toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash = ?').pluck().get(hash)).toBe(1);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(0);
   await expect(
     fs.readFile(resolveAttachmentStoragePath(hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);

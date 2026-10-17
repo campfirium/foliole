@@ -26,6 +26,7 @@ export interface NativeNodeMutationPatchResult {
 }
 
 export type NativeNodeCreationMutationArgs = NativeNodeSnapshotArgs & {
+  newImageReferences?: readonly import('../core/sync/localContentEditResources.js').ContentImageReference[];
   activeNodeId?: string | null;
   nodeOrder: string[];
 };

@@ -83,7 +83,7 @@ export function buildResolutionRecord(
 }
 
 export function semanticSnapshot(snapshot: NativeSyncNodeRecord['snapshot'], body = snapshot.content) {
-  const transientKeys = new Set(['created_at', 'updated_at', 'id', 'body_blob_hash']);
+  const transientKeys = new Set(['created_at', 'updated_at', 'id', 'body_blob_hash', 'local_edit_image_input_hash']);
   return canonicalResolutionJson(Object.fromEntries(
     Object.entries({ ...snapshot, content: body }).filter(([key]) => !transientKeys.has(key))
   ));

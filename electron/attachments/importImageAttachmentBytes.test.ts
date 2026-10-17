@@ -122,7 +122,7 @@ it('leaves no file or database rows when bytes are unsupported', async () => {
   await expect(fs.readdir(assetsDir())).resolves.toEqual([]);
 });
 
-it('removes a newly created canonical file when database persistence fails', async () => {
+it('prepares a file without attempting to write the owner resource description', async () => {
   const contentHash = hash(jpeg);
   openDatabaseConnection().sqlite.exec(
     `INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('owner', 'Owner', 'now', 'now');
@@ -135,23 +135,23 @@ it('removes a newly created canonical file when database persistence fails', asy
     errorSource: 'image.jpeg',
     mimeType: 'image/jpeg',
     originalName: 'image.jpeg'
-  })).resolves.toMatchObject({ error_code: 'storage_write_failed', status: 'error' });
-  await expect(fs.access(path.join(assetsDir(), `${contentHash}.jpg`))).rejects.toThrow();
+  })).resolves.toMatchObject({ status: 'imported', original_name: 'image.jpeg' });
+  await expect(fs.readFile(path.join(assetsDir(), `${contentHash}.jpg`))).resolves.toEqual(jpeg);
+  expect(loadNodeResourceReferences('owner')).toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(0);
   expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").get()).toBeUndefined();
   expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
 });
 
-it('stores each original name on its owner while importing without either registry', async () => {
+it('returns each prepared original name without adding descriptions or versions to either owner', async () => {
   const db = openDatabaseConnection().sqlite;
   db.pragma('foreign_keys = OFF');
   db.exec(`
     INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('first', 'First', 'now', 'now'), ('second', 'Second', 'now', 'now');`);
   for (const nodeId of ['first', 'second']) {
     await expect(importImageAttachmentBytes({ bytes: jpeg, errorSource: nodeId, mimeType: 'image/png',
-      originalName: `${nodeId}.jpeg`, nodeId })).resolves.toMatchObject({ status: 'imported' });
-    expect(loadNodeResourceReferences(nodeId)).toEqual([
-      { storage_key: `${hash(jpeg)}.jpg`, original_name: `${nodeId}.jpeg`, role: 'image' }
-    ]);
+      originalName: `${nodeId}.jpeg`, nodeId })).resolves.toMatchObject({ status: 'imported', original_name: `${nodeId}.jpeg` });
+    expect(loadNodeResourceReferences(nodeId)).toEqual([]);
   }
   await expect(fs.readFile(path.join(assetsDir(), `${hash(jpeg)}.jpg`))).resolves.toEqual(jpeg);
 });

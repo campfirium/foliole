@@ -10,6 +10,7 @@ export interface EditorRevealOptions {
 }
 
 export interface EditorContentChangeMeta {
+  newImageReferences?: readonly import('../../../../lib/core/sync/localContentEditResources').ContentImageReference[];
   contentLength?: number;
   nodeId: string | null;
   origin?: 'history' | 'user';
@@ -60,6 +61,7 @@ export interface EditorAdapter {
   destroy(): void;
   focus(): void;
   getContent(): string;
+  flushContentChanges?(): void;
   getDocumentPositionAtViewportY(clientY: number): number | null;
   getDocumentPositionAtClientPoint?(clientX: number, clientY: number): number | null;
   getPrimaryVisiblePosition?(): number | null;

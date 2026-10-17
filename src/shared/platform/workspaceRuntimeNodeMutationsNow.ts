@@ -47,6 +47,7 @@ function toNodeAnchorLocatorUpdatePayload(node: WorkspaceRuntimeNode) {
 }
 
 export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
+  newImageReferences?: readonly import('../../../lib/core/sync/localContentEditResources').ContentImageReference[];
   activeNodeId?: string | null;
   node: WorkspaceRuntimeNode;
   nodeOrder: string[];
@@ -64,6 +65,7 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
   try {
     const result = await runtimeInvoke(command, {
       ...payload,
+      ...(args.newImageReferences?.length ? { newImageReferences: args.newImageReferences } : {}),
       activeNodeId: args.activeNodeId ?? null,
       nodeOrder: args.nodeOrder
     });

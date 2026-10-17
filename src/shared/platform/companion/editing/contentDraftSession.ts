@@ -1,3 +1,4 @@
+import type { ContentImageReference } from '../../../../../lib/core/sync/localContentEditResources';
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
 import { createCompanionUuid } from '../../companionUuid';
 
@@ -8,6 +9,7 @@ export class ContentDraftSession {
   value: string;
   error: string | null = null;
   ready: boolean;
+  private imageReferences = new Map<string, ContentImageReference>();
   private sequence = 0;
   private acknowledged = 0;
   private pending: (CompanionContentEdit & { sequence: number }) | null = null;
@@ -91,8 +93,11 @@ export class ContentDraftSession {
     }
   }
 
-  change(value: string) {
+  change(value: string, references: readonly ContentImageReference[] = []) {
     if (!this.ready) return;
+    for (const reference of references) {
+      if (!this.imageReferences.has(reference.storage_key)) this.imageReferences.set(reference.storage_key, reference);
+    }
     this.bufferedInput = false;
     if (value === this.value) return;
     this.value = value;
@@ -126,6 +131,8 @@ export class ContentDraftSession {
 
   private async commit() {
     const edit = this.pending ?? {
+      newImageReferences: [...this.imageReferences.values()],
+      baseContent: this.base.content,
       nodeId: this.nodeId, content: this.value, baseVersionId: this.base.versionId,
       ...(this.holdId ? { holdId: this.holdId } : {}),
       versionId: createOpaqueVersionRef(createCompanionUuid()),

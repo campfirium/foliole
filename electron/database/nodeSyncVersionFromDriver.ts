@@ -2,8 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
+import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { upsertNodeSyncState } from './nodeSyncStateRows.js';
 import { prepareNodeSyncVersionFromDriver } from './nodeSyncVersionPreparedFromDriver.js';
@@ -30,7 +32,7 @@ export function flushNodeSyncVersionWithDriver(
           ...(snapshot.text_alternatives.length ? {
             text_alternative_bodies: loadTopicTextBodiesWithDriver(driver, nodeId, snapshot.text_alternatives)
           } : {}),
-          text_selection: { version_id: resolvedVersionId, created_at: now } })]
+          text_selection: resolveTextSelection(driver, row.current_version_id, body, resolvedVersionId, now) })]
     );
     driver.execute('INSERT INTO node_version_local_origins (version_id) VALUES (?)', [resolvedVersionId]);
     if (row.current_version_id) {
@@ -56,4 +58,17 @@ export function flushNodeSyncVersionWithDriver(
     createdVersionId = resolvedVersionId;
   });
   return createdVersionId;
+}
+
+function resolveTextSelection(driver: DatabaseDriver, parentId: string | null, body: string, versionId: string, now: string) {
+  const parent = parentId ? driver.queryOne<{ snapshot_json: string; body_text: string | null; created_at: string }>(
+    'SELECT snapshot_json, body_text, created_at FROM node_sync_versions WHERE version_id = ?', [parentId]) : null;
+  if (parent) {
+    const snapshot: NativeSyncNodeRecord['snapshot'] = JSON.parse(parent.snapshot_json);
+    const parentHash = snapshot.body_blob_hash ?? (parent.body_text === null ? null : hashTextBody(parent.body_text));
+    if (parentHash !== null && parentHash === hashTextBody(body)) {
+      return snapshot.text_selection ?? { version_id: parentId!, created_at: parent.created_at };
+    }
+  }
+  return { version_id: versionId, created_at: now };
 }

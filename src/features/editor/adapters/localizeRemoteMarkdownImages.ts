@@ -1,4 +1,5 @@
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../../../lib/core/import/markdownImageReferences';
+import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
 import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { importRemoteImageAttachment } from '../../../shared/platform/remoteImageLocalization';
 
@@ -21,6 +22,7 @@ interface LocalizedRemoteImageImport {
 }
 
 export interface LocalizedImageChange {
+  resource?: ContentImageReference;
   from: number;
   to: number;
   insert: string;
@@ -94,7 +96,8 @@ export async function localizeRemoteMarkdownImageOccurrence(
   return {
     attachmentId: localized.attachmentId,
     content: `${markdown.slice(0, token.from)}${buildLocalizedMarkdownImage(token, localized.storageKey)}${markdown.slice(token.to)}`,
-    changes: [{ from: token.from, to: token.to, insert: buildLocalizedMarkdownImage(token, localized.storageKey) }]
+    changes: [{ from: token.from, to: token.to, insert: buildLocalizedMarkdownImage(token, localized.storageKey),
+      resource: { storage_key: localized.storageKey, original_name: localized.originalName, role: 'image' as const, source_url: token.sourceUrl } }]
   };
 }
 
@@ -128,7 +131,9 @@ export async function localizeRemoteMarkdownImagesWithChanges(nodeId: string, ma
       const replacement = buildLocalizedMarkdownImage(match, localization.storageKey);
       localized += markdown.slice(cursor, match.from);
       localized += replacement;
-      changes.push({ from: match.from, to: match.to, insert: replacement });
+      changes.push({ from: match.from, to: match.to, insert: replacement, resource: {
+        storage_key: localization.storageKey, original_name: localization.originalName, role: 'image', source_url: match.sourceUrl
+      } });
       cursor = match.to;
     } else {
       localized += markdown.slice(cursor, match.from);

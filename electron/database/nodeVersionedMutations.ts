@@ -5,7 +5,10 @@ import type {
   UpdateNodeAnchorLinkInput,
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
+import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
+import type { ContentImageReference } from '../../lib/core/sync/localContentEditResources.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -33,11 +36,16 @@ export function upsertVersionedNodeSnapshot(
   });
 }
 
-export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[], options: UpsertNodeSnapshotOptions = {}) {
+export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[], options: UpsertNodeSnapshotOptions & { newImageReferences?: readonly ContentImageReference[] } = {}) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   return withTransaction(driver, () => {
     upsertNodeSnapshotWithOrder(input, nodeOrder, options);
+    if (options.newImageReferences?.length) {
+      const keys = new Set(collectArticleImageStorageKeys(input.content));
+      driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?',
+        [serializeNodeResourceReferences(options.newImageReferences.filter(reference => keys.has(reference.storage_key))), input.nodeId]);
+    }
     return flushVersion(driver, input.nodeId, hostName, input.updatedAt);
   });
 }

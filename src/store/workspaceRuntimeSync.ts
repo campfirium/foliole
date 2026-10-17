@@ -105,6 +105,7 @@ export async function syncCreateNodeMutationToRuntime(
 ): Promise<WorkspaceNodeMutationPatchResult | null> {
   return saveCreatedWorkspaceNodeMutationSnapshot({
     ...createNodeSnapshotArgs(node, position),
+    ...(node.pendingImageReferences?.length ? { newImageReferences: node.pendingImageReferences } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),
     nodeOrder
   });

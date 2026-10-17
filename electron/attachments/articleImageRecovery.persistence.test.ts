@@ -5,23 +5,26 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-let appData = '';
-vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
-  app_data_dir: appData, app_cache_dir: path.join(appData, 'cache'),
-  app_config_dir: path.join(appData, 'config'), app_log_dir: path.join(appData, 'logs')
-}) }));
-
+import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { readNodeImageSources } from '../database/nodeImageSources.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
 import { backupSqliteDatabase, restoreSqliteDatabase } from '../database/sqliteBackupRestore.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 
 import { readAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
 import { recoverArticleImageAttachment } from './recoverArticleImageAttachment.js';
 import { configureRemoteImageFetchTransportForTests, importRemoteImageAttachment, resetRemoteImagePipelineForTests } from './remoteImagePipeline.js';
+
+let appData = '';
+vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
+  app_data_dir: appData, app_cache_dir: path.join(appData, 'cache'),
+  app_config_dir: path.join(appData, 'config'), app_log_dir: path.join(appData, 'logs')
+}) }));
 
 const sourceUrl = 'https://example.com/image.png';
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -56,6 +59,12 @@ async function localized() {
   const imported = await importRemoteImageAttachment({ nodeId: 'article', sourceUrl });
   if (imported.status !== 'imported') throw new Error(imported.message);
   const content = `![caption](asset://${imported.storage_key})`;
+  const baseVersionId = flushNodeSyncVersion('article')!;
+  await applyLocalContentEdit(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+    nodeId: 'article', content, baseVersionId, versionId: 'localized', title: 'article', hideTitleHeading: false,
+    hostName: 'test', updatedAt: new Date().toISOString(), newImageReferences: [{ storage_key: imported.storage_key,
+      original_name: imported.original_name, role: 'image', source_url: sourceUrl }]
+  });
   saveNode('article', content);
   return { imported, content, file: path.join(readAttachmentLibraryPathSnapshot()!.assetsDir, imported.storage_key) };
 }

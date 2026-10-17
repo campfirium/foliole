@@ -32,7 +32,7 @@ function registerDebouncePersistenceTest() {
       vi.advanceTimersByTime(1);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
   it('defers pending draft flush while raw editor input keeps arriving', () => {
@@ -62,7 +62,7 @@ function registerDebouncePersistenceTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
 }
@@ -92,7 +92,7 @@ function registerCloseFlushTest() {
       await expect(closeFlush?.()).resolves.toBe(true);
     });
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha body updated', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
   it('flushes the pending draft on unmount', () => {
@@ -112,7 +112,7 @@ function registerCloseFlushTest() {
 
     unmount();
 
-    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft', { publishLocal: false });
+    expect(onCommit).toHaveBeenCalledWith('node-1', 'Alpha unmount draft', { publishLocal: false, baseContent: 'Alpha body' });
   });
 
 }
@@ -191,9 +191,9 @@ function registerNodeSwitchCommitIsolationTest() {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false });
+    expect(alphaCommit).toHaveBeenCalledWith('node-1', 'Alpha draft', { publishLocal: false, baseContent: 'Alpha body' });
     expect(alphaCommit).not.toHaveBeenCalledWith('node-1', 'Beta draft');
-    expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft', { publishLocal: false });
+    expect(betaCommit).toHaveBeenCalledWith('node-2', 'Beta draft', { publishLocal: false, baseContent: 'Beta body' });
   });
 
 }

@@ -92,8 +92,6 @@ it('imports from the remote image cache without downloading again', async () => 
   expect(importImageAttachmentBytes).toHaveBeenCalledWith(expect.objectContaining({
     bytes: PNG_BYTES
   }));
-  expect(registerNodeImageSources).toHaveBeenCalledWith('node-1', {
-    'hash-1.png': 'https://example.com/images/cover.png'
-  });
+  expect(registerNodeImageSources).not.toHaveBeenCalled();
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
