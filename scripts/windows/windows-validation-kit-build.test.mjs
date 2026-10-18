@@ -59,18 +59,17 @@ describe('Windows validation kit build', () => {
     });
     const expected = { commitSha, runAttempt: '2', runId: '1234' };
     expect(manifest.files.some((entry) => entry.path === 'manifest.json')).toBe(false);
-    expect(manifest.runtimePackages).toEqual({
-      '@playwright/test': '1.63.0',
-      playwright: '1.63.0',
-      'playwright-core': '1.63.0'
-    });
+    const lock = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package-lock.json'), 'utf8'));
+    const runtimeVersions = Object.fromEntries(['@playwright/test', 'playwright', 'playwright-core']
+      .map(name => [name, lock.packages[`node_modules/${name}`].version]));
+    expect(manifest.runtimePackages).toEqual(runtimeVersions);
     expect(manifest.generatedWithNodeVersion).toBe('22.14.0');
     const playwright = spawnSync(process.execPath, [path.join(kitRoot, 'node_modules/playwright/cli.js'), '--version'], {
       cwd: kitRoot,
       encoding: 'utf8'
     });
     expect(playwright.status).toBe(0);
-    expect(playwright.stdout).toContain('Version 1.63.0');
+    expect(playwright.stdout.trim()).toBe(`Version ${runtimeVersions.playwright}`);
     expect(() => verifyWindowsValidationKit({
       expected: { ...expected, runId: 'wrong' },
       kitRoot,
