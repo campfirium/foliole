@@ -5,7 +5,9 @@ import { expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { LATEST_NUMBERED_SCHEMA_MIGRATIONS } from '../../lib/core/database/numberedMigrationLatestRegistry.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS as historicalInventoryTriggers } from '../../lib/core/database/preNodeChildInventorySchema.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -14,6 +16,12 @@ it('installs daily counting on desktop and companion upgrades while retaining ex
     const db = new Database(':memory:');
     try {
       for (const sql of schema) db.exec(sql);
+      for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
+        const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)?.[1];
+        if (!name) throw new Error('inventory_fixture_trigger_invalid');
+        db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+      }
+      for (const sql of historicalInventoryTriggers) db.exec(sql);
       db.exec(`DROP TABLE topic_daily_count_entries; DROP TABLE topic_daily_counts; DROP TABLE topic_daily_count_coverage;
         INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('topic', 'Retained', '2026-10-01', '2026-10-01');
         INSERT INTO node_reading(node_id, last_handled_at, next_at, repetition_count, state)
