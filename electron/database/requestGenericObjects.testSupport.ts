@@ -148,6 +148,8 @@ export function insertViewStateSyncState() {
 
 export function insertImportSourceSyncState() {
   const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id, title, content, created_at, updated_at)
+    VALUES ('node-1', 'Imported topic', 'Imported body', 'now', 'now')`);
   driver.execute(
     `INSERT INTO import_sources (
        source_fingerprint, provider, source_kind, source_name, source_locator,

@@ -20,11 +20,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { importLocalImageAttachment } from '../attachments/importLocalImageAttachment.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 
@@ -90,6 +93,12 @@ it('initializes and keeps using the library home directory layout across restart
   });
   await expect(fs.readFile(resolveAttachmentStoragePath(hash, assetsDir, 'image/png'))).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(assetsDir, hash))).rejects.toThrow();
+  const baseVersionId = flushNodeSyncVersion('node-1')!;
+  await applyLocalContentEdit(createBetterSqliteDbPort(firstConnection.sqlite), {
+    nodeId: 'node-1', content: `![Cover](asset://${hash}.png)`, baseVersionId, versionId: 'image-edit',
+    title: 'node-1', hideTitleHeading: false, hostName: 'test', updatedAt: new Date().toISOString(),
+    newImageReferences: [{ storage_key: `${hash}.png`, role: 'image', original_name: 'cover.png' }]
+  });
 
   closeDatabaseConnection();
 

@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import { expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -36,9 +37,15 @@ it('transfers a deterministic incompressible 50 MiB file through independent aut
     const storageKey = `${hash}.png`;
     expect(await fixture.left.invoke('seed_resource', { filePath: source,
       includeImageInBody: true, nodeId: 'large-resource' })).toEqual({ hash, storageKey });
-    expect(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot)).toMatchObject({
-      complete: true
-    });
+    const resultSchema = z.object({ complete: z.boolean(), attachmentProgress: z.number().optional(),
+      attachmentYielded: z.boolean().optional(), dynamicBacklog: z.boolean().optional() });
+    let completed = false;
+    for (let round = 0; round < 8; round++) {
+      const result = resultSchema.parse(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot));
+      if (result.complete) { completed = true; break; }
+      expect((result.attachmentProgress ?? 0) > 0 || result.attachmentYielded || result.dynamicBacklog).toBe(true);
+    }
+    expect(completed).toBe(true);
     const target = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', storageKey);
     expect((await fs.stat(target)).size).toBe(50 * 1024 * 1024);
     expect(await hashResourceFile(target)).toBe(hash);

@@ -29,6 +29,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { upsertDesktopSource } from './desktopSources.js';
 import { runPreparedImport } from './importPipeline.js';
 import { initializeDatabase } from './migrate.js';
+import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 
@@ -149,6 +150,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
     })
   );
   const nodeId = imported.nodeId as string;
+  flushNodeSyncVersion(nodeId, imported.importedAt);
   const nodeRow = openDatabaseConnection().sqlite
     .prepare(
       `SELECT ${buildNodeBodyContentSql('n')} AS content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data

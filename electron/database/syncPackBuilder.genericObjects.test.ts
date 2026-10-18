@@ -84,10 +84,12 @@ it('transfers import source metadata and its watched binding without the local a
     .toEqual([{ source_fingerprint: 'source-1', watched_binding_id: 'watched-source-1', watched_relative_path: 'notes.md', source_locator: '' }]);
 });
 
-it('transfers the complete PDF page text and dimensions', async () => {
+it('omits retired independent PDF page state while preserving its local text and dimensions', async () => {
   insertPdfPageTextSyncState();
+  expect(await readFramedSyncInventory(ownerPort())).toEqual([]);
   const target = await receive();
-  expect(target.prepare('SELECT attachment_id, page, text, page_width, page_height FROM pdf_page_text').all())
+  expect(target.prepare('SELECT * FROM pdf_page_text').all()).toEqual([]);
+  expect(openDatabaseConnection().driver.queryAll('SELECT attachment_id, page, text, page_width, page_height FROM pdf_page_text'))
     .toEqual([{ attachment_id: 'pdf-1', page: 1, text: 'page text', page_width: 612, page_height: 792 }]);
 });
 

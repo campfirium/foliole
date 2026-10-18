@@ -193,6 +193,6 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
      FROM sync_object_state
      WHERE object_type = 'pdf_page_text' AND object_id = ?`,
     [`${PDF_ID}:1`]
-  )).toEqual({ deleted_at: expect.any(String) });
+  )).toBeUndefined();
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
