@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
-import { observeSlowRequest } from './companionLanRequestTiming.js';
+import { observeSlowRequest, recordSyncSessionWaitTiming } from './companionLanRequestTiming.js';
 
 vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
@@ -41,11 +41,34 @@ it('records a finished slow response only once when close follows finish', () =>
   }));
 });
 
-it('excludes GET session long polls but keeps POST session notifications', () => {
-  requestPair('GET', '/companion/sync-session').response.emit('close');
+it('omits only a completed, unchanged session wait that reached its timeout', () => {
+  const { response } = requestPair('GET', '/companion/sync-session');
+  recordSyncSessionWaitTiming(response, { changed: false, waitStartedAt: 10,
+    waitEndedAt: 20010, waitDurationMs: 20000 });
+  response.emit('finish');
   expect(appendDiagnosticLog).not.toHaveBeenCalled();
-  vi.restoreAllMocks();
-  requestPair('POST', '/companion/sync-session').response.emit('close');
+});
+
+it.each(['finish', 'close'] as const)('records a fast session wake or disconnect ending with %s', completion => {
+  const { response } = requestPair('GET', '/companion/sync-session');
+  vi.mocked(performance.now).mockReturnValue(10);
+  response.emit(completion);
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    payload: expect.objectContaining({ completion, method: 'GET', durationMs: 10,
+      startedAt: expect.any(Number), endedAt: expect.any(Number), durationScope: 'response_lifetime' })
+  }));
+});
+
+it.each([true, false])('keeps a long wait that changed or disconnected: changed=%s', changed => {
+  const { response } = requestPair('GET', '/companion/sync-session');
+  recordSyncSessionWaitTiming(response, { changed, waitStartedAt: 10,
+    waitEndedAt: 20010, waitDurationMs: 20000 });
+  response.emit(changed ? 'finish' : 'close');
+  expect(appendDiagnosticLog).toHaveBeenCalledTimes(1);
+});
+
+it('keeps slow POST session notifications', () => {
+  requestPair('POST', '/companion/sync-session').response.emit('finish');
   expect(appendDiagnosticLog).toHaveBeenCalledTimes(1);
 });
 

@@ -151,7 +151,6 @@ it('matches a complete snapshot after saving text that removes a child anchor ta
     expect(complete!.nodesById.child!.deletedAt).toBeFalsy();
     expect(complete!.nodeOrder).toEqual(expect.arrayContaining(['child', 'grandchild']));
     expect(complete!.nodesById.grandchild).toEqual(before!.nodesById.grandchild);
-    expect(complete!.nodesById.topic!.title).toBe('Original title');
   } finally {
     await library.close();
     runtime.owner = null;

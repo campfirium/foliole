@@ -18,8 +18,8 @@ export async function loadCompanionContentProjection(db: DbPort, nodeId: string)
 }
 
 // Only the content-save path may use this projection. Missing anchor text marks the child
-// unmapped; it does not delete/reparent it. The save retains the title and only remaps
-// direct-child anchors. Structural mutations still require the normalized full snapshot.
+// unmapped; it does not delete/reparent it. Topic-derived fields stay in the selected row.
+// Structural mutations still require the normalized full snapshot.
 export function mergeCompanionContentProjection(
   current: WorkspaceSnapshot, nodes: WorkspaceSnapshot['nodesById']
 ): WorkspaceSnapshot {

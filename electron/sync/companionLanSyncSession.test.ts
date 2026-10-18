@@ -4,6 +4,7 @@ import { createServer, type Server } from 'node:http';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({ allowed: true, depth: 0, entered: () => {} }));
+vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 vi.mock('../database/connection.js', () => ({ registerDatabaseConnectionCleanup: () => {},
   runWithDatabaseConnectionOwner: async (run: () => unknown) => {
     runtime.depth += 1;
@@ -21,7 +22,9 @@ vi.mock('./companionLanResponses.js', () => ({ writeJson: (_request: unknown,
 } }));
 
 import { SYNC_SESSION_PATH, syncSessionReplySchema, type SyncSessionRequest } from '../../lib/platform/syncSessionContract.js';
+import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
+import { observeSlowRequest } from './companionLanRequestTiming.js';
 import { handleCompanionSyncSession } from './companionLanSyncSession.js';
 import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 
@@ -29,8 +32,12 @@ let server: Server;
 let endpoint: string;
 beforeEach(async () => {
   runtime.allowed = true;
+  vi.clearAllMocks();
   runtime.entered = () => {};
-  server = createServer((request, response) => { void handleCompanionSyncSession(request, response); });
+  server = createServer((request, response) => {
+    observeSlowRequest(request, response);
+    void handleCompanionSyncSession(request, response);
+  });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('test_server_missing');
@@ -73,4 +80,20 @@ it('cleans pending HTTP responses when the service stops', async () => {
   await new Promise<void>(resolve => setImmediate(resolve));
   closeDesktopSyncChangeSessions();
   expect((await pending).status).toBe(409);
+});
+
+it('logs notification wake times through the actual HTTP session route', async () => {
+  const opened = syncSessionReplySchema.parse(await (await request({ operation: 'open' })).json());
+  let arrived!: () => void;
+  const entered = new Promise<void>(resolve => { arrived = resolve; });
+  runtime.entered = arrived;
+  const pending = request({ operation: 'wait', session: opened.session, marker: opened.marker });
+  await entered;
+  await new Promise<void>(resolve => setImmediate(resolve));
+  desktopSyncChangeSessions().changed();
+  expect(syncSessionReplySchema.parse(await (await pending).json()).changed).toBe(true);
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    payload: expect.objectContaining({ method: 'GET', changed: true, completion: 'finish',
+      responseFinished: true, waitStartedAt: expect.any(Number), waitEndedAt: expect.any(Number) })
+  }));
 });

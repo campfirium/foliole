@@ -3,6 +3,7 @@ import type http from 'node:http';
 import { SYNC_SESSION_PATH, syncSessionRequestSchema } from '../../lib/platform/syncSessionContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
+import { recordSyncSessionWaitTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization } from './companionRequestAuth.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -28,10 +29,16 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
     }
     const sessions = desktopSyncChangeSessions();
     const peer = context.auth.device_id;
+    const waitStartedAt = Date.now();
+    const waitStarted = performance.now();
     const reply = input.operation === 'open' ? sessions.open(peer)
       : input.operation === 'close' ? (sessions.close(peer, input.session), { closed: true })
         : input.operation === 'complete' ? { completed: true }
         : await sessions.wait(peer, input.session, input.marker, controller.signal);
+    if (input.operation === 'wait' && 'changed' in reply) recordSyncSessionWaitTiming(response, {
+      waitStartedAt, waitEndedAt: Date.now(), waitDurationMs: performance.now() - waitStarted,
+      changed: reply.changed
+    });
     await runWithDatabaseConnectionOwner(() => {
       if (response.destroyed) return;
       const auth = revalidateCompanionRequestAuthorization(context);
