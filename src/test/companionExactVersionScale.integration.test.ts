@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
@@ -52,6 +52,7 @@ it.each([10, 100, 1000])('transmits one new full version across %i shared versio
     await host.restart();
     expect(host.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get()).toBe(head.version_id);
     expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+    await mkdir('.tmp/artifacts', { recursive: true });
     await writeFile(`.tmp/artifacts/t359-history-${historySize}.json`, JSON.stringify({
       scope: 'Synthetic production HTTP workload; database callback timing, no native UI timing or speedup claim', samples
     }, null, 2));

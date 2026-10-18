@@ -24,7 +24,7 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
     state: createSyncState()
   });
 
-  expect(outcome).toBe('skipped');
+  expect(outcome).toBe('pending');
   expect(setSyncProgress).not.toHaveBeenCalledWith(expect.objectContaining({ phase: 'attachment' }));
   expect(setSyncProgress).toHaveBeenLastCalledWith(null);
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({

@@ -1,7 +1,15 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+
+const database = vi.hoisted(() => {
+  const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));
+  const db: DbPort = { run, query: async () => [], transaction: async work => work(db) };
+  return { db, run };
+});
+
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
-  runWriter: async (task: (db: { run: () => Promise<void> }) => Promise<void>) => task({ run: async () => undefined })
+  runWriter: async (task: (db: DbPort) => Promise<void>) => task(database.db)
 }) }));
 
 const mocks = vi.hoisted(() => ({ group: vi.fn(), blocked: vi.fn(async () => false), discovery: vi.fn(),
@@ -50,6 +58,7 @@ it('exchanges member state before availability and changes provider after a 404'
   const result = await runCompanionResourceProviderBatch({ endpointUrl: 'http://anchor',
     needs: [need], onTransfer, transfer });
   expect(result.ready).toEqual([`attachment:${need.id}`]);
+  expect(database.run).toHaveBeenCalledWith(expect.stringContaining('framed_sync_resource_availability'), [need.id, 1]);
   expect(transfer.mock.calls.map(([endpoint]) => endpoint)).toEqual(['http://member','http://mobile']);
   expect(onTransfer.mock.calls.map(([attempt]) => [attempt.deviceId, attempt.ready,
     attempt.errors[`attachment:${need.id}`]])).toEqual([

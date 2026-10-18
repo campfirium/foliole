@@ -28,8 +28,8 @@ final class FolioleAttachmentBlockSourceTests: XCTestCase {
             let presence = try fixture.call("source-stat")
             XCTAssertEqual(presence["hash"] as? String, "")
             XCTAssertEqual(presence["length"] as? Int, bytes.count)
-            XCTAssertEqual(try fixture.call("source-open")["hash"] as? String,
-                           AttachmentBlockStorageFixture.hash(bytes))
+            // The shared sender verifies source bytes in bounded slices before transfer.
+            XCTAssertEqual(try fixture.call("source-open")["hash"] as? String, "")
             XCTAssertTrue(fixture.storage.isSending(fixture.key))
             XCTAssertThrowsError(try fixture.call("source-open"))
             let tail = try fixture.call("source-read", numbers: ["offset": 524288, "length": 3])

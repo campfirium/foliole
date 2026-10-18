@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
-import { metadataOwner } from './companionWorkspaceMetadata.testSupport';
+import { metadataOwner } from './companion/runtime/companionWorkspaceMetadata.testSupport';
 import { saveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSync';
 
 const runtime = vi.hoisted(() => ({ owner: vi.fn() }));

@@ -8,6 +8,7 @@ import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 const EXPECTED_STAGING_TABLES = [
   'framed_sync_fact_summary',
   'framed_sync_inventory',
+  'framed_sync_node_digest',
   'framed_sync_resource_availability',
   'framed_sync_version_summary'
 ] as const;

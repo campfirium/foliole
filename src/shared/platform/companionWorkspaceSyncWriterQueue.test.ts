@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
-import { metadataOwner } from './companionWorkspaceMetadata.testSupport';
+import { metadataOwner } from './companion/runtime/companionWorkspaceMetadata.testSupport';
 
 const runtime = vi.hoisted(() => ({ owner: vi.fn() }));
 vi.mock('@capacitor/core', () => ({

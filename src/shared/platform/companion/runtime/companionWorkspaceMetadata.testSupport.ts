@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 
-import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
+import { COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
 
-import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from './companion/runtime/capacitorCompanionDatabaseOwner';
+import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from './capacitorCompanionDatabaseOwner';
 
 export async function metadataOwner(entries: Array<[string, string]> = []) {
   const metadata = new Map(entries);
