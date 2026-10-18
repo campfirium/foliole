@@ -24,8 +24,8 @@ export function snapshotProbeRecord(index: number): NativeSyncNodeRecord {
       hide_title_heading: false, opening_text: null, virtual_filter: null, reveal: null, image_regions: null } };
 }
 
-export async function openRequestSnapshotFixture(platform: 'android' | 'ios') {
-  const name = `request_snapshot_${crypto.randomUUID().replaceAll('-', '')}`;
+export async function createAcceptanceScratchDatabase(prefix: string) {
+  const name = `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`;
   const sqlite = new SQLiteConnection(CapacitorSQLite);
   requireValue((await sqlite.isDatabase(name)).result === false, 'Scratch database absence unverified');
   const manager: CapacitorCompanionDatabaseManager = {
@@ -35,15 +35,23 @@ export async function openRequestSnapshotFixture(platform: 'android' | 'ios') {
     isDatabase: () => sqlite.isDatabase(name),
     retrieveConnection: (_name, readonly) => sqlite.retrieveConnection(name, readonly)
   };
+  const remove = async () => {
+    await sqlite.createConnection(name, false, 'no-encryption', 1, false);
+    try { await CapacitorSQLite.deleteDatabase({ database: name, readonly: false }); }
+    finally { await sqlite.closeConnection(name, false); }
+    requireValue((await sqlite.isDatabase(name)).result === false, 'Scratch database cleanup failed');
+  };
+  return { manager, name, remove };
+}
+
+export async function openRequestSnapshotFixture(platform: 'android' | 'ios') {
+  const { manager, name, remove } = await createAcceptanceScratchDatabase('request_snapshot');
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const close = async () => {
     try { await closeCompanionFramedPayloadBudget(owner); }
     finally {
       await owner.close();
-      await sqlite.createConnection(name, false, 'no-encryption', 1, false);
-      try { await CapacitorSQLite.deleteDatabase({ database: name, readonly: false }); }
-      finally { await sqlite.closeConnection(name, false); }
-      requireValue((await sqlite.isDatabase(name)).result === false, 'Scratch database cleanup failed');
+      await remove();
     }
   };
   try {

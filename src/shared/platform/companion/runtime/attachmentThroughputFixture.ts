@@ -1,11 +1,9 @@
-import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
-
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { ensureCompanionSyncGroupDataOwner } from '../sync/syncGroupProviderDataOwner';
 
 import { seedAttachmentThroughputFixture } from './attachmentThroughputFixtureData';
-import type { CapacitorCompanionDatabaseManager } from './capacitorCompanionDatabaseOwner';
 import { closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase } from './iosCompanionDatabaseBootstrap';
+import { createAcceptanceScratchDatabase } from './requestSnapshotFixture';
 
 export const THROUGHPUT_FILE_BYTES = 64 * 1024 * 1024;
 export const THROUGHPUT_KEYS = [
@@ -22,25 +20,13 @@ export function throughputFile(index: number) {
 
 /** Used only by the isolated acceptance application, never a user's library. */
 export async function openAttachmentThroughputFixture(platform: 'android' | 'ios', keys: string[]) {
-  const name = `attachment_throughput_${crypto.randomUUID().replaceAll('-', '')}`;
-  const sqlite = new SQLiteConnection(CapacitorSQLite);
-  if ((await sqlite.isDatabase(name)).result !== false) throw new Error('Scratch database absence unverified');
-  const manager: CapacitorCompanionDatabaseManager = {
-    createConnection: (_name, encrypted, mode, version, readonly) => sqlite.createConnection(name, encrypted, mode, version, readonly),
-    closeConnection: (_name, readonly) => sqlite.closeConnection(name, readonly),
-    isConnection: (_name, readonly) => sqlite.isConnection(name, readonly),
-    isDatabase: () => sqlite.isDatabase(name),
-    retrieveConnection: (_name, readonly) => sqlite.retrieveConnection(name, readonly)
-  };
+  const { manager, remove } = await createAcceptanceScratchDatabase('attachment_throughput');
   await initializeIosCompanionDatabase({ booted_at: new Date().toISOString(), database_path: null,
     database_ready: false, host_name: 'Attachment throughput acceptance', runtime_kind: `${platform}-capacitor` }, manager);
   const owner = getIosCompanionDatabaseOwner();
   const close = async () => {
     await closeIosCompanionDatabase();
-    await sqlite.createConnection(name, false, 'no-encryption', 1, false);
-    try { await CapacitorSQLite.deleteDatabase({ database: name, readonly: false }); }
-    finally { await sqlite.closeConnection(name, false); }
-    if ((await sqlite.isDatabase(name)).result !== false) throw new Error('Scratch cleanup failed');
+    await remove();
   };
   try {
     await owner.runWriter(db => seedAttachmentThroughputFixture(db, keys));
