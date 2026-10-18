@@ -107,3 +107,37 @@ it('keeps each entry within reusable workflow limits without expanding leaf perm
     expect(leaf.permissions).toEqual({ contents: 'read' });
   }
 });
+
+it('routes replay through the shared chain and prevents all from minting full evidence', () => {
+  const remote = workflow('remote-quality');
+  expect(remote.on.workflow_dispatch.inputs.scope.options).toContain('replay');
+  expect(remote.jobs['scoped-quality'].if).toContain("inputs.scope != 'replay'");
+  expect(remote.jobs['full-quality'].if).toContain("inputs.scope == 'replay'");
+  expect(remote.jobs['full-quality'].with.stages)
+    .toBe("${{ inputs.scope == 'replay' && inputs.stages || 'all' }}");
+  const guard = remote.jobs['dev-ref'].steps.find(step => step.env?.STAGES);
+  expect(guard.if).toBe("inputs.scope == 'replay'");
+  for (const selection of ['', 'all', 't6-ios-contract']) {
+    expect(spawnSync('bash', ['-c', guard.run], {
+      env: { ...process.env, STAGES: selection }
+    }).status).toBe(selection === 't6-ios-contract' ? 0 : 1);
+  }
+});
+
+it('runs a selected tail despite skipped baseline and keeps Windows build preparation', () => {
+  const selection = ['t6-ios-contract'];
+  for (const stage of TAIL_STAGES) {
+    const expression = chain.jobs[stage].if.slice(3, -3)
+      .replaceAll('!cancelled()', 'true')
+      .replaceAll("needs.context.result", "'success'")
+      .replaceAll('fromJSON(needs.context.outputs.stages)', JSON.stringify(selection))
+      .replaceAll('contains(', 'includes(')
+      .replaceAll('inputs.stages', "'t6-ios-contract'")
+      .replaceAll('needs.baseline.result', "'skipped'");
+    const evaluate = new Function('includes', `return (${expression});`);
+    expect(evaluate((values, value) => values.includes(value))).toBe(stage === 't6-ios-contract');
+  }
+  const steps = workflow('hosted-quality-windows-acceptance').jobs['windows-acceptance'].steps;
+  expect(steps.find(step => step.id === 'desktop_build').run).toContain('npm run build:vite-only');
+  expect(steps.find(step => step.id === 'windows_tail').if).toContain("steps.desktop_build.outcome == 'success'");
+});

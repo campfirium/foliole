@@ -14,6 +14,12 @@ on:
           - android
           - ios
           - full
+          - replay
+      stages:
+        description: Explicit replay stage IDs; full always uses all
+        required: false
+        default: all
+        type: string
       target_sha:
         description: Exact commit SHA to validate with the current dev topology
         required: true
@@ -34,13 +40,18 @@ jobs:
       - name: Require the dev branch
         if: github.ref != 'refs/heads/dev'
         run: exit 1
+      - name: Require an explicit replay selection
+        if: inputs.scope == 'replay'
+        env:
+          STAGES: ${{ inputs.stages }}
+        run: test -n "$STAGES" && test "$STAGES" != all
       - name: Validate target SHA
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
 
   scoped-quality:
-    if: inputs.scope != 'full' && needs.dev-ref.result == 'success'
+    if: inputs.scope != 'full' && inputs.scope != 'replay' && needs.dev-ref.result == 'success'
     needs: dev-ref
     permissions:
       artifact-metadata: write
@@ -55,13 +66,14 @@ jobs:
       scope: ${{ inputs.scope }}
 
   full-quality:
-    if: inputs.scope == 'full' && needs.dev-ref.result == 'success'
+    if: (inputs.scope == 'full' || inputs.scope == 'replay') && needs.dev-ref.result == 'success'
     needs: dev-ref
     uses: ./.github/workflows/t6-hosted-quality.yml
     with:
       execution_lane: dev-remote
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ github.ref }}
+      stages: ${{ inputs.scope == 'replay' && inputs.stages || 'all' }}
 
   timing-summary:
     if: ${{ always() }}
