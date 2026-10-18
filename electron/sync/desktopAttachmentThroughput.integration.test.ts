@@ -12,6 +12,7 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
 } }));
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { parseChangedAttachmentArticles } from '../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 import { requestAttachmentWorkYield, waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
@@ -23,6 +24,7 @@ import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObj
 import { withRequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createSyncPeerRoundOwnership } from '../../lib/core/sync/syncPeerRoundOwnership.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
@@ -135,6 +137,9 @@ async function prepareScale(root: string) {
   const target = resolveRuntimeDataPaths();
   seedScale(local.sqlite);
   await runWithDatabaseConnectionOwner(() => seedScale(openDatabaseConnection().sqlite));
+  // Finish the synthetic import before measuring steady-library file transfer.
+  await parseSeededArticles(local.sqlite);
+  await runWithDatabaseConnectionOwner(() => parseSeededArticles(openDatabaseConnection().sqlite));
   for (let i = 0; i < keys.length; i++) {
     bytes[0] = i;
     await writeFile(path.join(i < 2 ? local.assetsDir : target.assetsDir, keys[i]!), bytes);
@@ -173,4 +178,15 @@ function measureSourceWork() {
   return { close: () => { hashCalls.mockRestore(); receiverHashes.mockRestore(); }, metrics: () => ({
     sourceHashCalls, sourceReadBytes, sourceHashedBytes, sourceFullHashes, receiverFullHashes: receiverHashes.mock.calls.length, sourceOpens: hashCalls.mock.calls.length
   }) };
+}
+
+async function parseSeededArticles(sqlite: Database.Database) {
+  const db = createBetterSqliteDbPort(sqlite);
+  await db.transaction(async tx => {
+    const host = { readSnapshot: <T>(read: (port: typeof tx) => Promise<T>) => read(tx),
+      write: <T>(write: (port: typeof tx) => Promise<T>) => write(tx) };
+    while ((await tx.query('SELECT 1 FROM attachment_parse_queue LIMIT 1')).length) {
+      await parseChangedAttachmentArticles(host, () => false);
+    }
+  });
 }

@@ -47,14 +47,25 @@ function readBusinessState(file: string) {
   finally { db.close(); }
 }
 
-async function repairAttachmentLoss(sourceDir: string, targetDir: string, keys: string[],
+async function ignoreExternalAttachmentLoss(sourceDir: string, targetDir: string, keys: string[],
   transfer: () => Promise<unknown>, failures: unknown[]) {
   await rm(path.join(targetDir, keys[0]!));
   await rm(path.join(sourceDir, keys[1]!));
   const repaired = await transfer();
   expect(failures).toEqual([]);
-  expect(repaired).toEqual({ pending: 0, transferred: 2 });
+  expect(repaired).toEqual({ pending: 0, transferred: 0 });
   expect(await transfer()).toEqual({ pending: 0, transferred: 0 });
+}
+
+async function expectFilesAfterExternalLoss(targetDir: string, sourceDir: string, keys: string[], originals: Buffer[]) {
+  for (const [index, bytes] of originals.entries()) {
+    const targetFile = readFile(path.join(targetDir, keys[index]!));
+    if (index === 0) await expect(targetFile).rejects.toMatchObject({ code: 'ENOENT' });
+    else expect(await targetFile).toEqual(bytes);
+    const sourceFile = readFile(path.join(sourceDir, keys[index]!));
+    if (index === 1) await expect(sourceFile).rejects.toMatchObject({ code: 'ENOENT' });
+    else expect(await sourceFile).toEqual(bytes);
+  }
 }
 
 function expectNoPersistentTransfers(...databases: Database.Database[]) {
@@ -144,7 +155,7 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
           .toEqual({ pending: 0, transferred: 0 });
         expect(hashFile).not.toHaveBeenCalled();
         hashFile.mockRestore();
-        await repairAttachmentLoss(local.assetsDir, target.assetsDir, keys,
+        await ignoreExternalAttachmentLoss(local.assetsDir, target.assetsDir, keys,
           () => exchangeRequestSyncAttachments(local.host, exchange, (_key, error) => failures.push(error)), failures);
       });
     } finally { lease.release(); }
@@ -153,10 +164,7 @@ it.each([0, 5])('transfers both directions through signed HTTP with lost respons
     try {
       expect(businessState(reopened)).toEqual(targetBefore);
       expect(businessState(local.sqlite)).toEqual(sourceBefore);
-      for (const [index, bytes] of [localBytes, remoteBytes].entries()) {
-        expect(await readFile(path.join(target.assetsDir, keys[index]!))).toEqual(bytes);
-        expect(await readFile(path.join(local.assetsDir, keys[index]!))).toEqual(bytes);
-      }
+      await expectFilesAfterExternalLoss(target.assetsDir, local.assetsDir, keys, [localBytes, remoteBytes]);
       expect(reopened.prepare('SELECT available FROM framed_sync_resource_availability').pluck().all()).toEqual([1, 1]);
       expectNoPersistentTransfers(reopened, local.sqlite);
     } finally { reopened.close(); }

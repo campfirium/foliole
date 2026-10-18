@@ -21,7 +21,7 @@ function versions(databasePath: string) {
   finally { db.close(); }
 }
 
-it('repairs current images on ordinary zero-database-difference rounds and resumes after source absence and receiver restart', async () => {
+it('retains undelivered image demand through source absence and receiver restart', async () => {
   const f = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
   const id = 'zero-diff-resource-article';
@@ -30,19 +30,16 @@ it('repairs current images on ordinary zero-database-difference rounds and resum
     const seeded = await f.left.seedResource({ bytes, nodeId: id, includeImageInBody: true });
     const source = path.join(f.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
     const target = path.join(f.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
+    await fs.rm(source);
     const result = await reconnectFixturePeer(f.right, f.leftSnapshot);
     expect(article(f.rightSnapshot.databasePath, id)).toMatchObject({ content: `Article with an image\n\n![Cover](asset://${seeded.storageKey})` });
-    expect(result).toMatchObject({ complete: true });
-    expect(await fs.readFile(target)).toEqual(bytes);
+    expect(result).toMatchObject({ complete: false });
+    expect(await fs.stat(target).catch(() => null)).toBeNull();
     const before = versions(f.rightSnapshot.databasePath);
     const inventory = (await readFixtureInventory(f.right)).find((entry) => entry.globalId === id)!;
-    expect(inventory.resourceHashes.map((hash) => Buffer.from(hash).toString('hex'))).toContain(seeded.hash);
-    await fs.rm(target);
-    expect(await reconnectFixturePeer(f.right, f.leftSnapshot)).toMatchObject({ complete: true });
-    expect(await fs.readFile(target)).toEqual(bytes);
-    expect(versions(f.rightSnapshot.databasePath)).toEqual(before);
-    await Promise.all([fs.rm(target), fs.rm(source)]);
+    expect(inventory.resourceHashes.map((hash) => Buffer.from(hash).toString('hex'))).not.toContain(seeded.hash);
     expect(await reconnectFixturePeer(f.right, f.leftSnapshot)).toMatchObject({ complete: false });
+    expect(versions(f.rightSnapshot.databasePath)).toEqual(before);
     const restarted = await f.restartRight();
     expect(restarted.snapshot.pid).not.toBe(f.rightSnapshot.pid);
     await fs.writeFile(source, bytes);
