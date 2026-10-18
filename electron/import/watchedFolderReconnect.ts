@@ -79,7 +79,10 @@ export async function confirmWatchedFolderReconnect(args: {
   const sources = currentIndex < 0
     ? [...settings.sources, source]
     : settings.sources.map((item, index) => index === currentIndex ? source : item);
-  saveImportManagerSettings({ ...settings, sources });
-  const updated = upsertChangedWatchedFolderSource(source, new Date().toISOString(), true, binding.binding_id);
-  return { ...preview, binding: updated ?? binding };
+  return openDatabaseConnection().driver.transaction(() => {
+    requireBinding(binding.binding_id);
+    const updated = upsertChangedWatchedFolderSource(source, new Date().toISOString(), true, binding.binding_id);
+    saveImportManagerSettings({ ...settings, sources });
+    return { ...preview, binding: updated ?? binding };
+  });
 }
