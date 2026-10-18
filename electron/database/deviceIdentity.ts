@@ -1,6 +1,7 @@
+import { loadStandaloneDeviceUuid } from '../../lib/core/database/standaloneDeviceIdentity.js';
+
 import type { DatabaseConnection } from './connection.js';
 import { openDatabaseConnection } from './connection.js';
-import { loadJsonSetting } from './settingsStore.js';
 
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
@@ -12,8 +13,7 @@ function normalizeDeviceId(value: unknown): string | null {
 
 export function loadDesktopDeviceId(): string | null {
   return loadActiveSyncGroupDeviceId()
-    ?? normalizeDeviceId(loadJsonSetting(DEVICE_ID_KEY))
-    ?? normalizeDeviceId(loadJsonSetting(LEGACY_DESKTOP_DEVICE_ID_KEY));
+    ?? loadStandaloneDeviceUuid(openDatabaseConnection().driver);
 }
 
 export function loadOrCreateDesktopDeviceId(now = new Date().toISOString()): string {

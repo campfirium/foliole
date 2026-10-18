@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { loadStandaloneDeviceUuid } from '../../lib/core/database/standaloneDeviceIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
@@ -11,15 +12,7 @@ export function loadStandaloneWatchedDeviceId(driver: DatabaseDriver) {
   const hasTable = driver.queryOne<{ present: number }>(`SELECT 1 AS present FROM sqlite_master
     WHERE type = 'table' AND name = 'settings'`);
   if (!hasTable) return null;
-  const row = driver.queryOne<{ value: string }>(`SELECT value FROM settings
-    WHERE key IN ('device_id', 'desktop_device_id') ORDER BY key = 'device_id' DESC LIMIT 1`);
-  if (!row) return null;
-  try {
-    const value = JSON.parse(row.value) as unknown;
-    return typeof value === 'string' && value.trim() ? value.trim() : null;
-  } catch {
-    return row.value.trim() || null;
-  }
+  return loadStandaloneDeviceUuid(driver);
 }
 
 export function retagLocalWatchedFolderBindings(driver: DatabaseDriver, previousId: string | null,

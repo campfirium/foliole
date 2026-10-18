@@ -14,7 +14,9 @@ function readProfile(databasePath: string) {
   try {
     // The host profile lives in host_name; device_id is only a legacy identity.
     const raw = database.prepare("SELECT value FROM settings WHERE key = 'host_name'").get()?.value;
-    return typeof raw === 'string' ? JSON.parse(raw) : null;
+    const uuid = database.prepare("SELECT value FROM settings WHERE key = 'standalone_device_uuid'").get()?.value;
+    return { host: typeof raw === 'string' ? JSON.parse(raw) : null,
+      uuid: typeof uuid === 'string' ? JSON.parse(uuid) : null };
   } finally {
     database.close();
   }
@@ -31,7 +33,9 @@ test('desktop startup owns the current host profile across a legacy identity res
     const libraryHome = await session.electronApp.evaluate(() => process.env.FOLIOLE_LIBRARY_HOME);
     if (!libraryHome) throw new Error('Desktop host did not expose its isolated library home.');
     const databasePath = path.join(libraryHome, 'Data', 'foliole.db');
-    expect(readProfile(databasePath)).toBe(EXPECTED_DEVICE_PROFILE);
+    const initialProfile = readProfile(databasePath);
+    expect(initialProfile.host).toBe(EXPECTED_DEVICE_PROFILE);
+    expect(initialProfile.uuid).toMatch(/^[0-9a-f-]{36}$/);
     await window.evaluate(async () => globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([{
       content: '# Host-owned device profile', id: 'host-owned-device-profile',
       kind: 'topic', title: 'Host-owned device profile'
@@ -47,7 +51,7 @@ test('desktop startup owns the current host profile across a legacy identity res
 
     session = await launchDesktopSession({ env });
     window = session.firstWindow;
-    expect(readProfile(databasePath)).toBe(EXPECTED_DEVICE_PROFILE);
+    expect(readProfile(databasePath)).toEqual(initialProfile);
     await expect.poll(() => window.evaluate(() =>
       globalThis.window?.__folioleWorkspaceDebug?.getNode?.('host-owned-device-profile')
     )).toMatchObject({ title: 'Host-owned device profile' });

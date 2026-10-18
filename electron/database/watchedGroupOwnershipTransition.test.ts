@@ -7,6 +7,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { initializeDesktopStandaloneIdentity } from './standaloneDeviceIdentity.js';
 import { createDesktopSyncGroup, leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
 
 const connection = vi.hoisted(() => ({ current: null as unknown as { driver: unknown } }));
@@ -33,6 +34,7 @@ it('moves a standalone watched source to the new group device and back without c
     VALUES ('local-source', 'needs-folder', 'keep', 'merged', '/Users/test/Articles',
       'draft-import-source-101', '/Users/test/Articles', 'old', 'old',
       'watched:local-source', 'standalone-device')`).run();
+  const standaloneId = initializeDesktopStandaloneIdentity(createBetterSqlite3Driver(db), 'migration');
   const device = createSyncGroupDeviceIdentity({
     device_anchor: '7debea90-baf0-4f85-9481-31aefaf59496', group_id: 'group-1',
     library_path: '/library/local', path_flavor: 'posix'
@@ -44,5 +46,5 @@ it('moves a standalone watched source to the new group device and back without c
     AND object_id = 'local-source'`).get()).toEqual({ sync_dirty: 1 });
   leaveDesktopSyncGroupDevice(device.identity_key);
   expect(db.prepare(`SELECT binding_id, owner_device_identity_key FROM watched_folder_bindings`).get())
-    .toEqual({ binding_id: 'local-source', owner_device_identity_key: 'standalone-device' });
+    .toEqual({ binding_id: 'local-source', owner_device_identity_key: standaloneId });
 });

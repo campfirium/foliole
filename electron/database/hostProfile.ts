@@ -4,6 +4,7 @@ import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNode
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { updateLocalDesktopSourceHosts } from './desktopSources.js';
+import { initializeDesktopStandaloneIdentity } from './standaloneDeviceIdentity.js';
 
 const HOST_NAME_KEY = 'host_name';
 const LEGACY_DEVICE_KEYS = ['device_id', 'desktop_device_id'] as const;
@@ -27,7 +28,7 @@ export function migrateDesktopHostProfile(
   const current = normalize(currentHostName);
   if (!current) throw new Error('Desktop system Host is unavailable.');
   const previous = readSetting(connection.driver, HOST_NAME_KEY) ?? readLegacyName(connection.driver) ?? current;
-  ensureLegacyIdentity(connection.driver, previous, now);
+  initializeDesktopStandaloneIdentity(connection.driver, now);
   if (previous !== current) transferSyncGroupHost(connection.driver, current, now);
   if (previous !== current) transferHostState(connection.driver, previous, current);
   if (previous !== current) updateLocalDesktopSourceHosts({
@@ -169,11 +170,6 @@ function pruneOtherHostObjectState(driver: DatabaseDriver, current: string) {
     driver.execute('DELETE FROM sync_object_state WHERE object_type = ? AND object_id = ?',
       [row.object_type, row.object_id]);
   }
-}
-
-function ensureLegacyIdentity(driver: DatabaseDriver, fallback: string, now: string) {
-  if (readLegacyName(driver)) return;
-  writeSetting(driver, 'device_id', fallback, now);
 }
 
 function readLegacyName(driver: DatabaseDriver) {

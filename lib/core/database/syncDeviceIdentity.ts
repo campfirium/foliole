@@ -1,4 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
+import { loadStandaloneDeviceUuid } from './standaloneDeviceIdentity.js';
 
 const DEVICE_ID_KEY = 'device_id';
 const LEGACY_DESKTOP_DEVICE_ID_KEY = 'desktop_device_id';
@@ -28,6 +29,8 @@ export function loadDatabaseDeviceId(driver: DatabaseDriver) {
   );
   const activeGroupDeviceId = parseSettingValue(activeGroup?.local_device_id);
   if (activeGroupDeviceId) return activeGroupDeviceId;
+  const standalone = loadStandaloneDeviceUuid(driver);
+  if (standalone) return standalone;
   const existing = driver.queryOne<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DEVICE_ID_KEY]);
   const existingDeviceId = parseSettingValue(existing?.value);
   if (existingDeviceId) {

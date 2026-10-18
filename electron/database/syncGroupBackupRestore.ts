@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseBindValue, DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { loadStandaloneDeviceUuid } from '../../lib/core/database/standaloneDeviceIdentity.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { SyncGroupRestoreEvent } from '../../lib/platform/syncGroupRestoreContract.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
@@ -8,6 +9,8 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.j
 import { readBackupRestoreLocalGroup } from './backupRestoreLocalGroup.js';
 import { saveBackupRestorePendingSync } from './backupRestorePendingSync.js';
 import { writeJsonSetting } from './settingsStore.js';
+import { loadLegacyStandaloneDeviceId } from './standaloneDeviceIdentity.js';
+import { retagLocalWatchedFolderBindings } from './watchedGroupOwnershipTransition.js';
 
 const GROUP_TABLES = [
   'sync_group_devices', 'sync_group_removal_decisions',
@@ -39,7 +42,7 @@ export function captureBackupRestoreHostSettings(driver: DatabaseDriver) {
   const hostSettings = driver.queryAll<DatabaseRow>("SELECT * FROM setting_records WHERE scope = 'host'");
   const materializedHostSettings = driver.queryAll<DatabaseRow>(`SELECT * FROM settings
     WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')
-      OR key IN ('host_name', 'device_id', 'desktop_device_id')`);
+      OR key IN ('host_name', 'device_id', 'desktop_device_id', 'standalone_device_uuid')`);
   const hostObjectStates = driver.queryAll<DatabaseRow>(
     "SELECT * FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
   return { hostSettings, materializedHostSettings, hostObjectStates };
@@ -114,6 +117,7 @@ export function publishBackupRestoreEvent(driver: DatabaseDriver, event: SyncGro
 }
 
 export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: ReturnType<typeof captureBackupRestoreHostSettings>) {
+  const restoredId = loadStandaloneDeviceUuid(tx) ?? loadLegacyStandaloneDeviceId(tx);
   tx.execute("DELETE FROM settings WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')");
   tx.execute("DELETE FROM setting_records WHERE scope = 'host'");
   for (const row of snapshot.hostSettings) insertRow(tx, 'setting_records', row);
@@ -121,6 +125,8 @@ export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: Ret
     tx.execute('DELETE FROM settings WHERE key = ?', [row.key as string]);
     insertRow(tx, 'settings', row);
   }
+  const currentId = loadStandaloneDeviceUuid(tx);
+  if (currentId) retagLocalWatchedFolderBindings(tx, restoredId, currentId, new Date().toISOString());
   tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
   for (const row of snapshot.hostObjectStates) insertRestoredHostObjectState(tx, row);
 }
