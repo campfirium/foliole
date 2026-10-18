@@ -102,8 +102,8 @@ it.each(['hash', 'unready', 'missing'] as const)('rejects %s detail changes in t
   try {
     await host.receive([textBranch('version', 'Body')]);
     const summaries = framedSyncInventorySummary(await readFramedSyncInventory(host.db));
-    if (change === 'hash') summaries[0]!.sharedStateHash = new Uint8Array(32);
-    if (change === 'unready') summaries[0]!.unready = !summaries[0]!.unready;
+    if (change === 'hash') summaries[0] = { ...summaries[0]!, sharedStateHash: new Uint8Array(32) };
+    if (change === 'unready') summaries[0] = { ...summaries[0]!, unready: !summaries[0]!.unready };
     if (change === 'missing') host.sqlite.exec('DELETE FROM framed_sync_inventory');
     await expect(host.db.transaction(db => expandRequestSyncNodeSummaries(db, summaries, ['topic'])))
       .rejects.toThrow('framed_sync_source_changed');
