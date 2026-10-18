@@ -14,6 +14,8 @@ function database(local) {
     CREATE TABLE sync_group_local_state(singleton_id INTEGER, group_id TEXT, local_device_identity_key TEXT, state TEXT);
     CREATE TABLE sync_group_devices(group_id TEXT, device_identity_key TEXT, platform TEXT, state TEXT);
     CREATE TABLE companion_meta(key TEXT, value TEXT);
+    CREATE TABLE nodes(id TEXT, body_blob_hash TEXT, content TEXT, deleted_at TEXT);
+    CREATE TABLE foreground_daily_time(source_id TEXT, day_key TEXT, duration_ms INTEGER);
     CREATE TABLE sync_object_state(object_type TEXT, object_id TEXT, content_hash TEXT, sync_dirty INTEGER);
     CREATE TABLE node_open_state(node_id TEXT PRIMARY KEY, last_opened_at TEXT NOT NULL);
     CREATE TABLE parent_child_order(parent_id TEXT PRIMARY KEY, child_ids_json TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -87,4 +89,25 @@ it('shows both actual values for review while preserving differences and databas
   ]);
   expect(snapshot()).toEqual(before);
   expect(JSON.stringify(result)).not.toMatch(/test-key|192\.168/u);
+});
+
+it('reports time buckets and missing bodies without writing or accepting divergent content', () => {
+  const phone = database('phone');
+  const desktop = database('mac');
+  phone.exec(`INSERT INTO sync_object_state VALUES('foreground_source', 'source', 'new', 1);
+    INSERT INTO foreground_daily_time VALUES('source', '2026-10-19', 9000), ('source', '2026-10-18', 1000);
+    INSERT INTO nodes VALUES('missing', 'hash', NULL, NULL), ('present', 'hash2', 'body', NULL),
+      ('empty', NULL, NULL, NULL), ('deleted-missing', 'hash3', NULL, '2026-10-18');`);
+  desktop.exec(`INSERT INTO sync_object_state VALUES('foreground_source', 'source', 'old', 0);
+    INSERT INTO foreground_daily_time VALUES('source', '2026-10-18', 1000);`);
+  for (const db of [phone, desktop]) db.exec('PRAGMA query_only = ON');
+  const result = inspectExistingSyncBaseline(phone, desktop);
+  expect(result).toMatchObject({ resultStatus: 'approval_required', dirtyRecordCount: 1,
+    phoneBodyCompleteness: { nodeCount: 4, bodyHashWithoutContentCount: 2,
+      activeBodyHashWithoutContentCount: 1 } });
+  expect(result.differences[0].actualValues).toEqual({
+    phone: [{ day_key: '2026-10-18', duration_ms: 1000 }, { day_key: '2026-10-19', duration_ms: 9000 }],
+    desktop: [{ day_key: '2026-10-18', duration_ms: 1000 }]
+  });
+  expect(phone.prepare('SELECT sync_dirty FROM sync_object_state').get().sync_dirty).toBe(1);
 });

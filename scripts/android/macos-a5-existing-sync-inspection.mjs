@@ -32,6 +32,11 @@ function requireMembers(phone, desktop) {
 }
 
 function inspectDifferenceValues(phone, desktop, row) {
+  if (row.object_type === 'foreground_source') {
+    const query = 'SELECT day_key, duration_ms FROM foreground_daily_time WHERE source_id = ? ORDER BY day_key';
+    return { actualValues: { phone: phone.prepare(query).all(row.object_id),
+      desktop: desktop.prepare(query).all(row.object_id) } };
+  }
   const queries = {
     node_open_state: 'SELECT node_id, last_opened_at FROM node_open_state WHERE node_id = ?',
     parent_child_order: 'SELECT parent_id, child_ids_json, updated_at FROM parent_child_order WHERE parent_id = ?'
@@ -42,6 +47,13 @@ function inspectDifferenceValues(phone, desktop, row) {
     phone: phone.prepare(query).get(row.object_id) ?? null,
     desktop: desktop.prepare(query).get(row.object_id) ?? null
   } };
+}
+
+function inspectBodyCompleteness(database) {
+  return database.prepare(`SELECT COUNT(*) AS nodeCount,
+    COUNT(CASE WHEN body_blob_hash IS NOT NULL AND content IS NULL THEN 1 END) AS bodyHashWithoutContentCount,
+    COUNT(CASE WHEN body_blob_hash IS NOT NULL AND content IS NULL AND deleted_at IS NULL THEN 1 END)
+      AS activeBodyHashWithoutContentCount FROM nodes`).get();
 }
 
 export function inspectExistingSyncBaseline(phoneDb, desktopDb) {
@@ -65,7 +77,8 @@ export function inspectExistingSyncBaseline(phoneDb, desktopDb) {
     return [{ ...row, desktop_content_hash: remote?.content_hash ?? null,
       ...inspectDifferenceValues(phoneDb, desktopDb, row) }];
   });
-  return { syncGroupId: phone.group_id, syncGroupCredentialsPresent: true, syncGroupPeerConflict: false,
+  return { phoneBodyCompleteness: inspectBodyCompleteness(phoneDb),
+    syncGroupId: phone.group_id, syncGroupCredentialsPresent: true, syncGroupPeerConflict: false,
     activeSyncGroupMemberCount: phone.members.filter(row => row.state === 'active').length,
     syncGroupRemotePeerFingerprint: fingerprint(desktop.local_device_identity_key),
     localDeviceIdentityFingerprint: fingerprint(phone.local_device_identity_key),
