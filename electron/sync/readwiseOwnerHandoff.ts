@@ -44,6 +44,10 @@ function stopTargets(groupId: string, localId: string, ownerId: string | null) {
   const desktopIds = group.devices.filter((device) => device.state === 'active' &&
     isDesktopSyncGroupPlatform(device.platform)).map((device) => device.device_identity_key);
   if (!desktopIds.includes(localId)) throw new Error('readwise_local_member_inactive');
+  const previousOwner = ownerId ? openDatabaseConnection().driver.queryOne<{ state: string }>(
+    'SELECT state FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?',
+    [groupId, ownerId]) : null;
+  if (previousOwner?.state === 'left') return [];
   if (ownerId && ownerId !== localId) return [ownerId];
   if (ownerId === localId) return [localId];
   return desktopIds.sort();
@@ -213,6 +217,9 @@ async function performHandoff(intent: ReadwiseHandoffIntent) {
     if (!current.group || current.group.group_id !== groupId || current.mode !== request.mode ||
         current.assignment.active_device_identity_key !== ownerId ||
         current.assignment.active_owner_epoch !== request.epoch) throw new Error('readwise_handoff_state_changed');
+    if (!targets.length && stopTargets(groupId, localId, ownerId).length) {
+      throw new Error('readwise_handoff_state_changed');
+    }
     const nextEpoch = request.epoch + 1;
     saveReadwiseOwnerGuard({ epoch: nextEpoch, groupId, mode: request.mode,
       ownerId: localId, state: 'active', targetId: null });

@@ -32,6 +32,7 @@ import { exchangeDesktopSyncGroupMemberState, publishDesktopSyncGroupMemberState
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
+import { runReadwiseTakeoverFixture } from './readwiseTakeover.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
 import { runWatchedSettingsFixture } from './watchedSettingsSync.fixture.js';
 
@@ -202,7 +203,9 @@ async function run(action: string, args: Record<string, unknown>) {
   throw new Error('unknown test action');
 }
 process.on('message', (message: { id: number; action: string; args: Record<string, unknown> }) => {
-  const handler = message.action === 'local_content_edit'
+  const handler = message.action.startsWith('readwise')
+    ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runReadwiseTakeoverFixture(action, args))
+    : message.action === 'local_content_edit'
     ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runDesktopFramedSyncEditCommand(action, args))
     : message.action.startsWith('watched')
       ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runWatchedSettingsFixture(action, args))
