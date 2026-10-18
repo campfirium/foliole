@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { documentPanelBodyMock, renderSectionWithProps } from './DocumentPanelSection.testSupport';
 
@@ -18,14 +18,14 @@ async function expectTopicSearchMatch(args: {
   });
 }
 
-async function openTopicSearchInput() {
-  fireEvent.keyDown(window, { ctrlKey: true, key: 'f' });
+async function openTopicSearchInput(modifier: 'ctrlKey' | 'metaKey') {
+  fireEvent.keyDown(window, { [modifier]: true, key: 'f' });
   const input = await screen.findByLabelText('Topic search');
   expect(input).toHaveFocus();
   return input;
 }
 
-async function createTopicSearchSession() {
+async function createTopicSearchSession(modifier: 'ctrlKey' | 'metaKey') {
   const revealSelection = vi.fn();
   const revealSelectionCentered = vi.fn(() => {
     const editorSink = document.createElement('button');
@@ -49,7 +49,7 @@ async function createTopicSearchSession() {
   } as never);
 
   return {
-    input: await openTopicSearchInput(),
+    input: await openTopicSearchInput(modifier),
     revealSelection,
     revealSelectionCentered,
     restoreSelection,
@@ -75,9 +75,21 @@ function clickNextMatchButton() {
   fireEvent.click(screen.getByRole('button', { name: 'Next match' }));
 }
 
-describe('DocumentPanelSection topic search', () => {
-  it('opens topic search with Ctrl+F and navigates topic matches', async () => {
-    const { input, restoreSelection, revealSelection, revealSelectionCentered, setSearchDecorations } = await createTopicSearchSession();
+function mockPlatform(platform: string) {
+  vi.spyOn(navigator, 'platform', 'get').mockReturnValue(platform);
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(platform);
+}
+
+afterEach(() => vi.restoreAllMocks());
+
+describe.each([
+  { platform: 'Win32', modifier: 'ctrlKey' as const },
+  { platform: 'MacIntel', modifier: 'metaKey' as const }
+])('DocumentPanelSection topic search on $platform', ({ platform, modifier }) => {
+  beforeEach(() => mockPlatform(platform));
+
+  it('opens topic search with the platform shortcut and navigates topic matches', async () => {
+    const { input, restoreSelection, revealSelection, revealSelectionCentered, setSearchDecorations } = await createTopicSearchSession(modifier);
     fireEvent.change(input, { target: { value: 'alpha' } });
 
     await expectTopicSearchMatch({
@@ -138,7 +150,7 @@ describe('DocumentPanelSection topic search', () => {
       showAnswerSection: true
     });
 
-    fireEvent.keyDown(window, { ctrlKey: true, key: 'f' });
+    fireEvent.keyDown(window, { [modifier]: true, key: 'f' });
 
     expect(screen.queryByLabelText('Topic search')).not.toBeInTheDocument();
   });

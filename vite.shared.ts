@@ -201,7 +201,7 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
         ...(process.env.FOLIOLE_SIM_OUTPUT ? ['scripts/sync/simulator/simulator.runner.mjs'] : [])
       ],
       exclude: ['tests/**', 'node_modules/**', 'dist/**', ...resolvePlatformTestExcludes()],
-      setupFiles: './src/test/setup.ts',
+      setupFiles: path.resolve(projectRoot, 'src/test/setup.ts'),
       globals: true
     }
   });

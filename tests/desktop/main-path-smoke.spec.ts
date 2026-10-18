@@ -104,8 +104,8 @@ test('desktop main path smoke covers import, reading, review entry, and sync set
   await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(IMPORTED_TITLE);
 
   const settingsDialog = await openSettingsCategory(desktopWindow, 'Sync');
-  await expect(settingsDialog.getByRole('heading', { level: 3, name: /^(Sync|同步)$/ })).toBeVisible();
-  await expect(settingsDialog.getByRole('switch', { name: /^(Enable desktop sync|启用桌面同步)$/ })).toBeVisible();
-  await expect(settingsDialog.getByText(/^(Device role|设备角色)$/)).toBeVisible();
-  await expect(settingsDialog.getByText(/^(Connected devices|已连接设备)$/)).toBeVisible();
+  const syncSection = settingsDialog.getByRole('region', { name: /^(Sync section|同步设置区)$/ });
+  await expect(syncSection.getByRole('switch', { name: /^(Sync|同步)$/ })).toBeEnabled();
+  await expect(syncSection.getByRole('button', { name: /^(Create Sync Group|建立同步组)$/ })).toBeEnabled();
+  await expect(syncSection.getByRole('button', { name: /^(Sync now|立即同步)$/i })).toBeDisabled();
 });
