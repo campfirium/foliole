@@ -116,13 +116,11 @@ describe('useCompanionArticleSurface browsing', () => {
     await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeOpenState).toHaveBeenCalledWith(
       expect.objectContaining({ nodeId: 'article-2' })
     ));
-    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        nodeOpenStateById: expect.objectContaining({
-          'article-2': expect.objectContaining({ nodeId: 'article-2' })
-        })
-      })
-    );
+    // The committed open record is read through its registered scope, not a supplied projection.
+    await waitFor(() => expect(workspaceSync.refreshAfterMutation.mock.invocationCallOrder.some(order =>
+      order > syncObjectMock.saveCompanionSyncNodeOpenState.mock.invocationCallOrder[0]!)).toBe(true));
+    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalledWith(
+      expect.objectContaining({ nodeOpenStateById: expect.anything() }));
   });
 
   it('reads complete local content without starting an extra sync', async () => {

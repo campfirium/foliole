@@ -83,7 +83,9 @@ async function finishPending(args: Args,
     const saved = pending.current;
     if (!saved) return;
     if (saved.token.scope !== getCompanionReadingScope()) { pending.current = null; return; }
-    const snapshot = await args.workspaceSync.refreshAfterMutation(saved.mutation.partial ? undefined : saved.mutation.snapshot);
+    // A grade registers its committed review scope; a supplied projection would force a complete read.
+    const preview = saved.mutation.partial || saved.mutation.action === 'grade' ? undefined : saved.mutation.snapshot;
+    const snapshot = await args.workspaceSync.refreshAfterMutation(preview);
     if (!snapshot) throw new Error('Could not refresh the saved action.');
     if (confirmFlowMutation(saved.mutation, snapshot)) {
       args.flow.advance(saved.token, saved.mutation.action, snapshot, saved.mutation.now);

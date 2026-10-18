@@ -30,8 +30,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
   const reading = deferred();
   const release = deferred();
   let holdDisplay = false;
-  let directoryRows = 0;
-  let directoryQueries = 0;
+  const counts = { rows: 0, queries: 0, fullQueries: 0 };
   const projectionPlans: ProjectionPlan[] = [];
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
@@ -46,8 +45,9 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
         const plan = readProjectionPlan(database, sql, params);
         if (plan) projectionPlans.push(plan);
         if (sql.includes('AS collection_source_content')) {
-          directoryRows += result.values?.length ?? 0;
-          directoryQueries += 1;
+          counts.rows += result.values?.length ?? 0;
+          counts.queries += 1;
+          if (!sql.includes('selected_nodes')) counts.fullQueries += 1;
         }
         if (holdDisplay && sql.includes('AS collection_source_content')) {
           reading.resolve();
@@ -72,9 +72,9 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
     retrieveConnection: async () => adapt(writer)
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
-  return { owner, file, reading, release, directoryRows: () => directoryRows,
-    projectionPlans: () => projectionPlans,
-    directoryQueries: () => directoryQueries, hold: () => { holdDisplay = true; },
+  return { owner, file, reading, release, directoryRows: () => counts.rows,
+    projectionPlans: () => projectionPlans, directoryQueries: () => counts.queries,
+    fullDirectoryQueries: () => counts.fullQueries, hold: () => { holdDisplay = true; },
     async close() {
       await owner.close();
       for (const connection of connections.values()) if (connection.open) connection.close();

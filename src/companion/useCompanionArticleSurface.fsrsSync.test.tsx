@@ -207,6 +207,8 @@ describe('useCompanionArticleSurface fsrs sync', () => {
     expectFsrsReviewRecordSaved(grade);
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
       .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[1]!);
+    // The grade's committed review scope is consumed without forcing a complete read.
+    expect((workspaceSync.refreshAfterMutation.mock.calls.at(-1) as unknown[] | undefined)?.[0]).toBeUndefined();
   });
 
   it('does not replace the companion snapshot when fsrs review persistence is unavailable', async () => {

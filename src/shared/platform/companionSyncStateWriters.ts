@@ -26,7 +26,10 @@ import {
 
 export async function saveCompanionSyncNodeOpenState(args: { lastOpenedAt: string; nodeId: string }) {
   if (!isNativeCompanionOpenStateWriteRuntime()) return null;
-  return runCompanionSyncMutationTask(() => saveIosOpenState({ last_opened_at: args.lastOpenedAt, node_id: args.nodeId }));
+  return runCompanionSyncMutationTask(
+    () => saveIosOpenState({ last_opened_at: args.lastOpenedAt, node_id: args.nodeId }),
+    { kind: 'nodes', nodeIds: [], openStateNodeIds: [args.nodeId] }
+  );
 }
 
 export interface CompanionSyncSettingRecordArgs {
@@ -89,7 +92,10 @@ export async function saveCompanionSyncNodeReviewRecord(args: {
   reviewLog?: NativeSyncReviewLogDraft;
 }) {
   if (!isNativeCompanionReviewWriteRuntime()) return null;
-  return runCompanionHighValueMutationTask(() => saveCompanionSyncNodeReviewRecordWithinWriterTask(args));
+  return runCompanionHighValueMutationTask(
+    () => saveCompanionSyncNodeReviewRecordWithinWriterTask(args),
+    { kind: 'nodes', nodeIds: [], reviewNodeIds: [args.nodeId] }
+  );
 }
 
 export async function saveCompanionSyncNodeReviewRecordWithinWriterTask(args: {
@@ -111,7 +117,10 @@ export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
   if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncMutationTask(() => saveIosActiveViewState({ node_id: nodeId }));
+  return runCompanionSyncMutationTask(
+    () => saveIosActiveViewState({ node_id: nodeId }),
+    { kind: 'nodes', nodeIds: [], activeNode: true }
+  );
 }
 
 export async function saveCompanionSyncNodeViewState(args: {

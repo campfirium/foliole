@@ -7,23 +7,34 @@ import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 import { companionWorkspaceSnapshots, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
+import { mergeCompanionLocalState } from './sync/workspace-state/companionLocalStateProjection.js';
 import { buildIosPersistedNodeViews } from './sync/workspace-state/iosCompanionWorkspaceSnapshotRows.js';
 import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCompanionWorkspaceSnapshotStore.js';
 
+type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
+
 async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
   return getIosCompanionDatabaseOwner().readSnapshot(async db => {
-    if (input.current && input.scope.kind === 'nodes') {
-      const roots = new Set(input.scope.nodeIds);
-      const nodes = await loadCompanionContentProjection(db, [...roots]);
-      const expected = Object.values(input.current.nodesById)
-        .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
-        .map(node => node.id);
-      if (canMergeWorkspaceContentProjection(input.current, nodes, expected)) {
-        return mergeProjectedNodeViews(db, mergeWorkspaceContentProjection(input.current, nodes), Object.keys(nodes));
-      }
-    }
-    return loadIosCompanionWorkspaceSnapshot(db);
+    const scoped = input.current && input.scope.kind === 'nodes'
+      ? await readScoped(db, input.current, input.scope) : null;
+    return scoped ?? loadIosCompanionWorkspaceSnapshot(db);
   });
+}
+
+/** Returns null when the committed scope cannot be proven against this baseline. */
+async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeScope) {
+  const reviewed = scope.reviewNodeIds ?? [];
+  const roots = new Set([...scope.nodeIds, ...reviewed]);
+  let next = current;
+  if (roots.size) {
+    const nodes = await loadCompanionContentProjection(db, [...roots]);
+    const expected = Object.values(current.nodesById)
+      .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
+      .map(node => node.id);
+    if (!canMergeWorkspaceContentProjection(current, nodes, expected, reviewed)) return null;
+    next = await mergeProjectedNodeViews(db, mergeWorkspaceContentProjection(current, nodes), Object.keys(nodes));
+  }
+  return mergeCompanionLocalState(db, next, scope);
 }
 
 async function mergeProjectedNodeViews(db: DbPort, snapshot: WorkspaceSnapshot, nodeIds: string[]) {

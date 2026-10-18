@@ -9,5 +9,6 @@ companionWorkspaceSnapshots.subscribe(() => registerWorkspaceAttachmentResources
 subscribeCompanionReadingScope(() => companionWorkspaceSnapshots.reset(null));
 
 export function registerCompanionWorkspaceRefresh(scope: WorkspaceRefreshScope) {
-  if (scope.kind === 'full' || scope.nodeIds.length) companionWorkspaceSnapshots.register(scope);
+  if (scope.kind === 'full' || scope.nodeIds.length || scope.reviewNodeIds?.length ||
+    scope.openStateNodeIds?.length || scope.activeNode) companionWorkspaceSnapshots.register(scope);
 }

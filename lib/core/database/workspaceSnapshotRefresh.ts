@@ -1,6 +1,16 @@
+/**
+ * `nodeIds` are content projections. The local-state lists name committed
+ * review, open-record or active-node writes that can be read narrowly.
+ */
 export type WorkspaceRefreshScope =
   | { kind: 'full' }
-  | { kind: 'nodes'; nodeIds: readonly string[] };
+  | {
+    kind: 'nodes';
+    nodeIds: readonly string[];
+    reviewNodeIds?: readonly string[];
+    openStateNodeIds?: readonly string[];
+    activeNode?: boolean;
+  };
 
 interface PendingRefresh {
   revision: number;
@@ -11,10 +21,25 @@ export interface WorkspaceSnapshotReader<T> {
   (input: { current: T; scope: WorkspaceRefreshScope }): Promise<T>;
 }
 
+type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
+
+function unionIds(scopes: readonly NodeScope[], pick: (scope: NodeScope) => readonly string[] | undefined) {
+  return [...new Set(scopes.flatMap(scope => pick(scope) ?? []))];
+}
+
+function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
+  const scope: NodeScope = { kind: 'nodes', nodeIds: unionIds(scopes, item => item.nodeIds) };
+  const reviewNodeIds = unionIds(scopes, item => item.reviewNodeIds);
+  const openStateNodeIds = unionIds(scopes, item => item.openStateNodeIds);
+  if (reviewNodeIds.length) scope.reviewNodeIds = reviewNodeIds;
+  if (openStateNodeIds.length) scope.openStateNodeIds = openStateNodeIds;
+  if (scopes.some(item => item.activeNode)) scope.activeNode = true;
+  return scope;
+}
+
 function combineScopes(entries: readonly PendingRefresh[]): WorkspaceRefreshScope {
   if (entries.some(entry => entry.scope.kind === 'full')) return { kind: 'full' };
-  return { kind: 'nodes', nodeIds: [...new Set(entries.flatMap(entry =>
-    entry.scope.kind === 'nodes' ? entry.scope.nodeIds : []))] };
+  return copyNodeScope(entries.map(entry => entry.scope as NodeScope));
 }
 
 /** Owns published snapshots, not database writes or uncommitted editor drafts. */
@@ -37,7 +62,7 @@ export class WorkspaceSnapshotRefresh<T> {
   /** Call only for committed changes, or an explicit request to reread current state. */
   register(scope: WorkspaceRefreshScope) {
     this.pending.push({ revision: ++this.revision, scope: scope.kind === 'full'
-      ? scope : { kind: 'nodes', nodeIds: [...scope.nodeIds] } });
+      ? scope : copyNodeScope([scope]) });
   }
 
   reset(snapshot: T) {
