@@ -29,9 +29,10 @@ permissions:
   actions: read
   contents: read
 
+# The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: remote-quality-dev-remote-${{ github.ref }}-orchestrator
-  cancel-in-progress: false
+  group: quality-dev-remote
+  cancel-in-progress: true
 
 jobs:
   dev-ref:

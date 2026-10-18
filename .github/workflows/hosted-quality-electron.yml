@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-electron-${{ matrix.host }}-${{ matrix.bucket }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-electron-${{ matrix.host }}-${{ matrix.bucket }}-${{ github.run_id }}
       cancel-in-progress: false
     strategy:
       fail-fast: false

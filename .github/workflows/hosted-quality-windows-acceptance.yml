@@ -20,7 +20,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-windows-acceptance
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-windows-acceptance-${{ github.run_id }}
       cancel-in-progress: false
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}

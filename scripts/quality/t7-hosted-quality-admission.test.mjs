@@ -3,97 +3,102 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  hasCompletedFullRemoteValidation,
+  decideT7Admission,
   resolveT7Admission,
-  shouldRunT7
+  selectVerdictCandidates
 } from './t7-hosted-quality-admission.mjs';
 
 const SHA = '0123456789abcdef0123456789abcdef01234567';
+const SELF = 900;
 
 function run(overrides = {}) {
-  return {
-    conclusion: 'success',
-    display_title: `Remote Quality (full) @ ${SHA} via ${SHA}`,
-    status: 'completed',
-    ...overrides
-  };
+  return { conclusion: 'success', created_at: '2026-10-18T00:00:00Z', head_sha: SHA,
+    id: 1, status: 'completed', ...overrides };
 }
 
-describe('T7 Hosted Quality admission', () => {
-  it('skips only a scheduled duplicate of a successful Remote Quality full validation', () => {
-    expect(hasCompletedFullRemoteValidation([run()], SHA)).toBe(true);
-    expect(shouldRunT7({
-      eventName: 'schedule', releaseActive: false, runs: [run()], targetSha: SHA
-    })).toBe(false);
-    expect(shouldRunT7({
-      eventName: 'workflow_dispatch', releaseActive: false, runs: [run()], targetSha: SHA
-    })).toBe(true);
+const decide = (verdicts, runs = [run()]) => decideT7Admission({
+  currentRunId: SELF, releaseActive: false, runs, verdicts
+});
+
+describe('T7 Hosted Quality admission decision', () => {
+  it('skips only on a decisive full verdict', () => {
+    expect(decide([{ kind: 'full', verdict: 'passed' }])).toBe('decisive-full-verdict');
+    expect(decide([{ kind: 'full', verdict: 'failed' }])).toBe('decisive-full-verdict');
+    expect(decide([{ verdict: 'incomplete' }])).toBe('admitted');
+    expect(decide([{ kind: 'replay', verdict: 'passed' }, { kind: 'replay', verdict: 'failed' }])).toBe('admitted');
+    expect(decide([])).toBe('admitted');
   });
 
-  it('keeps failed, different, scoped, canceled, and active validations', () => {
-    const failed = run({ conclusion: 'failure' });
-    expect(shouldRunT7({
-      eventName: 'schedule', releaseActive: false, runs: [failed], targetSha: SHA
-    })).toBe(true);
-    for (const candidate of [
-      failed,
-      run({ display_title: `Remote Quality (desktop) @ ${SHA} via ${SHA}` }),
-      run({ display_title: `Remote Quality (full) @ ${SHA} via ${'a'.repeat(40)}` }),
-      run({ display_title: `Remote Quality (full) @ ${'a'.repeat(40)} via ${SHA}` }),
-      run({ conclusion: 'cancelled' }),
-      run({ conclusion: '', status: 'in_progress' })
-    ]) expect(hasCompletedFullRemoteValidation([candidate], SHA)).toBe(false);
+  it('does not count the current run as active, but yields to any other active run', () => {
+    expect(decide([], [run({ id: SELF, status: 'in_progress' })])).toBe('admitted');
+    expect(decide([], [run({ id: SELF, status: 'in_progress' }), run({ id: 2, status: 'queued' })]))
+      .toBe('active-run');
   });
 
-  it('pauses every dev entry while the release branch exists', async () => {
-    const runner = vi.fn(async () => ({ code: 0, stderr: '', stdout: '{}' }));
-    const baseEnv = {
-      FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole',
-      FOLIOLE_QUALITY_TARGET_SHA: SHA
-    };
-    await expect(resolveT7Admission({
-      env: { ...baseEnv, FOLIOLE_QUALITY_EVENT: 'schedule' }, runner
-    })).resolves.toEqual({ reason: 'release-active', shouldRun: false });
-    await expect(resolveT7Admission({
-      env: { ...baseEnv, FOLIOLE_QUALITY_EVENT: 'workflow_dispatch' }, runner
-    })).resolves.toEqual({ reason: 'release-active', shouldRun: false });
-    expect(runner).toHaveBeenCalledTimes(2);
-    expect(runner.mock.calls.every(([, args]) => args.some((arg) => arg.includes('/git/ref/heads/release'))))
-      .toBe(true);
+  it('pauses for an active release before anything else', () => {
+    expect(decideT7Admission({ currentRunId: SELF, releaseActive: true, runs: [], verdicts: [] }))
+      .toBe('release-active');
   });
 
-  it('checks T4 history only for a scheduled T7 without a release', async () => {
-    const runner = vi.fn(async (_command, args) => {
-      if (args.some((arg) => arg.includes('/git/ref/heads/release'))) {
-        return { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
-      }
-      return { code: 0, stderr: '', stdout: JSON.stringify({ workflow_runs: [run()] }) };
-    });
-    const baseEnv = {
-      FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole',
-      FOLIOLE_QUALITY_TARGET_SHA: SHA
-    };
-    await expect(resolveT7Admission({
-      env: { ...baseEnv, FOLIOLE_QUALITY_EVENT: 'schedule' }, runner
-    })).resolves.toEqual({ reason: 'duplicate-full-validation', shouldRun: false });
-    await expect(resolveT7Admission({
-      env: { ...baseEnv, FOLIOLE_QUALITY_EVENT: 'workflow_dispatch' }, runner
-    })).resolves.toEqual({ reason: 'admitted', shouldRun: true });
-    expect(runner).toHaveBeenCalledTimes(3);
+  it('reads verdicts only for finished success or failure runs of the target SHA', () => {
+    const candidates = selectVerdictCandidates([
+      run({ id: 1 }), run({ conclusion: 'failure', id: 2 }),
+      run({ conclusion: 'cancelled', id: 3 }), run({ id: 4, status: 'in_progress', conclusion: null }),
+      run({ head_sha: 'a'.repeat(40), id: 5 }), run({ id: SELF })
+    ], SHA, SELF);
+    expect(candidates.map((candidate) => candidate.id).sort()).toEqual([1, 2]);
   });
+});
 
-  it('fails closed when release state cannot be read', async () => {
-    const runner = vi.fn(async () => ({
-      code: 1, stderr: 'HTTP 403: Resource not accessible by integration', stdout: ''
-    }));
-    await expect(resolveT7Admission({
-      env: {
-        FOLIOLE_QUALITY_EVENT: 'schedule',
-        FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole',
-        FOLIOLE_QUALITY_TARGET_SHA: SHA
-      },
-      runner
-    })).rejects.toThrow('failed to read release ref');
+function createRunner({ release = false, runsByWorkflow = {} } = {}) {
+  return vi.fn(async (_command, args) => {
+    const endpoint = args.at(-1);
+    if (endpoint.includes('/git/ref/heads/release')) {
+      return release ? { code: 0, stderr: '', stdout: '{}' } : { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
+    }
+    const workflow = Object.keys(runsByWorkflow).find((name) => endpoint.includes(`/workflows/${name}/`));
+    return { code: 0, stderr: '', stdout: JSON.stringify({ workflow_runs: runsByWorkflow[workflow] ?? [] }) };
+  });
+}
+
+const env = { FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole', FOLIOLE_QUALITY_RUN_ID: String(SELF),
+  FOLIOLE_QUALITY_TARGET_SHA: SHA };
+
+describe('T7 Hosted Quality admission resolution', () => {
+  it('pauses while the release branch exists without reading run history', async () => {
+    const runner = createRunner({ release: true });
+    await expect(resolveT7Admission({ env, runner, readVerdict: vi.fn() }))
+      .resolves.toEqual({ reason: 'release-active', shouldRun: false });
     expect(runner).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a SHA whose scheduled run already produced a decisive full verdict', async () => {
+    const runner = createRunner({ runsByWorkflow: { 't7-hosted-quality.yml': [run({ id: 7 }), run({ id: SELF, status: 'in_progress' })] } });
+    const readVerdict = vi.fn(() => ({ kind: 'full', verdict: 'failed' }));
+    await expect(resolveT7Admission({ env, runner, readVerdict }))
+      .resolves.toEqual({ reason: 'decisive-full-verdict', shouldRun: false });
+    expect(readVerdict).toHaveBeenCalledWith({ repository: 'campfirium/foliole', runId: 7, targetSha: SHA });
+  });
+
+  it('runs when only incomplete or replay evidence exists and the only active run is itself', async () => {
+    const runner = createRunner({ runsByWorkflow: {
+      'remote-quality.yml': [run({ id: 3 })], 't7-hosted-quality.yml': [run({ id: SELF, status: 'in_progress' })]
+    } });
+    const readVerdict = vi.fn(() => ({ verdict: 'incomplete' }));
+    await expect(resolveT7Admission({ env, runner, readVerdict }))
+      .resolves.toEqual({ reason: 'admitted', shouldRun: true });
+  });
+
+  it('yields to an active Remote Quality run without reading verdicts', async () => {
+    const runner = createRunner({ runsByWorkflow: { 'remote-quality.yml': [run({ id: 3, status: 'in_progress' })] } });
+    const readVerdict = vi.fn();
+    await expect(resolveT7Admission({ env, runner, readVerdict }))
+      .resolves.toEqual({ reason: 'active-run', shouldRun: false });
+    expect(readVerdict).not.toHaveBeenCalled();
+  });
+
+  it('requires the current run ID so it can exclude itself', async () => {
+    await expect(resolveT7Admission({ env: { ...env, FOLIOLE_QUALITY_RUN_ID: '' }, runner: createRunner() }))
+      .rejects.toThrow('current run ID');
   });
 });

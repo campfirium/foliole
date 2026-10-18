@@ -26,7 +26,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-windows-core
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-windows-core-${{ github.run_id }}
       cancel-in-progress: false
     env:
       CI: "true"

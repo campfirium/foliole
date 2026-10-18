@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: foliole-t7-exclusive
+  group: quality-dev-scheduled
   cancel-in-progress: false
 
 jobs:
@@ -36,12 +36,12 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Resolve release pause or successful validation reuse
+      - name: Resolve release pause, active runs, or a decisive full verdict
         id: admission
         env:
           GH_TOKEN: ${{ github.token }}
-          FOLIOLE_QUALITY_EVENT: ${{ github.event_name }}
           FOLIOLE_QUALITY_REPOSITORY: ${{ github.repository }}
+          FOLIOLE_QUALITY_RUN_ID: ${{ github.run_id }}
           FOLIOLE_QUALITY_TARGET_SHA: ${{ github.sha }}
         run: node scripts/quality/t7-hosted-quality-admission.mjs
 

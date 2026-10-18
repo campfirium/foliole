@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-android-host
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-android-host-${{ github.run_id }}
       cancel-in-progress: false
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}

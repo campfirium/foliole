@@ -89,7 +89,10 @@ export function findActiveHostedQualityRuns(workflowRuns, branch) {
   ));
 }
 
-async function requireHostedQualityIdle(runner, repo, branch, cwd, replayTarget) {
+// Correctness comes from the server-side concurrency groups; this check only
+// avoids a replay that would cancel an active full run of the same SHA.
+async function refuseReplayOverActiveFull(runner, repo, branch, cwd, replayTarget) {
+  if (!replayTarget) return;
   const responses = await Promise.all(QUALITY_WORKFLOWS.map((workflow) => requireSuccess(
     runner,
     'gh',
@@ -97,13 +100,7 @@ async function requireHostedQualityIdle(runner, repo, branch, cwd, replayTarget)
       `repos/${repo}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&per_page=30`],
     { cwd }
   )));
-  const activeRuns = findActiveHostedQualityRuns(responses.map(parseWorkflowRuns), branch);
-  if (replayTarget) assertNoActiveFullReplay(activeRuns, replayTarget);
-  if (activeRuns.length === 0) return;
-  const details = activeRuns
-    .map((run) => `${run.name ?? 'hosted quality'} #${run.run_number ?? run.id} ${run.status} ${run.html_url ?? ''}`.trim())
-    .join('\n');
-  throw new Error(`A T7 Hosted Quality or Remote Quality run is still active; wait for every job to reach a terminal state before dispatching another run:\n${details}`);
+  assertNoActiveFullReplay(findActiveHostedQualityRuns(responses.map(parseWorkflowRuns), branch), replayTarget);
 }
 
 function isFailedJob(job) {
@@ -173,7 +170,7 @@ export async function runRemoteQuality(options = {}) {
       'api', `repos/${repoInfo.nameWithOwner}/actions/runs/${runId}`
     ], { cwd }))
   }) : undefined;
-  await requireHostedQualityIdle(runner, repoInfo.nameWithOwner, 'dev', cwd, stages && targetSha);
+  await refuseReplayOverActiveFull(runner, repoInfo.nameWithOwner, 'dev', cwd, stages && targetSha);
   const payload = JSON.stringify({
     inputs: { scope: args.scope, target_sha: targetSha, ...(stages ? { stages } : {}) },
     ref: 'dev'

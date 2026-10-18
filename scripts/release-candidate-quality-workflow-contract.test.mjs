@@ -18,7 +18,7 @@ describe('release candidate quality workflow contract', () => {
     expect(workflow.on.workflow_call.outputs.accepted_sha.value)
       .toBe('${{ jobs.release-candidate-quality.outputs.accepted_sha }}');
     expect(workflow.concurrency).toEqual({
-      group: 'rc-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-candidate',
+      group: 'rc-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-candidate-${{ github.run_id }}',
       'cancel-in-progress': false
     });
   });

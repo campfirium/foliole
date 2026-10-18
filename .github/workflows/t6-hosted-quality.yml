@@ -23,7 +23,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: t6-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator
+  group: t6-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   context:

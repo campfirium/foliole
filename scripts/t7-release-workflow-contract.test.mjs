@@ -39,7 +39,7 @@ describe('T7 release workflow contract', () => {
       'releases/github/**', 'releases/notes/**', 'releases/update-manifest.json'
     ]);
     expect(workflow.concurrency).toEqual({
-      group: 'foliole-t7-exclusive',
+      group: 'quality-release',
       'cancel-in-progress': true
     });
     expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');

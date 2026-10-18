@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-dependency-hardening
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-dependency-hardening-${{ github.run_id }}
       cancel-in-progress: false
     env:
       TARGET_SHA: ${{ inputs.target_sha }}

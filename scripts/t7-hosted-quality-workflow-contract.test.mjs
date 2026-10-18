@@ -25,24 +25,30 @@ describe('T7 hosted quality workflow contract', () => {
     expect(hosted.jobs.t6_quality.if).toBe("needs.context.outputs.should_run == 'true'");
   });
 
-  it('pauses before T6 when a release ref exists', () => {
-    expect(hostedSource).toContain('node scripts/quality/t7-hosted-quality-admission.mjs');
-    expect(hostedSource).toContain('FOLIOLE_QUALITY_EVENT: ${{ github.event_name }}');
-    const admission = read('scripts/quality/t7-hosted-quality-admission.mjs');
-    expect(admission).toContain('git/ref/heads/release');
-    expect(admission).toContain("reason: releaseActive\n      ? 'release-active'");
-    expect(admission).toContain("run.conclusion === 'success'");
-    expect(admission).toContain('reason=${admission.reason}');
+  it('passes its own run ID to the admission so it is never counted as an active run', () => {
+    const admission = hosted.jobs.context.steps.find((step) => step.id === 'admission');
+    expect(admission.run).toBe('node scripts/quality/t7-hosted-quality-admission.mjs');
+    expect(admission.env.FOLIOLE_QUALITY_RUN_ID).toBe('${{ github.run_id }}');
+    expect(admission.env.FOLIOLE_QUALITY_TARGET_SHA).toBe('${{ github.sha }}');
+    expect(hosted.permissions.actions).toBe('read');
   });
 
-  it('shares one release-exclusive top-level concurrency group', () => {
-    expect(hosted.concurrency).toEqual({
-      group: 'foliole-t7-exclusive',
-      'cancel-in-progress': false
-    });
-    expect(release.concurrency).toEqual({
-      group: 'foliole-t7-exclusive',
-      'cancel-in-progress': true
-    });
+  it('isolates scheduled dev, active dev, and release concurrency groups', () => {
+    const remote = parse(read('.github/workflows/remote-quality.yml'));
+    expect(remote.concurrency).toEqual({ group: 'quality-dev-remote', 'cancel-in-progress': true });
+    expect(hosted.concurrency).toEqual({ group: 'quality-dev-scheduled', 'cancel-in-progress': false });
+    expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
+    const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
+    const referencing = workflows.filter((file) => read(`.github/workflows/${file}`).includes('quality-release'));
+    expect(referencing).toEqual(['t7-release.yml']);
+    expect(workflows.some((file) => read(`.github/workflows/${file}`).includes('foliole-t7-exclusive'))).toBe(false);
+  });
+
+  it('scopes reusable quality job groups to the calling run', () => {
+    const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
+    const inner = workflows.flatMap((file) => read(`.github/workflows/${file}`).split('\n')
+      .filter((line) => /^\s+group: (quality|t6|rc)-\$\{\{/u.test(line)).map((line) => `${file}:${line.trim()}`));
+    expect(inner.length).toBeGreaterThan(0);
+    expect(inner.filter((line) => !line.endsWith('-${{ github.run_id }}'))).toEqual([]);
   });
 });

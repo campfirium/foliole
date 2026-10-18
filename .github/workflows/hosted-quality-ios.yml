@@ -43,7 +43,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}-${{ github.run_id }}
       cancel-in-progress: false
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
@@ -97,7 +97,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 120
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}-${{ github.run_id }}
       cancel-in-progress: false
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}

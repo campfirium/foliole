@@ -57,15 +57,14 @@ describe('remote quality dispatcher', () => {
     expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(false);
   });
 
-  it('refuses to dispatch while T7 Hosted Quality or Remote Quality is nonterminal', async () => {
+  it('dispatches a full run while another dev run is active and leaves replacement to the server group', async () => {
     const activeRun = {
       head_branch: 'dev', html_url: 'https://github.test/runs/41',
       id: 41, name: 'T7 Hosted Quality', run_number: 9, status: 'in_progress'
     };
     const { runner } = createRunner({ activeRuns: [activeRun] });
-    await expect(runRemoteQuality({ args: ['--scope', 'full'], runner }))
-      .rejects.toThrow('wait for every job to reach a terminal state');
-    expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(false);
+    await runRemoteQuality({ args: ['--scope', 'full'], runner });
+    expect(runner.mock.calls.some(([, args]) => args.some((arg) => arg.includes('/dispatches')))).toBe(true);
   });
 
   it('filters active hosted quality to the default branch', () => {

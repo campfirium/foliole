@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.domain == 'shared' && 40 || 20 }}
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}-${{ github.run_id }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
