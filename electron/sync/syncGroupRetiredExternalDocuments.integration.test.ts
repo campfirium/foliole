@@ -58,6 +58,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
       db.prepare("SELECT value FROM sync_group_metadata WHERE key = 'sync_group_completed_adoption'").pluck().get()
     )));
     expect(completed?.libraryEpoch).toBe(before?.libraryEpoch);
+    await applicant!.send('holdSyncRound', { ...peers[1]! });
     await applicant!.send('startContendedSync', { ...peers[1]! });
     for (const worker of [applicant!, provider!]) {
       await expectReopenedAdoption(worker);

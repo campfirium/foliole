@@ -6,14 +6,27 @@ import { loadActiveDesktopSyncRun, runDesktopSyncCoordinator } from './desktopSy
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 
-export async function reopenAfterSyncStops() {
+async function stopFixtureSync() {
   await stopLanWorkspaceSyncServer();
-  await loadActiveDesktopSyncRun()?.catch(() => undefined);
+  let active = loadActiveDesktopSyncRun();
+  while (active) {
+    await active.catch(() => undefined);
+    active = loadActiveDesktopSyncRun();
+  }
+}
+
+export async function reopenAfterSyncStops() {
+  await stopFixtureSync();
   closeDatabaseConnection();
   initializeDatabase();
 }
 
+export function holdSyncRound(args: Record<string, unknown>) {
+  desktopSyncPeerRoundOwner().acquireOutbound(String(args.identity), 'fixture-existing-round');
+}
+
 export async function startContendedSync(args: Record<string, unknown>) {
+  await stopFixtureSync();
   const owner = desktopSyncPeerRoundOwner();
   const peerId = String(args.identity);
   const held = owner.acquireOutbound(peerId, 'fixture-held-round');

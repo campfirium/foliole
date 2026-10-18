@@ -22,7 +22,7 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
-import { reopenAfterSyncStops, startContendedSync } from './contendedSync.fixture.js';
+import { holdSyncRound, reopenAfterSyncStops, startContendedSync } from './contendedSync.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
@@ -152,6 +152,7 @@ async function run(action: string, args: Record<string, unknown>) {
     return runRemovalFixture(action, args);
   }
   if (action === 'init') return initializeGroup(args);
+  if (action === 'holdSyncRound') return holdSyncRound(args);
   if (action === 'startContendedSync') return startContendedSync(args);
   if (action === 'register') {
     for (const member of args.members as Array<{ device: SyncGroupDeviceIdentity; name: string }>) {
