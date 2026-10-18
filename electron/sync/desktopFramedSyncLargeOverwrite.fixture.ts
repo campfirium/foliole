@@ -57,7 +57,7 @@ async function seedIndependentInputs(db: DbPort, index: number) {
     'SELECT current_version_id FROM nodes WHERE id = ?', [nodeId]);
   if (!row) throw new Error('fixture_node_missing');
   for (let pass = 0; pass < 3; pass++) {
-    await applyLocalContentEdit(db, { nodeId, baseVersionId: row.current_version_id,
+    await applyLocalContentEdit(db, { nodeId, baseVersionId: row.current_version_id, baseContent: '',
       versionId: `${nodeId}-input-${pass}`, content: largeOverwriteBody(index, pass),
       title: `Large overwrite ${index}`, hideTitleHeading: false, hostName: 'Large overwrite',
       updatedAt: new Date(Date.now() + pass + 1).toISOString() });

@@ -115,6 +115,10 @@ it('protects a still-current old version until the complete descendant is adopte
 it('collects only after all object facts and state, returns the final digest, and atomically rolls back failure', async () => {
   const { a, b } = await oldPeers();
   initializeDatabaseSchema(a.db);
+  initializeDatabaseSchema(b.db);
+  // Model retained history awaiting end-of-object collection on the current schema.
+  b.db.exec(`UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_deleted')
+    WHERE version_id IN ('v1', 'v2')`);
   const before = ['node_sync_versions', 'node_sync_version_parents', 'nodes', 'sync_object_state',
     'framed_sync_inventory'];
   const state = () => before.map(table => b.db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());

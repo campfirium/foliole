@@ -12,9 +12,12 @@ import { root, type Peer } from './syncLibrary.testSupport.js';
 
 export async function withLibraryRequestSnapshot(source: Peer, target: Peer,
   execute: (replay: () => Promise<void>) => Promise<void>,
-  runtime = { applyRequestSyncObject, writeRequestSyncSnapshot }) {
-  const differences = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.port),
-    remote: await readFramedSyncInventory(target.port) }).filter(value => value.direction === 'local_to_remote');
+  runtime: { applyRequestSyncObject: typeof applyRequestSyncObject;
+    writeRequestSyncSnapshot: typeof writeRequestSyncSnapshot; readFramedSyncInventory?: typeof readFramedSyncInventory }
+    = { applyRequestSyncObject, writeRequestSyncSnapshot }) {
+  const readInventory = runtime.readFramedSyncInventory ?? readFramedSyncInventory;
+  const differences = compareFramedSyncInventories({ local: await readInventory(source.port),
+    remote: await readInventory(target.port) }).filter(value => value.direction === 'local_to_remote');
   const files = createDesktopFramedSyncFiles(path.join(root, `snapshot-${crypto.randomUUID()}`));
   const requests = differences.map(() => new RequestSyncFiles(files, `requests/${crypto.randomUUID()}`));
   const proof = source.db.prepare<[], { library_epoch: string; proof_revision: number }>(

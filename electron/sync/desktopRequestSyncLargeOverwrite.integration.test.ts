@@ -42,7 +42,7 @@ it.each(modes)(
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toEqual(progress);
       expect(restoreIdentityState(restarted.snapshot.databasePath)).toEqual(identity);
       continueAfterObjectCommitFailure(restarted.snapshot.databasePath, first.id);
-      expect(await fixture.right.invoke('round', request)).toMatchObject({ complete: true });
+      await finishResourceRounds(() => fixture.right.invoke('round', request));
       const transferMs = performance.now() - transferStarted;
       const completed = await verifyLargeOverwriteBodies(restarted.snapshot.databasePath);
       expect(completed.nodes).toEqual(source.nodes); expect(completed.versions).toEqual(source.versions);
@@ -97,4 +97,16 @@ function assertFinished(file: string, deviceId: string, mode: 'restore' | 'adopt
     else expect(state.metadata).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'sync_group_completed_adoption' })]));
   } finally { db.close(); }
+}
+
+async function finishResourceRounds(round: () => Promise<unknown>) {
+  const outcomeSchema = z.object({ complete: z.boolean(), attachmentProgress: z.number().optional(),
+    attachmentYielded: z.boolean().optional(), dynamicBacklog: z.boolean().optional() });
+  // The demand slice covers 64 of the 100 attachments; the coordinator follows progress.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const result = outcomeSchema.parse(await round());
+    if (result.complete) return;
+    expect((result.attachmentProgress ?? 0) > 0 || result.attachmentYielded || result.dynamicBacklog).toBe(true);
+  }
+  throw new Error('large_overwrite_continuation_limit_exceeded');
 }
