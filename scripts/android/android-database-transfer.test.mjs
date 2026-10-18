@@ -4,8 +4,9 @@
 import { mkdtemp, open, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
-import { pullDatabaseFile } from './android-device-snapshot.mjs';
+import { pullAttachmentArchive, pullDatabaseFile } from './android-device-snapshot.mjs';
 
 const fixture = vi.hoisted(() => ({ body: '' }));
 vi.mock('node:child_process', async (importOriginal) => {
@@ -58,6 +59,23 @@ it('rejects a failed transfer and removes its incomplete database', async () => 
 `, async (options, destination) => {
     await expect(pullDatabaseFile(options, 'databases/companion.db', destination))
       .rejects.toThrow('transfer failed');
+    await expect(stat(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+});
+
+it('hashes every streamed attachment byte and rejects empty or failed archives', async () => {
+  const bytes = 'archive-content'.repeat(100_000);
+  await withFakeAdb("process.stdout.write('archive-content'.repeat(100_000));", async (options, destination) => {
+    expect(await pullAttachmentArchive(options, destination)).toEqual({
+      path: destination, size: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex')
+    });
+  });
+  await withFakeAdb('', async (options, destination) => {
+    await expect(pullAttachmentArchive(options, destination)).rejects.toThrow('archive is empty');
+  });
+  await withFakeAdb("process.stdout.write('partial'); process.exitCode = 2;", async (options, destination) => {
+    await expect(pullAttachmentArchive(options, destination)).rejects.toThrow('transfer failed');
     await expect(stat(destination)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });

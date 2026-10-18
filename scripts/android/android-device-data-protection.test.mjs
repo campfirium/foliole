@@ -1,5 +1,5 @@
 // @vitest-environment node
-/* global Buffer, URL */
+/* global URL */
 
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -77,9 +77,13 @@ describe('Android device data protection', () => {
   it('streams the stopped app attachment directory into a hashed restorable archive', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-attachment-protection-'));
     const destination = path.join(root, 'attachments.tar');
-    const executeAdb = async (_options, args) => args.includes('tar')
-      ? { stdout: Buffer.from('archive-bytes') }
-      : { stdout: Buffer.alloc(0) };
+    const executeAdb = async (_options, args, transferOptions) => {
+      if (args.includes('tar')) {
+        if (!transferOptions?.outputPath) throw new Error('archive exceeds stdout buffer');
+        await writeFile(transferOptions.outputPath, 'archive-bytes');
+      }
+      return {};
+    };
     const archive = await pullAttachmentArchive(
       { appId: 'com.campfirium.foliole.android' }, destination, executeAdb
     );

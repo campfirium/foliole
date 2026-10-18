@@ -2,7 +2,8 @@
 
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -106,13 +107,14 @@ export async function pullAttachmentArchive(options, destination, executeAdb = r
     if (error.code === 1) return null;
     throw error;
   }
-  const { stdout } = await executeAdb(options, [
+  await executeAdb(options, [
     'exec-out', 'run-as', options.appId, 'tar', '-cf', '-', 'files/attachments'
-  ], { encoding: 'buffer', maxBuffer: 1024 * 1024 * 1024 });
-  if (!stdout || stdout.length === 0) throw new Error('Android attachment archive is empty.');
-  await writeFile(destination, stdout);
-  return { path: destination, sha256: createHash('sha256').update(stdout).digest('hex'),
-    size: stdout.length };
+  ], { outputPath: destination });
+  const size = (await stat(destination)).size;
+  if (size === 0) throw new Error('Android attachment archive is empty.');
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(destination)) hash.update(chunk);
+  return { path: destination, sha256: hash.digest('hex'), size };
 }
 
 async function pullDatabase(options, destination) {
