@@ -24,7 +24,9 @@ public final class FolioleResourceProviderTest {
             JSObject opened = source.access("source-open", key);
             assertTrue(opened.getBool("present"));
             assertEquals(length, opened.getLong("length"));
-            assertEquals(key.substring(0, 64), opened.getString("hash"));
+            // source-open no longer hashes whole files; the explicit hash primitive verifies content.
+            assertEquals("", opened.getString("hash"));
+            assertEquals(key.substring(0, 64), source.access("hash", key).getString("hash"));
             receiver.truncate(key, 0);
             for (int index = 0; index < blocks; index++) {
                 long offset = (long) index * BLOCK_BYTES;
@@ -39,7 +41,8 @@ public final class FolioleResourceProviderTest {
             receiver.reopen();
             JSObject stored = receiver.access("source-open", key);
             assertEquals(length, stored.getLong("length"));
-            assertEquals(key.substring(0, 64), stored.getString("hash"));
+            assertEquals("", stored.getString("hash"));
+            assertEquals(key.substring(0, 64), receiver.access("hash", key).getString("hash"));
             assertArrayEquals(new byte[] {0, 0, 0, 0}, receiver.readBytes(key, 0, 4));
             assertArrayEquals(new byte[] {87, 2, 0, 0}, receiver.readBytes(key, 599L * BLOCK_BYTES, 4));
         }
@@ -109,7 +112,8 @@ public final class FolioleResourceProviderTest {
             files.reopen();
             JSObject stored = files.access("source-open", key);
             assertEquals(bytes.length, stored.getLong("length"));
-            assertEquals(key.substring(0, 64), stored.getString("hash"));
+            assertEquals("", stored.getString("hash"));
+            assertEquals(key.substring(0, 64), files.access("hash", key).getString("hash"));
             assertArrayEquals(bytes, files.readBytes(key, 0, bytes.length));
         }
     }
@@ -120,7 +124,8 @@ public final class FolioleResourceProviderTest {
         try (var files = fixture()) {
             files.replacePartial(key, bytes);
             files.access("publish", key);
-            assertEquals(key.substring(0, 64), files.access("source-open", key).getString("hash"));
+            assertEquals("", files.access("source-open", key).getString("hash"));
+            assertEquals(key.substring(0, 64), files.access("hash", key).getString("hash"));
             assertArrayEquals(bytes, files.readBytes(key, 0, bytes.length));
             assertThrows(IllegalStateException.class, () -> files.access("source-open", key));
             assertInvalidReads(files, key, bytes.length);
