@@ -23,10 +23,9 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import {
-  closeIosCompanionDatabase, initializeIosCompanionDatabase,
-  type IosCompanionDatabaseManager
+  closeIosCompanionDatabase, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-import { createFakeCapacitorConnection } from '../shared/platform/companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
@@ -44,14 +43,7 @@ async function openLibrary() {
   const existed = existsSync(file);
   const sqlite = new Database(file);
   database = sqlite;
-  const connection = { ...createFakeCapacitorConnection(sqlite), getUrl: async () => ({ url: file }) };
-  const manager = {
-    closeConnection: async () => { sqlite.close(); database = null; },
-    createConnection: async () => connection,
-    isConnection: async () => ({ result: false }),
-    isDatabase: async () => ({ result: existed }),
-    retrieveConnection: async () => connection
-  } as unknown as IosCompanionDatabaseManager;
+  const manager = createFakeCapacitorDatabaseManager(sqlite, existed, () => { database = null; });
   await initializeIosCompanionDatabase({
     booted_at: '2026-10-03T00:00:00Z', database_path: null, database_ready: false,
     host_name: 'Android mutation fixture', runtime_kind: 'android-capacitor'

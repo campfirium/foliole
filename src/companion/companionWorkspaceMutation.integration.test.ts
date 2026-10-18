@@ -17,10 +17,9 @@ vi.mock('@capacitor/core', async () => {
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
-  closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase,
-  type IosCompanionDatabaseManager
+  closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-import { createFakeCapacitorConnection } from '../shared/platform/companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import {
   loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
@@ -37,14 +36,7 @@ async function openLibrary() {
   const existed = existsSync(file);
   const sqlite = new Database(file);
   database = sqlite;
-  const connection = { ...createFakeCapacitorConnection(sqlite), getUrl: async () => ({ url: file }) };
-  const manager = {
-    closeConnection: async () => { sqlite.close(); database = null; },
-    createConnection: async () => connection,
-    isConnection: async () => ({ result: false }),
-    isDatabase: async () => ({ result: existed }),
-    retrieveConnection: async () => connection
-  } as unknown as IosCompanionDatabaseManager;
+  const manager = createFakeCapacitorDatabaseManager(sqlite, existed, () => { database = null; });
   await initializeIosCompanionDatabase({
     booted_at: '2026-10-03T00:00:00Z', database_path: null, database_ready: false,
     host_name: 'Android mutation fixture', runtime_kind: 'android-capacitor'

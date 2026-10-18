@@ -4,6 +4,8 @@ import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/com
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companionSchemaStatements';
 import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort';
 
+import type { CapacitorCompanionDatabaseManager } from './companion/runtime/capacitorCompanionDatabaseOwner';
+
 export function installCompanionNodeSchema(database: Database.Database) {
   database.transaction(() => {
     database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
@@ -43,6 +45,10 @@ export function createFakeCapacitorConnection(database: Database.Database) {
     isDBOpen: async () => ({ result: false }),
     open: async () => undefined,
     query: async (sql: string, params: unknown[] = []) => {
+      if (sql === 'BEGIN DEFERRED' || sql === 'ROLLBACK') {
+        database.exec(sql);
+        return { values: [] };
+      }
       const prepared = prepareStatement(database, sql, params);
       return { values: prepared.statement.all(...prepared.params).map((row) =>
         Object.fromEntries(Object.entries(row as DbRow).map(([key, value]) =>
@@ -57,6 +63,30 @@ export function createFakeCapacitorConnection(database: Database.Database) {
       return { changes: { changes: info.changes, lastId: Number(info.lastInsertRowid) } };
     }
   };
+}
+
+export function createFakeCapacitorDatabaseManager(
+  writer: Database.Database, existed: boolean, onWriterClose: () => void
+): CapacitorCompanionDatabaseManager {
+  const connections = new Map<boolean, Database.Database>([[false, writer]]);
+  const adapt = (database: Database.Database) => ({
+    ...createFakeCapacitorConnection(database), getUrl: async () => ({ url: writer.name })
+  });
+  return {
+    closeConnection: async (_name: string, readonly: boolean) => {
+      connections.get(readonly)?.close();
+      connections.delete(readonly);
+      if (!readonly) onWriterClose();
+    },
+    createConnection: async (_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) => {
+      const database = readonly ? new Database(writer.name, { readonly: true }) : writer;
+      connections.set(readonly, database);
+      return adapt(database);
+    },
+    isConnection: async () => ({ result: false }),
+    isDatabase: async () => ({ result: existed }),
+    retrieveConnection: async () => adapt(writer)
+  } as unknown as CapacitorCompanionDatabaseManager;
 }
 
 export function createFakeCompanionDatabaseOwner(database: Database.Database) {

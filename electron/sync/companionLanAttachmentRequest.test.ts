@@ -1,4 +1,5 @@
-import type http from 'node:http';
+import http from 'node:http';
+import { Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 
 import { expect, it, vi } from 'vitest';
@@ -52,9 +53,9 @@ it('retires the legacy attachment GET before loading resources or a workspace sn
     appVersion: '0.1.0-test', deviceId: 'desktop-local', getSyncStatus: () => null,
     onJoinRequestCreated: null, updateGroupStatus: vi.fn()
   });
-  await handler({ headers: {}, method: 'GET',
+  await handler(Object.assign(new http.IncomingMessage(new Socket()), { headers: {}, method: 'GET',
     url: `${ATTACHMENT_RESOURCE_PATH}?attachment_id=att-1&content_hash=hash-1`
-  } as http.IncomingMessage, response);
+  }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(410, expect.objectContaining({
     'Content-Type': 'application/json; charset=utf-8'
