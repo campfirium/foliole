@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'src/test/attachmentThroughputFixture.integration.test.ts',
   'electron/sync/desktopSlowNetworkDiagnostic.integration.test.ts',
   'electron/sync/attachmentDemandQueue.integration.test.ts',
   'electron/sync/attachmentDemandFairness.integration.test.ts',

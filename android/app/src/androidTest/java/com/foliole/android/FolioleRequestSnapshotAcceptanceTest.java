@@ -66,7 +66,13 @@ public class FolioleRequestSnapshotAcceptanceTest {
 
     private JSONObject awaitResult(Instrumentation instrumentation, WebView webView) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(2);
+        boolean throughput = false;
         while (System.nanoTime() < deadline) {
+            if (!throughput && "throughput".equals(FolioleCompanionWebViewSemanticAdapter.readAttribute(
+                    instrumentation, webView, RESULT, "data-phase").optString("value"))) {
+                throughput = true;
+                deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(10);
+            }
             String status = FolioleCompanionWebViewSemanticAdapter.readAttribute(
                 instrumentation, webView, RESULT, "data-status").optString("value");
             if ("passed".equals(status) || "failed".equals(status)) {

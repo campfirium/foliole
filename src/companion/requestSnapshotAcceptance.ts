@@ -36,7 +36,12 @@ export function mountRequestSnapshotAcceptance(root: HTMLElement) {
         publish({ status: 'running', phase });
       });
       const attachment = await runAttachmentBlockNativeProbe(platform);
-      publish({ status: 'passed', scenario: 'request-snapshot', appId: identity.id, platform, cleanup: true, ...outcome, attachment });
+      const endpoint = import.meta.env.VITE_FOLIOLE_ATTACHMENT_BENCHMARK_URL;
+      const throughput = endpoint ? await (await import('../shared/platform/companion/runtime/attachmentThroughputNativeProbe'))
+        .runAttachmentThroughputNativeProbe(platform, endpoint,
+          detail => publish({ status: 'running', phase: 'throughput', detail })) : undefined;
+      publish({ status: 'passed', scenario: 'request-snapshot', appId: identity.id, platform,
+        cleanup: true, ...outcome, attachment, throughput });
     } catch (error) { publish({ status: 'failed', phases, error: String(error) }); }
   };
 }
