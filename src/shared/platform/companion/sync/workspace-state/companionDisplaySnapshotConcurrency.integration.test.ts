@@ -34,6 +34,7 @@ function createLibrary(platform: 'android' | 'ios') {
   const reading = deferred();
   const release = deferred();
   let holdDisplay = false;
+  let directoryRows = 0;
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
     const connection = createFakeCapacitorConnection(database);
@@ -44,6 +45,7 @@ function createLibrary(platform: 'android' | 'ios') {
           return { values: [] };
         }
         const result = await connection.query(sql, params);
+        if (sql.includes('AS collection_source_content')) directoryRows += result.values?.length ?? 0;
         if (holdDisplay && sql.includes('AS collection_source_content')) {
           reading.resolve();
           await release.promise;
@@ -67,7 +69,7 @@ function createLibrary(platform: 'android' | 'ios') {
     retrieveConnection: async () => adapt(writer)
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
-  return { owner, file, reading, release, hold: () => { holdDisplay = true; },
+  return { owner, file, reading, release, directoryRows: () => directoryRows, hold: () => { holdDisplay = true; },
     async close() {
       await owner.close();
       for (const connection of connections.values()) if (connection.open) connection.close();
@@ -114,6 +116,33 @@ it.each([
     clearTimeout(timeout);
     release.resolve();
     await Promise.allSettled([snapshot, write]);
+    await library.close();
+    runtime.owner = null;
+  }
+});
+
+
+it('refreshes edited topic projections without transferring unrelated directory rows', async () => {
+  const library = createLibrary('android');
+  runtime.owner = library.owner;
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
+    await library.owner.runWriter(db => db.run(`WITH RECURSIVE series(n) AS (
+      VALUES(1) UNION ALL SELECT n + 1 FROM series WHERE n < 3000
+    ) INSERT INTO nodes (id, title, content, created_at, updated_at)
+      SELECT 'node-' || n, 'Topic ' || n, 'Old text', 'now', 'now' FROM series`));
+    await library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET parent_id = 'node-1' WHERE id = 'node-2'"));
+    const before = await refreshCompanionWorkspaceAfterMutation();
+    await library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET title = 'Changed', content = '' WHERE id IN ('node-1', 'node-2')"));
+    const start = library.directoryRows();
+    const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'node-1');
+    const transferred = library.directoryRows() - start;
+    const complete = await refreshCompanionWorkspaceAfterMutation();
+    expect(refreshed).toEqual(complete);
+    expect(transferred, 'One content edit must not transfer the whole directory').toBeLessThanOrEqual(2);
+  } finally {
     await library.close();
     runtime.owner = null;
   }

@@ -4,13 +4,18 @@ import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncSt
 import { registerWorkspaceAttachmentResources } from '../runtime/workspaceAttachmentResourceRegistry';
 
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap';
+import { loadCompanionContentProjection, mergeCompanionContentProjection } from './sync/workspace-state/companionContentProjection';
 import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 // Native mutations have already committed; only the Web preview stores a supplied projection.
-export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null) {
+export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null, contentNodeId?: string) {
   const runtime = getCompanionRuntimeCapability();
   if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
-    const snapshot = await getIosCompanionDatabaseOwner().readSnapshot(loadIosCompanionWorkspaceSnapshot) as WorkspaceSnapshot | null;
+    const owner = getIosCompanionDatabaseOwner();
+    const snapshot = contentNodeId && previewSnapshot
+      ? mergeCompanionContentProjection(previewSnapshot, await owner.readSnapshot(db =>
+        loadCompanionContentProjection(db, contentNodeId)))
+      : await owner.readSnapshot(loadIosCompanionWorkspaceSnapshot) as WorkspaceSnapshot | null;
     registerWorkspaceAttachmentResources(snapshot);
     return snapshot;
   }

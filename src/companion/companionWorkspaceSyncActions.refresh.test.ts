@@ -114,3 +114,19 @@ it('does not invent a saved projection when the repository read fails', async ()
   await expect(actions.refreshAfterMutation()).rejects.toThrow('read failed');
   expect(callbacks.setState).not.toHaveBeenCalled();
 });
+
+
+it('preserves an unrelated remote update while a local content projection finishes', async () => {
+  resetSyncActionMocks();
+  const { actions, callbacks } = createActions();
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockImplementation(async previous => ({
+    ...previous, nodesById: { ...previous.nodesById,
+      'topic-1': { ...previous.nodesById['topic-1'], title: 'Saved topic' } }
+  }));
+  await actions.refreshAfterMutation(undefined, 'topic-1');
+  const latest = createSyncState({ workspace_snapshot: createSnapshot('remote-topic') });
+  const updated = callbacks.setState.mock.lastCall?.[0](latest);
+  expect(updated.workspace_snapshot.nodesById['remote-topic']).toEqual(latest.workspace_snapshot!.nodesById['remote-topic']);
+  expect(updated.workspace_snapshot.nodesById['topic-1'].title).toBe('Saved topic');
+  expect(updated.workspace_snapshot.nodeOrder).toEqual(['remote-topic']);
+});

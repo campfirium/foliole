@@ -31,7 +31,7 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
         versionId: createOpaqueVersionRef(createCompanionUuid()), updatedAt: new Date().toISOString() };
       requireCurrentScope();
       const acknowledgement = await saveCompanionContentEdit(input);
-      const refresh = () => { requireCurrentScope(); return workspaceSync.refreshAfterMutation(); };
+      const refresh = () => { requireCurrentScope(); return workspaceSync.refreshAfterMutation(undefined, nodeId); };
       try { await refresh(); }
       catch { throw new ContentSavedRefreshError(acknowledgement, refresh); }
       return acknowledgement;

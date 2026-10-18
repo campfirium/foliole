@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { getCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { mergeCompanionContentProjection } from '../shared/platform/companion/sync/workspace-state/companionContentProjection';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
@@ -93,10 +94,16 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
 
 async function refreshAfterMutation(
   args: WorkspaceSnapshotActionArgs,
-  previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']
+  previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
+  contentNodeId?: string
 ) {
-  const workspaceSnapshot = await refreshCompanionWorkspaceAfterMutation(previewSnapshot);
-  args.setState((current) => ({ ...current, workspace_snapshot: workspaceSnapshot }));
+  const previous = contentNodeId ? args.state.workspace_snapshot : previewSnapshot;
+  const workspaceSnapshot = await refreshCompanionWorkspaceAfterMutation(previous, contentNodeId);
+  const changed = contentNodeId && previous && workspaceSnapshot
+    ? Object.fromEntries(Object.entries(workspaceSnapshot.nodesById)
+      .filter(([id, node]) => node !== previous.nodesById[id])) : null;
+  args.setState(current => ({ ...current, workspace_snapshot: changed && current.workspace_snapshot
+    ? mergeCompanionContentProjection(current.workspace_snapshot, changed) : workspaceSnapshot }));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   return workspaceSnapshot;
 }
@@ -110,8 +117,8 @@ export function createWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs
       args.setState(current => ({ ...current, ...nextState }));
       return nextState;
     },
-    refreshAfterMutation: (previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) =>
-      refreshAfterMutation(args, previewSnapshot),
+    refreshAfterMutation: (previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot'], contentNodeId?: string) =>
+      refreshAfterMutation(args, previewSnapshot, contentNodeId),
     saveEndpoint: async (endpointUrl: string) => {
       const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
       args.setState(current => ({ ...current, ...nextState }));

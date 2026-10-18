@@ -4,11 +4,13 @@ import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 const definition = ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes;
 const columns = definition.columns.map(column => column.source);
 const statement = `SELECT json_array(${columns.map(column => `"${column}"`).join(', ')}) AS packed
-  FROM (${definition.sql}) ORDER BY created_at ASC, id ASC`;
+  FROM (${definition.sql})`;
 
-export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string): Promise<DbRow[]> {
+export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string, contentNodeId?: string): Promise<DbRow[]> {
   // Avoid repeating the directory schema thousands of times across the native bridge.
-  const rows = await db.query(statement, [hostName]);
+  const scope = contentNodeId ? ' WHERE id = ? OR parent_id = ?' : '';
+  const rows = await db.query(`${statement}${scope} ORDER BY created_at ASC, id ASC`,
+    contentNodeId ? [hostName, contentNodeId, contentNodeId] : [hostName]);
   return rows.map(row => {
     if (typeof row.packed !== 'string') throw new Error('workspace_snapshot_row_invalid');
     const values: unknown = JSON.parse(row.packed);
