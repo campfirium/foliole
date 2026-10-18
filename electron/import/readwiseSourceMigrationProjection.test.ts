@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -50,6 +51,7 @@ import {
   publishAttachmentLibraryPathSnapshot
 } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { upsertDesktopSource } from '../database/desktopSources.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
 import { readwiseKeepAdapter } from './readwiseKeepAdapter.js';
@@ -141,11 +143,14 @@ async function seedLocalizedSource() {
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
     VALUES ('topic-1',NULL,'topic','Sample',0,'placeholder','old','old')`);
-  driver.execute(`INSERT INTO desktop_sources (source_ref,source_type,config_ref,host_name,host_platform,
-    root_path,path_flavor,type_settings_json,created_at,updated_at) VALUES
-    ('readwise:local','readwise','articles-local','This Mac',?,?,?,?, 'old','old')`,
-  [process.platform, state.sourcePath, process.platform === 'win32' ? 'windows' : 'posix',
-    JSON.stringify({ highlightPath: state.sourcePath, keepState: 'enabled', kind: 'articles' })]);
+  driver.execute(`INSERT INTO settings (key, value, updated_at)
+    VALUES ('standalone_device_uuid', ?, 'old') ON CONFLICT(key) DO NOTHING`,
+  [JSON.stringify(randomUUID())]);
+  upsertDesktopSource({
+    configRef: 'articles-local', hostName: 'This Mac', rootPath: state.sourcePath,
+    sourceRef: 'readwise:local', sourceType: 'readwise', updatedAt: 'old',
+    typeSettings: { highlightPath: state.sourcePath, keepState: 'enabled', kind: 'articles' }
+  });
   driver.execute(`INSERT INTO import_sources (source_fingerprint,provider,source_kind,source_name,source_locator,
     first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location) VALUES
     ('source-1','desktop_text_file','markdown','Sample.md',?,'old','old','hash','topic-1','readwise:local','Sample.md')`,
