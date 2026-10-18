@@ -44,7 +44,7 @@ import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnectio
 import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
 import { cleanAbandonedRequestSyncFiles } from './requestSyncTemporaryCleanup.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
-import { assertStartupMemberIdentity } from './startupMemberIdentity.js';
+import { rebindStartupMemberIdentity } from './startupMemberIdentity.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
@@ -79,7 +79,7 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
   enableDatabaseWriteAheadLog(connection);
 }
 
-function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false, requireSchema = false) {
+function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false, requireSchema = false, rebindMemberIdentity = false) {
   reportStage?.('database_integrity_check_skipped', {
     reason: 'routine-startup-check-disabled'
   });
@@ -94,7 +94,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   const pendingSnapshot = createPreMigrationSnapshotIfNeeded(connection);
   let initializedConnection: ReturnType<typeof initializeSchemaWorkspaceAndSearch>;
   try {
-    initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), deferSearchIndex);
+    initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), deferSearchIndex, rebindMemberIdentity);
   } catch (error) {
     pendingSnapshot?.protection.release();
     throw error;
@@ -110,13 +110,15 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
 function initializeSchemaWorkspaceAndSearch(
   connection: ReturnType<typeof openDatabaseConnection>,
   currentHostName: string,
-  deferSearchIndex = false
+  deferSearchIndex = false,
+  rebindMemberIdentity = false
 ) {
   const version = readUserVersion(connection.sqlite);
   const fresh = version === 0;
   const attachmentTargets = captureLegacyAttachmentTargets(connection);
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => {
+      if (rebindMemberIdentity) rebindStartupMemberIdentity(connection.driver, connection.dbPath);
       bindParentOrderWriter(connection.driver, loadDesktopLibraryWriterBinding(connection.dbPath));
       migrateDesktopHostProfile(connection, currentHostName);
       migrateLegacyBodyConsistency(connection, currentHostName, fresh);
@@ -145,7 +147,7 @@ function initializeSchemaWorkspaceAndSearch(
   return deferSearchIndex ? initializedConnection : initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
-function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; verifyMemberIdentity?: boolean } = {}) {
+function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; rebindMemberIdentity?: boolean } = {}) {
   const databasePath = resolveDatabasePath();
 
   try {
@@ -157,11 +159,11 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
       reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
     });
     try {
-      if (options.verifyMemberIdentity) assertStartupMemberIdentity(connection);
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
       });
-      return initializeOpenedDatabase(connection, reportStage, options.deferSearchIndex, options.recovery === 'fail');
+      return initializeOpenedDatabase(connection, reportStage, options.deferSearchIndex, options.recovery === 'fail',
+        options.rebindMemberIdentity);
     } catch (error) {
       closeDatabaseConnection();
       throw error;
@@ -206,7 +208,7 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
   }
 }
 
-export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; verifyMemberIdentity?: boolean } = {}) {
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; rebindMemberIdentity?: boolean } = {}) {
   const connection = initializeDatabaseInternal(reportStage, options);
   cleanAbandonedRequestSyncFiles(connection);
   notifyDatabaseConnectionReady();

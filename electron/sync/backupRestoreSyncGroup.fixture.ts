@@ -40,11 +40,13 @@ import { runWatchedSettingsFixture } from './watchedSettingsSync.fixture.js';
 let server: ReturnType<typeof createWorkspaceSyncHttpServer> | null = null;
 let origin = '';
 async function initializeGroup(args: Record<string, unknown>) {
-  initializeDatabase();
+  initializeDatabase(undefined, { rebindMemberIdentity: true });
   const groupId = String(args.groupId);
   const { identity } = await loadDesktopDeviceIdentity({ groupId, libraryPath: openDatabaseConnection().dbPath });
-  createDesktopSyncGroup({ device: identity, deviceName: String(args.name), platform: 'darwin',
-    workgroupKey: Buffer.alloc(32, 7).toString('base64url') });
+  if (!createDesktopSyncGroup({ device: identity, deviceName: String(args.name), platform: 'darwin',
+    workgroupKey: Buffer.alloc(32, 7).toString('base64url') }).devices.some(device => device.device_identity_key === identity.identity_key)) {
+    throw new Error('fixture_member_identity_not_rebound');
+  }
   if (!server) {
     server = createWorkspaceSyncHttpServer({ appVersion: '0.7.14', deviceId: identity.identity_key });
     await new Promise<void>((resolve) => server!.listen(Number(args.port ?? 0), '127.0.0.1', resolve));

@@ -125,7 +125,7 @@ async function initializeRuntimeServices() {
         error,
         stage
       }));
-    }, { deferSearchIndex: true, verifyMemberIdentity: true });
+    }, { deferSearchIndex: true, rebindMemberIdentity: true });
     await appendBootEvent('database_initialize_call_complete');
     await startSearchAliasMirror();
     refreshGlobalClipShortcutFromSettings();
