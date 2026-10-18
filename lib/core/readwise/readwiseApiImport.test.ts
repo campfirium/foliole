@@ -97,6 +97,58 @@ it('fails closed instead of producing a metadata-only topic', () => {
   });
 });
 
+it.each([
+  { deletedFirst: true, deletedParent: 'doc' },
+  { deletedFirst: false, deletedParent: 'doc' },
+  { deletedFirst: true, deletedParent: 'other-doc' },
+  { deletedFirst: false, deletedParent: 'other-doc' }
+])('keeps the live highlight and note with deleted duplicate $deletedParent, first=$deletedFirst', ({
+  deletedFirst, deletedParent
+}) => {
+  const documents = [
+    { category: 'article', html_content: '<p>Body</p>', id: 'doc' },
+    { category: 'highlight', id: 'highlight', parent_id: 'doc' },
+    { category: 'note', id: 'note', parent_id: 'highlight' }
+  ].map(normalizeReaderDocument).filter((item) => item !== null);
+  const live = normalizeExportBook({
+    external_id: 'doc', source: 'reader', user_book_id: 1,
+    highlights: [{ id: 10, external_id: 'highlight', text: 'Live body', note: 'Preserved note' }]
+  })!;
+  const deleted = normalizeExportBook({
+    external_id: deletedParent, source: 'reader', user_book_id: 2,
+    highlights: [{ id: 20, external_id: 'highlight', text: 'Deleted body', is_deleted: true }]
+  })!;
+  const books = deletedParent === 'doc'
+    ? [{ ...live, highlights: deletedFirst
+      ? [...deleted.highlights, ...live.highlights] : [...live.highlights, ...deleted.highlights] }]
+    : deletedFirst ? [deleted, live] : [live, deleted];
+
+  const result = prepareReadwiseApiDocuments(documents, books)[0];
+  expect(result?.unmatchedAnnotationCount).toBe(0);
+  expect(result?.annotations).toHaveLength(1);
+  expect(result?.annotations[0]).toMatchObject({ remoteId: 'highlight', locatorText: 'Live body' });
+  expect(result?.annotations[0]?.content).toContain('Preserved note');
+  expect(result?.annotations[0]?.content).toContain('Live body');
+  expect(result?.annotations[0]?.content).not.toContain('Deleted body');
+});
+
+it('leaves an all-deleted highlight unmatched without restoring it', () => {
+  const documents = [
+    { category: 'article', html_content: '<p>Body</p>', id: 'doc' },
+    { category: 'highlight', id: 'highlight', parent_id: 'doc' }
+  ].map(normalizeReaderDocument).filter((item) => item !== null);
+  const exported = [normalizeExportBook({
+    external_id: 'doc', source: 'reader', user_book_id: 1,
+    highlights: [10, 20].map((id) => ({
+      id, external_id: 'highlight', text: 'Deleted body', is_deleted: true
+    }))
+  })!];
+
+  expect(prepareReadwiseApiDocuments(documents, exported)[0]).toMatchObject({
+    annotations: [], unmatchedAnnotationCount: 1
+  });
+});
+
 it('derives stable annotation node ids from connection and remote identity', () => {
   expect(stableReadwiseAnnotationNodeId('connection', 'highlight')).toBe(
     stableReadwiseAnnotationNodeId('connection', 'highlight')

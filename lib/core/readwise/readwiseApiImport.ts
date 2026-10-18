@@ -151,6 +151,7 @@ function indexExportedHighlights(exportBooks: ExportBookContract[]) {
   for (const book of exportBooks) {
     if (book.source !== 'reader' || book.isDeleted || !book.externalId) continue;
     for (const highlight of book.highlights) {
+      if (highlight.isDeleted) continue;
       const existing = index.get(highlight.externalId);
       if (existing && existing.documentId !== book.externalId) conflicts.add(highlight.externalId);
       else index.set(highlight.externalId, { documentId: book.externalId, highlight });
