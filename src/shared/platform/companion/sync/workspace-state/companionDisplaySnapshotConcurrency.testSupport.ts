@@ -23,6 +23,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
   const release = deferred();
   let holdDisplay = false;
   let directoryRows = 0;
+  let directoryQueries = 0;
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
     const connection = createFakeCapacitorConnection(database);
@@ -33,7 +34,10 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
           return { values: [] };
         }
         const result = await connection.query(sql, params);
-        if (sql.includes('AS collection_source_content')) directoryRows += result.values?.length ?? 0;
+        if (sql.includes('AS collection_source_content')) {
+          directoryRows += result.values?.length ?? 0;
+          directoryQueries += 1;
+        }
         if (holdDisplay && sql.includes('AS collection_source_content')) {
           reading.resolve();
           await release.promise;
@@ -57,7 +61,8 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
     retrieveConnection: async () => adapt(writer)
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
-  return { owner, file, reading, release, directoryRows: () => directoryRows, hold: () => { holdDisplay = true; },
+  return { owner, file, reading, release, directoryRows: () => directoryRows,
+    directoryQueries: () => directoryQueries, hold: () => { holdDisplay = true; },
     async close() {
       await owner.close();
       for (const connection of connections.values()) if (connection.open) connection.close();

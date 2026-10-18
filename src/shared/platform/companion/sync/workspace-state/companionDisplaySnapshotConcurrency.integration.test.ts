@@ -117,7 +117,7 @@ it('refreshes edited topic projections without transferring unrelated directory 
     await library.owner.runWriter(db => db.run(
       "UPDATE nodes SET content = '', opening_text = 'Changed body' WHERE id IN ('node-1', 'node-2')"));
     const plan = await library.owner.read(db => db.query(`EXPLAIN QUERY PLAN ${COMPANION_CONTENT_SNAPSHOT_SQL}`,
-      ['node-1', 'node-1', 'display-fixture']));
+      ['["node-1"]', '["node-1"]', 'display-fixture']));
     expect(plan.some(row => /^SCAN n(?: |$)/u.test(String(row.detail)))).toBe(false);
     const start = library.directoryRows();
     const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'node-1');
@@ -125,6 +125,23 @@ it('refreshes edited topic projections without transferring unrelated directory 
     const complete = await refreshCompanionWorkspaceAfterMutation();
     expect(refreshed).toEqual(complete);
     expect(transferred, 'One content edit must not transfer the whole directory').toBeLessThanOrEqual(2);
+    const ids = Array.from({ length: 600 }, (_, index) => `node-${index + 1}`);
+    await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET opening_text = 'Batch edited' WHERE id IN (SELECT value FROM json_each(?))",
+      [JSON.stringify(ids)])), { kind: 'nodes', nodeIds: ids });
+    const queriesBefore = library.directoryQueries();
+    const rowsBefore = library.directoryRows();
+    const batch = await refreshCompanionWorkspaceSnapshot();
+    expect(library.directoryQueries() - queriesBefore, 'A batch must use one directory query').toBe(1);
+    expect(library.directoryRows() - rowsBefore).toBe(600);
+    expect(batch).toEqual(await refreshCompanionWorkspaceAfterMutation());
+    const unchanged = companionWorkspaceSnapshots.getSnapshot();
+    const listener = vi.fn();
+    const unsubscribe = companionWorkspaceSnapshots.subscribe(listener);
+    try {
+      expect(await refreshCompanionWorkspaceSnapshot({ kind: 'nodes', nodeIds: ids })).toBe(unchanged);
+      expect(listener).not.toHaveBeenCalled();
+    } finally { unsubscribe(); }
   } finally {
     await library.close();
     runtime.owner = null;

@@ -42,3 +42,13 @@ it('rejects both missing and newly encountered nodes', () => {
     ...current.nodesById, new: { ...current.nodesById.topic!, id: 'new', parentNodeId: 'topic' }
   }, ['topic'])).toBe(false);
 });
+
+it('preserves cached consumers when the selected nodes have not changed', () => {
+  const current = snapshot();
+  current.virtualResultIdsByNodeId = { folder: ['topic'] };
+  const node = current.nodesById.topic!;
+  const { id, ...fields } = node;
+  const reordered = { ...fields, id };
+  expect(canMergeWorkspaceContentProjection(current, { topic: reordered }, ['topic'])).toBe(true);
+  expect(mergeWorkspaceContentProjection(current, { topic: reordered })).toBe(current);
+});

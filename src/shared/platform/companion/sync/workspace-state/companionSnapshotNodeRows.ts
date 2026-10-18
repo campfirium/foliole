@@ -9,10 +9,11 @@ const statement = `SELECT json_array(${columns.map(column => `"${column}"`).join
 const contentStatement = `SELECT json_array(${columns.map(column => `"${column}"`).join(', ')}) AS packed
   FROM (${COMPANION_CONTENT_SNAPSHOT_SQL})`;
 
-export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string, contentNodeId?: string): Promise<DbRow[]> {
+export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string, contentNodeIds?: readonly string[]): Promise<DbRow[]> {
   // Avoid repeating the directory schema thousands of times across the native bridge.
-  const rows = await db.query(`${contentNodeId ? contentStatement : statement} ORDER BY created_at ASC, id ASC`,
-    contentNodeId ? [contentNodeId, contentNodeId, hostName] : [hostName]);
+  const ids = contentNodeIds ? JSON.stringify(contentNodeIds) : null;
+  const rows = await db.query(`${ids ? contentStatement : statement} ORDER BY created_at ASC, id ASC`,
+    ids ? [ids, ids, hostName] : [hostName]);
   return rows.map(row => {
     if (typeof row.packed !== 'string') throw new Error('workspace_snapshot_row_invalid');
     const values: unknown = JSON.parse(row.packed);

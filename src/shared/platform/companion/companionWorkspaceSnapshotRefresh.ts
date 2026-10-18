@@ -1,6 +1,7 @@
 import { canMergeWorkspaceContentProjection, mergeWorkspaceContentProjection } from '../../../../lib/core/database/workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import type { WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
+import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/workspaceSnapshotValueEqual.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { companionWorkspaceSnapshots, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
@@ -13,8 +14,7 @@ async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: W
   return getIosCompanionDatabaseOwner().readSnapshot(async db => {
     if (input.current && input.scope.kind === 'nodes') {
       const roots = new Set(input.scope.nodeIds);
-      const nodes: WorkspaceSnapshot['nodesById'] = {};
-      for (const id of roots) Object.assign(nodes, await loadCompanionContentProjection(db, id));
+      const nodes = await loadCompanionContentProjection(db, [...roots]);
       const expected = Object.values(input.current.nodesById)
         .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
         .map(node => node.id);
@@ -33,9 +33,11 @@ async function mergeProjectedNodeViews(db: DbPort, snapshot: WorkspaceSnapshot, 
   const rows = await db.query(`SELECT node_id, scroll_top, selection_from, selection_to, source, updated_at
     FROM node_view_state WHERE host_name = (SELECT value FROM companion_meta WHERE key = 'host_name')
       AND node_id IN (SELECT value FROM json_each(?))`, [JSON.stringify(nodeIds)]);
+  const projected = buildIosPersistedNodeViews(rows);
+  if (nodeIds.every(id => workspaceSnapshotValueEqual(snapshot.persistedNodeViewById?.[id], projected[id]))) return snapshot;
   const views = { ...snapshot.persistedNodeViewById };
   for (const id of nodeIds) delete views[id];
-  Object.assign(views, buildIosPersistedNodeViews(rows));
+  Object.assign(views, projected);
   const next = { ...snapshot };
   if (Object.keys(views).length) next.persistedNodeViewById = views;
   else delete next.persistedNodeViewById;

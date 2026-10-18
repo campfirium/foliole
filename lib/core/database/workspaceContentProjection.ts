@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from './workspaceSnapshot.js';
 import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
+import { workspaceSnapshotValueEqual } from './workspaceSnapshotValueEqual.js';
 
 // Title changes can invalidate parent ordering. All fields not listed here require
 // a complete snapshot, including newly introduced fields until their impact is known.
@@ -21,7 +22,7 @@ export function canMergeWorkspaceContentProjection(
   return Object.entries(nodes).every(([id, node]) => {
     const previous = current.nodesById[id];
     return previous !== undefined &&
-      JSON.stringify(structuralProjection(previous)) === JSON.stringify(structuralProjection(node));
+      workspaceSnapshotValueEqual(structuralProjection(previous), structuralProjection(node));
   });
 }
 
@@ -29,7 +30,9 @@ export function canMergeWorkspaceContentProjection(
 export function mergeWorkspaceContentProjection(
   current: WorkspaceSnapshot, nodes: WorkspaceSnapshot['nodesById']
 ): WorkspaceSnapshot {
-  const next = { ...current, nodesById: { ...current.nodesById, ...nodes } };
+  const changed = Object.entries(nodes).filter(([id, node]) => !workspaceSnapshotValueEqual(current.nodesById[id], node));
+  if (!changed.length) return current;
+  const next = { ...current, nodesById: { ...current.nodesById, ...Object.fromEntries(changed) } };
   // Text filters can change membership even when directory structure is unchanged.
   delete next.virtualResultIdsByNodeId;
   return next;

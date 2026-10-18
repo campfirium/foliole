@@ -50,8 +50,11 @@ export class WorkspaceSnapshotRefresh<T> {
   async updateDerived(baseline: T, update: (current: T) => T) {
     if (this.running) await this.running;
     if (baseline !== this.snapshot) return false;
-    this.snapshot = update(this.snapshot);
-    this.notify();
+    const next = update(this.snapshot);
+    if (!Object.is(next, this.snapshot)) {
+      this.snapshot = next;
+      this.notify();
+    }
     return true;
   }
 
@@ -82,9 +85,10 @@ export class WorkspaceSnapshotRefresh<T> {
         throw error;
       }
       if (session !== this.session) continue;
+      const changed = !Object.is(this.snapshot, next);
       this.snapshot = next;
       this.pending = this.pending.filter(entry => entry.revision > revision);
-      this.notify();
+      if (changed) this.notify();
     }
   }
 

@@ -9,6 +9,18 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+it('consumes unchanged reads without notifying subscribers', async () => {
+  const initial = { value: 'same' };
+  const store = new WorkspaceSnapshotRefresh(initial, async () => initial);
+  let notifications = 0;
+  store.subscribe(() => { notifications += 1; });
+  store.register({ kind: 'nodes', nodeIds: ['topic'] });
+  await store.refresh();
+  await store.refresh();
+  expect(store.getSnapshot()).toBe(initial);
+  expect(notifications).toBe(0);
+});
+
 it('publishes intermediate results without consuming later changes to the same node', async () => {
   const reads = [deferred<string>(), deferred<string>()];
   const scopes: WorkspaceRefreshScope[] = [];

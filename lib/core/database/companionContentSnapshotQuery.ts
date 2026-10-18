@@ -4,7 +4,8 @@ import { SNAPSHOT_VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 // Walk only the selected nodes' ancestors to determine visibility. Walking down
 // from every root would still visit the entire library before projecting two rows.
 const scopedVisibility = `WITH RECURSIVE selected_nodes AS (
-  SELECT id, parent_id, deleted_at FROM nodes WHERE id = ? OR parent_id = ?
+  SELECT id, parent_id, deleted_at FROM nodes
+  WHERE id IN (SELECT value FROM json_each(?)) OR parent_id IN (SELECT value FROM json_each(?))
 ), ancestors(origin, id, parent_id, deleted_at) AS (
   SELECT id, id, parent_id, deleted_at FROM selected_nodes
   UNION
