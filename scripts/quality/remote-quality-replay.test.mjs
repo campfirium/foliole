@@ -39,12 +39,12 @@ it('reads source evidence against its original SHA, not the new dev tip', async 
 
 it('rejects same-SHA active full from either entry without confusing replay or scoped runs', () => {
   for (const metadata of [{ path: '.github/workflows/t7-hosted-quality.yml' },
-    { display_title: 'Remote Quality (full) @ exact via topology' }]) {
+    { display_title: 'Dev Quality Check (full) @ exact via topology' }]) {
     expect(() => assertNoActiveFullReplay([{ head_sha: SHA, ...metadata }], SHA)).toThrow('still active');
     expect(() => assertNoActiveFullReplay([{ head_sha: 'b'.repeat(40), ...metadata }], SHA)).not.toThrow();
   }
   expect(() => assertNoActiveFullReplay([{ head_sha: SHA,
-    display_title: 'Remote Quality (replay) @ exact via topology' }], SHA)).not.toThrow();
+    display_title: 'Dev Quality Check (replay) @ exact via topology' }], SHA)).not.toThrow();
 });
 
 function replayRunner(options) {
@@ -74,7 +74,7 @@ it('never dispatches when the production receipt reader rejects evidence', async
 it('refuses dispatch when the current target already has an active full chain', async () => {
   const { runner, calls } = replayRunner({ activeRuns: [{
     head_branch: 'dev', head_sha: SHA, status: 'in_progress',
-    display_title: `Remote Quality (full) @ ${SHA} via ${SHA}`
+    display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}`
   }] });
   await expect(runRemoteQuality({ args: ['--replay', '123'], runner,
     readChainVerdict: () => ({ verdict: 'failed', stages: { 't5-tooling': 'failure' } }) }))

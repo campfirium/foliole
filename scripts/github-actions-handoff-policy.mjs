@@ -1,6 +1,6 @@
 export const DEV_T7_HANDOFF_POLICY = Object.freeze({
   branch: 'dev',
-  name: 'T7 Hosted Quality',
+  name: 'Scheduled Dev Quality',
   path: '.github/workflows/t7-hosted-quality.yml',
   runTier: 'T7'
 });

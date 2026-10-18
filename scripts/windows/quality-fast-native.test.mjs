@@ -154,7 +154,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        '[quality-fast-native] desktop-class change detected -> hosted quality deferred to scheduled T7 Hosted Quality; Remote Quality is reserved for repair or explicit rechecks on dev, while releases use T7 Release.'
+        '[quality-fast-native] desktop-class change detected -> hosted quality deferred to Scheduled Dev Quality; Dev Quality Check is reserved for repair or explicit rechecks on dev, while releases use Release.'
       );
     } finally {
       logSpy.mockRestore();
@@ -231,7 +231,7 @@ describe('quality-fast-native T0 routing', () => {
         }
       });
       expect(logSpy).toHaveBeenCalledWith(
-        `[quality-fast-native] ${level}-class change detected -> hosted quality deferred to scheduled T7 Hosted Quality; Remote Quality is reserved for repair or explicit rechecks on dev, while releases use T7 Release.`
+        `[quality-fast-native] ${level}-class change detected -> hosted quality deferred to Scheduled Dev Quality; Dev Quality Check is reserved for repair or explicit rechecks on dev, while releases use Release.`
       );
     } finally {
       logSpy.mockRestore();

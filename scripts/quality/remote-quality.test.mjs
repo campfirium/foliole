@@ -60,7 +60,7 @@ describe('remote quality dispatcher', () => {
   it('dispatches a full run while another dev run is active and leaves replacement to the server group', async () => {
     const activeRun = {
       head_branch: 'dev', html_url: 'https://github.test/runs/41',
-      id: 41, name: 'T7 Hosted Quality', run_number: 9, status: 'in_progress'
+      id: 41, name: 'Scheduled Dev Quality', run_number: 9, status: 'in_progress'
     };
     const { runner } = createRunner({ activeRuns: [activeRun] });
     await runRemoteQuality({ args: ['--scope', 'full'], runner });

@@ -186,8 +186,8 @@ export async function runQualityT0Native(options = {}) {
     cacheLocation: '.tmp/eslint-cache/quality-fast-native/', env: routeEnv, runStep, runner
   });
   console.log(
-    `[quality-fast-native] ${plan.level}-class change detected -> hosted quality deferred to scheduled T7 Hosted Quality; ` +
-    'Remote Quality is reserved for repair or explicit rechecks on dev, while releases use T7 Release.'
+    `[quality-fast-native] ${plan.level}-class change detected -> hosted quality deferred to Scheduled Dev Quality; ` +
+    'Dev Quality Check is reserved for repair or explicit rechecks on dev, while releases use Release.'
   );
   return plan;
 }

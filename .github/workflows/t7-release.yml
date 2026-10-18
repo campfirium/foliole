@@ -1,6 +1,6 @@
-name: T7 Release
+name: Release
 
-run-name: T7 Release (${{ inputs.stage || 'full' }}) @ ${{ github.sha }}
+run-name: Release (${{ inputs.stage || 'full' }}) @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -103,7 +103,7 @@ jobs:
           echo "trigger_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
 
   quality_bucket_recheck:
-    name: Quality bucket recheck
+    name: Stage recheck
     if: startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')
     needs: release_context
     permissions: { contents: read }
@@ -114,7 +114,7 @@ jobs:
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
 
   t6_quality:
-    name: T6 hosted quality
+    name: Full chain
     if: github.event_name == 'push' || inputs.stage == 'full'
     needs: release_context
     permissions:
@@ -225,4 +225,4 @@ jobs:
     with:
       ref_name: ${{ github.ref_name }}
       topology: t7-release
-      workflow_name: T7 Release
+      workflow_name: Release

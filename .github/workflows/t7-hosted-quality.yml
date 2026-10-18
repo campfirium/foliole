@@ -1,6 +1,6 @@
-name: T7 Hosted Quality
+name: Scheduled Dev Quality
 
-run-name: T7 Hosted Quality (dev) @ ${{ github.sha }}
+run-name: Scheduled Dev Quality @ ${{ github.sha }}
 
 on:
   schedule:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   context:
-    name: Resolve dev T7 context
+    name: Resolve scheduled dev target
     runs-on: ubuntu-latest
     outputs:
       reason: ${{ steps.admission.outputs.reason }}
@@ -46,7 +46,7 @@ jobs:
         run: node scripts/quality/t7-hosted-quality-admission.mjs
 
   skipped_notice:
-    name: DEV T7 intentionally skipped
+    name: Scheduled dev run skipped
     needs: context
     if: needs.context.outputs.should_run != 'true'
     runs-on: ubuntu-latest
@@ -56,12 +56,12 @@ jobs:
           ADMISSION_REASON: ${{ needs.context.outputs.reason }}
           TARGET_SHA: ${{ needs.context.outputs.target_sha }}
         run: |
-          echo "## DEV T7 intentionally skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Scheduled dev run skipped" >> "$GITHUB_STEP_SUMMARY"
           echo "Reason: \`${ADMISSION_REASON}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Target: \`${TARGET_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
 
   t6_quality:
-    name: T6 hosted quality
+    name: Full chain
     needs: context
     if: needs.context.outputs.should_run == 'true'
     permissions:

@@ -7,10 +7,10 @@ import {
 } from './github-actions-handoff-policy.mjs';
 
 describe('GitHub Actions handoff policy', () => {
-  it('declares only the top-level dev T7 Hosted Quality workflow as a repair stream', () => {
+  it('declares only the top-level dev Scheduled Dev Quality workflow as a repair stream', () => {
     expect(DEV_T7_HANDOFF_POLICY).toEqual({
       branch: 'dev',
-      name: 'T7 Hosted Quality',
+      name: 'Scheduled Dev Quality',
       path: '.github/workflows/t7-hosted-quality.yml',
       runTier: 'T7'
     });
@@ -21,7 +21,7 @@ describe('GitHub Actions handoff policy', () => {
     const identity = buildActionsHandoffIdentity('.github/workflows/t7-hosted-quality.yml', {
       databaseId: 42,
       headBranch: 'dev',
-      workflowName: 'T7 Hosted Quality'
+      workflowName: 'Scheduled Dev Quality'
     });
 
     expect(policy?.path).toBe('.github/workflows/t7-hosted-quality.yml');
@@ -39,7 +39,7 @@ describe('GitHub Actions handoff policy', () => {
       workflowName: 'Other Workflow'
     };
 
-    expect(buildActionsHandoffIdentity('T7 Hosted Quality', run)).toBeNull();
+    expect(buildActionsHandoffIdentity('Scheduled Dev Quality', run)).toBeNull();
     expect(buildActionsHandoffIdentity('.github/workflows/t7-hosted-quality.yml', {
       ...run,
       headBranch: 'release'

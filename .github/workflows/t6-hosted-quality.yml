@@ -1,5 +1,5 @@
-name: T6 Hosted Quality
-run-name: T6 Hosted Quality (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}
+name: Quality Chain
+run-name: Quality Chain (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}
 on:
   workflow_call:
     inputs:

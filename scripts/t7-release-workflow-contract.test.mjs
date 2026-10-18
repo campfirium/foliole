@@ -27,7 +27,7 @@ const qualityStages = [
 
 describe('T7 release workflow contract', () => {
   it('owns exact release push and repaired-HEAD stage rechecks', () => {
-    expect(workflow.name).toBe('T7 Release');
+    expect(workflow.name).toBe('Release');
     const dispatch = workflow.on.workflow_dispatch.inputs;
     expect(dispatch.stage.options).toEqual([
       ...qualityStages, 'release-candidate', 'macos', 'windows', 'linux', 'assembly', 'full'

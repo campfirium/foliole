@@ -20,7 +20,7 @@ const decide = (verdicts, runs = [run()]) => decideT7Admission({
   currentRunId: SELF, releaseActive: false, runs, verdicts
 });
 
-describe('T7 Hosted Quality admission decision', () => {
+describe('Scheduled Dev Quality admission decision', () => {
   it('skips only on a decisive full verdict', () => {
     expect(decide([{ kind: 'full', verdict: 'passed' }])).toBe('decisive-full-verdict');
     expect(decide([{ kind: 'full', verdict: 'failed' }])).toBe('decisive-full-verdict');
@@ -64,7 +64,7 @@ function createRunner({ release = false, runsByWorkflow = {} } = {}) {
 const env = { FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole', FOLIOLE_QUALITY_RUN_ID: String(SELF),
   FOLIOLE_QUALITY_TARGET_SHA: SHA };
 
-describe('T7 Hosted Quality admission resolution', () => {
+describe('Scheduled Dev Quality admission resolution', () => {
   it('pauses while the release branch exists without reading run history', async () => {
     const runner = createRunner({ release: true });
     await expect(resolveT7Admission({ env, runner, readVerdict: vi.fn() }))

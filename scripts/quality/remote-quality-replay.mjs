@@ -26,7 +26,7 @@ export async function resolveReplayStages({ repository, runId, readRun, read = r
 export function assertNoActiveFullReplay(runs, targetSha) {
   const active = runs.find(run => run.head_sha === targetSha && (
     run.path === '.github/workflows/t7-hosted-quality.yml'
-    || /^Remote Quality \(full\) @ /u.test(run.display_title ?? '')
+    || /^Dev Quality Check \(full\) @ /u.test(run.display_title ?? '')
   ));
   if (active) throw new Error(`A full chain for ${targetSha} is still active: ${active.html_url ?? active.id}`);
 }

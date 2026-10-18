@@ -34,7 +34,7 @@ function run(overrides = {}) {
     headSha: overrides.headSha ?? 'abc123',
     status: overrides.status ?? 'completed',
     url: overrides.url ?? 'https://github.com/campfirium/foliole/actions/runs/100',
-    workflowName: overrides.workflowName ?? 'T7 Hosted Quality'
+    workflowName: overrides.workflowName ?? 'Scheduled Dev Quality'
   };
 }
 
@@ -139,7 +139,7 @@ describe('GitHub desktop handoff action events', () => {
     expect(state.actions['Other Workflow'].runs['105']).toBeUndefined();
   });
 
-  it('emits only the stable T7 Hosted Quality path through the controller', () => {
+  it('emits only the stable Scheduled Dev Quality path through the controller', () => {
     gh.runs = [run({ databaseId: 106, headSha: 'barrier-owned' })];
     const state = {
       actions: { [T7_WORKFLOW]: { initialized: true, runs: {} } },
@@ -155,7 +155,7 @@ describe('GitHub desktop handoff action events', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      prompt: 'T7:T7 Hosted Quality:dev:106',
+      prompt: 'T7:Scheduled Dev Quality:dev:106',
       runTier: 'T7',
       title: 'Foliole T7 hosted quality repair: run 106',
       workflowPath: T7_WORKFLOW

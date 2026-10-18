@@ -1,4 +1,4 @@
-name: Release Quality Bucket Recheck
+name: Release Stage Recheck
 on:
   workflow_call:
     inputs:

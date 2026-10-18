@@ -19,7 +19,7 @@ const TOPOLOGIES = {
   't7-release': {
     nodes: [
       ['release_context', ['Resolve release identity']],
-      ['t6_quality', ['t6_quality', 'T6 hosted quality']],
+      ['t6_quality', ['t6_quality', 'Full chain']],
       ['release_candidate', ['release_candidate', 'Release candidate quality']],
       ['macos_package', ['macos_package', 'macOS package']],
       ['windows_package', ['windows_package', 'Windows package']],

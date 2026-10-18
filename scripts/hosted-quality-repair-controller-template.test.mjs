@@ -11,7 +11,7 @@ describe('hosted-quality repair handoff', () => {
     const template = fs.readFileSync(templatePath, 'utf8');
 
     expect(template).toContain('Use `$foliole-hosted-quality-repair`');
-    expect(template).toContain('failed independent top-level dev T7 Hosted Quality run');
+    expect(template).toContain('failed independent top-level dev Scheduled Dev Quality run');
     expect(template).toContain('The handoff is only a locator');
     expect(template).toContain('Workflow file: {{workflowPath}}');
     expect(template).toContain('Run tier: {{runTier}}');
@@ -21,7 +21,7 @@ describe('hosted-quality repair handoff', () => {
     expect(template).not.toContain('one scoped local repair commit');
     expect(template).toContain('repairState=waiting-for-dev-delivery');
     expect(template).toContain('registered dev Remote Quality orchestrator');
-    expect(template).toContain('Never treat a later scheduled T7 Hosted Quality run as repair evidence');
+    expect(template).toContain('Never treat a later scheduled Scheduled Dev Quality run as repair evidence');
     expect(template).not.toContain('remote-quality.mjs');
   });
 
