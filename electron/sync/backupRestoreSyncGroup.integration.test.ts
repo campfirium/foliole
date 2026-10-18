@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterEach, expect, it } from 'vitest';
 
@@ -80,6 +81,17 @@ async function resumePausedRestore(context: Awaited<ReturnType<typeof setup>>) {
   return source;
 }
 
+async function synchronizeFully(worker: (typeof workers)[number], peer: { origin: string }) {
+  const deadline = Date.now() + 20000;
+  for (;;) {
+    const result = await worker.send('sync', { ...peer, name: 'A' }) as unknown as { status: string };
+    if (result.status === 'completed') return;
+    expect(result.status).toBe('pending');
+    if (Date.now() >= deadline) throw new Error('Restore synchronization remained pending.');
+    await delay(1000);
+  }
+}
+
 for (const pause of [false, true]) {
   it(`covers a whole group through independent production instances after ${pause ? 'pause and edits' : 'immediate restore'}`, async () => {
     const { members, groupId, peers, script } = await setup();
@@ -102,7 +114,7 @@ for (const pause of [false, true]) {
     if (pause) source = await resumePausedRestore({ members, groupId, peers, script });
     else await source.send('enable');
     await receiver.send('enable');
-    await receiver.send('sync', { ...peers[0], name: 'A' });
+    await synchronizeFully(receiver, peers[0]!);
     const a = await source.send('snapshot');
     const b = await receiver.send('reopen');
     expect(a.pending).toBeNull();
@@ -120,7 +132,7 @@ for (const pause of [false, true]) {
     workers.push(returning);
     await returning.send('init', { groupId, name: 'C', members });
     await returning.send('enable');
-    await returning.send('sync', { ...peers[0], name: 'A' });
+    await synchronizeFully(returning, peers[0]!);
     const c = await returning.send('reopen');
     expect(c.library.nodesById.topic!.content).toBe(a.library.nodesById.topic!.content);
     expect(c.library.nodesById['offline-only']).toBeUndefined();
