@@ -14,6 +14,12 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         let browse = app.buttons["Browse"]
         if !browse.waitForExistence(timeout: 5) {
             let exit = app.buttons["Exit"]
+            let body = app.descendants(matching: .any).matching(identifier: "Topic body").firstMatch
+            if !exit.exists, body.waitForExistence(timeout: 5) {
+                let passage = body.staticTexts.firstMatch
+                XCTAssertTrue(passage.waitForExistence(timeout: 5), "The restored topic text is unavailable.")
+                passage.tap()
+            }
             if exit.waitForExistence(timeout: 5) { exit.tap() }
         }
         XCTAssertTrue(browse.waitForExistence(timeout: 45),
