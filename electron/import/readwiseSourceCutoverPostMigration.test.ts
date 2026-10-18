@@ -106,8 +106,9 @@ it('adds later API highlights without creating a source-update workflow', async 
     .filter((url) => url.pathname === '/api/v2/export/' || url.searchParams.has('category'));
   expect(completedThrough).not.toBeNull();
   expect(incrementalScopes.length).toBeGreaterThan(0);
+  const overlapStart = new Date(Date.parse(completedThrough!) - 5 * 60_000).toISOString();
   expect(incrementalScopes.every((url) =>
-    url.searchParams.get('updatedAfter') === completedThrough)).toBe(true);
+    url.searchParams.get('updatedAfter') === overlapStart)).toBe(true);
 
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
     .toBe(migratedBody);

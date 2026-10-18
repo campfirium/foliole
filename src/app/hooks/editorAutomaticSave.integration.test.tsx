@@ -35,6 +35,7 @@ afterEach(async () => {
   resetPendingNodeContentRuntimePersistsForTests();
   resetNodeContentVersionGuardForTests();
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   closeDatabaseConnection();
   if (sandbox.root) await rm(sandbox.root, { recursive: true, force: true });
 });
@@ -42,6 +43,7 @@ afterEach(async () => {
 async function mountDesktopEditor(size: number) {
   await mkdir('.tmp/artifacts/desktop-editor-save', { recursive: true });
   sandbox.root = await mkdtemp(path.resolve('.tmp/artifacts/desktop-editor-save/run-'));
+  vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', sandbox.root);
   initializeDatabase();
   const initial = createWorkspaceNodeActionsFixture();
   const node = { ...initial.nodesById['node-1']!, content: 'Original body\n' + 'x'.repeat(size) };

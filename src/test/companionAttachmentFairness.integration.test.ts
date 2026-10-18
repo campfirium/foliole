@@ -67,7 +67,7 @@ it.each([
       }
       expect(blocks).toBe(3);
       const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
-      expect(await readFile(target)).toEqual(bytes);
+      expect((await readFile(target)).equals(bytes)).toBe(true);
       if (scenario === 'continuous edits') expect(edit).toBeGreaterThanOrEqual(12);
     } finally { release(); }
   } finally { await host.close(); }
@@ -102,6 +102,6 @@ it('uses the normal attachment budget when repeated data requests make no progre
     }
     expect(blocks).toBe(32);
     const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
-    expect(await readFile(target)).toEqual(bytes);
+    expect((await readFile(target)).equals(bytes)).toBe(true);
   } finally { await host.close(); }
 }, 60000);

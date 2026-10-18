@@ -161,7 +161,7 @@ export async function approveJoiningMobile(host: Awaited<ReturnType<typeof creat
     endpointUrl: host.peer.origin, groupId: host.groupId, mode: 'use-group' });
   await host.provider.send('joinAccept', { requestId: pending.request_id });
   return completeCompanionSyncGroupJoin({ databasePath: host.local.database, endpointUrl: host.peer.origin,
-    providerDeviceId: host.peer.identity, providerDeviceName: 'Provider', providerPlatform: 'darwin',
+    providerDeviceId: host.peer.identity, providerDeviceName: 'Provider', providerPlatform: process.platform,
     requestId: pending.request_id });
 }
 

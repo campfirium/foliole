@@ -126,7 +126,7 @@ function identityFetch() {
     const url = new URL(String(input));
     if (url.pathname === '/api/v2/export/') {
       return new Response(JSON.stringify({
-        results: [{ external_id: 'document-1', source: 'reader', highlights: [{ external_id: 'highlight-1' }] }]
+        nextPageCursor: null, results: [{ external_id: 'document-1', source: 'reader', highlights: [{ external_id: 'highlight-1' }] }]
       }), { status: 200 });
     }
     const id = url.searchParams.get('id');
