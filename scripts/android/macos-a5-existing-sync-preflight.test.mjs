@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -38,8 +40,8 @@ it('uses the current-model inspection against the same library the scenario will
   const run = vi.fn().mockReturnValue(result('[android-data] existing-sync-readiness=', ready));
   expect(runMacosA5ExistingSyncPreflight({ adb: '/adb', buildRoot: '/repo', desktopDevLibrary: '/library' }, run))
     .toEqual(ready);
-  expect(run.mock.calls[0][1]).toEqual(['/repo/scripts/android/macos-a5-existing-sync-readiness-runner.mjs',
-    '/adb', '/library/Data/foliole.db']);
+  expect(run.mock.calls[0][1]).toEqual([path.join('/repo', 'scripts/android/macos-a5-existing-sync-readiness-runner.mjs'),
+    '/adb', path.join('/library', 'Data', 'foliole.db')]);
 });
 
 it('rejects unapproved content differences', () => {

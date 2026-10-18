@@ -20,7 +20,7 @@ it('binds read-only preflight to the daily library and refuses unreviewed differ
     paths: { adb: '/adb', desktopDevLibrary: '/different-controller-library' } }))
     .rejects.toThrow('content differences require review');
   expect(inspectExistingSyncDevice).toHaveBeenCalledWith({ adb: '/adb',
-    desktopDatabase: '/Users/roamer/Documents/Foliole/Data/foliole.db' });
+    desktopDatabase: path.join('/Users/roamer/Documents/Foliole', 'Data', 'foliole.db') });
   expect(assertFixed).toHaveBeenCalledOnce();
   expect(build).not.toHaveBeenCalled();
 });

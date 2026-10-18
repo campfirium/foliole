@@ -15,6 +15,7 @@ import { decryptWorkgroupPayloadNode, encryptWorkgroupPayloadNode } from '../../
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { SyncGroupJoinDeviceFacts } from '../../lib/platform/syncGroupJoinContract.js';
+import { devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
 
@@ -114,7 +115,7 @@ export async function createJoiningMobile() {
     return db;
   }
   mobile.facts = { canonical_library_path: local.device.canonical_library_path,
-    device_anchor: local.device.device_anchor, device_name: 'Mobile', path_flavor: 'posix', platform: 'android-capacitor' };
+    device_anchor: local.device.device_anchor, device_name: 'Mobile', path_flavor: devicePathFlavorFromCanonicalLibraryPath(local.device.canonical_library_path), platform: 'android-capacitor' };
   const fileRoot = path.join(root, 'files');
   const files = createDesktopFramedSyncFiles(fileRoot);
   mobile.files = { ...files, async write(key, bytes) {
