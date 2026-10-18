@@ -68,12 +68,12 @@ it.each(['same', 'changed', 'deleted'] as const)('applies the independent curren
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     await source.seed('topic'); await sendCurrentObject(source, target);
-    await reviewState(source, false); await sendCurrentObject(source, target, 'node_review');
+    await reviewState(source, false); await sendCurrentObject(source, target, 'node');
     const state = () => target.sqlite.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_review'").get();
     const original = state();
     if (mode === 'changed') await reviewState(source, true);
     if (mode === 'deleted') source.sqlite.exec("UPDATE sync_object_state SET deleted_at = '2026-05-08T00:00:00.000Z', updated_at = '2026-05-08T00:00:00.000Z' WHERE object_type = 'node_review'");
-    await sendCurrentObject(source, target, 'node_review'); target.reopen();
+    await sendCurrentObject(source, target, 'node'); target.reopen();
     if (mode === 'same') expect(state()).toEqual(original);
     else expect(state()).not.toEqual(original);
     if (mode === 'deleted') {
@@ -82,7 +82,7 @@ it.each(['same', 'changed', 'deleted'] as const)('applies the independent curren
         .toEqual(source.sqlite.prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'node_review'").get());
     } else expect(target.sqlite.prepare('SELECT * FROM node_review').all()).toEqual(source.sqlite.prepare('SELECT * FROM node_review').all());
     const applied = state();
-    await sendCurrentObject(source, target, 'node_review'); target.reopen();
+    await sendCurrentObject(source, target, 'node'); target.reopen();
     expect(state()).toEqual(applied);
   } finally { await fixture.close(); }
 });

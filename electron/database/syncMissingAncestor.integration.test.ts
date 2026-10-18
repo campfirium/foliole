@@ -106,7 +106,6 @@ it.each(['identity', 'identity-with-history', 'body'])('rejects an unavailable c
     WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 'topic')`).run();
   const before = originals(target);
   expect((await readFramedSyncInventory(source.port)).find(entry => entry.globalId === 'topic')).toMatchObject({ unready: true });
-  await expect(sync(source, target)).rejects.toThrow(unavailable !== 'body'
-    ? /request_sync_version_missing:/ : 'request_sync_applied_state_missing');
+  await expect(sync(source, target)).rejects.toThrow('framed_sync_source_changed');
   expect(originals(target)).toEqual(before);
 });

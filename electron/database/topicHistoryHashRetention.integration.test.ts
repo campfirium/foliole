@@ -6,6 +6,7 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 
@@ -51,7 +52,9 @@ it.each(['retired', 'complete'])('converges with a matching %s fact without resu
   if (form === 'retired') await collectNodeVersionPayloads(b.port, 'topic');
   a.db.exec("UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = 'base'");
   await withLibraryRequestSnapshot(b, a, replay => replay());
-  const expectedHash = form === 'complete' ? hashTextBody(original) : null;
+  expect((await loadRetainedSyncNodeVersionFact(a.port, 'base'))!.snapshot.body_blob_hash ?? null).toBeNull();
+  await a.port.transaction(async tx => upsertRemoteVersion(tx, (await loadRetainedSyncNodeVersionFact(b.port, 'base'))!));
+  const expectedHash = hashTextBody(original);
   const received = (await loadRetainedSyncNodeVersionFact(a.port, 'base'))!;
   expect(received).toMatchObject({ body_text: null, snapshot: { body_deleted: true } });
   expect(received.snapshot.body_blob_hash ?? null).toBe(expectedHash);

@@ -49,8 +49,8 @@ export class RestorePeer {
     write: <T>(write: (db: ReturnType<typeof createBetterSqliteDbPort>) => Promise<T>) => write(this.db) }; }
   reopen() { this.sqlite.close(); this.sqlite = new Database(this.file); }
   async seed(id: string) {
-    const base = textBranch(`${id}-base`, `Original ${id}😀`);
-    const head = textBranch(`${id}-head`, `Current ${id}中文\0`, base);
+    const base = textBranch(`${id}-base`, `Original ${id}😀`, undefined, time);
+    const head = textBranch(`${id}-head`, `Current ${id}中文\0`, base, time);
     await applySyncNodesWithDbPort(this.db, [base, head].map(record => ({ ...record,
       object_id: id, snapshot: { ...record.snapshot, id } })));
   }
@@ -76,12 +76,12 @@ export function context(progress: SyncGroupOverwriteProgress) {
 export async function transfer(source: RestorePeer, target: RestorePeer, progress: SyncGroupOverwriteProgress,
   difference: FramedSyncInventoryDifference, enqueueSearchInvalidations = true) {
   await withRequestSyncFiles(source.host.files, async request => {
-    await writeRequestSyncSnapshot(source.db, { ...difference, direction: 'local_to_remote' }, request);
+    const selected = await writeRequestSyncSnapshot(source.db, { ...difference, direction: 'local_to_remote' }, request);
     await applyRequestSyncObject(target.db, { context: context(progress),
       peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
         library_epoch: progress.providerLibraryEpoch, proof_revision: 0, source_proof_revisions: {},
         devices: [], removals: [], restore: null }, objectType: difference.objectType, globalId: difference.globalId,
-      requestId: new Uint8Array(16), enqueueSearchInvalidations, facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob) });
+      requestId: new Uint8Array(16), ...(selected.currentVersionId ? { currentVersionId: selected.currentVersionId } : {}), enqueueSearchInvalidations, facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob) });
   });
 }
 

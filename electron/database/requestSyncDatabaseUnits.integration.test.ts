@@ -79,6 +79,7 @@ it('preserves both parent order source identities and child lists through curren
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     for (const [parentId, childIds] of [['order-a', ['aaa']], ['order-c', ['ccc']]] as const) {
+      await source.seed(parentId);
       const sources = [{ authorId: 'sender', counter: 1, childIds: [...childIds] }];
       await applyCurrentParentOrderRecord(source.db, { object_type: 'parent_child_order', object_id: parentId,
         content_hash: currentParentOrderHash(parentId, sources),
@@ -89,10 +90,11 @@ it('preserves both parent order source identities and child lists through curren
     expect(source.sqlite.prepare('SELECT parent_id, child_ids_json FROM parent_order_sources ORDER BY parent_id').all())
       .toEqual([{ parent_id: 'order-a', child_ids_json: '["aaa"]' }, { parent_id: 'order-c', child_ids_json: '["ccc"]' }]);
     for (let replay = 0; replay < 2; replay++) {
-      await send(source, target, 'parent_child_order');
+      await send(source, target, 'node');
       target.reopen();
       expect(rows(target)).toEqual(original);
-      expect(target.sqlite.prepare('SELECT COUNT(*) FROM nodes').pluck().get()).toBe(0);
+      expect(target.sqlite.prepare('SELECT id FROM nodes ORDER BY id').all())
+        .toEqual([{ id: 'order-a' }, { id: 'order-c' }]);
     }
   } finally { await fixture.close(); }
 });

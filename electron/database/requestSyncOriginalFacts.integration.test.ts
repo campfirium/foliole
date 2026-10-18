@@ -134,16 +134,16 @@ it('rejects unavailable current text without committing partial receiver facts',
   const state = () => Object.fromEntries(tables.map(({ name }) => [name,
     target.sqlite.prepare(`SELECT * FROM "${name}"`).all()]));
   const before = state();
-  await snapshot(source, async request => {
-    await expect(applyRequestSyncObject(target.db, {
+  await expect(snapshot(source, async request => {
+    await applyRequestSyncObject(target.db, {
       context: { groupId: 'group', senderDeviceId: 'peer', senderLibraryEpoch: 'peer-epoch',
         receiverDeviceId: 'local', receiverLibraryEpoch: 'local-epoch', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION },
       peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: 'peer',
         library_epoch: 'peer-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
       objectType: 'node', globalId: 'topic', requestId: new Uint8Array(16).fill(1),
       facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob)
-    })).rejects.toThrow('request_sync_applied_state_missing');
-  });
+    });
+  })).rejects.toThrow('framed_sync_source_changed');
   expect(state()).toEqual(before);
   expect(source.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(original);
 });

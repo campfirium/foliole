@@ -13,11 +13,15 @@ it('discovers an independent production order edit without a Node edit', async (
   const source = createPeer('order-source');
   edit(source, 'unchanged Node body');
   const before = (await readFramedSyncInventory(source.port)).filter((entry) => entry.objectType === 'node');
-  saveLocalCurrentParentOrder(source.driver, { parentId: 'root', childIds: ['topic'],
+  saveLocalCurrentParentOrder(source.driver, { parentId: 'topic', childIds: ['child'],
     now: '2026-10-06T00:00:00.000Z', hostName: source.name });
   const after = await readFramedSyncInventory(source.port);
-  expect(after.filter((entry) => entry.objectType === 'node')).toEqual(before);
-  expect(after).toContainEqual(expect.objectContaining({ globalId: 'root', objectType: 'parent_child_order' }));
+  const node = after.find(entry => entry.objectType === 'node' && entry.globalId === 'topic');
+  expect(node?.currentVersionId).toBe(before[0]?.currentVersionId);
+  expect(node?.sharedStateHash).not.toEqual(before[0]?.sharedStateHash);
+  expect(source.db.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe('unchanged Node body');
+  expect(node?.stateFactIds).toContainEqual(expect.stringContaining('parent_child_order'));
+  expect(after.some(entry => entry.objectType === 'parent_child_order' && entry.globalId === 'topic')).toBe(false);
 });
 
 it('does not publish replication positions after a local edit', async () => {

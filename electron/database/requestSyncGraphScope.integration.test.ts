@@ -98,7 +98,7 @@ it('rejects a missing current head before producing a complete snapshot without 
     source.sqlite.prepare("DELETE FROM node_sync_versions WHERE version_id = 'merged'").run();
     expect(source.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'topic'").pluck().get()).toBe('merged');
     const before = facts(source);
-    await expect(snapshot(source)).rejects.toThrow(/request_sync_version_missing:merged|node_version_missing_parents:merged/);
+    await expect(snapshot(source)).rejects.toThrow('framed_sync_source_changed');
     source.reopen();
     expect(facts(source)).toEqual(before);
   } finally { await fixture.close(); }

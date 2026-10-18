@@ -7,7 +7,7 @@ import { textBranch, textDevice } from '../../../electron/database/topicTextStat
 import { migrateNodeHistoryState } from '../database/nodeHistoryStateMigration.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
-import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
+import { compareFramedSyncDatabaseInventories, unreadyFramedSyncDatabaseObjectCount } from './framedSyncDatabaseDifference.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
@@ -74,7 +74,8 @@ it('keeps legacy missing bodies unready on both sides and repairs them from a co
   }
   const missing = await Promise.all([a, b].map(device => readFramedSyncInventoryEntry(device.db, key)));
   expect(missing.map(entry => entry!.unready)).toEqual([true, true]);
-  expect(compareFramedSyncDatabaseInventories({ local: [missing[0]!], remote: [missing[1]!] })).not.toEqual([]);
+  expect(compareFramedSyncDatabaseInventories({ local: [missing[0]!], remote: [missing[1]!] })).toEqual([]);
+  expect(unreadyFramedSyncDatabaseObjectCount({ local: [missing[0]!], remote: [missing[1]!] })).toBe(1);
   for (const device of [a, b]) await upsertRemoteVersion(device.db, v1);
   const repaired = await Promise.all([a, b].map(device => readFramedSyncInventoryEntry(device.db, key)));
   expect(repaired[0]!.unready).toBe(false);

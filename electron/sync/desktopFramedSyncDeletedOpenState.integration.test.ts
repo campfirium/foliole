@@ -55,8 +55,10 @@ async function prepareDeletion(fixture: Awaited<ReturnType<typeof createDesktopF
     });
     previousOpenState = receiver.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?").get(nodeId);
     await expect(readFramedSyncInventoryEntry(createBetterSqliteDbPort(receiver), {
-      globalId: nodeId, objectType: 'node_open_state'
-    })).resolves.toMatchObject({ globalId: nodeId });
+      globalId: nodeId, objectType: 'node'
+    })).resolves.toMatchObject({ globalId: nodeId, stateFactIds: expect.arrayContaining([
+      expect.stringContaining('node_open_state')
+    ]) });
   } finally { receiver.close(); }
   const source = new Database(fixture.leftSnapshot.databasePath);
   try {

@@ -24,6 +24,7 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { currentParentOrderHash } from '../../lib/core/sync/currentParentOrder.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { restoreFramedSyncNodeChildFact } from '../../lib/core/sync/framedSyncNodeChildFact.js';
 import { restoreOwnedFramedSyncNode } from '../../lib/core/sync/framedSyncNodeRecordSource.js';
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { readFramedSyncObjectPayload } from '../../lib/core/sync/framedSyncObjectStatePayload.js';
@@ -183,7 +184,7 @@ it('preserves the original contract metadata and complete import identities thro
     for await (const fact of request.readFacts()) {
       if (fact.kind === 2) nodes.push(await restoreOwnedFramedSyncNode(port, fact, (_db, blob) => request.loadBody(blob)));
       if (fact.kind === 1) {
-        states.push(restoreFramedSyncObjectStateFact(fact));
+        states.push(fact.objectType === 'node' ? restoreFramedSyncNodeChildFact(fact) : restoreFramedSyncObjectStateFact(fact));
         for (const blob of fact.blobs) externalBodies.push(new TextDecoder().decode(await request.loadBody(blob)));
       }
     }

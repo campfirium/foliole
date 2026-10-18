@@ -15,7 +15,7 @@ const importedState = JSON.stringify({ annotations: 'x'.repeat(170_000) });
 const source = { source_fingerprint: 'large-source', provider: 'desktop_text_file',
   source_kind: 'html', source_name: 'Imported article', source_locator: 'article.html',
   first_imported_at: '2026-10-06T00:00:00.000Z', last_imported_at: '2026-10-06T00:00:00.000Z',
-  last_content_fingerprint: 'content', latest_node_id: null, watched_binding_id: null,
+  last_content_fingerprint: 'content', latest_node_id: 'imported-topic', watched_binding_id: null,
   watched_relative_path: null, source_ref: null, source_location: null,
   remote_provider: null, remote_connection_ref: null, remote_document_id: null,
   remote_annotations_json: '[]', remote_import_state_json: importedState };
@@ -23,6 +23,7 @@ const source = { source_fingerprint: 'large-source', provider: 'desktop_text_fil
 it('transfers a canonical import payload above 64 KiB intact over production HTTP and across restart', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
+    await fixture.left.seed({ nodeId: 'imported-topic', title: 'Imported article', content: 'Imported body' });
     const db = new Database(fixture.leftSnapshot.databasePath);
     try {
       await createBetterSqliteDbPort(db).transaction((tx) => applySyncObjectInTransaction(tx, {

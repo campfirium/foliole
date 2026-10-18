@@ -58,15 +58,16 @@ it('keeps local execution paths while accepting the remote display path through 
 function seedImport(peer: RestorePeer) {
   peer.sqlite.prepare(`INSERT INTO import_sources
     (source_fingerprint, provider, source_kind, source_name, source_locator,
-     first_imported_at, last_imported_at, last_content_fingerprint, watched_binding_id, watched_relative_path)
+     first_imported_at, last_imported_at, last_content_fingerprint, watched_binding_id, watched_relative_path, latest_node_id)
     VALUES ('source', 'markdown', 'file', 'note.md', '/local/private/note.md',
-      'now', 'now', 'content', 'watched-a', 'note.md')`).run();
+      'now', 'now', 'content', 'watched-a', 'note.md', 'topic')`).run();
 }
 
 it('publishes no watched import locator while preserving its local historical value through requests', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target'); const empty = fixture.peer('observer');
   try {
+    await source.seed('topic'); await target.seed('topic');
     seedImport(source); seedImport(target);
     publish(source, 'import_source', 'source');
     await withSnapshot(source, target, 'import_source', 'source', async (replay, payload) => {

@@ -29,7 +29,7 @@ it('keeps one-change wire volume bounded at both fixed library scales using narr
         seedScale(device, count);
         await device.db.transaction(flushRequestSyncInventoryDigests);
       }
-      right.sqlite.prepare("UPDATE framed_sync_inventory SET content_hash = ? WHERE object_id = 'node-000000'").run(JSON.stringify(['2'.repeat(64), null, []]));
+      right.sqlite.prepare(`UPDATE framed_sync_inventory SET content_hash = ?, frontier_json = '["v2"]' WHERE object_id = 'node-000000'`).run(JSON.stringify(['2'.repeat(64), 'v2', []]));
       const files = createDesktopFramedSyncFiles(root);
       const host = (device: typeof left): RequestSyncDatabaseHost => ({ files,
         write: task => task(device.db), readSnapshot: task => device.db.transaction(task) });
@@ -72,7 +72,7 @@ it('keeps one-change wire volume bounded at both fixed library scales using narr
 function seedScale(device: ReturnType<typeof textDevice>, count: number) {
   const nodes = count === 35000 ? 30000 : count;
   const insert = device.sqlite.prepare(`INSERT INTO framed_sync_inventory VALUES
-    ('node', ?, ?, '[]', '[]', '[]', '[]', '[]')`);
+    ('node', ?, ?, '["v1"]', '[]', '[]', '[]', '[]')`);
   const document = device.sqlite.prepare(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at)
     VALUES ('external_document', ?, ?, ?, 'fixture', '2026-10-16', NULL)`);
@@ -82,7 +82,7 @@ function seedScale(device: ReturnType<typeof textDevice>, count: number) {
     VALUES (?, 'fixture', ?, 'test.md', 'md', 4, '2026-10-16', 0, ?, 'Document', 'body', ?, 'now', 'now', 'now')`);
   device.sqlite.transaction(() => {
     for (let index = 0; index < nodes; index++) {
-      insert.run(`node-${String(index).padStart(6, '0')}`, JSON.stringify(['1'.repeat(64), null, []]));
+      insert.run(`node-${String(index).padStart(6, '0')}`, JSON.stringify(['1'.repeat(64), 'v1', []]));
     }
     for (let index = nodes; index < count; index++) {
       body.run(`document-${index}`, `${index}.md`, '3'.repeat(64), '4'.repeat(64));

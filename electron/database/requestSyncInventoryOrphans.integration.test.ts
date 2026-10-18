@@ -39,27 +39,26 @@ it('selects inventory and snapshot by both type and identity when two valid obje
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     await source.seed('shared');
-    const payload = { source_fingerprint: 'shared', provider: 'manual', source_kind: 'markdown',
-      source_name: 'Original.md', source_locator: '', first_imported_at: at, last_imported_at: at,
-      last_content_fingerprint: 'original-content', latest_node_id: null };
-    await applySyncObjectInTransaction(source.db, { object_type: 'import_source', object_id: 'shared',
-      payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('import_source', payload),
+    const payload = { id: 'shared', attachment_mode: 'document_relative_first_then_fixed_root',
+      excluded_dirs_json: '[]', host_name: 'source', host_platform: 'darwin', source_ref: 'external:shared' };
+    await applySyncObjectInTransaction(source.db, { object_type: 'external_folder', object_id: 'shared',
+      payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('external_folder', payload),
       updated_at: at, deleted_at: null });
-    for (const objectType of ['node', 'import_source']) {
+    for (const objectType of ['node', 'external_folder']) {
       expect(await readFramedSyncInventoryEntry(source.db, { objectType, globalId: 'shared' }))
         .toMatchObject({ objectType, globalId: 'shared' });
     }
     expect(await readFramedSyncInventoryEntry(source.db, { objectType: 'external_document', globalId: 'shared' })).toBeNull();
-    await send(source, target, 'import_source', 'shared');
+    await send(source, target, 'external_folder', 'shared');
     expect(target.sqlite.prepare('SELECT id FROM nodes').all()).toEqual([]);
-    expect(target.sqlite.prepare('SELECT source_fingerprint, source_name FROM import_sources').all())
-      .toEqual([{ source_fingerprint: 'shared', source_name: 'Original.md' }]);
+    expect(target.sqlite.prepare('SELECT id, source_ref FROM external_search_folders').all())
+      .toEqual([{ id: 'shared', source_ref: 'external:shared' }]);
     await send(source, target, 'node', 'shared');
     target.reopen();
     expect(target.sqlite.prepare('SELECT id, content FROM nodes').all())
       .toEqual([{ id: 'shared', content: 'Current shared中文\0' }]);
-    expect(target.sqlite.prepare('SELECT source_fingerprint, source_name FROM import_sources').all())
-      .toEqual([{ source_fingerprint: 'shared', source_name: 'Original.md' }]);
+    expect(target.sqlite.prepare('SELECT id, source_ref FROM external_search_folders').all())
+      .toEqual([{ id: 'shared', source_ref: 'external:shared' }]);
   } finally { await fixture.close(); }
 });
 

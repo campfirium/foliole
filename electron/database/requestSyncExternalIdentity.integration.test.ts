@@ -5,10 +5,13 @@ import { expect, it } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { framedSyncObjectStateFactId } from '../../lib/core/sync/framedSyncObjectStateInventory.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
-import { context, restoreFixture, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
+import { context, restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 
 const at = '2026-04-27T00:03:00.000Z';
 const later = '2026-05-01T00:00:00.000Z';
@@ -53,11 +56,19 @@ it('preserves all remote import-source fields through request replay and reopen'
       remote_import_state_json: '{"version":1,"bodyState":"materialized"}' };
     const payload = { source_fingerprint: 'source-contract', provider: 'desktop_text_file', source_kind: 'markdown',
       source_name: 'Source.md', source_locator: '/history/Source.md', first_imported_at: at, last_imported_at: at,
-      last_content_fingerprint: 'content-contract', latest_node_id: null, source_ref: 'readwise:articles',
+      last_content_fingerprint: 'content-contract', latest_node_id: 'topic', source_ref: 'readwise:articles',
       source_location: 'Source.md', ...remote };
-    const value = fact('import_source', 'source-contract', payload);
+    await source.seed('topic');
+    await applySyncObjectInTransaction(source.db, { object_type: 'import_source', object_id: 'source-contract',
+      content_hash: computeSyncContentHash('import_source', payload), payload_json: JSON.stringify(payload),
+      updated_at: at, deleted_at: null });
+    const difference = compareFramedSyncInventories({ local: await readFramedSyncInventory(source.db), remote: [] })
+      .find(value => value.objectType === 'node' && value.globalId === 'topic');
+    if (!difference) throw new Error('import_owner_missing');
     for (let replay = 0; replay < 2; replay++) {
-      await receive(source, target, value); target.reopen();
+      await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+        providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);
+      target.reopen();
       expect(target.sqlite.prepare(`SELECT remote_provider, remote_connection_ref, remote_document_id,
         remote_annotations_json, remote_import_state_json FROM import_sources`).all()).toEqual([remote]);
       expect(target.sqlite.prepare("SELECT content_hash FROM sync_object_state WHERE object_type = 'import_source'")
