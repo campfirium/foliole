@@ -124,7 +124,7 @@ function assembleRouletteBuckets<T>(
 ) {
   const workingBuckets = createRegularPriorityBuckets<T>();
   REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
-    workingBuckets[priority] = [...buckets[priority]];
+    workingBuckets[priority] = [...buckets[priority]].reverse();
   });
 
   const queue: T[] = [];
@@ -134,7 +134,7 @@ function assembleRouletteBuckets<T>(
       return queue;
     }
 
-    const nextEntry = workingBuckets[selectedPriority].shift();
+    const nextEntry = workingBuckets[selectedPriority].pop();
     if (nextEntry !== undefined) {
       queue.push(nextEntry);
     }

@@ -44,7 +44,7 @@ test('desktop Resume returns to the current Flow topic', async ({ desktopWindow 
         kind: 'topic',
         title: 'Desktop Flow Resume Topic 2'
       }
-    ], { persist: false });
+    ], { persist: true });
   });
   await desktopWindow.waitForFunction(() =>
     globalThis.window.__folioleWorkspaceDebug?.listNodes().some((node) => node.id === 'desktop-flow-resume-topic-2')
@@ -63,13 +63,15 @@ test('desktop Resume returns to the current Flow topic', async ({ desktopWindow 
     reviewSession: globalThis.window.__folioleWorkspaceDebug?.getReviewSession?.() ?? null
   }));
   expect(flowState.reviewSession?.currentNodeId).toBeTruthy();
+  const otherNodeId = flowState.reviewSession?.currentNodeId === 'desktop-flow-resume-topic-2'
+    ? 'desktop-flow-resume-topic-1' : 'desktop-flow-resume-topic-2';
 
-  await desktopWindow.evaluate(async () => {
-    await globalThis.window.__folioleWorkspaceDebug?.openNode?.('desktop-flow-resume-topic-2');
-  });
+  await desktopWindow.evaluate(async (nodeId) => {
+    await globalThis.window.__folioleWorkspaceDebug?.openNode?.(nodeId);
+  }, otherNodeId);
   await expect.poll(() =>
     desktopWindow.evaluate(() => globalThis.window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)
-  ).toBe('desktop-flow-resume-topic-2');
+  ).toBe(otherNodeId);
 
   await desktopWindow.getByRole('button', { name: /^(Resume review|继续复习)$/ }).click();
   await expect.poll(() =>
