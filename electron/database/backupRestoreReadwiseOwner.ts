@@ -1,6 +1,7 @@
 import { saveReadwiseHandoffIntent } from '../sync/readwiseHandoffIntent.js';
 import { resumeReadwiseExecutionAfterActivation } from '../sync/readwiseOwnerStop.js';
 
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadReadwiseHostAssignment, loadStoredReadwiseHost } from './readwiseHostAssignment.js';
 import { loadReadwiseOwnerGuard, saveReadwiseOwnerGuard } from './readwiseOwnerGuard.js';
 import { loadReadwiseSourceModeState } from './readwiseSourceMode.js';
@@ -17,7 +18,7 @@ export function retainReadwiseOwnerAfterBackupRestore(wasLocalOwner: boolean) {
   const guard = group ? loadReadwiseOwnerGuard(group.group_id) : null;
   const epoch = guard ? guard.epoch + 1 : 0;
   saveJsonSetting('readwise_active_host', {
-    device_identity_key: group?.local_device_identity_key ?? null,
+    device_identity_key: loadDesktopDeviceId(),
     epoch,
     host_name: assignment.current_host_name,
     selection_source: 'chosen'

@@ -38,6 +38,7 @@ import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } fro
 import { loadBackupRestorePendingSync } from './backupRestorePendingSync.js';
 import { inspectBackupRestoreSync } from './backupRestoreSyncPreview.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadwiseHostAssignment } from './readwiseHostAssignment.js';
 import { loadReadwiseOwnerGuard, saveReadwiseOwnerGuard } from './readwiseOwnerGuard.js';
@@ -85,10 +86,11 @@ async function restore(file: string, source: 'backup' | 'current' = 'current', a
 }
 
 async function expectLocalOwnerAfterReopen() {
-  const localId = loadDesktopSyncGroup()?.local_device_identity_key ?? null;
+  const group = loadDesktopSyncGroup();
+  const localId = loadDesktopDeviceId();
   expect(loadReadwiseHostAssignment()).toMatchObject({ is_active: true, legacy_unassigned: false,
     active_device_identity_key: localId, handoff_pending: false, activation_blocked_reason: null });
-  if (localId) {
+  if (group) {
     expect(isDesktopCompanionSyncPaused()).toBe(true);
     expect(loadBackupRestorePendingSync()).not.toBeNull();
     expect(await resolveReadwiseJoinDecision()).toEqual({ kind: 'none', devices: [] });

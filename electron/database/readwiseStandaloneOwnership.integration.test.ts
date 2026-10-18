@@ -11,7 +11,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_cache_dir: path.join(dataRoot, 'cache'), app_log_dir: path.join(dataRoot, 'logs') })
 }));
 
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -90,7 +90,8 @@ it('keeps local relay ownership through join, leave and restore without retaggin
   const foreign = upsertDesktopSource({ configRef: 'foreign', rootPath: folder, sourceType: 'readwise',
     ownerDeviceIdentityKey: 'foreign-device', updatedAt: 'now' });
   const device = createSyncGroupDeviceIdentity({ device_anchor: '11111111-1111-4111-8111-111111111111',
-    group_id: 'test-group', library_path: openDatabaseConnection().dbPath, path_flavor: 'posix' });
+    group_id: 'test-group', library_path: openDatabaseConnection().dbPath,
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(openDatabaseConnection().dbPath) });
   createDesktopSyncGroup({ device, deviceName: 'Renamed member', platform: 'darwin' });
   saveJsonSetting('readwise_active_host', { device_identity_key: device.identity_key, host_name: 'Member', epoch: 0 });
   expect(isDesktopSourceConnected(loadDesktopSource(source.source_ref)!)).toBe(true);
