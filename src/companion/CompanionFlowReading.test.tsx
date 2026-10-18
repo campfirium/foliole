@@ -42,14 +42,13 @@ it('reveals the answer through the common reader and keeps it after a confirmed 
   fireEvent.click(view.container.querySelector('section')!);
   fireEvent.click(screen.getByTestId('companion-reading-edit'));
   expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText('Topic body'), { target: { value: 'Edited body' } });
   const gate = deferred<void>();
   const refresh = vi.fn(() => gate.promise);
   save.mockImplementationOnce(async (_id, content, edit) => {
     save.setSource({ content, versionId: edit!.versionId });
     throw new ContentSavedRefreshError({ content, currentVersionId: edit!.versionId, submittedVersionId: edit!.versionId }, refresh);
   });
-  fireEvent.click(screen.getByTestId('companion-reading-edit-done'));
+  fireEvent.change(screen.getByLabelText('Topic body'), { target: { value: 'Edited body' } });
   await screen.findByText('The topic was saved, but could not be refreshed.');
   expect(screen.getByLabelText('Topic body')).not.toHaveAttribute('readonly');
   expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();

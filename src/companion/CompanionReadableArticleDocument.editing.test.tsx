@@ -86,18 +86,20 @@ describe('ReadableArticleDocument editing', () => {
     expect(onSaveContent).not.toHaveBeenCalled();
   });
 
-  it('flushes explicitly editable content on blur through the save handler', () => {
+  it('saves buffered editor content immediately and does not duplicate it on blur', async () => {
     const onSaveContent = createContentSaveMock();
     renderReadableArticleDocument({ allowContentEditing: true, onSaveContent });
 
     expect(markdownEditorMock.props?.ariaLabel).toBe('Topic body');
 
     fireEvent.change(screen.getByLabelText('Topic body'), { target: { value: 'Edited body' } });
-    expect(onSaveContent).not.toHaveBeenCalled();
+    expect(onSaveContent).toHaveBeenCalledOnce();
 
     fireEvent.blur(screen.getByLabelText('Topic body'));
 
-    expect(onSaveContent).toHaveBeenCalledWith('topic-1', 'Edited body', expect.objectContaining({ content: 'Edited body' }));
+    expect(onSaveContent).toHaveBeenCalledWith('topic-1', 'Edited body', expect.objectContaining({ content: 'Edited body', baseContent: 'Original body' }));
+    await act(async () => Promise.resolve());
+    expect(onSaveContent).toHaveBeenCalledOnce();
   });
 
   it('keeps the document read-only when content editing is disabled', () => {

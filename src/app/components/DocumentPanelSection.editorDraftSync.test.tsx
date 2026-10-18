@@ -45,7 +45,7 @@ it('commits body editor input through node-aware draft flush only', () => {
   });
 
   expect(onEditorChange).not.toHaveBeenCalled();
-  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Alpha body draft', { publishLocal: false });
+  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', 'Alpha body draft', { publishLocal: false, baseContent: 'Alpha body' });
 });
 
 it('commits early body input to the active real node before editorNodeId is ready', () => {
@@ -71,5 +71,5 @@ it('commits early body input to the active real node before editorNodeId is read
   });
 
   expect(onEditorChange).not.toHaveBeenCalled();
-  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', '# New topic\n\nBody', { publishLocal: false });
+  expect(onNodeContentChange).toHaveBeenCalledWith('node-1', '# New topic\n\nBody', { publishLocal: false, baseContent: '' });
 });

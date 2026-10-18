@@ -82,7 +82,7 @@ it('keeps attachments yielding while the cadence holds a committed edit', async 
   expect(hasWaitingSyncData()).toBe(false);
 });
 
-it('runs immediately and merges a five-second high-value burst into one trailing sync', async () => {
+it('runs idle mutations immediately and merges mutations while a run is active', async () => {
   const { hook, run } = renderMutationSchedule();
   await act(async () => Promise.resolve());
 
@@ -90,11 +90,13 @@ it('runs immediately and merges a five-second high-value burst into one trailing
     publishCompanionHighValueMutation();
     await Promise.resolve();
   });
+  expect(run).toHaveBeenCalledTimes(2);
   publishCompanionHighValueMutation();
+  expect(run).toHaveBeenCalledTimes(3);
   publishCompanionHighValueMutation();
   await act(async () => vi.advanceTimersByTimeAsync(5_000));
 
-  expect(run).toHaveBeenCalledTimes(3);
+  expect(run).toHaveBeenCalledTimes(4);
   hook.unmount();
 });
 

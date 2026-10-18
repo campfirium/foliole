@@ -24,7 +24,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('projects desktop commits into one leading, one trailing, and minute freshness run', async () => {
+it('runs desktop idle commits immediately, merges busy commits, and keeps minute freshness', async () => {
   vi.useFakeTimers();
   vi.setSystemTime(1_000);
   updateDesktopSyncFreshness(true, 1_000);
@@ -32,12 +32,13 @@ it('projects desktop commits into one leading, one trailing, and minute freshnes
   requestDesktopHighValueSync();
   await vi.advanceTimersByTimeAsync(1_000);
   requestDesktopHighValueSync();
+  expect(runtime.run).toHaveBeenCalledTimes(2);
   requestDesktopHighValueSync();
   await vi.advanceTimersByTimeAsync(4_000);
-  expect(runtime.run).toHaveBeenCalledTimes(2);
+  expect(runtime.run).toHaveBeenCalledTimes(3);
 
   await vi.advanceTimersByTimeAsync(60_000);
-  expect(runtime.run).toHaveBeenCalledTimes(3);
+  expect(runtime.run).toHaveBeenCalledTimes(4);
 });
 
 it('restarts the freshness minute after a manual coordinator completion', async () => {

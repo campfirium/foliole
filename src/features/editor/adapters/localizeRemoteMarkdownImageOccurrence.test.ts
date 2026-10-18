@@ -32,7 +32,9 @@ describe('localizeRemoteMarkdownImageOccurrence', () => {
     })).resolves.toEqual({
       attachmentId: 'attachment-1',
       content: `${first}\n![Second](${IMAGE_URL})`,
-      changes: [{ from: first.length + 1, to: markdown.length, insert: `![Second](${IMAGE_URL})` }]
+      changes: [{ from: first.length + 1, to: markdown.length, insert: `![Second](${IMAGE_URL})`,
+        resource: { storage_key: `${IMAGE_HASH}.png`, original_name: 'cover.png',
+          role: 'image', source_url: 'https://example.com/second.png' } }]
     });
     expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
     expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/second.png');
