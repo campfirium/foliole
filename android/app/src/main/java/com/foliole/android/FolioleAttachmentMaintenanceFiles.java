@@ -70,7 +70,12 @@ final class FolioleAttachmentMaintenanceFiles {
         if (!destination.getParentFile().isDirectory() && !destination.getParentFile().mkdirs()) {
             throw new IllegalStateException("attachment_directory_failed");
         }
-        if (destination.exists()) requireFile(destination);
+        if (destination.exists()) {
+            requireFile(destination);
+            if (!key.substring(0, 64).equals(FolioleCompanionAttachmentResourceHash.digestHex(destination))) {
+                throw new IllegalStateException("attachment_trash_destination_conflict");
+            }
+        }
         FolioleAttachmentBlockFiles.publish(context, source, destination, key.substring(0, 64));
     }
 

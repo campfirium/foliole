@@ -107,7 +107,15 @@ public class FolioleRemoteImageFilesTest {
         assertTrue(trash.mkdir());
         Files.write(new File(trash, key).toPath(), new byte[] {1, 2, 3});
         assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, true));
-        assertArrayEquals(bytes, Files.readAllBytes(new File(root, "attachments/" + key).toPath()));
+        File active = new File(root, "attachments/" + key);
+        File destination = new File(trash, key);
+        assertArrayEquals(bytes, Files.readAllBytes(active.toPath()));
+        assertArrayEquals(new byte[] {1, 2, 3}, Files.readAllBytes(destination.toPath()));
+        Files.write(active.toPath(), new byte[] {4, 5, 6});
+        Files.write(destination.toPath(), bytes);
+        assertThrows(IllegalStateException.class, () -> FolioleAttachmentMaintenanceFiles.move(context, key, false));
+        assertArrayEquals(new byte[] {4, 5, 6}, Files.readAllBytes(active.toPath()));
+        assertArrayEquals(bytes, Files.readAllBytes(destination.toPath()));
     }
 
     private PluginCall input(byte[] value, String key) throws Exception { return call(data(value, key)); }
