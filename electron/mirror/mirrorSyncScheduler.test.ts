@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(mockedAppDataDir, 'logs')
   })
 }));
+vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn(async () => {}) }));
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [] },
   nativeTheme: { on: vi.fn(), shouldUseDarkColors: false, themeSource: 'system' },
