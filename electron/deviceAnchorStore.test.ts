@@ -66,6 +66,19 @@ it('keeps desktop test device identity inside the isolated runtime root', () => 
   })).toBe('D:\\Temp\\foliole-playwright-a\\device-identity\\anchor-v1');
 });
 
+it('keeps daily macOS DEV on the shared device identity despite its isolated runtime state', () => {
+  const appGroupContainerPath = vi.fn(() => ({ ok: true as const, path: '/Users/me/Library/Group Containers/foliole' }));
+  expect(resolveDesktopDeviceAnchorFilePath({
+    env: {
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/repo/.tmp/macos-desktop-daily-debug',
+      FOLIOLE_MACOS_DAILY_DEBUG: '1',
+      FOLIOLE_USER_DATA_PATH: '/repo/.tmp/macos-desktop-daily-debug/user-data'
+    },
+    loadAdapter: () => ({ adapter: { appGroupContainerPath }, status: 'ready' }),
+    platform: 'darwin'
+  })).toBe('/Users/me/Library/Group Containers/foliole/device-identity/anchor-v1');
+});
+
 it('creates one lowercase UUIDv4 and hydrates it after restart', async () => {
   const root = await temporaryRoot();
   const filePath = path.join(root, 'device-identity', 'anchor-v1');

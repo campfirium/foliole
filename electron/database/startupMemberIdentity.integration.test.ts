@@ -6,6 +6,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let root = '';
 let dataRoot = '';
+vi.mock('../macosSecurityScopedBookmarksNative.js', () => ({
+  loadMacosSecurityScopedBookmarkAdapter: () => ({ status: 'ready', adapter: {
+    appGroupContainerPath: () => ({ ok: true, path: path.join(root, 'device-one') })
+  } })
+}));
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({ app_data_dir: dataRoot, app_config_dir: path.join(dataRoot, 'config'),
     app_cache_dir: path.join(dataRoot, 'cache'), app_log_dir: path.join(dataRoot, 'logs') })
@@ -38,6 +43,16 @@ it('reopens the same library on the original device with the same member identit
   closeDatabaseConnection();
   expect(() => initializeDatabase(undefined, { verifyMemberIdentity: true })).not.toThrow();
   expect(loadDesktopSyncGroup()?.local_device_identity_key).toBe(original);
+});
+
+it.runIf(process.platform === 'darwin')('reopens the existing member in daily DEV without changing its identity', () => {
+  const original = loadDesktopSyncGroup();
+  closeDatabaseConnection();
+  vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', path.join(root, 'daily-runtime'));
+  vi.stubEnv('FOLIOLE_MACOS_DAILY_DEBUG', '1');
+  expect(() => initializeDatabase(undefined, { verifyMemberIdentity: true })).not.toThrow();
+  expect(loadDesktopSyncGroup()?.local_device_identity_key).toBe(original?.local_device_identity_key);
+  expect(loadDesktopSyncGroup()?.devices).toEqual(original?.devices);
 });
 
 it.each(['device anchor', 'library path'])('rejects a changed %s before rewriting membership', async changed => {

@@ -2,6 +2,26 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 
+test('daily DEV resolves the same native Mac device location as the installed channel', async ({ desktopApp }) => {
+  // SKIP: macOS App Group contract | 2026-10-19 | revive: running on macOS
+  test.skip(process.platform !== 'darwin', 'macOS App Group contract');
+  const locations = await desktopApp.evaluate(() => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const anchors = require(`${process.cwd()}/dist/electron/deviceAnchorStore.js`);
+    return {
+      installed: anchors.resolveDesktopDeviceAnchorFilePath({ env: {} }),
+      daily: anchors.resolveDesktopDeviceAnchorFilePath({
+        env: { ...process.env, FOLIOLE_MACOS_DAILY_DEBUG: '1' }
+      }),
+      isolated: anchors.resolveDesktopDeviceAnchorFilePath({
+        env: { ...process.env, FOLIOLE_MACOS_DAILY_DEBUG: undefined }
+      })
+    };
+  });
+  expect(locations.daily).toBe(locations.installed);
+  expect(locations.isolated).not.toBe(locations.installed);
+});
+
 test('explains a rejected library identity on the native startup error page', async ({ desktopApp, desktopWindow }, info) => {
   const message = await desktopApp.evaluate(async ({ BrowserWindow }) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
