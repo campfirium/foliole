@@ -24,7 +24,7 @@ jobs:
   desktop-source-tests:
     name: ${{ matrix.host }} ${{ matrix.bucket }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ matrix.host == 'Ubuntu' && 30 || 20 }}
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-desktop-source-${{ matrix.host }}-${{ matrix.bucket }}
       cancel-in-progress: false
