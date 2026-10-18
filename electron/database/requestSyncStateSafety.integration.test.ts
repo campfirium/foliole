@@ -100,3 +100,26 @@ it('applies a remote reading tombstone by clearing that node reading and host po
     }
   } finally { await fixture.close(); }
 });
+
+it('retains newer live reading state when an older ownerless tombstone is replayed', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  try {
+    await target.seed('reading');
+    const payload = { node_id: 'reading', interval_duration_ms: 120000, interval_growth_factor: 1.5,
+      last_handled_at: now, next_at: '2026-10-20T00:00:00.000Z', priority: 0.75, repetition_count: 2, state: 'active' };
+    await target.db.transaction(db => applySyncObjectInTransaction(db, {
+      object_type: 'node_reading', object_id: 'reading', content_hash: computeSyncContentHash('node_reading', payload),
+      payload_json: JSON.stringify(payload), updated_at: '2026-10-18T00:00:00.000Z', deleted_at: null
+    }));
+    target.sqlite.prepare('INSERT INTO node_reading_host_state VALUES (?, ?, 128, ?)').run('reading', 'Phone', now);
+    const tables = ['node_reading', 'node_reading_host_state', 'node_sync_versions', 'sync_object_state'];
+    const saved = () => tables.map(table => target.sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
+    const before = saved();
+    tombstone(source, 'node_reading', 'reading');
+    for (let replay = 0; replay < 2; replay++) {
+      await send(source, target); target.reopen();
+      expect(saved()).toEqual(before);
+    }
+  } finally { await fixture.close(); }
+});

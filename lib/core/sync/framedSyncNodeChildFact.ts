@@ -11,14 +11,14 @@ import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecuto
 
 const childIdentity = z.tuple([z.enum(NODE_CHILD_STATE_TYPES), z.string().min(1), z.string().regex(/^[a-f0-9]{64}$/u)]);
 
-function identity(factId: string) {
+export function parseFramedSyncNodeChildIdentity(factId: string) {
   const [objectType, globalId, hash] = childIdentity.parse(JSON.parse(factId));
   if (JSON.stringify([objectType, globalId, hash]) !== factId) throw new Error('framed_sync_node_child_fact_invalid');
   return { objectType, globalId, hash };
 }
 
 export async function selectFramedSyncNodeChildFact(db: DbPort, nodeId: string, factId: string): Promise<CanonicalFact> {
-  const key = identity(factId);
+  const key = parseFramedSyncNodeChildIdentity(factId);
   const [owner] = await db.query<{ node_id: string }>(`SELECT ${nodeChildOwnerSql('state')} AS node_id
     FROM sync_object_state state WHERE object_type = ? AND object_id = ?`, [key.objectType, key.globalId]);
   if (owner?.node_id !== nodeId) throw new Error('framed_sync_source_changed');
@@ -28,7 +28,7 @@ export async function selectFramedSyncNodeChildFact(db: DbPort, nodeId: string, 
 
 export function restoreFramedSyncNodeChildFact(fact: CanonicalFact) {
   if (fact.objectType !== 'node' || fact.kind !== 1) throw new Error('framed_sync_node_child_fact_invalid');
-  const key = identity(fact.factId);
+  const key = parseFramedSyncNodeChildIdentity(fact.factId);
   const record = restoreFramedSyncObjectStateFact({ ...fact, ...key,
     factId: `${key.objectType}:${key.hash}` });
   assertOwner(record, fact.globalId);

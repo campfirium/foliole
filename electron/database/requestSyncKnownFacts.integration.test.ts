@@ -8,6 +8,7 @@ import { restoreFramedSyncReview } from '../../lib/core/sync/framedSyncRelationR
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { buildRemoteNodeVersionUpsert } from '../../lib/core/sync/syncNodeApplyStatements.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { applyReviewLogRecordsWithDbPort, type ReviewLogRecordInput } from '../../lib/core/sync/syncReviewLogApply.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -20,6 +21,19 @@ function history(count: number, bodySize = 32) {
   for (let index = 1; index <= count; index++) records.push(textBranch(`v${index}`,
     `${index}:` + 'b'.repeat(bodySize), records.at(-1), '2026-10-01T00:00:00.000Z'));
   return records;
+}
+
+async function seedKnownHistory(peer: RestorePeer, records: NativeSyncNodeRecord[]) {
+  await peer.db.transaction(async db => {
+    for (const record of records) {
+      const statement = buildRemoteNodeVersionUpsert(record)!;
+      await db.run(statement.sql, statement.params);
+      if (record.parent_version_id) await db.run(
+        'INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal) VALUES (?, ?, 0)',
+        [record.version_id!, record.parent_version_id]);
+    }
+  });
+  await applySyncNodesWithDbPort(peer.db, [records.at(-1)!]);
 }
 
 function graph(peer: RestorePeer) {
@@ -122,15 +136,15 @@ it('discovers and persists an open-state change after 2050 already known version
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     const records = history(2050);
-    await applySyncNodesWithDbPort(source.db, records); await applySyncNodesWithDbPort(target.db, records);
+    await seedKnownHistory(source, records); await seedKnownHistory(target, records);
     const expectedGraph = graph(source); const expectedBodies = bodies(source);
     expect(expectedGraph.versions).toHaveLength(2050); expect(expectedGraph.parents).toHaveLength(2049);
     const payload = { node_id: 'topic', last_opened_at: '2026-10-09T09:00:00.000Z' };
     await source.db.transaction(db => applySyncObjectInTransaction(db, { object_type: 'node_open_state', object_id: 'topic',
       payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('node_open_state', payload),
       updated_at: payload.last_opened_at, deleted_at: null }));
-    expect((await differences(source, target)).map(value => value.objectType)).toEqual(['node_open_state']);
-    const difference = await send(source, target, 'node_open_state');
+    expect((await differences(source, target)).map(value => value.objectType)).toEqual(['node']);
+    const difference = await send(source, target, 'node');
     await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference, false);
     target.reopen();

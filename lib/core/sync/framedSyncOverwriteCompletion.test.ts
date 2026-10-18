@@ -58,3 +58,20 @@ it('retains missing immutable order versions after a delivery receipt', () => {
   expect(pendingFramedSyncOverwriteDifferences({ local: current, remote,
     deliveredDifferences: compareFramedSyncDatabaseInventories({ local: current, remote }) })).toHaveLength(1);
 });
+
+const childId = (type: string, id: string, hash: string) => JSON.stringify([type, id, hash.repeat(64)]);
+
+it('finishes a delivered child state merged into a newer local value', () => {
+  const remote = [{ ...source, stateFactIds: [childId('node_open_state', 'article', 'a')] }];
+  const current = [{ ...local, stateFactIds: [childId('node_open_state', 'article', 'b')] }];
+  const delivered = compareFramedSyncDatabaseInventories({ local: current, remote });
+  expect(pendingFramedSyncOverwriteDifferences({ local: current, remote, deliveredDifferences: delivered })).toEqual([]);
+  expect(pendingFramedSyncOverwriteDifferences({ local: current, remote, deliveredDifferences: [] })).toHaveLength(1);
+  for (const stateFactIds of [[], [childId('node_open_state', 'other', 'b')], [childId('node_review', 'article', 'b')]]) {
+    expect(pendingFramedSyncOverwriteDifferences({ local: [{ ...local, stateFactIds }], remote,
+      deliveredDifferences: delivered })).toHaveLength(1);
+  }
+  expect(pendingFramedSyncOverwriteDifferences({ local: current,
+    remote: [{ ...source, stateFactIds: [childId('node_open_state', 'article', 'c')] }],
+    deliveredDifferences: delivered })).toHaveLength(1);
+});
