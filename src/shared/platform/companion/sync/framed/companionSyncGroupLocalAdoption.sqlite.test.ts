@@ -36,7 +36,8 @@ async function setup(kind: 'android' | 'ios') {
   const main = new Database(path.join(root, 'main.db'));
   databases.push(main);
   const port = createBetterSqliteDbPort(main);
-  await bootstrapCompanionDatabase(port, { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
+  await bootstrapCompanionDatabase(port, { allowCreate: true, expectedHostName: 'receiver', expectedJournalMode: 'wal', now: '2026-10-06' });
+  expect(main.pragma('journal_mode', { simple: true })).toBe('wal');
   main.exec(`INSERT INTO sync_groups VALUES ('group-1', 'Group', 'key', 'now', 'now');
     INSERT INTO sync_group_local_state VALUES (1, 'group-1', 'receiver', 'active', 'now');
     INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
