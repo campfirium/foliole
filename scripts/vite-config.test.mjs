@@ -105,8 +105,10 @@ describe('vite config', () => {
     });
   });
 
-  it('forwards WebView console messages to Logcat only in Android debug builds', () => {
-    expect(capacitorConfig.android?.loggingBehavior).toBe('debug');
+  it('keeps full native payload logging out of installed Android builds', () => {
+    expect(createCapacitorConfig({}).android?.loggingBehavior).toBe('none');
+    expect(createCapacitorConfig({ FOLIOLE_ANDROID_DEV_LIVE_RELOAD: '1' })
+      .android?.loggingBehavior).toBe('debug');
   });
 
   it('keeps live reload out of normal builds and enables it only for the fixed A5 DEV sync', () => {
