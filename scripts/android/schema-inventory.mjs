@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ATTACHMENT_DEMAND_SCHEMA } from '../../lib/core/database/attachmentDemandSchema.ts';
 import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.ts';
 
 import {
@@ -83,7 +84,7 @@ export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {
 }
 
 export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
-  const arrays = {};
+  const arrays = { ATTACHMENT_DEMAND_SCHEMA };
   for (const [name, relativePath] of Object.entries(DESKTOP_SCHEMA_FILES)) {
     arrays[name] = extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name, arrays);
   }

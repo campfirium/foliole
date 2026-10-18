@@ -1,4 +1,6 @@
 export const CORE_TABLES = [
+  'attachment_parse_queue',
+  'attachment_pending',
   'content_blobs',
   'content_blob_data',
   'external_documents',
