@@ -2,6 +2,7 @@ import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from
 
 import { readCompanionArticle } from './companion/reading/companionArticleRead';
 import {
+  loadCompanionDisplaySnapshotState,
   loadIosCompanionWorkspaceSyncState,
   updateIosCompanionWorkspaceSyncMetadata,
   type CompanionSyncMetadata
@@ -35,6 +36,10 @@ export async function loadCompanionWorkspaceSyncState() {
     return loadIosCompanionWorkspaceSyncState();
   }
   return readWebSyncState();
+}
+
+export function loadCompanionWorkspaceDisplayState() {
+  return usesSharedOwner() ? loadCompanionDisplaySnapshotState() : Promise.resolve(readWebSyncState());
 }
 
 export {

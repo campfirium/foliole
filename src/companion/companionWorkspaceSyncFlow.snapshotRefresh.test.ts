@@ -31,14 +31,14 @@ it('does not reload the tree for received foreground time alone', async () => {
   const view = createView();
   receiveChanges(false);
   expect(await tryForegroundAutoSync(view.args)).toBe('completed');
-  expect(syncPlatformMock.loadCompanionWorkspaceSyncState).not.toHaveBeenCalled();
+  expect(syncPlatformMock.loadCompanionWorkspaceDisplayState).not.toHaveBeenCalled();
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('original');
 });
 
 it('releases the run before a slow display refresh and preserves current metadata', async () => {
   const view = createView();
   let resolve!: (state: ReturnType<typeof createSyncState>) => void;
-  syncPlatformMock.loadCompanionWorkspaceSyncState.mockImplementation(() => {
+  syncPlatformMock.loadCompanionWorkspaceDisplayState.mockImplementation(() => {
     expect(loadActiveCompanionSyncRun()).toBeNull();
     return new Promise(done => { resolve = done; });
   });
@@ -54,7 +54,7 @@ it('releases the run before a slow display refresh and preserves current metadat
 it('does not rebuild the workspace when no data was received', async () => {
   const view = createView();
   expect(await tryForegroundAutoSync(view.args), JSON.stringify(view.args.setError.mock.calls)).toBe('completed');
-  expect(syncPlatformMock.loadCompanionWorkspaceSyncState).not.toHaveBeenCalled();
+  expect(syncPlatformMock.loadCompanionWorkspaceDisplayState).not.toHaveBeenCalled();
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('original');
 });
 
@@ -64,7 +64,7 @@ it('reloads after discarding a late snapshot so both remote changes and local ed
   const combined = createWorkspaceSnapshot('local-edit');
   combined.nodesById.received = createWorkspaceSnapshot('received').nodesById.received!;
   combined.nodeOrder.push('received');
-  syncPlatformMock.loadCompanionWorkspaceSyncState
+  syncPlatformMock.loadCompanionWorkspaceDisplayState
     .mockReturnValueOnce(new Promise(done => { resolve = done; }))
     .mockResolvedValue(createSyncState({ workspace_snapshot: combined }));
   receiveChanges();
@@ -74,12 +74,12 @@ it('reloads after discarding a late snapshot so both remote changes and local ed
   resolve(createSyncState({ workspace_snapshot: createWorkspaceSnapshot('stale') }));
   await vi.waitFor(() => expect(view.current().workspace_snapshot?.nodesById.received).toBeDefined());
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('local-edit');
-  expect(syncPlatformMock.loadCompanionWorkspaceSyncState).toHaveBeenCalledTimes(2);
+  expect(syncPlatformMock.loadCompanionWorkspaceDisplayState).toHaveBeenCalledTimes(2);
 });
 
 it('reports display failure without changing the committed data result', async () => {
   const view = createView();
-  syncPlatformMock.loadCompanionWorkspaceSyncState.mockRejectedValue(new Error('snapshot_failed'));
+  syncPlatformMock.loadCompanionWorkspaceDisplayState.mockRejectedValue(new Error('snapshot_failed'));
   receiveChanges();
   expect(await tryForegroundAutoSync(view.args), JSON.stringify(view.args.setError.mock.calls)).toBe('completed');
   await vi.waitFor(() => expect(view.args.setError).toHaveBeenCalledWith('sync_display_unavailable'));
@@ -92,7 +92,7 @@ async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs) {
 
 it('clears the visible workspace when the last received node is deleted', async () => {
   const view = createView();
-  syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
+  syncPlatformMock.loadCompanionWorkspaceDisplayState.mockResolvedValue(createSyncState());
   receiveChanges();
   expect(await tryForegroundAutoSync(view.args)).toBe('completed');
   await vi.waitFor(() => expect(view.current().workspace_snapshot).toBeNull());
@@ -106,7 +106,7 @@ it('retries when a local edit arrives after reading but before React publishes t
   const combined = createWorkspaceSnapshot('local-edit');
   combined.nodesById.received = createWorkspaceSnapshot('received').nodesById.received!;
   combined.nodeOrder.push('received');
-  syncPlatformMock.loadCompanionWorkspaceSyncState
+  syncPlatformMock.loadCompanionWorkspaceDisplayState
     .mockResolvedValueOnce(createSyncState({ workspace_snapshot: createWorkspaceSnapshot('stale') }))
     .mockResolvedValue(createSyncState({ workspace_snapshot: combined }));
   await refreshCompanionSyncDisplay({ ...view.args, setState: update => updates.push(update) });

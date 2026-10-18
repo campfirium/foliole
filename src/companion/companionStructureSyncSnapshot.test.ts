@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const workspaceSyncMock = vi.hoisted(() => ({
-  loadCompanionWorkspaceSyncState: vi.fn()
+  loadCompanionWorkspaceDisplayState: vi.fn()
 }));
 
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
@@ -13,7 +13,7 @@ describe('loadCompanionStateAfterStructureSyncReport', () => {
 
   it('accepts an empty workspace after its last node is deleted', async () => {
     const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
-    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue({
+    workspaceSyncMock.loadCompanionWorkspaceDisplayState.mockResolvedValue({
       endpoint_url: null,
       last_synced_at: null,
       remembered_targets: [],
@@ -30,7 +30,7 @@ describe('loadCompanionStateAfterStructureSyncReport', () => {
 
   it('reports db_busy separately from generic snapshot refresh errors', async () => {
     const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
-    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockRejectedValue(new Error('SQLiteException: database is locked'));
+    workspaceSyncMock.loadCompanionWorkspaceDisplayState.mockRejectedValue(new Error('SQLiteException: database is locked'));
 
     const report = await loadCompanionStateAfterStructureSyncReport();
 
@@ -42,7 +42,7 @@ describe('loadCompanionStateAfterStructureSyncReport', () => {
     vi.useFakeTimers();
     try {
       const { loadCompanionStateAfterStructureSyncReport } = await import('./companionStructureSyncSnapshot');
-      workspaceSyncMock.loadCompanionWorkspaceSyncState.mockReturnValue(new Promise(() => undefined));
+      workspaceSyncMock.loadCompanionWorkspaceDisplayState.mockReturnValue(new Promise(() => undefined));
 
       const reportPromise = loadCompanionStateAfterStructureSyncReport();
       await vi.advanceTimersByTimeAsync(8_000);

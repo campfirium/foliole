@@ -21,6 +21,10 @@ export async function loadIosCompanionWorkspaceSyncState(
   return manager ? withConnection(manager, loadState) : getIosCompanionDatabaseOwner().read(loadState);
 }
 
+export function loadCompanionDisplaySnapshotState() {
+  return getIosCompanionDatabaseOwner().readSnapshot(loadState);
+}
+
 export type CompanionSyncMetadata = Omit<NativeCompanionWorkspaceSyncState, 'workspace_snapshot'>;
 
 const metadataKeys = {

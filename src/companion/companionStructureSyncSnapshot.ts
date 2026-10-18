@@ -3,7 +3,7 @@ import {
   companionSyncTimeoutOwnership,
   createCompanionSyncTimeoutError
 } from '../shared/platform/companionSyncTimeoutOwnership';
-import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import { loadCompanionWorkspaceDisplayState } from '../shared/platform/companionWorkspaceSync';
 
 const WORKSPACE_SNAPSHOT_REFRESH_TIMEOUT_MS =
   companionSyncTimeoutOwnership('workspace_snapshot_refresh').timeoutMs;
@@ -31,7 +31,7 @@ export async function loadCompanionStateAfterStructureSyncReport(): Promise<Comp
     );
   });
   try {
-    const refreshedState = await Promise.race([loadCompanionWorkspaceSyncState(), timeout]);
+    const refreshedState = await Promise.race([loadCompanionWorkspaceDisplayState(), timeout]);
     return {
       elapsedMs: Date.now() - startedAt,
       fallbackReason: null,

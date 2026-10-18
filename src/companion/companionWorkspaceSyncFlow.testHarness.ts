@@ -8,7 +8,7 @@ import type { CompanionDesktopSyncResult } from '../shared/platform/companionDes
 export const syncPlatformMock = {
   bindCompanionWorkspaceSyncTarget: vi.fn(),
   loadCompanionReadableArticle: vi.fn(async () => null),
-  loadCompanionWorkspaceSyncState: vi.fn(),
+  loadCompanionWorkspaceDisplayState: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
   resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn<(
@@ -111,7 +111,7 @@ export function resetCompanionWorkspaceSyncFlowMocks() {
     localExited: false, peerRemoved: false
   });
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult());
-  syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
+  syncPlatformMock.loadCompanionWorkspaceDisplayState.mockResolvedValue(createSyncState());
   syncPlatformMock.recordCompanionWorkspaceSyncEvent.mockImplementation(async () => {
     const state: Partial<NativeCompanionWorkspaceSyncState> = createSyncState();
     delete state.workspace_snapshot;
