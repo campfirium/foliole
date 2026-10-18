@@ -8,6 +8,7 @@ import { expect, it, vi } from 'vitest';
 
 import { loadCompanionStateAfterStructureSyncReport } from '../../../../../companion/companionStructureSyncSnapshot';
 import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
+import { refreshCompanionWorkspaceAfterMutation } from '../../companionWorkspaceRepository';
 import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
 
 vi.mock('@capacitor/core', () => ({
@@ -75,11 +76,14 @@ function createLibrary(platform: 'android' | 'ios') {
   };
 }
 
-it.each(['android', 'ios'] as const)('%s commits new text while the previous display snapshot is still reading', async platform => {
+it.each([
+  { platform: 'android', origin: 'remote' }, { platform: 'ios', origin: 'remote' },
+  { platform: 'android', origin: 'local' }, { platform: 'ios', origin: 'local' }
+] as const)('$platform commits new text during a $origin display refresh', async ({ platform, origin }) => {
   const library = createLibrary(platform);
   const { owner, file, reading, release } = library;
   runtime.owner = owner;
-  let snapshot: ReturnType<typeof loadCompanionStateAfterStructureSyncReport> | undefined;
+  let snapshot: ReturnType<typeof refreshCompanionWorkspaceAfterMutation> | undefined;
   let write: Promise<unknown> | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -87,7 +91,9 @@ it.each(['android', 'ios'] as const)('%s commits new text while the previous dis
     await owner.runWriter(db => db.run(`INSERT INTO nodes
       (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Old text', 'now', 'now')`));
     library.hold();
-    snapshot = loadCompanionStateAfterStructureSyncReport();
+    snapshot = origin === 'remote'
+      ? loadCompanionStateAfterStructureSyncReport().then(report => report.state?.workspace_snapshot ?? null)
+      : refreshCompanionWorkspaceAfterMutation();
     await reading.promise;
     write = owner.runWriter(db => db.transaction(tx => tx.run(
       "UPDATE nodes SET title = 'After', content = 'New text' WHERE id = 'topic'")));
@@ -103,7 +109,7 @@ it.each(['android', 'ios'] as const)('%s commits new text while the previous dis
     await write;
     expect(committedBeforeDisplay, 'Display refresh must not own the writer queue').toBe(true);
     expect(persisted).toBe('New text');
-    expect(displayed.state?.workspace_snapshot?.nodesById.topic?.title).toBe('Before');
+    expect(displayed?.nodesById.topic?.title).toBe('Before');
   } finally {
     clearTimeout(timeout);
     release.resolve();

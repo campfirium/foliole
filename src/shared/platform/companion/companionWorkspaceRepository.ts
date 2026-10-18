@@ -10,7 +10,7 @@ import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCom
 export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null) {
   const runtime = getCompanionRuntimeCapability();
   if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
-    const snapshot = await getIosCompanionDatabaseOwner().read(loadIosCompanionWorkspaceSnapshot) as WorkspaceSnapshot | null;
+    const snapshot = await getIosCompanionDatabaseOwner().readSnapshot(loadIosCompanionWorkspaceSnapshot) as WorkspaceSnapshot | null;
     registerWorkspaceAttachmentResources(snapshot);
     return snapshot;
   }
