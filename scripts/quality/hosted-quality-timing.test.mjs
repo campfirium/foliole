@@ -45,3 +45,15 @@ it('keeps failures and missing queued timestamps honest without changing conclus
   expect(report.current.incompleteJobs).toEqual(['t5-baseline / queued']);
   expect(report.wallDeltaSeconds).toBe(-3);
 });
+
+it('includes the entry gate when full quality owns the whole reusable chain', () => {
+  const report = analyzeHostedQualityTiming({
+    topology: 'remote-quality', baseline: null,
+    current: { run: { created_at: '2026-01-01T00:00:00Z' }, jobs: [
+      job('dev-ref', '2026-01-01T00:00:00Z', '2026-01-01T00:00:01Z', '2026-01-01T00:00:03Z'),
+      job('full-quality / t5-static / static', '2026-01-01T00:00:03Z', '2026-01-01T00:00:05Z', '2026-01-01T00:00:10Z'),
+      job('full-quality / t6-ios-contract / iOS', '2026-01-01T00:00:10Z', '2026-01-01T00:00:11Z', '2026-01-01T00:00:20Z')
+    ] }
+  });
+  expect(report.current.criticalChain).toEqual({ nodes: ['dev-ref', 'full-quality'], observedSeconds: 19 });
+});

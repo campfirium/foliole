@@ -13,6 +13,11 @@ on:
         required: true
         type: string
 
+    outputs:
+      accepted_sha:
+        description: Exact commit accepted by the requested host checks
+        value: ${{ jobs.android-host.outputs.accepted_sha }}
+
 permissions:
   contents: read
 
@@ -24,6 +29,8 @@ jobs:
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-android-host
       cancel-in-progress: false
+    outputs:
+      accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
       FOLIOLE_ANDROID_HOST_MODE: native-linux
@@ -63,3 +70,6 @@ jobs:
           path: .tmp/logs/quality-gate
           if-no-files-found: ignore
           retention-days: 14
+      - name: Export accepted SHA
+        id: accepted
+        run: echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

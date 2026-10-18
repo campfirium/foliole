@@ -54,7 +54,7 @@ const HOSTED_QUALITY_GAP_ROUTES = [
   ], ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']],
   ['pinned npm workflow', ['package.json', 'package-lock.json'], [
     'scripts/quality/pinned-npm.test.mjs',
-    'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+    'scripts/quality/chain-workflow-contract.test.mjs',
     'scripts/t6-hosted-quality-workflow-contract.test.mjs',
     'scripts/t7-hosted-quality-workflow-contract.test.mjs'
   ]]
@@ -65,7 +65,7 @@ const HOSTED_QUALITY_CONTRACTS = [
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
   'scripts/t4-desktop-canonical-workflow-contract.test.mjs',
-  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/quality/chain-workflow-contract.test.mjs',
   'scripts/t5-quality-leaf-ownership-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs',
   'scripts/t7-hosted-quality-workflow-contract.test.mjs'
@@ -135,7 +135,7 @@ describe('quality critical test routes', () => {
   });
 
   it.each(HOSTED_QUALITY_GAP_ROUTES)('routes the %s triggers to their cross-file contract', (_name, triggers, tests) => {
-    expect(resolveCriticalTestFiles(triggers, existing)).toEqual(tests);
+    expect(resolveCriticalTestFiles(triggers, existing)).toEqual([...tests].sort());
   });
 
   it('routes every hosted orchestration surface to the full workflow contract set', () => {
@@ -146,7 +146,7 @@ describe('quality critical test routes', () => {
       '.github/workflows/t6-hosted-quality.yml',
       '.github/workflows/t7-hosted-quality.yml',
       'scripts/quality/t7-hosted-quality-admission.mjs'
-    ], existing)).toEqual(HOSTED_QUALITY_CONTRACTS);
+    ], existing)).toEqual([...HOSTED_QUALITY_CONTRACTS].sort());
   });
 
   it('routes every release orchestration surface to the release workflow contracts', () => {

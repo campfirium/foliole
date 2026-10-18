@@ -54,27 +54,18 @@ jobs:
       trigger_ref: ${{ github.ref }}
       scope: ${{ inputs.scope }}
 
-  t5-baseline:
+  full-quality:
     if: inputs.scope == 'full' && needs.dev-ref.result == 'success'
     needs: dev-ref
-    uses: ./.github/workflows/t5-baseline-admission.yml
+    uses: ./.github/workflows/t6-hosted-quality.yml
     with:
       execution_lane: dev-remote
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ github.ref }}
 
-  full-quality:
-    if: inputs.scope == 'full' && needs.t5-baseline.result == 'success'
-    needs: t5-baseline
-    uses: ./.github/workflows/hosted-quality-full.yml
-    with:
-      execution_lane: dev-remote
-      target_sha: ${{ needs.t5-baseline.outputs.admitted_sha }}
-      trigger_ref: ${{ github.ref }}
-
   timing-summary:
     if: ${{ always() }}
-    needs: [dev-ref, scoped-quality, t5-baseline, full-quality]
+    needs: [dev-ref, scoped-quality, full-quality]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:

@@ -61,9 +61,9 @@ describe('T7 release workflow contract', () => {
       .toBe('./.github/workflows/release-quality-recheck.yml');
     expect(jobs.quality_bucket_recheck.if)
       .toBe("startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')");
-    expect(Object.keys(qualityRecheck.jobs)).toEqual(qualityStages);
-    expect(qualityRecheck.jobs['t6-linux-responsiveness'].uses)
-      .toBe('./.github/workflows/hosted-quality-linux-responsiveness.yml');
+    expect(qualityRecheck.jobs.chain.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
+    expect(qualityRecheck.jobs.chain.with.stages).toBe('${{ inputs.stage }}');
+    expect(qualityRecheck.jobs.chain.with.execution_lane).toBe('release-t7-recheck');
     const linuxSteps = linuxResponsiveness.jobs['linux-responsiveness'].steps;
     expect(linuxSteps.some((step) => step.run?.includes('sync-pack-load-responsiveness.spec.ts')))
       .toBe(true);
@@ -72,10 +72,6 @@ describe('T7 release workflow contract', () => {
     expect(linuxResponsiveness.on.workflow_dispatch.inputs.target_sha.required).toBe(true);
     expect(linuxResponsiveness.on.workflow_dispatch.inputs.inject_block_ms.options)
       .toEqual(['0', '1200']);
-    for (const stage of qualityStages) {
-      expect(qualityRecheck.jobs[stage].if).toBe(`inputs.stage == '${stage}'`);
-      expect(qualityRecheck.jobs[stage].with.target_sha).toBe('${{ inputs.target_sha }}');
-    }
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
     expect(jobs.release_candidate.needs).toEqual(['release_context', 't6_quality']);

@@ -31,7 +31,7 @@ const parseWorkflow = (name) => parse(read(`.github/workflows/${name}`));
 const portable = parseWorkflow('hosted-quality-portable-domain.yml');
 const desktopSource = parseWorkflow('hosted-quality-desktop-source.yml');
 const electron = parseWorkflow('hosted-quality-electron.yml');
-const t5 = parseWorkflow('t5-baseline-admission.yml');
+const t5 = parseWorkflow('t6-hosted-quality.yml');
 const tooling = parseWorkflow('hosted-quality-tooling.yml');
 const t5LeafWorkflows = [
   portable, desktopSource, electron, tooling,
@@ -116,8 +116,8 @@ describe('T5 canonical leaf ownership', () => {
       .toBe("inputs.domain == 'shared'");
     expect(steps.find(({ name }) => name === 'Run canonical Android source domain').if)
       .toBe("inputs.domain == 'android-source'");
-    expect(t5.jobs['shared-tests'].with.domain).toBe('shared');
-    expect(t5.jobs['android-source-tests'].with.domain).toBe('android-source');
+    expect(t5.jobs['t5-shared'].with.domain).toBe('shared');
+    expect(t5.jobs['t5-android-source'].with.domain).toBe('android-source');
   });
 
   it('maps every original test file to exactly one shard on both canonical hosts', () => {
@@ -236,6 +236,6 @@ describe('T5 canonical leaf ownership', () => {
   it('keeps every top-level caller within GitHub reusable workflow depth limits', () => {
     expect(maximumWorkflowDepth('t7-hosted-quality.yml')).toBeLessThanOrEqual(10);
     expect(maximumWorkflowDepth('remote-quality.yml')).toBeLessThanOrEqual(10);
-    expect(maximumWorkflowDepth('t7-hosted-quality.yml')).toBe(4);
+    expect(maximumWorkflowDepth('t7-release.yml')).toBeLessThanOrEqual(10);
   });
 });

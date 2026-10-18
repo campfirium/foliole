@@ -43,7 +43,7 @@ const NATIVE_PAIRING_SIGNING_CONTRACT_TESTS = [
 
 const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
   'scripts/quality/pinned-npm.test.mjs',
-  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/quality/chain-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs',
   'scripts/t7-hosted-quality-workflow-contract.test.mjs'
 ];
@@ -54,7 +54,7 @@ const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
   'scripts/t4-desktop-canonical-workflow-contract.test.mjs',
   'scripts/t5-quality-leaf-ownership-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
-  'scripts/t5-baseline-admission-workflow-contract.test.mjs',
+  'scripts/quality/chain-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs',
   'scripts/t7-hosted-quality-workflow-contract.test.mjs'
 ];
@@ -151,7 +151,7 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.github\/workflows\/(?:hosted-quality-(?:android|android-host|android-web-build|core|dependency-hardening|desktop-build|desktop-source|desktop-static|electron|full|ios|portable-domain|scoped-static|shared|static|tooling|windows-acceptance|windows-core)|remote-quality|t5-baseline-admission|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
+      /^\.github\/workflows\/(?:hosted-quality-(?:android|android-host|android-web-build|core|dependency-hardening|desktop-build|desktop-source|desktop-static|electron|chain-verdict|ios|portable-domain|scoped-static|shared|static|tooling|windows-acceptance|windows-core)|remote-quality|t6-hosted-quality|t7-hosted-quality)\.yml$/u,
       /^scripts\/quality\/t7-hosted-quality-admission\.mjs$/u
     ],
     tests: HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS

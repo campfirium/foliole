@@ -28,6 +28,11 @@ on:
         default: '[{"bucket":"sync-group-and-content","scenarios":["sync-group-signed-transport","content-resource-read"]},{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]},{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]},{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
         type: string
 
+    outputs:
+      accepted_sha:
+        description: Exact commit accepted by the requested host checks
+        value: ${{ jobs.contract.outputs.accepted_sha || jobs.simulator.outputs.accepted_sha }}
+
 permissions:
   contents: read
 
@@ -40,6 +45,8 @@ jobs:
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-contract-${{ inputs.scope }}
       cancel-in-progress: false
+    outputs:
+      accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
@@ -76,6 +83,9 @@ jobs:
           path: .tmp/logs/quality-gate
           if-no-files-found: ignore
           retention-days: 14
+      - name: Export accepted SHA
+        id: accepted
+        run: echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
 
   simulator:
     name: iOS Simulator (${{ matrix.bucket }})
@@ -89,6 +99,8 @@ jobs:
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-ios-simulator-${{ matrix.bucket }}
       cancel-in-progress: false
+    outputs:
+      accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
       FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
@@ -212,3 +224,6 @@ jobs:
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 14
+      - name: Export accepted SHA
+        id: accepted
+        run: echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

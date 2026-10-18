@@ -12,8 +12,8 @@ import { SHARED_TEST_BUCKETS } from './run-shared-test-bucket.mjs';
 const read = (file) => fs.readFileSync(file, 'utf8');
 const workflow = (name) => parse(read(`.github/workflows/${name}`));
 const core = workflow('hosted-quality-core.yml');
-const full = workflow('hosted-quality-full.yml');
-const t5 = workflow('t5-baseline-admission.yml');
+const full = workflow('t6-hosted-quality.yml');
+const t5 = workflow('t6-hosted-quality.yml');
 const TEST_PATTERN = /\.test\.(?:mjs|mts|ts|tsx)$/u;
 
 function collectTests(root) {
@@ -61,14 +61,14 @@ describe('T4 desktop canonical bucket topology', () => {
 
   it('uses the same reusable calls for every desktop bucket shared with full quality', () => {
     const pairs = [
-      ['desktop-static', t5.jobs['desktop-static']],
-      ['desktop-source-tests', t5.jobs['desktop-source-tests']],
-      ['desktop-shared-tests', t5.jobs['shared-tests']],
-      ['desktop-electron-tests', t5.jobs['electron-tests']],
-      ['desktop-tooling-tests', t5.jobs['tooling-tests']],
-      ['desktop-windows-core', t5.jobs['windows-core']],
-      ['desktop-dependency-hardening', t5.jobs['dependency-hardening']],
-      ['desktop-build', full.jobs['desktop-build']]
+      ['desktop-static', t5.jobs['t5-desktop-static']],
+      ['desktop-source-tests', t5.jobs['t5-desktop-source']],
+      ['desktop-shared-tests', t5.jobs['t5-shared']],
+      ['desktop-electron-tests', t5.jobs['t5-electron']],
+      ['desktop-tooling-tests', t5.jobs['t5-tooling']],
+      ['desktop-windows-core', t5.jobs['t5-windows-core']],
+      ['desktop-dependency-hardening', t5.jobs['t5-dependency-hardening']],
+      ['desktop-build', full.jobs['t6-desktop-build']]
     ];
     for (const [coreName, fullJob] of pairs) expectSameCall(core.jobs[coreName], fullJob);
     expect(new Set(pairs.map(([, job]) => job.uses)).size).toBe(pairs.length);

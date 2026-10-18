@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 const core = fs.readFileSync('.github/workflows/hosted-quality-core.yml', 'utf8');
-const full = fs.readFileSync('.github/workflows/hosted-quality-full.yml', 'utf8');
+const full = fs.readFileSync('.github/workflows/t6-hosted-quality.yml', 'utf8');
 const acceptanceJob = fs.readFileSync('.github/workflows/hosted-quality-windows-acceptance.yml', 'utf8');
-const t5 = fs.readFileSync('.github/workflows/t5-baseline-admission.yml', 'utf8');
+const t5 = fs.readFileSync('.github/workflows/t6-hosted-quality.yml', 'utf8');
 const t5WindowsCore = fs.readFileSync('.github/workflows/hosted-quality-windows-core.yml', 'utf8');
 const coreWorkflow = parse(core);
 const t5Workflow = parse(t5);
@@ -15,7 +15,7 @@ const t5Workflow = parse(t5);
 describe('hosted Windows x64 workflow contract', () => {
   it('keeps T4 desktop diagnosis independent from T5 and T6', () => {
     const scoped = coreWorkflow.jobs['desktop-windows-core'];
-    const baseline = t5Workflow.jobs['windows-core'];
+    const baseline = t5Workflow.jobs['t5-windows-core'];
     expect(scoped.if).toBe("inputs.scope == 'desktop'");
     expect(scoped.uses).toBe('./.github/workflows/hosted-quality-windows-core.yml');
     expect(scoped.uses).toBe(baseline.uses);

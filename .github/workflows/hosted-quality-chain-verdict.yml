@@ -1,0 +1,48 @@
+name: Hosted chain verdict
+on:
+  workflow_call:
+    inputs:
+      stages:
+        required: true
+        type: string
+      target_sha:
+        required: true
+        type: string
+      stage_results:
+        required: true
+        type: string
+    outputs:
+      accepted_sha:
+        description: Exact SHA accepted by the complete chain
+        value: ${{ jobs.verdict.outputs.accepted_sha }}
+permissions:
+  contents: read
+jobs:
+  verdict:
+    runs-on: ubuntu-latest
+    outputs:
+      accepted_sha: ${{ steps.verdict.outputs.accepted_sha }}
+    steps:
+      - name: Check out chain implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Write chain verdict
+        id: verdict
+        env:
+          CHAIN_STAGES: ${{ inputs.stages }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          CHAIN_NEEDS: ${{ inputs.stage_results }}
+        run: node scripts/quality/chain-verdict.mjs write
+      - name: Upload chain verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: chain-verdict-${{ github.run_id }}-${{ github.run_attempt }}
+          path: chain-verdict.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Require a passing chain
+        env:
+          VERDICT: ${{ steps.verdict.outputs.verdict }}
+        run: test "$VERDICT" = passed

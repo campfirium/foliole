@@ -12,10 +12,10 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const workflow = (name) => parse(read(`.github/workflows/${name}`));
 const android = workflow('hosted-quality-android.yml');
 const core = workflow('hosted-quality-core.yml');
-const full = workflow('hosted-quality-full.yml');
+const full = workflow('t6-hosted-quality.yml');
 const ios = workflow('hosted-quality-ios.yml');
 const shared = workflow('hosted-quality-shared.yml');
-const t5 = workflow('t5-baseline-admission.yml');
+const t5 = workflow('t6-hosted-quality.yml');
 const TEST_PATTERN = /\.test\.(?:mjs|mts|ts|tsx)$/u;
 
 function collectTests(root) {
@@ -69,14 +69,14 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
 
   it('reuses every shared and Android bucket that overlaps full quality', () => {
     for (const [scopedJob, canonicalJob] of [
-      [shared.jobs['shared-tests'], t5.jobs['shared-tests']],
-      [shared.jobs['shared-tooling'], t5.jobs['tooling-tests']],
-      [shared.jobs['shared-desktop-build'], full.jobs['desktop-build']],
-      [shared.jobs['shared-android-web-build'], full.jobs['android-web-build']],
-      [android.jobs['android-source-tests'], t5.jobs['android-source-tests']],
-      [android.jobs['android-tooling'], t5.jobs['tooling-tests']],
-      [android.jobs['android-web-build'], full.jobs['android-web-build']],
-      [android.jobs['android-host'], full.jobs['android-host']]
+      [shared.jobs['shared-tests'], t5.jobs['t5-shared']],
+      [shared.jobs['shared-tooling'], t5.jobs['t5-tooling']],
+      [shared.jobs['shared-desktop-build'], full.jobs['t6-desktop-build']],
+      [shared.jobs['shared-android-web-build'], full.jobs['t6-android-web-build']],
+      [android.jobs['android-source-tests'], t5.jobs['t5-android-source']],
+      [android.jobs['android-tooling'], t5.jobs['t5-tooling']],
+      [android.jobs['android-web-build'], full.jobs['t6-android-web-build']],
+      [android.jobs['android-host'], full.jobs['t6-android-host']]
     ]) expectSameCall(scopedJob, canonicalJob);
   });
 
@@ -107,11 +107,11 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
 
   it('keeps iOS scope and full on the same canonical workflow', () => {
     const scopedCall = core.jobs['ios-quality'];
-    const fullCall = full.jobs['ios-full'];
+    const fullCall = full.jobs['t6-ios-contract'];
     expect(scopedCall.uses).toBe('./.github/workflows/hosted-quality-ios.yml');
     expect(fullCall.uses).toBe(scopedCall.uses);
     expect({ ...scopedCall.with, scope: undefined })
-      .toEqual({ ...fullCall.with, scope: undefined });
+      .toEqual({ ...fullCall.with, scope: undefined, run_contract: undefined, run_simulator: undefined });
     expect(scopedCall.with.scope).toBe('${{ inputs.scope }}');
     expect(fullCall.with.scope).toBe('full');
     expect(ios.jobs.simulator.if).toBe("inputs.scope == 'full' && inputs.run_simulator");

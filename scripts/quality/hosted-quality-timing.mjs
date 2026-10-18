@@ -13,7 +13,8 @@ const TOPOLOGIES = {
       ['t5-baseline', ['t5-baseline']],
       ['full-quality', ['full-quality']]
     ],
-    edges: [['dev-ref', 'scoped-quality'], ['dev-ref', 't5-baseline'], ['t5-baseline', 'full-quality']]
+    edges: [['dev-ref', 'scoped-quality'], ['dev-ref', 't5-baseline'],
+      ['t5-baseline', 'full-quality'], ['dev-ref', 'full-quality']]
   },
   't7-release': {
     nodes: [
