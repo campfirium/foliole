@@ -6,9 +6,13 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { toWorkspaceNativeNodeVersion } from '../../../../../../lib/core/database/workspaceNodeSyncVersion';
+import type { WorkspaceNodeSnapshot } from '../../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { loadCompanionStateAfterStructureSyncReport } from '../../../../../companion/companionStructureSyncSnapshot';
 import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
 import { refreshCompanionWorkspaceAfterMutation } from '../../companionWorkspaceRepository';
+import { saveCompanionContentEdit } from '../../editing/companionContentEditing';
 import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
 
 vi.mock('@capacitor/core', () => ({
@@ -116,6 +120,39 @@ it.each([
     clearTimeout(timeout);
     release.resolve();
     await Promise.allSettled([snapshot, write]);
+    await library.close();
+    runtime.owner = null;
+  }
+});
+
+it('matches a complete snapshot after saving text that removes a child anchor target', async () => {
+  const library = createLibrary('android');
+  runtime.owner = library.owner;
+  const now = '2026-10-18T00:00:00Z';
+  const topic: WorkspaceNodeSnapshot = { id: 'topic', kind: 'topic', parentNodeId: null,
+    title: 'Original title', content: 'Apples\nBread\nMilk\n', isTitleManual: false,
+    hideTitleHeading: false, reveal: null, anchorLink: null, reading: null, review: null,
+    createdAt: now, updatedAt: now };
+  const child: WorkspaceNodeSnapshot = { ...topic, id: 'child', kind: 'item', parentNodeId: 'topic',
+    content: 'Child note', anchorLink: { id: 'anchor', kind: 'highlight',
+      locator: { from: 7, to: 12, originalText: 'Bread' } } };
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now });
+    for (const node of [topic, child, { ...topic, id: 'grandchild', parentNodeId: 'child' }]) {
+      const record = await toWorkspaceNativeNodeVersion(node, 'remote', `${node.id}-base`);
+      await library.owner.runWriter(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+    }
+    const before = await refreshCompanionWorkspaceAfterMutation();
+    await saveCompanionContentEdit({ nodeId: 'topic', baseVersionId: 'topic-base', versionId: 'edited',
+      content: '# New heading\nApples\nMilk\n', updatedAt: '2026-10-18T01:00:00Z' });
+    const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'topic');
+    const complete = await refreshCompanionWorkspaceAfterMutation();
+    expect(refreshed).toEqual(complete);
+    expect(complete!.nodesById.child!.deletedAt).toBeFalsy();
+    expect(complete!.nodeOrder).toEqual(expect.arrayContaining(['child', 'grandchild']));
+    expect(complete!.nodesById.grandchild).toEqual(before!.nodesById.grandchild);
+    expect(complete!.nodesById.topic!.title).toBe('Original title');
+  } finally {
     await library.close();
     runtime.owner = null;
   }

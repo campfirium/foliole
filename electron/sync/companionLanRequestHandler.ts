@@ -2,7 +2,6 @@ import type http from 'node:http';
 
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
-import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import type { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
@@ -12,6 +11,7 @@ import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyn
 import {
   buildWorkspaceSnapshotPayload,
 } from './companionLanPayloads.js';
+import { observeSlowRequest } from './companionLanRequestTiming.js';
 import { writeJson, writeOptions } from './companionLanResponses.js';
 import {
   isRetiredSyncJsonEndpoint,
@@ -136,22 +136,6 @@ async function handleAuthenticatedGet(
   writeJson(request, response, 200, buildWorkspaceSnapshotPayload(args.appVersion, args.deviceId, snapshot));
 }
 
-function observeSlowRequest(request: http.IncomingMessage, response: http.ServerResponse) {
-  const startedAt = Date.now();
-  let bodyReceivedAt: number | null = null;
-  request.once('end', () => { bodyReceivedAt = Date.now(); });
-  response.once('finish', () => {
-    const durationMs = Date.now() - startedAt;
-    if (durationMs < 250) return;
-    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    void appendDiagnosticLog({ event: 'companion_lan_slow_request', level: 'debug',
-      occurred_at: new Date().toISOString(), source: 'electron.main',
-      payload: { durationMs, startedAt, bodyReceivedAt, requestPath: url.pathname,
-        operation: url.searchParams.get('request'), statusCode: response.statusCode }
-    }).catch(() => undefined);
-  });
-}
-
 export function createLanWorkspaceSyncRequestHandler(args: {
   appVersion: string;
   getSyncStatus?: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
@@ -160,8 +144,8 @@ export function createLanWorkspaceSyncRequestHandler(args: {
   updateGroupStatus: (status: { active_device_count: number; pending_join_request_count: number }) => void;
 }) {
   return async (request: http.IncomingMessage, response: http.ServerResponse) => {
-    observeSlowRequest(request, response);
     try {
+    observeSlowRequest(request, response);
     const parsedRequestUrl = new URL(request.url ?? '/', 'http://127.0.0.1');
     if (request.method === 'OPTIONS') {
       writeOptions(request, response);
