@@ -118,8 +118,13 @@ function configureAttachmentReads(stateRoot: string) {
     const assets = path.join(stateRoot, 'documents', 'Foliole', 'Assets');
     if (input.action === 'source-close' || input.action === 'acquire') return {};
     if (input.action === 'source-read') {
-      const bytes = await fs.readFile(path.join(assets, input.key));
-      return { base64: bytes.subarray(input.offset, (input.offset ?? 0) + (input.length ?? 0)).toString('base64') };
+      const file = await fs.open(path.join(assets, input.key), 'r');
+      try {
+        const bytes = Buffer.alloc(input.length ?? 0);
+        const { bytesRead } = await file.read(bytes, 0, bytes.length, input.offset ?? 0);
+        if (bytesRead !== bytes.length) throw new Error('fixture_attachment_source_truncated');
+        return { base64: bytes.toString('base64') };
+      } finally { await file.close(); }
     }
     if (input.action === 'source-stat-batch') return { presence: await Promise.all((input.keys ?? [])
       .map(key => fs.stat(path.join(assets, key)).then(() => true, error => {

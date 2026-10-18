@@ -74,7 +74,7 @@ it.each([false, true])('pulls only the opened attachment without changing busine
       await pullRequestSyncAttachment(selectedHost, exchange, selected.key);
       await pullRequestSyncAttachment(selectedHost, exchange, selected.key);
     });
-    expect(await readFile(path.join(local.assetsDir, selected.key))).toEqual(selected.bytes);
+    expect((await readFile(path.join(local.assetsDir, selected.key))).equals(selected.bytes)).toBe(true);
     await expect(stat(path.join(local.assetsDir, other.key))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(stat(path.join(remoteDir, localOnly.key))).rejects.toMatchObject({ code: 'ENOENT' });
     expect(changed).toBe(changeReferences);
@@ -186,7 +186,7 @@ it('releases a selected attachment after a block when new data is waiting, then 
     await runWithDatabaseConnectionOwner(() => expect(openDatabaseConnection().sqlite
       .prepare("SELECT current_version_id FROM nodes WHERE id = 'topic'").pluck().get()).toBe('edited'));
     for (let attempt = 0; attempt < 20 && (await local.host.status({ storageKey: selected.key, byteLength: selected.bytes.length })).kind !== 'complete'; attempt++) await pull();
-    expect(await readFile(path.join(local.assetsDir, selected.key))).toEqual(selected.bytes);
+    expect((await readFile(path.join(local.assetsDir, selected.key))).equals(selected.bytes)).toBe(true);
   } finally {
     owner.close(); await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
