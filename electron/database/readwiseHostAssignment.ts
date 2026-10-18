@@ -112,8 +112,7 @@ export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
   const currentHost = currentHostName();
   const owner = loadStoredReadwiseHost();
   const byId = group.members.find((member) => member.device_identity_key === owner.deviceId);
-  const byName = group.members.filter((member) => member.device_name === owner.hostName);
-  const activeId = owner.deviceId ?? (byName.length === 1 ? byName[0]?.device_identity_key ?? null : null);
+  const activeId = owner.deviceId;
   const activeHost = byId?.device_name ?? owner.hostName;
   const unassigned = !owner.deviceId && !owner.hostName;
   const localQualified = group.members.some((member) => member.device_identity_key === group.localId);
