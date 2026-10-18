@@ -48,10 +48,10 @@ export function publishCompanionHighValueMutation(scope: WorkspaceRefreshScope =
   }
 }
 
-export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>) {
+export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope = { kind: 'full' }) {
   const session = getCompanionReadingScope();
   const result = await runCompanionSyncWriterTask(task);
-  if (session === getCompanionReadingScope()) publishCompanionSyncMutationRevision();
+  if (session === getCompanionReadingScope()) publishCompanionSyncMutationRevision(scope);
   return result;
 }
 

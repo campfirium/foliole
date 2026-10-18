@@ -121,7 +121,10 @@ export async function saveCompanionSyncNodeViewState(args: {
   if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
-  return runCompanionSyncMutationTask(() => saveIosNodeViewState({ node_id: args.nodeId, scroll_top: args.scrollTop }));
+  return runCompanionSyncMutationTask(
+    () => saveIosNodeViewState({ node_id: args.nodeId, scroll_top: args.scrollTop }),
+    { kind: 'nodes', nodeIds: [args.nodeId] }
+  );
 }
 
 function toReadingPayload(reading: NativeWorkspaceReadingProfile) {

@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
+import { saveCompanionSyncNodeViewState } from '../../../companionSyncStateWriters.js';
 import * as companionRuntime from '../../../companionWorkspaceRuntimeRepository.js';
 import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnapshotRefresh.js';
 import { companionWorkspaceSnapshots } from '../../companionWorkspaceSnapshotStore.js';
@@ -26,7 +27,9 @@ it('publishes a scoped projection after a real HTTP body update and agrees with 
     expect(after?.nodeOrder, 'Ordinary body sync must not reread the complete directory').toBe(before?.nodeOrder);
     expect(companionWorkspaceSnapshots.getSnapshot()).toBe(after);
     const capability = vi.spyOn(companionRuntime, 'isNativeCompanionNodeVersionWriteRuntime').mockReturnValue(true);
+    const viewCapability = vi.spyOn(companionRuntime, 'isNativeCompanionViewStateWriteRuntime').mockReturnValue(true);
     try {
+      await saveCompanionSyncNodeViewState({ nodeId: 'projection-topic', scrollTop: 250 });
       const baseVersionId = host.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'projection-topic'").pluck().get();
       if (typeof baseVersionId !== 'string') throw new Error('fixture_current_version_missing');
       await saveCompanionContentEdit({ nodeId: 'projection-topic', baseVersionId, versionId: 'mobile-edit',
@@ -34,13 +37,15 @@ it('publishes a scoped projection after a real HTTP body update and agrees with 
       await host.sync();
       const final = await refreshCompanionWorkspaceSnapshot();
       expect(final).toEqual(await loadIosCompanionWorkspaceSnapshot(host.db));
+      expect(final?.persistedNodeViewById?.['projection-topic']?.scrollTop).toBe(250);
+      expect(final?.nodeOrder, 'Scrolling during editing must not force a complete directory read').toBe(after?.nodeOrder);
       const remote = new Database(host.fixture.rightSnapshot.databasePath, { readonly: true });
       try {
         expect(remote.prepare("SELECT content FROM nodes WHERE id = 'projection-topic'").pluck().get()).toBe('Mobile edited body');
         expect(remote.prepare("SELECT current_version_id FROM nodes WHERE id = 'projection-topic'").pluck().get())
           .toBe(host.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'projection-topic'").pluck().get());
       } finally { remote.close(); }
-    } finally { capability.mockRestore(); }
+    } finally { capability.mockRestore(); viewCapability.mockRestore(); }
   } finally {
     invalidateCompanionReadingScope();
     await host.close();
