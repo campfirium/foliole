@@ -31,6 +31,7 @@ import {
 } from './ios-foreground-sync-lifecycle-snapshot.mjs';
 import {
   readServiceObservations,
+  readForegroundSyncLifecycleSnapshot,
   waitForForegroundSyncLifecycleRunCompletion,
   waitForForegroundSyncLifecycleSnapshot,
   waitForForegroundSyncRequestPhase
@@ -73,8 +74,15 @@ export async function runIosForegroundSyncLifecycleAcceptance(
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
 
     launch(options, udid, true);
-    await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
-    await waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 2);
+    const startup = await waitForBridge(options, resultPath, (value) => value.phase === 'ready', 'acceptance shell readiness', 60_000);
+    writeFileSync(path.join(artifactDir, 'startup.json'), JSON.stringify(startup, null, 2));
+    try {
+      await waitForForegroundSyncRequestPhase(options, 'endpoint-ready', 2);
+    } catch (error) {
+      writeFileSync(path.join(artifactDir, 'startup-snapshot.json'),
+        JSON.stringify(readForegroundSyncLifecycleSnapshot(repoRoot, databasePath), null, 2));
+      throw error;
+    }
     let previousRun = await waitForForegroundSyncLifecycleSnapshot({ databasePath, repoRoot: options.repoRoot });
 
     const backgroundDeltas = [];

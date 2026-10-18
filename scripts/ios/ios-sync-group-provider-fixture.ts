@@ -8,6 +8,7 @@ import { app } from 'electron';
 
 import { closeDatabaseConnection } from '../../electron/database/connection.js';
 import { handleProductionCompanionFramedSyncPost } from '../../electron/sync/companionLanFramedSyncRoute.js';
+import { handleCompanionSyncSession } from '../../electron/sync/companionLanSyncSession.js';
 
 import { createIosForegroundSyncLifecycleService } from './ios-foreground-sync-lifecycle-service.ts';
 import { createIosHostedRequestLibrary, initializeIosHostedRequestLibrary } from './ios-hosted-request-library.js';
@@ -126,6 +127,7 @@ async function handleRequestSync(request: IncomingMessage, response: ServerRespo
 
 const server = createServer(async (request, response) => {
   try {
+    if (await handleCompanionSyncSession(request, response)) return;
     if (request.method === 'POST' && new URL(request.url ?? '/', 'http://localhost').pathname === '/companion/framed-sync') {
       await handleRequestSync(request, response);
     } else if (request.method === 'GET' && request.url === '/companion/discovery') {

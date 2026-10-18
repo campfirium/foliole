@@ -46,6 +46,9 @@ function postReady(workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>) 
     sync_group_joined: workspaceSync.syncGroupJoined,
     phase: 'ready',
     scenario: 'foreground-sync-lifecycle',
+    participation_hydrated: workspaceSync.syncParticipation.hydrated,
+    sync_enabled: workspaceSync.syncParticipation.sync_enabled,
+    sync_paused: workspaceSync.syncParticipation.sync_paused,
     sync_error: workspaceSync.error,
     sync_status: workspaceSync.status,
     status: 'passed'
