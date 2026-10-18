@@ -5,6 +5,7 @@ import { parseLibraryCapacityResult } from '../mobile/library-capacity-result.mj
 import { extractTopActivity, matchesLaunchComponent } from './verify-android-launch.mjs';
 import { removeA5AcceptanceApplication } from './macos-a5-acceptance-package-cleanup.mjs';
 import { measureAndroidWorkspaceMemory } from './android-a5-workspace-memory.mjs';
+import { measureAttachmentQueues } from './a5-attachment-queue-measurement.mjs';
 
 import {
   evaluateCompanionDatabasePerformanceResults,
@@ -45,6 +46,9 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', paths.apk], options)).output);
     output.push((await checked(execute, paths.adb, ['-s', serial, 'install', '-r', '-t', testApk], options)).output);
     testInstalled = true;
+    if (scenario === 'attachment-queue') {
+      return await measureAttachmentQueues({ execute, paths, serial, options, evidenceRoot });
+    }
     let result;
     const workspaceMemory = [];
     if (workspaceCapacity) {

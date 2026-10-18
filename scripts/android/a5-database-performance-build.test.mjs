@@ -44,3 +44,14 @@ it('builds the production request snapshot only for the fixed acceptance app', (
     expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('request-snapshot');
   }
 });
+
+it('measures native attachment queues with production assets in the isolated acceptance app', () => {
+  const checked = vi.fn();
+  buildA5DatabasePerformance({ checked, captured: (_command, args) => manifests(args.at(-1)), paths,
+    env: { ...env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'attachment-queue' } });
+  for (const [, , options] of checked.mock.calls) {
+    expect(options.env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID).toBe(appId);
+    expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE).toBe('0');
+    expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('');
+  }
+});

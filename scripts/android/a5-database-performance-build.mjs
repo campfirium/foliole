@@ -4,7 +4,7 @@ export const PERFORMANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function performanceScenario(env) {
   const scenario = env.FOLIOLE_DATABASE_PERFORMANCE_SCENARIO ?? 'native-gate';
-  if (!['native-gate', 'library-capacity', 'library-capacity-workspace', 'request-snapshot'].includes(scenario)) {
+  if (!['native-gate', 'library-capacity', 'library-capacity-workspace', 'request-snapshot', 'attachment-queue'].includes(scenario)) {
     throw new Error('Unsupported fixed database performance scenario.');
   }
   return scenario;
@@ -27,7 +27,7 @@ export function assertPerformanceApkIdentity({ captured, paths, env }) {
 
 export function buildA5DatabasePerformance({ checked, captured, paths, env }) {
   const scenario = performanceScenario(env);
-  const acceptance = scenario !== 'native-gate';
+  const acceptance = !['native-gate', 'attachment-queue'].includes(scenario);
   const buildEnv = { ...env, FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: PERFORMANCE_APP_ID,
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: acceptance ? '1' : '0',
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: acceptance ? scenario : '' };
