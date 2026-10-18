@@ -24,14 +24,15 @@ async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: W
 /** Returns null when the committed scope cannot be proven against this baseline. */
 async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeScope) {
   const reviewed = scope.reviewNodeIds ?? [];
-  const roots = new Set([...scope.nodeIds, ...reviewed]);
+  const reading = scope.readingNodeIds ?? [];
+  const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
   let next = current;
   if (roots.size) {
     const nodes = await loadCompanionContentProjection(db, [...roots]);
     const expected = Object.values(current.nodesById)
       .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
       .map(node => node.id);
-    if (!canMergeWorkspaceContentProjection(current, nodes, expected, reviewed)) return null;
+    if (!canMergeWorkspaceContentProjection(current, nodes, expected, reviewed, reading)) return null;
     next = await mergeProjectedNodeViews(db, mergeWorkspaceContentProjection(current, nodes), Object.keys(nodes));
   }
   return mergeCompanionLocalState(db, next, scope);

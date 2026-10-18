@@ -14,6 +14,22 @@ export async function applyNodeReadingObject(
   record: SyncObjectRecord,
   options: SyncObjectPayloadApplyOptions = {}
 ) {
+  if (!record.deleted_at) {
+    const payload = asObject(record);
+    if (!isReadingState(text(payload.state))) throw new Error('invalid node_reading state');
+    const accepted = await shouldApplyNodeReading(port, record,
+      text(payload.last_handled_at) ?? record.updated_at, integer(payload.repetition_count));
+    if (!accepted) return false;
+  }
+  return writeNodeReadingObject(port, record, options);
+}
+
+/** Writes an accepted reading record; local commits do not undergo remote conflict arbitration. */
+export async function writeNodeReadingObject(
+  port: DbPort,
+  record: SyncObjectRecord,
+  options: SyncObjectPayloadApplyOptions = {}
+) {
   if (record.deleted_at) {
     await port.run('DELETE FROM node_reading WHERE node_id = ?', [record.object_id]);
     await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [record.object_id]);
@@ -21,19 +37,9 @@ export async function applyNodeReadingObject(
   }
   const payload = asObject(record);
   const state = text(payload.state);
-  if (!isReadingState(state)) {
-    throw new Error('invalid node_reading state');
-  }
+  if (!isReadingState(state)) throw new Error('invalid node_reading state');
   const incomingLastHandledAt = text(payload.last_handled_at) ?? record.updated_at;
   const incomingRepetitionCount = integer(payload.repetition_count);
-  if (!await shouldApplyNodeReading(
-    port,
-    record,
-    incomingLastHandledAt,
-    incomingRepetitionCount
-  )) {
-    return false;
-  }
   await port.run(
     `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
@@ -56,8 +62,9 @@ async function shouldApplyNodeReading(
     content_hash: string | null;
     last_handled_at: string;
     repetition_count: number;
+    updated_at: string | null;
   }>(
-    `SELECT r.last_handled_at, r.repetition_count, s.content_hash
+    `SELECT r.last_handled_at, r.repetition_count, s.content_hash, s.updated_at
      FROM node_reading r LEFT JOIN sync_object_state s
        ON s.object_type = 'node_reading' AND s.object_id = r.node_id
      WHERE r.node_id = ?`,
@@ -67,11 +74,13 @@ async function shouldApplyNodeReading(
   const incomingKey = [
     incomingLastHandledAt,
     String(incomingRepetitionCount).padStart(12, '0'),
+    record.updated_at,
     record.content_hash
   ];
   const existingKey = [
     existing.last_handled_at,
     String(existing.repetition_count).padStart(12, '0'),
+    existing.updated_at ?? '',
     existing.content_hash ?? ''
   ];
   return incomingKey.join('\n') > existingKey.join('\n');

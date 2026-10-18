@@ -28,6 +28,44 @@ it('persists every shared reading field through repeated current requests', asyn
   expect(target.db.prepare(query).all()).toEqual(source.db.prepare(query).all());
 });
 
+it('propagates later reading state changes without inventing another reading repetition', async () => {
+  const source = createPeer('unlock-source'); const target = createPeer('unlock-target');
+  joinPeers(source, target);
+  edit(source, 'Sequential reading topic');
+  const reading = {
+    intervalDurationMs: 1000, intervalGrowthFactor: 1,
+    lastHandledAt: '2026-10-18T01:00:00.000Z', nextAt: '2026-10-19T01:00:00.000Z',
+    priority: 1, readingPosition: 0, repetitionCount: 0, state: 'locked' as const
+  };
+  saveNodeReadingStateWithSync(source.driver, { nodeId: 'topic', hostName: source.name, reading,
+    updatedAt: '2026-10-18T01:00:00.000Z' });
+  await syncRequestLibrary(source, target);
+  expect(target.db.prepare("SELECT state FROM node_reading WHERE node_id = 'topic'").pluck().get()).toBe('locked');
+  saveNodeReadingStateWithSync(source.driver, { nodeId: 'topic', hostName: source.name,
+    reading: { ...reading, state: 'active' }, updatedAt: '2026-10-18T02:00:00.000Z' });
+  await syncRequestLibrary(source, target);
+  await syncRequestLibrary(target, source);
+  const query = "SELECT state, last_handled_at, repetition_count FROM node_reading WHERE node_id = 'topic'";
+  expect(target.db.prepare(query).get()).toEqual({
+    state: 'active', last_handled_at: reading.lastHandledAt, repetition_count: 0
+  });
+  expect(source.db.prepare(query).get()).toEqual(target.db.prepare(query).get());
+  saveNodeReadingStateWithSync(source.driver, { nodeId: 'topic', hostName: source.name, reading,
+    updatedAt: '2026-10-18T03:00:00.000Z' });
+  await syncRequestLibrary(source, target);
+  expect(target.db.prepare(query).get()).toEqual({
+    state: 'locked', last_handled_at: reading.lastHandledAt, repetition_count: 0
+  });
+  saveNodeReadingStateWithSync(source.driver, { nodeId: 'topic', hostName: source.name,
+    reading: { ...reading, state: 'active' }, updatedAt: '2026-10-18T02:00:00.000Z' });
+  await syncRequestLibrary(source, target);
+  expect(target.db.prepare(query).get()).toEqual({
+    state: 'locked', last_handled_at: reading.lastHandledAt, repetition_count: 0
+  });
+  await syncRequestLibrary(target, source);
+  expect(source.db.prepare(query).get()).toEqual(target.db.prepare(query).get());
+});
+
 it('prunes clean orphan learning records while preserving live, dirty and deleted state', async () => {
   const peer = createPeer('learning-pruning');
   edit(peer, 'Visible topic');

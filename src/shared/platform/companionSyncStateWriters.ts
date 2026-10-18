@@ -68,7 +68,7 @@ export async function saveCompanionSyncSettingRecord(args: CompanionSyncSettingR
   return runCompanionSyncMutationTask(() => saveIosSetting({
     form_factor: args.formFactor ?? 'phone', key: args.key,
     platform, scope: args.scope ?? 'host', value_json: args.valueJson
-  }));
+  }), { kind: 'nodes', nodeIds: [] });
 }
 
 export async function saveCompanionSyncNodeReadingRecord(args: {
@@ -83,7 +83,7 @@ export async function saveCompanionSyncNodeReadingRecord(args: {
     node_id: args.nodeId,
     reading_json: JSON.stringify(toReadingPayload(args.reading)),
     ...(args.completedReviewDay !== undefined ? { completedReviewDay: args.completedReviewDay } : {})
-  }));
+  }), { kind: 'nodes', nodeIds: [], readingNodeIds: [args.nodeId] });
 }
 
 export async function saveCompanionSyncNodeReviewRecord(args: {

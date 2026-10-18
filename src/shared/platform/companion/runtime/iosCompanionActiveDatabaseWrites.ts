@@ -1,5 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { applyNodeReadingObject, applyNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
+import { writeNodeReadingObject, applyNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 import { createCompanionUuid } from '../../companionUuid';
 
@@ -46,7 +46,7 @@ export function saveIosReading(args: { node_id: string; reading_json: string; co
     const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
     void ignoredHost; void ignoredPosition;
     const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
-      applyNodeReadingObject(tx, record, { hostName })
+      writeNodeReadingObject(tx, record, { hostName })
     ), hashPayload);
     if (args.completedReviewDay !== undefined) {
       await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);

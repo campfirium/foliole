@@ -1,6 +1,6 @@
 /**
  * `nodeIds` are content projections. The local-state lists name committed
- * review, open-record or active-node writes that can be read narrowly.
+ * reading, review, open-record or active-node writes that can be read narrowly.
  */
 export type WorkspaceRefreshScope =
   | { kind: 'full' }
@@ -8,6 +8,7 @@ export type WorkspaceRefreshScope =
     kind: 'nodes';
     nodeIds: readonly string[];
     reviewNodeIds?: readonly string[];
+    readingNodeIds?: readonly string[];
     openStateNodeIds?: readonly string[];
     activeNode?: boolean;
   };
@@ -30,8 +31,10 @@ function unionIds(scopes: readonly NodeScope[], pick: (scope: NodeScope) => read
 function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
   const scope: NodeScope = { kind: 'nodes', nodeIds: unionIds(scopes, item => item.nodeIds) };
   const reviewNodeIds = unionIds(scopes, item => item.reviewNodeIds);
+  const readingNodeIds = unionIds(scopes, item => item.readingNodeIds);
   const openStateNodeIds = unionIds(scopes, item => item.openStateNodeIds);
   if (reviewNodeIds.length) scope.reviewNodeIds = reviewNodeIds;
+  if (readingNodeIds.length) scope.readingNodeIds = readingNodeIds;
   if (openStateNodeIds.length) scope.openStateNodeIds = openStateNodeIds;
   if (scopes.some(item => item.activeNode)) scope.activeNode = true;
   return scope;

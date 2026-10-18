@@ -5,6 +5,8 @@ import type { WorkspaceSnapshot } from '../../../../../../lib/core/database/work
 import {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeOpenState,
+  saveCompanionSyncNodeReadingRecord,
+  saveCompanionSyncSettingRecord,
   saveCompanionSyncNodeReviewRecord
 } from '../../../companionSyncStateWriters';
 import { refreshCompanionWorkspaceAfterMutation } from '../../companionWorkspaceRepository';
@@ -53,6 +55,35 @@ it('publishes a local grade without rereading the whole directory', async () => 
     expect(displayed?.nodesById.a?.review?.due).toBe(review.due);
   } finally { await library.close(); }
 });
+
+it.each(['custom_css_snippets', 'handoff_reminder_settings'])(
+  'persists %s without widening a reading, grade and active-node batch', async key => {
+    const { library, reads, baseline } = await openLibrary();
+    try {
+      const valueJson = JSON.stringify(key === 'custom_css_snippets' ? { version: 1, snippets: [] } : { enabled: true });
+      await saveCompanionSyncSettingRecord({ key, valueJson });
+      expect(await refreshCompanionWorkspaceAfterMutation()).toEqual(baseline);
+      expect(library.fullDirectoryQueries()).toBe(reads);
+      expect(await library.owner.readSnapshot(db => db.query(
+        'SELECT value_json FROM setting_records WHERE key = ?', [key]
+      ))).toEqual([{ value_json: valueJson }]);
+      await saveCompanionSyncNodeReviewRecord({ nodeId: 'b', review });
+      await saveCompanionSyncNodeReadingRecord({ nodeId: 'a', reading: {
+        intervalDurationMs: 1000, intervalGrowthFactor: 1,
+        lastHandledAt: '2026-10-18T01:00:00.000Z', nextAt: '2026-10-19T01:00:00.000Z',
+        priority: 1, readingPosition: 0, repetitionCount: 1, state: 'active'
+      } });
+      await saveCompanionSyncActiveViewState('b');
+      await saveCompanionSyncSettingRecord({ key, valueJson });
+      const displayed = await refreshCompanionWorkspaceAfterMutation();
+      expect(library.fullDirectoryQueries()).toBe(reads);
+      expect(displayed).toEqual(await readComplete());
+      expect(displayed?.activeNodeId).toBe('b');
+      expect(displayed?.nodesById.b?.review).toEqual(review);
+      expect(displayed?.nodesById.a?.reading?.repetitionCount).toBe(1);
+    } finally { await library.close(); }
+  }
+);
 
 it('publishes opened and active node changes without rereading the whole directory', async () => {
   const { library, reads } = await openLibrary();

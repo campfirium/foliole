@@ -9,24 +9,27 @@ const CONTENT_FIELDS = new Set<string>([
   'openingText', 'reveal', 'anchorLink', 'imageRegions', 'updatedAt', 'importContentFingerprint'
 ] satisfies Array<keyof WorkspaceNodeSnapshot>);
 
-function structuralProjection(node: WorkspaceNodeSnapshot, reviewed: boolean) {
+function structuralProjection(node: WorkspaceNodeSnapshot, reviewed: boolean, reading: boolean) {
   return Object.fromEntries(Object.entries(node).filter(([key]) =>
-    !CONTENT_FIELDS.has(key) && !(reviewed && key === 'review')));
+    !CONTENT_FIELDS.has(key) && !(reviewed && key === 'review') && !(reading && key === 'reading')));
 }
 
-/** `reviewedNodeIds` name committed local grades; only their review profile may differ. */
+/** Learning scopes permit profile changes only for nodes whose local writes committed. */
 export function canMergeWorkspaceContentProjection(
   current: WorkspaceSnapshot,
   nodes: WorkspaceSnapshot['nodesById'],
   expectedNodeIds: readonly string[],
-  reviewedNodeIds: readonly string[] = []
+  reviewedNodeIds: readonly string[] = [],
+  readingNodeIds: readonly string[] = []
 ) {
   if (expectedNodeIds.some(id => !nodes[id])) return false;
   const reviewed = new Set(reviewedNodeIds);
+  const reading = new Set(readingNodeIds);
   return Object.entries(nodes).every(([id, node]) => {
     const previous = current.nodesById[id];
     return previous !== undefined && workspaceSnapshotValueEqual(
-      structuralProjection(previous, reviewed.has(id)), structuralProjection(node, reviewed.has(id)));
+      structuralProjection(previous, reviewed.has(id), reading.has(id)),
+      structuralProjection(node, reviewed.has(id), reading.has(id)));
   });
 }
 
