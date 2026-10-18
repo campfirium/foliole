@@ -1,19 +1,20 @@
 // @vitest-environment node
-import { mkdtempSync, rmSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { COMPANION_CONTENT_SNAPSHOT_SQL } from '../../../../../../lib/core/database/companionContentSnapshotQuery';
 import { toWorkspaceNativeNodeVersion } from '../../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { loadCompanionStateAfterStructureSyncReport } from '../../../../../companion/companionStructureSyncSnapshot';
-import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
 import { refreshCompanionWorkspaceAfterMutation } from '../../companionWorkspaceRepository';
+import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnapshotRefresh';
+import { companionWorkspaceSnapshots } from '../../companionWorkspaceSnapshotStore';
 import { saveCompanionContentEdit } from '../../editing/companionContentEditing';
-import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
+import type { CapacitorCompanionDatabaseOwner } from '../../runtime/capacitorCompanionDatabaseOwner';
+import { runCompanionHighValueMutationTask, runCompanionSyncMutationTask } from '../mutation/companionSyncMutationRevision';
+
+import { createDisplayLibrary } from './companionDisplaySnapshotConcurrency.testSupport';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
@@ -25,68 +26,11 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => runtime.owner!
 }));
 
-function deferred() {
-  let resolve!: () => void;
-  const promise = new Promise<void>(done => { resolve = done; });
-  return { promise, resolve };
-}
-
-function createLibrary(platform: 'android' | 'ios') {
-  const root = mkdtempSync(path.join(os.tmpdir(), 'companion-display-wal-'));
-  const file = path.join(root, 'library.db');
-  const writer = new Database(file);
-  const reading = deferred();
-  const release = deferred();
-  let holdDisplay = false;
-  let directoryRows = 0;
-  const connections = new Map<boolean, Database.Database>([[false, writer]]);
-  const adapt = (database: Database.Database) => {
-    const connection = createFakeCapacitorConnection(database);
-    return { ...connection, getUrl: async () => ({ url: file }),
-      async query(sql: string, params: unknown[] = []) {
-        if (sql === 'BEGIN DEFERRED' || sql === 'ROLLBACK') {
-          database.exec(sql);
-          return { values: [] };
-        }
-        const result = await connection.query(sql, params);
-        if (sql.includes('AS collection_source_content')) directoryRows += result.values?.length ?? 0;
-        if (holdDisplay && sql.includes('AS collection_source_content')) {
-          reading.resolve();
-          await release.promise;
-        }
-        return result;
-      }
-    };
-  };
-  const manager = {
-    async closeConnection(_name: string, readonly: boolean) {
-      connections.get(readonly)?.close();
-      connections.delete(readonly);
-    },
-    async createConnection(_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) {
-      const database = readonly ? new Database(file, { readonly: true }) : writer;
-      connections.set(readonly, database);
-      return adapt(database);
-    },
-    isConnection: async () => ({ result: false }),
-    isDatabase: async () => ({ result: false }),
-    retrieveConnection: async () => adapt(writer)
-  } as unknown as CapacitorCompanionDatabaseManager;
-  const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
-  return { owner, file, reading, release, directoryRows: () => directoryRows, hold: () => { holdDisplay = true; },
-    async close() {
-      await owner.close();
-      for (const connection of connections.values()) if (connection.open) connection.close();
-      rmSync(root, { recursive: true, force: true });
-    }
-  };
-}
-
 it.each([
   { platform: 'android', origin: 'remote' }, { platform: 'ios', origin: 'remote' },
   { platform: 'android', origin: 'local' }, { platform: 'ios', origin: 'local' }
 ] as const)('$platform commits new text during a $origin display refresh', async ({ platform, origin }) => {
-  const library = createLibrary(platform);
+  const library = createDisplayLibrary(platform);
   const { owner, file, reading, release } = library;
   runtime.owner = owner;
   let snapshot: ReturnType<typeof refreshCompanionWorkspaceAfterMutation> | undefined;
@@ -126,7 +70,7 @@ it.each([
 });
 
 it('matches a complete snapshot after saving text that removes a child anchor target', async () => {
-  const library = createLibrary('android');
+  const library = createDisplayLibrary('android');
   runtime.owner = library.owner;
   const now = '2026-10-18T00:00:00Z';
   const topic: WorkspaceNodeSnapshot = { id: 'topic', kind: 'topic', parentNodeId: null,
@@ -159,19 +103,22 @@ it('matches a complete snapshot after saving text that removes a child anchor ta
 
 
 it('refreshes edited topic projections without transferring unrelated directory rows', async () => {
-  const library = createLibrary('android');
+  const library = createDisplayLibrary('android');
   runtime.owner = library.owner;
   try {
     await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
     await library.owner.runWriter(db => db.run(`WITH RECURSIVE series(n) AS (
-      VALUES(1) UNION ALL SELECT n + 1 FROM series WHERE n < 3000
+      VALUES(1) UNION ALL SELECT n + 1 FROM series WHERE n < 30000
     ) INSERT INTO nodes (id, title, content, created_at, updated_at)
       SELECT 'node-' || n, 'Topic ' || n, 'Old text', 'now', 'now' FROM series`));
     await library.owner.runWriter(db => db.run(
       "UPDATE nodes SET parent_id = 'node-1' WHERE id = 'node-2'"));
     const before = await refreshCompanionWorkspaceAfterMutation();
     await library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET title = 'Changed', content = '' WHERE id IN ('node-1', 'node-2')"));
+      "UPDATE nodes SET content = '', opening_text = 'Changed body' WHERE id IN ('node-1', 'node-2')"));
+    const plan = await library.owner.read(db => db.query(`EXPLAIN QUERY PLAN ${COMPANION_CONTENT_SNAPSHOT_SQL}`,
+      ['node-1', 'node-1', 'display-fixture']));
+    expect(plan.some(row => /^SCAN n(?: |$)/u.test(String(row.detail)))).toBe(false);
     const start = library.directoryRows();
     const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'node-1');
     const transferred = library.directoryRows() - start;
@@ -179,6 +126,77 @@ it('refreshes edited topic projections without transferring unrelated directory 
     expect(refreshed).toEqual(complete);
     expect(transferred, 'One content edit must not transfer the whole directory').toBeLessThanOrEqual(2);
   } finally {
+    await library.close();
+    runtime.owner = null;
+  }
+});
+
+
+it.each(['insert', 'delete', 'move', 'restore', 'reference', 'order'] as const)('uses a complete snapshot for a concurrent child %s', async action => {
+  const library = createDisplayLibrary('android');
+  runtime.owner = library.owner;
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
+    await library.owner.runWriter(db => db.run(`INSERT INTO nodes
+      (id, parent_id, title, content, created_at, updated_at) VALUES
+      ('topic', NULL, 'Topic', 'Body', 'now', 'now'),
+      ('child', 'topic', 'Child', 'Body', 'now', 'now')`));
+    if (action === 'restore') await library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET deleted_at = 'earlier' WHERE id = 'child'"));
+    const before = await refreshCompanionWorkspaceAfterMutation();
+    await library.owner.runWriter(db => db.run(action === 'insert'
+      ? "INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at) VALUES ('new', 'topic', 'New', 'Body', 'now', 'now')"
+      : action === 'delete' ? "UPDATE nodes SET deleted_at = 'later' WHERE id = 'child'"
+      : action === 'restore' ? "UPDATE nodes SET deleted_at = NULL WHERE id = 'child'"
+      : action === 'reference' ? `UPDATE nodes SET resource_references = '[{"storage_key":"${'a'.repeat(64)}.png","role":"image","original_name":null}]' WHERE id = 'child'`
+      : action === 'order' ? `UPDATE nodes SET manual_child_order = '["child"]' WHERE id = 'topic'`
+        : "UPDATE nodes SET parent_id = NULL WHERE id = 'child'"));
+    const actual = await refreshCompanionWorkspaceAfterMutation(before, 'topic');
+    const complete = await refreshCompanionWorkspaceAfterMutation();
+    expect(actual).toEqual(complete);
+  } finally {
+    await library.close();
+    runtime.owner = null;
+  }
+});
+
+
+it('publishes a local projection then a concurrent remote structural commit without losing either', async () => {
+  const library = createDisplayLibrary('android');
+  runtime.owner = library.owner;
+  const published: string[] = [];
+  let work: Promise<unknown> | undefined;
+  let unsubscribe = () => {};
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
+    await library.owner.runWriter(db => db.run(`INSERT INTO nodes
+      (id, title, content, created_at, updated_at) VALUES ('topic', 'Original', 'Body', 'now', 'now')`));
+    await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
+    await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET opening_text = 'Local edit' WHERE id = 'topic'")), { kind: 'nodes', nodeIds: ['topic'] });
+    library.hold();
+    unsubscribe = companionWorkspaceSnapshots.subscribe(() => {
+      const snapshot = companionWorkspaceSnapshots.getSnapshot();
+      published.push(snapshot?.nodesById.topic?.title ?? 'empty');
+    });
+    work = refreshCompanionWorkspaceSnapshot();
+    await library.reading.promise;
+    await runCompanionSyncMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
+      await tx.run("UPDATE nodes SET title = 'Remote title' WHERE id = 'topic'");
+      await tx.run(`INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at)
+        VALUES ('remote-child', 'topic', 'Child', 'Body', 'now', 'now')`);
+    })));
+    library.release.resolve();
+    await work;
+    expect(published).toEqual(['Original', 'Remote title']);
+    const final = companionWorkspaceSnapshots.getSnapshot();
+    expect(final?.nodesById.topic?.openingText).toBe('Local edit');
+    expect(final?.nodeOrder).toContain('remote-child');
+    expect(final).toEqual(await refreshCompanionWorkspaceSnapshot({ kind: 'full' }));
+  } finally {
+    library.release.resolve();
+    await work;
+    unsubscribe();
     await library.close();
     runtime.owner = null;
   }

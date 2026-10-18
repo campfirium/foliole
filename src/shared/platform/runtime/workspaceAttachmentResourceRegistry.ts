@@ -1,8 +1,8 @@
 import {
   type AttachmentResourceDescription,
   isCanonicalAttachmentStorageKey
-} from '../../../../lib/platform/attachmentResource';
-import { registerAttachmentResourceDescriptions } from '../../../../lib/platform/attachmentResourceRegistry';
+} from '../../../../lib/platform/attachmentResource.js';
+import { registerAttachmentResourceDescriptions } from '../../../../lib/platform/attachmentResourceRegistry.js';
 
 const AVAILABILITIES = new Set(['cached', 'local', 'missing', 'remote_known', 'unresolved']);
 

@@ -76,7 +76,7 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     await host?.files.remove(directory);
     throw error;
   } finally {
-    if (applied) publishCompanionSyncApplied();
+    if (applied) publishCompanionSyncApplied({ kind: 'nodes', nodeIds: [] });
     dispose();
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();

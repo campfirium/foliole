@@ -28,6 +28,6 @@ export function useCompanionWorkspaceLoaders(args: {
     ...useCompanionReadableArticleLoader(
       args.state.workspace_snapshot, args.setReadableArticle, refreshSnapshot, args.setError
     ),
-    openVirtualFolder: useCompanionVirtualFolderLoader(args.state, args.setState)
+    openVirtualFolder: useCompanionVirtualFolderLoader(args.state)
   };
 }

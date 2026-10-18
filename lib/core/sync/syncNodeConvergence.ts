@@ -33,16 +33,21 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
+  let expired = false;
   for (const nodeId of new Set(records.map((record) => record.object_id))) {
-    await expireTopicText(port, nodeId, new Date().toISOString(), false);
+    if (await expireTopicText(port, nodeId, new Date().toISOString(), false)) expired = true;
   }
-  await reviveDeletedFoldersForLaterChildren(
+  const revivedIds = await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
   );
   if (options.collectVersionPayloads !== false) for (const nodeId of new Set(records.map(record => record.object_id))) {
     await collectNodeVersionPayloads(port, nodeId, Number.MAX_SAFE_INTEGER);
   }
   return {
+    workspaceScopeExpanded: expired || result.workspaceScopeExpanded || revivedIds.length > 0 || conflicts.length > 0,
+    workspaceNodeIds: [...new Set([...result.appliedIds,
+      ...result.anchorRepairRecords.map(record => record.nodeId),
+      ...result.unmappedAnchorRecords.map(record => record.nodeId)])],
     appliedNodeCount: new Set([
       ...result.appliedIds,
       ...resolvedNodeIds,

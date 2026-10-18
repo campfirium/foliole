@@ -1,6 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
 import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
+import { companionWorkspaceSnapshots } from '../../companionWorkspaceSnapshotStore.js';
+import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope.js';
 
 import {
   getCompanionSyncMutationRevision,
@@ -59,4 +61,25 @@ it('publishes a high-value trigger only after its permanent write succeeds', asy
 
   expect(listener).toHaveBeenCalledOnce();
   unsubscribe();
+});
+
+
+it('keeps rollback and old-library completions out of the display refresh queue', async () => {
+  invalidateCompanionReadingScope();
+  const read = vi.fn(async () => null);
+  await expect(runCompanionHighValueMutationTask(async () => {
+    throw new Error('rolled back');
+  }, { kind: 'nodes', nodeIds: ['topic'] })).rejects.toThrow('rolled back');
+  await companionWorkspaceSnapshots.refresh(read);
+  expect(read).not.toHaveBeenCalled();
+  await runCompanionHighValueMutationTask(async () => {
+    invalidateCompanionReadingScope();
+    return 'old library committed';
+  }, { kind: 'nodes', nodeIds: ['topic'] });
+  await companionWorkspaceSnapshots.refresh(read);
+  expect(read).not.toHaveBeenCalled();
+  await runCompanionHighValueMutationTask(async () => 'current committed', { kind: 'nodes', nodeIds: ['topic'] });
+  await companionWorkspaceSnapshots.refresh(read);
+  expect(read).toHaveBeenCalledExactlyOnceWith({ current: null, scope: { kind: 'nodes', nodeIds: ['topic'] } });
+  invalidateCompanionReadingScope();
 });

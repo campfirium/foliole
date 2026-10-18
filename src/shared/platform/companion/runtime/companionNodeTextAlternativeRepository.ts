@@ -5,6 +5,7 @@ import { mutateTopicText } from '../../../../../lib/core/sync/topicTextMutation'
 import { textAlternativesSchema, type TopicTextAlternative } from '../../../../../lib/core/sync/topicTextState';
 import { createCompanionUuid } from '../../companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
+import { runCompanionHighValueMutationTask, runCompanionOptionalHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { iosCompanionHostName } from './iosCompanionMutationState';
@@ -23,9 +24,10 @@ export interface CompanionNodeTextAlternative {
 
 export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string) {
   if (!isAvailableNativeCompanionRuntime()) return null;
+  const now = new Date().toISOString();
+  await runCompanionOptionalHighValueMutationTask(() => writeIosCompanionDatabase(async db =>
+    await expireTopicText(db, nodeId, now) ? true : null));
   return writeIosCompanionDatabase(async (db) => {
-    const now = new Date().toISOString();
-    await expireTopicText(db, nodeId, now);
     const [record] = await db.query<{ snapshot_json: string; version_id: string; updated_at: string }>(
       `SELECT v.snapshot_json, v.version_id, n.updated_at
        FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
@@ -44,7 +46,7 @@ export async function loadCompanionNodeTextAlternative(nodeId: string, alternati
 }
 
 export async function updateCompanionNodeTextAlternativeStatus(alternativeId: string, status: 'dismissed' | 'promoted') {
-  return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
+  return runCompanionHighValueMutationTask(() => writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const [node] = await tx.query<{ id: string }>(
       `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
        json_each(v.snapshot_json, '$.text_alternatives') entry
@@ -53,5 +55,5 @@ export async function updateCompanionNodeTextAlternativeStatus(alternativeId: st
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action: status,
       now: new Date().toISOString(), versionId: createOpaqueVersionRef(createCompanionUuid()),
       hostName: await iosCompanionHostName(tx) });
-  }));
+  })));
 }

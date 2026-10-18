@@ -71,7 +71,7 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
         currentVersionId: result.current.version_id,
         submittedVersionId: result.submittedVersionId
       };
-    })));
+    })), { kind: 'nodes', nodeIds: [edit.nodeId] });
   await runCompanionSyncWriterTask(() =>
     writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32)))
     .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });

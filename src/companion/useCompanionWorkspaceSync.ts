@@ -21,6 +21,7 @@ import { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 import { useForegroundAutoSync } from './useCompanionWorkspaceAutoSync';
 import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
 import { useCompanionWorkspaceParticipationActions } from './useCompanionWorkspaceParticipationActions';
+import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
 const EMPTY_SYNC_STATE: NativeCompanionWorkspaceSyncState = {
   endpoint_url: null,
@@ -97,7 +98,7 @@ function useMergedCompanionSyncProgress() {
 }
 
 function useCompanionSyncViewState() {
-  const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(EMPTY_SYNC_STATE);
+  const [state, setState] = useCompanionWorkspaceState(EMPTY_SYNC_STATE);
   const [isWorkspaceSyncStateReady, setIsWorkspaceSyncStateReady] = useState(false);
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [syncConflictCount, setSyncConflictCount] = useState(0);

@@ -90,7 +90,11 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     if (collectBodies) await collectNodeVersionPayloads(tx, input.globalId, Number.MAX_SAFE_INTEGER);
     const sharedStateHash = await readAppliedStateHash(tx, input);
     input.signal?.throwIfAborted();
-    return { ...result, sharedStateHash };
+    const workspaceScope = input.objectType === 'foreground_source'
+      ? { kind: 'nodes' as const, nodeIds: [] } : input.objectType === 'node' && result.workspaceScope.kind === 'nodes'
+      ? { kind: 'nodes' as const, nodeIds: [...new Set([...result.workspaceScope.nodeIds, input.globalId])] }
+      : result.workspaceScope;
+    return { ...result, sharedStateHash, workspaceScope };
   });
 }
 

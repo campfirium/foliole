@@ -14,7 +14,7 @@ afterEach(cleanup);
 it('refreshes the visible saved workspace after an incoming commit and preserves connection state', async () => {
   const { callbacks } = createActions();
   const snapshot = createSnapshot('incoming-phone-topic');
-  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockResolvedValue(snapshot);
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterSync.mockResolvedValue(snapshot);
   const { unmount } = renderHook(() => useCompanionSyncAppliedRefresh(
     callbacks.setState, callbacks.setSyncConflictCount, callbacks.setError
   ));
@@ -32,7 +32,7 @@ it('refreshes the visible saved workspace after an incoming commit and preserves
 
 it('keeps the last visible workspace if refreshing committed data fails', async () => {
   const { callbacks } = createActions();
-  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockRejectedValue(new Error('read failed'));
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterSync.mockRejectedValue(new Error('read failed'));
   renderHook(() => useCompanionSyncAppliedRefresh(
     callbacks.setState, callbacks.setSyncConflictCount, callbacks.setError
   ));

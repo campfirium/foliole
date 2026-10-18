@@ -18,21 +18,24 @@ export async function loadCurrentParentOrderSources(port: DbPort, parentId: stri
     ({ authorId, counter, childIds: JSON.parse(child_ids_json) })));
 }
 
-export async function projectCurrentParentOrderWithDbPort(port: DbPort, parentId: string, now: string) {
+export async function projectCurrentParentOrderWithDbPort(port: DbPort, parentId: string, now: string, onChanged?: () => void) {
   const sources = await loadCurrentParentOrderSources(port, parentId);
   const members = await port.query<CurrentOrderMember & DbRow>(PARENT_ORDER_MEMBERS_SQL, [parentId, parentId]);
   const order = projectCurrentParentOrder(sources, members);
-  await port.run(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
+  const written = await port.run(PARENT_ORDER_MATERIALIZE_SQL, [parentId, JSON.stringify(order), now]);
+  if (written.changes > 0) onChanged?.();
   await port.run('DELETE FROM parent_order_projection_pending WHERE parent_id = ?', [parentId]);
   return order;
 }
 
 export async function flushCurrentParentOrderProjectionsWithDbPort(port: DbPort) {
+  let changed = false;
   const now = new Date().toISOString();
   for (const { parent_id } of await port.query<{ parent_id: string }>(
     'SELECT parent_id FROM parent_order_projection_pending ORDER BY parent_id')) {
-    await projectCurrentParentOrderWithDbPort(port, parent_id, now);
+    await projectCurrentParentOrderWithDbPort(port, parent_id, now, () => { changed = true; });
   }
+  return changed;
 }
 
 const payloadSchema = z.object({ parent_id: z.string().min(1), sources_json: z.string() }).strict();

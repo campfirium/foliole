@@ -25,5 +25,6 @@ export async function expireTopicText(db: DbPort, nodeId: string, now: string, c
     const result = await applySyncNodesWithDbPort(tx, [record], { operation: 'local_mutation' });
     if (!result.appliedIds.includes(nodeId)) throw new Error('text_alternative_expiry_not_applied');
     if (collectVersionPayloads) await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER);
+    return true;
   });
 }

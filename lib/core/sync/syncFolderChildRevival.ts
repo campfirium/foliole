@@ -16,6 +16,7 @@ export async function reviveDeletedFoldersForLaterChildren(
   records: readonly SyncNodeRecordMetadata[],
   appliedNodeIds: ReadonlySet<string>
 ) {
+  const revivedIds: string[] = [];
   for (const child of records) {
     const parentId = child.snapshot.parent_id;
     if (!parentId || !appliedNodeIds.has(child.object_id) || child.snapshot.deleted_at) continue;
@@ -31,8 +32,10 @@ export async function reviveDeletedFoldersForLaterChildren(
       enqueueSearchInvalidations: false,
       operation: 'local_restore'
     });
+    revivedIds.push(parentId);
     if (!applied.appliedIds.includes(parentId)) {
       throw new Error(`sync_folder_later_child_restore_failed:${parentId}`);
     }
   }
+  return revivedIds;
 }

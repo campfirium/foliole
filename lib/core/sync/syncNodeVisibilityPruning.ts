@@ -4,16 +4,16 @@ import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../data
 import type { DbPort } from './dbPort.js';
 
 export async function pruneLearningRowsWithoutVisibleNodes(port: DbPort) {
-  await port.run(
+  const removedHostState = await port.run(
     `DELETE FROM node_reading_host_state
      WHERE node_id NOT IN (SELECT id FROM nodes)`
   );
-  await port.run(
+  const removedReading = await port.run(
     `DELETE FROM node_reading
      WHERE node_id NOT IN (SELECT id FROM nodes)`
   );
-  await port.run(RETIRE_ORPHANED_INACTIVE_READING_STATE_SQL);
-  await port.run(
+  const retiredReading = await port.run(RETIRE_ORPHANED_INACTIVE_READING_STATE_SQL);
+  const removedReviews = await port.run(
     `${VISIBLE_NODES_CTE_SQL}
      DELETE FROM node_review
      WHERE node_id NOT IN (SELECT id FROM visible_nodes)`
@@ -25,4 +25,5 @@ export async function pruneLearningRowsWithoutVisibleNodes(port: DbPort) {
       (SELECT 1 FROM node_reading entity WHERE entity.node_id = sync_object_state.object_id))
     OR (object_type = 'node_review' AND NOT EXISTS
       (SELECT 1 FROM node_review entity WHERE entity.node_id = sync_object_state.object_id)))`);
+  return removedHostState.changes + removedReading.changes + retiredReading.changes + removedReviews.changes > 0;
 }

@@ -70,11 +70,13 @@ async function queryRows(connection: DbPort, statement: string, values: unknown[
   return connection.query(statement, values as never[]);
 }
 
-function parseObject(value: string | null) {
+function parseObject(value: string | null): Record<string, number> {
   if (!value) return {};
   try {
     const parsed: unknown = JSON.parse(value);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, number] =>
+      typeof entry[1] === 'number' && Number.isFinite(entry[1])));
   } catch {
     return {};
   }

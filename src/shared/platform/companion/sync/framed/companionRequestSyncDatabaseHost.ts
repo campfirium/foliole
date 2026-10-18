@@ -1,5 +1,7 @@
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
+import { registerCompanionWorkspaceRefresh } from '../../companionWorkspaceSnapshotStore.js';
+import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
@@ -10,6 +12,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
   objectApplied: RequestSyncDatabaseHost['objectApplied'] = () => undefined
 ): Promise<RequestSyncDatabaseHost> {
   const owner = getIosCompanionDatabaseOwner();
+  const session = getCompanionReadingScope();
   const databasePath = owner.databasePath;
   const files = await currentCompanionFramedSyncFiles();
   const checkLibrary = () => {
@@ -17,7 +20,11 @@ export async function currentCompanionRequestSyncDatabaseHost(
   };
   return {
     enqueueSearchInvalidations: false,
-    objectApplied,
+    objectApplied: async object => {
+      if (session !== getCompanionReadingScope()) return;
+      registerCompanionWorkspaceRefresh(object.workspaceScope);
+      await objectApplied?.(object);
+    },
     objectOptions: async db => ({ hostName: await iosCompanionHostName(db) }),
     files,
     readSnapshot: (read, signal) => owner.readSnapshot(db => {

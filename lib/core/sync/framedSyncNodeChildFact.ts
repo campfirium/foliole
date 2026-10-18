@@ -65,4 +65,5 @@ export async function applyFramedSyncNodeChildFact(db: DbPort, fact: CanonicalFa
         ELSE min(sync_node_child_owners.node_id, excluded.node_id) END`,
     [fact.globalId, record.object_type, record.object_id, record.content_hash, record.deleted_at, applied ? 1 : 0]);
   }
+  return applied;
 }

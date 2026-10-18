@@ -9,6 +9,7 @@ import {
 } from '../../../companionSyncNodeVersions';
 import { normalizeWorkspaceSyncState } from '../../../companionWorkspaceSyncState';
 import { registerWorkspaceAttachmentResources } from '../../../runtime/workspaceAttachmentResourceRegistry';
+import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnapshotRefresh';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
 import { loadIosCompanionWorkspaceSnapshot } from './iosCompanionWorkspaceSnapshotStore';
@@ -18,11 +19,16 @@ const META = ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS.syncMetaKeys;
 export async function loadIosCompanionWorkspaceSyncState(
   manager?: CompanionSqliteConnectionManager
 ) {
-  return manager ? withConnection(manager, loadState) : getIosCompanionDatabaseOwner().read(loadState);
+  if (manager) return withConnection(manager, loadState);
+  const metadata = await getIosCompanionDatabaseOwner().read(loadMetadata);
+  const workspace_snapshot = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
+  return { ...metadata, workspace_snapshot };
 }
 
-export function loadCompanionDisplaySnapshotState() {
-  return getIosCompanionDatabaseOwner().readSnapshot(loadState);
+export async function loadCompanionDisplaySnapshotState() {
+  const metadata = await getIosCompanionDatabaseOwner().read(loadMetadata);
+  const workspace_snapshot = await refreshCompanionWorkspaceSnapshot();
+  return { ...metadata, workspace_snapshot };
 }
 
 export type CompanionSyncMetadata = Omit<NativeCompanionWorkspaceSyncState, 'workspace_snapshot'>;

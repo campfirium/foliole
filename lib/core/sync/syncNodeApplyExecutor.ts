@@ -33,6 +33,7 @@ interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
 
 export interface ApplySyncNodesWithDbPortResult {
   appliedIds: string[];
+  workspaceScopeExpanded: boolean;
   anchorRepairRecords: SyncNodeAnchorRepairRecord[];
   blockedIds: string[];
   conflictRecords: NativeSyncNodeConflictRecord[];
@@ -159,7 +160,7 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   port: DbPort, source: SyncNodeRecordSource<M>, options: ApplySyncNodesWithDbPortOptions = {}
 ): Promise<ApplySyncNodeSourceResult<M>> {
   const result: ApplySyncNodeSourceResult<M> = {
-    appliedIds: [], anchorRepairRecords: [], blockedIds: [], conflictNodes: [],
+    workspaceScopeExpanded: false, appliedIds: [], anchorRepairRecords: [], blockedIds: [], conflictNodes: [],
     skippedConflictCopyIds: [], tombstoneBlockedIds: [], unmappedAnchorRecords: []
   };
   const ordered = orderNodesForApply(latestBranchHeadRecords(source.records.filter((record) => !source.isIdentityOnly(record))));
@@ -184,7 +185,7 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
       }
     }
     assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
-    if (result.appliedIds.length > 0) await pruneLearningRowsWithoutVisibleNodes(tx);
+    if (result.appliedIds.length > 0) result.workspaceScopeExpanded = await pruneLearningRowsWithoutVisibleNodes(tx);
   });
   return result;
 }

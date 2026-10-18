@@ -1,5 +1,6 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
 import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
@@ -48,11 +49,17 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     const nodeSource = hasStoredReference ? await requestSyncNodeSource(tx, selected) : selected;
     if (hasStoredReference) await assertFramedSyncNodeParentDependencies(tx, nodeSource.records);
     let generatedChanges = false;
+    let workspaceScope: WorkspaceRefreshScope = { kind: 'nodes', nodeIds: [] };
     if (nodeSource.records.length) {
-      if (options.operation === 'local_restore') await applySyncNodeSourceWithDbPort(tx, nodeSource, { operation: 'local_restore' });
+      if (options.operation === 'local_restore') {
+        await applySyncNodeSourceWithDbPort(tx, nodeSource, { operation: 'local_restore' });
+        workspaceScope = { kind: 'full' };
+      }
       else {
         const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false });
         generatedChanges = result.handledConflictCount > 0;
+        workspaceScope = result.workspaceScopeExpanded ? { kind: 'full' }
+          : { kind: 'nodes', nodeIds: result.workspaceNodeIds };
         if (options.enqueueSearchInvalidations) for (const id of result.processedNodeIds) {
           await enqueueAppliedNodeBodySearchInvalidation(tx, id, new Date().toISOString());
         }
@@ -60,20 +67,22 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     }
     for (const source of sources) for await (const fact of source(tx, [3, 4])) {
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
+      if (fact.kind === 4) workspaceScope = { kind: 'full' };
     }
     for (const source of sources) for await (const fact of source(tx, [1])) {
-      if (fact.kind === 1) await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions);
+      if (fact.kind === 1 && await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions)) {
+        workspaceScope = { kind: 'full' };
+      }
     }
-    await flushCurrentParentOrderProjectionsWithDbPort(tx);
-    return { generatedChanges };
+    if (await flushCurrentParentOrderProjectionsWithDbPort(tx)) workspaceScope = { kind: 'full' };
+    return { generatedChanges, workspaceScope };
   });
 }
 
 async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,
   options?: ApplySyncObjectsWithDbPortOptions) {
   if (fact.objectType === 'node') {
-    await applyFramedSyncNodeChildFact(db, fact, options);
-    return;
+    return applyFramedSyncNodeChildFact(db, fact, options);
   }
   let record = restoreFramedSyncObjectStateFact(fact);
   if (record.object_type === 'external_document' && !record.deleted_at) {
@@ -86,5 +95,5 @@ async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: F
     }
     record = withFramedExternalDocumentBody(record, bodies);
   }
-  await applyFramedSyncObjectStateRecord(db, record, options);
+  return applyFramedSyncObjectStateRecord(db, record, options);
 }

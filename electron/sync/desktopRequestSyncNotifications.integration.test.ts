@@ -74,7 +74,7 @@ it('waits after a durable object commit and resumes remaining objects after reop
   const controller = new AbortController();
   const desktopHost = createDesktopRequestSyncDatabaseHost(target.file);
   const host = { ...desktopHost, ...target.host,
-    objectApplied: async (object: { objectType: string; globalId: string }) => {
+    objectApplied: async (object: Parameters<NonNullable<RequestSyncDatabaseHost['objectApplied']>>[0]) => {
       await desktopHost.objectApplied?.(object);
       if (object.globalId === 'sync-from-zero-a-first') { reached(); await held; }
     } };

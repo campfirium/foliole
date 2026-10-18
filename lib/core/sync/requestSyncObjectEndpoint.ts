@@ -1,4 +1,5 @@
 import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
+import type { WorkspaceRefreshScope } from '../database/workspaceSnapshotRefresh.js';
 
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSyncContract.js';
@@ -18,7 +19,7 @@ export interface RequestSyncDatabaseHost {
   files: RequestSyncFilePort;
   enqueueSearchInvalidations?: boolean;
   objectOptions?(db: DbPort): Promise<ApplySyncObjectsWithDbPortOptions>;
-  objectApplied?(object: { objectType: string; globalId: string }): void | Promise<void>;
+  objectApplied?(object: { objectType: string; globalId: string; workspaceScope: WorkspaceRefreshScope }): void | Promise<void>;
   readSnapshot<T>(read: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T>;
   write<T>(write: (db: DbPort) => Promise<T>): Promise<T>;
 }
@@ -79,7 +80,7 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
     ...(input.signal ? { signal: input.signal } : {}),
     objectOptions: { ...await host.objectOptions?.(db), ...input.objectOptions }
   }));
-  await host.objectApplied?.(header);
+  await host.objectApplied?.({ ...header, workspaceScope: result.workspaceScope });
   return { ...result, requestId: header.requestId };
 }
 

@@ -3,7 +3,6 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { getCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
-import { mergeCompanionContentProjection } from '../shared/platform/companion/sync/workspace-state/companionContentProjection';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
@@ -99,11 +98,7 @@ async function refreshAfterMutation(
 ) {
   const previous = contentNodeId ? args.state.workspace_snapshot : previewSnapshot;
   const workspaceSnapshot = await refreshCompanionWorkspaceAfterMutation(previous, contentNodeId);
-  const changed = contentNodeId && previous && workspaceSnapshot
-    ? Object.fromEntries(Object.entries(workspaceSnapshot.nodesById)
-      .filter(([id, node]) => node !== previous.nodesById[id])) : null;
-  args.setState(current => ({ ...current, workspace_snapshot: changed && current.workspace_snapshot
-    ? mergeCompanionContentProjection(current.workspace_snapshot, changed) : workspaceSnapshot }));
+  args.setState(current => ({ ...current, workspace_snapshot: workspaceSnapshot }));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   return workspaceSnapshot;
 }
