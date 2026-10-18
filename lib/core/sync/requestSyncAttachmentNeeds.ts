@@ -35,8 +35,10 @@ export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSync
   inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false) {
   if (!await host.readSnapshot(hasAttachmentDemand)) return { keys: [], pdfTextKeys: [], pending: false };
   await parseChangedAttachmentArticles(host, shouldYield);
+  const parsingPending = await host.readSnapshot(async db =>
+    (await db.query('SELECT 1 FROM attachment_parse_queue LIMIT 1')).length > 0);
   const keys = await host.readSnapshot(selectPendingAttachments);
-  if (!keys.length) return { keys: [], pdfTextKeys: [], pending: await host.readSnapshot(hasAttachmentDemand) };
+  if (!keys.length) return { keys: [], pdfTextKeys: [], pending: await host.readSnapshot(hasAttachmentDemand), parsingPending };
   const pdfTextKeys = requirePdfText ? await host.readSnapshot(db => missingPdfTextArtifacts(db, keys)) : [];
   const missing = await inspectAttachmentNeeds(host, keys, inspect);
   const retained = new Set([...missing, ...pdfTextKeys]);
@@ -52,7 +54,7 @@ export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSync
       WHERE storage_key NOT IN (${keys.map(() => '?').join(',')}) LIMIT 1`, keys);
     return Boolean(queued || remaining);
   });
-  return { keys: missing, pdfTextKeys, pending };
+  return { keys: missing, pdfTextKeys, pending, parsingPending };
 }
 
 export async function inspectAttachmentNeeds(host: Pick<RequestSyncDatabaseHost, 'write'>, resources: readonly string[],

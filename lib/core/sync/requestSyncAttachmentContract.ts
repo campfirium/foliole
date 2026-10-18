@@ -22,6 +22,7 @@ export const attachmentRequestSchema = z.object({
     .default(() => new Uint8Array()),
   storageKeys: z.array(key).max(256).default([]),
   pending: z.boolean().default(false),
+  parsingPending: z.boolean().default(false),
   maxBlocks: z.number().int().min(0).max(8).transform(value => value || 1).default(1),
   state: z.enum(['', 'partial', 'complete', 'offset', 'block', 'end']).default('')
 });

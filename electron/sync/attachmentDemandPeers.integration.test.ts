@@ -205,3 +205,40 @@ it('restores an empty clean current projection when its complete object is recei
     expect(b.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual([]);
   } finally { await bb.close(); await fixture.close(); }
 });
+
+
+it.each(['local', 'remote'])('continues a %s parsing backlog without transferring blocks', async side => {
+  const fixture = await restoreFixture(); const a = fixture.peer('source'); const b = fixture.peer('target');
+  const aa = await attachments(a); const bb = await attachments(b);
+  try {
+    const peer = side === 'local' ? a : b;
+    for (let i = 0; i < 3; i++) {
+      const record = textBranch(`v-${i}`, 'No attachment');
+      record.object_id = `article-${i}`; record.snapshot.id = record.object_id;
+      await applyConvergentSyncNodesWithDbPort(peer.db, [record]);
+    }
+    const responder = side === 'remote' ? { ...bb.host, needsSlice: () => bb.host.needsSlice(() => true) } : bb.host;
+    const first = await exchangeRequestSyncAttachments(aa.host, exchange(a, b, responder), (_key, error) => { throw error; }, () => true);
+    expect(first).toMatchObject({ pending: null, blocks: 0, yielded: true });
+    expect(peer.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toHaveLength(2);
+    const next = await exchangeRequestSyncAttachments(aa.host, exchange(a, b, bb.host), (_key, error) => { throw error; });
+    expect(next).toMatchObject({ pending: 0, blocks: 0, yielded: false });
+    expect(peer.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual([]);
+  } finally { await aa.close(); await bb.close(); await fixture.close(); }
+});
+
+
+it('does not request immediate continuation for an already parsed missing-file backlog', async () => {
+  const fixture = await restoreFixture(); const a = fixture.peer('source'); const b = fixture.peer('target');
+  const aa = await attachments(a); const bb = await attachments(b);
+  try {
+    const keys = Array.from({ length: 100 }, (_, i) => `${i.toString(16).padStart(64, '0')}.png`);
+    await applyConvergentSyncNodesWithDbPort(a.db, [textBranch('missing', keys.map(key => `![image](asset://${key})`).join('\n'))]);
+    const errors: unknown[] = [];
+    const result = await exchangeRequestSyncAttachments(aa.host, exchange(a, b, bb.host), (_key, error) => errors.push(error));
+    expect(errors.length).toBeGreaterThan(0);
+    expect(result).toMatchObject({ pending: null, blocks: 0, yielded: false });
+    expect(a.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual([]);
+    expect(a.sqlite.prepare('SELECT * FROM attachment_pending').all()).toHaveLength(100);
+  } finally { await aa.close(); await bb.close(); await fixture.close(); }
+});

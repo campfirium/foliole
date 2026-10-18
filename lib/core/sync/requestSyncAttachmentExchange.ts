@@ -101,10 +101,12 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   exchange.signal?.throwIfAborted();
   let remoteNeeds = new Set<string>();
   let pendingScan = false;
+  let parsingPending = false;
   await request(exchange, { operation: 'needs' }, async message => {
     if (message.state !== 'partial' && message.state !== 'end') throw new Error('attachment_needs_invalid');
     for (const key of message.storageKeys) remoteNeeds.add(key);
     pendingScan ||= message.pending;
+    parsingPending ||= message.parsingPending;
   });
   const roundKey = JSON.stringify(exchange.context);
   const retryFirst = retryFirstRounds.has(roundKey);
@@ -114,6 +116,7 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
   const local = { ...demand, keys: prioritizeRetryPairs(demand.keys, retryFirst),
     pdfTextKeys: prioritizeRetryPairs(demand.pdfTextKeys ?? [], retryFirst) };
   pendingScan ||= local.pending;
+  parsingPending ||= local.parsingPending ?? false;
   const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report);
   let textPending = 0;
   const stages = [
@@ -150,7 +153,7 @@ export async function exchangeRequestSyncAttachments(host: RequestSyncAttachment
       : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
   if (!pendingScan && !pendingKeys.size && !textPending) retryFirstRounds.delete(roundKey);
   return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending,
-    yielded: verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
+    yielded: parsingPending || verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
 
 async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,

@@ -1117,6 +1117,11 @@
                       "type": "uint32",
                       "id": 12,
                       "protoName": "extractor_version"
+                    },
+                    "parsingPending": {
+                      "type": "bool",
+                      "id": 13,
+                      "protoName": "parsing_pending"
                     }
                   }
                 }

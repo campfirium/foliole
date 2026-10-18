@@ -205,7 +205,7 @@ it('releases the coordinator and persists mobile waiting when an active phone do
 });
 
 
-it.each([{ attachmentProgress: 1 }, { dynamicBacklog: true }])('queues continuation behind a waiting peer: %j', async progress => {
+it.each([{ attachmentProgress: 1 }, { dynamicBacklog: true }, { attachmentYielded: true }])('queues continuation behind a waiting peer: %j', async progress => {
   const slice = deferred<{ complete: boolean; attachmentProgress?: number; dynamicBacklog?: boolean }>();
   transport.continueDesktopSyncGroupSync.mockImplementationOnce(() => slice.promise);
   const first = runDesktopSyncCoordinator('automatic', peer);

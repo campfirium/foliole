@@ -7,47 +7,58 @@ import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 
 type Host = Pick<RequestSyncDatabaseHost, 'write' | 'readSnapshot'>;
 interface Article extends Record<string, unknown> {
-  content: string; resource_references: string; deleted_at: string | null;
+  article_id: string; content: string | null; resource_references: string | null; deleted_at: string | null;
 }
+interface Need { article: string; source: 'mount' | 'body'; key: string }
 
-/** Reserve half the existing wall budget and bound bridge transactions even for tiny bodies. */
+/** Bound each bridge read, then drain batches within half the attachment wall budget. */
 export async function parseChangedAttachmentArticles(host: Host, shouldYield: () => boolean) {
   const deadline = performance.now() + 1000;
-  const rows = await host.readSnapshot(db => db.query<{ article_id: string }>(`SELECT article_id
-    FROM attachment_parse_queue ORDER BY COALESCE(attempted_at, registered_at), article_id LIMIT 64`));
-  let processed = 0;
-  for (const row of rows) {
-    if (processed > 0 && (shouldYield() || performance.now() >= deadline)) break;
-    processed++;
-    await host.write(db => db.transaction(tx => parseArticle(tx, row.article_id)));
-  }
+  await host.write(db => db.transaction(async tx => {
+    let processed = 0;
+    while (true) {
+      const rows = await tx.query<Article>(`SELECT q.article_id, n.content, n.resource_references, n.deleted_at
+        FROM attachment_parse_queue q LEFT JOIN nodes n ON n.id = q.article_id
+        ORDER BY COALESCE(q.attempted_at, q.registered_at), q.article_id LIMIT 128`);
+      if (!rows.length) return;
+      const ids: string[] = [];
+      const needs: Need[] = [];
+      for (const row of rows) {
+        if (processed > 0 && (shouldYield() || performance.now() >= deadline)) break;
+        ids.push(row.article_id);
+        needs.push(...articleNeeds(row));
+        processed++;
+      }
+      if (!ids.length) return;
+      await replaceBatch(tx, ids, needs);
+      if (shouldYield() || performance.now() >= deadline) return;
+    }
+  }));
 }
 
-async function parseArticle(db: DbPort, id: string) {
-  const [queued] = await db.query('SELECT 1 FROM attachment_parse_queue WHERE article_id = ?', [id]);
-  if (!queued) return;
-  const [article] = await db.query<Article>(`SELECT content, resource_references, deleted_at
-    FROM nodes WHERE id = ?`, [id]);
-  if (!article || article.deleted_at !== null) {
-    await db.run('DELETE FROM attachment_pending WHERE article_id = ?', [id]);
-  } else {
-    const mounts = parseNodeResourceReferences(article.resource_references)
-      .filter(reference => reference.role === 'reference').map(reference => reference.storage_key);
-    await replaceNeeds(db, id, 'mount', mounts);
-    await replaceNeeds(db, id, 'body', collectArticleImageStorageKeys(article.content));
-  }
-  await db.run('DELETE FROM attachment_parse_queue WHERE article_id = ?', [id]);
+function articleNeeds(article: Article): Need[] {
+  if (article.content === null || article.deleted_at !== null) return [];
+  const mounts = parseNodeResourceReferences(article.resource_references ?? '[]')
+    .filter(reference => reference.role === 'reference').map(reference => reference.storage_key);
+  const body = collectArticleImageStorageKeys(article.content);
+  const needs: Need[] = [...new Set(mounts)].map(key => ({ article: article.article_id, source: 'mount', key }));
+  needs.push(...[...new Set(body)].map((key): Need => ({ article: article.article_id, source: 'body', key })));
+  return needs.filter(need => parseCanonicalAttachmentStorageKey(need.key));
 }
 
-async function replaceNeeds(db: DbPort, id: string, source: 'mount' | 'body', keys: readonly string[]) {
-  const wanted = new Set(keys.filter(key => parseCanonicalAttachmentStorageKey(key)));
-  const old = await db.query<{ storage_key: string }>(
-    'SELECT storage_key FROM attachment_pending WHERE article_id = ? AND source = ?', [id, source]);
-  for (const row of old) if (!wanted.has(row.storage_key)) await db.run(
-    'DELETE FROM attachment_pending WHERE article_id = ? AND source = ? AND storage_key = ?', [id, source, row.storage_key]);
-  const now = new Date().toISOString();
-  for (const key of wanted) await db.run(`INSERT INTO attachment_pending(article_id, source, storage_key, registered_at)
-    VALUES (?, ?, ?, ?) ON CONFLICT(article_id, source, storage_key) DO NOTHING`, [id, source, key, now]);
+async function replaceBatch(db: DbPort, ids: string[], needs: Need[]) {
+  const articles = JSON.stringify(ids);
+  const wanted = JSON.stringify(needs);
+  await db.run(`DELETE FROM attachment_pending WHERE article_id IN (SELECT value FROM json_each(?))
+    AND NOT EXISTS (SELECT 1 FROM json_each(?) wanted
+      WHERE json_extract(wanted.value, '$.article') = attachment_pending.article_id
+        AND json_extract(wanted.value, '$.source') = attachment_pending.source
+        AND json_extract(wanted.value, '$.key') = attachment_pending.storage_key)`, [articles, wanted]);
+  await db.run(`INSERT INTO attachment_pending(article_id, source, storage_key, registered_at)
+    SELECT json_extract(value, '$.article'), json_extract(value, '$.source'), json_extract(value, '$.key'), ?
+    FROM json_each(?) WHERE 1 ON CONFLICT(article_id, source, storage_key) DO NOTHING`,
+  [new Date().toISOString(), wanted]);
+  await db.run('DELETE FROM attachment_parse_queue WHERE article_id IN (SELECT value FROM json_each(?))', [articles]);
 }
 
 /** New demand and oldest retries each receive half the slots; unused slots go to the other side. */

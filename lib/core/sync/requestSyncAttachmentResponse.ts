@@ -12,7 +12,7 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
   attempted?(storageKey: string): Promise<void>;
   derivePdfText?(pdfKey: string, version: number): Promise<string | null>;
   importPdfText?(pdfKey: string, artifactKey: string): Promise<void>;
-  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; pdfTextKeys?: string[] }>;
+  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; parsingPending?: boolean; pdfTextKeys?: string[] }>;
 }
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
@@ -68,7 +68,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, request: Attac
     for (let index = 0; index < needs.length; index += 256) {
       yield attachmentMessage({ ...request, storageKeys: needs.slice(index, index + 256), state: 'partial' });
     }
-    yield attachmentMessage({ ...request, state: 'end', pending: demand.pending });
+    yield attachmentMessage({ ...request, state: 'end', pending: demand.pending, parsingPending: demand.parsingPending ?? false });
     return;
   }
   const resource = attachmentBlockResourceSchema.parse(request);

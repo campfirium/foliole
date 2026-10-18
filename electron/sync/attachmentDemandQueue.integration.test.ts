@@ -43,7 +43,7 @@ it('does no body or file work at rest, and leaves externally deleted attachments
     f.insert('article');
     await slice(f.host, async keys => keys.map(() => true), () => false);
     let bodies = 0; let stats = 0;
-    const host = observeDemandQueries(f, sql => { if (sql.includes('FROM nodes')) bodies++; });
+    const host = observeDemandQueries(f, sql => { if (sql.includes('JOIN nodes')) bodies++; });
     for (let i = 0; i < 3; i++) await slice(host, async keys => { stats += keys.length; return keys.map(() => false); }, () => false);
     expect({ bodies, stats }).toEqual({ bodies: 0, stats: 0 });
     f.sqlite.prepare('UPDATE nodes SET content = content || ?').run(' edited');
@@ -86,7 +86,7 @@ it('retains new edits queued during the protected parsing transaction', async ()
     const host = { ...f.host, write: <T>(write: (db: DbPort) => Promise<T>) => f.host.write(db => write({ ...db,
       transaction: execute => db.transaction(tx => execute({ ...tx, async query<R extends DbRow>(sql: string, params?: DbParams) {
         const rows = await tx.query<R>(sql, params);
-        if (sql.includes('FROM nodes') && !requested) {
+        if (sql.includes('JOIN nodes') && !requested) {
           requested = true;
           beginEdit();
           await Promise.resolve();

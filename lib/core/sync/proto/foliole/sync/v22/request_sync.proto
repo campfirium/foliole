@@ -38,4 +38,5 @@ message RequestAttachment {
   uint32 max_blocks = 10;
   string derive = 11;
   uint32 extractor_version = 12;
+  bool parsing_pending = 13;
 }
