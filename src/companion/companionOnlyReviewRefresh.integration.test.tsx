@@ -10,10 +10,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import {
-  closeIosCompanionDatabase, initializeIosCompanionDatabase,
-  type IosCompanionDatabaseManager
+  closeIosCompanionDatabase, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-import { createFakeCapacitorConnection } from '../shared/platform/companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { applyCompanionLocalNodeVersions, saveCompanionSyncNodeReadingRecord, saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import { selectCanonicalReviewQueueSource } from '../shared/workspaceCanonicalSelectors';
@@ -40,14 +39,7 @@ beforeEach(async () => {
   const existed = existsSync(file);
   const sqlite = new Database(file);
   database = sqlite;
-  const connection = { ...createFakeCapacitorConnection(sqlite), getUrl: async () => ({ url: file }) };
-  const manager = {
-    closeConnection: async () => { sqlite.close(); database = null; },
-    createConnection: async () => connection,
-    isConnection: async () => ({ result: false }),
-    isDatabase: async () => ({ result: existed }),
-    retrieveConnection: async () => connection
-  } as unknown as IosCompanionDatabaseManager;
+  const manager = createFakeCapacitorDatabaseManager(sqlite, existed, () => { database = null; });
   await initializeIosCompanionDatabase({
     booted_at: past, database_path: null, database_ready: false,
     host_name: 'Only Review refresh fixture', runtime_kind: 'android-capacitor'

@@ -15,7 +15,7 @@ import { useCompanionSyncAppliedRefresh } from './useCompanionSyncAppliedRefresh
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock('../shared/platform/companion/companionWorkspaceRepository', () => ({
-  refreshCompanionWorkspaceAfterMutation: refresh
+  refreshCompanionWorkspaceAfterSync: refresh
 }));
 vi.mock('../shared/platform/companionSyncObjects', () => ({
   loadCompanionSyncNodeConflicts: async () => [],

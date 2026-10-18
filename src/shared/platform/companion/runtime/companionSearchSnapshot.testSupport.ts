@@ -14,10 +14,20 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   const database = new Database(file);
   const base = createFakeCapacitorConnection(database);
   const connection = { ...base, getUrl: async () => ({ url: file }) };
+  // Snapshot reads open their own readonly connection; closing it must not close the writer.
+  // The writer keeps this exact connection object so tests can observe its queries.
+  let reader: Database.Database | null = null;
   const manager = {
     isConnection: async () => ({ result: false }), isDatabase: async () => ({ result: false }),
-    createConnection: async () => connection, retrieveConnection: async () => connection,
-    closeConnection: async () => database.close()
+    createConnection: async (_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) => {
+      if (!readonly) return connection;
+      reader = new Database(file, { readonly: true });
+      return { ...createFakeCapacitorConnection(reader), getUrl: async () => ({ url: file }) };
+    },
+    retrieveConnection: async () => connection,
+    closeConnection: async (_name: string, readonly: boolean) => {
+      if (readonly) { reader?.close(); reader = null; } else database.close();
+    }
   } as unknown as IosCompanionDatabaseManager;
   await initializeIosCompanionDatabase({ booted_at: '2026-10-03T00:00:00Z', database_path: null,
     database_ready: false, host_name: 'Search', runtime_kind: 'android-capacitor' }, manager);
