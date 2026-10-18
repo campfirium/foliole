@@ -19,7 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { resetSeededWorkspace } from './databaseTestWorkspace.js';
-import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadingProgress, saveReadingProgress } from './readingProgress.js';
@@ -182,7 +181,6 @@ it('does not let restore overwrite saved user reading positions', () => {
 
 
 it('writes sync object state for active node and node view states', () => {
-  const deviceId = loadDesktopDeviceId();
   const hostName = loadOrCreateDesktopHostName('2026-03-06T10:00:00.000Z');
   saveReadingProgress({
     activeNodeId: 'node-2',
@@ -216,7 +214,7 @@ it('writes sync object state for active node and node view states', () => {
     `session_resume:windows:desktop:${hostName}:node:node-1`,
     `session_resume:windows:desktop:${hostName}:node:node-2`
   ]);
-  expect(rows.every((row) => row.last_modified_by_host_name === deviceId)).toBe(true);
+  expect(rows.every((row) => row.last_modified_by_host_name === hostName)).toBe(true);
   expect(rows.every((row) => row.sync_dirty === 1)).toBe(true);
   const changeCount = openDatabaseConnection().sqlite
     .prepare(

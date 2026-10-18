@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { initializeDesktopStandaloneIdentity } from '../database/standaloneDeviceIdentity.js';
 
 import { buildDesktopSyncDiagnostics } from './buildDesktopSyncDiagnostics.js';
 import { loadDesktopSyncActivity, recordDesktopSyncActivity } from './desktopSyncActivityStore.js';
@@ -26,6 +27,7 @@ beforeEach(async () => {
   fixture.appDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
   initializeDesktopDeviceProfileFixture();
+  initializeDesktopStandaloneIdentity(openDatabaseConnection().driver, new Date().toISOString());
 });
 
 afterEach(async () => {
