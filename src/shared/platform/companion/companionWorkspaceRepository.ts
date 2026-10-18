@@ -9,8 +9,11 @@ import { refreshCompanionWorkspaceSnapshot } from './companionWorkspaceSnapshotR
 export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null, contentNodeId?: string) {
   const runtime = getCompanionRuntimeCapability();
   if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
+    // A read-only preflight consumes committed scopes without inventing a mutation.
+    // Supplied mutation projections still require a complete native read unless scoped.
     const snapshot = await refreshCompanionWorkspaceSnapshot(contentNodeId
-      ? { kind: 'nodes', nodeIds: [contentNodeId] } : { kind: 'full' });
+      ? { kind: 'nodes', nodeIds: [contentNodeId] }
+      : previewSnapshot === undefined ? undefined : { kind: 'full' });
     registerWorkspaceAttachmentResources(snapshot);
     return snapshot;
   }

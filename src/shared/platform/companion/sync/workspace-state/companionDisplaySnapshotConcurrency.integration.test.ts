@@ -16,6 +16,25 @@ import { runCompanionHighValueMutationTask, runCompanionSyncMutationTask } from 
 
 import { createDisplayLibrary } from './companionDisplaySnapshotConcurrency.testSupport';
 
+it('reuses the committed snapshot before grading and reads registered mutations afterwards', async () => {
+  const library = createDisplayLibrary('android');
+  runtime.owner = library.owner;
+  try {
+    await library.owner.open({ expectedHostName: 'display-fixture', now: '2026-10-18T00:00:00Z' });
+    await library.owner.runWriter(db => db.run(`INSERT INTO nodes
+      (id, title, content, created_at, updated_at) VALUES ('topic', 'Before', 'Body', 'now', 'now')`));
+    const before = await refreshCompanionWorkspaceAfterMutation();
+    const reads = library.directoryQueries();
+    expect(await refreshCompanionWorkspaceAfterMutation()).toBe(before);
+    expect(library.directoryQueries()).toBe(reads);
+    await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
+      "UPDATE nodes SET title = 'After' WHERE id = 'topic'")));
+    const after = await refreshCompanionWorkspaceAfterMutation();
+    expect(after?.nodesById.topic?.title).toBe('After');
+    expect(library.directoryQueries()).toBe(reads + 1);
+  } finally { await library.close(); }
+});
+
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
   registerPlugin: () => ({})
@@ -90,7 +109,7 @@ it('matches a complete snapshot after saving text that removes a child anchor ta
     await saveCompanionContentEdit({ nodeId: 'topic', baseVersionId: 'topic-base', versionId: 'edited',
       content: '# New heading\nApples\nMilk\n', updatedAt: '2026-10-18T01:00:00Z' });
     const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'topic');
-    const complete = await refreshCompanionWorkspaceAfterMutation();
+    const complete = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     expect(refreshed).toEqual(complete);
     expect(complete!.nodesById.child!.deletedAt).toBeFalsy();
     expect(complete!.nodeOrder).toEqual(expect.arrayContaining(['child', 'grandchild']));
@@ -126,7 +145,7 @@ it('refreshes edited topic projections without transferring unrelated directory 
     for (const plan of library.projectionPlans()) {
       expect(plan.details.filter(detail => /\bSCAN(?: TABLE)? (?:nodes|n|owner)\b/u.test(detail)), plan.kind).toEqual([]);
     }
-    const complete = await refreshCompanionWorkspaceAfterMutation();
+    const complete = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     expect(refreshed).toEqual(complete);
     expect(transferred, 'One content edit must not transfer the whole directory').toBeLessThanOrEqual(2);
     const ids = Array.from({ length: 600 }, (_, index) => `node-${index + 1}`);
@@ -138,7 +157,7 @@ it('refreshes edited topic projections without transferring unrelated directory 
     const batch = await refreshCompanionWorkspaceSnapshot();
     expect(library.directoryQueries() - queriesBefore, 'A batch must use one directory query').toBe(1);
     expect(library.directoryRows() - rowsBefore).toBe(600);
-    expect(batch).toEqual(await refreshCompanionWorkspaceAfterMutation());
+    expect(batch).toEqual(await refreshCompanionWorkspaceSnapshot({ kind: 'full' }));
     const unchanged = companionWorkspaceSnapshots.getSnapshot();
     const listener = vi.fn();
     const unsubscribe = companionWorkspaceSnapshots.subscribe(listener);
@@ -173,7 +192,7 @@ it.each(['insert', 'delete', 'move', 'restore', 'reference', 'order'] as const)(
       : action === 'order' ? `UPDATE nodes SET manual_child_order = '["child"]' WHERE id = 'topic'`
         : "UPDATE nodes SET parent_id = NULL WHERE id = 'child'"));
     const actual = await refreshCompanionWorkspaceAfterMutation(before, 'topic');
-    const complete = await refreshCompanionWorkspaceAfterMutation();
+    const complete = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
     expect(actual).toEqual(complete);
   } finally {
     await library.close();
