@@ -38,7 +38,10 @@ async function drainQueue() {
             for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
           }
         });
-        if (articleIds.size > 0) await syncIncrementalMirrorOutput([...articleIds], context);
+        if (articleIds.size > 0) {
+          const result = await syncIncrementalMirrorOutput([...articleIds], context);
+          if (result.pending_article_count > 0) break;
+        }
         await context.yieldIfNeeded();
       }
     }
@@ -48,7 +51,7 @@ async function drainQueue() {
     await flushInFlight;
   } finally {
     flushInFlight = null;
-    if (pendingNodeIds.size > 0) void drainQueue();
+    if (pendingNodeIds.size > 0) scheduleFlush();
   }
 }
 

@@ -34,6 +34,7 @@ import * as articleMirror from './exportArticleMirror.js';
 import { flushMirrorSync, scheduleMirrorSync } from './mirrorSyncScheduler.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 import { rebuildMirrorOutput } from './rebuildMirrorOutput.js';
+import * as mirrorOutput from './rebuildMirrorOutput.js';
 
 let tempRoot = '';
 
@@ -47,8 +48,25 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
+});
+
+it('leaves a changing source queued for a later flush instead of retrying in the same operation', async () => {
+  saveNode('changing', null, 'topic', 'Changing', 'Latest body.', '2026-03-30T00:00:00.000Z', 0);
+  const sync = vi.spyOn(mirrorOutput, 'syncIncrementalMirrorOutput').mockImplementationOnce(async () => {
+    scheduleMirrorSync(['changing']);
+    return { failed_article_count: 0, pending_article_count: 1, queued_article_count: 0,
+      rebuilt_article_count: 0, updated_at: '2026-03-30T00:00:00.000Z' };
+  });
+  scheduleMirrorSync(['changing']);
+  await flushMirrorSync();
+  expect(sync).toHaveBeenCalledTimes(1);
+  await expect(fs.access(mirrorPath('Changing.md'))).rejects.toThrow();
+  await flushMirrorSync();
+  expect(sync).toHaveBeenCalledTimes(2);
+  await expect(fs.readFile(mirrorPath('Changing.md'), 'utf8')).resolves.toContain('Latest body.');
 });
 
 function saveNode(

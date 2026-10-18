@@ -30,6 +30,7 @@ import {
 } from './mirrorOutputStorage.js';
 import { collectProtectedMirrorPaths } from './mirrorPathIdentity.js';
 import { collectChangedMirrorOwners } from './mirrorPathOwnership.js';
+import { scheduleMirrorSync } from './mirrorSyncScheduler.js';
 
 type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
@@ -188,7 +189,8 @@ async function processMirrorPlans(args: {
 
 async function syncMirrorOutput(
   mode: MirrorSyncMode,
-  options: MirrorSyncOptions = {}
+  options: MirrorSyncOptions = {},
+  attempt = 1
 ): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
   const captured = await runWithDatabaseConnectionOwner(captureMirrorOutputSnapshot);
@@ -203,42 +205,36 @@ async function syncMirrorOutput(
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
   } else if (mode === 'incremental') {
-    await runWithDatabaseConnectionOwner(() => {
-      const current = captureMirrorOutputSnapshot();
-      return pruneMirrorOutputToTargets(current.paths.mirror, current.plans.map((plan) => plan.targetPath));
-    });
+    await runWithDatabaseConnectionOwner(() => pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath)));
   }
 
   await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
 
-  await runWithDatabaseConnectionOwner(() => {
-    const current = captureMirrorOutputSnapshot();
-    const currentProtectedPaths = collectProtectedMirrorPaths(current.plans.map((plan) => plan.targetPath));
-    return removeLegacyMirrorArtifacts(
-      current.paths.mirror, current.plans.map((plan) => plan.targetPath), currentProtectedPaths);
-  });
+  await runWithDatabaseConnectionOwner(() => removeLegacyMirrorArtifacts(
+    paths.mirror, plans.map((plan) => plan.targetPath), protectedPaths));
 
   const processed = snapshot
     ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
     : { pendingArticleIds: [], rebuiltArticleCount: 0 };
 
-  if (processed.pendingArticleIds.length > 0) {
+  if (processed.pendingArticleIds.length > 0 && attempt < 3) {
     const retry = await syncMirrorOutput('incremental', {
       articleIds: processed.pendingArticleIds,
       ...(options.taskContext ? { taskContext: options.taskContext } : {})
-    });
+    }, attempt + 1);
     return {
       ...retry,
       queued_article_count: processed.rebuiltArticleCount + retry.queued_article_count,
       rebuilt_article_count: processed.rebuiltArticleCount + retry.rebuilt_article_count
     };
   }
+  if (processed.pendingArticleIds.length > 0) scheduleMirrorSync(processed.pendingArticleIds);
 
   return {
     queued_article_count: mode === 'full' ? plans.length : processed.rebuiltArticleCount,
     rebuilt_article_count: processed.rebuiltArticleCount,
     failed_article_count: 0,
-    pending_article_count: 0,
+    pending_article_count: processed.pendingArticleIds.length,
     updated_at: updatedAt
   };
 }
