@@ -31,5 +31,5 @@ export function commitCompanionImageArticle(nodeId: string, before: RecoverableI
     }, await iosCompanionHostName(db));
     const result = await applySyncNodesWithDbPort(db, [version], { operation: 'local_mutation', enqueueSearchInvalidations: false });
     return result.appliedIds.includes(nodeId);
-  }));
+  }), { kind: 'full' });
 }

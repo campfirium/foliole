@@ -24,7 +24,7 @@ export function subscribeCompanionHighValueMutation(listener: MutationListener) 
   return () => highValueMutationListeners.delete(listener);
 }
 
-export function publishCompanionSyncMutationRevision(scope: WorkspaceRefreshScope = { kind: 'full' }) {
+export function publishCompanionSyncMutationRevision(scope: WorkspaceRefreshScope) {
   registerCompanionWorkspaceRefresh(scope);
   mutationRevision += 1;
   for (const listener of mutationListeners) {
@@ -36,7 +36,7 @@ export function publishCompanionSyncMutationRevision(scope: WorkspaceRefreshScop
   }
 }
 
-export function publishCompanionHighValueMutation(scope: WorkspaceRefreshScope = { kind: 'full' }) {
+export function publishCompanionHighValueMutation(scope: WorkspaceRefreshScope) {
   requestAttachmentWorkYield();
   publishCompanionSyncMutationRevision(scope);
   for (const listener of highValueMutationListeners) {
@@ -48,30 +48,30 @@ export function publishCompanionHighValueMutation(scope: WorkspaceRefreshScope =
   }
 }
 
-export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope = { kind: 'full' }) {
+export async function runCompanionSyncMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
   const result = await runCompanionSyncWriterTask(task);
   if (session === getCompanionReadingScope()) publishCompanionSyncMutationRevision(scope);
   return result;
 }
 
-export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promise<T | null>) {
+export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promise<T | null>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
   const result = await runCompanionSyncWriterTask(task);
-  if (result !== null && session === getCompanionReadingScope()) publishCompanionSyncMutationRevision();
+  if (result !== null && session === getCompanionReadingScope()) publishCompanionSyncMutationRevision(scope);
   return result;
 }
 
-export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope = { kind: 'full' }) {
+export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
   const result = await runCompanionSyncWriterTask(task);
   if (session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
   return result;
 }
 
-export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>) {
+export async function runCompanionOptionalHighValueMutationTask<T>(task: () => Promise<T | null>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
   const result = await runCompanionSyncWriterTask(task);
-  if (result !== null && session === getCompanionReadingScope()) publishCompanionHighValueMutation();
+  if (result !== null && session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
   return result;
 }

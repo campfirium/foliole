@@ -85,7 +85,7 @@ async function leaveCompanionWorkspaceSyncGroup(args: {
   saveEndpoint: (endpointUrl: string) => Promise<unknown>;
 }) {
   await leaveCompanionSyncGroupDevice();
-  publishCompanionSyncMutationRevision();
+  publishCompanionSyncMutationRevision({ kind: 'full' });
   await args.saveEndpoint('');
 }
 

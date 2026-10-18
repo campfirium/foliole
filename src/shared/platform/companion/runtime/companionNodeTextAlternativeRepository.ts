@@ -26,7 +26,7 @@ export async function loadCompanionNodeTextAlternative(nodeId: string, alternati
   if (!isAvailableNativeCompanionRuntime()) return null;
   const now = new Date().toISOString();
   await runCompanionOptionalHighValueMutationTask(() => writeIosCompanionDatabase(async db =>
-    await expireTopicText(db, nodeId, now) ? true : null));
+    await expireTopicText(db, nodeId, now) ? true : null), { kind: 'full' });
   return writeIosCompanionDatabase(async (db) => {
     const [record] = await db.query<{ snapshot_json: string; version_id: string; updated_at: string }>(
       `SELECT v.snapshot_json, v.version_id, n.updated_at
@@ -55,5 +55,5 @@ export async function updateCompanionNodeTextAlternativeStatus(alternativeId: st
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action: status,
       now: new Date().toISOString(), versionId: createOpaqueVersionRef(createCompanionUuid()),
       hostName: await iosCompanionHostName(tx) });
-  })));
+  })), { kind: 'full' });
 }

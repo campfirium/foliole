@@ -80,7 +80,7 @@ function useJoinCompletion(args: {
     }).then((group) => {
       setPendingRequest(null); setStatus('idle'); onErrorRef.current(null);
       setJoined(true);
-      publishCompanionSyncMutationRevision();
+      publishCompanionSyncMutationRevision({ kind: 'full' });
       return group;
     }).finally(() => { completionRef.current = null; });
     return completionRef.current;

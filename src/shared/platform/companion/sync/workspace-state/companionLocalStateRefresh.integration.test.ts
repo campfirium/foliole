@@ -118,7 +118,7 @@ it('lets a registered full refresh govern a batch that also holds local state sc
   try {
     await saveCompanionSyncNodeReviewRecord({ nodeId: 'a', review });
     await runCompanionSyncMutationTask(() => library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET title = 'Renamed' WHERE id = 'b'")));
+      "UPDATE nodes SET title = 'Renamed' WHERE id = 'b'")), { kind: 'full' });
     const displayed = await refreshCompanionWorkspaceAfterMutation();
     expect(library.fullDirectoryQueries()).toBe(reads + 1);
     expect(displayed?.nodesById.b?.title).toBe('Renamed');

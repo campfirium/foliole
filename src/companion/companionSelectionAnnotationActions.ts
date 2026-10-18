@@ -147,5 +147,5 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
       throw new Error('companion_annotation_snapshot_not_converged');
     }
     return { nodeId: draft.node.id, snapshot: nextSnapshot };
-  });
+  }, { kind: 'full' });
 }

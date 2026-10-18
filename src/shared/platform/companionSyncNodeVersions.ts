@@ -53,7 +53,7 @@ export async function applyCompanionLocalNodeVersions(
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
   return runCompanionHighValueMutationTask(() => (
     applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager, 'local_mutation')
-  ));
+  ), { kind: 'full' });
 }
 
 export async function applyCompanionSyncNodeVersionsWithinWriterTask(
@@ -89,7 +89,7 @@ export async function applyCompanionTrashRestoreNodeVersions(
       ));
     }
     return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore');
-  });
+  }, { kind: 'full' });
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(

@@ -28,7 +28,7 @@ it('reuses the committed snapshot before grading and reads registered mutations 
     expect(await refreshCompanionWorkspaceAfterMutation()).toBe(before);
     expect(library.directoryQueries()).toBe(reads);
     await runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.run(
-      "UPDATE nodes SET title = 'After' WHERE id = 'topic'")));
+      "UPDATE nodes SET title = 'After' WHERE id = 'topic'")), { kind: 'full' });
     const after = await refreshCompanionWorkspaceAfterMutation();
     expect(after?.nodesById.topic?.title).toBe('After');
     expect(library.directoryQueries()).toBe(reads + 1);
@@ -225,7 +225,7 @@ it('publishes a local projection then a concurrent remote structural commit with
       await tx.run("UPDATE nodes SET title = 'Remote title' WHERE id = 'topic'");
       await tx.run(`INSERT INTO nodes (id, parent_id, title, content, created_at, updated_at)
         VALUES ('remote-child', 'topic', 'Child', 'Body', 'now', 'now')`);
-    })));
+    })), { kind: 'full' });
     library.release.resolve();
     await work;
     expect(published).toEqual(['Original', 'Remote title']);

@@ -66,9 +66,9 @@ it('keeps attachments yielding while the cadence holds a committed edit', async 
   ));
   try {
     await act(async () => Promise.resolve());
-    await act(async () => { publishCompanionHighValueMutation(); });
-    publishCompanionHighValueMutation();
-    publishCompanionHighValueMutation();
+    await act(async () => { publishCompanionHighValueMutation({ kind: 'full' }); });
+    publishCompanionHighValueMutation({ kind: 'full' });
+    publishCompanionHighValueMutation({ kind: 'full' });
     expect(attachmentWorkBudget()()).toBe(true);
     await act(async () => { finishRun?.(); });
     expect(attachmentWorkBudget()()).toBe(true);
@@ -87,13 +87,13 @@ it('runs idle mutations immediately and merges mutations while a run is active',
   await act(async () => Promise.resolve());
 
   await act(async () => {
-    publishCompanionHighValueMutation();
+    publishCompanionHighValueMutation({ kind: 'full' });
     await Promise.resolve();
   });
   expect(run).toHaveBeenCalledTimes(2);
-  publishCompanionHighValueMutation();
+  publishCompanionHighValueMutation({ kind: 'full' });
   expect(run).toHaveBeenCalledTimes(3);
-  publishCompanionHighValueMutation();
+  publishCompanionHighValueMutation({ kind: 'full' });
   await act(async () => vi.advanceTimersByTimeAsync(5_000));
 
   expect(run).toHaveBeenCalledTimes(4);
@@ -104,9 +104,9 @@ it('ignores ambient writes and requests no freshness or mutation sync in backgro
   const { hook, run } = renderMutationSchedule();
   await act(async () => Promise.resolve());
 
-  publishCompanionSyncMutationRevision();
+  publishCompanionSyncMutationRevision({ kind: 'full' });
   await act(async () => lifecycle.backgroundHandlers[0]?.());
-  publishCompanionHighValueMutation();
+  publishCompanionHighValueMutation({ kind: 'full' });
   await act(async () => vi.advanceTimersByTimeAsync(60_000));
 
   expect(run).toHaveBeenCalledOnce();
@@ -125,8 +125,8 @@ it('retains an active-run mutation across background and syncs it on foreground'
   ));
   await act(async () => Promise.resolve());
 
-  await act(async () => { publishCompanionHighValueMutation(); await Promise.resolve(); });
-  publishCompanionHighValueMutation();
+  await act(async () => { publishCompanionHighValueMutation({ kind: 'full' }); await Promise.resolve(); });
+  publishCompanionHighValueMutation({ kind: 'full' });
   expect(hasWaitingSyncData()).toBe(true);
   await act(async () => lifecycle.backgroundHandlers[0]?.());
   expect(hasWaitingSyncData()).toBe(false);
@@ -149,8 +149,8 @@ it('releases a queued edit on unmount before the active run finishes', async () 
     vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
   ));
   await act(async () => Promise.resolve());
-  await act(async () => { publishCompanionHighValueMutation(); });
-  publishCompanionHighValueMutation();
+  await act(async () => { publishCompanionHighValueMutation({ kind: 'full' }); });
+  publishCompanionHighValueMutation({ kind: 'full' });
   expect(hasWaitingSyncData()).toBe(true);
   hook.unmount();
   expect(hasWaitingSyncData()).toBe(false);

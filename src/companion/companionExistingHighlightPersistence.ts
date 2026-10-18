@@ -20,7 +20,7 @@ interface ExistingHighlightMutation {
 
 function persistExistingHighlightNode(args: ExistingHighlightMutation) {
   return isAvailableNativeCompanionRuntime()
-    ? runCompanionOptionalHighValueMutationTask(() => writeExistingHighlight(args, true))
+    ? runCompanionOptionalHighValueMutationTask(() => writeExistingHighlight(args, true), { kind: 'full' })
     : writeExistingHighlight(args, false);
 }
 
