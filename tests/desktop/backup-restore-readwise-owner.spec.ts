@@ -18,7 +18,8 @@ async function seedLegacySource(app: ElectronApplication) {
       const groupId = 'legacy-readwise-backup';
       const device = identity.createSyncGroupDeviceIdentity({
         device_anchor: '11111111-1111-4111-8111-111111111111', group_id: groupId,
-        library_path: connection.openDatabaseConnection().dbPath, path_flavor: 'posix'
+        library_path: connection.openDatabaseConnection().dbPath,
+        path_flavor: identity.devicePathFlavorFromCanonicalLibraryPath(connection.openDatabaseConnection().dbPath)
       });
       groups.createDesktopSyncGroup({ device, deviceName: 'This Mac', platform: 'darwin' });
       const remote = identity.createSyncGroupDeviceIdentity({
@@ -97,4 +98,38 @@ test('restores a legacy backup with this device responsible while group sync sta
   expect(await assignment(desktopWindow)).toMatchObject({ is_active: true, legacy_unassigned: false,
     handoff_pending: false });
   await expect(desktopWindow.getByRole('dialog', { name: /^(Readwise import device|Readwise 导入设备)$/ })).toHaveCount(0);
+});
+
+test('retains local Readwise responsibility when restoring a backup without a group', async ({
+  desktopApp, desktopWindow
+}, info) => {
+  const backup = await desktopWindow.evaluate(() => window.electronAPI.invoke('backup_sqlite_database', {})) as {
+    destinationPath: string
+  };
+  await seedLegacySource(desktopApp);
+  await makeLocalOwner(desktopApp);
+  expect((await assignment(desktopWindow)).is_active).toBe(true);
+  const settings = await openBackupsSection(desktopWindow);
+  await settings.locator('[data-settings-row]').filter({
+    has: desktopWindow.getByRole('heading', { name: path.basename(backup.destinationPath) })
+  }).getByRole('button', { name: /^(Restore|恢复)$/ }).click();
+  const sourceChoice = desktopWindow.getByRole('dialog', {
+    name: /^(Sync settings for this restore|本次恢复的同步设置)$/
+  });
+  await expect(sourceChoice).toBeVisible();
+  await sourceChoice.getByRole('button', { name: /Use the backup’s sync group settings|使用备份的同步组设置/ }).click();
+  const done = desktopWindow.getByRole('dialog', { name: /^(Backup restored|备份已恢复)$/ });
+  await expect(done).toBeVisible();
+  await done.getByRole('button', { name: /^(Done|完成)$/ }).click();
+  const overview = await desktopWindow.evaluate(() => window.electronAPI.invoke('load_sync_group_overview', {}));
+  expect(overview).toMatchObject({ sync_group: null });
+  expect(await assignment(desktopWindow)).toMatchObject({ is_active: true, legacy_unassigned: false,
+    handoff_pending: false, active_device_identity_key: expect.stringMatching(/^[0-9a-f-]{36}$/u) });
+  await desktopWindow.reload();
+  expect(await assignment(desktopWindow)).toMatchObject({ is_active: true, legacy_unassigned: false });
+  await expect(desktopWindow.getByRole('dialog', { name: /^(Readwise import device|Readwise 导入设备)$/ })).toHaveCount(0);
+  const screenshot = await desktopWindow.screenshot({
+    path: path.join(process.cwd(), '.tmp/artifacts/readwise-restore/standalone-owner.png')
+  });
+  await info.attach('standalone-readwise-owner', { body: screenshot, contentType: 'image/png' });
 });
