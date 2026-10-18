@@ -184,6 +184,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncExternalDocument.integration.test.ts',
   'electron/sync/desktopFramedSyncFolderRemoval.integration.test.ts',
   'electron/sync/desktopFramedSyncHostSetting.integration.test.ts',
+  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
   'electron/sync/desktopFramedSyncIndependentRound.integration.test.ts',
   'electron/sync/desktopFramedSyncLargeResource.integration.test.ts',
   'electron/sync/desktopFramedSyncLegacyTombstone.integration.test.ts',
