@@ -174,9 +174,15 @@ for (const enabled of [false, true]) {
     await expect(joining.send('joinComplete')).rejects.toThrow('backup_restore_sync_confirmation_required');
     expect((await joining.send('snapshot')).group).toBeUndefined();
     await joining.send('pendingRestore', { pending: false });
-    await joining.send('joinComplete');
-    await expect.poll(async () => (await joining.send('snapshot')).library.nodesById['provider-note']?.content,
-      { timeout: 20000 }).toBe('Retained remote note').catch((error) => {
+    await expect.poll(async () => {
+      try { await joining.send('joinComplete'); }
+      catch (error) {
+        if (!(error instanceof Error) || error.message.split('\n', 1)[0] !==
+            'joinComplete: Error: sync_group_sync_incomplete') throw error;
+        return null;
+      }
+      return (await joining.send('snapshot')).library.nodesById['provider-note']?.content;
+    }, { timeout: 20000, interval: 1000 }).toBe('Retained remote note').catch((error) => {
         throw new Error(`${String(error)}\nProvider: ${provider.diagnostics()}\nJoining: ${joining.diagnostics()}`);
       });
     expect((await provider.send('snapshot')).library.nodesById['restored-note']).toBeUndefined();

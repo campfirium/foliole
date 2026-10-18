@@ -20,7 +20,7 @@ describe('companion workspace manual sync refresh', () => {
   it('refreshes the visible workspace snapshot after manual structure sync', async () => {
     const { actions, callbacks } = createActions();
     const syncedSnapshot = createSnapshot('synced-topic');
-    workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState({
+    workspaceSyncMock.loadCompanionWorkspaceDisplayState.mockResolvedValue(createSyncState({
       workspace_snapshot: syncedSnapshot
     }));
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async (_endpoint, options) => {

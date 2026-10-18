@@ -15,7 +15,8 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   bindCompanionWorkspaceSyncTarget: async () => undefined,
   saveCompanionWorkspaceSyncEndpoint: async () => undefined,
   recordCompanionWorkspaceSyncEvent: runtime.record,
-  loadCompanionWorkspaceSyncState: async () => ({ workspace_snapshot: null })
+  loadCompanionWorkspaceSyncState: async () => ({ workspace_snapshot: null }),
+  loadCompanionWorkspaceDisplayState: async () => ({ workspace_snapshot: null })
 }));
 vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', () => ({
   exchangeCompanionSyncGroupMemberState: async () => ({ normalSyncReady: true, peerLibraryEpoch: runtime.epoch })

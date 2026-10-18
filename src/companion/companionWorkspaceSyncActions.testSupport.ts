@@ -16,6 +16,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   loadCompanionReadableArticle: vi.fn(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
+  loadCompanionWorkspaceDisplayState: vi.fn(),
 
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
@@ -140,6 +141,7 @@ export function resetSyncActionMocks() {
   vi.resetAllMocks();
   workspaceSyncMock.recordCompanionWorkspaceSyncEvent.mockResolvedValue(createSyncState());
   workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState());
+  workspaceSyncMock.loadCompanionWorkspaceDisplayState.mockResolvedValue(createSyncState());
   workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockImplementation(
     async (endpointUrl: string) => [{ endpointUrl }]
   );
