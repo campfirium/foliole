@@ -68,7 +68,7 @@ it('accepts exactly one Network.framework candidate whose TXT and HTTP identity 
   await expect(discoverIosHostedProvider()).resolves.toMatchObject({ discovery, endpointUrl });
   expect(runtime.load).toHaveBeenCalledWith([{
     endpointUrl, protocolTxt, source: 'nsd'
-  }]);
+  }], expect.any(Function));
 });
 
 it('uses the existing discovery session when the initial native snapshot is empty', async () => {
@@ -119,4 +119,13 @@ it('returns the sync source from the exact discovered provider identity', async 
     peer: { sourceHostName: 'Acceptance Provider', sourcePeerId: IOS_HOSTED_PROVIDER_DEVICE_ID }
   });
   expect(runtime.discover).toHaveBeenCalledOnce();
+});
+
+it('includes the failed HTTP verification in the existing acceptance error', async () => {
+  const failure = { endpointUrl, kind: 'http', status: 503 };
+  runtime.load.mockImplementation(async (_candidates, onFailure) => {
+    onFailure(failure);
+    return [];
+  });
+  await expect(discoverIosHostedProvider()).rejects.toThrow(`"failures":[${JSON.stringify(failure)}]`);
 });

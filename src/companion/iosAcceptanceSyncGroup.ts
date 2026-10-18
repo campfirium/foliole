@@ -19,6 +19,7 @@ import {
 } from '../shared/platform/companionSyncGroupJoinClient';
 import {
   loadCompanionDiscoveryCandidates,
+  type CompanionDiscoveryFailure,
   type DiscoveryCandidate
 } from '../shared/platform/companionWorkspaceDiscovery';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -34,7 +35,8 @@ export async function discoverIosHostedProvider() {
       protocolTxt: candidate.protocol_txt ?? null,
       source: candidate.source
     } satisfies DiscoveryCandidate));
-  const discovered = await loadCompanionDiscoveryCandidates(candidates);
+  const failures: CompanionDiscoveryFailure[] = [];
+  const discovered = await loadCompanionDiscoveryCandidates(candidates, failure => failures.push(failure));
   const exact = discovered.filter((result) => matchesHostedIdentity(
     candidates.find((candidate) => candidate.endpointUrl === result.endpointUrl)?.protocolTxt ?? null,
     result.discovery
@@ -42,6 +44,7 @@ export async function discoverIosHostedProvider() {
   if (exact.length !== 1) {
     const evidence = {
       nativeCount: nativeCandidates.length,
+      failures,
       advertisements: candidates.map(candidate => ({
         endpoint: candidate.endpointUrl, groupId: candidate.protocolTxt?.group_id,
         runtimeId: candidate.protocolTxt?.runtime_instance_id

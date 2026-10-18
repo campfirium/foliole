@@ -18,7 +18,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => plugin)
 }));
 
-import { discoverCompanionDesktops } from './companionWorkspaceDiscovery';
+import { discoverCompanionDesktops, loadCompanionDiscoveryCandidates } from './companionWorkspaceDiscovery';
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -53,4 +53,31 @@ it('allows a hosted-speed native discovery response to finish', async () => {
   const pending = discoverCompanionDesktops('http://10.0.2.2:38641');
   await vi.advanceTimersByTimeAsync(3500);
   await expect(pending).resolves.toHaveLength(1);
+});
+
+const candidate = { endpointUrl: 'http://192.168.1.44:38641', protocolTxt: null, source: 'direct' as const };
+
+it.each([
+  ['http', () => Promise.resolve({ status: 503, body: '{}' }), { kind: 'http', status: 503 }],
+  ['request', () => Promise.reject(new Error('Local network denied')), { kind: 'request', message: 'Local network denied' }],
+  ['parse', () => Promise.resolve({ status: 200, body: 'invalid' }), { kind: 'parse' }]
+])('retains %s failure evidence without returning a verified candidate', async (_name, request, expected) => {
+  plugin.desktopHttpRequest.mockImplementation(request);
+  const onFailure = vi.fn();
+  await expect(loadCompanionDiscoveryCandidates([candidate], onFailure)).resolves.toEqual([]);
+  expect(onFailure).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+    endpointUrl: candidate.endpointUrl, ...expected
+  }));
+});
+
+it('reports the unchanged five-second discovery deadline', async () => {
+  vi.useFakeTimers();
+  plugin.desktopHttpRequest.mockImplementation(() => new Promise(() => {}));
+  const onFailure = vi.fn();
+  const pending = loadCompanionDiscoveryCandidates([candidate], onFailure);
+  await vi.advanceTimersByTimeAsync(5000);
+  await expect(pending).resolves.toEqual([]);
+  expect(onFailure).toHaveBeenCalledExactlyOnceWith({
+    endpointUrl: candidate.endpointUrl, kind: 'request', message: 'Discovery request timed out.'
+  });
 });

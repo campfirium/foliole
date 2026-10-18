@@ -40,6 +40,12 @@ export type DiscoveryCandidate = {
   source: 'direct' | 'nsd';
 };
 
+export type CompanionDiscoveryFailure = { endpointUrl: string } & (
+  | { kind: 'http'; status: number }
+  | { kind: 'request' | 'parse'; message: string }
+);
+type DiscoveryFailureReporter = (failure: CompanionDiscoveryFailure) => void;
+
 const DISCOVERY_TIMEOUT_MS = 5000;
 const DISCOVERY_BATCH_SIZE = 24;
 
@@ -118,27 +124,34 @@ function resolveCompatibility(candidate: DiscoveryCandidate, discovery: LoadComp
   } satisfies SyncProtocolCompatibilityResult;
 }
 
-async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate, signal?: AbortSignal): Promise<CompanionDiscoveryResult | null> {
+async function tryLoadCompanionDiscovery(
+  candidate: DiscoveryCandidate, signal?: AbortSignal, onFailure?: DiscoveryFailureReporter
+): Promise<CompanionDiscoveryResult | null> {
   const normalizedEndpointUrl = normalizeEndpointUrl(candidate.endpointUrl);
   const { controller, timeoutId } = createDiscoveryTimeout();
   const abort = () => controller.abort(signal?.reason);
   signal?.addEventListener('abort', abort, { once: true });
   if (signal?.aborted) abort();
+  let stage: 'request' | 'parse' = 'request';
   try {
     const response = signal && isNativeCompanionNetworkRuntime()
       ? await requestNativeDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal)
         .then(payload => new Response(payload.body, { status: payload.status }))
       : await requestDiscovery(`${normalizedEndpointUrl}${DISCOVERY_ENDPOINT_PATH}`, controller.signal);
     if (!response.ok) {
+      onFailure?.({ endpointUrl: normalizedEndpointUrl, kind: 'http', status: response.status });
       return null;
     }
+    stage = 'parse';
     const discovery = (await response.json()) as LoadCompanionDiscoveryResponse;
     return {
       compatibility: resolveCompatibility(candidate, discovery),
       discovery,
       endpointUrl: normalizedEndpointUrl
     };
-  } catch {
+  } catch (error) {
+    onFailure?.({ endpointUrl: normalizedEndpointUrl, kind: stage,
+      message: error instanceof Error || error instanceof DOMException ? error.message : String(error) });
     return null;
   } finally {
     window.clearTimeout(timeoutId);
@@ -146,11 +159,13 @@ async function tryLoadCompanionDiscovery(candidate: DiscoveryCandidate, signal?:
   }
 }
 
-export async function loadCompanionDiscoveryCandidates(candidates: DiscoveryCandidate[]) {
+export async function loadCompanionDiscoveryCandidates(
+  candidates: DiscoveryCandidate[], onFailure?: DiscoveryFailureReporter
+) {
   const discovered: CompanionDiscoveryResult[] = [];
   for (let index = 0; index < candidates.length; index += DISCOVERY_BATCH_SIZE) {
     const batch = candidates.slice(index, index + DISCOVERY_BATCH_SIZE);
-    const results = await Promise.all(batch.map((candidate) => tryLoadCompanionDiscovery(candidate)));
+    const results = await Promise.all(batch.map((candidate) => tryLoadCompanionDiscovery(candidate, undefined, onFailure)));
     results.forEach((result) => { if (result) appendUniqueDiscovery(discovered, result); });
   }
   return discovered;
