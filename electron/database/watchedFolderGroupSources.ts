@@ -1,6 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { WatchedFolderGroupSource } from '../../lib/platform/watchedFolderConflictContract.js';
 import { parseWatchedFolderGroupSource } from '../../lib/platform/watchedFolderConflictContract.js';
+import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -42,19 +44,33 @@ export function applyRemoteWatchedFolderGroupSources(values: unknown[], senderDe
     return;
   }
   const driver = openDatabaseConnection().driver;
+  const hints: WatchedFolderGroupSource[] = [];
   for (const source of sources) {
     if (source.owner_device_identity_key !== senderDeviceId ||
         source.source_ref !== `watched:${source.binding_id}`) {
       throw new Error('watched_source_owner_invalid');
     }
+    const canonical = driver.queryOne<{ updated_at: string }>(`SELECT updated_at FROM sync_object_state
+      WHERE object_type = 'watched_folder' AND object_id = ?`, [source.binding_id]);
     const existing = driver.queryOne<{ owner_device_identity_key: string | null; source_ref: string }>(
       'SELECT owner_device_identity_key, source_ref FROM watched_folder_bindings WHERE binding_id = ?',
       [source.binding_id]
     );
-    if (existing && (existing.owner_device_identity_key !== senderDeviceId ||
-        existing.source_ref !== source.source_ref)) throw new Error('watched_source_identity_conflict');
+    if (canonical || existing && (existing.owner_device_identity_key !== senderDeviceId ||
+        existing.source_ref !== source.source_ref)) {
+      if (!canonical || source.updated_at > canonical.updated_at) {
+        void appendDiagnosticLog({ event: 'watched_member_source_hint_ignored', level: 'debug',
+          occurred_at: new Date().toISOString(), source: 'electron.main', payload: {
+            bindingId: source.binding_id, senderDeviceId,
+            reason: canonical ? 'canonical_source_exists' : 'source_identity_changed'
+          }
+        }).catch(error => appendMainProcessDiagnosticLog('watched_hint_diagnostic_failed', { error }));
+      }
+      continue;
+    }
+    hints.push(source);
   }
-  for (const source of sources) upsertRemoteSource(source);
+  for (const source of hints) upsertRemoteSource(source);
 }
 
 function upsertRemoteSource(source: WatchedFolderGroupSource) {
