@@ -10,6 +10,7 @@ import {
   readReport,
   removeOldReports
 } from './desktop-electron-test-bucket-report.mjs';
+import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
 const CHUNK_SIZE = 30;
@@ -94,7 +95,7 @@ export function buildReleaseDesktopSourceVitestArgs(bucket) {
     bucket.report,
     '--',
     '--silent=passed-only',
-    '--pool=threads',
+    bucket.targets.some(file => controlledElectronSqliteTests.includes(file)) ? '--pool=forks' : '--pool=threads',
     '--maxWorkers=2',
     '--no-file-parallelism',
     '--testTimeout=15000',

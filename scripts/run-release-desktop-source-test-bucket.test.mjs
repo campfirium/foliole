@@ -60,5 +60,16 @@ it('runs renderer-only source buckets under ordinary Node', () => {
   });
 
   expect(args[0]).toBe('scripts/run-vitest-with-summary.mjs');
+  expect(args).toContain('--pool=threads');
   expect(args).not.toContain('scripts/electron-sqlite-runner.mjs');
+});
+
+it('isolates registered native SQLite source tests in child processes', () => {
+  const args = buildReleaseDesktopSourceVitestArgs({
+    report: '.tmp/vitest/native-source.json',
+    targets: ['src/app/hooks/editorAutomaticSave.integration.test.tsx']
+  });
+
+  expect(args).toContain('--pool=forks');
+  expect(args).not.toContain('--pool=threads');
 });
