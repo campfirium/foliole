@@ -19,6 +19,19 @@ export interface ReadwiseStopRequest {
 }
 
 let pendingStop: Omit<ReadwiseStopRequest, 'requestId'> | null = null;
+let pendingStopExpiry: ReturnType<typeof setTimeout> | null = null;
+
+function clearPendingStopExpiry() {
+  if (pendingStopExpiry !== null) clearTimeout(pendingStopExpiry);
+  pendingStopExpiry = null;
+}
+
+function renewPendingStopExpiry() {
+  clearPendingStopExpiry();
+  // Without a stopped ACK the candidate cannot activate; abandoned attempts may resume.
+  pendingStopExpiry = setTimeout(resumeReadwiseExecutionAfterActivation, 30_000);
+  pendingStopExpiry.unref?.();
+}
 
 function parseRequest(bodyText: string): ReadwiseStopRequest {
   let value: Record<string, unknown>;
@@ -70,10 +83,12 @@ export function handleReadwiseOwnerStop(bodyText: string, senderId: string) {
   beginReadwiseExecutionStop(group.group_id);
   cancelReadwiseApiImport();
   if (isReadwiseApiImportActive() || hasActiveReadwiseKeepImportRuns()) {
+    renewPendingStopExpiry();
     return { status: 'pending' as const, requestId: request.requestId };
   }
   saveReadwiseOwnerGuard({ epoch: request.epoch, groupId: request.groupId, mode: request.mode,
     ownerId: request.ownerId ?? localId, state: 'relinquished', targetId: request.targetId });
+  clearPendingStopExpiry();
   return stopped(request, localId);
 }
 
@@ -84,6 +99,7 @@ function stopped(request: ReadwiseStopRequest, localId: string) {
 }
 
 export function resumeReadwiseExecutionAfterActivation() {
+  clearPendingStopExpiry();
   pendingStop = null;
   endReadwiseExecutionStop();
 }
