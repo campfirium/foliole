@@ -3,7 +3,6 @@ package com.foliole.android.framed;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -18,7 +17,8 @@ public final class FramedSyncSessionReaderTest {
         FramedSyncSessionContext context = new FramedSyncSessionContext(
             "group-a", "device-a", "epoch-a", "device-b", "epoch-b");
         byte[] sessionId = hex("00112233445566778899aabbccddeeff");
-        byte[] preamble = preamble(context.deriveContextId(sessionId), sessionId);
+        byte[] preamble = FramedSyncPreamble.session(
+            context.deriveContextId(sessionId), sessionId, hex("05060708")).encoded();
         byte[] plaintext = Base64.getDecoder().decode("GhQKEAARIjNEVWZ3iJmqu8zd7v8QAQ==");
         byte[] header = FramedSyncWireHeader.encode(
             plaintext.length + 16, 0, FramedSyncFrameType.SESSION_CONTROL.wireValue());
@@ -41,11 +41,6 @@ public final class FramedSyncSessionReaderTest {
             new GCMParameterSpec(128, hex("050607080000000000000000")));
         cipher.updateAAD(concat(preamble.encoded(), header));
         return cipher.doFinal(plaintext);
-    }
-
-    private static byte[] preamble(byte[] contextId, byte[] sessionId) {
-        return concat("FOLSYNC2".getBytes(StandardCharsets.US_ASCII), hex("0060001801000000"),
-            contextId, sessionId, hex("0506070800000000000000000000000000000000000000000000000000000000"));
     }
 
     private static byte[] concat(byte[]... values) {

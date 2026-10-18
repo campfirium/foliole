@@ -39,7 +39,20 @@ export async function discoverIosHostedProvider() {
     candidates.find((candidate) => candidate.endpointUrl === result.endpointUrl)?.protocolTxt ?? null,
     result.discovery
   ));
-  if (exact.length !== 1) throw new Error(`ios_hosted_sync_group_discovery_count_${exact.length}`);
+  if (exact.length !== 1) {
+    const evidence = {
+      nativeCount: nativeCandidates.length,
+      advertisements: candidates.map(candidate => ({
+        endpoint: candidate.endpointUrl, groupId: candidate.protocolTxt?.group_id,
+        runtimeId: candidate.protocolTxt?.runtime_instance_id
+      })),
+      verified: discovered.map(result => ({
+        endpoint: result.endpointUrl, groupId: result.discovery.group_id,
+        runtimeId: result.discovery.runtime_instance_id
+      }))
+    };
+    throw new Error(`ios_hosted_sync_group_discovery_count_${exact.length}: ${JSON.stringify(evidence)}`);
+  }
   return exact[0]!;
 }
 
