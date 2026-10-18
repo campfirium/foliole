@@ -11,8 +11,11 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_config_dir: path.join(appData, 'config'), app_log_dir: path.join(appData, 'logs')
 }) }));
 
+import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { initiateDesktopSyncGroupDeviceRemoval } from '../database/syncGroupMemberStateStore.js';
+import { createDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
 import { disconnectWatchedFolderBinding, upsertChangedWatchedFolderSource } from '../database/watchedFolderBindings.js';
 
 import { loadImportManagerSettings, saveImportManagerSettings } from './importManagerSettings.js';
@@ -48,6 +51,8 @@ function persistedState() {
     settings: driver.queryAll('SELECT * FROM settings ORDER BY key'),
     bindings: driver.queryAll('SELECT * FROM watched_folder_bindings ORDER BY binding_id'),
     sources: driver.queryAll('SELECT * FROM desktop_sources ORDER BY source_ref'),
+    imports: driver.queryAll('SELECT * FROM import_sources ORDER BY source_fingerprint'),
+    nodes: driver.queryAll('SELECT * FROM nodes ORDER BY id'),
     sync: driver.queryAll('SELECT * FROM sync_object_state ORDER BY object_type, object_id')
   };
 }
@@ -85,5 +90,37 @@ it('does not recreate a source removed while its candidate folder is being scann
     [binding.binding_id]);
   const before = persistedState();
   await expect(pending).rejects.toThrow('watched_folder_not_found');
+  expect(persistedState()).toEqual(before);
+});
+
+it('preserves a connected source and its imported content when its owner leaves the group', async () => {
+  const identity = (anchor: string, libraryPath: string) => createSyncGroupDeviceIdentity({
+    device_anchor: anchor, group_id: 'watched-removal', library_path: libraryPath, path_flavor: 'posix'
+  });
+  const local = identity('11111111-1111-4111-8111-111111111111', '/local');
+  const old = identity('22222222-2222-4222-8222-222222222222', '/old');
+  createDesktopSyncGroup({ device: local, deviceName: 'Local', platform: 'darwin' });
+  registerSyncGroupDevice({ device: old, deviceName: 'Old', platform: 'darwin' });
+  const { binding, newPath } = await fixture();
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+    VALUES ('imported-note', 'topic', 'Imported note', 'Preserved content', 'now', 'now')`);
+  driver.execute(`INSERT INTO import_sources (
+    source_fingerprint, provider, source_kind, source_name, source_locator, first_imported_at,
+    last_imported_at, last_content_fingerprint, latest_node_id, watched_binding_id, watched_relative_path
+  ) VALUES ('imported-file', 'markdown', 'file', 'note.md', 'note.md', 'now', 'now', 'hash',
+    'imported-note', ?, 'note.md')`, [binding.binding_id]);
+  driver.execute(
+    'UPDATE watched_folder_bindings SET owner_device_identity_key = ? WHERE binding_id = ?',
+    [old.identity_key, binding.binding_id]);
+  const before = persistedState();
+  initiateDesktopSyncGroupDeviceRemoval(old.identity_key);
+  expect(driver.queryOne('SELECT state FROM sync_group_devices WHERE device_identity_key = ?',
+    [old.identity_key])).toEqual({ state: 'left' });
+  expect(persistedState()).toEqual(before);
+  await expect(confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath: newPath }))
+    .rejects.toThrow('watched_folder_owner_must_disconnect');
+  expect(persistedState()).toEqual(before);
+  closeDatabaseConnection();
   expect(persistedState()).toEqual(before);
 });
