@@ -33,6 +33,9 @@ function startGuidedSampleReviewSession(queueNodeIds: string[]) {
 
 export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandActions,
   intent: 'user' | 'startup' = 'user') {
+  // Samples are created without activation; startup only yields when the user
+  // selected something else while they were being created.
+  const activeBefore = useWorkspaceStore.getState().activeNodeId;
   const result = await ensureGuidedSampleTopicTree(
     () => useWorkspaceStore.getState(),
     undefined,
@@ -43,7 +46,7 @@ export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandAc
   }
   const mayOpen = () => {
     const active = useWorkspaceStore.getState().activeNodeId;
-    return intent === 'user' || active === null || result.queueNodeIds.includes(active);
+    return intent === 'user' || active === null || active === activeBefore || result.queueNodeIds.includes(active);
   };
   if (!mayOpen()) return false;
 

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ assets: vi.fn() }));
 vi.mock('../../features/guidedSample/model/guidedSampleAssetImports', () => ({ importGuidedSampleTopicAssets: mocks.assets }));
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
+import { INBOX_NODE_ID } from '../../../lib/core/database/specialNodeIds';
 import { findGuidedSampleRootNodeId } from '../../features/guidedSample/model/guidedSampleWorkspace';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -35,6 +36,13 @@ it('keeps a newly created topic selected when startup sample assets finish later
 });
 
 it('opens the startup sample when the user has not taken over', async () => {
+  const controls = actions();
+  await openGuidedSampleCommand(controls, 'startup');
+  expect(useWorkspaceStore.getState().activeNodeId).toBe(findGuidedSampleRootNodeId(useWorkspaceStore.getState()));
+  expect(controls.startStudyMode).toHaveBeenCalledWith({ force: true });
+});
+it('opens the startup sample when a system folder was selected before it was created', async () => {
+  useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
   const controls = actions();
   await openGuidedSampleCommand(controls, 'startup');
   expect(useWorkspaceStore.getState().activeNodeId).toBe(findGuidedSampleRootNodeId(useWorkspaceStore.getState()));
