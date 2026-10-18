@@ -1,18 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
-import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { computeSyncContentHash, type SyncObjectStateInput,
-  upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
-import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { readwiseSourceOwner } from './readwiseSourceIdentity.js';
 import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
 
@@ -64,9 +60,14 @@ export function loadDesktopSourceByConfig(sourceType: DesktopSourceType, configR
 export function upsertDesktopSource(input: {
   configRef: string; hostName?: string; hostPlatform?: string; rootPath: string;
   sourceRef?: string; sourceType: DesktopSourceType; typeSettings?: unknown; updatedAt: string;
+  ownerDeviceIdentityKey?: string | null;
 }) {
   const host = loadCurrentDesktopHost();
   const sourceRef = input.sourceRef ?? `${input.sourceType}:${input.configRef}`;
+  const settings = input.sourceType === 'readwise' ? {
+    ...(input.typeSettings && typeof input.typeSettings === 'object' ? input.typeSettings : {}),
+    ownerDeviceIdentityKey: input.ownerDeviceIdentityKey === undefined ? loadDesktopDeviceId() : input.ownerDeviceIdentityKey
+  } : input.typeSettings ?? {};
   openDatabaseConnection().driver.execute(
     `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
        root_path, path_flavor, type_settings_json, created_at, updated_at)
@@ -77,7 +78,7 @@ export function upsertDesktopSource(input: {
        updated_at = excluded.updated_at`,
     [sourceRef, input.sourceType, input.configRef, input.hostName ?? host.name,
       input.hostPlatform ?? host.platform, input.rootPath.trim(), pathFlavor(input.rootPath),
-      JSON.stringify(input.typeSettings ?? {}), input.updatedAt, input.updatedAt]
+      JSON.stringify(settings), input.updatedAt, input.updatedAt]
   );
   return loadDesktopSourceByConfig(input.sourceType, input.configRef)!;
 }
@@ -114,8 +115,10 @@ export function loadCurrentHostDesktopSources(sourceType: DesktopSourceType) {
   return openDatabaseConnection().driver.queryAll<DesktopSourceRecord>(
     `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
        path_flavor, type_settings_json, updated_at FROM desktop_sources
-     WHERE source_type = ? AND host_name = ? ORDER BY updated_at, source_ref`,
-    [sourceType, host.name]
+     WHERE source_type = ? AND CASE WHEN source_type = 'readwise'
+       THEN CASE WHEN json_valid(type_settings_json) THEN json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ? ELSE 0 END
+       ELSE host_name = ? END ORDER BY updated_at, source_ref`,
+    [sourceType, loadDesktopDeviceId(), host.name]
   );
 }
 
@@ -151,81 +154,16 @@ export function isDesktopSourceConnected(source: DesktopSourceRecord) {
     return Boolean(localId) && binding?.owner_device_identity_key === localId &&
       binding?.connection_status === 'connected';
   }
-  if (source.host_name !== loadCurrentDesktopHost().name) return false;
   try {
+    if (source.source_type === 'readwise') {
+      const owner = readwiseSourceOwner(source.type_settings_json);
+      if (!owner || owner !== loadDesktopDeviceId()) return false;
+    } else if (source.host_name !== loadCurrentDesktopHost().name) return false;
     const settings = JSON.parse(source.type_settings_json) as Record<string, unknown>;
     return settings.connectionStatus !== 'needs-folder';
   } catch {
     return false;
   }
-}
-
-export function updateLocalDesktopSourceHosts(input: {
-  currentHostName: string; currentHostPlatform: string; driver: DatabaseDriver;
-  previousHostName: string; updatedAt: string;
-}) {
-  const { driver } = input;
-  const localId = loadDatabaseDeviceId(driver);
-  if (!driver.queryOne("SELECT 1 AS present FROM sqlite_master WHERE type = 'table' AND name = 'desktop_sources'")) return;
-  driver.transaction((tx) => {
-    const changed = tx.queryAll<{ object_id: string; source_type: DesktopSourceType }>(
-      `SELECT source_type, CASE source_type
-         WHEN 'external' THEN COALESCE((SELECT id FROM external_search_folders WHERE source_ref = source.source_ref), config_ref)
-         WHEN 'watched' THEN COALESCE((SELECT binding_id FROM watched_folder_bindings WHERE source_ref = source.source_ref), config_ref)
-         ELSE config_ref END object_id
-       FROM desktop_sources source WHERE host_name = ?
-         AND (host_name IS NOT ? OR host_platform IS NOT ?)
-         AND (source_type <> 'watched' OR EXISTS (
-           SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = source.source_ref
-             AND binding.owner_device_identity_key = ?))`,
-      [input.previousHostName, input.currentHostName, input.currentHostPlatform, localId]
-    );
-    if (!changed.length) return;
-    tx.execute(`UPDATE desktop_sources SET host_name = ?, host_platform = ?, updated_at = ?
-      WHERE host_name = ? AND (source_type <> 'watched' OR EXISTS (
-        SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = desktop_sources.source_ref
-          AND binding.owner_device_identity_key = ?))`, [input.currentHostName, input.currentHostPlatform,
-      input.updatedAt, input.previousHostName, localId]);
-    transferReadwiseActiveHost(tx, input.previousHostName, input.currentHostName, input.updatedAt);
-    for (const source of changed) recordHostProjectionSync(tx, source, input);
-  });
-}
-
-function transferReadwiseActiveHost(
-  driver: DatabaseDriver,
-  previousHostName: string,
-  currentHostName: string,
-  updatedAt: string
-) {
-  driver.execute(`UPDATE settings SET value = json_set(value, '$.host_name', ?), updated_at = ?
-    WHERE key = 'readwise_active_host' AND json_extract(value, '$.host_name') = ?`,
-  [currentHostName, updatedAt, previousHostName]);
-  driver.execute(`UPDATE setting_records SET value_json = json_set(value_json, '$.host_name', ?), updated_at = ?
-    WHERE key = 'readwise_active_host' AND json_extract(value_json, '$.host_name') = ?`,
-  [currentHostName, updatedAt, previousHostName]);
-}
-
-function recordHostProjectionSync(
-  driver: DatabaseDriver,
-  source: { object_id: string; source_type: DesktopSourceType },
-  input: { currentHostName: string; updatedAt: string }
-) {
-  if (source.source_type === 'readwise') return;
-  const objectType = source.source_type === 'external' ? 'external_folder' : 'watched_folder';
-  const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[objectType], [source.object_id]);
-  if (!row) return;
-  const state: SyncObjectStateInput = {
-    contentHash: computeSyncContentHash(objectType, JSON.parse(row.payload_json)),
-    lastModifiedByHostName: input.currentHostName,
-    objectId: source.object_id,
-    objectType,
-    syncDirty: true,
-    updatedAt: input.updatedAt
-  };
-  if (objectType === 'external_folder') upsertExternalResourceSyncState(driver, {
-    ...state, objectType
-  });
-  else upsertSyncObjectState(driver, state);
 }
 
 export function recordDesktopImportLocation(input: {

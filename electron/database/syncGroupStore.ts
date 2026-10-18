@@ -6,6 +6,7 @@ import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifie
 import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { retagLocalReadwiseSources, retagStandaloneReadwiseOwner } from './readwiseSourceIdentity.js';
 import {
   loadStandaloneWatchedDeviceId,
   retagLocalWatchedFolderBindings
@@ -133,6 +134,10 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
       driver.execute('DELETE FROM sync_group_metadata');
       retagLocalWatchedFolderBindings(driver, deviceIdentityKey,
         loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
+      retagLocalReadwiseSources(driver, deviceIdentityKey,
+        loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
+      retagStandaloneReadwiseOwner(driver, deviceIdentityKey,
+        loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
 
 
       driver.execute('DELETE FROM sync_group_nonce_ledger');
@@ -185,6 +190,7 @@ function writeGroupAndLocalDevice(args: {
     );
     retagLocalWatchedFolderBindings(driver, previousDeviceId, args.device.identity_key,
       args.createdAt);
+    retagLocalReadwiseSources(driver, previousDeviceId, args.device.identity_key, args.createdAt);
   });
 }
 

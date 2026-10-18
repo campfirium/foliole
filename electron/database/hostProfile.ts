@@ -3,7 +3,8 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { withoutNodeViewStateHashSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
-import { updateLocalDesktopSourceHosts } from './desktopSources.js';
+import { updateLocalDesktopSourceHosts } from './desktopSourceHostProjection.js';
+import { migrateReadwiseSourceIdentity } from './readwiseSourceIdentity.js';
 import { initializeDesktopStandaloneIdentity } from './standaloneDeviceIdentity.js';
 
 const HOST_NAME_KEY = 'host_name';
@@ -29,6 +30,7 @@ export function migrateDesktopHostProfile(
   if (!current) throw new Error('Desktop system Host is unavailable.');
   const previous = readSetting(connection.driver, HOST_NAME_KEY) ?? readLegacyName(connection.driver) ?? current;
   initializeDesktopStandaloneIdentity(connection.driver, now);
+  migrateReadwiseSourceIdentity(connection.driver, previous, now);
   if (previous !== current) transferSyncGroupHost(connection.driver, current, now);
   if (previous !== current) transferHostState(connection.driver, previous, current);
   if (previous !== current) updateLocalDesktopSourceHosts({

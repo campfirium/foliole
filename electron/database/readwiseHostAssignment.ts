@@ -10,6 +10,7 @@ import { loadReadwiseHandoffIntent } from '../sync/readwiseHandoffIntent.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadCurrentHostDesktopSources } from './desktopSources.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { loadReadwiseOwnerGuard, saveReadwiseOwnerGuard } from './readwiseOwnerGuard.js';
 import { loadReadwiseSourceCutover } from './readwiseSourceCutover.js';
@@ -126,7 +127,7 @@ export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
   const stopping = isReadwiseExecutionStopping(group.groupId);
   const isActive = group.localId
     ? ownerMatches && guardReady && !stopping
-    : unassigned || owner.hostName === currentHost;
+    : unassigned || Boolean(owner.deviceId && owner.deviceId === loadDesktopDeviceId());
   const blockedReason = isActive || !group.localId ? null
     : ownerMatches && (relinquished || stopping) ? 'handoff-in-progress'
       : ownerMatches && !guardReady ? 'guard-unavailable'

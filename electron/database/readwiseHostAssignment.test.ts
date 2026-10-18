@@ -173,6 +173,7 @@ it('runs Readwise for the current Host when another enabled category directory i
   expect(canCurrentHostRunReadwise()).toBe(true);
   upsertDesktopSource({
     configRef: 'readwise-remote',
+    ownerDeviceIdentityKey: 'other-device',
     hostName: 'Other Mac',
     rootPath,
     sourceType: 'readwise',
@@ -183,6 +184,9 @@ it('runs Readwise for the current Host when another enabled category directory i
   openDatabaseConnection().driver.execute(
     "UPDATE desktop_sources SET host_name = 'Other Mac' WHERE source_type = 'readwise'"
   );
+  expect(canCurrentHostRunReadwise()).toBe(true);
+  openDatabaseConnection().driver.execute(`UPDATE desktop_sources SET type_settings_json =
+    json_set(type_settings_json, '$.ownerDeviceIdentityKey', 'other-device') WHERE source_type = 'readwise'`);
   expect(canCurrentHostRunReadwise()).toBe(false);
 });
 

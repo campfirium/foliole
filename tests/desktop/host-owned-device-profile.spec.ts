@@ -36,6 +36,18 @@ test('desktop startup owns the current host profile across a legacy identity res
     const initialProfile = readProfile(databasePath);
     expect(initialProfile.host).toBe(EXPECTED_DEVICE_PROFILE);
     expect(initialProfile.uuid).toMatch(/^[0-9a-f-]{36}$/);
+    await session.electronApp.evaluate(async (_electron, folder) => {
+      const fs = process.getBuiltinModule('fs')!;
+      const pathApi = process.getBuiltinModule('path')!;
+      const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+      const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+      const sources = require(pathApi.join(process.cwd(), 'dist/electron/database/desktopSources.js'));
+      fs.mkdirSync(folder, { recursive: true });
+      fs.writeFileSync(pathApi.join(folder, 'article.md'), 'Persistent relay source');
+      await connection.runWithDatabaseConnectionOwner(() => sources.upsertDesktopSource({
+        configRef: 'native-relay', rootPath: folder, sourceType: 'readwise', updatedAt: new Date().toISOString()
+      }));
+    }, path.join(artifactRoot, 'relay'));
     await window.evaluate(async () => globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([{
       content: '# Host-owned device profile', id: 'host-owned-device-profile',
       kind: 'topic', title: 'Host-owned device profile'
@@ -52,6 +64,18 @@ test('desktop startup owns the current host profile across a legacy identity res
     session = await launchDesktopSession({ env });
     window = session.firstWindow;
     expect(readProfile(databasePath)).toEqual(initialProfile);
+    const relay = await session.electronApp.evaluate(async () => {
+      const pathApi = process.getBuiltinModule('path')!;
+      const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+      const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+      const sources = require(pathApi.join(process.cwd(), 'dist/electron/database/desktopSources.js'));
+      return connection.runWithDatabaseConnectionOwner(() => {
+        const local = sources.loadCurrentHostDesktopSources('readwise');
+        const file = sources.resolveDesktopSourceAddress('readwise:native-relay', 'article.md');
+        return { count: local.length, text: file ? process.getBuiltinModule('fs')!.readFileSync(file, 'utf8') : null };
+      });
+    });
+    expect(relay).toEqual({ count: 1, text: 'Persistent relay source' });
     await expect.poll(() => window.evaluate(() =>
       globalThis.window?.__folioleWorkspaceDebug?.getNode?.('host-owned-device-profile')
     )).toMatchObject({ title: 'Host-owned device profile' });

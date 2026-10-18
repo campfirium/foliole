@@ -13,7 +13,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { updateLocalDesktopSourceHosts } from './desktopSources.js';
+import { updateLocalDesktopSourceHosts } from './desktopSourceHostProjection.js';
 import { initializeDatabase } from './migrate.js';
 import {
   loadWatchedFolderBindings,

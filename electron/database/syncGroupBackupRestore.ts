@@ -8,6 +8,7 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.j
 
 import { readBackupRestoreLocalGroup } from './backupRestoreLocalGroup.js';
 import { saveBackupRestorePendingSync } from './backupRestorePendingSync.js';
+import { retagLocalReadwiseSources, retagStandaloneReadwiseOwner } from './readwiseSourceIdentity.js';
 import { writeJsonSetting } from './settingsStore.js';
 import { loadLegacyStandaloneDeviceId } from './standaloneDeviceIdentity.js';
 import { retagLocalWatchedFolderBindings } from './watchedGroupOwnershipTransition.js';
@@ -127,6 +128,8 @@ export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: Ret
   }
   const currentId = loadStandaloneDeviceUuid(tx);
   if (currentId) retagLocalWatchedFolderBindings(tx, restoredId, currentId, new Date().toISOString());
+  if (currentId) retagLocalReadwiseSources(tx, restoredId, currentId, new Date().toISOString());
+  if (currentId) retagStandaloneReadwiseOwner(tx, restoredId, currentId, new Date().toISOString());
   tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
   for (const row of snapshot.hostObjectStates) insertRestoredHostObjectState(tx, row);
 }
