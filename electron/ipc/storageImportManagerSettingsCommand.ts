@@ -1,6 +1,7 @@
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { refreshReadwiseApiScheduler } from '../import/readwiseApiScheduler.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 import { publishWatchedFolderGroupMemberState } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 
@@ -12,5 +13,6 @@ export async function saveImportManagerSettingsAndPublish(value: unknown) {
   refreshReadwiseApiScheduler();
   notifyDesktopSyncGroupOverviewChanged();
   await publishWatchedFolderGroupMemberState();
+  void requestDesktopHighValueSync();
   return result;
 }

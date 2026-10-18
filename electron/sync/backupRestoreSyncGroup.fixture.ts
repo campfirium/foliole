@@ -33,6 +33,7 @@ import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
+import { runWatchedSettingsFixture } from './watchedSettingsSync.fixture.js';
 
 let server: ReturnType<typeof createWorkspaceSyncHttpServer> | null = null;
 let origin = '';
@@ -203,7 +204,9 @@ async function run(action: string, args: Record<string, unknown>) {
 process.on('message', (message: { id: number; action: string; args: Record<string, unknown> }) => {
   const handler = message.action === 'local_content_edit'
     ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runDesktopFramedSyncEditCommand(action, args))
-    : message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
+    : message.action.startsWith('watched')
+      ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runWatchedSettingsFixture(action, args))
+      : message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
   void handler(message.action, message.args).then(
     (result) => process.send?.({ id: message.id, result }),
     (error: unknown) => process.send?.({ id: message.id, error: error instanceof Error ? `${message.action}: ${error.stack}` : String(error) })

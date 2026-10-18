@@ -171,7 +171,7 @@ async function expectSelectedPathPropagated(providerPage: Page, memberPage: Page
 }
 
 for (const savingSide of ['member', 'provider'] as const) test(
-  `${savingSide} can resolve a join conflict and close both dialogs`, async ({ browserName }, testInfo) => {
+  `${savingSide} can resolve a watched source conflict after joining and close both dialogs`, async ({ browserName }, testInfo) => {
     const folder = await sharedFolder(testInfo, browserName);
     const providerPort = await freePort();
     const memberPort = await freePort();
@@ -192,7 +192,6 @@ for (const savingSide of ['member', 'provider'] as const) test(
       await expectWorkspaceShell(memberPage);
       const candidate = await providerCandidate(providerPage);
       await addWatchedSource(provider.electronApp, folder, 'provider-rule');
-      await addWatchedSource(member.electronApp, folder, 'member-rule');
       await invoke(memberPage, 'enable_companion_sync');
       await discoverCandidate(member.electronApp, candidate);
       await invoke(memberPage, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'use-group' });
@@ -206,6 +205,7 @@ for (const savingSide of ['member', 'provider'] as const) test(
       }).not.toBeNull();
       await invoke(providerPage, 'accept_sync_group_join_request', { request_id: requestId });
       await invoke(memberPage, 'complete_sync_group_join');
+      await addWatchedSource(member.electronApp, folder, 'member-rule');
 
       const title = /Resolve watched folder conflicts|监听文件夹冲突处理/;
       const memberDialog = memberPage.getByRole('dialog', { name: title });
