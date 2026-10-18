@@ -37,6 +37,8 @@ it('retires document state through shared apply against the production companion
         payload_json: null, updated_at: '2026-07-24T00:23:10.000Z', deleted_at: '2026-07-24T00:23:10.000Z' });
     });
     expect(db.prepare('SELECT * FROM external_documents').all()).toEqual([]);
+    expect(db.prepare('SELECT source_ref FROM desktop_sources WHERE source_ref = ?').get(folder.source_ref))
+      .toBeUndefined();
     const entry = (await readFramedSyncInventory(port)).find((item) => item.globalId === document.document_id)!;
     await expect(selectFramedSyncObjectStateFact(port, entry, entry.stateFactIds![0]!))
       .resolves.toMatchObject({ globalId: document.document_id });

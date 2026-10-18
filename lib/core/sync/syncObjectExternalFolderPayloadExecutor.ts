@@ -17,6 +17,7 @@ export async function applyExternalFolderObject(port: DbPort, record: SyncObject
     });
     await port.run('DELETE FROM external_documents WHERE folder_id = ?', [record.object_id]);
     await port.run('DELETE FROM external_search_folders WHERE id = ?', [record.object_id]);
+    await port.run("DELETE FROM desktop_sources WHERE source_type = 'external' AND config_ref = ?", [record.object_id]);
     return;
   }
   const payload = asObject(record);
