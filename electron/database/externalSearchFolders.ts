@@ -7,7 +7,9 @@ import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceConnected, type DesktopSourceRecord, upsertDesktopSource } from './desktopSources.js';
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadExternalFolderEnabled } from './externalFolderHostPreferences.js';
+import { isLocalExternalFolder } from './externalSearchFolderIdentity.js';
 import {
   type ExternalSearchFolderRow,
   normalizeExcludedDirs,
@@ -55,9 +57,8 @@ function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: str
 }
 
 function resolveLocalId(input: ReturnType<typeof normalizedInput>[number], rows: ExternalSearchFolderRow[]) {
-  const currentHostName = loadOrCreateDesktopHostName();
   const byId = rows.find((row) => row.id === input.id);
-  if (byId && byId.host_name !== currentHostName) return null;
+  if (byId && !isLocalExternalFolder(byId)) return null;
   return input.id;
 }
 
@@ -114,11 +115,11 @@ export function updateExternalSearchFolderIndexState(args: {
   documentCount: number; folderId: string; indexedAt: string | null; lastError: string | null;
   status: NativeExternalSearchFolder['status'];
 }) {
-  const hostName = loadOrCreateDesktopHostName();
   openDatabaseConnection().driver.execute(
     `UPDATE external_search_folders SET status = ?, document_count = ?, indexed_at = ?, last_error = ?, updated_at = ?
-     WHERE id = ? AND source_ref IN (SELECT source_ref FROM desktop_sources WHERE host_name = ?)`,
+     WHERE id = ? AND source_ref IN (SELECT source_ref FROM desktop_sources WHERE source_type = 'external'
+       AND json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ?)`,
     [args.status, args.documentCount, args.indexedAt, args.lastError, new Date().toISOString(),
-      args.folderId, hostName]
+      args.folderId, loadDesktopDeviceId()]
   );
 }

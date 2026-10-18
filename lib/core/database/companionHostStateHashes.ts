@@ -53,13 +53,15 @@ async function rehashExternalResources(db: DbPort) {
     computeCompanionContentHash(buildCanonicalExternalDocumentPayload(row)));
   const folders = await db.query<ExternalFolderRow>(
     `SELECT folder.id, folder.source_ref, source.host_name, source.host_platform,
-       folder.attachment_mode, folder.excluded_dirs_json
+       folder.attachment_mode, folder.excluded_dirs_json,
+       json_extract(source.type_settings_json, '$.ownerDeviceIdentityKey') AS owner_device_identity_key
      FROM external_search_folders folder JOIN desktop_sources source ON source.source_ref = folder.source_ref
      JOIN sync_object_state state ON state.object_type = 'external_folder' AND state.object_id = folder.id
      WHERE state.deleted_at IS NULL`
   );
   for (const row of folders) await updateStateHash(db, 'external_folder', row.id,
-    computeCompanionContentHash(buildCanonicalExternalFolderPayload(row)));
+    computeCompanionContentHash(buildCanonicalExternalFolderPayload({ ...row,
+      owner_device_identity_key: row.owner_device_identity_key ?? undefined })));
 }
 
 async function rehashViewState(db: DbPort, objectId: string, hostName: string) {
@@ -124,6 +126,7 @@ interface ExternalDocumentRow extends DbRow {
 }
 
 interface ExternalFolderRow extends DbRow {
+  owner_device_identity_key: string | null;
   attachment_mode: string; excluded_dirs_json: string; host_name: string; host_platform: string;
   id: string; source_ref: string;
 }

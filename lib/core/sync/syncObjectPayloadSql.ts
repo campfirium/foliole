@@ -7,10 +7,12 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
     AS payload_json FROM topic_daily_count_entries WHERE id = ?`,
   parent_child_order: PARENT_ORDER_PAYLOAD_SQL,
-  external_folder: `SELECT json_object(
+  external_folder: `SELECT json_patch(json_object(
     'id', f.id, 'attachment_mode', f.attachment_mode, 'excluded_dirs_json', f.excluded_dirs_json,
     'host_name', s.host_name, 'host_platform', s.host_platform, 'source_ref', f.source_ref
-  ) AS payload_json FROM external_search_folders f
+  ), CASE WHEN json_extract(s.type_settings_json, '$.ownerDeviceIdentityKey') IS NULL THEN '{}'
+    ELSE json_object('owner_device_identity_key', json_extract(s.type_settings_json, '$.ownerDeviceIdentityKey')) END)
+    AS payload_json FROM external_search_folders f
     JOIN desktop_sources s ON s.source_ref = f.source_ref WHERE f.id = ?`,
   import_source: `SELECT json_object(
     'source_fingerprint', source_fingerprint, 'provider', provider, 'source_kind', source_kind,

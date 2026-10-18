@@ -15,7 +15,7 @@ import {
 
 import { reconnectExternalSearchFolder } from './externalSearchFolderReconnect';
 import { serializeEditableExternalFolders } from './externalSearchFolderSerialization';
-import { removeExternalSource, replaceExternalSourceHost } from './externalSourceManagement';
+import { removeExternalSource } from './externalSourceManagement';
 
 export function useExternalSearchFolders() {
   const t = useTranslation();
@@ -60,12 +60,6 @@ export function useExternalSearchFolders() {
           .catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save')));
       }
     },
-    onReplaceExternalSourceHost: (hostName: string) => void replaceExternalSourceHost(
-      hostName, () => {
-        invalidateExternalSourceSettingsFoldersCache();
-        setLoadKey((value) => value + 1);
-      }, t
-    ).catch((nextError) => setError(nextError instanceof Error ? nextError.message : t('settings.externalSources.error.save'))),
     onRetryLoadExternalSearchFolders: () => setLoadKey((value) => value + 1),
     onUpdateExternalSearchFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) =>
       updateFolder(folderId, (current) => ({

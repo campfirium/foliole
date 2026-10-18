@@ -8,7 +8,7 @@ vi.mock('../../../shared/platform/desktop/sourceManagementRepository', () => ({
 }));
 vi.mock('../../../shared/ui', () => ({ requestAppConfirmation: mocks.requestConfirmation }));
 
-import { removeExternalSource, replaceExternalSourceHost } from './externalSourceManagement';
+import { removeExternalSource } from './externalSourceManagement';
 
 const t = (key: string, values?: Record<string, unknown>) => `${key}:${JSON.stringify(values ?? {})}`;
 
@@ -26,14 +26,14 @@ it('does not confirm an External Source removal when the user cancels its impact
   expect(mocks.confirm).not.toHaveBeenCalled();
 });
 
-it('replaces an External Host only after confirmation and refreshes the persisted view', async () => {
+it('removes an owned External library only after confirmation and refreshes the persisted view', async () => {
   const refresh = vi.fn();
   mocks.requestConfirmation.mockResolvedValue(true);
 
-  await replaceExternalSourceHost('Office PC', refresh, t as never);
+  await removeExternalSource('external:a', refresh, t as never);
 
   expect(mocks.confirm).toHaveBeenCalledWith({
-    action: 'replace_host', hostName: 'Office PC', sourceType: 'external'
+    action: 'remove_source', sourceRef: 'external:a'
   });
   expect(refresh).toHaveBeenCalledTimes(1);
 });

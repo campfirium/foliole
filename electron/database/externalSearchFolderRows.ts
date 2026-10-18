@@ -1,12 +1,13 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
+
 import { openDatabaseConnection } from './connection.js';
 import {
   isDesktopSourceExecutable,
-  loadCurrentDesktopHost,
   type DesktopSourceRecord
 } from './desktopSources.js';
+import { isLocalExternalFolder } from './externalSearchFolderIdentity.js';
 
 export interface ExternalSearchFolderRow extends DatabaseRow {
   attachment_mode: string;
@@ -51,7 +52,7 @@ export function toExternalSearchFolder(
 ): NativeExternalSearchFolder {
   const source = row as unknown as DesktopSourceRecord;
   return {
-    access_mode: row.host_name === loadCurrentDesktopHost().name ? 'local' : 'remote_mirror',
+    access_mode: isLocalExternalFolder(row) ? 'local' : 'remote_mirror',
     attachment_mode: row.attachment_mode === 'fixed_root' || row.attachment_mode === 'document_relative_first_then_fixed_root'
       ? row.attachment_mode : 'document_relative',
     attachment_root_path: row.attachment_root_path?.trim() || null,

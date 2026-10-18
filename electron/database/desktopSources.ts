@@ -8,6 +8,7 @@ import type { ImportManagerSourceDraft } from '../../lib/core/import/importManag
 
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { isLocalExternalFolder } from './externalSearchFolderIdentity.js';
 import { readwiseSourceOwner } from './readwiseSourceIdentity.js';
 import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
@@ -64,9 +65,12 @@ export function upsertDesktopSource(input: {
 }) {
   const host = loadCurrentDesktopHost();
   const sourceRef = input.sourceRef ?? `${input.sourceType}:${input.configRef}`;
-  const settings = input.sourceType === 'readwise' ? {
+  const settings = (input.sourceType === 'readwise' || input.sourceType === 'external') ? {
     ...(input.typeSettings && typeof input.typeSettings === 'object' ? input.typeSettings : {}),
-    ownerDeviceIdentityKey: input.ownerDeviceIdentityKey === undefined ? loadDesktopDeviceId() : input.ownerDeviceIdentityKey
+    ownerDeviceIdentityKey: input.ownerDeviceIdentityKey === undefined
+      ? (input.sourceType === 'external' && input.typeSettings && typeof input.typeSettings === 'object' &&
+        'ownerDeviceIdentityKey' in input.typeSettings ? input.typeSettings.ownerDeviceIdentityKey : loadDesktopDeviceId())
+      : input.ownerDeviceIdentityKey
   } : input.typeSettings ?? {};
   openDatabaseConnection().driver.execute(
     `INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name, host_platform,
@@ -115,7 +119,7 @@ export function loadCurrentHostDesktopSources(sourceType: DesktopSourceType) {
   return openDatabaseConnection().driver.queryAll<DesktopSourceRecord>(
     `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
        path_flavor, type_settings_json, updated_at FROM desktop_sources
-     WHERE source_type = ? AND CASE WHEN source_type = 'readwise'
+     WHERE source_type = ? AND CASE WHEN source_type IN ('readwise', 'external')
        THEN CASE WHEN json_valid(type_settings_json) THEN json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ? ELSE 0 END
        ELSE host_name = ? END ORDER BY updated_at, source_ref`,
     [sourceType, loadDesktopDeviceId(), host.name]
@@ -155,10 +159,11 @@ export function isDesktopSourceConnected(source: DesktopSourceRecord) {
       binding?.connection_status === 'connected';
   }
   try {
+    if (source.source_type === 'external' && !isLocalExternalFolder(source)) return false;
     if (source.source_type === 'readwise') {
       const owner = readwiseSourceOwner(source.type_settings_json);
       if (!owner || owner !== loadDesktopDeviceId()) return false;
-    } else if (source.host_name !== loadCurrentDesktopHost().name) return false;
+    }
     const settings = JSON.parse(source.type_settings_json) as Record<string, unknown>;
     return settings.connectionStatus !== 'needs-folder';
   } catch {

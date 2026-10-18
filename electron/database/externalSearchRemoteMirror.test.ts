@@ -68,6 +68,18 @@ it('reads a remote document by id without using its source path', () => {
   expect(loadExternalSearchMirrorPreview('remote-doc')).toMatchObject({ content: '# Topic\nBody', document_id: 'remote-doc' });
 });
 
+it('does not disconnect a foreign External owner sharing the local display name', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`UPDATE desktop_sources SET host_name = ?, type_settings_json = ?
+    WHERE source_ref = 'external:remote-folder'`, [loadOrCreateDesktopHostName(), JSON.stringify({
+    connectionStatus: 'connected', ownerDeviceIdentityKey: 'foreign-member'
+  })]);
+  const before = driver.queryOne("SELECT * FROM desktop_sources WHERE source_ref = 'external:remote-folder'");
+
+  expect(() => disconnectExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
+  expect(driver.queryOne("SELECT * FROM desktop_sources WHERE source_ref = 'external:remote-folder'")).toEqual(before);
+});
+
 it('imports remote mirror content without authorizing or reading the remote path', async () => {
   const result = await runImportForMirrorDocument('remote-doc');
   expect(result).toMatchObject({ node_id: expect.any(String), source_locator: 'mirror-document:remote-doc' });
@@ -131,20 +143,19 @@ it('does not claim a remote Source when a local folder uses its id and path', ()
     ['external:remote-folder'])).toEqual({ host_name: 'Windows PC', root_path: 'D:\\Docs' });
 });
 
-it('claims a remote Source only after its replacement path is previewed and confirmed', async () => {
+it('rejects reconnecting a remote External library on this device', async () => {
   const replacementPath = path.join(tempRoot, 'replacement');
   await fs.mkdir(replacementPath);
   await fs.writeFile(path.join(replacementPath, 'topic.md'), '# Topic\nBody');
-  await expect(previewExternalSearchFolderReconnect('remote-folder', replacementPath)).resolves.toMatchObject({
-    matched_count: 1, missing_count: 0, new_count: 0
-  });
-  expect(openDatabaseConnection().driver.queryOne(
-    'SELECT host_name FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']
-  )).toEqual({ host_name: 'Windows PC' });
+  const before = openDatabaseConnection().driver.queryOne(
+    'SELECT * FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']);
+  await expect(previewExternalSearchFolderReconnect('remote-folder', replacementPath))
+    .rejects.toThrow('external_folder_not_local');
+  await expect(reconnectExternalSearchFolder('remote-folder', replacementPath))
+    .rejects.toThrow('external_folder_not_local');
   expect(() => disconnectExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
   expect(() => removeExternalSearchFolder('remote-folder')).toThrow('external_folder_not_local');
-  await reconnectExternalSearchFolder('remote-folder', replacementPath);
   expect(openDatabaseConnection().driver.queryOne(
-    'SELECT host_name, root_path FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder']
-  )).toEqual({ host_name: loadOrCreateDesktopHostName(), root_path: replacementPath });
+    'SELECT * FROM desktop_sources WHERE source_ref = ?', ['external:remote-folder'])).toEqual(before);
+  expect(await fs.readFile(path.join(replacementPath, 'topic.md'), 'utf8')).toBe('# Topic\nBody');
 });

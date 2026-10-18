@@ -6,6 +6,7 @@ import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifie
 import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { retireDepartedExternalFolders, retagLocalExternalFolders } from './externalFolderGroupLifecycle.js';
 import { retagLocalReadwiseSources, retagStandaloneReadwiseOwner } from './readwiseSourceIdentity.js';
 import {
   loadStandaloneWatchedDeviceId,
@@ -126,6 +127,9 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
        WHERE device_identity_key = ? AND state = 'active'`,
       [leftAt, leftAt, deviceIdentityKey]
     );
+    const departed = driver.queryOne<{ group_id: string }>(
+      'SELECT group_id FROM sync_group_devices WHERE device_identity_key = ?', [deviceIdentityKey]);
+    if (departed) retireDepartedExternalFolders(driver, departed.group_id, leftAt);
     const local = driver.queryOne<{ local_device_identity_key: string }>(
       'SELECT local_device_identity_key FROM sync_group_local_state WHERE singleton_id = 1'
     );
@@ -188,6 +192,7 @@ function writeGroupAndLocalDevice(args: {
        VALUES (1, ?, ?, 'active', ?)`,
       [args.device.group_id, args.device.identity_key, args.createdAt]
     );
+    retagLocalExternalFolders(driver, previousDeviceId, args.device.identity_key, args.createdAt);
     retagLocalWatchedFolderBindings(driver, previousDeviceId, args.device.identity_key,
       args.createdAt);
     retagLocalReadwiseSources(driver, previousDeviceId, args.device.identity_key, args.createdAt);

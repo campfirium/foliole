@@ -17,6 +17,15 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 
 const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities];
 
+it('rejects peers that cannot preserve External provider identities and retirement', () => {
+  const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter(value => value !== 'external-device-library-lifecycle-v1') });
+  expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing',
+    missing_capabilities: ['external-device-library-lifecycle-v1']
+  });
+});
+
 it('rejects a same-version peer lacking the current request transport', () => {
   const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
     .filter(value => value !== 'framed-sync-v26') });

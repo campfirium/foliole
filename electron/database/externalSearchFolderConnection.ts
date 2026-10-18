@@ -5,9 +5,11 @@ import type { NativeExternalSearchReconnectPreview } from '../../lib/platform/na
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
 
+
 import { openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
 import { scanFolderEntries, type ScannedDocumentEntry } from './externalSearchCacheSupport.js';
+import { isLocalExternalFolder } from './externalSearchFolderIdentity.js';
 import { readExternalSearchFolderRows } from './externalSearchFolderRows.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -34,7 +36,7 @@ function recordConnectionSync(folderId: string, now: string) {
 
 export function disconnectExternalSearchFolder(folderId: string) {
   const row = requireFolder(folderId);
-  if (row.host_name !== loadOrCreateDesktopHostName()) throw new Error('external_folder_not_local');
+  if (!isLocalExternalFolder(row)) throw new Error('external_folder_not_local');
   const now = new Date().toISOString();
   openDatabaseConnection().driver.execute(
     `UPDATE desktop_sources SET type_settings_json = json_set(type_settings_json, '$.connectionStatus', 'needs-folder'),
@@ -49,6 +51,7 @@ export async function previewExternalSearchFolderReconnect(
   folderPath: string
 ): Promise<NativeExternalSearchReconnectPreview> {
   const row = requireFolder(folderId);
+  if (!isLocalExternalFolder(row)) throw new Error('external_folder_not_local');
   const normalizedPath = folderPath.trim();
   assertNoUnsafePathOverlap([...loadManagedPathCandidates(), { label: 'External source', path: normalizedPath }]);
   const entries: ScannedDocumentEntry[] = [];
@@ -75,6 +78,7 @@ export async function reconnectExternalSearchFolder(folderId: string, folderPath
   const preview = await previewExternalSearchFolderReconnect(folderId, folderPath);
   const now = new Date().toISOString();
   const row = requireFolder(folderId);
+  if (!isLocalExternalFolder(row)) throw new Error('external_folder_not_local');
   openDatabaseConnection().driver.transaction(() => {
     upsertDesktopSource({
       configRef: folderId,

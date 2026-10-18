@@ -3,6 +3,8 @@ import type { SyncGroupRemovalDecisionPayload } from '../../lib/platform/syncGro
 import { eligibleSyncGroupRemovals } from '../../lib/platform/syncGroupRemovalModel.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { retireDepartedExternalFolders } from './externalFolderGroupLifecycle.js';
+
 type DeviceRow = Omit<SyncGroupDevicePayload, 'contract_version'>;
 type RemovalRow = Omit<SyncGroupRemovalDecisionPayload, 'confirmations'>;
 type ConfirmationRow = Pick<SyncGroupRemovalDecisionPayload['confirmations'][number],
@@ -36,4 +38,5 @@ export function completeEligibleRemovals(groupId: string, now: string) {
     driver.execute(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`, [now, now, groupId, removal.target_device_identity_key]);
   }
+  retireDepartedExternalFolders(driver, groupId, now);
 }

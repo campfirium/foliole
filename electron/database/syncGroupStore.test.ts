@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
@@ -30,7 +31,7 @@ function identity(groupId: string, deviceAnchor: string, libraryPath: string) {
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  for (const statement of [...SYNC_GROUP_SCHEMA_STATEMENTS, ...DESKTOP_SOURCE_SCHEMA_STATEMENTS]) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT)');
   sqlite.exec('CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT)');
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);

@@ -23,6 +23,7 @@ import {
   upsertDesktopSource
 } from './desktopSources.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
+import { loadExternalFolderEnabled, setExternalFolderEnabled } from './externalFolderHostPreferences.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
@@ -159,4 +160,41 @@ it('returns unavailable without deleting topics or historical source fields', as
     WHERE source_fingerprint = 'fingerprint-a'`)).toEqual({
     source_fingerprint: 'fingerprint-a', source_locator: '/historical/topic.md'
   });
+});
+
+it.each(['Host A', 'Host B'])('does not resolve a foreign External owner with display name %s', async (hostName) => {
+  const rootPath = path.join(tempRoot, 'foreign-external');
+  await fs.promises.mkdir(rootPath, { recursive: true });
+  await fs.promises.writeFile(path.join(rootPath, 'topic.md'), 'Local private content');
+  const source = upsertDesktopSource({
+    configRef: 'foreign-external', hostName, rootPath, sourceType: 'external',
+    typeSettings: { connectionStatus: 'connected', ownerDeviceIdentityKey: 'foreign-member' },
+    updatedAt: '2026-10-19T00:00:00.000Z'
+  });
+
+  expect(resolveDesktopSourceAddress(source.source_ref, 'topic.md')).toBeNull();
+  expect(resolveDesktopSourceAddress(source.source_ref, 'topic.md', { requireAvailableRoot: false })).toBeNull();
+  expect(await fs.promises.readFile(path.join(rootPath, 'topic.md'), 'utf8')).toBe('Local private content');
+});
+
+it('keeps local folder preferences across display name changes', () => {
+  setExternalFolderEnabled('folder-a', false);
+  saveJsonSetting('host_name', 'Renamed');
+  expect(loadExternalFolderEnabled('folder-a')).toBe(false);
+  setExternalFolderEnabled('folder-a', true);
+  expect(loadExternalFolderEnabled('folder-a')).toBe(true);
+});
+
+it('does not rename a foreign library sharing the local display name', () => {
+  const source = upsertDesktopSource({
+    configRef: 'foreign', rootPath: '/foreign', sourceType: 'external', hostName: 'Host A',
+    ownerDeviceIdentityKey: 'foreign-member', updatedAt: '2026-10-01T00:00:00.000Z'
+  });
+  updateLocalDesktopSourceHosts({
+    currentHostName: 'Renamed', currentHostPlatform: process.platform,
+    driver: openDatabaseConnection().driver, previousHostName: 'Host A', updatedAt: '2026-10-02T00:00:00.000Z'
+  });
+  expect(openDatabaseConnection().driver.queryOne(
+    'SELECT host_name FROM desktop_sources WHERE source_ref = ?', [source.source_ref]
+  )).toEqual({ host_name: 'Host A' });
 });

@@ -28,7 +28,6 @@ interface SettingsExternalSearchSectionProps {
   onReconnectFolder: (folderId: string) => void;
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
-  onReplaceHost: (hostName: string) => void;
   onRetryLoad: () => void;
   onUpdateFolder: (folderId: string, patch: ExternalSourceSettingsFolderPatch) => void;
   previewDesktopSettings?: boolean;
@@ -98,9 +97,6 @@ export function SettingsExternalSearchSection(props: SettingsExternalSearchSecti
       {hasActiveSyncGroup && remoteFolders.length > 0 ? (
         <SettingsRemoteExternalFolderRows
           folders={remoteFolders}
-          onReconnectFolder={props.onReconnectFolder}
-          onRemoveFolder={props.onRemoveFolder}
-          onReplaceHost={props.onReplaceHost}
         />
       ) : null}
       <LocalExternalFolders folders={localFolders} settings={props} />

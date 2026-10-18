@@ -28,7 +28,6 @@ const baseProps = {
   onReconnectFolder: vi.fn(),
   onRebuildIndex: vi.fn(),
   onRemoveFolder: vi.fn(),
-  onReplaceHost: vi.fn(),
   onRetryLoad: vi.fn(),
   onUpdateFolder: vi.fn()
 };
@@ -102,10 +101,7 @@ it('groups by Source Host without exposing receiver controls or guessing missing
   expect(screen.queryByText('mystery')).not.toBeInTheDocument();
   expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-  const folderActions = screen.getByRole('button', { name: 'More actions for /unknown' });
-  expect(folderActions).toHaveAttribute('aria-haspopup', 'menu');
-  expect(screen.getByRole('button', { name: 'More actions for 0cap' })).toHaveAttribute('aria-haspopup', 'menu');
-  expect(screen.getByRole('button', { name: 'More actions for D:\\Docs' })).toHaveAttribute('aria-haspopup', 'menu');
+  expect(screen.queryByRole('button', { name: /More actions for/ })).not.toBeInTheDocument();
 });
 
 it('does not show link panel browsing data controls in external sources', () => {

@@ -9,13 +9,14 @@ import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncO
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
+import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
 import { confirmSourceManagement } from './sourceManagement.js';
 import { closeLibraries, createPeer, edit, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 
 let peer: Peer;
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => ({ driver: peer.driver, sqlite: peer.db }) }));
-beforeEach(async () => { await startLibraries(); peer = createPeer('owner'); });
+beforeEach(async () => { await startLibraries(); peer = createPeer('owner'); peer.db.prepare("INSERT INTO settings VALUES ('standalone_device_uuid', ?, 'now')").run(JSON.stringify(peer.anchor)); });
 afterEach(closeLibraries);
 
 const createdAt = '2026-07-01T00:00:00.000Z';
@@ -69,7 +70,7 @@ it.each(['folder', 'source', 'remote'] as const)(
 
 async function seedFolder() {
   const folder = { id: 'folder', source_ref: 'external:folder', host_name: peer.name,
-    host_platform: 'darwin', attachment_mode: 'document_relative', excluded_dirs_json: '[]' };
+    owner_device_identity_key: loadDesktopDeviceId(), host_platform: 'darwin', attachment_mode: 'document_relative', excluded_dirs_json: '[]' };
   await peer.port.transaction(async (tx) => {
     await applySyncObjectInTransaction(tx, { object_type: 'external_folder', object_id: 'folder',
       content_hash: computeSyncContentHash('external_folder', folder), deleted_at: null,

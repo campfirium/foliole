@@ -1,13 +1,6 @@
-import { MoreHorizontal } from 'lucide-react';
-
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 import {
-  AppDropdownMenu,
-  AppDropdownMenuContent,
-  AppDropdownMenuItem,
-  AppDropdownMenuSeparator,
-  AppDropdownMenuTrigger,
   settingsActionTableHeaderClassName,
   settingsActionTableRowClassName
 } from '../../../../shared/ui';
@@ -16,79 +9,8 @@ import { groupRemoteExternalFolders } from './remoteExternalFolderGroups';
 
 const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 
-function FolderActions(props: {
-  folder: ExternalSourceSettingsFolder;
-  onReconnectFolder: (folderId: string) => void;
-  onRemoveFolder: (folderId: string) => void;
-}) {
-  const t = useTranslation();
-  return (
-    <AppDropdownMenu>
-      <AppDropdownMenuTrigger asChild>
-        <button
-          aria-label={t('settings.externalSources.remote.folderActions', { path: props.folder.folderPath })}
-          className="grid h-8 w-8 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
-          type="button"
-        >
-          <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />
-        </button>
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem onSelect={() => props.onReconnectFolder(props.folder.id)}>
-          {t('settings.externalSources.remote.changeSource')}
-        </AppDropdownMenuItem>
-        <AppDropdownMenuSeparator />
-        <AppDropdownMenuItem
-          className="text-destructive focus:text-destructive data-[highlighted]:text-destructive"
-          onSelect={() => props.onRemoveFolder(props.folder.id)}
-        >
-          {t('settings.externalSources.remote.removeSource')}
-        </AppDropdownMenuItem>
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
-  );
-}
-
-function HostActions(props: { hostName: string; onReplaceHost: (hostName: string) => void }) {
-  const t = useTranslation();
-  return (
-    <AppDropdownMenu>
-      <AppDropdownMenuTrigger asChild>
-        <button
-          aria-label={t('settings.externalSources.remote.hostActions', { host: props.hostName })}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
-          type="button"
-        >
-          <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />
-        </button>
-      </AppDropdownMenuTrigger>
-      <AppDropdownMenuContent align="end" sideOffset={4}>
-        <AppDropdownMenuItem onSelect={() => props.onReplaceHost(props.hostName)}>
-          {t('settings.externalSources.remote.replaceHost')}
-        </AppDropdownMenuItem>
-      </AppDropdownMenuContent>
-    </AppDropdownMenu>
-  );
-}
-
-function RemoteFolderRow(props: {
-  folder: ExternalSourceSettingsFolder;
-  onReconnectFolder: (folderId: string) => void;
-  onRemoveFolder: (folderId: string) => void;
-}) {
-  return (
-    <div className="grid min-h-10 grid-cols-[minmax(0,1fr)_2rem] items-center gap-3 rounded-md transition-colors hover:bg-settings-control-hover">
-      <span className="min-w-0 truncate font-mono text-xs text-foreground/68">{props.folder.folderPath}</span>
-      <FolderActions {...props} />
-    </div>
-  );
-}
-
 export function SettingsRemoteExternalFolderRows(props: {
   folders: ExternalSourceSettingsFolder[];
-  onReconnectFolder: (folderId: string) => void;
-  onRemoveFolder: (folderId: string) => void;
-  onReplaceHost: (hostName: string) => void;
 }) {
   const t = useTranslation();
   const groups = groupRemoteExternalFolders(
@@ -115,17 +37,13 @@ export function SettingsRemoteExternalFolderRows(props: {
                 {group.platformName ? (
                   <span className="shrink-0 text-xs font-normal text-foreground/48">{group.platformName}</span>
                 ) : null}
-                <HostActions hostName={group.hostName} onReplaceHost={props.onReplaceHost} />
               </div>
             </div>
             <div className="grid min-w-0 gap-0.5">
               {group.folders.map((folder) => (
-                <RemoteFolderRow
-                  folder={folder}
-                  key={folder.id}
-                  onReconnectFolder={props.onReconnectFolder}
-                  onRemoveFolder={props.onRemoveFolder}
-                />
+                <div className="flex min-h-10 min-w-0 items-center" key={folder.id}>
+                  <span className="min-w-0 truncate font-mono text-xs text-foreground/68">{folder.folderPath}</span>
+                </div>
               ))}
             </div>
           </section>

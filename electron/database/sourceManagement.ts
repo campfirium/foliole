@@ -1,4 +1,4 @@
-import { retireExternalFolderDocuments } from '../../lib/core/database/externalFolderDocumentRetirement.js';
+import { retireExternalFolder } from '../../lib/core/database/externalFolderRetirement.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { computeSyncContentHash, type SyncObjectStateInput,
   upsertSyncObjectState } from '../../lib/core/database/syncState.js';
@@ -12,6 +12,7 @@ import type {
   NativeSourceManagementType
 } from '../../lib/platform/nativeSourceManagementContract.js';
 
+
 import { openDatabaseConnection } from './connection.js';
 import {
   loadCurrentDesktopHost,
@@ -19,6 +20,7 @@ import {
   type DesktopSourceRecord
 } from './desktopSources.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { isLocalExternalFolder } from './externalSearchFolderIdentity.js';
 import { loadHistoricalRefsForWatchedBinding,
   resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 
@@ -53,6 +55,9 @@ function requireManageableSource(sourceRef: string) {
   if (!source || (source.source_type !== 'external' && source.source_type !== 'watched')) {
     throw new Error('source_management_source_not_found');
   }
+  if (source.source_type === 'external' && !isLocalExternalFolder(source)) {
+    throw new Error('external_folder_not_local');
+  }
   return source;
 }
 
@@ -63,15 +68,9 @@ function sourcesForPreview(
   sourceType?: NativeSourceManagementType
 ) {
   if (action === 'remove_source') return [requireManageableSource(sourceRef ?? '')];
+  void hostName;
   if (sourceType === 'watched') throw new Error('watched_host_replacement_requires_source_reconnect');
-  if ((sourceType !== 'external' && sourceType !== 'watched') || !hostName?.trim()) {
-    throw new Error('source_management_host_required');
-  }
-  return openDatabaseConnection().driver.queryAll<DesktopSourceRecord>(
-    `SELECT source_ref, source_type, config_ref, host_name, host_platform, root_path,
-       path_flavor, type_settings_json, updated_at FROM desktop_sources
-     WHERE source_type = ? AND host_name = ? ORDER BY source_ref`, [sourceType, hostName.trim()]
-  );
+  throw new Error('external_folder_transfer_not_supported');
 }
 
 export function previewSourceManagement(input: {
@@ -114,35 +113,13 @@ function recordSourceSync(source: DesktopSourceRecord, now: string, deleted: boo
 function removeSource(source: DesktopSourceRecord, now: string) {
   const driver = openDatabaseConnection().driver;
   if (source.source_type === 'external') {
-    retireExternalFolderDocuments(driver, {
-      folderId: source.config_ref, deletedAt: now, hostName: loadCurrentDesktopHost().name
-    });
-    driver.execute('DELETE FROM external_documents WHERE folder_id = ?', [source.config_ref]);
-    driver.execute('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [source.config_ref]);
-    driver.execute('DELETE FROM external_search_folders WHERE source_ref = ?', [source.source_ref]);
+    retireExternalFolder(driver, source.config_ref, now, loadCurrentDesktopHost().name);
+    return;
   } else {
     driver.execute('DELETE FROM watched_folder_bindings WHERE source_ref = ?', [source.source_ref]);
   }
   driver.execute('DELETE FROM desktop_sources WHERE source_ref = ?', [source.source_ref]);
   recordSourceSync(source, now, true);
-}
-
-function replaceHost(source: DesktopSourceRecord, now: string) {
-  const driver = openDatabaseConnection().driver;
-  const host = loadCurrentDesktopHost();
-  driver.execute(
-    `UPDATE desktop_sources SET host_name = ?, host_platform = ?,
-       type_settings_json = json_set(type_settings_json, '$.connectionStatus', 'needs-folder'), updated_at = ?
-     WHERE source_ref = ?`, [host.name, host.platform, now, source.source_ref]
-  );
-  if (source.source_type === 'external') {
-    driver.execute("UPDATE external_search_folders SET status = 'idle', updated_at = ? WHERE source_ref = ?",
-      [now, source.source_ref]);
-  } else {
-    driver.execute("UPDATE watched_folder_bindings SET connection_status = 'needs-folder', updated_at = ? WHERE source_ref = ?",
-      [now, source.source_ref]);
-  }
-  recordSourceSync({ ...source, host_name: host.name, host_platform: host.platform }, now, false);
 }
 
 export function confirmSourceManagement(input: {
@@ -157,8 +134,7 @@ export function confirmSourceManagement(input: {
   const sources = preview.sources.map((item) => requireManageableSource(item.source_ref));
   openDatabaseConnection().driver.transaction(() => {
     for (const source of sources) {
-      if (input.action === 'remove_source') removeSource(source, now);
-      else replaceHost(source, now);
+      removeSource(source, now);
     }
   });
   return {

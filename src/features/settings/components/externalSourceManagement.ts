@@ -26,17 +26,3 @@ export async function removeExternalSource(sourceRef: string, refresh: () => voi
   await confirmSourceManagement(input);
   refresh();
 }
-
-export async function replaceExternalSourceHost(hostName: string, refresh: () => void, t: ReturnType<typeof useTranslation>) {
-  const input = { action: 'replace_host' as const, hostName, sourceType: 'external' as const };
-  const preview = await previewSourceManagement(input);
-  const confirmed = await requestAppConfirmation({
-    cancelLabel: t('settings.externalSources.management.cancel'),
-    confirmLabel: t('settings.externalSources.management.replaceConfirm'),
-    description: summary(t, preview),
-    title: t('settings.externalSources.management.replaceTitle', { host: hostName })
-  });
-  if (!confirmed) return;
-  await confirmSourceManagement(input);
-  refresh();
-}

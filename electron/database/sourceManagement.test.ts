@@ -73,23 +73,23 @@ it('previews removal without changing Source, Topic, or Location and preserves T
     WHERE source_fingerprint = 'fingerprint-a'`)).toEqual({ source_location: 'topic.md', source_ref: sourceRef });
 });
 
-it('rolls back every Host replacement write when one Source projection fails', () => {
+it('rejects External device replacement without changing either library', () => {
   const firstRef = seedExternalSource('external-a', 'Other Mac');
   const secondRef = seedExternalSource('external-b', 'Other Mac');
   const driver = openDatabaseConnection().driver;
-  driver.execute(`CREATE TRIGGER fail_second_source BEFORE UPDATE ON desktop_sources
-    WHEN OLD.source_ref = '${secondRef}' BEGIN SELECT RAISE(ABORT, 'injected failure'); END`);
+  const before = driver.queryAll('SELECT * FROM desktop_sources ORDER BY source_ref');
+  for (const run of [previewSourceManagement, confirmSourceManagement]) {
+    expect(() => run({ action: 'replace_host', hostName: 'Other Mac', sourceType: 'external' }))
+      .toThrow('external_folder_transfer_not_supported');
+  }
+  expect(driver.queryAll('SELECT * FROM desktop_sources ORDER BY source_ref')).toEqual(before);
+  expect(before.map(source => source.source_ref)).toEqual([firstRef, secondRef]);
+});
 
-  expect(previewSourceManagement({
-    action: 'replace_host', hostName: 'Other Mac', sourceType: 'external'
-  })).toMatchObject({ source_count: 2, topic_count: 0 });
-  expect(() => confirmSourceManagement({
-    action: 'replace_host', hostName: 'Other Mac', sourceType: 'external'
-  })).toThrow('injected failure');
-
-  expect(driver.queryAll(`SELECT source_ref, host_name FROM desktop_sources
-    WHERE source_ref IN (?, ?) ORDER BY source_ref`, [firstRef, secondRef])).toEqual([
-    { host_name: 'Other Mac', source_ref: firstRef },
-    { host_name: 'Other Mac', source_ref: secondRef }
-  ]);
+it('rejects removing a same-name foreign library through source management', () => {
+  const sourceRef = seedExternalSource('foreign', 'This Mac');
+  const driver = openDatabaseConnection().driver;
+  driver.execute("UPDATE desktop_sources SET type_settings_json = json_set(type_settings_json, '$.ownerDeviceIdentityKey', 'foreign') WHERE source_ref = ?", [sourceRef]);
+  expect(() => confirmSourceManagement({ action: 'remove_source', sourceRef })).toThrow('external_folder_not_local');
+  expect(driver.queryOne('SELECT source_ref FROM desktop_sources WHERE source_ref = ?', [sourceRef])).toEqual({ source_ref: sourceRef });
 });

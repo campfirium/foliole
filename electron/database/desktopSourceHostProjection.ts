@@ -21,7 +21,7 @@ export function updateLocalDesktopSourceHosts(input: {
          ELSE config_ref END object_id
        FROM desktop_sources source WHERE host_name = ?
          AND (host_name IS NOT ? OR host_platform IS NOT ?)
-         AND (source_type <> 'readwise' OR json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ?)
+         AND (source_type NOT IN ('readwise', 'external') OR json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ?)
          AND (source_type <> 'watched' OR EXISTS (
            SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = source.source_ref
              AND binding.owner_device_identity_key = ?))`,
@@ -29,7 +29,7 @@ export function updateLocalDesktopSourceHosts(input: {
     );
     if (!changed.length) return;
     tx.execute(`UPDATE desktop_sources SET host_name = ?, host_platform = ?, updated_at = ?
-      WHERE host_name = ? AND (source_type <> 'readwise' OR json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ?)
+      WHERE host_name = ? AND (source_type NOT IN ('readwise', 'external') OR json_extract(type_settings_json, '$.ownerDeviceIdentityKey') = ?)
         AND (source_type <> 'watched' OR EXISTS (
         SELECT 1 FROM watched_folder_bindings binding WHERE binding.source_ref = desktop_sources.source_ref
           AND binding.owner_device_identity_key = ?))`, [input.currentHostName, input.currentHostPlatform,
