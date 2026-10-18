@@ -5,9 +5,9 @@ import { z } from 'zod';
 import type { DbPort } from '../sync/dbPort.js';
 import { matchingTombstoneVersionSql } from '../sync/syncNodeTombstoneVersion.js';
 
-import { framedSyncNodeInventorySql, framedSyncTombstoneSummarySql } from './framedSyncInventoryProjectionSql.js';
 import { migrateCompanionFramedSyncTombstoneInventory, migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { framedSyncNodeInventorySql, framedSyncTombstoneSummarySql } from './preNodeChildInventoryProjectionSql.js';
 
 const source = z.object({ version_id: z.string(), body_text: z.string() });
 const SOURCE_SQL = `SELECT version.version_id, version.body_text FROM node_sync_versions version

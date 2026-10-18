@@ -5,7 +5,7 @@ import { seedA5ResourceLanProbe,
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs';
+import { captureA5ActionRun, captureA5SyncRun, readA5SyncEvents } from './a5-sync-event-proof.mjs';
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
 import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
@@ -161,6 +161,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     const conflict = await loadVisibleDesktopSyncConflictBodies({
       nodeId: conflictSeed.nodeId, session
     });
+    const a5RestartedAfter = new Date().toISOString();
     args.checked(args.paths.adb, [
       '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
     ]);
@@ -168,7 +169,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       `${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`]);
     const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
-    [a5Initial.run, a5AutomaticBeforeRestart.run]);
+    [a5Initial.run, a5AutomaticBeforeRestart.run], a5RestartedAfter);
     const a5ManualAfterRestartAction = await runMacosA5SyncGroupMaintenance({
       action: 'sync-now', transportRequired: false, appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-after-restart'),
@@ -219,6 +220,10 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         manualAfterRestart: macosRestart.manualRun,
         manualBeforeRestart: macosManualBeforeRestart } } };
     process.stdout.write(result.output);
+  } catch (error) {
+    await readA5SyncEvents({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'failure-sync-events') }).catch(() => undefined);
+    throw error;
   } finally {
     resourceFixture?.restore();
     await session.close().catch(() => undefined);

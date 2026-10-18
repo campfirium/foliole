@@ -1,6 +1,9 @@
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  'src/app/hooks/editorAutomaticSave.integration.test.tsx',
+  'src/companion/companionAutomaticSave.integration.test.tsx',
+  'src/companion/companionEditorHttp.integration.test.tsx',
   'electron/database/betterSqlite3Driver.statements.test.ts',
   'electron/database/requestSyncExternalIdentity.integration.test.ts',
   'electron/database/requestSyncStateSafety.integration.test.ts',

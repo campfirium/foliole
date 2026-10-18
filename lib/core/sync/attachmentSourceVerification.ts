@@ -18,7 +18,11 @@ export class AttachmentVerificationPending extends Error {
 /** Volatile send-side proofs only. Receivers still verify the complete received file. */
 export class AttachmentSourceVerification {
   private readonly proofs = new Map<string, Proof>();
-  constructor(private readonly capacity = 128) {}
+  private readonly capacity: number;
+
+  constructor(capacity = 128) {
+    this.capacity = capacity;
+  }
 
   invalidate(storageKey?: string) {
     for (const [key, proof] of this.proofs) {
