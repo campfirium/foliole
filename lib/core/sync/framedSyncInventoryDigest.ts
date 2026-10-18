@@ -3,7 +3,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
-import { inventoryColumns, inventoryEntryFromRow, readFramedSyncInventoryEntry, type InventoryRow } from './framedSyncInventoryRead.js';
+import { inventoryColumns, inventoryEntryFromRow, type InventoryRow } from './framedSyncInventoryRead.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
@@ -38,13 +38,16 @@ export async function readRequestSyncInventorySummaries(db: DbPort) {
 }
 
 export async function expandRequestSyncNodeSummaries(db: DbPort, entries: readonly FramedSyncInventoryEntry[], ids: readonly string[]) {
-  const byId = new Map<string, FramedSyncInventoryEntry>();
-  for (const globalId of ids) {
-    const entry = await readFramedSyncInventoryEntry(db, { objectType: 'node', globalId });
-    if (entry) byId.set(globalId, entry);
-  }
+  if (ids.length === 0) return [...entries];
+  const requested = new Set(ids);
+  const rows = await db.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
+    WHERE object_type = 'node' AND object_id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...requested])]);
+  const byId = new Map(rows.map(row => {
+    const entry = inventoryEntryFromRow(row);
+    return [entry.globalId, entry] as const;
+  }));
   return entries.map(entry => {
-    if (entry.objectType !== 'node' || !ids.includes(entry.globalId)) return entry;
+    if (entry.objectType !== 'node' || !requested.has(entry.globalId)) return entry;
     const detail = byId.get(entry.globalId);
     if (!detail || !entry.sharedStateHash.every((value, index) => detail.sharedStateHash[index] === value) ||
         !!entry.unready !== !!detail.unready) throw new Error('framed_sync_source_changed');
