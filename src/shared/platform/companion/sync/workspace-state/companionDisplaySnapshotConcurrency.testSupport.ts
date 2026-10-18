@@ -14,6 +14,14 @@ function deferred() {
   return { promise, resolve };
 }
 
+type ProjectionPlan = { kind: 'nodes' | 'attachments'; details: string[] };
+function readProjectionPlan(database: Database.Database, sql: string, params: unknown[]): ProjectionPlan | null {
+  if (sql.startsWith('EXPLAIN') || (!sql.includes('selected_nodes') &&
+    !(sql.includes('FROM nodes owner') && sql.includes('WHERE node_id IN')))) return null;
+  const plan = database.prepare<unknown[], { detail: string }>(`EXPLAIN QUERY PLAN ${sql}`).all(...params);
+  return { kind: sql.includes('selected_nodes') ? 'nodes' : 'attachments', details: plan.map(row => row.detail) };
+}
+
 export function createDisplayLibrary(platform: 'android' | 'ios') {
   invalidateCompanionReadingScope();
   const root = mkdtempSync(path.join(os.tmpdir(), 'companion-display-wal-'));
@@ -24,6 +32,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
   let holdDisplay = false;
   let directoryRows = 0;
   let directoryQueries = 0;
+  const projectionPlans: ProjectionPlan[] = [];
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
     const connection = createFakeCapacitorConnection(database);
@@ -34,6 +43,8 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
           return { values: [] };
         }
         const result = await connection.query(sql, params);
+        const plan = readProjectionPlan(database, sql, params);
+        if (plan) projectionPlans.push(plan);
         if (sql.includes('AS collection_source_content')) {
           directoryRows += result.values?.length ?? 0;
           directoryQueries += 1;
@@ -62,6 +73,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   return { owner, file, reading, release, directoryRows: () => directoryRows,
+    projectionPlans: () => projectionPlans,
     directoryQueries: () => directoryQueries, hold: () => { holdDisplay = true; },
     async close() {
       await owner.close();

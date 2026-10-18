@@ -118,10 +118,14 @@ it('refreshes edited topic projections without transferring unrelated directory 
       "UPDATE nodes SET content = '', opening_text = 'Changed body' WHERE id IN ('node-1', 'node-2')"));
     const plan = await library.owner.read(db => db.query(`EXPLAIN QUERY PLAN ${COMPANION_CONTENT_SNAPSHOT_SQL}`,
       ['["node-1"]', '["node-1"]', 'display-fixture']));
-    expect(plan.some(row => /^SCAN n(?: |$)/u.test(String(row.detail)))).toBe(false);
+    expect(plan.some(row => /\bSCAN(?: TABLE)? (?:nodes|n|owner)\b/u.test(String(row.detail)))).toBe(false);
     const start = library.directoryRows();
     const refreshed = await refreshCompanionWorkspaceAfterMutation(before, 'node-1');
     const transferred = library.directoryRows() - start;
+    expect(library.projectionPlans().map(plan => plan.kind)).toEqual(['nodes', 'attachments']);
+    for (const plan of library.projectionPlans()) {
+      expect(plan.details.filter(detail => /\bSCAN(?: TABLE)? (?:nodes|n|owner)\b/u.test(detail)), plan.kind).toEqual([]);
+    }
     const complete = await refreshCompanionWorkspaceAfterMutation();
     expect(refreshed).toEqual(complete);
     expect(transferred, 'One content edit must not transfer the whole directory').toBeLessThanOrEqual(2);
