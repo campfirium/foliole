@@ -31,6 +31,19 @@ function requireMembers(phone, desktop) {
   }
 }
 
+function inspectDifferenceValues(phone, desktop, row) {
+  const queries = {
+    node_open_state: 'SELECT node_id, last_opened_at FROM node_open_state WHERE node_id = ?',
+    parent_child_order: 'SELECT parent_id, child_ids_json, updated_at FROM parent_child_order WHERE parent_id = ?'
+  };
+  const query = Object.hasOwn(queries, row.object_type) ? queries[row.object_type] : null;
+  if (!query) return {};
+  return { actualValues: {
+    phone: phone.prepare(query).get(row.object_id) ?? null,
+    desktop: desktop.prepare(query).get(row.object_id) ?? null
+  } };
+}
+
 export function inspectExistingSyncBaseline(phoneDb, desktopDb) {
   const phone = authority(phoneDb);
   const desktop = authority(desktopDb);
@@ -47,7 +60,10 @@ export function inspectExistingSyncBaseline(phoneDb, desktopDb) {
   const lookup = desktopDb.prepare('SELECT content_hash FROM sync_object_state WHERE object_type = ? AND object_id = ?');
   const differences = dirty.flatMap(row => {
     const remote = lookup.get(row.object_type, row.object_id);
-    return typeof row.content_hash === 'string' && row.content_hash.length > 0 && remote?.content_hash === row.content_hash ? [] : [{ ...row, desktop_content_hash: remote?.content_hash ?? null }];
+    if (typeof row.content_hash === 'string' && row.content_hash.length > 0
+      && remote?.content_hash === row.content_hash) return [];
+    return [{ ...row, desktop_content_hash: remote?.content_hash ?? null,
+      ...inspectDifferenceValues(phoneDb, desktopDb, row) }];
   });
   return { syncGroupId: phone.group_id, syncGroupCredentialsPresent: true, syncGroupPeerConflict: false,
     activeSyncGroupMemberCount: phone.members.filter(row => row.state === 'active').length,
