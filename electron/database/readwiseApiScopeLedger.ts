@@ -77,6 +77,10 @@ export function saveReadwiseApiScopeCursor(
   return saveScope(connectionRef, { ...ledger, cursor, status: cursor ? 'running' : 'complete' });
 }
 
+export function restartReadwiseApiScope(connectionRef: string, ledger: ReadwiseApiScopeLedger) {
+  return saveScope(connectionRef, { ...ledger, cursor: null, status: 'running' });
+}
+
 export function finalizeReadwiseApiScopeLedgers(connectionRef: string) {
   const driver = openDatabaseConnection().driver;
   const ledgers = driver.queryAll<{ payload_json: string }>(

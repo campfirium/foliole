@@ -15,6 +15,7 @@ import {
 } from '../database/readwiseApiIndexStage.js';
 import {
   loadOrCreateReadwiseApiScopeLedgers,
+  restartReadwiseApiScope,
   saveReadwiseApiScopeCursor
 } from '../database/readwiseApiScopeLedger.js';
 
@@ -36,6 +37,7 @@ import {
   indexReadwiseApiExportMatches
 } from './readwiseApiIndexExportFacts.js';
 import { buildReadwiseApiScopeUrl } from './readwiseApiIndexPlan.js';
+import { createReadwiseApiPageParser } from './readwiseApiPage.js';
 
 export async function buildReadwiseApiCandidateIndex(input: {
   connectionRef: string;
@@ -69,6 +71,8 @@ async function fetchScope(
 ) {
   let ledger = initial;
   if (ledger.status === 'complete') return;
+  let parsePage = createReadwiseApiPageParser(ledger.cursor);
+  let restarted = false;
   while (true) {
     const url = buildReadwiseApiScopeUrl({
       checkpoint: ledger.checkpoint,
@@ -82,17 +86,20 @@ async function fetchScope(
     try {
       payload = await request(url);
     } catch (error) {
-      if (ledger.cursor && error instanceof Error && error.message === 'readwise_api_http_400') {
-        throw new Error(`readwise_api_scope_cursor_invalid:${ledger.scope}`);
+      if (!restarted && ledger.cursor && error instanceof Error && error.message === 'readwise_api_http_400') {
+        ledger = await runWithDatabaseConnectionOwner(() => restartReadwiseApiScope(input.connectionRef, ledger));
+        restarted = true;
+        parsePage = createReadwiseApiPageParser();
+        continue;
       }
       throw error;
     }
-    const cursor = nextCursor(payload);
+    const { results, cursor } = parsePage(payload);
     ledger = await runWithDatabaseConnectionOwner(() => {
-      savePage(input.connectionRef, ledger.scope, payload, ledger.runStartedAt);
+      savePage(input.connectionRef, ledger.scope, results, ledger.runStartedAt);
       input.dependencies.onPage?.({
         phase: ledger.scope === 'export' ? 'export' : 'reader',
-        recordCount: values(payload).length
+        recordCount: results.length
       });
       reportIndexProgress(input.connectionRef, input.onProgress);
       return saveReadwiseApiScopeCursor(input.connectionRef, ledger, cursor);
@@ -104,15 +111,15 @@ async function fetchScope(
 function savePage(
   connectionRef: string,
   scope: string,
-  payload: Record<string, unknown>,
+  results: unknown[],
   seenInRun: string
 ) {
   if (scope === 'export') {
     saveReadwiseApiExportIndexPage(connectionRef,
-      values(payload).map(normalizeExportBook).filter((item) => item !== null));
+      results.map(normalizeExportBook).filter((item) => item !== null));
   } else {
     saveReadwiseApiReaderIndexPage(connectionRef,
-      values(payload).map(normalizeReaderDocument).filter((item) => item !== null),
+      results.map(normalizeReaderDocument).filter((item) => item !== null),
       seenInRun);
   }
 }
@@ -197,13 +204,4 @@ function reportIndexProgress(connectionRef: string, onProgress?: (processed: num
 
 function isParentCategory(value: unknown): value is ReaderParentCategory {
   return READER_PARENT_CATEGORIES.includes(value as ReaderParentCategory);
-}
-
-function values(payload: Record<string, unknown>) {
-  return Array.isArray(payload.results) ? payload.results : [];
-}
-
-function nextCursor(payload: Record<string, unknown>) {
-  return typeof payload.nextPageCursor === 'string' && payload.nextPageCursor
-    ? payload.nextPageCursor : null;
 }

@@ -54,7 +54,7 @@ afterEach(async () => {
 
 it('writes deletion and missing facts only after both complete sets and keeps local content', () => {
   const run = loadOrCreateReadwiseApiReconcileRun('connection', ALL_READWISE_RECONCILE_SCOPE, 'start');
-  expect(readState().remoteLifecycle).toMatchObject({ checkedAt: null, reader: 'unconfirmed' });
+  expect(readState().remoteLifecycle).toBeUndefined();
   expect(() => completeReadwiseApiReconcileRun(run, 'too-early')).toThrow('readwise_reconcile_incomplete');
   saveReadwiseApiReconcilePage({ connectionRef: 'connection', cursor: null, items: [], kind: 'reader' });
   saveReadwiseApiReconcilePage({ connectionRef: 'connection', cursor: null, items: [{
@@ -83,7 +83,7 @@ it('resets an incomplete set when scope changes and restores present facts on a 
   const laterScope = { readerLocation: 'later' as const, version: 1 };
   const reset = loadOrCreateReadwiseApiReconcileRun('connection', laterScope, 'changed');
   expect(loadReadwiseApiReconcileStage('connection').reader).toHaveLength(0);
-  expect(readState().remoteLifecycle).toMatchObject({ checkedAt: null, scope: laterScope });
+  expect(readState().remoteLifecycle).toBeUndefined();
   saveReadwiseApiReconcilePage({
     connectionRef: 'connection', cursor: null, items: [
       { category: 'article', id: 'document' }, { category: 'highlight', id: 'highlight' }

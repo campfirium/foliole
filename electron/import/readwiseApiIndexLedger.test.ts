@@ -143,32 +143,6 @@ it('uses five checkpointed base requests and adds only one new tag backfill scop
   ]));
 });
 
-it('resumes from a saved scope cursor and fails closed when that cursor is rejected', async () => {
-  let fail = true;
-  const cursors: Array<string | null> = [];
-  const fetchImpl = vi.fn(async (input: string | URL | Request) => {
-    const url = new URL(String(input));
-    if (url.searchParams.get('category') === 'highlight') {
-      const cursor = url.searchParams.get('pageCursor');
-      cursors.push(cursor);
-      if (!cursor) return response([], 'cursor-1');
-      if (fail) return new Response('{}', { status: 500 });
-      return new Response('{}', { status: 400 });
-    }
-    return response([]);
-  }) as typeof fetch;
-
-  await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', {
-    fetchImpl, minIntervalMs: 0
-  })).rejects.toThrow('readwise_api_http_500');
-  expect(cursors).toEqual([null, 'cursor-1', 'cursor-1', 'cursor-1']);
-  fail = false;
-  await expect(ensureReadwiseApiCandidateIndex(settings(), 'connection', {
-    fetchImpl, minIntervalMs: 0
-  })).rejects.toThrow('readwise_api_scope_cursor_invalid:reader:highlight');
-  expect(cursors).toEqual([null, 'cursor-1', 'cursor-1', 'cursor-1', 'cursor-1']);
-});
-
 it('does not refetch the parent body when an incremental highlight belongs to an imported document', async () => {
   materializeReadwiseApiDocument({
     config: createDefaultReadwiseReaderConfig(),

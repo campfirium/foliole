@@ -20,6 +20,7 @@ import {
   READWISE_READER_LIST_URL,
   type ReadwiseApiFetchDependencies
 } from './readwiseApiImportFetch.js';
+import { createReadwiseApiPageParser } from './readwiseApiPage.js';
 
 interface ActiveReconcile {
   controller: AbortController;
@@ -56,10 +57,14 @@ async function runNow(
   const dependencies = { ...input?.dependencies, signal };
   const request = createReadwiseApiRequest(dependencies);
   let run = loadOrCreateReadwiseApiReconcileRun(connectionRef, scope);
+  const parsers = {
+    reader: createReadwiseApiPageParser(run.readerCursor),
+    export: createReadwiseApiPageParser(run.exportCursor)
+  };
   try {
     while (run.phase !== 'ready') {
       assertEligible(signal);
-      run = await fetchPage(run, request);
+      run = await fetchPage(run, request, parsers, signal);
     }
     assertEligible(signal);
     const result = completeReadwiseApiReconcileRun(run);
@@ -81,7 +86,9 @@ async function runNow(
 
 async function fetchPage(
   run: ReadwiseApiReconcileRunState,
-  request: (url: URL) => Promise<Record<string, unknown>>
+  request: (url: URL) => Promise<Record<string, unknown>>,
+  parsers: Record<'reader' | 'export', ReturnType<typeof createReadwiseApiPageParser>>,
+  signal: AbortSignal
 ) {
   const kind = run.phase === 'export' ? 'export' : 'reader';
   const url = new URL(kind === 'reader' ? READWISE_READER_LIST_URL : READWISE_EXPORT_URL);
@@ -94,12 +101,11 @@ async function fetchPage(
     if (run.exportCursor) url.searchParams.set('pageCursor', run.exportCursor);
   }
   const payload = await request(url);
-  const values = Array.isArray(payload.results) ? payload.results : [];
+  assertEligible(signal);
+  const { results: values, cursor } = parsers[kind](payload);
   const items = kind === 'reader'
     ? values.map(normalizeReadwiseReconcileReaderDocument).filter((item) => item !== null)
     : values.map(normalizeReadwiseReconcileExportBook).filter((item) => item !== null);
-  const cursor = typeof payload.nextPageCursor === 'string' && payload.nextPageCursor
-    ? payload.nextPageCursor : null;
   saveReadwiseApiReconcilePage({ connectionRef: run.connectionRef, cursor, items, kind });
   return loadOrCreateReadwiseApiReconcileRun(run.connectionRef, run.scope);
 }

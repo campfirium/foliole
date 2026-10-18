@@ -13,6 +13,7 @@ import {
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
 import { loadStoredReadwiseHostSettings } from './readwiseApiConnectionState.js';
+import { createReadwiseApiPageParser } from './readwiseApiPage.js';
 import {
   assertReadwiseApiEligible,
   canRunReadwiseApiRequest,
@@ -94,18 +95,20 @@ async function fetchRemainingPages(
   hydrateAncestors = true
 ) {
   let run = initial;
+  const parsers = {
+    reader: createReadwiseApiPageParser(run.readerCursor),
+    export: createReadwiseApiPageParser(run.exportCursor)
+  };
   while (run.phase !== 'ready') {
     assertReadwiseApiEligible(dependencies.signal, run.connectionRef, dependencies.allowFolderModeForCutover);
     const kind = run.phase;
     const url = buildPageUrl(run, kind);
     const payload = await request(url);
     assertReadwiseApiEligible(dependencies.signal, run.connectionRef, dependencies.allowFolderModeForCutover);
-    const values = Array.isArray(payload.results) ? payload.results : [];
+    const { results: values, cursor } = parsers[kind](payload);
     const items = kind === 'reader'
       ? values.map(normalizeReaderDocument).filter((item) => item !== null)
       : values.map(normalizeExportBook).filter((item) => item !== null);
-    const cursor = typeof payload.nextPageCursor === 'string' && payload.nextPageCursor
-      ? payload.nextPageCursor : null;
     saveReadwiseApiStagePage({ connectionRef: run.connectionRef, cursor, items, kind });
     dependencies.onPage?.({
       phase: kind,

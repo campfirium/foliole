@@ -18,7 +18,7 @@ it('versions the tag scope to backfill existing checkpoints once', () => {
     .not.toContain('tag-checkpoint-overlap-v1');
 });
 
-it('overlaps only incremental tag checkpoints by five minutes', () => {
+it('overlaps incremental scope checkpoints by five minutes', () => {
   const checkpoint = '2026-09-17T13:15:22.591Z';
   const tagUrl = buildReadwiseApiScopeUrl({
     checkpoint,
@@ -40,6 +40,8 @@ it('overlaps only incremental tag checkpoints by five minutes', () => {
   });
 
   expect(tagUrl.searchParams.get('updatedAfter')).toBe('2026-09-17T13:10:22.591Z');
-  expect(articleUrl.searchParams.get('updatedAfter')).toBe(checkpoint);
+  expect(articleUrl.searchParams.get('updatedAfter')).toBe('2026-09-17T13:10:22.591Z');
+  expect(buildReadwiseApiScopeUrl({ checkpoint, cursor: null, importTag: '', scope: 'export' })
+    .searchParams.get('updatedAfter')).toBe('2026-09-17T13:10:22.591Z');
   expect(firstTagUrl.searchParams.has('updatedAfter')).toBe(false);
 });

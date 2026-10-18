@@ -42,7 +42,6 @@ export function loadOrCreateReadwiseApiReconcileRun(
       ) VALUES (?, ?, ?, NULL, NULL, 'reader', ?)`,
       [connectionRef, JSON.stringify(scope), now, now]
     );
-    markReadwiseLifecycleUnconfirmed(tx, connectionRef, scope, now);
   });
   return loadReadwiseApiReconcileRun(connectionRef)!;
 }
@@ -139,20 +138,6 @@ export function completeReadwiseApiReconcileRun(run: ReadwiseApiReconcileRunStat
     tx.execute('DELETE FROM readwise_api_reconcile_runs WHERE connection_ref = ?', [run.connectionRef]);
   });
   return { exportDeletedCount, presentCount, readerMissingCount, reconciledAt: now, unconfirmedCount };
-}
-
-function markReadwiseLifecycleUnconfirmed(
-  driver: DatabaseDriver,
-  connectionRef: string,
-  scope: ReadwiseReconcileScope,
-  now: string
-) {
-  for (const row of loadLifecycleRows(driver, connectionRef)) {
-    const state = normalizeReadwiseApiDocumentImportState(parseJson(row.remote_import_state_json));
-    state.annotations = state.annotations.map((annotation) => ({ ...annotation, remoteStatus: 'unconfirmed' }));
-    state.remoteLifecycle = { checkedAt: null, connectionRef, export: 'unconfirmed', reader: 'unconfirmed', scope };
-    saveLifecycleState(driver, row, state, now);
-  }
 }
 
 function loadLifecycleRows(driver: DatabaseDriver, connectionRef: string) {

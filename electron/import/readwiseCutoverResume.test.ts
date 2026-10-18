@@ -173,7 +173,7 @@ it('counts downloaded records from both APIs even when one API omits its count',
       if (url.searchParams.has('pageCursor')) throw new Error('offline');
       return Response.json(url.pathname.includes('/v3/')
         ? { results: [{ category: 'article', id: 'a', title: 'Article' }], nextPageCursor: 'next' }
-        : { count: 1, results: [{ source: 'reader', external_id: 'a', highlights: [{ external_id: 'h', text: 'One' }] }] });
+        : { count: 1, nextPageCursor: null, results: [{ source: 'reader', external_id: 'a', highlights: [{ external_id: 'h', text: 'One' }] }] });
     }
   })).rejects.toThrow('network_failed');
   expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 2, total: null });

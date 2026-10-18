@@ -37,7 +37,7 @@ it('resolves note ancestry and cross-checks the Reader document through Export',
 it('does not infer missing or cyclic identity', async () => {
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(String(input));
-    if (url.pathname === '/api/v2/export/') return json({ results: [] });
+    if (url.pathname === '/api/v2/export/') return json({ results: [], nextPageCursor: null });
     const id = url.searchParams.get('id');
     return json({ results: id === 'missing' ? [] : [{ category: 'note', id, parent_id: id }] });
   }) as typeof fetch;

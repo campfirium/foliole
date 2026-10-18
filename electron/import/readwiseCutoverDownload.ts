@@ -3,6 +3,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { loadOrCreateReadwiseApiImportRun, loadStagedReadwiseApiContracts, saveReadwiseApiStagePage } from '../database/readwiseApiImportState.js';
 import { loadReadwiseCutoverStage, saveReadwiseCutoverStage } from '../database/readwiseCutoverStage.js';
 
+import { createReadwiseApiPageParser } from './readwiseApiPage.js';
 import { assertReadwiseApiEligible, type ReadwiseApiFetchDependencies } from './readwiseApiRequest.js';
 
 type Kind = 'reader' | 'export';
@@ -29,6 +30,10 @@ export async function downloadReadwiseCutover(
   dependencies: ReadwiseApiFetchDependencies
 ) {
   let state = await runWithDatabaseConnectionOwner(() => loadDownload(connectionRef));
+  const parsers = {
+    reader: createReadwiseApiPageParser(state.reader.cursor),
+    export: createReadwiseApiPageParser(state.export.cursor)
+  };
   while (!state.reader.done || !state.export.done) {
     const kind = nextKind(state);
     await runWithDatabaseConnectionOwner(() => {
@@ -36,11 +41,12 @@ export async function downloadReadwiseCutover(
       assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
     });
     const payload = await request(pageUrl(kind, state[kind].cursor));
+    const page = parsers[kind](payload);
     state = await runWithDatabaseConnectionOwner(() => {
       assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
       dependencies.assertCutoverBatch?.();
-      const next = persistPage(connectionRef, kind, state, payload);
-      dependencies.onPage?.({ phase: kind, recordCount: (payload.results as unknown[]).length,
+      const next = persistPage(connectionRef, kind, state, page, payload.count);
+      dependencies.onPage?.({ phase: kind, recordCount: page.results.length,
         ...(next[kind].total === null ? {} : { totalCount: next[kind].total }) });
       return next;
     });
@@ -71,13 +77,15 @@ function nextKind(state: DownloadState): Kind {
   return state.reader.done ? 'export' : 'reader';
 }
 
-function persistPage(connectionRef: string, kind: Kind, state: DownloadState, payload: Record<string, unknown>) {
-  if (!Array.isArray(payload.results)) throw new Error('readwise_source_cutover_page_invalid');
-  const items = kind === 'reader' ? payload.results.map(normalizeReaderDocument) : payload.results.map(normalizeExportBook);
+function persistPage(
+  connectionRef: string, kind: Kind, state: DownloadState,
+  page: ReturnType<ReturnType<typeof createReadwiseApiPageParser>>, count: unknown
+) {
+  const items = kind === 'reader' ? page.results.map(normalizeReaderDocument) : page.results.map(normalizeExportBook);
   if (items.some((item) => item === null)) throw new Error('readwise_source_cutover_page_invalid');
-  const cursor = typeof payload.nextPageCursor === 'string' && payload.nextPageCursor ? payload.nextPageCursor : null;
-  const total = typeof payload.count === 'number' && Number.isSafeInteger(payload.count) && payload.count >= 0
-    ? payload.count : null;
+  const { cursor } = page;
+  const total = typeof count === 'number' && Number.isSafeInteger(count) && count >= 0
+    ? count : null;
   const previous = state[kind];
   const changed = previous.started && previous.total !== null && previous.total !== total;
   const next: DownloadState = { ...state, countIssue: state.countIssue ?? (changed ? 'remote_total_changed' : null),

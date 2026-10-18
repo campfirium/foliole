@@ -51,7 +51,7 @@ export function buildReadwiseApiScopeUrl(input: {
 }) {
   const url = new URL(input.scope === 'export' ? READWISE_EXPORT_URL : READWISE_READER_LIST_URL);
   if (input.checkpoint) {
-    url.searchParams.set('updatedAfter', resolveUpdatedAfter(input.scope, input.checkpoint));
+    url.searchParams.set('updatedAfter', resolveUpdatedAfter(input.checkpoint));
   }
   if (input.cursor) url.searchParams.set('pageCursor', input.cursor);
   if (input.scope === 'export') return url;
@@ -69,8 +69,7 @@ export function buildReadwiseApiScopeUrl(input: {
   return url;
 }
 
-function resolveUpdatedAfter(scope: ReadwiseApiIndexScope, checkpoint: string) {
-  if (scope !== 'reader:tag') return checkpoint;
+function resolveUpdatedAfter(checkpoint: string) {
   const checkpointMs = Date.parse(checkpoint);
   if (!Number.isFinite(checkpointMs)) return checkpoint;
   return new Date(checkpointMs - READWISE_TAG_CHECKPOINT_OVERLAP_MS).toISOString();

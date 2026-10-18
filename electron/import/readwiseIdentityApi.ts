@@ -4,6 +4,8 @@ import {
   type ReaderDocumentContract
 } from '../../lib/core/readwise/readwiseApiContract.js';
 
+import { createReadwiseApiPageParser } from './readwiseApiPage.js';
+
 const READER_URL = 'https://readwise.io/api/v3/list/';
 const EXPORT_URL = 'https://readwise.io/api/v2/export/';
 
@@ -67,18 +69,19 @@ export async function fetchReadwiseIdentityDocument(
 
 async function fetchExportIds(request: (url: URL) => Promise<Record<string, unknown>>) {
   const result = new Set<string>();
+  const parsePage = createReadwiseApiPageParser();
   let cursor: string | null = null;
   do {
     const url = new URL(EXPORT_URL);
     url.searchParams.set('includeDeleted', 'true');
     if (cursor) url.searchParams.set('pageCursor', cursor);
     const payload = await request(url);
-    for (const value of Array.isArray(payload.results) ? payload.results : []) {
+    const page = parsePage(payload);
+    for (const value of page.results) {
       const book = normalizeExportBook(value);
       if (book?.source === 'reader' && book.externalId && !book.isDeleted) result.add(book.externalId);
     }
-    cursor = typeof payload.nextPageCursor === 'string' && payload.nextPageCursor
-      ? payload.nextPageCursor : null;
+    cursor = page.cursor;
   } while (cursor);
   return result;
 }
