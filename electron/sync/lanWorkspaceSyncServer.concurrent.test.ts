@@ -46,9 +46,6 @@ vi.mock('./companionLanRequestHandler.js', () => ({
 vi.mock('./companionMdnsAdvertisement.js', () => ({
   stopCompanionMdnsAdvertisement: vi.fn()
 }));
-vi.mock('./desktopAnchorTopologyRole.js', () => ({
-  loadDesktopAnchorTopologyState: () => ({ role: 'anchor', status: 'ready' })
-}));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => true
 }));

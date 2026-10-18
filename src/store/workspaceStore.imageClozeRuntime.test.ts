@@ -8,17 +8,7 @@ import { createAnnotationHistoryEntry } from '../features/editor/model/editorOpe
 
 import { useWorkspaceStore } from './workspaceStore';
 
-const nodeStorage = vi.hoisted(() => ({
-  listNodeOrder: vi.fn<() => Promise<string[]>>(),
-  loadNodes: vi.fn(),
-  saveNode: vi.fn(),
-  saveNodeOrder: vi.fn()
-}));
 const runtimeInvoke = vi.hoisted(() => vi.fn());
-
-vi.mock('../../lib/platform/storage', () => ({
-  nodeStorage
-}));
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn(() => runtimeInvoke)

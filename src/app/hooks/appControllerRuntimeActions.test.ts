@@ -8,7 +8,7 @@ vi.mock('../../store/workspaceRuntimeSync', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../store/workspaceRuntimeSync')>(), syncReadingProgressToRuntime
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfAnchorJump
 }));
 

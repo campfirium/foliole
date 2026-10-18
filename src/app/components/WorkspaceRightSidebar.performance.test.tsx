@@ -30,7 +30,7 @@ vi.mock('./WorkspaceRightSidebarReviewQueuePanel', () => ({
   }
 }));
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfAnchorJump: vi.fn()
 }));
 

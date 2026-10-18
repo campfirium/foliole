@@ -7,12 +7,6 @@ import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/worksp
 import { readCachedWorkspaceNodeDocument, resetWorkspaceNodeDocumentCacheForTest } from './workspaceNodeDocumentCache';
 import { useWorkspaceStore } from './workspaceStore';
 
-const nodeStorage = vi.hoisted(() => ({
-  listNodeOrder: vi.fn<() => Promise<string[]>>(),
-  loadNodes: vi.fn(),
-  saveNode: vi.fn(),
-  saveNodeOrder: vi.fn()
-}));
 const mutationRepository = vi.hoisted(() => ({
   syncNodeCreation: vi.fn<
     (
@@ -22,10 +16,6 @@ const mutationRepository = vi.hoisted(() => ({
       position?: number
     ) => Promise<WorkspaceNodeMutationPatchResult | null>
   >(async () => null)
-}));
-
-vi.mock('../../lib/platform/storage', () => ({
-  nodeStorage
 }));
 
 vi.mock('./workspaceMutationRepository', () => ({

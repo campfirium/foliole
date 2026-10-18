@@ -5,7 +5,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { WorkspaceRightSidebar } from './WorkspaceRightSidebar';
 
-vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
+vi.mock('../../features/pdf/model/pdfSystemRegistry', () => ({
   requestPdfAnchorJump: vi.fn()
 }));
 

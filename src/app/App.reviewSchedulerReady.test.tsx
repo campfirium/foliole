@@ -51,7 +51,6 @@ vi.mock('../shared/localization/LocalizationProvider', () => ({
   useLocalization: () => ({ t: (key: string) => key }),
   useTranslation: () => (key: string) => key
 }));
-vi.mock('./components/LocalFileEditorSurface', () => ({ LocalFileEditorSurface: () => null }));
 vi.mock('./components/WorkspaceLayout', () => ({ WorkspaceLayout: () => <div>workspace-layout</div> }));
 vi.mock('./components/WorkspaceLayoutWithReviewQueueDialog', () => ({
   WorkspaceLayoutWithReviewQueueDialog: () => <div>workspace-layout</div>

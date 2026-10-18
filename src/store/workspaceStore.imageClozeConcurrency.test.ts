@@ -8,9 +8,6 @@ import { useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceNodeActionsFixture } from './workspaceStoreNodeActions.test-support';
 
 const runtimeInvoke = vi.hoisted(() => vi.fn());
-vi.mock('../../lib/platform/storage', () => ({
-  nodeStorage: { listNodeOrder: vi.fn(), loadNodes: vi.fn(), saveNode: vi.fn(), saveNodeOrder: vi.fn() }
-}));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => runtimeInvoke }));
 
 const region = { id: 'region-1', attachmentId: 'image', answer: 'Answer', x: 0.1, y: 0.2, width: 0.3, height: 0.4 };
