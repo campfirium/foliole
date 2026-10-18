@@ -25,12 +25,12 @@ it('keeps independent external documents current across two desktops and the mob
     peer: { deviceId: desktop.deviceId, libraryEpoch: `${desktop.deviceId}-epoch` } } });
   try {
     for (const id of ids) await writeDocument(source, id, 'Original body', '2026-10-16T01:00:00Z');
-    expect(await pullThird()).toEqual({ complete: true });
+    expect(await pullThird()).toEqual({ complete: true, attachmentProgress: 0, attachmentYielded: false });
     await mobile.sync();
     for (const db of [source, peer, mobile.sqlite]) await assertDocuments(db, ids, 'Original body');
     for (const id of ids) await writeDocument(source, id, 'Updated whole body', '2026-10-16T02:00:00Z');
     await mobile.sync();
-    expect(await pullThird()).toEqual({ complete: true });
+    expect(await pullThird()).toEqual({ complete: true, attachmentProgress: 0, attachmentYielded: false });
     for (const db of [source, peer, mobile.sqlite]) await assertDocuments(db, ids, 'Updated whole body');
     retire(source, ids[0]!);
     const renamed = 'local-folder:renamed.md';
@@ -42,7 +42,7 @@ it('keeps independent external documents current across two desktops and the mob
     for (const id of ids.slice(1)) retire(source, id);
     await mobile.sync();
     for (const id of ids) assertDeleted(mobile.sqlite, id);
-    expect(await pullThird()).toEqual({ complete: true });
+    expect(await pullThird()).toEqual({ complete: true, attachmentProgress: 0, attachmentYielded: false });
     await mobile.sync();
     for (const db of [source, peer, mobile.sqlite]) {
       for (const id of ids) assertDeleted(db, id);

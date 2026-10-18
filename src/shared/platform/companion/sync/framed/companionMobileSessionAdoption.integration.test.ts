@@ -18,7 +18,7 @@ it('adopts a real approved mobile member without a notification session and pers
   await host.provider.send('joinAccept', { requestId: pending.request_id });
   expect(companionDesktopSessionId(host.peer.identity)).toBeUndefined();
   const complete = { ...args, providerDeviceId: host.peer.identity, providerDeviceName: 'Provider',
-    providerPlatform: 'darwin', requestId: pending.request_id };
+    providerPlatform: process.platform, requestId: pending.request_id };
   await completeCompanionSyncGroupJoin(complete).catch(error => {
     throw new Error(`${error.message}\n${host!.provider.diagnostics()}`);
   });
