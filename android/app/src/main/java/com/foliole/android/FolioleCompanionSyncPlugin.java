@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService signingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService syncFileExecutor = Executors.newSingleThreadExecutor();
     final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
@@ -160,7 +161,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
-        async(call, "Failed to sign Sync Group request.", () ->
+        // Credential reads may wait for a database writer that is awaiting fileExecutor.
+        FolioleCompanionSyncAsync.run(signingExecutor, call, "Failed to sign Sync Group request.", () ->
             FolioleCompanionSyncGroupSigning.sign(getContext(), call));
     }
 
@@ -215,6 +217,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         });
         super.handleOnDestroy();
         fileExecutor.shutdown();
+        signingExecutor.shutdown();
         framedSendExecutor.shutdown();
         syncFileExecutor.shutdown();
     }

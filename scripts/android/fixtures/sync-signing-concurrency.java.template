@@ -1,0 +1,60 @@
+package com.foliole.android;
+    import java.util.concurrent.*;
+    @interface PluginMethod {}
+    class PluginCall {
+      final CompletableFuture<Object> result = new CompletableFuture<>();
+      void resolve(Object value) { result.complete(value); }
+      void reject(String message, Exception cause) { result.completeExceptionally(cause); }
+    }
+    class FolioleCompanionSyncAsync {
+      interface Work { Object run() throws Exception; }
+      static void run(ExecutorService executor, PluginCall call, String message, Work work) {
+        executor.execute(() -> {
+          try { call.resolve(work.run()); }
+          catch (Exception error) { call.reject(message, error); }
+        });
+      }
+    }
+    class FolioleCompanionSyncGroupSigning {
+      static final CountDownLatch entered = new CountDownLatch(1);
+      static final CompletableFuture<Object> credential = new CompletableFuture<>();
+      static Object sign(Object context, PluginCall call) throws Exception {
+        entered.countDown();
+        return credential.get(3, TimeUnit.SECONDS);
+      }
+    }
+    class FolioleAttachmentMaintenanceFiles {
+      static Object execute(Object context, PluginCall call) { return "files-complete"; }
+    }
+    public class SigningFixture {
+      __EXECUTORS__
+      Object getContext() { return null; }
+      __ASYNC_HELPER__
+      __MAINTENANCE__
+      __SIGNING__
+      public static void main(String[] args) throws Exception {
+        SigningFixture plugin = new SigningFixture();
+        try {
+          PluginCall signature = new PluginCall();
+          plugin.signCompanionSyncRequest(signature);
+          if (!FolioleCompanionSyncGroupSigning.entered.await(1, TimeUnit.SECONDS))
+            throw new AssertionError("Signing did not request credentials");
+          PluginCall maintenance = new PluginCall();
+          plugin.maintainAttachmentFiles(maintenance);
+          // The database writer can release the queued credential read only after its file call.
+          try { maintenance.result.get(1, TimeUnit.SECONDS); }
+          catch (TimeoutException error) {
+            throw new AssertionError("Writer file work is blocked behind its own credential read", error);
+          }
+          FolioleCompanionSyncGroupSigning.credential.complete("signed-with-current-credential");
+          if (!signature.result.get(1, TimeUnit.SECONDS).equals("signed-with-current-credential"))
+            throw new AssertionError("Signing did not resume after writer completion");
+          System.out.println("Maintenance and authenticated signing both finish");
+        } finally {
+          for (var field : SigningFixture.class.getDeclaredFields()) {
+            if (ExecutorService.class.isAssignableFrom(field.getType()))
+              ((ExecutorService) field.get(plugin)).shutdownNow();
+          }
+        }
+      }
+    }
