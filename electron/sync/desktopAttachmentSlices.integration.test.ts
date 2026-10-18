@@ -33,8 +33,13 @@ import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
   attachmentHttpSource, seedAttachmentTarget } from './desktopRequestSyncAttachments.testSupport.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
+import { slowNetworkRelay } from './slowNetworkDiagnostic.testSupport.js';
 
-it('releases each bidirectional slice and resumes verified prefixes across new rounds and receiver reopening', async () => {
+it.each([
+  { name: 'unlimited', network: null },
+  { name: '5 Mbps / 80 ms', network: { mbps: 5, rttMs: 80 } },
+  { name: '1 Mbps / 80 ms', network: { mbps: 1, rttMs: 80 } }
+])('resumes bidirectional attachments and persists edits across receiver reopening at $name', async ({ network }) => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
   const data = [Buffer.alloc(2 * ATTACHMENT_BLOCK_BYTES + 13, 0x73), Buffer.alloc(2 * ATTACHMENT_BLOCK_BYTES + 7, 0x74)];
@@ -54,10 +59,11 @@ it('releases each bidirectional slice and resumes verified prefixes across new r
   await local.host.withFile(keys[0]!, async () => undefined);
   await createDesktopAttachmentBlockSource(target.assetsDir, target.databasePath).withFile(keys[1]!, async () => undefined);
   const server = await attachmentHttpServer(0);
+  const relay = network ? await slowNetworkRelay(server.url, network) : null;
   const owner = createSyncPeerRoundOwnership(60_000);
   try {
     for (let index = 0; index < 7; index++) {
-      await runSlice(local, owner, server.url, target.databasePath, index);
+      await runSlice(local, owner, relay?.url ?? server.url, target.databasePath, index);
       if (index === 0) {
         const prefix = await readFile(path.join(local.assetsDir, `.attachment-${keys[1]!.slice(0, 64)}.partial`));
         expect(prefix.length).toBe(ATTACHMENT_BLOCK_BYTES);
@@ -75,12 +81,12 @@ it('releases each bidirectional slice and resumes verified prefixes across new r
       expect(await readFile(path.join(target.assetsDir, keys[index]!))).toEqual(data[index]);
     }
   } finally {
-    owner.close(); await server.close(); await local.close();
+    owner.close(); await relay?.close(); await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
-});
+}, 240_000);
 
 
 async function syncDataDuringAttachment(local: Awaited<ReturnType<typeof attachmentHttpSource>>,
