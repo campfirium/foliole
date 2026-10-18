@@ -187,7 +187,9 @@ function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDevic
     throw new Error('sync_group_device_identity_mismatch');
   }
   const driver = openDatabaseConnection().driver;
-  const existing = driver.queryOne<Row>(`SELECT device_anchor, canonical_library_path, state
+  const existing = driver.queryOne<Pick<SyncGroupDevicePayload,
+    'device_anchor' | 'canonical_library_path' | 'state' | 'device_name' | 'platform' | 'updated_at'>>(`SELECT device_anchor, canonical_library_path, state,
+    device_name, platform, updated_at
     FROM sync_group_devices WHERE group_id = ? AND device_identity_key = ?`, [groupId, device.device_identity_key]);
   if (existing && (existing.device_anchor !== device.device_anchor ||
       existing.canonical_library_path !== device.canonical_library_path)) {
@@ -200,18 +202,21 @@ function mergeDevice(groupId: string, device: SyncGroupDevicePayload, localDevic
   const state = device.device_identity_key === localDeviceId ? 'active'
     : existing?.state === 'active' && staleRemoval ? 'active'
     : existing?.state === 'left' && !canRevive ? 'left' : device.state;
+  const keepMetadata = existing && (device.device_identity_key === localDeviceId ||
+    device.updated_at <= existing.updated_at);
   driver.execute(`INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor,
     canonical_library_path, device_name, platform, state, joined_at, left_at, last_seen_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(group_id, device_identity_key) DO UPDATE SET
-      device_name = excluded.device_name, platform = excluded.platform,
+      device_name = excluded.device_name, platform = excluded.platform, updated_at = excluded.updated_at,
       state = excluded.state,
       left_at = CASE WHEN excluded.state = 'active' THEN NULL
         ELSE COALESCE(sync_group_devices.left_at, excluded.left_at) END,
       last_seen_at = COALESCE(excluded.last_seen_at, sync_group_devices.last_seen_at)`,
   [groupId, device.device_identity_key, device.device_anchor, device.canonical_library_path,
-    device.device_name, device.platform, state, device.joined_at, device.left_at,
-    device.last_seen_at, device.updated_at]);
+    keepMetadata ? existing.device_name : device.device_name,
+    keepMetadata ? existing.platform : device.platform, state, device.joined_at, device.left_at,
+    device.last_seen_at, keepMetadata ? existing.updated_at : device.updated_at]);
 }
 
 function hasSupersededRemoval(groupId: string, deviceId: string) {
