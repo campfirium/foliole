@@ -11,9 +11,9 @@ export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: Abo
   const revision = await attachmentDatabaseRevision(port);
   const articles = await port.query<{ id: string }>('SELECT id FROM nodes ORDER BY id');
   const storageKeys = new Set<string>();
-  for (const article of articles) {
+  for (let offset = 0; offset < articles.length; offset += 128) {
     signal?.throwIfAborted();
-    const result = await loadNodeOwnedArticleResourceNeeds(port, [article.id]);
+    const result = await loadNodeOwnedArticleResourceNeeds(port, articles.slice(offset, offset + 128).map(article => article.id));
     if (result.unreadableArticleIds.length) throw new Error('attachment_scan_body_unreadable');
     for (const need of result.needs) storageKeys.add(need.storageKey);
   }
