@@ -1,4 +1,5 @@
-import type http from 'node:http';
+import http from 'node:http';
+import { Socket } from 'node:net';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -49,6 +50,7 @@ beforeEach(() => {
 
 function createResponse() {
   const response = {
+    once: vi.fn(),
     end: vi.fn(() => {
       response.writableEnded = true;
     }),
@@ -71,8 +73,8 @@ it('ends unhandled route errors with a generic json response', async () => {
   authenticatedPostMock.handleAuthenticatedPost.mockRejectedValue(new Error('route failed'));
   const response = createResponse();
 
-  await createHandler()({ headers: {}, method: 'POST',
-    url: '/companion/content-blobs?token=private-token' } as http.IncomingMessage, response);
+  await createHandler()(createRequest({ headers: {}, method: 'POST',
+    url: '/companion/content-blobs?token=private-token' }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(500, expect.objectContaining({
     'Content-Type': 'application/json; charset=utf-8'
@@ -94,9 +96,14 @@ it('does not write a fallback response after the route already ended the respons
   });
   const response = createResponse();
 
-  await createHandler()({ headers: {}, method: 'POST', url: '/companion/content-blobs' } as http.IncomingMessage, response);
+  await createHandler()(createRequest({ headers: {}, method: 'POST', url: '/companion/content-blobs' }), response);
 
   expect(response.writeHead).toHaveBeenCalledTimes(1);
   expect(response.writeHead).toHaveBeenCalledWith(204, {});
   expect(response.end).toHaveBeenCalledTimes(1);
 });
+
+
+function createRequest(input: Pick<http.IncomingMessage, 'headers' | 'method' | 'url'>) {
+  return Object.assign(new http.IncomingMessage(new Socket()), input);
+}

@@ -1,4 +1,5 @@
-import type http from 'node:http';
+import http from 'node:http';
+import { Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -22,6 +23,7 @@ const contentBlobResourceMock = vi.hoisted(() => ({
   }))
 }));
 const diagnosticsMock = vi.hoisted(() => ({
+  appendDiagnosticLog: vi.fn(async () => undefined),
   buildCompanionSyncDiagnostics: vi.fn((): unknown => ({
     collected_at: '2026-04-29T00:00:00.000Z',
     content: { missing_content_blob_count: 0 },
@@ -68,6 +70,8 @@ vi.mock('./companionLanContentBlobs.js', () => ({
   acknowledgeCompanionContentBlobs: contentBlobResourceMock.acknowledgeCompanionContentBlobs,
   loadCompanionContentBlobResource: contentBlobResourceMock.loadCompanionContentBlobResource
 }));
+vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: diagnosticsMock.appendDiagnosticLog }));
+
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
@@ -118,9 +122,9 @@ beforeEach(() => {
 it('dispatches the framed sync binary route before authenticated JSON handlers', async () => {
   framedSyncRouteMock.handle.mockResolvedValueOnce(true);
   const response = createResponse();
-  const request = {
+  const request = createRequest({
     headers: {}, method: 'POST', url: '/companion/framed-sync'
-  } as http.IncomingMessage;
+  });
   await createHandler()(request, response);
 
   expect(framedSyncRouteMock.handle).toHaveBeenCalledWith({
@@ -130,9 +134,9 @@ it('dispatches the framed sync binary route before authenticated JSON handlers',
 
 it('rejects the retired SQLite sync-pack endpoint', async () => {
   const response = createResponse();
-  await createHandler()({
+  await createHandler()(createRequest({
     headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0&fact_index_id=probe-1'
-  } as http.IncomingMessage, response);
+  }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(410, expect.any(Object));
 });
@@ -191,7 +195,7 @@ function createHandler() {
 
 it('does not load the full workspace snapshot for unknown authenticated GET paths', async () => {
   const response = createResponse();
-  await createHandler()({ headers: {}, method: 'GET', url: '/missing' } as http.IncomingMessage, response);
+  await createHandler()(createRequest({ headers: {}, method: 'GET', url: '/missing' }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(404, expect.any(Object));
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
@@ -199,7 +203,7 @@ it('does not load the full workspace snapshot for unknown authenticated GET path
 
 it('loads the workspace snapshot only for the snapshot endpoint', async () => {
   const response = createResponse();
-  await createHandler()({ headers: {}, method: 'GET', url: WORKSPACE_SNAPSHOT_PATH } as http.IncomingMessage, response);
+  await createHandler()(createRequest({ headers: {}, method: 'GET', url: WORKSPACE_SNAPSHOT_PATH }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
@@ -207,7 +211,7 @@ it('loads the workspace snapshot only for the snapshot endpoint', async () => {
 
 it('loads lightweight version metadata for the version endpoint', async () => {
   const response = createResponse();
-  await createHandler()({ headers: {}, method: 'GET', url: WORKSPACE_VERSION_PATH } as http.IncomingMessage, response);
+  await createHandler()(createRequest({ headers: {}, method: 'GET', url: WORKSPACE_VERSION_PATH }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
   expect(workspaceSnapshotMock.loadWorkspaceVersionMetadata).toHaveBeenCalledTimes(1);
@@ -216,13 +220,18 @@ it('loads lightweight version metadata for the version endpoint', async () => {
 
 it('rejects the retired out-of-band content blob endpoint', async () => {
   const response = createResponse();
-  await createHandler()({
+  await createHandler()(createRequest({
     headers: {},
     method: 'GET',
     url: '/companion/content-blob?hash=abc'
-  } as http.IncomingMessage, response);
+  }), response);
 
   expect(response.writeHead).toHaveBeenCalledWith(410, expect.any(Object));
   expect(contentBlobResourceMock.loadCompanionContentBlobResource).not.toHaveBeenCalled();
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
+
+
+function createRequest(input: Pick<http.IncomingMessage, 'headers' | 'method' | 'url'>) {
+  return Object.assign(new http.IncomingMessage(new Socket()), input);
+}
