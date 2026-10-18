@@ -44,6 +44,7 @@ import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnectio
 import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
 import { cleanAbandonedRequestSyncFiles } from './requestSyncTemporaryCleanup.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
+import { assertStartupMemberIdentity } from './startupMemberIdentity.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
 export { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
@@ -144,7 +145,7 @@ function initializeSchemaWorkspaceAndSearch(
   return deferSearchIndex ? initializedConnection : initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
-function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
+function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; verifyMemberIdentity?: boolean } = {}) {
   const databasePath = resolveDatabasePath();
 
   try {
@@ -156,6 +157,7 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
       reportFileNameMigration: (result) => reportDatabaseFileNameMigration(reportStage, result)
     });
     try {
+      if (options.verifyMemberIdentity) assertStartupMemberIdentity(connection);
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
       });
@@ -204,7 +206,7 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
   }
 }
 
-export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail'; verifyMemberIdentity?: boolean } = {}) {
   const connection = initializeDatabaseInternal(reportStage, options);
   cleanAbandonedRequestSyncFiles(connection);
   notifyDatabaseConnectionReady();

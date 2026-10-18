@@ -155,7 +155,7 @@ it('loads the static workspace shell before runtime services and activates React
 
   expect(installInvokeHandler).toHaveBeenCalledTimes(1);
   expect(mocks.initializeDatabase).toHaveBeenCalledTimes(1);
-  expect(mocks.initializeDatabase).toHaveBeenCalledWith(expect.any(Function), { deferSearchIndex: true });
+  expect(mocks.initializeDatabase).toHaveBeenCalledWith(expect.any(Function), { deferSearchIndex: true, verifyMemberIdentity: true });
   expect(createMainWindow).toHaveBeenCalledWith(null);
   expect(createMainWindow).toHaveBeenCalledTimes(1);
   expect(loadMainWindow).toHaveBeenCalledWith(window);
