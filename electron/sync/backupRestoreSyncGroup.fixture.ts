@@ -22,6 +22,7 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
+import { reopenAfterSyncStops, startContendedSync } from './contendedSync.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
@@ -151,6 +152,7 @@ async function run(action: string, args: Record<string, unknown>) {
     return runRemovalFixture(action, args);
   }
   if (action === 'init') return initializeGroup(args);
+  if (action === 'startContendedSync') return startContendedSync(args);
   if (action === 'register') {
     for (const member of args.members as Array<{ device: SyncGroupDeviceIdentity; name: string }>) {
       registerSyncGroupDevice({ device: createSyncGroupDeviceIdentity({ device_anchor: member.device.device_anchor,
@@ -190,10 +192,7 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'windowEvents') return windowEvents.splice(0);
   if (action === 'preserveConcurrent') return preserveWithConcurrentTransaction(String(args.groupId));
   if (action === 'snapshot') return runWithDatabaseConnectionOwner(snapshot);
-  if (action === 'reopen') {
-    await stopLanWorkspaceSyncServer();
-    closeDatabaseConnection(); initializeDatabase(); return snapshot();
-  }
+  if (action === 'reopen') return reopenAfterSyncStops().then(snapshot);
   if (action === 'close') {
     await stopLanWorkspaceSyncServer();
     await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());

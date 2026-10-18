@@ -58,11 +58,9 @@ it('resumes a blocked use-group adoption after provider migration without anothe
       db.prepare("SELECT value FROM sync_group_metadata WHERE key = 'sync_group_completed_adoption'").pluck().get()
     )));
     expect(completed?.libraryEpoch).toBe(before?.libraryEpoch);
+    await applicant!.send('startContendedSync', { ...peers[1]! });
     for (const worker of [applicant!, provider!]) {
-      const state = await worker.send('reopen');
-      expect(state.library.nodesById['group-source']?.content).toBe('Authoritative group content');
-      expect(state.library.nodesById['existing-topic']?.content).toBe('Existing member content');
-      expect(state.library.nodesById['discarded-local']).toBeUndefined();
+      await expectReopenedAdoption(worker);
     }
     await applicant!.send('seed', { id: 'after-adoption', content: 'Ordinary synchronization remains available' });
     await sync(applicant!, peers[1]!);
@@ -75,6 +73,13 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     await fs.rm(root, { recursive: true, force: true });
   }
 }, 90_000);
+
+async function expectReopenedAdoption(worker: ReturnType<typeof startRestoreFixture>) {
+  const state = await worker.send('reopen');
+  expect(state.library.nodesById['group-source']?.content).toBe('Authoritative group content');
+  expect(state.library.nodesById['existing-topic']?.content).toBe('Existing member content');
+  expect(state.library.nodesById['discarded-local']).toBeUndefined();
+}
 
 async function freePort() {
   const server = net.createServer();
