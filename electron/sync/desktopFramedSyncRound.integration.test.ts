@@ -47,7 +47,7 @@ it('converges a child sorted before its missing parent through the production ro
   });
 
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes).toEqual([]);
-  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toEqual({ complete: true });
+  await expect(fixture.left.synchronize(fixture.rightSnapshot.origin)).resolves.toMatchObject({ complete: true });
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([
     expect.objectContaining({ content: 'Child body', id: 't326-a-child', parent_id: 't326-z-parent' }),

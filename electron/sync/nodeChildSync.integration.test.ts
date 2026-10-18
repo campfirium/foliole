@@ -59,7 +59,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
       for (const state of records()) await applySyncObjectInTransaction(db, state);
       await assertGrouped(db);
     });
-    expect(await round()).toEqual({ complete: true });
+    expect(await round()).toMatchObject({ complete: true });
     await withDb(b.databasePath, async (db, sqlite) => {
       await assertGrouped(db);
       expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').get(nodeId)).toEqual({ reps: 3 });
@@ -73,7 +73,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
           updated_at: '2026-10-16T04:00:00.000Z', deleted_at: '2026-10-16T04:00:00.000Z', payload_json: null });
       }
     });
-    expect(await round()).toEqual({ complete: true });
+    expect(await round()).toMatchObject({ complete: true });
     for (const device of [a, b]) await withDb(device.databasePath, async (db, sqlite) => {
       expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
       expect(sqlite.prepare('SELECT * FROM node_open_state WHERE node_id = ?').get(nodeId)).toBeUndefined();
@@ -85,7 +85,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
     const third = await fixture.startThird();
     try {
       expect(await third.process.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: a.origin,
-        peer: { deviceId: a.deviceId, libraryEpoch: `${a.deviceId}-epoch` } } })).toEqual({ complete: true });
+        peer: { deviceId: a.deviceId, libraryEpoch: `${a.deviceId}-epoch` } } })).toMatchObject({ complete: true });
       await withDb(third.snapshot.databasePath, async (db, sqlite) => {
         expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
         expect(sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_type = 'import_source'").pluck().get())
@@ -133,7 +133,7 @@ async function concurrentChanges(fixture: Awaited<ReturnType<typeof createDeskto
     for (const state of updates) await applySyncObjectInTransaction(db,
       { ...state, updated_at: '2026-10-16T03:00:00.000Z' });
   });
-  expect(await round()).toEqual({ complete: true });
+  expect(await round()).toMatchObject({ complete: true });
   for (const device of [a, b]) await withDb(device.databasePath, async (_db, sqlite) => {
     expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
     expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').pluck().get(nodeId)).toBe(4);

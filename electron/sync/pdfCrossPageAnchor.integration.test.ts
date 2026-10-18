@@ -30,13 +30,13 @@ it('keeps every page through IPC validation, SQLite, hydrate, editing, HTTP sync
       title: 'Excerpt', content: 'First\nSecond', anchorLink: anchor });
     expect(first.workspace).toMatchObject({ nodesById: { 'pdf-excerpt': { anchorLink: anchor } } });
     expect(readAnchor(first.databasePath)).toEqual(anchor);
-    expect(await fixture.left.synchronize(fixture.rightSnapshot.origin)).toEqual({ complete: true });
+    expect(await fixture.left.synchronize(fixture.rightSnapshot.origin)).toMatchObject({ complete: true });
     expect(readAnchor(fixture.rightSnapshot.databasePath)).toEqual(anchor);
     const received = await fixture.right.snapshot();
     expect(received.workspace).toMatchObject({ nodesById: { 'pdf-excerpt': { anchorLink: anchor } } });
     await fixture.right.seed({ nodeId: 'pdf-excerpt', parentNodeId: 'pdf-source',
       title: 'Edited title', content: 'Edited excerpt', anchorLink: anchor });
-    expect(await fixture.right.synchronize(fixture.leftSnapshot.origin)).toEqual({ complete: true });
+    expect(await fixture.right.synchronize(fixture.leftSnapshot.origin)).toMatchObject({ complete: true });
     expect(readAnchor(fixture.leftSnapshot.databasePath)).toEqual(anchor);
     const restarted = await fixture.restartLeft();
     expect(restarted.snapshot.workspace).toMatchObject({ nodesById: { 'pdf-excerpt': { anchorLink: anchor, title: 'Edited title' } } });

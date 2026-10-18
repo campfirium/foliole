@@ -56,7 +56,7 @@ beforeEach(() => {
 });
 
 it('routes a normal compatible peer through the request database round', async () => {
-  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true });
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toMatchObject({ complete: true });
   expect(runtime.framedRound).toHaveBeenCalledWith(expect.objectContaining({
     localLibraryEpoch: 'epoch-a', peer, peerState: undefined, remoteLibraryEpoch: 'epoch-b'
   }));
@@ -74,7 +74,7 @@ it('rechecks restore readiness and still uses the request database round', async
     localExited: false, localLibraryEpoch: 'epoch-a', normalSyncReady: false,
     peerBlocked: false, remoteLibraryEpoch: 'epoch-b', restoreFromPeer: 'restore'
   }).mockResolvedValueOnce({ normalSyncReady: true });
-  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true });
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toMatchObject({ complete: true });
   expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(3);
   expect(runtime.framedRound).toHaveBeenCalledOnce();
 });

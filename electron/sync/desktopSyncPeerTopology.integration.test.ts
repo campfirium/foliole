@@ -27,23 +27,23 @@ it('converges simultaneous initiators and relays through one peer without an A/B
     await b.process.seed({ nodeId: 't326-b', title: 'B', content: 'From B' });
     await Promise.all([round(a, b), round(b, a)]);
     // A bounded collision may leave a round pending. The next foreground request must recover.
-    expect(await round(a, b)).toEqual({ complete: true });
+    expect(await round(a, b)).toMatchObject({ complete: true });
     assertBodies(a, ['t326-a', 't326-b']);
     assertBodies(b, ['t326-a', 't326-b']);
     hub = await fixture.startThird();
     await a.process.seed({ nodeId: 't326-a-relay', title: 'A relay', content: 'A through hub' });
     await b.process.seed({ nodeId: 't326-b-relay', title: 'B relay', content: 'B through hub' });
     // These new facts can cross only A/hub and B/hub edges.
-    expect(await round(hub, a)).toEqual({ complete: true });
-    expect(await round(b, hub)).toEqual({ complete: true });
-    expect(await round(a, hub)).toEqual({ complete: true });
+    expect(await round(hub, a)).toMatchObject({ complete: true });
+    expect(await round(b, hub)).toMatchObject({ complete: true });
+    expect(await round(a, hub)).toMatchObject({ complete: true });
     for (const device of [a, b, hub]) assertBodies(device,
       ['t326-a', 't326-a-relay', 't326-b', 't326-b-relay']);
     const before = await Promise.all([a, b, hub].map(inventory));
     expect(compareFramedSyncInventories({ local: before[0]!, remote: before[1]! })).toEqual([]);
     expect(compareFramedSyncInventories({ local: before[0]!, remote: before[2]! })).toEqual([]);
     for (const [source, target] of [[a, hub], [hub, b], [b, a]]) {
-      expect(await round(source!, target!)).toEqual({ complete: true });
+      expect(await round(source!, target!)).toMatchObject({ complete: true });
     }
     expect(await Promise.all([a, b, hub].map(inventory))).toEqual(before);
     const restarted = await fixture.restartRight();

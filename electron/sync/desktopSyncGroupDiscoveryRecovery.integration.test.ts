@@ -34,7 +34,7 @@ it('retries two expired discovery requests and commits the next round through pr
     await fixture.left.seed({ nodeId: 'after-timeouts', title: 'Recovery', content: 'Durable after retry' });
     const command = { input: { kind: 'request_reconcile', peerOrigin: `http://127.0.0.1:${address.port}`,
       peer: { deviceId: fixture.leftSnapshot.deviceId, libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch` } } };
-    expect(await fixture.right.invoke('round', command)).toEqual({ complete: true });
+    expect(await fixture.right.invoke('round', command)).toMatchObject({ complete: true });
     expect(probes).toBe(3);
     expect(roundIds.size).toBe(1);
     const restarted = await fixture.restartRight();

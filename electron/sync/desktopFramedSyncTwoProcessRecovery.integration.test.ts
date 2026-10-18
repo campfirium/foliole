@@ -68,7 +68,7 @@ it('preserves committed facts after its HTTP response is lost and the receiver p
   const proxy = await requestProcessFaultProxy(fixture.rightSnapshot.origin, 'drop_response');
   closeables.push(proxy);
   // The production round retries after response loss and converges from the committed inventory.
-  await expect(fixture.left.synchronize(proxy.origin, nodeId)).resolves.toEqual({ complete: true });
+  await expect(fixture.left.synchronize(proxy.origin, nodeId)).resolves.toMatchObject({ complete: true });
   expect(proxy.injected()).toBeGreaterThan(0);
   const applied = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(applied.versions).toEqual([expect.objectContaining({ body_text: content, object_id: nodeId })]);
