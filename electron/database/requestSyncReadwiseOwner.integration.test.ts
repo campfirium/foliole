@@ -18,8 +18,11 @@ function owner(epoch: number, identity = 'owner') {
   return JSON.stringify({ device_identity_key: `${identity}-${epoch}`, epoch, host_name: `Owner ${epoch}` });
 }
 async function seed(peer: RestorePeer, epoch: number, time: string, identity = 'owner') {
+  return seedValue(peer, owner(epoch, identity), time);
+}
+async function seedValue(peer: RestorePeer, valueJson: string, time: string) {
   const payload = { key: 'readwise_active_host', scope: 'user_space', platform: 'windows',
-    form_factor: 'desktop', host_name: '*', value_json: owner(epoch, identity) };
+    form_factor: 'desktop', host_name: '*', value_json: valueJson };
   const record = { object_type: 'setting' as const, object_id: objectId,
     content_hash: computeSyncContentHash('setting', payload), payload_json: JSON.stringify(payload),
     updated_at: time, deleted_at: null };
@@ -66,5 +69,37 @@ it.each([['earlier', 2], ['later', 2], ['later', 3]] as const)(
     await transfer(stale, target);
     target.reopen();
     assertOwner(target, 3, hash);
+  } finally { await fixture.close(); }
+});
+
+it('upgrades a legacy owner without an epoch and cannot regress after replay or restart', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  const legacy = fixture.peer('observer');
+  try {
+    const legacyValue = JSON.stringify({ host_name: 'Legacy desktop' });
+    await seedValue(target, legacyValue, '2026-10-10T00:00:00Z');
+    await seedValue(legacy, legacyValue, '2026-10-11T00:00:00Z');
+    const hash = await seed(source, 1, '2026-10-01T00:00:00Z');
+    await transfer(source, target);
+    assertOwner(target, 1, hash);
+    await transfer(legacy, target);
+    await transfer(source, target);
+    target.reopen();
+    assertOwner(target, 1, hash);
+  } finally { await fixture.close(); }
+});
+
+it.each([null, '2', -1, 1.5])('does not reinterpret invalid local epoch %s as a legacy zero', async epoch => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  try {
+    const invalid = JSON.stringify({ host_name: 'Invalid owner', epoch });
+    await seedValue(target, invalid, '2026-10-01T00:00:00Z');
+    await seed(source, 3, '2026-10-02T00:00:00Z');
+    await transfer(source, target);
+    target.reopen();
+    expect(target.sqlite.prepare("SELECT value_json FROM setting_records WHERE key = 'readwise_active_host'")
+      .pluck().get()).toBe(invalid);
   } finally { await fixture.close(); }
 });

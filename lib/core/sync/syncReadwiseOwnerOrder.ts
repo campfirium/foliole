@@ -11,12 +11,14 @@ export async function compareReadwiseOwnerEpoch(port: DbPort, record: SyncObject
        CASE WHEN json_type(incoming.value, '$.epoch') = 'integer' THEN json_extract(incoming.value, '$.epoch') END
        END AS incoming_epoch,
        CASE WHEN json_valid(local.value_json) THEN
-       CASE WHEN json_type(local.value_json, '$.epoch') = 'integer' THEN json_extract(local.value_json, '$.epoch') END
+       CASE WHEN json_type(local.value_json, '$.epoch') = 'integer' THEN json_extract(local.value_json, '$.epoch')
+         WHEN json_type(local.value_json) = 'object' AND json_type(local.value_json, '$.epoch') IS NULL THEN 0 END
        END AS local_epoch, local.content_hash
      FROM incoming JOIN setting_records local ON local.key = 'readwise_active_host'
        AND local.scope = 'user_space' AND local.platform = 'windows'
        AND local.form_factor = 'desktop' AND local.host_name = '*'`, [record.payload_json, record.payload_json]);
   if (row?.incoming_epoch == null || row.local_epoch == null) return 'stale';
+  if (![row.incoming_epoch, row.local_epoch].every(epoch => Number.isSafeInteger(epoch) && epoch >= 0)) return 'stale';
   return row.incoming_epoch > row.local_epoch ||
     (row.incoming_epoch === row.local_epoch && row.content_hash === record.content_hash) ? 'apply' : 'stale';
 }
