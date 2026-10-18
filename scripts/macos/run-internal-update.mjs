@@ -188,7 +188,10 @@ export async function runInternalUpdateWithHandoff(options, dependencies = {}) {
 }
 
 function parseArgs(argv) {
-  const read = (flag) => argv[argv.indexOf(flag) + 1];
+  const read = (flag) => {
+    const index = argv.indexOf(flag);
+    return index < 0 ? undefined : argv[index + 1];
+  };
   return { repositoryRoot: read('--repository'), revision: read('--revision'), stateRoot: read('--state-root') };
 }
 

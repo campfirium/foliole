@@ -1,3 +1,9 @@
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,6 +14,32 @@ import {
 const REVISION = 'b'.repeat(40);
 
 describe('Internal update fixed-input worker', () => {
+  it('uses the default state directory when the CLI omits state-root', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'foliole-update-cli-'));
+    try {
+      const git = (...args) => {
+        const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+        expect(result.status, result.stderr).toBe(0);
+        return result.stdout.trim();
+      };
+      git('init');
+      git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--allow-empty', '-m', 'fixture');
+      const revision = git('rev-parse', 'HEAD');
+      const stateRoot = path.join(root, '.tmp/macos/internal-update');
+      await mkdir(stateRoot, { recursive: true });
+      await writeFile(path.join(stateRoot, 'accounted-revision'), revision);
+      const result = spawnSync(process.execPath, [
+        path.resolve('scripts/macos/run-internal-update.mjs'), '--repository', root, '--revision', revision
+      ], { cwd: root, encoding: 'utf8' });
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('skipped stale revision=');
+      expect(await readFile(path.join(stateRoot, 'accounted-revision'), 'utf8')).toBe(revision);
+      await expect(readFile(path.join(root, '--repository/accounted-revision'))).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('builds from an archived revision and an isolated APFS dependency clone', () => {
     const build = createInternalBuildSteps({
       includeCodexCache: true, repositoryRoot: '/repo', revision: REVISION, temporaryRoot: '/tmp/job'
