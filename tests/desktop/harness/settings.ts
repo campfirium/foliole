@@ -62,20 +62,24 @@ export async function connectAndCutoverReadwiseApi(
   await waitForVisible(setup);
   await setup.getByRole('button', { name: /^(Continue setup|继续设置)$/ }).click();
   if (destination) {
-    const name = destination === 'inbox' ? /^(Inbox|收件箱)$/ : /^(External|外部)$/;
-    await settingsDialog.getByRole('radiogroup', {
+    const name = destination === 'inbox' ? /^(Inbox|收件箱)$/ : /^(External document library|外部文档库)$/;
+    await settingsDialog.getByRole('combobox', {
       name: /^(Articles without highlights destination|无高亮文章的目标)$/
-    }).getByRole('radio', { name }).click();
+    }).click();
+    await windowPage.getByRole('menuitem', { name }).click();
   }
   await settingsDialog.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }).click();
   await waitForVisible(settingsDialog.getByText(/^(Connected|已连接)$/));
   await settingsDialog.getByRole('button', { name: /^(Enable API mode…|启用 API 模式…)$/ }).click();
   const confirmation = windowPage.getByRole('dialog', { name: /^(Enable API mode|启用 API 模式)$/ });
-  await waitForVisible(confirmation);
-  await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
-  await expect(settingsDialog.getByRole('radio', {
-    name: /^(Obsidian relay import|Obsidian 中转导入模式)$/
-  })).toBeDisabled({ timeout: 90_000 });
+  const completed = settingsDialog.getByRole('radio', {
+    name: /^(Obsidian relay|Obsidian 中转)$/, disabled: true
+  });
+  await expect(confirmation.or(completed)).toBeVisible({ timeout: 90_000 });
+  if (await confirmation.isVisible()) {
+    await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
+  }
+  await expect(completed).toBeVisible({ timeout: 90_000 });
 }
 
 export async function openBackupsSection(windowPage: Page) {

@@ -24,12 +24,11 @@ async function inspectAttachment(desktopApp: ElectronApplication, nodeId: string
     return connection.runWithDatabaseConnectionOwner(() => {
       const sqlite = connection.openDatabaseConnection().sqlite;
       return sqlite.prepare(
-        `SELECT a.id attachmentId, a.mime_type mimeType, b.content_hash contentHash,
-          b.storage_key storageKey, COUNT(na.node_id) linkCount
-         FROM attachments a JOIN attachment_blobs b ON b.attachment_id = a.id
-         JOIN node_attachments na ON na.attachment_id = a.id
-         WHERE na.node_id = ? GROUP BY a.id, a.mime_type, b.content_hash, b.storage_key`
-      ).get(targetNodeId);
+        `SELECT json_extract(resource.value, '$.storage_key') storageKey,
+          json_extract(resource.value, '$.role') role
+         FROM nodes, json_each(nodes.resource_references) resource
+         WHERE nodes.id = ?`
+      ).all(targetNodeId);
     });
   }, nodeId);
 }
@@ -48,6 +47,21 @@ async function inspectRestartReadability(
     const decoded = nativeImage.createFromPath(payload.storagePath);
     return { decodedSize: decoded.getSize(), imageEmpty: decoded.isEmpty(), resolution };
   }, input);
+}
+
+async function saveImportedImage(page: import('@playwright/test').Page, storageKey: string) {
+  await page.evaluate(async ({ nodeId, key }) => {
+    const api = window.electronAPI;
+    const snapshot = await api.invoke('load_workspace_snapshot');
+    const node = snapshot.nodesById[nodeId];
+    await api.invoke('update_node_content_with_anchors', {
+      parent: { ...node, nodeId, anchorLink: node.anchorLink ?? null, position: node.position ?? null,
+        content: `![Misleading extension](asset://${key})`, updatedAt: new Date().toISOString() },
+      affectedAnchors: [],
+      edit: { baseVersionId: node.currentVersionId, baseContent: '', versionId: crypto.randomUUID(),
+        newImageReferences: [{ storage_key: key, role: 'image', original_name: 'misleading-source.jpeg' }] }
+    });
+  }, { nodeId: NODE_ID, key: storageKey });
 }
 
 async function writeEvidence(input: {
@@ -82,9 +96,9 @@ test('imports misleading image extension to one canonical key across relaunch', 
 
   try {
     await expectWorkspaceShell(desktopSession.firstWindow);
-    await desktopSession.firstWindow.evaluate(async ({ nodeId, storageKey: key }) => {
+    await desktopSession.firstWindow.evaluate(async ({ nodeId }) => {
       await window.__folioleWorkspaceDebug?.seedNodes?.([{
-        content: `![Misleading extension](asset://${key})`,
+        content: '',
         id: nodeId,
         kind: 'topic',
         title: 'Canonical image write'
@@ -94,13 +108,13 @@ test('imports misleading image extension to one canonical key across relaunch', 
       window.electronAPI?.invoke('import_local_image_attachment', { nodeId, sourcePath: source }),
     { nodeId: NODE_ID, sourcePath });
     expect(imported).toMatchObject({ status: 'imported', storage_key: storageKey });
+    await saveImportedImage(desktopSession.firstWindow, storageKey);
     const nodeId = NODE_ID;
     const firstContent = (await loadNodeDocument(desktopSession.firstWindow, nodeId))?.content ?? '';
     expect(firstContent).toContain(`asset://${storageKey}`);
+    expect(firstContent.match(/asset:\/\/[^\s)]+/g)).toEqual([`asset://${storageKey}`]);
     expect(firstContent).not.toContain('.jpeg)');
-    expect(await inspectAttachment(desktopSession.electronApp, nodeId)).toEqual({
-      attachmentId: contentHash, contentHash, linkCount: 1, mimeType: 'image/png', storageKey
-    });
+    expect(await inspectAttachment(desktopSession.electronApp, nodeId)).toEqual([{ role: 'image', storageKey }]);
     await expect(fs.readFile(storagePath)).resolves.toEqual(bytes);
     await expect(fs.access(path.join(libraryHome, 'Assets', `${contentHash}.jpeg`))).rejects.toThrow();
 
@@ -109,6 +123,7 @@ test('imports misleading image extension to one canonical key across relaunch', 
     await expectWorkspaceShell(secondSession.firstWindow);
     const content = (await loadNodeDocument(secondSession.firstWindow, nodeId))?.content ?? '';
     expect(content).toBe(firstContent);
+    expect(await inspectAttachment(secondSession.electronApp, nodeId)).toEqual([{ role: 'image', storageKey }]);
     const readback = await inspectRestartReadability(secondSession.electronApp, {
       contentHash, storageKey, storagePath
     });
