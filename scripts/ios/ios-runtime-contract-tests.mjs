@@ -109,6 +109,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-bootstrap-acceptance.test.mjs',
   'scripts/ios/ios-bootstrap-database-path.test.mjs',
   'scripts/ios/ios-sync-group-provider-runner.test.mjs',
+  'scripts/ios/ios-sync-group-provider-shutdown.test.mjs',
   'scripts/ios/ios-database-upgrade-acceptance-runner.test.mjs',
   'scripts/ios/ios-device-anchor-acceptance-runner.test.mjs',
   'scripts/ios/ios-device-anchor-host-contract.test.mjs',
