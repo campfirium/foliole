@@ -7,7 +7,7 @@ import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 
 type Host = Pick<RequestSyncDatabaseHost, 'write' | 'readSnapshot'>;
 interface Article extends Record<string, unknown> {
-  content: string | null; body_blob_hash: string | null; resource_references: string; deleted_at: string | null;
+  content: string; resource_references: string; deleted_at: string | null;
 }
 
 /** Reserve half the existing wall budget and bound bridge transactions even for tiny bodies. */
@@ -26,7 +26,7 @@ export async function parseChangedAttachmentArticles(host: Host, shouldYield: ()
 async function parseArticle(db: DbPort, id: string) {
   const [queued] = await db.query('SELECT 1 FROM attachment_parse_queue WHERE article_id = ?', [id]);
   if (!queued) return;
-  const [article] = await db.query<Article>(`SELECT content, body_blob_hash, resource_references, deleted_at
+  const [article] = await db.query<Article>(`SELECT content, resource_references, deleted_at
     FROM nodes WHERE id = ?`, [id]);
   if (!article || article.deleted_at !== null) {
     await db.run('DELETE FROM attachment_pending WHERE article_id = ?', [id]);
@@ -34,11 +34,7 @@ async function parseArticle(db: DbPort, id: string) {
     const mounts = parseNodeResourceReferences(article.resource_references)
       .filter(reference => reference.role === 'reference').map(reference => reference.storage_key);
     await replaceNeeds(db, id, 'mount', mounts);
-    if (article.body_blob_hash && article.content === null) {
-      await db.run('UPDATE attachment_parse_queue SET attempted_at = ? WHERE article_id = ?', [new Date().toISOString(), id]);
-      return;
-    }
-    await replaceNeeds(db, id, 'body', collectArticleImageStorageKeys(article.content ?? ''));
+    await replaceNeeds(db, id, 'body', collectArticleImageStorageKeys(article.content));
   }
   await db.run('DELETE FROM attachment_parse_queue WHERE article_id = ?', [id]);
 }

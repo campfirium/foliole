@@ -41,7 +41,7 @@ it('rolls back demand registration with the originating write', async () => {
   const f = demandFixture();
   try {
     await expect(f.port.transaction(async tx => {
-      await tx.run('INSERT INTO nodes(id, content) VALUES (?, ?)', ['failed', imageBody(imageKey(1))]);
+      await tx.run("INSERT INTO nodes(id, content, title, created_at, updated_at) VALUES (?, ?, 'Article', '2000', '2000')", ['failed', imageBody(imageKey(1))]);
       throw new Error('interrupted');
     })).rejects.toThrow('interrupted');
     expect(f.queued()).toEqual([]);

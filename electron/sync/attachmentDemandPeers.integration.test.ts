@@ -14,6 +14,9 @@ import { exchangeRequestSyncAttachments } from '../../lib/core/sync/requestSyncA
 import { readRequestSyncAttachmentNeedsSlice } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import { respondRequestSyncAttachments, type RequestSyncAttachmentHost } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncExchange } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { withRequestSyncFiles, type RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
+import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
+import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { restoreFixture, transfer, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
@@ -133,4 +136,72 @@ it('downloads old backlog alongside continuous new content even when each round 
     expect(oldFiles.filter(Boolean).length).toBeGreaterThanOrEqual(3);
     expect(newFiles.filter(Boolean).length).toBeGreaterThanOrEqual(3);
   } finally { await aa.close(); await bb.close(); await fixture.close(); }
+});
+
+function applyBodyRequest(source: RestorePeer, target: RestorePeer, request: RequestSyncFiles) {
+  return applyRequestSyncObject(target.db, {
+    context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+      senderDeviceId: source.id, senderLibraryEpoch: source.epoch,
+      receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch },
+    peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
+      library_epoch: source.epoch, proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
+    objectType: 'node', globalId: 'topic', requestId: new Uint8Array(16), enqueueSearchInvalidations: false,
+    facts: () => request.readFacts(), loadBody: (_db, blob) => request.loadBody(blob)
+  });
+}
+
+it('rejects a request with missing body bytes, then retries the same version and downloads its attachment', async () => {
+  const fixture = await restoreFixture(); const a = fixture.peer('source'); const b = fixture.peer('target');
+  const aa = await attachments(a); const bb = await attachments(b);
+  const bytes = Buffer.from('Body retry attachment');
+  const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
+  const body = `![image](asset://${key})`;
+  try {
+    await applyConvergentSyncNodesWithDbPort(a.db, [textBranch('body-retry', body)]);
+    await writeFile(path.join(aa.assetsDir, key), bytes);
+    const difference = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(a.db), remote: [] })
+      .find(item => item.objectType === 'node' && item.globalId === 'topic');
+    if (!difference) throw new Error('test_node_difference_missing');
+    await withRequestSyncFiles(a.host.files, complete => withRequestSyncFiles(b.host.files, async incomplete => {
+      await writeRequestSyncSnapshot(a.db, difference, complete);
+      for await (const fact of complete.readFacts()) await incomplete.writeFact(fact);
+      await expect(applyBodyRequest(a, b, incomplete)).rejects.toThrow('request_sync_body_chunk_missing');
+      expect(b.sqlite.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
+      expect(b.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual([]);
+      expect(b.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual([]);
+      for await (const fact of complete.readFacts()) {
+        for (const blob of fact.blobs) await incomplete.writeBody(blob, await complete.loadBody(blob));
+      }
+      await applyBodyRequest(a, b, incomplete);
+    }));
+    b.reopen();
+    expect(b.sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe(body);
+    expect((await bb.host.needsSlice(() => false)).keys).toEqual([key]);
+    await exchangeRequestSyncAttachments(bb.host, exchange(b, a, aa.host), (_key, error) => { throw error; });
+    expect(await readFile(path.join(bb.assetsDir, key))).toEqual(bytes);
+    expect(b.sqlite.prepare('SELECT * FROM attachment_pending').all()).toEqual([]);
+  } finally { await aa.close(); await bb.close(); await fixture.close(); }
+});
+
+it('restores an empty clean current projection when its complete object is received again', async () => {
+  const fixture = await restoreFixture(); const a = fixture.peer('source'); const b = fixture.peer('target');
+  const bb = await attachments(b);
+  const key = `${'d'.repeat(64)}.png`; const body = `![image](asset://${key})`;
+  try {
+    await applyConvergentSyncNodesWithDbPort(a.db, [textBranch('original', body)]);
+    await content(a, b);
+    expect(() => b.sqlite.exec("UPDATE nodes SET content = NULL WHERE id = 'topic'")).toThrow('NOT NULL');
+    b.sqlite.exec("UPDATE nodes SET content = '' WHERE id = 'topic'");
+    await bb.host.needsSlice(() => false);
+    const difference = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(a.db), remote: [] })
+      .find(item => item.objectType === 'node' && item.globalId === 'topic');
+    if (!difference) throw new Error('test_node_difference_missing');
+    await transfer(a, b, { groupId: 'group', overwriteId: 'ordinary', providerDeviceId: a.id,
+      providerLibraryEpoch: a.epoch, receiverDeviceId: b.id, receiverLibraryEpoch: b.epoch }, difference, false);
+    b.reopen();
+    expect(b.sqlite.prepare("SELECT content, current_version_id FROM nodes WHERE id = 'topic'").get())
+      .toEqual({ content: body, current_version_id: 'original' });
+    expect((await bb.host.needsSlice(() => false)).keys).toEqual([key]);
+    expect(b.sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual([]);
+  } finally { await bb.close(); await fixture.close(); }
 });

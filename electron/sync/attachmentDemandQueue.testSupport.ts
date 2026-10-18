@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 
 import { ATTACHMENT_DEMAND_SCHEMA } from '../../lib/core/database/attachmentDemandSchema.js';
+import { DESKTOP_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopCoreSchemaStatements.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -8,9 +9,10 @@ export const imageKey = (value: number) => `${value.toString(16).padStart(64, '0
 export const imageBody = (key: string) => `![image](asset://${key})`;
 export function demandFixture(filename = ':memory:') {
   const sqlite = new Database(filename);
-  sqlite.exec(`CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, content TEXT, body_blob_hash TEXT,
-    resource_references TEXT NOT NULL DEFAULT '[]', deleted_at TEXT, title TEXT);
-    CREATE TABLE IF NOT EXISTS framed_sync_resource_availability(hash TEXT PRIMARY KEY, available INTEGER);
+  const nodesSchema = DESKTOP_CORE_SCHEMA_STATEMENTS.find(sql => sql.startsWith('CREATE TABLE IF NOT EXISTS nodes ('));
+  if (!nodesSchema) throw new Error('test_nodes_schema_missing');
+  sqlite.exec(nodesSchema);
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS framed_sync_resource_availability(hash TEXT PRIMARY KEY, available INTEGER);
     CREATE TABLE IF NOT EXISTS pdf_text_artifact(pdf_hash TEXT, extractor_version INTEGER, storage_key TEXT)`);
   for (const sql of ATTACHMENT_DEMAND_SCHEMA) sqlite.exec(sql);
   const port = createBetterSqliteDbPort(sqlite);
@@ -18,7 +20,7 @@ export function demandFixture(filename = ':memory:') {
     readSnapshot: read => port.transaction(read), write: write => write(port)
   };
   const insert = (id: string, content = imageBody(imageKey(1))) => sqlite.prepare(
-    'INSERT INTO nodes(id, content) VALUES (?, ?)').run(id, content);
+    "INSERT INTO nodes(id, content, title, created_at, updated_at) VALUES (?, ?, 'Article', '2000', '2000')").run(id, content);
   const pending = () => sqlite.prepare('SELECT storage_key FROM attachment_pending ORDER BY storage_key').pluck().all();
   const queued = () => sqlite.prepare('SELECT article_id FROM attachment_parse_queue ORDER BY article_id').pluck().all();
   return { sqlite, port, host, insert, pending, queued };

@@ -51,19 +51,17 @@ it('does no body or file work at rest, and leaves externally deleted attachments
   } finally { f.sqlite.close(); }
 });
 
-it('keeps old body demand while unreadable, processes mounts independently and later replaces the body', async () => {
+it('updates mount and body demand independently and waits for PDF text', async () => {
   const f = demandFixture();
   const pdf = imageKey(2).replace('.png', '.pdf');
   try {
     f.insert('article'); await read(f);
-    f.sqlite.prepare('UPDATE nodes SET content = NULL, body_blob_hash = ?, resource_references = ?')
-      .run('unavailable', JSON.stringify([{ role: 'reference', storage_key: pdf, original_name: null }]));
+    expect(() => f.sqlite.exec('UPDATE nodes SET content = NULL')).toThrow('NOT NULL');
+    f.sqlite.prepare('UPDATE nodes SET resource_references = ?')
+      .run(JSON.stringify([{ role: 'reference', storage_key: pdf, original_name: null }]));
     expect(new Set((await read(f)).keys)).toEqual(new Set([imageKey(1), pdf]));
-    expect(f.queued()).toEqual(['article']);
-    f.insert('later', imageBody(imageKey(3)));
-    expect((await read(f)).keys).toContain(imageKey(3));
-    f.sqlite.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(imageBody(imageKey(4)), 'article');
-    expect(new Set((await read(f)).keys)).toEqual(new Set([pdf, imageKey(3), imageKey(4)]));
+    f.sqlite.prepare('UPDATE nodes SET content = ?').run(imageBody(imageKey(4)));
+    expect(new Set((await read(f)).keys)).toEqual(new Set([pdf, imageKey(4)]));
     expect(f.queued()).toEqual([]);
     const result = await slice(f.host, async keys => keys.map(() => true), () => false, true);
     expect(result.pdfTextKeys).toEqual([pdf]); expect(f.pending()).toEqual([pdf]);
