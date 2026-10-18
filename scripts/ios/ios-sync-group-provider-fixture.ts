@@ -9,12 +9,14 @@ import { app } from 'electron';
 import { closeDatabaseConnection } from '../../electron/database/connection.js';
 import { handleProductionCompanionFramedSyncPost } from '../../electron/sync/companionLanFramedSyncRoute.js';
 import { handleCompanionSyncSession } from '../../electron/sync/companionLanSyncSession.js';
+import { closeDesktopSyncChangeSessions } from '../../electron/sync/desktopSyncChangeSessions.js';
 
 import { createIosForegroundSyncLifecycleService } from './ios-foreground-sync-lifecycle-service.ts';
 import { createIosHostedRequestLibrary, initializeIosHostedRequestLibrary } from './ios-hosted-request-library.js';
 import { createIosHostedRequestScenario } from './ios-hosted-request-scenario.js';
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
 import {
+  closeProviderHttpServer,
   readProviderJson,
   readProviderText,
   sendProviderResponse
@@ -189,10 +191,7 @@ async function stop(exitCode: number) {
   stopping = true;
   registration?.cancel();
   observations.registration.cancelled = registration !== null;
-  await new Promise<void>((resolve) => {
-    if (!server.listening) return resolve();
-    server.close(() => resolve());
-  });
+  await closeProviderHttpServer(server, closeDesktopSyncChangeSessions);
   observations.registration.closed = true;
   writeObservations();
   closeDatabaseConnection();

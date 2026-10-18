@@ -1,4 +1,12 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+
+export async function closeProviderHttpServer(server: Server, closeSessions: () => void) {
+  closeSessions();
+  await new Promise<void>((resolve) => {
+    if (!server.listening) return resolve();
+    server.close(() => resolve());
+  });
+}
 
 export function sendProviderResponse(
   response: ServerResponse,
