@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3';
 
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
+import { migrateNodeHistoryState } from '../../lib/core/database/nodeHistoryStateMigration.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
@@ -43,6 +45,10 @@ export async function freezeLegacyOrderPublication(file: string) {
       for (const blob of manifest.blobs) await tx.run('INSERT INTO framed_sync_outbound_blob_refs VALUES (?, ?, ?, ?, ?)',
         [transferId, blob.sha256, blob.byteLength, blob.role, blob.required ? 1 : 0]);
       await tx.run("INSERT INTO framed_sync_outbound_holds VALUES (?, 'desktop-b')", [transferId]);
+      for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
+        await tx.run(`DROP TRIGGER IF EXISTS ${/^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)![1]}`);
+      }
+      migrateNodeHistoryState(db);
       for (const name of ['insert', 'update', 'delete']) await tx.run(`DROP TRIGGER trg_parent_order_node_${name}`);
       for (const table of ['parent_order_sources', 'parent_order_writer', 'parent_order_projection_pending']) {
         await tx.run(`DROP TABLE ${table}`);

@@ -3,9 +3,11 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { encodeFramedSyncManifest } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateNodeHistoryState } from '../../lib/core/database/nodeHistoryStateMigration.js';
 import { currentParentOrderHash, currentParentOrderPayload, type ParentOrderSource } from '../../lib/core/sync/currentParentOrder.js';
 import { applyCurrentParentOrderRecord, loadCurrentParentOrderSources, saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore.js';
 import { canonicalContentId, canonicalTransferIdSync, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
@@ -22,6 +24,10 @@ function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
+    db.exec(`DROP TRIGGER IF EXISTS ${/^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)![1]}`);
+  }
+  migrateNodeHistoryState(db);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) db.exec(sql);
   db.exec(`DROP TRIGGER trg_parent_order_node_insert;
     DROP TRIGGER trg_parent_order_node_update;

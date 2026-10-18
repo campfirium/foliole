@@ -47,21 +47,25 @@ it.each([
     });
     const release = waitForAttachmentWorkYield();
     try {
-      let desktopBlocks = 0;
-      for (let round = 0; round < 3; round++) {
+      let blocks = 0;
+      // Three source-verification slices and three transfer slices can share the last verification round.
+      for (let round = 0; round < 5 && blocks < 3; round++) {
         if (desktop) {
           const result = await host.fixture.left.synchronize(host.fixture.rightSnapshot.origin);
           expect(result).toMatchObject({ complete: false });
           const parsed = z.object({ attachmentProgress: z.number() }).parse(result);
-          desktopBlocks += parsed.attachmentProgress;
+          blocks += parsed.attachmentProgress;
         } else {
           const result = await host.sync();
           expect(result.remainingStructureChangeCount).toBeGreaterThan(0);
           expect(result.databaseConfirmedAt).toBeUndefined();
-          expect(result.transferredAttachmentBlockCount).toBe(1);
+          const transferred = result.transferredAttachmentBlockCount ?? 0;
+          expect(transferred).toBeLessThanOrEqual(1);
+          if (!transferred) expect(result.attachmentWorkYielded).toBe(true);
+          blocks += transferred;
         }
       }
-      if (desktop) expect(desktopBlocks).toBe(3);
+      expect(blocks).toBe(3);
       const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
       expect(await readFile(target)).toEqual(bytes);
       if (scenario === 'continuous edits') expect(edit).toBeGreaterThanOrEqual(12);
