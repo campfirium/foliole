@@ -5,8 +5,10 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
 
+import { loadCompanionSnapshotNodeRows } from './companionSnapshotNodeRows';
 import { loadIosCompanionWorkspaceSnapshot } from './iosCompanionWorkspaceSnapshotStore';
 import { seedSnapshotDatabase, SNAPSHOT_NODE_COUNT, snapshotConnection, snapshotNodeId } from './iosCompanionWorkspaceSnapshotTestSupport';
 
@@ -60,7 +62,7 @@ it('keeps body pages and later attachments in one snapshot while another connect
     let committed = false;
     vi.spyOn(connection, 'query').mockImplementation(async (sql, params) => {
       const result = await original(sql, params);
-      if (!committed && result.values.some(row => Object.hasOwn(row as object, 'content'))) {
+      if (!committed && sql.includes('AS collection_source_content')) {
         writer.transaction(() => {
           writer.prepare("UPDATE nodes SET title = 'New title' WHERE id = 'node-0'").run();
           writer.prepare("UPDATE nodes SET resource_references = ? WHERE id = 'node-0'")
@@ -81,6 +83,26 @@ it('keeps body pages and later attachments in one snapshot while another connect
     database.close();
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+it('preserves every directory field while reducing native bridge bytes', async () => {
+  const database = new Database(':memory:');
+  try {
+    seedSnapshotDatabase(database);
+    const { connection, port } = snapshotPort(database);
+    const expected = database.prepare(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql).all('Phone');
+    let transferredBytes = 0;
+    const query = connection.query;
+    vi.spyOn(connection, 'query').mockImplementation(async (sql, params) => {
+      const result = await query(sql, params);
+      transferredBytes += Buffer.byteLength(JSON.stringify(result.values));
+      expect(JSON.stringify(result.values)).not.toContain('Body 1200');
+      return result;
+    });
+    expect(await loadCompanionSnapshotNodeRows(port, 'Phone')).toEqual(expected);
+    // The representative directory must remove at least 30% of bridge payload overhead.
+    expect(transferredBytes).toBeLessThan(Buffer.byteLength(JSON.stringify(expected)) * 0.7);
+  } finally { database.close(); }
 });
 
 it('reuses an owning transaction and releases it after a snapshot failure', async () => {
