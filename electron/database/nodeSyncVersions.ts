@@ -1,3 +1,4 @@
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -6,6 +7,14 @@ import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
 export { flushNodeSyncVersionWithDriver };
+
+export function hasPendingNodeSyncVersions(driver: DatabaseDriver) {
+  return Boolean(driver.queryOne(`SELECT 1 FROM nodes n WHERE n.id != ? AND (
+    n.sync_dirty = 1 OR n.current_version_id IS NULL OR (
+      EXISTS (SELECT 1 FROM node_sync_versions v WHERE v.version_id = n.current_version_id)
+      AND NOT EXISTS (SELECT 1 FROM sync_object_state s
+        WHERE s.object_type = 'node' AND s.object_id = n.id))) LIMIT 1`, [VIRTUAL_ROOT_NODE_ID]));
+}
 
 export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString()): string | null {
   const connection = openDatabaseConnection();

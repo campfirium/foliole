@@ -4,7 +4,7 @@ import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGr
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
-import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersions, hasPendingNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
 
 import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
@@ -28,11 +28,21 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
     readSnapshot: async (read, signal) => {
       signal?.throwIfAborted();
       if (resolveDatabasePath() !== databasePath) throw new Error('request_sync_library_changed');
-      await withPreparedDesktopSyncConnection(databasePath, async () => {});
+      await prepareDesktopSyncRead(databasePath);
       return withRequestSyncReadonlySnapshot(databasePath, read, signal);
     },
     write: write => withPreparedDesktopSyncConnection(databasePath, write)
   };
+}
+
+function prepareDesktopSyncRead(databasePath: string) {
+  return runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
+    // BEGIN IMMEDIATE also locks the attached search database, even when no rows need preparing.
+    if (!hasPendingNodeSyncVersions(connection.driver)) return;
+    return withPreparedDesktopSyncConnection(databasePath, async () => {});
+  });
 }
 
 function withPreparedDesktopSyncConnection<T>(databasePath: string, execute: (db: DbPort) => Promise<T>) {
