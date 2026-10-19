@@ -127,12 +127,16 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
        WHERE device_identity_key = ? AND state = 'active'`,
       [leftAt, leftAt, deviceIdentityKey]
     );
-    const departed = driver.queryOne<{ group_id: string }>(
-      'SELECT group_id FROM sync_group_devices WHERE device_identity_key = ?', [deviceIdentityKey]);
-    if (departed) retireDepartedExternalFolders(driver, departed.group_id, leftAt);
     const local = driver.queryOne<{ local_device_identity_key: string }>(
       'SELECT local_device_identity_key FROM sync_group_local_state WHERE singleton_id = 1'
     );
+    // The departing device keeps the libraries it provides; only other members retire them.
+    if (local?.local_device_identity_key === deviceIdentityKey) {
+      retagLocalExternalFolders(driver, deviceIdentityKey, loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
+    }
+    const departed = driver.queryOne<{ group_id: string }>(
+      'SELECT group_id FROM sync_group_devices WHERE device_identity_key = ?', [deviceIdentityKey]);
+    if (departed) retireDepartedExternalFolders(driver, departed.group_id, leftAt);
     if (local?.local_device_identity_key === deviceIdentityKey) {
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
       driver.execute('DELETE FROM sync_group_metadata');

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -51,15 +52,17 @@ beforeEach(async () => {
 });
 afterEach(closeLibraries);
 
-it.each(['remove', 'leave'] as const)('removes the departed provider library across persisted peers after %s', async (action) => {
+it.each(['remove', 'leave'] as const)('removes the departed provider library from other peers after %s and keeps it local on the provider', async (action) => {
   const [a, b, c] = peers as [Peer, Peer, Peer];
+  const standaloneId = randomUUID();
+  c.db.prepare("INSERT INTO settings VALUES ('standalone_device_uuid', ?, 'now')").run(JSON.stringify(standaloneId));
   const folderPath = path.join(root, 'external');
   await mkdir(folderPath);
   await writeFile(path.join(folderPath, 'note.md'), 'Original file');
   current = c;
   const original = seedFolder('provided', folderPath);
-  for (const peer of [a, b]) {
-    await peer.port.transaction(tx => applySyncObjectInTransaction(tx, original));
+  for (const peer of [a, b, c]) {
+    if (peer !== c) await peer.port.transaction(tx => applySyncObjectInTransaction(tx, original));
     peer.db.prepare(`INSERT INTO external_documents
       (document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, content, indexed_at, created_at, updated_at)
@@ -93,26 +96,45 @@ it.each(['remove', 'leave'] as const)('removes the departed provider library acr
     if (peer === b) await applyCompanionSyncGroupMemberState(completed, a.id);
     else if (action === 'remove') applyDesktopSyncGroupMemberState(completed, a.id);
   }
-  for (const peer of peers) await expectRetired(peer, original);
+  for (const peer of [a, b]) await expectRetired(peer, original);
+  expectKeptLocally(c, standaloneId, folderPath);
   expect(a.db.prepare("SELECT id FROM external_search_folders WHERE id = 'retained'").get()).toEqual({ id: 'retained' });
   expect(await readFile(path.join(folderPath, 'note.md'), 'utf8')).toBe('Original file');
 });
 
-it('rolls back membership completion when external retirement fails', () => {
+it('rolls back membership completion when external retirement fails', async () => {
   const a = peers[0]!;
   const c = peers[2]!;
   current = c;
-  seedFolder('provided', '/not-read');
-  const before = c.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all();
-  c.db.exec(`CREATE TRIGGER reject_external_retirement BEFORE DELETE ON external_search_folders
+  const original = seedFolder('provided', '/not-read');
+  current = a;
+  await a.port.transaction(tx => applySyncObjectInTransaction(tx, original));
+  const before = a.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all();
+  a.db.exec(`CREATE TRIGGER reject_external_retirement BEFORE DELETE ON external_search_folders
     BEGIN SELECT RAISE(ABORT, 'retirement rejected'); END`);
   expect(() => leaveDesktopSyncGroupDevice(c.id)).toThrow('retirement rejected');
-  expect(c.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all()).toEqual(before);
-  expect(c.db.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toEqual({ id: 'provided' });
+  expect(a.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all()).toEqual(before);
+  expect(a.db.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toEqual({ id: 'provided' });
   expect(c.db.prepare('SELECT local_device_identity_key FROM sync_group_local_state').get())
     .toEqual({ local_device_identity_key: c.id });
-  expect(a.db.prepare('SELECT count(*) AS count FROM sync_group_devices').get()).toEqual({ count: 3 });
 });
+
+function expectKeptLocally(peer: Peer, standaloneId: string, folderPath: string) {
+  current = peer;
+  expect(peer.db.prepare('SELECT * FROM sync_group_local_state').all()).toEqual([]);
+  expect(loadExternalSearchFolders().find(folder => folder.id === 'provided')?.access_mode).toBe('local');
+  expect(resolveDesktopSourceAddress('external:provided', 'note.md')).toBe(path.join(folderPath, 'note.md'));
+  const reopened = new Database(peer.file, { readonly: true });
+  try {
+    const source = reopened.prepare("SELECT type_settings_json FROM desktop_sources WHERE source_ref = 'external:provided'")
+      .get() as { type_settings_json: string };
+    expect(JSON.parse(source.type_settings_json).ownerDeviceIdentityKey).toBe(standaloneId);
+    expect(reopened.prepare("SELECT document_id FROM external_documents WHERE folder_id = 'provided'").all())
+      .toEqual([{ document_id: 'provided:note.md' }]);
+    expect(reopened.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'provided'").get())
+      .toEqual({ deleted_at: null });
+  } finally { reopened.close(); }
+}
 
 async function expectRetired(peer: Peer, original: NativeSyncObjectRecord) {
     const reopened = new Database(peer.file, { readonly: true });
