@@ -14,6 +14,39 @@ import {
 const REVISION = 'b'.repeat(40);
 
 describe('Internal update fixed-input worker', () => {
+  it.each(['current', 'older'])('forces only the current accounted revision: %s', async (target) => {
+    const root = await mkdtemp(path.join(tmpdir(), 'foliole-force-update-'));
+    try {
+      const git = (...args) => {
+        const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+        expect(result.status, result.stderr).toBe(0);
+        return result.stdout.trim();
+      };
+      git('init');
+      const commit = () => git('-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+        'commit', '--allow-empty', '-m', 'fixture');
+      commit();
+      const older = git('rev-parse', 'HEAD');
+      commit();
+      const current = git('rev-parse', 'HEAD');
+      const revision = target === 'current' ? current : older;
+      const stateRoot = path.join(root, 'state');
+      await mkdir(stateRoot);
+      await writeFile(path.join(stateRoot, 'accounted-revision'), current);
+      const run = vi.fn((command, args, options) => args[0] === 'merge-base'
+        ? spawnSync(command, args, options) : { status: 0 });
+      const result = await runInternalUpdate({
+        force: true, repositoryRoot: root, revision, stateRoot, run,
+        pathExists: async () => false
+      });
+      expect(result.status).toBe(target === 'current' ? 'installed' : 'skipped');
+      expect(run.mock.calls.some(([command]) => command === 'npm')).toBe(target === 'current');
+      expect((await readFile(path.join(stateRoot, 'accounted-revision'), 'utf8')).trim()).toBe(current);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('uses the default state directory when the CLI omits state-root', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'foliole-update-cli-'));
     try {

@@ -137,7 +137,7 @@ export async function runInternalUpdate(options) {
   await makeDirectory(stateRoot, { recursive: true });
   const baseline = options.baseline === undefined ? await readAccountedRevision(stateRoot) : options.baseline;
   const inspection = options.inspection ?? inspectChanges(repositoryRoot, baseline, revision, run);
-  if (inspection.stale) {
+  if (inspection.stale && !(options.force && baseline === revision)) {
     console.log(`[internal-update] skipped stale revision=${revision}`);
     return { revision, status: 'skipped' };
   }
