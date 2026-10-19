@@ -94,7 +94,12 @@ it('keeps editing mounted across actual SQLite autosave refreshes and persists c
   view.unmount();
 });
 
-it.each([false, true])('commits immediate Done input to SQLite with concurrent remote change=%s', async remoteChange => {
+it.each([
+  { remoteChange: false, finish: 'done' },
+  { remoteChange: true, finish: 'done' },
+  { remoteChange: false, finish: 'autosave' },
+  { remoteChange: true, finish: 'autosave' }
+])('persists buffered input with concurrent remote change=$remoteChange via $finish', async ({ remoteChange, finish }) => {
   library = await createSearchLibrary(0);
   const node = { id: 'topic', content: 'Original body', kind: 'topic' as const, title: 'Topic',
     isTitleManual: true, hideTitleHeading: false, parentNodeId: null, reveal: null, anchorLink: null,
@@ -128,12 +133,13 @@ it.each([false, true])('commits immediate Done input to SQLite with concurrent r
     await act(async () => { view.rerender(document(remoteBody, remoteVersionId)); });
     expect(editor!.getContent()).toBe('Immediate input Original body');
   }
-  await act(() => activity.flush());
-  const bodies = library.database.prepare(`SELECT n.content FROM nodes n WHERE n.id=?
+  if (finish === 'done') await act(() => activity.flush());
+  const readBodies = () => library!.database.prepare(`SELECT n.content FROM nodes n WHERE n.id=?
     UNION SELECT json_extract(body.value, '$.text') AS content FROM nodes n
     JOIN node_sync_versions v ON v.version_id=n.current_version_id,
     json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id=?`).all('topic', 'topic');
-  expect(bodies).toContainEqual({ content: 'Immediate input Original body' });
+  await waitFor(() => expect(readBodies()).toContainEqual({ content: 'Immediate input Original body' }), { timeout: 3000 });
+  const bodies = readBodies();
   if (remoteChange) expect(bodies).toContainEqual({ content: 'Original body\nRemote suffix' });
   expect(library.database.prepare('SELECT parent_version_id FROM node_sync_version_parents').all())
     .toContainEqual({ parent_version_id: 'base' });
