@@ -44,24 +44,36 @@ afterEach(() => {
 });
 
 it('answers native credential requests during first adoption before a provider has started', async () => {
+  const started = performance.now();
+  const mark = (stage: string) => {
+    if (process.platform === 'win32' && process.env.CI) {
+      console.info(JSON.stringify({ event: 'first_adoption_credential', stage,
+        elapsedMs: performance.now() - started }));
+    }
+  };
+  mark('start');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-first-adoption-'));
   roots.push(root);
   const database = new Database(path.join(root, 'fri.db'));
   databases.push(database);
   const db = createBetterSqliteDbPort(database);
+  mark('opened');
   await bootstrapCompanionDatabase(db, {
     allowCreate: true, expectedHostName: 'Fri', now: '2026-10-09T00:00:00Z'
   });
+  mark('schema');
   await db.run(`INSERT INTO sync_groups VALUES ('group-1', 'Group', 'key', 'now', 'now')`);
   await db.run(`INSERT INTO sync_group_local_state VALUES (1, 'group-1', 'fri', 'active', 'now')`);
   await db.run(`INSERT INTO sync_group_devices
     (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
      platform, state, joined_at, updated_at)
     VALUES ('group-1', 'fri', 'anchor', '/library', 'Fri', 'ios-capacitor', 'active', 'now', 'now')`);
+  mark('group');
   await beginSyncGroupLocalAdoption(db, {
     endpointUrl: 'http://mac:38641', groupId: 'group-1', libraryEpoch: 'adoption',
     providerDeviceId: 'mac', providerDeviceName: 'Mac', providerPlatform: 'macOS'
   });
+  mark('adoption');
   native.read.mockImplementation((task: (port: DbPort) => Promise<unknown>) => task(db));
   native.exchange.mockResolvedValue({
     localExited: false, peerRemoved: false, normalSyncReady: true, peerLibraryEpoch: 'mac-epoch'
@@ -69,6 +81,7 @@ it('answers native credential requests during first adoption before a provider h
   native.adopt.mockImplementation(() => nativeCredentialRequest());
 
   await expect(completeCompanionSyncGroupAdoption()).resolves.toBeUndefined();
+  mark('completed');
   expect(native.resolve).toHaveBeenCalledWith({
     request_id: 'native-credential', result: { device_id: 'fri', workgroup_key: 'key' }
   });

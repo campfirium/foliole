@@ -57,9 +57,11 @@ async function expandSharedBucketTargets() {
 }
 
 describe('run-shared-test-bucket', () => {
-  it('routes text database fixtures through the native library bucket', () => {
+  it('routes SQLite fixtures through the native library bucket', () => {
     const targets = SHARED_TEST_BUCKETS.find(({ label }) => label === 'lib-native').targets;
     for (const file of [
+      'lib/core/database/companionSnapshotReadwiseSources.test.ts',
+      'lib/core/database/companionTopicSearchDefinitions.test.ts',
       'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
       ...['framedSyncInventoryDigest', 'requestSyncBucketScale', 'requestSyncNodeMetadata',
         'topicHistoryProtection', 'topicHistoryReclamation'].map(name => `lib/core/sync/${name}.integration.test.ts`)
