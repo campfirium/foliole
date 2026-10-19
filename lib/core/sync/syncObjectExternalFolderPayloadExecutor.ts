@@ -49,10 +49,10 @@ export async function applyExternalFolderObject(port: DbPort, record: SyncObject
     `INSERT INTO external_search_folders (id, folder_path, attachment_mode, attachment_root_path, excluded_dirs_json, status,
        document_count, indexed_at, last_error, created_at, updated_at, source_ref)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET attachment_mode = excluded.attachment_mode,
+     ON CONFLICT(id) DO UPDATE SET folder_path = excluded.folder_path, attachment_mode = excluded.attachment_mode,
        excluded_dirs_json = excluded.excluded_dirs_json,
        updated_at = excluded.updated_at, source_ref = excluded.source_ref`,
-    [record.object_id, '', attachmentMode, null, excludedDirsJson, 'idle', 0, null, null,
+    [record.object_id, text(payload.folder_path) ?? '', attachmentMode, null, excludedDirsJson, 'idle', 0, null, null,
       record.updated_at, record.updated_at, sourceRef]
   );
 }

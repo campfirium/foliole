@@ -37,6 +37,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     READWISE_LIBRARY_SOURCE_MODE_CAPABILITY,
     'source-host-ownership-v1',
     'external-device-library-lifecycle-v1',
+    'external-library-reported-path-v1',
     'sync-group-device-facts-v1',
     SYNC_GROUP_MEMBER_STATE_CAPABILITY,
     SYSTEM_ENTRY_DISPLAY_NAMES_SYNC_CAPABILITY,

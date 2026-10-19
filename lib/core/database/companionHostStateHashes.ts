@@ -52,7 +52,7 @@ async function rehashExternalResources(db: DbPort) {
   for (const row of documents) await updateStateHash(db, 'external_document', row.document_id,
     computeCompanionContentHash(buildCanonicalExternalDocumentPayload(row)));
   const folders = await db.query<ExternalFolderRow>(
-    `SELECT folder.id, folder.source_ref, source.host_name, source.host_platform,
+    `SELECT folder.id, folder.folder_path, folder.source_ref, source.host_name, source.host_platform,
        folder.attachment_mode, folder.excluded_dirs_json,
        json_extract(source.type_settings_json, '$.ownerDeviceIdentityKey') AS owner_device_identity_key
      FROM external_search_folders folder JOIN desktop_sources source ON source.source_ref = folder.source_ref
@@ -126,6 +126,7 @@ interface ExternalDocumentRow extends DbRow {
 }
 
 interface ExternalFolderRow extends DbRow {
+  folder_path: string;
   owner_device_identity_key: string | null;
   attachment_mode: string; excluded_dirs_json: string; host_name: string; host_platform: string;
   id: string; source_ref: string;

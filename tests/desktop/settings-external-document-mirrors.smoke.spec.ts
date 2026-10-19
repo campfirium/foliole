@@ -12,10 +12,12 @@ async function seedRemoteMirror(desktopApp: ElectronApplication, active = true) 
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const load = (file: string) => require(`${process.cwd()}/dist/${file}.js`);
     const connection = load('electron/database/connection');
-    await connection.runWithDatabaseConnectionOwner(() => {
+    await connection.runWithDatabaseConnectionOwner(async () => {
       const groups = load('electron/database/syncGroupStore');
       const { createSyncGroupDeviceIdentity } = load('lib/platform/syncGroupUnifiedContract');
-      const { upsertDesktopSource } = load('electron/database/desktopSources');
+      const { applySyncObjectInTransaction } = load('lib/core/sync/syncObjectApplyExecutor');
+      const { computeSyncContentHash } = load('lib/core/database/syncState');
+      const { createBetterSqliteDbPort } = load('electron/database/betterSqliteDbPort');
       const groupId = 'external-native-group';
       const local = createSyncGroupDeviceIdentity({
         device_anchor: '11111111-1111-4111-8111-111111111111', group_id: groupId,
@@ -25,14 +27,14 @@ async function seedRemoteMirror(desktopApp: ElectronApplication, active = true) 
         library_path: '/remote/foliole.db', path_flavor: 'posix' });
       groups.createDesktopSyncGroup({ device: local, deviceName: 'This Mac', platform: 'darwin' });
       groups.registerSyncGroupDevice({ device: remote, deviceName: 'Windows PC', platform: 'win32' });
-      const driver = connection.openDatabaseConnection().driver;
+      const db = createBetterSqliteDbPort(connection.openDatabaseConnection().sqlite);
       for (const [id, folderPath] of [['remote-docs', 'D:\\Docs'], ['remote-projects', 'D:\\Projects']]) {
-        const source = upsertDesktopSource({ configRef: id, rootPath: folderPath, sourceType: 'external',
-          hostName: 'Windows PC', hostPlatform: 'win32', ownerDeviceIdentityKey: remote.identity_key,
-          updatedAt: '2026-10-01T00:00:00.000Z' });
-        driver.execute(`INSERT INTO external_search_folders
-          (id, folder_path, attachment_mode, created_at, updated_at, source_ref)
-          VALUES (?, ?, 'document_relative', 'now', 'now', ?)`, [id, folderPath, source.source_ref]);
+        const payload = { id, folder_path: folderPath, source_ref: `external:${id}`,
+          host_name: 'Windows PC', host_platform: 'win32', owner_device_identity_key: remote.identity_key,
+          attachment_mode: 'document_relative', excluded_dirs_json: '[]' };
+        await applySyncObjectInTransaction(db, { object_type: 'external_folder', object_id: id,
+          payload_json: JSON.stringify(payload), content_hash: computeSyncContentHash('external_folder', payload),
+          deleted_at: null, updated_at: '2026-10-01T00:00:00.000Z' });
       }
       if (!active) groups.leaveDesktopSyncGroupDevice(local.identity_key);
     });

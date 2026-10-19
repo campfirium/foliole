@@ -184,7 +184,7 @@ it('loads import source and external folder sync object payloads', () => {
     id: 'folder-1',
     source_ref: 'external:folder-1'
   });
-  expect(folderPayload).not.toHaveProperty('folder_path');
+  expect(folderPayload).toHaveProperty('folder_path');
 });
 
 it('does not synthesize legacy attachment metadata or possession from stale sync state', () => {

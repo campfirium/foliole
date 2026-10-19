@@ -28,7 +28,7 @@ import {
   reconnectExternalSearchFolder
 } from './externalSearchFolderConnection.js';
 import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
-import { saveExternalSearchFolders } from './externalSearchFolders.js';
+import { loadRefreshableExternalSearchFolders, saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 import { loadSyncObjects } from './syncObjects.js';
 
@@ -79,7 +79,7 @@ it('records external search folders as sync objects', () => {
   )).toEqual({ count: 0 });
 });
 
-it('exports only shared folder facts and ignores local path changes in its hash', () => {
+it('exports the provider path and republishes path changes without exposing attachment roots', () => {
   const folder = { attachment_mode: 'document_relative_first_then_fixed_root' as const,
     attachment_root_path: '/attachments', excluded_dirs: ['.git'], folder_path: '/library', id: 'folder-1' };
   saveExternalSearchFolders([folder]);
@@ -92,14 +92,31 @@ it('exports only shared folder facts and ignores local path changes in its hash'
   >;
   expect(payload).toEqual(expect.objectContaining({ attachment_mode: folder.attachment_mode,
     excluded_dirs_json: '[".git"]', id: 'folder-1', source_ref: expect.any(String) }));
-  expect(payload).not.toHaveProperty('folder_path');
+  expect(payload).toHaveProperty('folder_path', '/library');
+  expect(payload).not.toHaveProperty('attachment_root_path');
   expect(payload).not.toHaveProperty('status');
   expect(before.content_hash).toBe(computeSyncContentHash('external_folder', payload));
 
-  saveExternalSearchFolders([{ ...folder, attachment_root_path: '/other', folder_path: '/moved' }]);
+  saveExternalSearchFolders([{ ...folder, attachment_root_path: '/other' }]);
   expect(openDatabaseConnection().driver.queryOne(
     "SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'external_folder'"
   )).toEqual(before);
+  saveExternalSearchFolders([{ ...folder, folder_path: '/moved' }]);
+  const [moved] = loadSyncObjects(['folder-1'], ['external_folder']);
+  expect(JSON.parse(moved!.payload_json!)).toHaveProperty('folder_path', '/moved');
+  expect(moved!.content_hash).not.toBe(before.content_hash);
+});
+
+it('uses the locally connected root for scanning even when a mirror reports another path', async () => {
+  const localRoot = path.join(tempRoot, 'local-library');
+  await fs.mkdir(localRoot);
+  saveExternalSearchFolders([{ attachment_mode: 'document_relative_first_then_fixed_root',
+    attachment_root_path: null, excluded_dirs: [], folder_path: localRoot, id: 'local-root' }]);
+  openDatabaseConnection().driver.execute(
+    "UPDATE external_search_folders SET folder_path = '/reported/library' WHERE id = 'local-root'");
+  expect(loadRefreshableExternalSearchFolders()).toEqual([
+    expect.objectContaining({ id: 'local-root', folder_path: localRoot, source_executable: true })
+  ]);
 });
 
 it('only removes an external folder through the explicit removal action', () => {

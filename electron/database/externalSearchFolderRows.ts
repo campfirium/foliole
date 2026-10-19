@@ -37,7 +37,7 @@ export function normalizeExcludedDirs(value: unknown) {
 
 export function readExternalSearchFolderRows() {
   return openDatabaseConnection().driver.queryAll<ExternalSearchFolderRow>(
-    `SELECT f.id, COALESCE(s.root_path, f.folder_path) AS folder_path, f.attachment_mode,
+    `SELECT f.id, f.folder_path, f.attachment_mode,
       f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at,
       f.last_error, s.host_name, s.host_platform, s.root_path, s.path_flavor, s.source_type,
       s.type_settings_json, f.created_at, f.updated_at, f.source_ref
@@ -59,7 +59,7 @@ export function toExternalSearchFolder(
     created_at: row.created_at,
     document_count: Math.max(0, Number(row.document_count ?? 0)),
     excluded_dirs: normalizeExcludedDirs(JSON.parse(row.excluded_dirs_json)),
-    folder_path: row.folder_path,
+    folder_path: isLocalExternalFolder(row) ? row.root_path : row.folder_path,
     id: row.id,
     indexed_at: row.indexed_at,
     last_error: row.last_error,

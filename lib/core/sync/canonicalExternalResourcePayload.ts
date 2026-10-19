@@ -14,6 +14,7 @@ export interface CanonicalExternalDocumentPayload {
 }
 
 export interface CanonicalExternalFolderPayload {
+  folder_path?: string | undefined;
   owner_device_identity_key?: string | null | undefined;
   attachment_mode: string;
   excluded_dirs_json: string;
@@ -40,6 +41,7 @@ export function buildCanonicalExternalDocumentPayload(input: CanonicalExternalDo
 
 export function buildCanonicalExternalFolderPayload(input: CanonicalExternalFolderPayload) {
   return {
+    ...(input.folder_path ? { folder_path: input.folder_path } : {}),
     ...(input.owner_device_identity_key === undefined ? {} : { owner_device_identity_key: input.owner_device_identity_key }),
     attachment_mode: input.attachment_mode,
     excluded_dirs_json: input.excluded_dirs_json,
@@ -67,10 +69,12 @@ export function normalizeCanonicalExternalResourcePayload(objectType: string, va
     });
   }
   if (objectType !== 'external_folder') return null;
+  if ('folder_path' in input && typeof input.folder_path !== 'string') return null;
   const required = readStrings(input, [
     'attachment_mode', 'excluded_dirs_json', 'host_name', 'host_platform', 'id', 'source_ref'
   ]);
   return required ? buildCanonicalExternalFolderPayload({ ...required as unknown as CanonicalExternalFolderPayload,
+    folder_path: typeof input.folder_path === 'string' ? input.folder_path : undefined,
     ...('owner_device_identity_key' in input ? { owner_device_identity_key: nullableString(input.owner_device_identity_key) ?? null } : {}) }) : null;
 }
 

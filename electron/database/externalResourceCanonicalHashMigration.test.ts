@@ -78,7 +78,7 @@ function documentHash() {
 
 function folderHash() {
   return computeSyncContentHash('external_folder', buildCanonicalExternalFolderPayload({
-    attachment_mode: 'document_relative', excluded_dirs_json: '[".git"]', host_name: 'Host',
+    folder_path: '/private', attachment_mode: 'document_relative', excluded_dirs_json: '[".git"]', host_name: 'Host',
     host_platform: 'darwin', id: 'folder-1', source_ref: 'source-1'
   }));
 }

@@ -26,6 +26,15 @@ it('rejects peers that cannot preserve External provider identities and retireme
   });
 });
 
+it('rejects peers that discard External display paths', () => {
+  const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter(value => value !== 'external-library-reported-path-v1') });
+  expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing',
+    missing_capabilities: ['external-library-reported-path-v1']
+  });
+});
+
 it('rejects a same-version peer lacking the current request transport', () => {
   const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
     .filter(value => value !== 'framed-sync-v26') });
