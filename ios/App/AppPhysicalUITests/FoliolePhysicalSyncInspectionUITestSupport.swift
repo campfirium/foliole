@@ -1,6 +1,22 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func verifyRequestedJoinedTopicAfterRelaunch(in app: XCUIApplication) {
+        let prefix = requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX")
+        let text = requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT")
+        openBrowse(in: app)
+        waitForVisibleTopicText(prefix: prefix, text: text, in: app)
+        attachScreenshot(named: "Fri-requested-topic-after-join")
+        app.terminate()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
+                      "Fri did not retain its joined Sync Group after relaunch.")
+        openBrowse(in: app)
+        waitForVisibleTopicText(prefix: prefix, text: text, in: app)
+        attachScreenshot(named: "Fri-requested-topic-after-join-relaunch")
+    }
+
     func testInspectsExistingSyncSettings() throws {
         let app = acceptanceApplication()
         app.launch()

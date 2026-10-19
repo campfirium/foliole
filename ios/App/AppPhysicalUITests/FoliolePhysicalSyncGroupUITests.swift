@@ -43,6 +43,10 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
             "The accepted Sync Group was not activated on the physical iPhone."
         )
         enableAutomaticSync(in: app)
+        if ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_TOPIC_PREFIX"] != nil {
+            verifyRequestedJoinedTopicAfterRelaunch(in: app)
+            return
+        }
         if isTwoDeviceJourney { captureFriFact(in: app) }
         openBrowse(in: app)
         waitForJourneyFacts(isTwoDeviceJourney ? ["A", "B"] : ["A", "B", "C"], in: app)
