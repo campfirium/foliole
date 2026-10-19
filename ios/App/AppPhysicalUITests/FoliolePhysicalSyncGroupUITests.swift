@@ -162,7 +162,9 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
                                 text: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"), in: app)
         if let expectedBody = ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_EXPECTED_BODY"] {
             revealReadingChrome(in: app, matching: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"))
+            attachScreenshot(named: "Fri-before-open-topic-editor")
             tapButton(named: "Edit topic", in: app, timeout: 30)
+            attachScreenshot(named: "Fri-after-open-topic-editor")
             let editor = app.textViews["Topic body"]
             XCTAssertTrue(editor.waitForExistence(timeout: 30))
             XCTAssertEqual(editor.value as? String, expectedBody,
