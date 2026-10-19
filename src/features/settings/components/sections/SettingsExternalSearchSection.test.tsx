@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { useActiveSyncGroup } from '../../../../shared/platform/external/useActiveSyncGroup';
-import type { ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
+import { createDraftExternalSourceFolder, type ExternalSourceSettingsFolder } from '../../../../shared/platform/externalSourceSettingsRepository';
 
 import { SettingsExternalSearchSection } from './SettingsExternalSearchSection';
 
@@ -75,6 +75,14 @@ it('shows remote mirrors only when a remote desktop folder exists', () => {
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Update folder' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Reconnect' })).not.toBeInTheDocument();
+});
+
+it('keeps a newly selected local folder editable before its first save', () => {
+  const folder = createDraftExternalSourceFolder('/acceptance/local-folder');
+  renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[folder]} />);
+
+  expect(screen.getByLabelText('Excluded folder names for /acceptance/local-folder')).not.toBeDisabled();
+  expect(screen.queryByText('Other hosts')).not.toBeInTheDocument();
 });
 
 it('hides remote mirrors outside an active workgroup while keeping local controls', () => {

@@ -35,6 +35,7 @@ export const resetExternalSourceSettingsFoldersCacheForTest = invalidateExternal
 export function createDraftExternalSourceFolder(folderPath: string): ExternalSourceSettingsFolder {
   const now = new Date().toISOString();
   return {
+    accessMode: 'local',
     attachmentMode: 'document_relative_first_then_fixed_root',
     attachmentRootPath: null,
     createdAt: now,
