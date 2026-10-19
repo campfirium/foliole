@@ -8,11 +8,17 @@ import type { DatabaseDriver } from './driver.js';
 
 export const BODY_CANDIDATE_SQL = `SELECT b.kind, length(CAST(data.data AS BLOB)) AS byte_length
   FROM content_blobs b JOIN content_blob_data data ON data.hash = b.hash WHERE b.hash = ?`;
+export const BODY_CANDIDATE_EXISTS_SQL = `SELECT 1 AS present
+  FROM content_blobs b JOIN content_blob_data data ON data.hash = b.hash WHERE b.hash = ?`;
 const RANGE_SQL = 'SELECT substr(CAST(data AS BLOB), ?, ?) AS data FROM content_blob_data WHERE hash = ?';
 type Candidate = { kind: string; byte_length: number };
 
-function candidateLength(hash: string, row?: Candidate) {
+export function assertTextBodyCandidateHash(hash: string) {
   if (!/^[a-f0-9]{64}$/u.test(hash)) throw new Error('text_body_collection_invalid_hash');
+}
+
+function candidateLength(hash: string, row?: Candidate) {
+  assertTextBodyCandidateHash(hash);
   if (!row || row.kind !== 'text_body') return null;
   if (!Number.isSafeInteger(row.byte_length) || row.byte_length < 0) fail(hash);
   return row.byte_length;

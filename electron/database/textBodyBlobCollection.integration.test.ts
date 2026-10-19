@@ -12,6 +12,23 @@ beforeEach(startLibraries);
 afterEach(closeLibraries);
 const NOW = '2026-10-01T01:00:00.000Z';
 
+it.each(['driver', 'port'] as const)('does not inspect unrelated holders for absent body bytes through %s', async mode => {
+  const peer = createPeer('source');
+  const hash = upsertTextBodyBlob(peer.driver, 'Already collected', NOW);
+  peer.db.prepare('DELETE FROM content_blob_data WHERE hash = ?').run(hash);
+  peer.db.prepare('DELETE FROM content_blobs WHERE hash = ?').run(hash);
+  peer.db.prepare('INSERT INTO editor_operation_history VALUES (1, ?, ?)').run('invalid json', NOW);
+  const collect = (candidate: string) => mode === 'driver'
+    ? Promise.resolve().then(() => collectTextBodyBlobCandidates(peer.driver, [candidate]))
+    : collectTextBodyBlobCandidatesWithPort(peer.port, [candidate]);
+  await expect(collect(hash)).resolves.toEqual({ deletedHashes: [], deletedBytes: 0 });
+  await expect(collect('invalid')).rejects.toThrow('text_body_collection_invalid_hash');
+  expect(peer.db.prepare('SELECT payload_json FROM editor_operation_history').pluck().get()).toBe('invalid json');
+  upsertTextBodyBlob(peer.driver, 'Already collected', NOW);
+  await expect(collect(hash)).rejects.toThrow();
+  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeDefined();
+});
+
 it('protects and releases large raw text and nested JSON holders without complete body bridge reads', async () => {
   const peer = createPeer('source');
   const body = '\uFEFF' + ('🙂雪\u0000'.repeat(400000));

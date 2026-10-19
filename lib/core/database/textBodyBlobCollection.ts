@@ -1,7 +1,8 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver } from './driver.js';
-import { verifyTextBodyCandidate, verifyTextBodyCandidateWithPort } from './textBodyBlobCandidate.js';
+import { assertTextBodyCandidateHash, BODY_CANDIDATE_EXISTS_SQL,
+  verifyTextBodyCandidate, verifyTextBodyCandidateWithPort } from './textBodyBlobCandidate.js';
 import {
   bodyHolderQueries, DELETE_BODY_DATA_SQL, DELETE_BODY_METADATA_SQL
 } from './textBodyBlobCollectionQueries.js';
@@ -16,6 +17,8 @@ export function collectTextBodyBlobCandidates(driver: DatabaseDriver, hashes: re
     const deletedHashes: string[] = [];
     let deletedBytes = 0;
     for (const hash of new Set(hashes)) {
+      assertTextBodyCandidateHash(hash);
+      if (!driver.queryOne(BODY_CANDIDATE_EXISTS_SQL, [hash])) continue;
       if (bodyHolderQueries(tables, hash).some(({ sql, params }) => driver.queryOne(sql, params))) continue;
       const body = verifyTextBodyCandidate(driver, hash);
       if (!body) continue;
@@ -36,6 +39,8 @@ export async function collectTextBodyBlobCandidatesWithPort(port: DbPort, hashes
     const deletedHashes: string[] = [];
     let deletedBytes = 0;
     for (const hash of new Set(hashes)) {
+      assertTextBodyCandidateHash(hash);
+      if (!(await tx.query(BODY_CANDIDATE_EXISTS_SQL, [hash])).length) continue;
       if (await hasBodyHolder(tx, tables, hash)) continue;
       const body = await verifyTextBodyCandidateWithPort(tx, hash);
       if (!body) continue;
