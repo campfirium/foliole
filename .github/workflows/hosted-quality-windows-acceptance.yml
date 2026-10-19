@@ -45,7 +45,6 @@ jobs:
         run: node scripts/quality/pinned-npm.mjs activate
       - name: Verify fixed Windows x64 context
         id: context
-        env: { GITHUB_SHA: "${{ env.TARGET_SHA }}" }
         run: node scripts/windows/windows-ci-evidence.mjs verify
       - name: Install dependencies
         id: npm_ci
@@ -76,7 +75,6 @@ jobs:
           DEPENDENCY_HARDENING_OUTCOME: skipped
           DESKTOP_BUILD_OUTCOME: ${{ steps.desktop_build.outcome }}
           DESKTOP_QUALITY_OUTCOME: skipped
-          GITHUB_SHA: ${{ env.TARGET_SHA }}
           NATIVE_ABI_OUTCOME: ${{ steps.native_abi.outcome }}
           NPM_CI_OUTCOME: ${{ steps.npm_ci.outcome }}
           PLAYWRIGHT_OUTCOME: ${{ steps.playwright.outcome }}

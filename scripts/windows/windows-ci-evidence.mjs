@@ -29,10 +29,10 @@ export function verifyWindowsCiContext({
   env = process.env,
   readHead = () => execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 } = {}) {
-  const sha = requireValue(env, 'GITHUB_SHA');
-  if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error('GITHUB_SHA must be a 40-character lowercase commit SHA');
+  const sha = requireValue(env, 'TARGET_SHA');
+  if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error('TARGET_SHA must be a 40-character lowercase commit SHA');
   const head = readHead();
-  if (head !== sha) throw new Error(`checked out HEAD does not match GITHUB_SHA: head=${head} sha=${sha}`);
+  if (head !== sha) throw new Error(`checked out HEAD does not match TARGET_SHA: head=${head} sha=${sha}`);
   if (requireValue(env, 'RUNNER_OS') !== 'Windows') throw new Error('RUNNER_OS must be Windows');
   if (requireValue(env, 'RUNNER_ARCH') !== 'X64') throw new Error('RUNNER_ARCH must be X64');
   return { head, sha };
@@ -52,7 +52,7 @@ function inspectWindowsCiContext(options) {
     return {
       error: error instanceof Error ? error.message : String(error),
       head,
-      sha: env.GITHUB_SHA?.trim() || 'unavailable',
+      sha: env.TARGET_SHA?.trim() || 'unavailable',
       status: 'failure'
     };
   }

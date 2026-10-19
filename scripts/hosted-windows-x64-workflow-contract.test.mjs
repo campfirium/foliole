@@ -45,7 +45,7 @@ describe('hosted Windows x64 workflow contract', () => {
     expect(t5WindowsCore).toContain('Checked out SHA does not match TARGET_SHA');
     expect(acceptanceJob).toContain('ref: "${{ env.TARGET_SHA }}"');
     expect(acceptanceJob).toContain('Checked out SHA does not match TARGET_SHA');
-    expect(acceptanceJob).toContain('GITHUB_SHA: ${{ env.TARGET_SHA }}');
+    expect(acceptanceJob).toContain('TARGET_SHA: ${{ inputs.target_sha }}');
     expect(acceptanceJob).toContain('node scripts/windows/windows-ci-evidence.mjs verify');
     expect(acceptanceJob).toContain('node scripts/windows/windows-ci-evidence.mjs write');
     expect(acceptanceJob).toContain('name: windows-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}');

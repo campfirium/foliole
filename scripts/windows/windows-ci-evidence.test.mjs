@@ -13,7 +13,8 @@ function createEnv(overrides = {}) {
     GITHUB_REF: 'refs/heads/dev',
     GITHUB_RUN_ATTEMPT: '1',
     GITHUB_RUN_ID: '9001',
-    GITHUB_SHA: SHA,
+    GITHUB_SHA: 'f'.repeat(40),
+    TARGET_SHA: SHA,
     CONTEXT_OUTCOME: 'success',
     RUNNER_ARCH: 'X64',
     RUNNER_OS: 'Windows',
@@ -42,7 +43,11 @@ describe('Windows CI evidence', () => {
     expect(() => verifyWindowsCiContext({
       env: createEnv(),
       readHead: () => 'f'.repeat(40)
-    })).toThrow('HEAD does not match GITHUB_SHA');
+    })).toThrow('HEAD does not match TARGET_SHA');
+    expect(() => verifyWindowsCiContext({
+      env: createEnv({ TARGET_SHA: undefined }),
+      readHead: () => SHA
+    })).toThrow('TARGET_SHA is required');
   });
 
   it('writes human-readable SHA, suite, and step outcomes to the evidence whitelist', () => {
