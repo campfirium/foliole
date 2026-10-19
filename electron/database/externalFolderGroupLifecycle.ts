@@ -1,13 +1,7 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import { DEPARTED_EXTERNAL_FOLDERS_SQL, retireExternalFolder } from '../../lib/core/database/externalFolderRetirement.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
-
-export function retireDepartedExternalFolders(driver: DatabaseDriver, groupId: string, now: string) {
-  const folders = driver.queryAll<{ config_ref: string }>(DEPARTED_EXTERNAL_FOLDERS_SQL, [groupId]);
-  for (const folder of folders) retireExternalFolder(driver, folder.config_ref, now, 'sync-membership');
-}
 
 export function retagLocalExternalFolders(driver: DatabaseDriver, previousId: string | null, nextId: string, now: string) {
   if (!previousId || previousId === nextId) return;

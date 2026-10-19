@@ -7,7 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 for (const mode of ['local', 'remote', 'member'] as const) {
-test(`removes an indexed external folder through ${mode} deletion and keeps durable child deletion facts`, async ({
+test(`removes an indexed external folder through ${mode} ${mode === 'member' ? 'departure without deletion records' : 'deletion and keeps durable child deletion facts'}`, async ({
   desktopApp, desktopWindow
 }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
@@ -51,7 +51,8 @@ test(`removes an indexed external folder through ${mode} deletion and keeps dura
   expect(state.original).toBe('# Removal sync article\n\nOriginal article body');
   expect(state.documents).toEqual([]);
   expect(state.sources).toEqual([]);
-  expect(state.state).toMatchObject({ deleted_at: expect.any(String) });
+  if (mode === 'member') expect(state.state ?? null).toBeNull();
+  else expect(state.state).toMatchObject({ deleted_at: expect.any(String) });
   const screenshot = path.resolve(`.tmp/artifacts/external-folder-removal/native-after-${mode}-removal.png`);
   await mkdir(path.dirname(screenshot), { recursive: true });
   await desktopWindow.screenshot({ path: screenshot });

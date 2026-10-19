@@ -136,25 +136,28 @@ function expectKeptLocally(peer: Peer, standaloneId: string, folderPath: string)
   } finally { reopened.close(); }
 }
 
-async function expectRetired(peer: Peer, original: NativeSyncObjectRecord) {
-    const reopened = new Database(peer.file, { readonly: true });
-    try {
-      expect(reopened.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toBeUndefined();
-      expect(reopened.prepare("SELECT source_ref FROM desktop_sources WHERE source_ref = 'external:provided'").get()).toBeUndefined();
-      expect(reopened.prepare("SELECT document_id FROM external_documents WHERE folder_id = 'provided'").all()).toEqual([]);
-      expect(reopened.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'provided'").get())
-        .toEqual({ deleted_at: expect.any(String) });
-    } finally { reopened.close(); }
-    await peer.port.transaction(tx => applySyncObjectInTransaction(tx, { ...original, updated_at: '2099-01-01T00:00:00.000Z' }));
-    expect(peer.db.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toBeUndefined();
+function expectForgotten(peer: Peer, folderId: string) {
+  const reopened = new Database(peer.file, { readonly: true });
+  try {
+    expect(reopened.prepare('SELECT id FROM external_search_folders WHERE id = ?').get(folderId)).toBeUndefined();
+    expect(reopened.prepare('SELECT source_ref FROM desktop_sources WHERE source_ref = ?').get(`external:${folderId}`)).toBeUndefined();
+    expect(reopened.prepare('SELECT document_id FROM external_documents WHERE folder_id = ?').all(folderId)).toEqual([]);
+    expect(reopened.prepare(`SELECT object_type FROM sync_object_state WHERE (object_type = 'external_folder' AND object_id = ?)
+      OR (object_type = 'external_document' AND object_id LIKE ?)`).all(folderId, `${folderId}:%`)).toEqual([]);
+  } finally { reopened.close(); }
 }
 
-it('retires a library first received after its provider left and rejects its late documents', async () => {
+async function expectRetired(peer: Peer, original: NativeSyncObjectRecord) {
+  expectForgotten(peer, 'provided');
+  await peer.port.transaction(tx => applySyncObjectInTransaction(tx, { ...original, updated_at: '2099-01-01T00:00:00.000Z' }));
+  expectForgotten(peer, 'provided');
+}
+
+it('drops late payloads of a library whose provider already left without deletion records', async () => {
   current = peers[2]!;
   const original = seedFolder('late', '/not-read');
   current = peers[0]!;
   leaveDesktopSyncGroupDevice(peers[2]!.id);
-  await current.port.transaction(tx => applySyncObjectInTransaction(tx, original));
   const payload = { document_id: 'late:doc', folder_id: 'late', relative_path: 'doc.md',
     file_name: 'doc.md', extension: 'md', title: 'Late', content_hash: 'hash', body_blob_hash: null,
     reference_json: null, reference_kind: 'local_path' };
@@ -162,9 +165,8 @@ it('retires a library first received after its provider left and rejects its lat
     object_type: 'external_document', object_id: 'late:doc', payload_json: JSON.stringify(payload),
     content_hash: computeSyncContentHash('external_document', payload), updated_at: '2099-01-01T00:00:00.000Z', deleted_at: null
   }));
-  expect(current.db.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = 'late'").get())
-    .toEqual({ deleted_at: expect.any(String) });
-  expect(current.db.prepare("SELECT * FROM external_documents WHERE folder_id = 'late'").all()).toEqual([]);
+  await current.port.transaction(tx => applySyncObjectInTransaction(tx, original));
+  expectForgotten(current, 'late');
 });
 
 it('keeps an existing local library owned by the same device when creating a group', () => {

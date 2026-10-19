@@ -1,4 +1,4 @@
-import { removeExternalFolderProjectionWithDbPort, retireExternalFolderWithDbPort } from '../database/externalFolderRetirement.js';
+import { forgetExternalFolderWithDbPort, removeExternalFolderProjectionWithDbPort } from '../database/externalFolderRetirement.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort } from './dbPort.js';
@@ -22,7 +22,7 @@ export async function applyExternalFolderObject(port: DbPort, record: SyncObject
   const owner = text(payload.owner_device_identity_key);
   if (owner && (await port.query(
     "SELECT 1 FROM sync_group_devices WHERE device_identity_key = ? AND state = 'left'", [owner])).length) {
-    await retireExternalFolderWithDbPort(port, record.object_id, record.updated_at);
+    await forgetExternalFolderWithDbPort(port, record.object_id);
     return false;
   }
   const sourceRef = text(payload.source_ref) ?? '';

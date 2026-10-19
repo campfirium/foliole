@@ -167,6 +167,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncTwoProcessRecovery.integration.test.ts',
   'electron/sync/syncGroupSharedKeyTrust.test.ts',
   'electron/sync/syncGroupLocalAdoption.integration.test.ts',
+  'electron/sync/externalFolderMembershipRejoin.integration.test.ts',
   'lib/core/database/nodeBodyConsumersStable.integration.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionSyncGroupLocalAdoption.sqlite.test.ts',

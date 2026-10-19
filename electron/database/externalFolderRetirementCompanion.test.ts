@@ -7,7 +7,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
-import { retireDepartedExternalFoldersWithDbPort } from '../../lib/core/database/externalFolderRetirement.js';
+import { forgetDepartedExternalFoldersWithDbPort } from '../../lib/core/database/externalFolderRetirement.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
@@ -16,7 +16,7 @@ import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectAppl
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-it.each(['tombstone', 'membership'] as const)('retires document state through %s against the production companion SQLite schema', async (mode) => {
+it.each(['tombstone', 'membership'] as const)('removes the library through %s against the production companion SQLite schema', async (mode) => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'foliole-folder-retirement-companion-'));
   const db = new Database(path.join(root, 'main.db'));
   try {
@@ -45,7 +45,7 @@ it.each(['tombstone', 'membership'] as const)('retires document state through %s
           (group_id, device_identity_key, device_anchor, canonical_library_path, device_name, platform,
            state, joined_at, left_at, last_seen_at, updated_at)
           VALUES ('group', 'provider', 'anchor', '/provider', 'Provider', 'darwin', 'left', 'now', 'now', 'now', 'now')`);
-        await retireDepartedExternalFoldersWithDbPort(tx, 'group', '2026-07-24T00:23:10.000Z');
+        await forgetDepartedExternalFoldersWithDbPort(tx, 'group');
       } else await applySyncObjectInTransaction(tx, { object_type: 'external_folder', object_id: folder.id,
         content_hash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone(folder.id)),
         payload_json: null, updated_at: '2026-07-24T00:23:10.000Z', deleted_at: '2026-07-24T00:23:10.000Z' });
@@ -57,6 +57,12 @@ it.each(['tombstone', 'membership'] as const)('retires document state through %s
       .toEqual({ content: 'Original article', deleted_at: null });
     expect(db.prepare('SELECT source_ref FROM desktop_sources WHERE source_ref = ?').get(folder.source_ref))
       .toBeUndefined();
+    if (mode === 'membership') {
+      expect((await readFramedSyncInventory(port)).find((item) => item.globalId === document.document_id)).toBeUndefined();
+      expect(db.prepare(`SELECT object_id FROM sync_object_state WHERE object_type IN ('external_document', 'external_folder')`)
+        .all()).toEqual([]);
+      return;
+    }
     const entry = (await readFramedSyncInventory(port)).find((item) => item.globalId === document.document_id)!;
     await expect(selectFramedSyncObjectStateFact(port, entry, entry.stateFactIds![0]!))
       .resolves.toMatchObject({ globalId: document.document_id });

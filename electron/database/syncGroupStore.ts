@@ -1,12 +1,13 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
+import { forgetDepartedExternalFolders } from '../../lib/core/database/externalFolderRetirement.js';
 import { collectAllNodeVersionChainsWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { retireDepartedExternalFolders, retagLocalExternalFolders } from './externalFolderGroupLifecycle.js';
+import { retagLocalExternalFolders } from './externalFolderGroupLifecycle.js';
 import { retagLocalReadwiseSources, retagStandaloneReadwiseOwner } from './readwiseSourceIdentity.js';
 import {
   loadStandaloneWatchedDeviceId,
@@ -136,7 +137,7 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
     }
     const departed = driver.queryOne<{ group_id: string }>(
       'SELECT group_id FROM sync_group_devices WHERE device_identity_key = ?', [deviceIdentityKey]);
-    if (departed) retireDepartedExternalFolders(driver, departed.group_id, leftAt);
+    if (departed) forgetDepartedExternalFolders(driver, departed.group_id);
     if (local?.local_device_identity_key === deviceIdentityKey) {
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
       driver.execute('DELETE FROM sync_group_metadata');
