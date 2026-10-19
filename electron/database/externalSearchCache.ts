@@ -1,6 +1,7 @@
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
+import { runWithDatabaseConnectionOwner } from './connection.js';
 import {
   markExternalDocumentsMissing,
   replaceExternalDocumentsForFolder,
@@ -51,7 +52,7 @@ async function syncExternalSearchFolder(
   options: ExternalSearchRefreshOptions = {}
 ) {
   const defaultExcludedNames = new Set(['.git', '.obsidian', '.trash', 'node_modules']);
-  const autoExcludedPaths = resolveAutoExcludedPaths();
+  const autoExcludedPaths = await runWithDatabaseConnectionOwner(resolveAutoExcludedPaths);
   const scannedEntries: ScannedDocumentEntry[] = [];
   await scanFolderEntries(
     folder,
@@ -85,7 +86,7 @@ async function syncExternalSearchFolder(
     });
     await options.taskContext?.yieldIfNeeded?.();
   }
-  assertExternalSearchFolderConfigured(folder);
+  await runWithDatabaseConnectionOwner(() => assertExternalSearchFolderConfigured(folder));
   const indexedAt = await applyFolderDocumentChanges({
     db,
     deletedAbsolutePaths,
@@ -94,17 +95,28 @@ async function syncExternalSearchFolder(
     ...(options.documentChunkSize === undefined ? {} : { documentChunkSize: options.documentChunkSize }),
     ...(options.taskContext === undefined ? {} : { context: options.taskContext })
   });
-  assertExternalSearchFolderConfigured(folder);
-  upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
-  markExternalDocumentsMissing(
-    deletedRows.map((row) => ({ relativePath: row.relative_path })),
-    folder.id,
-    indexedAt
-  );
+  await commitExternalDocumentChanges(folder, documentsToUpsert, deletedRows, indexedAt);
   return {
     documentCount: scannedEntries.length,
     indexedAt
   };
+}
+
+function commitExternalDocumentChanges(
+  folder: ReturnType<typeof loadExternalSearchFolders>[number],
+  documentsToUpsert: ScannedDocument[],
+  deletedRows: CachedFolderDocumentRow[],
+  indexedAt: string
+) {
+  return runWithDatabaseConnectionOwner(() => {
+    assertExternalSearchFolderConfigured(folder);
+    upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
+    markExternalDocumentsMissing(
+      deletedRows.map((row) => ({ relativePath: row.relative_path })),
+      folder.id,
+      indexedAt
+    );
+  });
 }
 
 export async function rebuildExternalSearchIndexes(folderId?: string) {
@@ -155,41 +167,41 @@ function assertExternalSearchFolderConfigured(folder: ReturnType<typeof loadExte
 }
 
 export async function refreshExternalSearchIndexes(folderId?: string, options: ExternalSearchRefreshOptions = {}) {
-  const folders = loadRefreshableExternalSearchFolders().filter((folder) =>
+  const folders = (await runWithDatabaseConnectionOwner(loadRefreshableExternalSearchFolders)).filter((folder) =>
     !folderId || folder.id === folderId
   );
-  const db = openExternalSearchCacheDatabase();
+  const db = await runWithDatabaseConnectionOwner(openExternalSearchCacheDatabase);
   for (const folder of folders) {
     if (options.taskContext?.signal?.aborted) {
       throw new DOMException('AbortError', 'AbortError');
     }
-    updateExternalSearchFolderIndexState({
+    await runWithDatabaseConnectionOwner(() => updateExternalSearchFolderIndexState({
       documentCount: folder.document_count,
       folderId: folder.id,
       indexedAt: folder.indexed_at,
       lastError: null,
       status: 'indexing'
-    });
+    }));
     try {
       options.taskContext?.progress?.({ message: `refreshing ${folder.folder_path}`, unit: 'folder' });
       const result = await syncExternalSearchFolder(db, folder, options);
-      updateExternalSearchFolderIndexState({
+      await runWithDatabaseConnectionOwner(() => updateExternalSearchFolderIndexState({
         documentCount: result.documentCount,
         folderId: folder.id,
         indexedAt: result.indexedAt,
         lastError: null,
         status: 'ready'
-      });
+      }));
       await options.taskContext?.yieldIfNeeded?.();
     } catch (error) {
-      updateExternalSearchFolderIndexState({
+      await runWithDatabaseConnectionOwner(() => updateExternalSearchFolderIndexState({
         documentCount: 0,
         folderId: folder.id,
         indexedAt: null,
         lastError: error instanceof Error ? error.message : 'Unknown indexing error',
         status: 'error'
-      });
+      }));
     }
   }
-  return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
+  return runWithDatabaseConnectionOwner(() => [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()]);
 }

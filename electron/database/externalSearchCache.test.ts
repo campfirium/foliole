@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
 import {
   rebuildExternalSearchIndexes,
@@ -27,7 +27,7 @@ import {
 } from './externalSearchCache.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { loadExternalSearchBrowseEntries } from './externalSearchCacheRead.js';
-import { saveExternalSearchFolders } from './externalSearchFolders.js';
+import { loadExternalSearchFolders, saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
 
 const require = createRequire(import.meta.url);
@@ -98,6 +98,31 @@ function seedExternalSearchFolder(folderPath: string, id: string) {
     ]
   );
 }
+
+it.each(['folder', 'document'])('finishes background indexing with a concurrent operation at %s progress', async (unit) => {
+  const folderPath = path.join(tempRoot, 'concurrent');
+  const filePath = path.join(folderPath, 'source.md');
+  await writeTextFile(filePath, 'Concurrent source content', '2026-10-19T00:00:00.000Z');
+  seedExternalSearchFolder(folderPath, 'concurrent');
+  let competing: Promise<void> | undefined;
+  try {
+    await refreshExternalSearchIndexes('concurrent', { taskContext: {
+      progress: (progress) => {
+        if (progress.unit !== unit) return;
+        competing ??= runWithDatabaseConnectionOwner(async () => {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          expect(loadExternalSearchFolders()).toHaveLength(1);
+        });
+      }
+    } });
+  } finally {
+    await competing;
+  }
+  expect(loadExternalSearchFolders().find(folder => folder.id === 'concurrent')).toMatchObject({
+    status: 'ready', document_count: 1, last_error: null
+  });
+  expect(readDocumentRow(filePath)?.content).toContain('Concurrent source content');
+});
 
 it('refreshes external search indexes incrementally for added, changed, and deleted files', async () => {
   const libraryRoot = path.join(tempRoot, 'library');
