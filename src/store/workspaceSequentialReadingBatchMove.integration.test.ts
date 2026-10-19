@@ -8,6 +8,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 
 let tempRoot = '';
+const timings: Record<string, number> = {};
 vi.mock('../../electron/deviceAnchorStore.js', () => ({
   loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'reading-move-test', libraryPath })
 }));
@@ -27,13 +28,19 @@ import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialRea
 import { maintenanceTree } from './workspaceSequentialReadingMaintenance.testSupport';
 
 afterEach(async () => {
+  if (process.platform === 'win32' && process.env.CI) {
+    await fs.mkdir('.tmp/vitest', { recursive: true });
+    await fs.writeFile(`.tmp/vitest/reading-batch-move-${process.pid}.json`, JSON.stringify(timings));
+  }
   closeDatabaseConnection();
   if (tempRoot) await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
 it('persists every unlocked descendant through the production move and database reopen', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-batch-move-'));
+  const startedAt = performance.now();
   initializeDatabase();
+  timings.initializedAtMs = performance.now() - startedAt;
   const args = maintenanceTree();
   for (const [position, node] of Object.values(args.previousNodesById).entries()) {
     upsertNodeSnapshot({
@@ -43,6 +50,7 @@ it('persists every unlocked descendant through the production move and database 
       createdAt: node.createdAt, updatedAt: node.updatedAt
     });
   }
+  timings.seededAtMs = performance.now() - startedAt;
   const patch = buildSequentialReadingMaintenancePatch(args)!;
   moveNodes({
     nodeOrder: args.nodeOrder,
@@ -52,8 +60,10 @@ it('persists every unlocked descendant through the production move and database 
         sequentialReadingEnabled: node.sequentialReadingEnabled ?? null, updatedAt: args.now };
     })
   });
+  timings.movedAtMs = performance.now() - startedAt;
   closeDatabaseConnection();
   initializeDatabase();
+  timings.reopenedAtMs = performance.now() - startedAt;
   const snapshot = loadWorkspaceSnapshot()!;
   expect(snapshot.nodesById.moved?.parentNodeId).toBe('destination');
   for (const change of patch.changes) {

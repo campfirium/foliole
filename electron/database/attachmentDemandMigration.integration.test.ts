@@ -24,8 +24,8 @@ it.each(['desktop', 'companion'])('seeds existing live articles once at upgrade 
     sqlite.exec(`DROP TRIGGER attachment_demand_insert; DROP TRIGGER attachment_demand_update; DROP TRIGGER attachment_demand_delete;
       DROP TABLE attachment_parse_queue; DROP TABLE attachment_pending`);
     if (platform === 'desktop') {
-      sqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION - 1}`); initializeDatabaseSchema(sqlite);
-    } else await db.transaction(tx => migrateCompanionDatabase(tx, COMPANION_DATABASE_VERSION - 1, COMPANION_DATABASE_VERSION));
+      sqlite.pragma('user_version = 163'); initializeDatabaseSchema(sqlite);
+    } else await db.transaction(tx => migrateCompanionDatabase(tx, 92, COMPANION_DATABASE_VERSION));
     expect((await readRequestSyncAttachmentNeedsSlice(host, async keys => keys.map(() => false), () => false)).keys).toEqual([imageKey(1)]);
     await db.transaction(tx => clearWorkgroupSyncDataForRestore(tx, 'restore'));
     await readRequestSyncAttachmentNeedsSlice(host, async keys => keys.map(() => false), () => false);

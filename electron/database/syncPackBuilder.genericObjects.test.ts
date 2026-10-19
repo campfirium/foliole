@@ -64,16 +64,16 @@ it('ignores retired independent attachment state', async () => {
   expect(target.prepare('SELECT * FROM sync_object_state').all()).toEqual([]);
 });
 
-it('transfers external folder metadata without leaking the source filesystem path', async () => {
+it('transfers the reported external folder path without creating a local source binding', async () => {
   insertExternalFolderSyncState();
   const target = await receive();
   const row = target.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder).get('folder-1') as { payload_json: string };
   expect(JSON.parse(row.payload_json)).toEqual({
     attachment_mode: 'document_relative_first_then_fixed_root', excluded_dirs_json: '[".git"]',
-    host_name: 'desktop', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
+    folder_path: '/library', host_name: 'desktop', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
   });
-  expect(row.payload_json).not.toContain('/library');
-  expect(JSON.stringify(target.prepare('SELECT * FROM external_search_folders').all())).not.toContain('/library');
+  expect(target.prepare('SELECT folder_path, attachment_root_path FROM external_search_folders WHERE id = ?').get('folder-1'))
+    .toEqual({ folder_path: '/library', attachment_root_path: null });
   expect(JSON.stringify(target.prepare('SELECT * FROM desktop_sources').all())).not.toContain('/library');
 });
 
