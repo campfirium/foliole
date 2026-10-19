@@ -26,20 +26,28 @@ extension FoliolePhysicalSyncGroupUITests {
             }, object: app)
             guard XCTWaiter.wait(for: [ready], timeout: max(0, deadline.timeIntervalSinceNow)) == .completed
             else { break }
-            if body.exists {
+            if directory.isHittable {
+                directory.tap()
+                return
+            } else if browse.isHittable {
+                browse.tap()
+            } else if body.exists {
                 if !localizedButton(named: "Exit", in: app).exists {
                     let passage = body.staticTexts.firstMatch
                     XCTAssertTrue(passage.waitForExistence(timeout: 30), "The active topic text is unavailable.")
                     passage.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 }
+                if directory.isHittable {
+                    directory.tap()
+                    return
+                }
+                if browse.isHittable {
+                    browse.tap()
+                    continue
+                }
                 tapButton(named: "Exit", in: app, timeout: 30)
                 waitForDisappearance(body, timeout: 30,
                                      message: "Fri did not leave its restored topic.")
-            } else if directory.isHittable {
-                directory.tap()
-                return
-            } else if browse.isHittable {
-                browse.tap()
             }
         }
         XCTFail("Fri did not reach Browse directory from its restored surface.")
