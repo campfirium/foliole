@@ -5,8 +5,9 @@ import {
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import process from 'node:process';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   createTransientWorktree,
@@ -21,6 +22,15 @@ import {
 
 const roots = [];
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+beforeAll(() => {
+  if (process.platform !== 'win32' || !process.env.CI) return;
+  const directory = join(process.cwd(), '.tmp', 'vitest');
+  mkdirSync(directory, { recursive: true });
+  vi.stubEnv('GIT_TRACE2_PERF', join(directory, `worktree-git-${process.pid}.log`));
+});
+
+afterAll(() => vi.unstubAllEnvs());
 
 function git(cwd, ...args) {
   return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
