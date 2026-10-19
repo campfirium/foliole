@@ -115,6 +115,7 @@ export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   'settings.externalSources.update': 'Update',
   'settings.externalSources.removeFolder': 'Remove folder',
   'settings.externalSources.disconnect': 'Disconnect',
+  'settings.externalSources.status.disconnected': 'Disconnected',
   'settings.externalSources.reconnect.action': 'Reconnect',
   'settings.externalSources.reconnect.title': 'Reconnect external folder',
   'settings.externalSources.reconnect.summary': '{matched} matched, {added} new, {missing} missing. Missing files will not remove the saved search copy.',

@@ -8,8 +8,10 @@ import {
 
 export function ExternalLibraryRowActions(props: {
   disabled: boolean;
+  disconnected: boolean;
   folderId: string;
   onDisconnectFolder: (folderId: string) => void;
+  onReconnectFolder: (folderId: string) => void;
   onRebuildIndex: (folderId?: string) => void;
   onRemoveFolder: (folderId: string) => void;
 }) {
@@ -20,15 +22,16 @@ export function ExternalLibraryRowActions(props: {
       <button
         className={settingsButtonClassName('h-9 px-3')}
         disabled={props.disabled}
-        onClick={() => props.onDisconnectFolder(props.folderId)}
+        onClick={() => props.disconnected
+          ? props.onReconnectFolder(props.folderId) : props.onDisconnectFolder(props.folderId)}
         type="button"
       >
-        {t('settings.externalSources.disconnect')}
+        {t(props.disconnected ? 'settings.externalSources.reconnect.action' : 'settings.externalSources.disconnect')}
       </button>
       <button
         aria-label={t('settings.externalSources.updateMirror')}
         className={settingsButtonClassName('h-9 px-3')}
-        disabled={props.disabled}
+        disabled={props.disabled || props.disconnected}
         onClick={() => props.onRebuildIndex(props.folderId)}
         title={t('settings.externalSources.updateMirrorTitle')}
         type="button"

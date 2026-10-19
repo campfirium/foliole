@@ -5,6 +5,7 @@ import { AppStatusBadge } from '../../../../shared/ui';
 type Translate = ReturnType<typeof useTranslation>;
 
 function statusTone(folder: ExternalSourceSettingsFolder) {
+  if (folder.sourceExecutable === false) return 'neutral';
   if (folder.status === 'ready') return 'success';
   if (folder.status === 'indexing') return 'info';
   if (folder.status === 'error') return 'error';
@@ -12,6 +13,7 @@ function statusTone(folder: ExternalSourceSettingsFolder) {
 }
 
 function statusMeta(folder: ExternalSourceSettingsFolder, t: Translate) {
+  if (folder.sourceExecutable === false) return t('settings.externalSources.reconnect.action');
   if (folder.status === 'error') return folder.lastError ?? t('settings.externalSources.status.errorFallback');
   if (folder.status === 'ready') return t('settings.externalSources.status.readyMeta', { count: folder.documentCount });
   if (folder.status === 'indexing') return t('settings.externalSources.status.indexingMeta');
@@ -19,6 +21,7 @@ function statusMeta(folder: ExternalSourceSettingsFolder, t: Translate) {
 }
 
 function statusLabel(folder: ExternalSourceSettingsFolder, t: Translate) {
+  if (folder.sourceExecutable === false) return t('settings.externalSources.status.disconnected');
   if (folder.status === 'error' || Boolean(folder.lastError)) return t('settings.externalSources.status.unavailable');
   if (folder.status === 'indexing') return t('settings.externalSources.status.updating');
   if (folder.status === 'ready') return t('settings.externalSources.status.ready');

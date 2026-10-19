@@ -187,8 +187,10 @@ export function ExternalLibraryRow(props: {
       <ExternalLibraryStatus folder={props.folder} />
       <ExternalLibraryRowActions
         disabled={disabled}
+        disconnected={props.folder.sourceExecutable === false}
         folderId={props.folder.id}
         onDisconnectFolder={props.onDisconnectFolder}
+        onReconnectFolder={props.onChooseFolder}
         onRebuildIndex={props.onRebuildIndex}
         onRemoveFolder={props.onRemoveFolder}
       />

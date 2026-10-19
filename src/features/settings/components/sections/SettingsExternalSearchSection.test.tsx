@@ -60,6 +60,28 @@ beforeEach(() => {
   activeSyncGroupMock.mockReturnValue(true);
 });
 
+it('shows a disconnected local folder as paused and offers reconnection instead of another disconnect', () => {
+  const folder = remoteFolder({ accessMode: 'local', sourceExecutable: true });
+  const view = renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[folder]} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+  expect(baseProps.onDisconnectFolder).toHaveBeenCalledWith(folder.id);
+
+  view.rerender(<SettingsExternalSearchSection {...baseProps} folders={[
+    { ...folder, sourceExecutable: false }
+  ]} />);
+  expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+  expect(screen.getByText('Disconnected')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Update folder' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Reconnect' }));
+  expect(baseProps.onReconnectFolder).toHaveBeenCalledWith(folder.id);
+  expect(screen.getByRole('button', { name: 'Remove folder' })).not.toBeDisabled();
+  view.rerender(<SettingsExternalSearchSection {...baseProps} folders={[folder]} />);
+  expect(screen.getByText('Ready')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Disconnect' })).not.toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Update folder' })).not.toBeDisabled();
+});
+
 it('shows remote mirrors only when a remote desktop folder exists', () => {
   renderWithLocalization(<SettingsExternalSearchSection {...baseProps} folders={[remoteFolder()]} />);
 

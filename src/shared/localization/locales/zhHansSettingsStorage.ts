@@ -118,6 +118,7 @@ export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.externalSources.update': '更新',
   'settings.externalSources.removeFolder': '移除文件夹',
   'settings.externalSources.disconnect': '断开',
+  'settings.externalSources.status.disconnected': '已断开',
   'settings.externalSources.reconnect.action': '重新连接',
   'settings.externalSources.reconnect.title': '重新连接外部文件夹',
   'settings.externalSources.reconnect.summary': '匹配 {matched} 个，新增 {added} 个，缺少 {missing} 个。缺少的文件不会移除已保存的搜索内容。',
