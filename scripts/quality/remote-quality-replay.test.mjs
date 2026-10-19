@@ -37,11 +37,34 @@ it('reads source evidence against its original SHA, not the new dev tip', async 
   expect(read).toHaveBeenCalledWith({ repository: 'o/r', runId: '123', targetSha: 'b'.repeat(40) });
 });
 
+it('reads the tested SHA when the dispatch topology advanced during preflight', async () => {
+  const targetSha = 'b'.repeat(40);
+  const read = vi.fn(() => ({ verdict: 'failed', stages: { 't5-shared': 'failure' } }));
+  const run = { head_sha: SHA, path: '.github/workflows/remote-quality.yml',
+    display_title: `Dev Quality Check (full) @ ${targetSha} via ${SHA}` };
+  await expect(resolveReplayStages({ repository: 'o/r', runId: '123', read,
+    readRun: async () => run })).resolves.toBe('t5-shared');
+  expect(read).toHaveBeenCalledWith({ repository: 'o/r', runId: '123', targetSha });
+  expect(() => assertNoActiveFullReplay([run], targetSha)).toThrow('still active');
+  expect(() => assertNoActiveFullReplay([run], SHA)).not.toThrow();
+});
+
+it.each(['Dev Quality Check (full)',
+  `Dev Quality Check (full) @ ${SHA} via ${'b'.repeat(40)}`])(
+  'rejects ambiguous remote source metadata %s', async (display_title) => {
+    const read = vi.fn();
+    await expect(resolveReplayStages({ repository: 'o/r', runId: '123', read,
+      readRun: async () => ({ head_sha: SHA, path: '.github/workflows/remote-quality.yml', display_title })
+    })).rejects.toThrow('no exact tested SHA');
+    expect(read).not.toHaveBeenCalled();
+  }
+);
+
 it('rejects same-SHA active full from either entry without confusing replay or scoped runs', () => {
   for (const metadata of [{ path: '.github/workflows/t7-hosted-quality.yml' },
-    { display_title: 'Dev Quality Check (full) @ exact via topology' }]) {
+    { display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}` }]) {
     expect(() => assertNoActiveFullReplay([{ head_sha: SHA, ...metadata }], SHA)).toThrow('still active');
-    expect(() => assertNoActiveFullReplay([{ head_sha: 'b'.repeat(40), ...metadata }], SHA)).not.toThrow();
+    expect(() => assertNoActiveFullReplay([{ head_sha: SHA, ...metadata }], 'b'.repeat(40))).not.toThrow();
   }
   expect(() => assertNoActiveFullReplay([{ head_sha: SHA,
     display_title: 'Dev Quality Check (replay) @ exact via topology' }], SHA)).not.toThrow();
