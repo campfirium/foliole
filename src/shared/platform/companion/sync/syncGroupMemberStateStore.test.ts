@@ -20,6 +20,7 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
   })
 }));
 
+import { loadRemovals } from './syncGroupMemberStateReads';
 import {
   applyCompanionSyncGroupMemberState,
   loadCompanionSyncGroupMemberState
@@ -73,6 +74,38 @@ beforeEach(async () => {
 });
 
 afterEach(() => sqlite.close());
+
+it('loads removal confirmations with bounded bridge reads and preserves decision ordering', async () => {
+  const insert = sqlite.prepare(`INSERT INTO sync_group_removal_decisions
+    (group_id, decision_id, target_device_identity_key, initiated_by_device_identity_key, created_at)
+    VALUES ('group-1', ?, 'target', 'initiator', ?)`);
+  for (const id of ['c', 'b', 'a']) insert.run(id, id === 'c' ? '2026-01-02' : '2026-01-01');
+  const confirm = sqlite.prepare(`INSERT INTO sync_group_removal_confirmations
+    (group_id, decision_id, confirming_device_identity_key, kind, confirmed_at)
+    VALUES ('group-1', ?, ?, ?, '2026-01-03')`);
+  confirm.run('a', 'z', 'target_exit');
+  confirm.run('a', 'b', 'enforced');
+  confirm.run('c', 'b', 'enforced');
+  sqlite.exec(`INSERT INTO sync_groups VALUES ('other', 'Other', 'secret', '2026-01-01', '2026-01-01');
+    INSERT INTO sync_group_removal_decisions VALUES
+      ('other', 'a', 'foreign-target', 'initiator', '2026-01-01', NULL, NULL);
+    INSERT INTO sync_group_removal_confirmations VALUES
+      ('other', 'a', 'foreign-member', 'enforced', '2026-01-03')`);
+  const query = vi.spyOn(database.driver, 'query');
+  try {
+    const rows = await loadRemovals(database.driver, 'group-1');
+    expect(rows.map(row => [row.decision_id, row.confirmations])).toEqual([
+      ['a', [
+        { confirming_device_identity_key: 'b', kind: 'enforced', confirmed_at: '2026-01-03' },
+        { confirming_device_identity_key: 'z', kind: 'target_exit', confirmed_at: '2026-01-03' }
+      ]],
+      ['b', []],
+      ['c', [{ confirming_device_identity_key: 'b', kind: 'enforced', confirmed_at: '2026-01-03' }]]
+    ]);
+    expect(query.mock.calls.length).toBeLessThanOrEqual(2);
+    expect(await loadRemovals(database.driver, 'another-group')).toEqual([]);
+  } finally { query.mockRestore(); }
+});
 
 it.each(['missing', 'legacy'] as const)('rejects %s protocol before any companion database mutation', async kind => {
   const state = await loadCompanionSyncGroupMemberState();

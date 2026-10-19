@@ -20,11 +20,18 @@ export async function loadRemovals(db: DbPort, groupId: string): Promise<SyncGro
   const rows = await db.query<RemovalRow>(`SELECT decision_id, target_device_identity_key,
     initiated_by_device_identity_key, created_at, completed_at, superseded_at
     FROM sync_group_removal_decisions WHERE group_id = ? ORDER BY created_at, decision_id`, [groupId]);
-  return Promise.all(rows.map(async (row) => ({ ...row, confirmations: await db.query<ConfirmationRow>(
-    `SELECT confirming_device_identity_key, kind, confirmed_at
-     FROM sync_group_removal_confirmations WHERE group_id = ? AND decision_id = ?
-     ORDER BY confirming_device_identity_key`, [groupId, String(row.decision_id)]
-  ) })));
+  if (!rows.length) return [];
+  const confirmations = await db.query<ConfirmationRow & { decision_id: string }>(
+    `SELECT decision_id, confirming_device_identity_key, kind, confirmed_at
+     FROM sync_group_removal_confirmations WHERE group_id = ?
+     ORDER BY decision_id, confirming_device_identity_key`, [groupId]);
+  const byDecision = new Map<string, ConfirmationRow[]>();
+  for (const { decision_id, ...confirmation } of confirmations) {
+    const group = byDecision.get(decision_id) ?? [];
+    group.push(confirmation);
+    byDecision.set(decision_id, group);
+  }
+  return rows.map(row => ({ ...row, confirmations: byDecision.get(row.decision_id) ?? [] }));
 }
 
 export async function completeEligibleRemovals(db: DbPort, groupId: string, now: string) {
