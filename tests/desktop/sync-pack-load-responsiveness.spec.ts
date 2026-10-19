@@ -30,8 +30,7 @@ for (const mode of ['new', 'existing'] as const) {
         const workload = require(path.join(process.cwd(),
           'scripts/desktop/sync-pack-load-workload.cjs'));
         return workload.runSyncPackLoad(input);
-      }, { markerPath, nodeCount: NODE_COUNT, blockMs, mode,
-        profilePath: testInfo.outputPath('request-apply.cpuprofile') }),
+      }, { markerPath, nodeCount: NODE_COUNT, blockMs, mode }),
       waitUntilStarted: () => waitForMarker(markerPath),
       evidencePath,
       targetSha: process.env.TARGET_SHA ?? 'local',

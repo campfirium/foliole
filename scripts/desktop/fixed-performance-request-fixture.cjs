@@ -1,6 +1,5 @@
 /* global process, crypto */
 const assert = require('node:assert/strict');
-const { performance } = require('node:perf_hooks');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs/promises');
@@ -49,25 +48,7 @@ function seedReceiver(db) {
 const projectionSql = `SELECT n.id, n.parent_id, n.title, n.content, n.current_version_id,
   v.content_hash, v.body_text FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id ORDER BY n.id`;
 
-function measureWrites(port, writes) {
-  return new Proxy(port, { get(target, key) {
-    if (key === 'transaction') return action => target.transaction(tx => action(measureWrites(tx, writes)));
-    if (key === 'run') return async (...args) => {
-      const started = performance.now();
-      try { return await target.run(...args); }
-      finally {
-        const sql = String(args[0]).replace(/\s+/g, ' ').trim();
-        const row = writes.get(sql) ?? { sql, calls: 0, ms: 0 };
-        row.calls++;
-        row.ms += performance.now() - started;
-        writes.set(sql, row);
-      }
-    };
-    return typeof target[key] === 'function' ? target[key].bind(target) : target[key];
-  } });
-}
-
-async function receiveBatches(services, sender, receiver, differences, timings) {
+async function receiveBatches(services, sender, receiver, differences) {
   const context = { groupId: 'group', protocolVersion: services.protocolVersion,
     initiatorDeviceId: 'source', initiatorLibraryEpoch: 'source-epoch',
     responderDeviceId: 'target', responderLibraryEpoch: 'target-epoch' };
@@ -78,29 +59,18 @@ async function receiveBatches(services, sender, receiver, differences, timings) 
     const batch = differences.slice(offset, offset + services.batchObjects);
     const selections = batch.map(difference => ({ objectType: 'node', globalId: difference.globalId,
       requestId: crypto.getRandomValues(new Uint8Array(16)), resolve: async () => difference }));
-    const started = performance.now();
-    let wireMs = 0;
-    let receiveMs = 0;
     const consumed = await services.batchSnapshot(sender, selections, undefined, async objects => {
       assert.ok(objects.length > 0);
       assert.ok(objects.every(object => object.kind === 'object'));
       const requestId = crypto.getRandomValues(new Uint8Array(16));
-      const wireStarted = performance.now();
       const wire = await services.prepareWire({ context, groupKey,
         messages: contextId => services.batchMessages(objects, contextId, requestId) });
-      wireMs = performance.now() - wireStarted;
-      const receiveStarted = performance.now();
       const result = await services.receiveBatch(receiver, { ...wire, context, groupKey, peerState,
         author: 'initiator', requestId, expected: selections.slice(0, objects.length) });
-      receiveMs = performance.now() - receiveStarted;
       assert.equal(result.results.length, objects.length);
       assert.ok(result.results.every(value => value.error === ''));
       return objects.length;
     });
-    timings.snapshotMs += performance.now() - started - wireMs - receiveMs;
-    timings.wireMs += wireMs;
-    timings.receiveMs += receiveMs;
-    timings.batches++;
     offset += consumed;
   }
 }
@@ -113,8 +83,7 @@ async function prepareRequestFixture(nodeCount, services = defaultServices()) {
   try {
     services.initialize(source); services.initialize(db);
     seedSource(source, nodeCount, services); seedReceiver(db);
-    const writes = new Map();
-    const sourcePort = services.createPort(source); const port = measureWrites(services.createPort(db), writes);
+    const sourcePort = services.createPort(source); const port = services.createPort(db);
     const differences = services.compare({ local: await services.inventory(sourcePort), remote: [] });
     const nodes = new Map(differences.filter(value => value.objectType === 'node').map(value => [value.globalId, value]));
     const ordered = Array.from({ length: nodeCount }, (_, index) => {
@@ -128,8 +97,7 @@ async function prepareRequestFixture(nodeCount, services = defaultServices()) {
       readSnapshot: read => sourcePort.transaction(read), write: write => write(sourcePort) };
     const receiver = { files: services.createFiles(path.join(root, 'target')),
       readSnapshot: read => port.transaction(read), write: write => write(port), enqueueSearchInvalidations: false };
-    const timings = { snapshotMs: 0, wireMs: 0, receiveMs: 0, batches: 0 };
-    return { db, timings, writes, apply: () => receiveBatches(services, sender, receiver, ordered, timings), assertResult() {
+    return { db, apply: () => receiveBatches(services, sender, receiver, ordered), assertResult() {
       assert.deepEqual(db.prepare(projectionSql).all(), expected);
       assert.equal(db.prepare('SELECT count(*) FROM node_sync_versions').pluck().get(), nodeCount);
     }, close };
