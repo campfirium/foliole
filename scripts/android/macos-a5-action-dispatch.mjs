@@ -141,7 +141,7 @@ export async function dispatchMacosA5Action({
   if (action === 'image-contract') {
     const { runMacosA5ImageContractEntry } = await import('./macos-a5-image-contract-entry.mjs');
     await runMacosA5ImageContractEntry({ assertFixed: () => assertFixed(paths),
-      build: () => build(paths), buildIdentity, checked, env, execute, markMutationBoundary,
+      build: () => build(paths), buildIdentity, checked, captured, env, execute, markMutationBoundary,
       pairingReadiness, paths, protectData, readiness, serial });
   }
   if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({

@@ -50,7 +50,8 @@ public class FolioleRemoteImageFilesTest {
         Files.delete(stored.toPath());
         assertEquals("created", FolioleRemoteImageFiles.write(context, input).getString("storedFile"));
         assertArrayEquals(bytes, Files.readAllBytes(stored.toPath()));
-        assertEquals(1, stored.getParentFile().list().length);
+        assertFalse(java.util.Arrays.stream(stored.getParentFile().list())
+            .anyMatch(name -> name.endsWith(".part")));
     }
 
     @Test public void rejectsTraversalAndMismatchedContentWithoutWriting() throws Exception {

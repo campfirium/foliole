@@ -1,6 +1,7 @@
 /* global process */
 import fs from 'node:fs';
 import path from 'node:path';
+import { runIsolatedImageContract } from './macos-a5-image-contract-isolated.mjs';
 import { imageProjectionMode, runImageProjection } from './macos-a5-image-projection.mjs';
 
 const APP_ID = 'com.campfirium.foliole.android';
@@ -13,8 +14,9 @@ export function assertImageContractOutput(output) {
   }
 }
 
-export async function runMacosA5ImageContractEntry(args) {
+export async function runMacosA5ImageContractEntry(args, dependencies = {}) {
   const projectionMode = imageProjectionMode(args.env);
+  if (!projectionMode) return runIsolatedImageContract(args, IMAGE_TEST_CLASS, assertImageContractOutput, dependencies);
   args.assertFixed();
   const disposableData = args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE === '1';
   if (!disposableData) {

@@ -14,11 +14,11 @@ function fixture() {
   roots.push(root);
   const events = [];
   return { events, args: { assertFixed: vi.fn(), pairingReadiness: vi.fn(), readiness: vi.fn(),
-    build: vi.fn(), buildIdentity: () => 'run', markMutationBoundary: vi.fn(), serial: '87a33a4b', env: {},
+    build: vi.fn(), buildIdentity: () => 'run', markMutationBoundary: vi.fn(), serial: '87a33a4b', env: { FOLIOLE_S203_IMAGE_PROJECTION: 'inspect' },
     paths: { artifactsRoot: root, deviceBackupRoot: root, buildRoot: root, adb: 'adb', apk: 'main.apk', androidTestApk: 'test.apk' },
     checked: vi.fn((_command, args) => events.push(args.join(' '))),
     protectData: vi.fn(async (mode) => events.push(mode)),
-    execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: 'OK (6 tests)' }; }) } };
+    execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: args.includes(IMAGE_TEST_CLASS) ? 'OK (6 tests)' : 'OK (1 test)' }; }) } };
 }
 it('registers the native test behind the existing mutation lease and frozen build contract', () => {
   expect(assertRegisteredMacosA5Action('image-contract')).toMatchObject({ deviceLeaseMode: 'mutation',
@@ -64,7 +64,7 @@ it('honors explicit disposable test data without requiring sync credentials or p
   expect(args.pairingReadiness).not.toHaveBeenCalled();
   expect(args.readiness).not.toHaveBeenCalled();
   expect(args.protectData).not.toHaveBeenCalled();
-  expect(args.execute).toHaveBeenCalledTimes(1);
+  expect(args.execute).toHaveBeenCalledTimes(2);
 });
 
 it.each(['remove', 'cases-remove-changed', 'cases-offline', 'cases-online'])('rejects %s without explicit disposable data authorization before mutation', async (mode) => {
