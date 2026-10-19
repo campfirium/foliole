@@ -5,6 +5,8 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
+import { decodeCompanionFileBytes } from './companionFileBytes.js';
+
 export function currentCompanionFramedSyncFiles() {
   return createCompanionFramedSyncFiles(FolioleCompanionSync, companionFramedFileOwner(getIosCompanionDatabaseOwner()));
 }
@@ -27,7 +29,7 @@ export function createCompanionFramedSyncFiles(plugin: NativeCompanionFramedFile
       const result = await plugin.accessFramedSyncFile({ ...owner, key: checked(key), operation: 'read' });
       if (result.base64 === null) return null;
       if (typeof result.base64 !== 'string') throw new Error('framed_sync_file_response_invalid');
-      return Uint8Array.from(atob(result.base64), char => char.charCodeAt(0));
+      return decodeCompanionFileBytes(result.base64);
     },
     async write(key, bytes) {
       await plugin.accessFramedSyncFile({ ...owner, key: checked(key), operation: 'write', base64: base64(bytes) });

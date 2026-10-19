@@ -14,6 +14,7 @@ import { notifyAttachmentResourceAvailable } from '../../../runtime/attachmentRe
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
+import { decodeCompanionFileBytes } from './companionFileBytes.js';
 import { createCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 import { importCompanionPdfTextArtifact } from './companionPdfTextArtifact.js';
 
@@ -82,7 +83,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
         const file = { resource: { storageKey: key, byteLength: info.length }, async read(offset: number, length: number) {
           const result = await call({ key, action: 'source-read', offset, length });
           if (typeof result.base64 !== 'string') throw new Error('attachment_source_response_invalid');
-          return Uint8Array.from(atob(result.base64), char => char.charCodeAt(0));
+          return decodeCompanionFileBytes(result.base64);
         } };
         return await consume(await attachmentSourceVerification.verify(
           JSON.stringify([owner.library_key, owner.generation_id]), file, options?.shouldYield));
