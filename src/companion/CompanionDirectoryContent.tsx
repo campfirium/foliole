@@ -133,7 +133,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
         : null;
       props.onSelectNode(item.nodeId, readingOrder);
     }
-    if (!isContainer) return;
+    if (!isContainer && item.source !== 'externalDocument') return;
     props.onChangeSelection(resolveItemSelection(item));
   };
 

@@ -125,6 +125,36 @@ function createTopicContainerSnapshot(): WorkspaceSnapshot {
 }
 
 describe('CompanionDirectoryContent external article exit', () => {
+  it.each(['row', 'menu'])('opens an External document using its %s', (entry) => {
+    mocks.useCompanionExternalDirectory.mockReturnValue(externalDirectory);
+    mocks.useCompanionExternalDocument.mockReturnValue(null);
+    const onChangeSelection = vi.fn();
+    const onSelectNode = vi.fn();
+    render(
+      <CompanionDirectoryContent
+        onChangeSelection={onChangeSelection}
+        onExitArticle={vi.fn()}
+        onSelectNode={onSelectNode}
+        selection={{ kind: 'externalDirectory', folderId: 'external-1', directoryPath: 'sub' }}
+        snapshot={null}
+        sortDirection="asc"
+        sortKey="name"
+      />
+    );
+
+    if (entry === 'menu') {
+      fireEvent.click(screen.getByRole('button', { name: 'companion.browse.more: Doc title' }));
+      fireEvent.click(screen.getByRole('button', { name: 'desktop.searchPreview.open' }));
+    } else {
+      fireEvent.click(screen.getByText('Doc title'));
+    }
+
+    expect(onChangeSelection).toHaveBeenCalledWith({
+      documentId: 'external-1:sub/doc.md', kind: 'externalDocument'
+    });
+    expect(onSelectNode).not.toHaveBeenCalled();
+  });
+
   it('uses the article exit callback so the shell can restore navigation state', () => {
     mocks.useCompanionExternalDirectory.mockReturnValue(externalDirectory);
     mocks.useCompanionExternalDocument.mockReturnValue({
