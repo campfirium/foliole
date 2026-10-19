@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { once } from 'node:events';
+import { connect } from 'node:net';
+
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
@@ -14,6 +17,27 @@ import { createCompanionRequestSyncExchange } from './companionRequestSyncExchan
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 beforeEach(async () => { host = await createCompanionRequestFixture(); }, 20000);
 afterEach(async () => { await host?.close(); host = undefined; });
+
+it('closes the fixture without waiting for a client to finish its HTTP headers', async () => {
+  if (!host) throw new Error('companion_request_fixture_not_initialized');
+  const current = host;
+  const endpoint = new URL(current.fixture.rightSnapshot.origin);
+  const socket = connect(Number(endpoint.port), endpoint.hostname);
+  socket.on('error', () => undefined);
+  let closing: Promise<void> | undefined;
+  try {
+    await once(socket, 'connect');
+    socket.write('GET /health HTTP/1.1\r\nHost: localhost\r\n');
+    await current.fixture.right.snapshot();
+    let closed = false;
+    closing = current.close().then(() => { closed = true; });
+    await expect.poll(() => closed, { timeout: 2000 }).toBe(true);
+  } finally {
+    socket.destroy();
+    await closing;
+    host = undefined;
+  }
+});
 
 it('retains a review with a missing receiver node, delivers independent work and retries after reopening', async () => {
   if (!host) throw new Error('companion_request_fixture_not_initialized');

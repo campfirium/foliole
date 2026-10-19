@@ -197,11 +197,18 @@ async function run(command: Command) {
   }
   if (command.action === 'close') {
     await runActivationFixtureCommand('activation_stop', {});
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await closeFixtureServer();
     closeDatabaseConnection();
     return null;
   }
   throw new Error(`fixture_action_unknown:${command.action}`);
+}
+
+function closeFixtureServer() {
+  return new Promise<void>((resolve) => {
+    server.close(() => resolve());
+    server.closeAllConnections();
+  });
 }
 
 function writeHttpError(response: ServerResponse, error: unknown) {
