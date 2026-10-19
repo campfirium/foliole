@@ -82,6 +82,7 @@ function useLoadExternalSearchFolders(
     let alive = true;
     setError(null);
     setIsLoading(true);
+    invalidateExternalSourceSettingsFoldersCache();
     loadExternalSourceSettingsFolders()
       .then((loaded) => {
         if (!alive || loaded === null) return;
