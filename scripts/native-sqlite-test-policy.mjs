@@ -206,6 +206,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionSyncGroupStore.test.ts',
   'src/shared/platform/companionSyncStateObjects.test.ts',
   'src/shared/platform/companion/editing/companionContentEditing.test.ts',
+  'src/shared/platform/companion/editing/companionSaveMetadataQueue.sqlite.test.ts',
   'src/shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore.test.ts',
   'src/shared/platform/companion/sync/workspace-state/companionDisplaySnapshotConcurrency.integration.test.ts',
   'src/shared/platform/companion/sync/workspace-state/companionLocalStateRefresh.integration.test.ts',
