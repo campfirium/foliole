@@ -52,3 +52,15 @@ it('retains explicit false instead of collapsing it into inherited null', () => 
   expect(disabled.snapshot.enable_short_term).toBe(false);
   expect(disabled.version_id).not.toBe(inherited.version_id);
 });
+
+it('ignores retired positions when both peers resolve the same folder versions', () => {
+  const a = record('a');
+  const b = record('b');
+  a.snapshot.kind = 'folder';
+  const original = buildResolutionRecord([a, b], a, '');
+  for (const position of [null, 12]) {
+    const restored = { ...a, snapshot: { ...a.snapshot, position } };
+    expect(buildResolutionRecord([b, a], restored, '')).toEqual(original);
+  }
+  expect(original.snapshot).not.toHaveProperty('position');
+});

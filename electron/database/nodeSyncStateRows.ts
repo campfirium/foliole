@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { SPECIAL_ROOT_NODE_IDS } from '../../lib/core/database/nodeMutationSpecialRoots.js';
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 
 interface MissingNodeSyncStateRow extends DatabaseRow {
@@ -50,9 +50,9 @@ export function backfillMissingNodeSyncState(
      FROM nodes n
      LEFT JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
      INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
-     WHERE n.id NOT IN (?, ?) AND n.current_version_id IS NOT NULL AND s.object_id IS NULL
+     WHERE n.id != ? AND n.current_version_id IS NOT NULL AND s.object_id IS NULL
      ORDER BY n.updated_at ASC, n.id ASC LIMIT 128`,
-    SPECIAL_ROOT_NODE_IDS
+    [VIRTUAL_ROOT_NODE_ID]
     );
     if (!rows.length) return ids;
     for (const row of rows) {

@@ -68,7 +68,7 @@ export function framedSyncNodeInventorySql(id: string) {
               WHERE availability.hash = resource.value AND availability.available = 1)
         ORDER BY hash)), '[]')
     FROM sync_object_state state WHERE state.object_type = 'node' AND state.object_id IN (${id})
-      AND state.object_id NOT IN ('special-inbox', 'special-virtual-root')
+      AND state.object_id != 'special-virtual-root'
       AND (state.current_version_id IS NOT NULL OR
         EXISTS (SELECT 1 FROM framed_sync_version_summary WHERE object_id = state.object_id));`;
 }

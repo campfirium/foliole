@@ -128,6 +128,7 @@ export async function migrateCompanionDatabase(
     }
   }
   if (currentVersion < 93 && targetVersion >= 93) await migrateCompanionAttachmentDemands(db);
+  if (currentVersion < 94 && targetVersion >= 94) await migrateCompanionMissingCurrentVersionInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

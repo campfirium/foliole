@@ -28,6 +28,8 @@ export const controlledSyncSqliteTests = [
   'electron/database/nodeChildInventory.integration.test.ts',
   'electron/database/nodeChildInventoryMigration.integration.test.ts',
   'electron/sync/nodeChildSync.integration.test.ts',
+  'electron/sync/inboxSync.integration.test.ts',
+  'lib/core/database/inboxInventoryMigration.integration.test.ts',
   'src/test/externalDocumentLifecycle.integration.test.ts',
   'electron/database/syncGroupRemovalRollback.test.ts',
   'electron/sync/buildCompanionSyncDiagnostics.test.ts',

@@ -149,12 +149,12 @@ it('creates an initial sync version for an unversioned clean node', () => {
   ).toEqual({ object_id: 'node-1' });
 });
 
-it('keeps fixed system roots outside user node version history', () => {
+it('publishes Inbox while keeping the virtual root outside node version history', () => {
   upsertTestNode();
 
-  expect(flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z')).not.toContain('special-inbox');
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z')).toContain('special-inbox');
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id IN ('special-inbox', 'special-virtual-root')"
+    "SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = 'special-virtual-root'"
   )).toEqual({ count: 0 });
 });
 
@@ -178,20 +178,20 @@ it('omits retired ordering positions from new sync snapshots', () => {
   expect(JSON.parse(row?.snapshot_json ?? '{}')).not.toHaveProperty('position');
 });
 
-it('backfills sync state for already versioned nodes missing from sync_object_state', () => {
+it.each(['node-1', 'special-inbox'])('backfills missing sync state for versioned %s', nodeId => {
   upsertTestNode();
   const connection = openDatabaseConnection();
-  const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
-  connection.driver.execute('DELETE FROM sync_object_state WHERE object_type = ? AND object_id = ?', ['node', 'node-1']);
+  const versionId = flushNodeSyncVersion(nodeId, '2026-04-21T10:01:00.000Z');
+  connection.driver.execute('DELETE FROM sync_object_state WHERE object_type = ? AND object_id = ?', ['node', nodeId]);
 
-  expect(flushDirtyNodeSyncVersions('2026-04-21T10:02:00.000Z')).toContain('node-1');
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:02:00.000Z')).toContain(nodeId);
 
   expect(
     connection.driver.queryOne<{ current_version_id: string | null; object_id: string }>(
       'SELECT object_id, current_version_id FROM sync_object_state WHERE object_type = ? AND object_id = ?',
-      ['node', 'node-1']
+      ['node', nodeId]
     )
-  ).toEqual({ current_version_id: versionId, object_id: 'node-1' });
+  ).toEqual({ current_version_id: versionId, object_id: nodeId });
 });
 
 it('creates a tombstone sync version when soft deleting a versioned node', () => {

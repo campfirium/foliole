@@ -81,3 +81,10 @@ it('blocks moving Home and dropping nodes into Home', () => {
   expect(canNodeBeMoved(home)).toBe(false);
   expect(canNodeAcceptMovedNode(home, topic)).toBe(false);
 });
+
+it('keeps Inbox fixed while allowing ordinary nodes to move into it', () => {
+  const inbox = createNode({ id: 'special-inbox', title: 'Inbox', content: '', kind: 'folder', specialKind: 'inbox' });
+  const topic = createNode({ id: 'topic', title: 'Topic', content: 'Body', kind: 'topic' });
+  expect(canNodeBeMoved(inbox)).toBe(false);
+  expect(canNodeAcceptMovedNode(inbox, topic)).toBe(true);
+});

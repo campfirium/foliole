@@ -31,5 +31,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 163, migrate: db => addColumnIfMissing(db,
     'node_version_local_origins', 'content_edit_image_input_hash', 'TEXT') },
   { version: 164, migrate: migrateAttachmentDemands },
-  { version: 165, migrate: migrateExternalFolderDisplayPaths }
+  { version: 165, migrate: migrateExternalFolderDisplayPaths },
+  { version: 166, migrate: migrateMissingCurrentVersionInventory }
 ];
