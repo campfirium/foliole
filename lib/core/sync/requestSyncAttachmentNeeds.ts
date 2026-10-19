@@ -1,6 +1,6 @@
 import { recordFramedSyncResourceAvailability } from '../database/framedSyncResourceAvailability.js';
 
-import { completeAttachmentDemand, hasAttachmentDemand, parseChangedAttachmentArticles, selectPendingAttachments } from './attachmentDemandQueue.js';
+import { hasAttachmentDemand, parseChangedAttachmentArticles, selectPendingAttachments } from './attachmentDemandQueue.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { missingPdfTextArtifacts } from './pdfTextArtifact.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
@@ -42,9 +42,11 @@ export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSync
   const pdfTextKeys = requirePdfText ? await host.readSnapshot(db => missingPdfTextArtifacts(db, keys)) : [];
   const missing = await inspectAttachmentNeeds(host, keys, inspect);
   const retained = new Set([...missing, ...pdfTextKeys]);
+  const completed = keys.filter(key => !retained.has(key));
   await host.write(db => db.transaction(async tx => {
-    for (const key of keys) {
-      if (!retained.has(key)) await completeAttachmentDemand(tx, key);
+    if (completed.length) {
+      await tx.run('DELETE FROM attachment_pending WHERE storage_key IN (SELECT value FROM json_each(?))',
+        [JSON.stringify(completed)]);
     }
   }));
   // Selected missing files are reported separately by the exchange; pending means work beyond this slice.
