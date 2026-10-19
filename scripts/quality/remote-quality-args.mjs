@@ -7,7 +7,10 @@ export function parseRemoteQualityArgs(args) {
   for (let index = 0; index < args.length; index += 2) {
     const name = args[index];
     const value = args[index + 1] ?? '';
-    if (name === '--scope') result.scope = value;
+    if (name === '--skip-preflight') {
+      result.skipPreflight = true;
+      index -= 1;
+    } else if (name === '--scope') result.scope = value;
     else if (name === '--replay') result.replay = value;
     else if (name === '--source-ref') result.sourceRef = normalizeRemoteQualitySourceRef(value);
     else throw new Error(`Unknown argument: ${name}`);

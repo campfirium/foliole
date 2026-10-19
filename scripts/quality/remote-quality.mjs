@@ -12,6 +12,7 @@ import {
 } from './remote-quality-target.mjs';
 
 import { parseRemoteQualityArgs } from './remote-quality-args.mjs';
+import { runRemoteQualityPreflight } from './remote-quality-preflight.mjs';
 import { assertNoActiveFullReplay, resolveReplayStages } from './remote-quality-replay.mjs';
 export { parseRemoteQualityArgs } from './remote-quality-args.mjs';
 
@@ -163,6 +164,9 @@ export async function runRemoteQuality(options = {}) {
   ], { cwd }), sourceBranch);
   assertRemoteQualitySourceContext({ defaultBranch: repoInfo.defaultBranchRef.name,
     localBranch: branch, sourceRef: args.sourceRef });
+  if (options.preflight && !args.replay && !args.skipPreflight) {
+    await options.preflight({ cwd, head: targetSha, repo: repoInfo.nameWithOwner, runner, scope: args.scope });
+  }
 
   const stages = args.replay ? await resolveReplayStages({
     repository: repoInfo.nameWithOwner, runId: args.replay, read: options.readChainVerdict,
@@ -201,7 +205,7 @@ export async function runRemoteQuality(options = {}) {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     assertQualityCommandAllowed('runner:remote-quality');
-    const result = await runRemoteQuality();
+    const result = await runRemoteQuality({ preflight: runRemoteQualityPreflight });
     console.log(`[remote-quality] ${result.scope} quality passed for ${result.sourceRef} `
       + `at ${result.targetSha}`);
   } catch (error) {
