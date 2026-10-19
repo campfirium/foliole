@@ -19,7 +19,7 @@ vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn()
 vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync: vi.fn() }));
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { assertSqlQueryBudget, assertSqlScaleInvariant } from '../database/sqlQueryBudget.testSupport.js';
@@ -99,10 +99,30 @@ it.each(POINT_COMMANDS)('keeps SQL work for %s independent of library size', asy
   assertSqlScaleInvariant(label, small, large);
 });
 
-// SKIP: backlinks currently read every node body to match wiki links in JS | 2026-10-19 | revive: backlinks resolve without scanning all node bodies
-it.skip('keeps SQL work for loading one document backlinks independent of library size', async () => {
-  const { large, small } = await measureAtBothScales(NATIVE_COMMANDS.loadNodeBacklinks, () => ({ node_id: 'topic-1' }));
+async function measureBacklinks(topicCount: number) {
+  await openLibrary(topicCount);
+  const { sqlite } = openDatabaseConnection();
+  sqlite.prepare("UPDATE nodes SET content = 'Plain body without links'").run();
+  const update = sqlite.prepare('UPDATE nodes SET content = ? WHERE id = ?');
+  update.run('First [[topic-0]]', 'topic-1');
+  update.run('Second [[ TOPIC-0 ]]', 'topic-2');
+  const { report, result } = await measureSqlStatements(() =>
+    handleStorageCommand(NATIVE_COMMANDS.loadNodeBacklinks, { node_id: TARGET }));
+  expect(result).toEqual([
+    { source_node_id: 'topic-1', source_title: 'topic-1', context: 'First [[topic-0]]', match_count: 1 },
+    { source_node_id: 'topic-2', source_title: 'topic-2', context: 'Second [[ TOPIC-0 ]]', match_count: 1 }
+  ]);
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
+  tempRoot = '';
+  return report;
+}
+
+it('keeps SQL work for loading one document backlinks independent of library size', async () => {
+  const small = await measureBacklinks(SMALL);
+  const large = await measureBacklinks(LARGE);
   assertSqlScaleInvariant('loading one document backlinks', small, large);
+  expect([small.rowsRead, large.rowsRead]).toEqual([3, 3]);
 });
 
 it('loads the workspace list with a statement count that does not grow per node', async () => {

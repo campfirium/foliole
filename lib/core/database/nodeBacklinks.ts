@@ -68,7 +68,9 @@ function loadBacklinkSources(driver: DatabaseDriver, targetNodeId: string) {
     `SELECT id, title, content
      FROM nodes
      WHERE id != ?
-       AND deleted_at IS NULL`,
+       AND deleted_at IS NULL
+       AND instr(content, '[[') > 0
+     ORDER BY rowid`,
     [targetNodeId]
   );
 }
