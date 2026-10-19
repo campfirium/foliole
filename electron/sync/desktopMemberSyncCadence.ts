@@ -17,8 +17,12 @@ const cadence = createMemberSyncCadence({
 subscribeDesktopSyncCompleted(() => cadence.markActualSync());
 
 export function requestDesktopHighValueSync() {
-  requestAttachmentWorkYield();
   desktopSyncChangeSessions().changed();
+  return requestDesktopRelaySync();
+}
+
+export function requestDesktopRelaySync() {
+  requestAttachmentWorkYield();
   return cadence.requestMutation('mutation');
 }
 

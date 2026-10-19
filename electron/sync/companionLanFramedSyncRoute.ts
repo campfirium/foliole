@@ -13,6 +13,7 @@ import {
 } from './companionLanFramedSyncPost.js';
 import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { requestDesktopRelaySync } from './desktopMemberSyncCadence.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -57,7 +58,8 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
-        const reply = await respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId), {
+        const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, relayInboundCommit);
+        const reply = await respondDesktopRequestSyncHttp(host, {
           context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
           onProgress: () => lease?.touch()
@@ -77,6 +79,10 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     }
   }
   return true;
+}
+
+function relayInboundCommit() {
+  void requestDesktopRelaySync()?.catch(error => console.warn('[sync] received change propagation failed', error));
 }
 
 function bindSessionRound(lease: SyncPeerRoundLease | undefined, signal: AbortSignal | undefined) {
