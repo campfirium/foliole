@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
@@ -23,7 +25,7 @@ it('uses the existing daily runtime without creating a group or USB transport', 
   await runMacosA5SyncNowEntry(args, dependencies);
   expect(dependencies.openDesktopSession).not.toHaveBeenCalled();
   expect(dependencies.inspectBaseline).toHaveBeenCalledWith(expect.objectContaining({
-    desktopDatabase: '/Users/roamer/Documents/Foliole/Data/foliole.db'
+    desktopDatabase: path.normalize('/Users/roamer/Documents/Foliole/Data/foliole.db')
   }));
   expect(dependencies.runAction).toHaveBeenCalledWith(expect.objectContaining({
     action: 'sync-now', transportRequired: false, instrumentationOwnsActivity: true
