@@ -68,8 +68,10 @@ export function buildIosPersistedNodeViews(rows: SqlRow[]) {
 }
 
 function toWorkspaceNodeRow(row: SqlRow) {
-  return {
-    ...row,
+  const copy: SqlRow = {};
+  // These keys are fixed SQL columns; copying incrementally avoids costly spread shapes on mobile.
+  for (const key of Object.keys(row)) copy[key] = row[key];
+  return Object.assign(copy, {
     reading_interval_duration_ms: row.interval_duration_ms,
     reading_interval_growth_factor: row.interval_growth_factor,
     reading_last_handled_at: row.last_handled_at,
@@ -83,5 +85,5 @@ function toWorkspaceNodeRow(row: SqlRow) {
     review_scheduled_days: row.scheduled_days,
     review_reps: row.reps,
     review_lapses: row.lapses
-  } as unknown as WorkspaceNodeRowShape;
+  }) as unknown as WorkspaceNodeRowShape;
 }

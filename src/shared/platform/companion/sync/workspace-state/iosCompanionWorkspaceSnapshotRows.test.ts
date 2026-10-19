@@ -50,6 +50,32 @@ function nodeRow() {
 }
 
 describe('iosCompanionWorkspaceSnapshotRows', () => {
+  it('keeps reusable SQL rows unchanged and gives canonical scheduling fields precedence', () => {
+    const row = Object.freeze({
+      ...nodeRow(),
+      due: '2026-07-21T00:00:00Z', last_review_at: '2026-07-18T00:00:00Z',
+      stability: 2, difficulty: 3, elapsed_days: 4, scheduled_days: 5, reps: 6, lapses: 7,
+      review_state: 2, review_due: 'stale', reading_next_at: 'stale',
+      deleted_at: '2026-07-20T00:00:00Z'
+    });
+    const before = { ...row };
+    const first = buildIosWorkspaceNodes([row]);
+    expect(first.nodesById['node-1']).toMatchObject({
+      reading: {
+        intervalDurationMs: 86_400_000, intervalGrowthFactor: 2,
+        lastHandledAt: row.last_handled_at, nextAt: row.next_at,
+        priority: 1, readingPosition: 2, repetitionCount: 5, state: 'active'
+      },
+      review: {
+        due: row.due, lastReviewAt: row.last_review_at, state: 2,
+        stability: 2, difficulty: 3, elapsedDays: 4, scheduledDays: 5, reps: 6, lapses: 7
+      }
+    });
+    expect(first.trashedNodeIds).toEqual(['node-1']);
+    expect(buildIosWorkspaceNodes([row])).toEqual(first);
+    expect(row).toEqual(before);
+  });
+
   it('maps canonical SQLite rows through the shared workspace node builder', () => {
     const { nodesById } = buildIosWorkspaceNodes([nodeRow()]);
 
