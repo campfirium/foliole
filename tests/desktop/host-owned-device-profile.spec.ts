@@ -84,3 +84,91 @@ test('desktop startup owns the current host profile across a legacy identity res
     fs.rmSync(artifactRoot, { force: true, recursive: true });
   }
 });
+
+async function readMemberState(session: Awaited<ReturnType<typeof launchDesktopSession>>) {
+  return session.electronApp.evaluate(async () => {
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const load = (name: string) => require(pathApi.join(process.cwd(), 'dist/electron', `${name}.js`));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    return load('database/connection').runWithDatabaseConnectionOwner(() => {
+      const group = load('database/syncGroupStore').loadDesktopSyncGroup();
+      const source = load('database/connection').openDatabaseConnection().driver.queryOne(
+        "SELECT type_settings_json FROM desktop_sources WHERE config_ref = 'copy-owner'"
+      );
+      return { group, source: JSON.parse(source.type_settings_json),
+        executableSources: load('database/desktopSources').loadCurrentHostDesktopSources('readwise').length };
+    });
+  });
+}
+
+async function seedCopiedLibrary(session: Awaited<ReturnType<typeof launchDesktopSession>>, root: string) {
+  await session.electronApp.evaluate(async (_electron, folder) => {
+    const pathApi = process.getBuiltinModule('path')!;
+    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
+    const load = (name: string) => require(pathApi.join(process.cwd(), 'dist/electron', `${name}.js`));
+    await load('database/connection').runWithDatabaseConnectionOwner(async () => {
+      const { identity } = await load('deviceAnchorStore').loadDesktopDeviceIdentity({
+        groupId: 'native-copy-group', libraryPath: load('database/connection').openDatabaseConnection().dbPath
+      });
+      load('database/syncGroupStore').createDesktopSyncGroup({
+        device: identity, deviceName: 'Original', platform: process.platform
+      });
+      process.getBuiltinModule('fs')!.mkdirSync(folder, { recursive: true });
+      load('database/desktopSources').upsertDesktopSource({
+        configRef: 'copy-owner', rootPath: folder, sourceType: 'readwise', updatedAt: new Date().toISOString()
+      });
+    });
+  }, path.join(root, 'source'));
+  await session.firstWindow.evaluate(async () => globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([{
+    content: '# Preserved copied content', id: 'copied-profile-content', kind: 'topic', title: 'Preserved copied content'
+  }]));
+}
+
+test('a copied library opens as a distinct member without taking its original sources', async ({ browserName }, info) => {
+  void browserName;
+  test.setTimeout(120_000);
+  const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/copied-device-profile-'));
+  const originalRoot = path.join(root, 'original');
+  const copiedRoot = path.join(root, 'copied');
+  const open = (stateRoot: string) => launchDesktopSession({
+    env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot }
+  });
+  let session = await open(originalRoot);
+  try {
+    await seedCopiedLibrary(session, root);
+    const original = await readMemberState(session);
+    expect(original.executableSources).toBe(1);
+    await session.close();
+    fs.mkdirSync(copiedRoot, { recursive: true });
+    fs.cpSync(path.join(originalRoot, 'library'), path.join(copiedRoot, 'library'), { recursive: true });
+
+    session = await open(copiedRoot);
+    await expect(session.firstWindow.getByRole('main', { name: /^(Foliole workspace|Foliole 工作区)$/ })).toBeVisible();
+    const copied = await readMemberState(session);
+    expect(copied.group.group_id).toBe(original.group.group_id);
+    expect(copied.group.local_device_identity_key).not.toBe(original.group.local_device_identity_key);
+    expect(copied.group.devices).toEqual(expect.arrayContaining(original.group.devices));
+    expect(copied.source.ownerDeviceIdentityKey).toBe(original.group.local_device_identity_key);
+    expect(copied.executableSources).toBe(0);
+    await expect.poll(() => session.firstWindow.evaluate(() =>
+      globalThis.window?.__folioleWorkspaceDebug?.getNode?.('copied-profile-content')
+    )).toMatchObject({ content: '# Preserved copied content' });
+    await info.attach('copied-library-workspace', {
+      body: await session.firstWindow.screenshot(), contentType: 'image/png'
+    });
+    await session.close();
+
+    session = await open(originalRoot);
+    const reopened = await readMemberState(session);
+    expect(reopened.group.local_device_identity_key).toBe(original.group.local_device_identity_key);
+    expect(reopened.source).toEqual(original.source);
+    expect(reopened.executableSources).toBe(1);
+    await info.attach('copied-library-identities', {
+      body: JSON.stringify({ original, copied, reopened }, null, 2), contentType: 'application/json'
+    });
+  } finally {
+    await session.close().catch(() => undefined);
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
