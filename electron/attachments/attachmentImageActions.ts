@@ -48,9 +48,9 @@ function resolveDialogFilters(fileName: string, mimeType: string | null) {
 }
 
 export async function copyAttachmentImageToClipboard(attachmentId: string): Promise<NativeCopyAttachmentImageResult> {
-  const description = loadAttachmentResourceDescription(attachmentId);
+  const description = await loadAttachmentResourceDescription(attachmentId);
   if (!description) return { status: 'not_found' };
-  const resolved = resolveAttachmentFile(description.storageKey);
+  const resolved = await resolveAttachmentFile(description.storageKey);
   if (resolved.status !== 'ready') {
     return { status: resolved.status };
   }
@@ -69,9 +69,9 @@ export async function exportAttachmentImage(
   window: BrowserWindow | null,
   nodeId?: string
 ): Promise<NativeExportAttachmentImageResult> {
-  const description = loadAttachmentResourceDescription(attachmentId);
+  const description = await loadAttachmentResourceDescription(attachmentId);
   if (!description) return { path: null, status: 'not_found' };
-  const resolved = resolveAttachmentFile(description.storageKey);
+  const resolved = await resolveAttachmentFile(description.storageKey);
   if (resolved.status !== 'ready') {
     return { path: null, status: resolved.status };
   }

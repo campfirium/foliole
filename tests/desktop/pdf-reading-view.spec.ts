@@ -7,6 +7,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PdfReadingView, PdfViewRect } from '../../src/features/pdf/model/pdfReadingView';
 
 import { expect, test } from './harness/fixtures';
+import { revealPdfBars } from './pdf-top-bars-interaction';
 
 test('PDF automatic and manual views preserve ranges across reload @pdf', async ({
   desktopApp,
@@ -15,11 +16,11 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await seedObsoleteRange(desktopWindow);
   await openPdf(desktopApp, desktopWindow);
   const surface = desktopWindow.getByTestId('pdf-document-surface');
-  const reveal = () => surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  const reveal = () => revealPdfBars(desktopWindow);
   const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
   const manual = surface.getByRole('button', { name: /^(Custom fit|自定义适配)$/ });
   const readView = () => readSavedView(desktopWindow);
-  await expect(automatic).toBeEnabled({ timeout: 45000 });
+  await pinPdfBars(desktopWindow);
   await expect(automatic).toHaveAttribute('aria-pressed', 'true');
   const autoRecord = await readView();
   expect(autoRecord).toMatchObject({ mode: 'auto', manual: null, automatic: expect.any(Object) });
@@ -69,6 +70,13 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await verifyFreeZoom(desktopWindow, autoRecord, manualRecord);
 });
 
+async function pinPdfBars(page: Page) {
+  await expect(page.getByRole('button', { name: /^(Auto fit|自动适配)$/ })).toBeEnabled({ timeout: 45000 });
+  const autoHide = page.getByRole('button', { name: /Auto-hide top bars|自动隐藏顶部栏/ });
+  if (await autoHide.getAttribute('aria-pressed') === 'true') await autoHide.click();
+  await expect(autoHide).toHaveAttribute('aria-pressed', 'false');
+}
+
 async function verifyFitTooltips(desktopWindow: Page) {
   const surface = desktopWindow.getByTestId('pdf-document-surface');
   const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
@@ -88,7 +96,7 @@ async function verifyFitTooltips(desktopWindow: Page) {
 async function verifyFreeZoom(desktopWindow: Page, autoRecord: PdfReadingView | null,
   manualRecord: PdfReadingView | null) {
   const surface = desktopWindow.getByTestId('pdf-document-surface');
-  const reveal = () => surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  const reveal = () => revealPdfBars(desktopWindow);
   const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
   const manual = surface.getByRole('button', { name: /^(Custom fit|自定义适配)$/ });
   const scroller = surface.getByTestId('pdf-scroll-container');
@@ -104,6 +112,9 @@ async function verifyFreeZoom(desktopWindow: Page, autoRecord: PdfReadingView | 
   await desktopWindow.reload();
   await expect(surface.getByTestId('pdf-zoom-value')).toHaveText('125%', { timeout: 45000 });
   expect(await readSavedView(desktopWindow)).toMatchObject({ mode: 'free', automatic: autoRecord?.automatic, manual: manualRecord?.manual });
+  const canvas = surface.locator('.react-pdf__Page canvas').first();
+  await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL('image/png').startsWith('data:image/png;base64,'))).toBe(true);
+  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-free-native.png') });
 }
 
 async function openPdf(desktopApp: ElectronApplication, desktopWindow: Page) {
@@ -201,10 +212,10 @@ async function verifyViewPaging(page: Page, rect: PdfViewRect | null | undefined
   await assertHeightFit(page, rect, 2);
   await page.keyboard.press('Shift+Space');
   await assertHeightFit(page, rect, 1);
-  await surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await revealPdfBars(page);
   await surface.getByRole('button', { name: /^(Next page|下一页)$/ }).click();
   await assertHeightFit(page, rect, 2);
-  await surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await revealPdfBars(page);
   await surface.getByRole('button', { name: /^(Previous page|上一页)$/ }).click();
   await assertHeightFit(page, rect, 1);
 }

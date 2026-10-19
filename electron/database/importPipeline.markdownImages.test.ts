@@ -127,8 +127,9 @@ async function expectStoredAttachmentFiles(args: {
     await expect(fs.access(path.join(args.assetsDir, entry.attachmentId))).rejects.toThrow();
     const storageKey = buildCanonicalAttachmentStorageKey(entry.attachmentId, entry.attachment.mimeType!);
     expect(storageKey).not.toBeNull();
-    const description = loadAttachmentResourceDescription(storageKey!)!;
-    expect(resolveAttachmentResource(description.storageKey, args.assetsDir)).toEqual({
+    const description = await loadAttachmentResourceDescription(storageKey!);
+    if (!description) throw new Error('Expected imported attachment description');
+    expect(await resolveAttachmentResource(description.storageKey, args.assetsDir)).toEqual({
       mime_type: entry.attachment.mimeType,
       resource_url: buildAttachmentAssetUrl(description),
       status: 'ready'

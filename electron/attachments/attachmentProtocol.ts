@@ -12,7 +12,7 @@ export function registerAttachmentProtocol() {
       return new Response(null, { status: 400 });
     }
 
-    const resolved = resolveAttachmentFile(resource.storageKey);
+    const resolved = await resolveAttachmentFile(resource.storageKey);
     if (resolved.status !== 'ready') {
       return new Response(null, { status: 404 });
     }

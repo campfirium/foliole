@@ -39,7 +39,7 @@ function toNativeImportRunRow(record: NonNullable<ReturnType<typeof loadNodeSour
   };
 }
 
-function resolvePdfSourceLocator(sourceNodeId: string) {
+async function resolvePdfSourceLocator(sourceNodeId: string) {
   const attachment = listNodeAttachments(sourceNodeId).find(
     (entry) => entry.role === PDF_ATTACHMENT_ROLE && entry.attachment.mimeType === PDF_MIME_TYPE
   );
@@ -47,11 +47,11 @@ function resolvePdfSourceLocator(sourceNodeId: string) {
     return '';
   }
 
-  const description = loadAttachmentResourceDescription(`${attachment.attachmentId}.pdf`);
+  const description = await loadAttachmentResourceDescription(`${attachment.attachmentId}.pdf`);
   return description ? buildAttachmentAssetUrl(description) : '';
 }
 
-function toNativeImportSource(
+async function toNativeImportSource(
   record: NonNullable<ReturnType<typeof loadNodeSourceDetails>>['importSource'],
   sourceNodeId: string
 ) {
@@ -59,7 +59,7 @@ function toNativeImportSource(
     return null;
   }
 
-  const sourceLocator = record.source_kind.toLowerCase() === 'pdf' ? resolvePdfSourceLocator(sourceNodeId) : record.source_locator;
+  const sourceLocator = record.source_kind.toLowerCase() === 'pdf' ? await resolvePdfSourceLocator(sourceNodeId) : record.source_locator;
 
   const readwiseState = normalizeReadwiseApiDocumentImportState(parseJson(record.remote_import_state_json));
   return {
@@ -127,14 +127,14 @@ function toNativePdfPageDimension(record: NonNullable<ReturnType<typeof loadNode
   };
 }
 
-export function toNativeNodeSourceDetails(nodeId: string) {
+export async function toNativeNodeSourceDetails(nodeId: string) {
   const details = loadNodeSourceDetails(nodeId);
   if (!details) {
     return null;
   }
   return {
     import_runs: details.importRuns.map((record) => toNativeImportRunRow(record)),
-    import_source: toNativeImportSource(details.importSource, details.sourceNodeId),
+    import_source: await toNativeImportSource(details.importSource, details.sourceNodeId),
     inherited_from_parent: details.inheritedFromParent,
     keep_import_item: toNativeKeepImportItem(details.keepImportItem),
     pdf_page_dimensions: details.pdfPageDimensions.map((record) => toNativePdfPageDimension(record)),

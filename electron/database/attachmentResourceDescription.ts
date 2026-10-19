@@ -10,12 +10,13 @@ export function currentLibraryScope() {
   return createHash('sha256').update(resolveDatabasePath()).digest('hex');
 }
 
-export function loadAttachmentResourceDescription(storageKey: string): AttachmentResourceDescription | null {
+export async function loadAttachmentResourceDescription(storageKey: string): Promise<AttachmentResourceDescription | null> {
   const identity = loadAttachmentResourceStorageIdentity(storageKey);
   if (!identity) return null;
+  const libraryScope = currentLibraryScope();
   return { ...identity,
-    availability: resolveAttachmentFile(identity.storageKey).status === 'ready' ? 'local' : 'missing',
-    libraryScope: currentLibraryScope() };
+    availability: (await resolveAttachmentFile(identity.storageKey)).status === 'ready' ? 'local' : 'missing',
+    libraryScope };
 }
 
 export function loadAttachmentResourceStorageIdentity(storageKey: string) {

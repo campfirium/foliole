@@ -85,8 +85,8 @@ function readImportRun(importId: string) {
     };
 }
 
-function readPdfOpenDetails(nodeId: string) {
-  const details = toNativeNodeSourceDetails(nodeId);
+async function readPdfOpenDetails(nodeId: string) {
+  const details = await toNativeNodeSourceDetails(nodeId);
   return details?.import_source
     ? {
         source_kind: details.import_source.source_kind,
@@ -96,9 +96,10 @@ function readPdfOpenDetails(nodeId: string) {
     : null;
 }
 
-function resolvePdfAttachmentAssetUrl(attachmentId: string) {
-  const description = loadAttachmentResourceDescription(`${attachmentId}.pdf`)!;
-  const resolved = resolveAttachmentFile(description.storageKey);
+async function resolvePdfAttachmentAssetUrl(attachmentId: string) {
+  const description = await loadAttachmentResourceDescription(`${attachmentId}.pdf`);
+  if (!description) throw new Error('Expected imported attachment description');
+  const resolved = await resolveAttachmentFile(description.storageKey);
   expect(resolved.status).toBe('ready');
   return buildAttachmentAssetUrl(description);
 }
@@ -126,9 +127,9 @@ async function expectPdfImportChain(options: {
       attachment: expect.objectContaining({ mimeType: 'application/pdf', originalName: options.sourceName })
     })
   );
-  expect(readPdfOpenDetails(options.nodeId)).toEqual({
+  expect(await readPdfOpenDetails(options.nodeId)).toEqual({
     source_kind: 'pdf',
-    source_locator: resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
+    source_locator: await resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: options.sourceName
   });
   expect(openDatabaseConnection().sqlite
@@ -174,10 +175,10 @@ it('reopens the same pdf from attachments after the original file is removed and
   );
 
   const pdfAttachment = listNodeAttachments(imported.nodeId as string)[0];
-  const linkedBeforeRestart = readPdfOpenDetails(imported.nodeId as string);
+  const linkedBeforeRestart = await readPdfOpenDetails(imported.nodeId as string);
   expect(linkedBeforeRestart).toEqual({
     source_kind: 'pdf',
-    source_locator: resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
+    source_locator: await resolvePdfAttachmentAssetUrl(pdfAttachment?.attachmentId as string),
     source_name: 'restart-proof.pdf'
   });
 
@@ -185,7 +186,7 @@ it('reopens the same pdf from attachments after the original file is removed and
   closeDatabaseConnection();
   initializeDatabase();
 
-  const linkedAfterRestart = readPdfOpenDetails(imported.nodeId as string);
+  const linkedAfterRestart = await readPdfOpenDetails(imported.nodeId as string);
   expect(linkedAfterRestart).toEqual(linkedBeforeRestart);
 });
 

@@ -59,7 +59,7 @@ function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: numbe
 }
 
 async function extractPdfPageText(attachmentId: string) {
-  const resolved = resolveAttachmentFile(`${attachmentId}.pdf`);
+  const resolved = await resolveAttachmentFile(`${attachmentId}.pdf`);
   if (resolved.status !== 'ready') {
     throw new Error('PDF attachment file is not available.');
   }

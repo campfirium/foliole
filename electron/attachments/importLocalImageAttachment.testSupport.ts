@@ -59,7 +59,7 @@ export async function expectAttachmentSyncState(nodeId: string, attachmentId: st
   expect(JSON.parse(JSON.parse(version?.snapshot_json ?? '{}').resource_references)).toEqual([
     { storage_key: storageKey, role: 'image', original_name: 'cover.png' }
   ]);
-  expect(loadAttachmentResourceDescription(storageKey)).toEqual(expect.objectContaining({
+  expect(await loadAttachmentResourceDescription(storageKey)).toEqual(expect.objectContaining({
     attachmentId,
     availability: 'local',
     contentHash: attachmentId,

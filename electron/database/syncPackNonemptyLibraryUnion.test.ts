@@ -46,7 +46,7 @@ it('converges nonempty libraries to the topic, resource ownership, body, reading
     } finally { db.close(); }
   }
   for (const suffix of ['a', 'b']) {
-    expect(resolveAttachmentFile(`${suffix.repeat(64)}.png`, path.join(root, 'assets')).status).toBe('missing_file');
+    expect((await resolveAttachmentFile(`${suffix.repeat(64)}.png`, path.join(root, 'assets'))).status).toBe('missing_file');
   }
 });
 

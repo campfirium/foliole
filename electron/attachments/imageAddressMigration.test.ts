@@ -33,7 +33,7 @@ it('repairs verified images and references, preserves originals and text example
   seedMigrationNode('child', 'Target sentence.', 'article', { id: 'anchor', kind: 'highlight',
     locator: { from: body.indexOf('Target sentence.'), to: body.indexOf('Target sentence.') + 16, originalText: 'Target sentence.' } });
   await fs.writeFile(path.join(migrationFixture.assetsDir, oldKey), imageBytes);
-  expect(resolveAttachmentFile(oldKey, migrationFixture.assetsDir).status).toBe('missing_file');
+  expect((await resolveAttachmentFile(oldKey, migrationFixture.assetsDir)).status).toBe('missing_file');
   const originalVersion = migrationNode().current_version_id;
   registerMigrationReceiver();
   const childVersion = migrationNode('child').current_version_id;
@@ -45,7 +45,7 @@ it('repairs verified images and references, preserves originals and text example
   expect(current.current_version_id).not.toBe(originalVersion);
   expect(migrationNode('child').current_version_id).not.toBe(childVersion);
   expect(JSON.parse(migrationNode('child').anchor_link).locator.from).toBe(current.content.indexOf('Target sentence.'));
-  expect(resolveAttachmentFile(newKey, migrationFixture.assetsDir).status).toBe('ready');
+  expect((await resolveAttachmentFile(newKey, migrationFixture.assetsDir)).status).toBe('ready');
   expect(await fs.readFile(path.join(migrationFixture.assetsDir, oldKey))).toEqual(imageBytes);
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne(`SELECT version_id, object_id, body_text,

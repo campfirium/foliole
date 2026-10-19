@@ -85,7 +85,7 @@ export async function placeReadwisePdfHighlightsFromAttachment(input: {
   documentId: string;
   nodeId: string;
 }) {
-  const file = resolveAttachmentFile(`${input.attachmentId}.pdf`);
+  const file = await resolveAttachmentFile(`${input.attachmentId}.pdf`);
   if (file.status !== 'ready') return;
   const pages = await readReadwisePdfPages(readFileSync(file.filePath));
   await runWithDatabaseConnectionOwner(() => placeReadwisePdfHighlights({ connectionRef: input.connectionRef,

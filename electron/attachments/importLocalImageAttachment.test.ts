@@ -70,7 +70,7 @@ it('prepares a local png without changing its target node', async () => {
     fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
-  expect(loadAttachmentResourceDescription(`${hashBytes(imageBytes)}.png`)).toEqual({
+  expect(await loadAttachmentResourceDescription(`${hashBytes(imageBytes)}.png`)).toEqual({
     attachmentId: hashBytes(imageBytes),
     contentHash: hashBytes(imageBytes),
     storageKey: `${hashBytes(imageBytes)}.png`,
@@ -112,7 +112,7 @@ it('reuses the same stored file across nodes and the resource reference for iden
   expect(await fs.readdir(path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual([`${hashBytes(sharedBytes)}.png`]);
 
   expect(countResourceReferences()).toBe(0);
-  expect(loadAttachmentResourceDescription(`${hashBytes(sharedBytes)}.png`)).toMatchObject({
+  expect(await loadAttachmentResourceDescription(`${hashBytes(sharedBytes)}.png`)).toMatchObject({
     attachmentId: (firstResult as { attachment_id: string }).attachment_id,
     contentHash: (firstResult as { attachment_id: string }).attachment_id,
     storageKey: `${(firstResult as { attachment_id: string }).attachment_id}.png`,
@@ -135,7 +135,7 @@ it('uses JPEG bytes as truth when the source file is named png', async () => {
     hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/jpeg'
   ))).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${hash}.png`))).rejects.toThrow();
-  expect(loadAttachmentResourceDescription(`${hash}.jpg`)).toMatchObject({
+  expect(await loadAttachmentResourceDescription(`${hash}.jpg`)).toMatchObject({
     attachmentId: hash, contentHash: hash, mimeType: 'image/jpeg', storageKey: `${hash}.jpg`
   });
 });

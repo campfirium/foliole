@@ -98,7 +98,7 @@ it('downloads a real PDF to the existing Topic and persists its highlight positi
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'document-1'"
   );
   expect(JSON.parse(source?.remote_import_state_json ?? '{}').originalFile.status).toBe('localized');
-  expect(toNativeNodeSourceDetails(rootNodeId)?.import_source?.source_locator)
+  expect((await toNativeNodeSourceDetails(rootNodeId))?.import_source?.source_locator)
     .toMatch(/^foliole-asset:\/\/attachment\//u);
   const child = driver.queryOne<{ anchor_link: string; content: string }>(
     'SELECT anchor_link, content FROM nodes WHERE id = ?', [stableReadwiseAnnotationNodeId('connection', 'highlight-1')]
@@ -107,7 +107,7 @@ it('downloads a real PDF to the existing Topic and persists its highlight positi
   expect(JSON.parse(child?.anchor_link ?? '{}').locator.page).toBe(1);
   closeDatabaseConnection();
   initializeDatabaseConnection(openDatabaseConnection());
-  expect(toNativeNodeSourceDetails(rootNodeId)?.import_source?.source_locator)
+  expect((await toNativeNodeSourceDetails(rootNodeId))?.import_source?.source_locator)
     .toMatch(/^foliole-asset:\/\/attachment\//u);
   expect(JSON.parse(openDatabaseConnection().driver.queryOne<{ anchor_link: string }>(
     'SELECT anchor_link FROM nodes WHERE id = ?', [stableReadwiseAnnotationNodeId('connection', 'highlight-1')]

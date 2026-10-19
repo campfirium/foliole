@@ -95,8 +95,9 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
 
   expect(imported).toEqual(expect.objectContaining({ result_status: 'imported', source_kind: 'pdf' }));
   const pdfAttachment = listNodeAttachments(imported?.node_id as string)[0];
-  const description = loadAttachmentResourceDescription(`${pdfAttachment?.attachmentId}.pdf`)!;
-  const resolvedAttachment = resolveAttachmentFile(description.storageKey);
+  const description = await loadAttachmentResourceDescription(`${pdfAttachment?.attachmentId}.pdf`);
+  if (!description) throw new Error('Expected imported attachment description');
+  const resolvedAttachment = await resolveAttachmentFile(description.storageKey);
   expect(resolvedAttachment.status).toBe('ready');
   expect(pdfAttachment).toEqual(
     expect.objectContaining({
@@ -104,7 +105,7 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
       attachment: expect.objectContaining({ mimeType: 'application/pdf', originalName: '渐进阅读报告.pdf' })
     })
   );
-  expect(toNativeNodeSourceDetails(imported?.node_id as string)?.import_source).toEqual(
+  expect((await toNativeNodeSourceDetails(imported?.node_id as string))?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
       source_locator: buildAttachmentAssetUrl(description),

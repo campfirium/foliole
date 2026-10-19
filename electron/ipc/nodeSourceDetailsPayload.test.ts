@@ -61,7 +61,7 @@ function mockPdfSource(sourceLocator: string) {
   return value;
 }
 
-it('serializes pdf attachment sources through the managed attachment protocol for the desktop PDF reader', () => {
+it('serializes pdf attachment sources through the managed attachment protocol for the desktop PDF reader', async () => {
   mockPdfSource('foliole-asset://attachment/pdf-hash');
   listNodeAttachments.mockReturnValue([
     {
@@ -71,7 +71,7 @@ it('serializes pdf attachment sources through the managed attachment protocol fo
     }
   ]);
 
-  expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
+  expect((await toNativeNodeSourceDetails('node-1'))?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
       source_locator: PDF_RESOURCE_URL,
@@ -80,7 +80,7 @@ it('serializes pdf attachment sources through the managed attachment protocol fo
   );
 });
 
-it('exposes a synced Readwise original-file result without its transient URL', () => {
+it('exposes a synced Readwise original-file result without its transient URL', async () => {
   const details = mockPdfSource('readwise://document/document-1');
   loadNodeSourceDetails.mockReturnValue({
     ...details,
@@ -95,14 +95,14 @@ it('exposes a synced Readwise original-file result without its transient URL', (
     }
   });
   listNodeAttachments.mockReturnValue([]);
-  expect(toNativeNodeSourceDetails('node-1')?.import_source).toMatchObject({
+  expect((await toNativeNodeSourceDetails('node-1'))?.import_source).toMatchObject({
     readwise_original_file: {
       attachment_id: null, reason: 'original_file_not_distributed', status: 'html_only'
     }
   });
 });
 
-it('keeps pdf reader sources on the managed attachment copy even when the import source has an original file path', () => {
+it('keeps pdf reader sources on the managed attachment copy even when the import source has an original file path', async () => {
   mockPdfSource('/tmp/foliole-source-details-payload-source.pdf');
   listNodeAttachments.mockReturnValue([
     {
@@ -112,7 +112,7 @@ it('keeps pdf reader sources on the managed attachment copy even when the import
     }
   ]);
 
-  expect(toNativeNodeSourceDetails('node-1')?.import_source).toEqual(
+  expect((await toNativeNodeSourceDetails('node-1'))?.import_source).toEqual(
     expect.objectContaining({
       source_kind: 'pdf',
       source_locator: PDF_RESOURCE_URL

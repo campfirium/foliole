@@ -25,7 +25,7 @@ export async function exportNodePdf(
   );
   if (!link) return { path: null, status: 'not_found' };
 
-  const resolved = resolveAttachmentFile(`${link.attachmentId}.pdf`);
+  const resolved = await resolveAttachmentFile(`${link.attachmentId}.pdf`);
   if (resolved.status !== 'ready') return { path: null, status: resolved.status };
 
   const options = {

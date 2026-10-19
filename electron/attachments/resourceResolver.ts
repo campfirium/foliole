@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { webcrypto } from 'node:crypto';
 import fs from 'node:fs';
 
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
@@ -65,7 +65,7 @@ function resolveAttachmentAssetsDir() {
   return snapshot.assetsDir;
 }
 
-export function resolveAttachmentFile(storageKey: string, assetsDir?: string): ResolvedAttachmentFile {
+export async function resolveAttachmentFile(storageKey: string, assetsDir?: string): Promise<ResolvedAttachmentFile> {
   const snapshot = readAttachmentLibraryPathSnapshot();
   if (!assetsDir && !snapshot) return { status: 'not_found' };
   const resolvedAssetsDir = assetsDir ?? snapshot!.assetsDir;
@@ -75,22 +75,22 @@ export function resolveAttachmentFile(storageKey: string, assetsDir?: string): R
   let bytes: Buffer;
   try {
     if (!fs.existsSync(canonicalPath)) restoreAttachmentFromTrash(resolvedAssetsDir, storageKey);
-    const linkStat = fs.lstatSync(canonicalPath);
+    const linkStat = await fs.promises.lstat(canonicalPath);
     if (linkStat.isSymbolicLink() || !linkStat.isFile()) {
       return { status: 'missing_file', mimeType: parsed.mimeType };
     }
     const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0);
-    const descriptor = fs.openSync(canonicalPath, flags);
+    const descriptor = await fs.promises.open(canonicalPath, flags);
     try {
-      const stat = fs.fstatSync(descriptor);
+      const stat = await descriptor.stat();
       if (!stat.isFile()) return { status: 'missing_file', mimeType: parsed.mimeType };
-      bytes = fs.readFileSync(descriptor);
-      if (createHash('sha256').update(bytes).digest('hex') !== parsed.contentHash ||
+      bytes = await descriptor.readFile();
+      if (Buffer.from(await webcrypto.subtle.digest('SHA-256', new Uint8Array(bytes))).toString('hex') !== parsed.contentHash ||
           classifyAttachmentBytes(bytes) !== parsed.mimeType) {
         return { status: 'missing_file', mimeType: parsed.mimeType };
       }
     } finally {
-      fs.closeSync(descriptor);
+      await descriptor.close();
     }
   } catch {
     console.warn('[native] attachment resource file missing', {
@@ -110,8 +110,8 @@ export function resolveAttachmentFile(storageKey: string, assetsDir?: string): R
   };
 }
 
-export function resolveAttachmentResource(storageKey: string, assetsDir?: string): NativeAttachmentResourceResolution {
-  const resolved = resolveAttachmentFile(storageKey, assetsDir);
+export async function resolveAttachmentResource(storageKey: string, assetsDir?: string): Promise<NativeAttachmentResourceResolution> {
+  const resolved = await resolveAttachmentFile(storageKey, assetsDir);
   if (resolved.status === 'not_found') {
     return {
       status: 'not_found',

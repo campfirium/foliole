@@ -36,7 +36,7 @@ it('reads only the canonical file named by a self-contained description', async 
   const resource = description(bytes);
   const filePath = resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey);
   await fs.writeFile(filePath, bytes);
-  expect(resolveAttachmentResource(resource.storageKey, tempRoot)).toEqual({
+  expect(await resolveAttachmentResource(resource.storageKey, tempRoot)).toEqual({
     status: 'ready', mime_type: 'image/png', resource_url: buildAttachmentAssetUrl(resource)
   });
 });
@@ -45,20 +45,20 @@ it('rejects a hash mismatch and does not open a bare-name fallback', async () =>
   const bytes = Buffer.concat([PNG_PREFIX, Buffer.from('expected')]);
   const resource = description(bytes);
   await fs.writeFile(path.join(tempRoot, resource.contentHash), bytes);
-  expect(resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+  expect(await resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
   await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey), Buffer.from('wrong'));
-  expect(resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+  expect(await resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
 });
 
-it('rejects non-canonical keys before touching bytes', () => {
+it('rejects non-canonical keys before touching bytes', async () => {
   const resource = description(Buffer.concat([PNG_PREFIX, Buffer.from('bytes')]));
-  expect(resolveAttachmentFile(resource.contentHash, tempRoot)).toEqual({ status: 'not_found' });
+  expect(await resolveAttachmentFile(resource.contentHash, tempRoot)).toEqual({ status: 'not_found' });
 });
 
-it('returns not found without an active library instead of throwing', () => {
+it('returns not found without an active library instead of throwing', async () => {
   clearAttachmentLibraryPathSnapshot();
   const resource = description(Buffer.concat([PNG_PREFIX, Buffer.from('bytes')]));
-  expect(resolveAttachmentFile(resource.storageKey)).toEqual({ status: 'not_found' });
+  expect(await resolveAttachmentFile(resource.storageKey)).toEqual({ status: 'not_found' });
 });
 
 it('rejects bytes whose signature disagrees with the canonical extension', async () => {
@@ -66,7 +66,7 @@ it('rejects bytes whose signature disagrees with the canonical extension', async
   const contentHash = createHash('sha256').update(bytes).digest('hex');
   const storageKey = `${contentHash}.png`;
   await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, storageKey), bytes);
-  expect(resolveAttachmentFile(storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+  expect(await resolveAttachmentFile(storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
 });
 
 it('rejects a symbolic link even when its target has the expected bytes', async () => {
@@ -75,7 +75,7 @@ it('rejects a symbolic link even when its target has the expected bytes', async 
   const target = path.join(tempRoot, 'outside.png');
   await fs.writeFile(target, bytes);
   await fs.symlink(target, resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey));
-  expect(resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+  expect(await resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
 });
 
 it('resolves a large sync source without reading the complete file into memory', async () => {
@@ -93,4 +93,18 @@ it('resolves a large sync source without reading the complete file into memory',
     });
     expect(fullRead).not.toHaveBeenCalled();
   } finally { clearAttachmentLibraryPathSnapshot(); }
+});
+
+it('allows queued event-loop work to run while validating a large displayed attachment', async () => {
+  const bytes = Buffer.concat([PNG_PREFIX, Buffer.alloc(24 * 1024 * 1024, 0x53)]);
+  const resource = description(bytes);
+  await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey), bytes);
+  let serviced = false;
+  const queued = new Promise<void>(resolve => setImmediate(() => { serviced = true; resolve(); }));
+  try {
+    const resolved = await resolveAttachmentFile(resource.storageKey, tempRoot);
+    expect(resolved.status).toBe('ready');
+    expect(serviced).toBe(true);
+    if (resolved.status === 'ready') expect(resolved.bytes.equals(bytes)).toBe(true);
+  } finally { await queued; }
 });

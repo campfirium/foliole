@@ -61,7 +61,7 @@ export async function recoverArticleImageAttachment(args: NativeImportRemoteImag
         return args.expectedContent !== undefined && article?.content !== args.expectedContent ? null : article;
       }),
       exists: async (key) => {
-        return resolveAttachmentFile(key, snapshot.assetsDir).status === 'ready';
+        return (await resolveAttachmentFile(key, snapshot.assetsDir)).status === 'ready';
       },
       importImage: async (sourceUrl) => {
         const fetched = await fetchRemoteImageResource(sourceUrl, { refresh: true, sourceOrigin: args.sourceOrigin ?? null });
@@ -84,7 +84,7 @@ export async function recoverArticleImageAttachment(args: NativeImportRemoteImag
     imported = await runWithDatabaseConnectionOwner(async () => {
       if (readAttachmentLibraryPathSnapshot()?.libraryScope !== snapshot.libraryScope) return null;
       const identity = parseCanonicalAttachmentStorageKey(result.storageKey);
-      const resource = resolveAttachmentFile(result.storageKey, snapshot.assetsDir);
+      const resource = await resolveAttachmentFile(result.storageKey, snapshot.assetsDir);
       if (!identity || resource.status !== 'ready') return null;
       const stat = await fs.stat(resource.filePath).catch(() => null);
       if (!stat) return null;

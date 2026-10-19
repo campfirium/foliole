@@ -204,10 +204,10 @@ it('ignores legacy attachment tombstones without deleting node resources or deri
   driver.execute(
     'UPDATE nodes SET resource_references = ? WHERE id = ?', [resources, 'pdf-topic']
   );
-  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir).status).toBe('missing_file');
+  expect((await resolveAttachmentFile(`${id}.pdf`, assetsDir)).status).toBe('missing_file');
   await fs.mkdir(assetsDir, { recursive: true });
   await fs.writeFile(path.join(assetsDir, `${id}.pdf`), bytes);
-  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
+  expect(await resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
   driver.execute(
     `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
      VALUES (?, ?, ?, ?, ?)`,
@@ -226,5 +226,5 @@ it('ignores legacy attachment tombstones without deleting node resources or deri
   expect(driver.queryOne('SELECT text FROM pdf_page_text WHERE attachment_id = ?', [id])).toEqual({ text: 'Page one' });
   expect(driver.queryOne('SELECT resource_references FROM nodes WHERE id = ?', ['pdf-topic']))
     .toEqual({ resource_references: resources });
-  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
+  expect(await resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
 });

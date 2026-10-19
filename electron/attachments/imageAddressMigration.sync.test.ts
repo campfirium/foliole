@@ -71,7 +71,7 @@ it('sends the repair as a normal descendant version to an independent replica wi
     expect(loadNodeBodyResolution(createBetterSqlite3Driver(target), 'article')).toMatchObject({ status: 'resolved', content: repaired.body_text });
     expect(received).toEqual({ resource_references: migrationNode().resource_references,
       current_version_id: repaired.version_id });
-    expect(resolveAttachmentFile(newKey, targetAssets).status).toBe('ready');
+    expect((await resolveAttachmentFile(newKey, targetAssets)).status).toBe('ready');
     expect(target.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get(original.version_id))
       .toEqual({ body_text: original.body_text });
     expect((await applySyncNodesWithDbPort(port, [repaired])).appliedIds).toEqual([]);
