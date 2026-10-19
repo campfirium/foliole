@@ -49,7 +49,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'image-content-sync': { requiresHiddenDesktopRuntime: true, mutatesFixedA5: false },
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
-  'sync-now': { requiresHiddenDesktopRuntime: true },
+  'sync-now': { formalSourceClass: 'ordinary-only' },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });

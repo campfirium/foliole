@@ -16,6 +16,18 @@ final class FolioleAcceptanceSyncEventProjection {
         if (!isAcceptancePackage(context.getPackageName())) {
             throw new IllegalStateException("acceptance_sync_projection_identity_invalid");
         }
+        return readDatabase(context);
+    }
+
+    static JSONObject readForSyncNow(Context context) throws Exception {
+        if (!isAcceptancePackage(context.getPackageName())
+            && !"com.campfirium.foliole.android".equals(context.getPackageName())) {
+            throw new IllegalStateException("acceptance_sync_projection_identity_invalid");
+        }
+        return readDatabase(context);
+    }
+
+    private static JSONObject readDatabase(Context context) throws Exception {
         String path = context.getDatabasePath(DATABASE_NAME).getPath();
         try (SQLiteDatabase database = SQLiteDatabase.openDatabase(
             path, null, SQLiteDatabase.OPEN_READONLY

@@ -156,7 +156,7 @@ final class FolioleCompanionSyncNowAction {
         JSONObject latestProjection = new JSONObject();
         while (System.nanoTime() < deadline) {
             try {
-                latestProjection = FolioleAcceptanceSyncEventProjection.read(
+                latestProjection = FolioleAcceptanceSyncEventProjection.readForSyncNow(
                     instrumentation.getTargetContext()
                 );
                 JSONArray events = latestProjection.getJSONArray("events");

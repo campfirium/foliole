@@ -2,54 +2,47 @@ import { expect, it, vi } from 'vitest';
 
 import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
 
-it('runs one public Sync Now action and consumes only its mechanical lifecycle result', async () => {
-  const close = vi.fn(async () => undefined);
-  const assertActive = vi.fn();
-  const enable = vi.fn(async () => undefined);
-  const openDesktopSession = vi.fn(async () => ({ assertActive, close, enable }));
-  const runAction = vi.fn(async () => ({
-    manifestPath: '/artifacts/a5-sync-now/build-1/sync-group-maintenance-manifest.json',
-    output: ''
-  }));
-  const markMutationBoundary = vi.fn();
+function fixture() {
+  const runAction = vi.fn(async () => ({ manifestPath: '/evidence/manifest.json', output: '' }));
+  const assertDailyRuntime = vi.fn(async () => ({ pid: 42 }));
+  const inspectBaseline = vi.fn(async () => ({ resultStatus: 'approval_required', differences: [{}] }));
+  const openDesktopSession = vi.fn(async () => ({ assertActive() {}, enable() {}, close() {} }));
   const args = {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-1',
-    checked: vi.fn(), env: {}, execute: vi.fn(), markMutationBoundary,
-    paths: {
-      artifactsRoot: '/artifacts', buildRoot: '/repo', desktopDevLibrary: '/library',
-      desktopRuntimeRoot: '/runtime'
-    }, serial: '87a33a4b'
+    checked: vi.fn(), env: {}, execute: vi.fn(), markMutationBoundary: vi.fn(),
+    paths: { artifactsRoot: '/artifacts', buildRoot: '/repo', sourceRepoRoot: '/repo',
+      adb: '/adb', desktopDevLibrary: '/unrelated-library', desktopRuntimeRoot: '/runtime' },
+    serial: '87a33a4b'
   };
+  return { args, dependencies: { assertDailyRuntime, inspectBaseline, runAction,
+    buildDesktop: vi.fn(), openDesktopSession } };
+}
 
-  await expect(runMacosA5SyncNowEntry(args, {
-    buildDesktop: vi.fn(), openDesktopSession, runAction
-  })).resolves.toMatchObject({ manifestPath: expect.stringContaining('sync-group-maintenance') });
-
-  expect(markMutationBoundary).toHaveBeenCalledOnce();
-  expect(assertActive).toHaveBeenCalledOnce();
-  expect(enable).toHaveBeenCalledOnce();
-  expect(enable.mock.invocationCallOrder[0]).toBeLessThan(runAction.mock.invocationCallOrder[0]);
-  expect(runAction).toHaveBeenCalledWith(expect.objectContaining({
-    action: 'sync-now', buildIdentity: 'build-1', serial: '87a33a4b'
+it('uses the existing daily runtime without creating a group or USB transport', async () => {
+  const { args, dependencies } = fixture();
+  await runMacosA5SyncNowEntry(args, dependencies);
+  expect(dependencies.openDesktopSession).not.toHaveBeenCalled();
+  expect(dependencies.inspectBaseline).toHaveBeenCalledWith(expect.objectContaining({
+    desktopDatabase: '/Users/roamer/Documents/Foliole/Data/foliole.db'
   }));
-  expect(runAction.mock.calls[0][0]).not.toHaveProperty('observeWhileTransportOpen');
-  expect(close).toHaveBeenCalledOnce();
+  expect(dependencies.runAction).toHaveBeenCalledWith(expect.objectContaining({
+    action: 'sync-now', transportRequired: false, instrumentationOwnsActivity: true
+  }));
 });
 
-it('closes the desktop runtime when the public action fails', async () => {
-  const close = vi.fn(async () => undefined);
-  await expect(runMacosA5SyncNowEntry({
-    assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-2',
-    checked: vi.fn(), env: {}, execute: vi.fn(), paths: {
-      artifactsRoot: '/artifacts', buildRoot: '/repo', desktopDevLibrary: '/library',
-      desktopRuntimeRoot: '/runtime'
-    }, serial: '87a33a4b'
-  }, {
-    buildDesktop: vi.fn(),
-    openDesktopSession: async () => ({
-      assertActive: vi.fn(), close, enable: vi.fn(async () => undefined)
-    }),
-    runAction: async () => { throw new Error('action lifecycle missing'); }
-  })).rejects.toThrow('action lifecycle missing');
-  expect(close).toHaveBeenCalledOnce();
+it('refuses a wrong desktop listener before building or mutating the phone', async () => {
+  const { args, dependencies } = fixture();
+  dependencies.assertDailyRuntime.mockRejectedValue(new Error('daily_sync_listener_mismatch'));
+  await expect(runMacosA5SyncNowEntry(args, dependencies)).rejects.toThrow('daily_sync_listener_mismatch');
+  expect(args.build).not.toHaveBeenCalled();
+  expect(args.markMutationBoundary).not.toHaveBeenCalled();
+  expect(dependencies.runAction).not.toHaveBeenCalled();
+});
+
+it('refuses an unrelated phone group before building or syncing', async () => {
+  const { args, dependencies } = fixture();
+  dependencies.inspectBaseline.mockRejectedValue(new Error('existing_sync_group_mismatch'));
+  await expect(runMacosA5SyncNowEntry(args, dependencies)).rejects.toThrow('existing_sync_group_mismatch');
+  expect(args.build).not.toHaveBeenCalled();
+  expect(dependencies.runAction).not.toHaveBeenCalled();
 });
