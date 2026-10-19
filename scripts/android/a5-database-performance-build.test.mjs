@@ -35,13 +35,13 @@ it('rejects unknown measurement inputs before building', () => {
   expect(checked).not.toHaveBeenCalled();
 });
 
-it('builds the production request snapshot only for the fixed acceptance app', () => {
+it.each(['request-snapshot', 'remediation-performance'])('builds %s only for the fixed acceptance app', scenario => {
   const checked = vi.fn();
   buildA5DatabasePerformance({ checked, captured: (_command, args) => manifests(args.at(-1)), paths,
-    env: { ...env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'request-snapshot' } });
+    env: { ...env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: scenario } });
   for (const [, , options] of checked.mock.calls) {
     expect(options.env.FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID).toBe(appId);
-    expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe('request-snapshot');
+    expect(options.env.VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO).toBe(scenario);
   }
 });
 

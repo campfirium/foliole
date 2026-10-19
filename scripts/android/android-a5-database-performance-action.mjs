@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { saveRemediationPerformanceResult } from './a5-remediation-performance-result.mjs';
 import path from 'node:path';
 import { assertPerformanceApkIdentity, performanceScenario, PERFORMANCE_APP_ID } from './a5-database-performance-build.mjs';
 import { parseLibraryCapacityResult } from '../mobile/library-capacity-result.mjs';
@@ -80,11 +81,14 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     } else {
       result = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-        '-e', 'class', requestSnapshot ? `${TEST_NAMESPACE}.FolioleRequestSnapshotAcceptanceTest`
+        '-e', 'class', scenario === 'remediation-performance' ? `${TEST_NAMESPACE}.FolioleRemediationPerformanceAcceptanceTest`
+          : requestSnapshot ? `${TEST_NAMESPACE}.FolioleRequestSnapshotAcceptanceTest`
           : capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
       ], options);
       output.push(result.output);
     }
+    if (scenario === 'remediation-performance') return await saveRemediationPerformanceResult({
+      result, execute, paths, serial, options, evidenceRoot });
     if (requestSnapshot) {
       fs.writeFileSync(path.join(evidenceRoot, 'request-snapshot-instrumentation.log'), result.output);
       assertSingleInstrumentationPassed(result.output, 'FolioleRequestSnapshotAcceptanceTest');
