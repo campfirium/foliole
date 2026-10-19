@@ -66,12 +66,14 @@ function hasNodeLifecycleFact(node: WorkspaceCanonicalNode | undefined) {
 
 function isCanonicallyDeleted<TNode extends WorkspaceCanonicalNode>(
   source: WorkspaceCanonicalSource<TNode>,
-  nodeId: string
+  nodeId: string,
+  legacyTrashIds?: ReadonlySet<string>
 ) {
   const node = source.nodesById[nodeId];
   if (!node) return false;
   if (hasNodeLifecycleFact(node)) return hasDeletedAt(node.deletedAt);
-  return Boolean(hasDeletedAt(source.trashedNodeDeletedAtById?.[nodeId]) || source.trashedNodeIds?.includes(nodeId));
+  return Boolean(hasDeletedAt(source.trashedNodeDeletedAtById?.[nodeId])
+    || (legacyTrashIds ? legacyTrashIds.has(nodeId) : source.trashedNodeIds?.includes(nodeId)));
 }
 
 function resolveCanonicalDeletedAt<TNode extends WorkspaceCanonicalNode>(
@@ -113,7 +115,9 @@ export function selectCanonicalNodeMembership<TNode extends WorkspaceCanonicalNo
 export function selectCanonicalVisibleNodeIds<TNode extends WorkspaceCanonicalNode>(
   source: WorkspaceCanonicalSource<TNode>
 ) {
-  return uniqueIds(source.nodeOrder).filter((nodeId) => isCanonicalVisibleNodeId(source, nodeId));
+  const legacyTrashIds = new Set(source.trashedNodeIds);
+  return uniqueIds(source.nodeOrder).filter((nodeId) =>
+    source.nodesById[nodeId] && !isCanonicallyDeleted(source, nodeId, legacyTrashIds));
 }
 
 export function selectCanonicalTrashedNodeIds<TNode extends WorkspaceCanonicalNode>(
@@ -125,7 +129,8 @@ export function selectCanonicalTrashedNodeIds<TNode extends WorkspaceCanonicalNo
     ...source.nodeOrder,
     ...Object.keys(source.nodesById)
   ]);
-  return candidateIds.filter((nodeId) => isCanonicalTrashedNodeId(source, nodeId));
+  const legacyTrashIds = new Set(source.trashedNodeIds);
+  return candidateIds.filter((nodeId) => isCanonicallyDeleted(source, nodeId, legacyTrashIds));
 }
 
 export function selectCanonicalTrashedNodeDeletedAtById<TNode extends WorkspaceCanonicalNode>(
