@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
@@ -20,7 +21,11 @@ vi.mock('../../appLifecycle', () => ({
 }));
 
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | undefined;
-afterEach(async () => { await library?.close(); library = undefined; vi.restoreAllMocks(); });
+let observer: Database.Database | undefined;
+afterEach(async () => {
+  observer?.close(); observer = undefined;
+  await library?.close(); library = undefined; vi.restoreAllMocks();
+});
 
 function signal() {
   let resolve = () => {};
@@ -42,6 +47,7 @@ async function prepareTopic() {
 it('keeps sync metadata behind a real pending content commit on the shared writer', async () => {
   library = await createSearchLibrary(0);
   await prepareTopic();
+  observer = new Database(library.database.name, { readonly: true });
   const entered = signal();
   const release = signal();
   const events: string[] = [];
@@ -65,10 +71,16 @@ it('keeps sync metadata behind a real pending content commit on the shared write
   try {
     await Promise.resolve();
     expect(events).toEqual(['content-commit-entered']);
+    expect(await library.connection.query('SELECT content FROM nodes WHERE id=?', ['topic']))
+      .toEqual({ values: [{ content: 'Edited' }] });
+    expect(observer.prepare('SELECT content FROM nodes WHERE id=?').get('topic'))
+      .toEqual({ content: 'Original' });
   } finally { release.resolve(); }
   try { await Promise.all([saving, metadata]); } finally { unsubscribe(); }
   expect(events.indexOf('metadata-writer-entered')).toBeGreaterThan(events.indexOf('content-committed'));
   expect(events).toContain('mutation-published');
+  expect(observer.prepare('SELECT content FROM nodes WHERE id=?').get('topic'))
+    .toEqual({ content: 'Edited' });
   expect(library.database.prepare('SELECT content FROM nodes WHERE id=?').get('topic'))
     .toEqual({ content: 'Edited' });
   events.length = 0;

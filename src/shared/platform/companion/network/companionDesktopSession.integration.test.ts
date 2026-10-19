@@ -59,6 +59,8 @@ it('notifies queued desktop data while the previous round is still handling atta
       versionId: 'during-attachments-next', content: 'New desktop body', hostName: 'Desktop',
       updatedAt: '2026-10-17T02:00:00Z' });
     await vi.waitFor(() => expect(hasWaitingSyncData()).toBe(true), { timeout: 1000 });
+    expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('during-attachments'))
+      .toBe('First body');
     release();
     await vi.waitFor(() => {
       expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('during-attachments'))
