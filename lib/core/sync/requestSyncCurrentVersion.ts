@@ -9,6 +9,10 @@ export type RequestSyncCurrentVersion = { globalId: string; versionId: string };
 export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNodeRecordSource,
   reference?: RequestSyncCurrentVersion): Promise<SyncNodeRecordSource> {
   if (!reference) return source;
+  const sole = source.records.length === 1 ? source.records[0] : undefined;
+  // An unchanged source is validated and retained by the ordinary apply transaction.
+  if (sole?.version_id === reference.versionId && sole.object_id === reference.globalId &&
+      !source.isIdentityOnly(sole)) return source;
   const history = await prepareIncomingNodeVersionSource(db, source);
   await retainIncomingNodeVersionSource(db, source, history, true);
   const incoming = source.records.find(record => record.version_id === reference.versionId);

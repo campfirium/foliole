@@ -25,13 +25,14 @@ async function snapshot(source: RestorePeer, consume: (request: RequestSyncFiles
   });
 }
 
-function apply(source: RestorePeer, target: RestorePeer, request: RequestSyncFiles, facts: readonly CanonicalFact[]) {
+function apply(source: RestorePeer, target: RestorePeer, request: RequestSyncFiles, facts: readonly CanonicalFact[], currentVersionId?: string) {
   return applyRequestSyncObject(target.db, {
     context: context({ groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }),
     peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
       library_epoch: source.epoch, proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
     objectType: 'node', globalId: 'topic', requestId: new Uint8Array(16), enqueueSearchInvalidations: false,
+    ...(currentVersionId ? { currentVersionId } : {}),
     facts: async function* () { yield* facts; }, loadBody: (_db, blob) => request.loadBody(blob)
   });
 }
@@ -51,21 +52,21 @@ function changeTitle(fact: CanonicalFact): CanonicalFact {
   }) };
 }
 
-it('rejects changed snapshot metadata with the same original version, hash and body without any receiver writes', async () => {
+it.each([undefined, 'original'])('rejects changed original metadata without receiver writes with declared head %s', async currentVersionId => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
     await applySyncNodesWithDbPort(source.db, [textBranch('original', '\uFEFFOriginal中😀\0\r\n')]);
     await snapshot(source, async (request, facts) => {
-      await apply(source, target, request, facts); target.reopen();
+      await apply(source, target, request, facts, currentVersionId); target.reopen();
       const before = durableState(target);
       const changed = facts.map(changeTitle);
       expect(changed).not.toEqual(facts);
-      await expect(apply(source, target, request, changed))
+      await expect(apply(source, target, request, changed, currentVersionId))
         .rejects.toThrow(/^sync_pack_node_version_immutable_mismatch:original$/u);
       target.reopen();
       expect(durableState(target)).toEqual(before);
-      await apply(source, target, request, facts); target.reopen();
+      await apply(source, target, request, facts, currentVersionId); target.reopen();
       expect(target.sqlite.prepare("SELECT title, content, current_version_id FROM nodes WHERE id = 'topic'").get())
         .toEqual({ title: 'Topic', content: '\uFEFFOriginal中😀\0\r\n', current_version_id: 'original' });
       expect(target.sqlite.prepare('SELECT COUNT(*) FROM node_sync_versions').pluck().get()).toBe(1);
