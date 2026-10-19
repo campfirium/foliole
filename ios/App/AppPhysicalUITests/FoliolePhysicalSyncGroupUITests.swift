@@ -5,6 +5,10 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    override func tearDownWithError() throws {
+        attachScreenshot(named: "Fri-final-sync-surface")
+    }
+
     func testPreparesLocalNetworkPermission() throws {
         let app = acceptanceApplication()
         app.launch()
