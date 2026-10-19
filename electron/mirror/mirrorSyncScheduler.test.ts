@@ -25,11 +25,14 @@ vi.mock('electron', () => ({
   systemPreferences: { getUserDefault: vi.fn(), subscribeNotification: vi.fn() }
 }));
 
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { submitDesktopOperation } from '../desktopOperations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
+import * as mirrorRenderer from './articleMirrorRenderWorkerClient.js';
 import * as articleMirror from './exportArticleMirror.js';
 import { flushMirrorSync, scheduleMirrorSync } from './mirrorSyncScheduler.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
@@ -97,6 +100,44 @@ function saveNode(
 function mirrorPath(fileName: string) {
   return path.join(tempRoot, 'Library', 'Mirror', fileName);
 }
+
+it.each(['incremental', 'backfill'] as const)('persists edits during %s mirror rendering and exports the newer body', async (mode) => {
+  saveNode('editable', null, 'topic', 'Editable', 'Before', '2026-03-30T00:00:00.000Z', 0);
+  let started!: () => void;
+  let release!: () => void;
+  const rendering = new Promise<void>((resolve) => { started = resolve; });
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const render = mirrorRenderer.renderArticleMirrorInWorker;
+  vi.spyOn(mirrorRenderer, 'renderArticleMirrorInWorker').mockImplementationOnce(async (...args) => {
+    started();
+    await gate;
+    return render(...args);
+  });
+  if (mode === 'incremental') scheduleMirrorSync(['editable']);
+  const mirror = mode === 'incremental' ? flushMirrorSync() : submitDesktopOperation('mirror-backfill', {
+    run: (context) => mirrorOutput.backfillMissingMirrorOutput(context)
+  }).promise;
+  await rendering;
+  const save = runDesktopDatabaseWrite('foreground', () => {
+    saveNode('editable', null, 'topic', 'Editable', 'After', '2030-03-30T00:00:00.000Z', 0);
+  });
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const savedWhileRendering = await Promise.race([
+      save.then(() => true),
+      new Promise<boolean>((resolve) => { timeout = setTimeout(() => resolve(false), 1000); })
+    ]);
+    expect(savedWhileRendering).toBe(true);
+  } finally {
+    clearTimeout(timeout);
+    release();
+    await Promise.all([save, mirror]);
+  }
+  closeDatabaseConnection();
+  expect(openDatabaseConnection().driver.queryOne('SELECT content FROM nodes WHERE id = ?', ['editable']))
+    .toEqual({ content: 'After' });
+  await expect(fs.readFile(mirrorPath('Editable.md'), 'utf8')).resolves.toContain('After');
+});
 
 it('flushes automatic mirror updates through the same incremental path used by rebuilds', async () => {
   saveNode('node-first', null, 'topic', 'Same Title', 'First body.', '2026-03-30T00:00:00.000Z', 0);
