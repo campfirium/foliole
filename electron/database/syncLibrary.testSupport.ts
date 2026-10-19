@@ -55,14 +55,16 @@ export function createPeer(id: string, initialize = initializeDatabaseSchema): P
 
 export function joinPeers(...members: Peer[]) {
   for (const peer of members) {
-    peer.db.prepare(`INSERT INTO sync_groups
-      (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('group', 'Group', 'key', 'now', 'now')`).run();
-    peer.db.prepare('INSERT INTO sync_group_local_state VALUES (1, ?, ?, ?, ?)')
-      .run('group', peer.id, 'active', 'now');
-    for (const member of members) peer.db.prepare(`INSERT INTO sync_group_devices
-      (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
-       platform, state, joined_at, updated_at) VALUES ('group', ?, ?, ?, ?, 'mac', 'active', 'now', 'now')`)
-      .run(member.id, member.anchor, member.file, member.name);
+    peer.db.transaction(() => {
+      peer.db.prepare(`INSERT INTO sync_groups
+        (group_id, display_name, workgroup_key, created_at, updated_at) VALUES ('group', 'Group', 'key', 'now', 'now')`).run();
+      peer.db.prepare('INSERT INTO sync_group_local_state VALUES (1, ?, ?, ?, ?)')
+        .run('group', peer.id, 'active', 'now');
+      for (const member of members) peer.db.prepare(`INSERT INTO sync_group_devices
+        (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+         platform, state, joined_at, updated_at) VALUES ('group', ?, ?, ?, ?, 'mac', 'active', 'now', 'now')`)
+        .run(member.id, member.anchor, member.file, member.name);
+    })();
   }
 }
 
