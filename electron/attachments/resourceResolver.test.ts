@@ -108,3 +108,20 @@ it('allows queued event-loop work to run while validating a large displayed atta
     if (resolved.status === 'ready') expect(resolved.bytes.equals(bytes)).toBe(true);
   } finally { await queued; }
 });
+
+
+it('keeps an in-flight resource read bound to its starting library', async () => {
+  const bytes = Buffer.concat([PNG_PREFIX, Buffer.from('original-library')]);
+  const resource = description(bytes);
+  await fs.writeFile(resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey), bytes);
+  const otherAssets = path.join(tempRoot, 'other');
+  await fs.mkdir(otherAssets);
+  publishAttachmentLibraryPathSnapshot({ assetsDir: tempRoot, libraryScope: 'original' });
+  try {
+    const pending = resolveAttachmentFile(resource.storageKey);
+    publishAttachmentLibraryPathSnapshot({ assetsDir: otherAssets, libraryScope: 'other' });
+    const resolved = await pending;
+    expect(resolved).toMatchObject({ status: 'ready', bytes });
+    expect(await resolveAttachmentFile(resource.storageKey)).toMatchObject({ status: 'missing_file' });
+  } finally { clearAttachmentLibraryPathSnapshot(); }
+});
