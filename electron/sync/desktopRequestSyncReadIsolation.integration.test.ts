@@ -13,6 +13,10 @@ vi.mock('../ipc/paths.js', () => ({
     app_log_dir: path.join(stateRoot, 'logs') })
 }));
 
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
+import { iterateRequestSyncInventory, decodeRequestSyncInventory } from '../../lib/core/sync/requestSyncInventoryWire.js';
+import { prepareRequestSyncWire, readRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -20,6 +24,62 @@ import { initializeDatabase } from '../database/migrate.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
+
+it.each([
+  { searchWriter: false, dirty: false },
+  { searchWriter: true, dirty: false },
+  { searchWriter: true, dirty: true }
+])('answers an inventory request with search writer=$searchWriter and dirty node=$dirty', async ({ searchWriter, dirty }) => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.pragma('busy_timeout = 0');
+  const search = new Database(connection.searchDbPath);
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  if (dirty) connection.driver.execute("UPDATE nodes SET priority = 3, sync_dirty = 1 WHERE id = 'special-inbox'");
+  const input = { context: { groupId: 'diagnostic', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: 'phone', initiatorLibraryEpoch: 'phone-epoch',
+    responderDeviceId: 'desktop', responderLibraryEpoch: 'desktop-epoch' } as const, groupKey: new Uint8Array(32).fill(7) };
+  const request = await prepareRequestSyncWire({ ...input, messages: async function* () {
+    yield* iterateRequestSyncInventory({ entries: [], roundId: new Uint8Array(16).fill(1), bucketSummary: true });
+  } });
+  try {
+    if (searchWriter) search.exec('BEGIN IMMEDIATE');
+    const result = await respondRequestSyncDatabase(host, { ...input, stream: request, mode: 'inventory' }, async response => {
+      return decodeRequestSyncInventory((async function* () {
+        for await (const decoded of readRequestSyncWire({ ...input, ...response })) yield decoded.message;
+      })());
+    });
+    expect(result.bucketSummary).toBe(true);
+    expect(connection.sqlite.prepare("SELECT sync_dirty FROM nodes WHERE id = 'special-inbox'").pluck().get()).toBe(0);
+    expect(search.inTransaction).toBe(searchWriter);
+  } finally {
+    await request.frames.return(undefined);
+    if (search.inTransaction) search.exec('ROLLBACK');
+    search.close();
+  }
+});
+
+it.each([false, true])('keeps sync writes atomic beside the search writer, rollback=%s', async rollback => {
+  const connection = openDatabaseConnection();
+  connection.sqlite.pragma('busy_timeout = 0');
+  const search = new Database(connection.searchDbPath);
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  try {
+    search.exec('BEGIN IMMEDIATE');
+    const work = host.write(async db => {
+      await db.run("UPDATE nodes SET priority = 3, sync_dirty = 1 WHERE id = 'special-inbox'");
+      if (rollback) throw new Error('reject_sync_write');
+    });
+    if (rollback) await expect(work).rejects.toThrow('reject_sync_write');
+    else await work;
+    expect(connection.sqlite.prepare("SELECT priority FROM nodes WHERE id = 'special-inbox'").pluck().get())
+      .toBe(rollback ? null : 3);
+    expect(connection.sqlite.inTransaction).toBe(false);
+    expect(search.inTransaction).toBe(true);
+  } finally {
+    if (search.inTransaction) search.exec('ROLLBACK');
+    search.close();
+  }
+});
 
 beforeEach(async () => {
   stateRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-read-isolation-'));

@@ -49,7 +49,10 @@ function withPreparedDesktopSyncConnection<T>(databasePath: string, execute: (db
   return runWithDatabaseConnectionOwner(async () => {
     const connection = openDatabaseConnection();
     if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
-    const db = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-request-sync' });
+    // Reserve only databases actually written; the attached search index has its own worker.
+    const db = createBetterSqliteDbPort(connection.sqlite, {
+      name: 'desktop-request-sync', transactionMode: 'deferred'
+    });
     return db.transaction(async tx => {
       if (!await syncGroupLocalPublicationBlockReason(tx)) flushDirtyNodeSyncVersions();
       return execute(tx);

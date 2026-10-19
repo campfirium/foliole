@@ -15,6 +15,7 @@ import { prepareCachedSqliteStatement as prepareStatement } from './sqliteStatem
 type SqliteDatabase = BetterSqlite3.Database;
 export interface BetterSqliteDbPortOptions {
   name?: string;
+  transactionMode?: 'deferred' | 'immediate';
 }
 
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
@@ -29,7 +30,8 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
     },
     async transaction<T>(execute: (tx: DbPort) => Promise<T>) {
       return coordinator.runExclusive(async (owner, nested) => (
-        runTransaction({ coordinator, execute, nested, owner, port, sqlite })
+        runTransaction({ coordinator, execute, nested, owner, port, sqlite,
+          mode: options.transactionMode ?? 'immediate' })
       ));
     }
   };
@@ -45,6 +47,7 @@ async function runTransaction<T>(input: {
   owner: SqliteConnectionOwner;
   port: DbPort;
   sqlite: SqliteDatabase;
+  mode: 'deferred' | 'immediate';
 }) {
   if (input.nested && input.sqlite.inTransaction) {
     return runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
@@ -52,7 +55,7 @@ async function runTransaction<T>(input: {
   if (!input.nested && input.sqlite.inTransaction) {
     throw new SqliteConnectionOwnerError('sqlite connection has an uncoordinated active transaction');
   }
-  prepareStatement(input.sqlite, 'BEGIN IMMEDIATE').run();
+  prepareStatement(input.sqlite, input.mode === 'deferred' ? 'BEGIN DEFERRED' : 'BEGIN IMMEDIATE').run();
   try {
     const result = await runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
     prepareStatement(input.sqlite, 'COMMIT').run();
