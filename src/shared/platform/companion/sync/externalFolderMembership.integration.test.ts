@@ -30,9 +30,23 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
 }));
 vi.mock('../../../../../electron/database/connection.js', () => ({ openDatabaseConnection: () => ({ driver: current.driver, sqlite: current.db }) }));
 beforeEach(async () => {
+  const started = performance.now();
+  const mark = (stage: string) => {
+    if (process.platform === 'win32' && process.env.CI) {
+      console.info(JSON.stringify({ event: 'external_membership_fixture_setup', stage,
+        elapsedMs: performance.now() - started, root }));
+    }
+  };
+  mark('start');
   await startLibraries();
-  peers = [createPeer('a'), createPeer('b'), createPeer('c')];
+  mark('directory');
+  peers = ['a', 'b', 'c'].map(id => {
+    const peer = createPeer(id);
+    mark(`peer-${id}`);
+    return peer;
+  });
   joinPeers(...peers);
+  mark('joined');
   current = peers[0]!;
 });
 afterEach(closeLibraries);
