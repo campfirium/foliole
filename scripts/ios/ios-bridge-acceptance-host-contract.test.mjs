@@ -35,7 +35,7 @@ describe('iOS bridge acceptance host contract', () => {
     expect(acceptanceSyncGroup).toContain('requestCompanionSyncGroupJoin({');
     expect(acceptanceSyncGroup).toContain('completeCompanionSyncGroupJoin({');
     expect(acceptanceSyncGroup).toContain('FolioleCompanionSync.loadDiscoveryCandidates()');
-    expect(acceptanceSyncGroup).toContain('loadCompanionDiscoveryCandidates(candidates)');
+    expect(acceptanceSyncGroup).toMatch(/loadCompanionDiscoveryCandidates\(candidates(?:,|\))/u);
     expect(acceptanceSyncGroup).not.toContain('VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT');
     expect(scenario).toContain("saveCompanionWorkspaceSyncEndpoint('')");
     expect(syncPackScenario).toContain('syncIosAcceptanceRequest(endpoint, peer)');
