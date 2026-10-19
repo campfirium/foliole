@@ -13,7 +13,7 @@ import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { leaveDesktopSyncGroupDevice, registerSyncGroupDevice } from '../database/syncGroupStore.js';
 
-import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
+import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 let memberDb: Database.Database;
@@ -25,7 +25,7 @@ const folderId = 'provided-folder';
 const documentId = `${folderId}:note.md`;
 const body = 'External document provided by a group member';
 
-it('drops a departed member library from peers without deletion records and restores it on rejoin', async () => {
+it('hides a departed member library on peers without deletion records and shows it again on rejoin', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const provider = fixture.leftSnapshot.deviceId;
@@ -39,9 +39,11 @@ it('drops a departed member library from peers without deletion records and rest
       leaveDesktopSyncGroupDevice(provider);
       return row;
     });
-    expectLibrary(fixture.rightSnapshot.databasePath, 'forgotten');
+    expectLibrary(fixture.rightSnapshot.databasePath, 'present');
+    await expectInventory(fixture.right, false);
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot).catch(() => undefined);
-    expectLibrary(fixture.rightSnapshot.databasePath, 'forgotten');
+    expectLibrary(fixture.rightSnapshot.databasePath, 'present');
+    await expectInventory(fixture.right, false);
     expectLibrary(fixture.leftSnapshot.databasePath, 'present');
 
     withMemberDb(fixture.rightSnapshot.databasePath, () => registerSyncGroupDevice({
@@ -52,11 +54,17 @@ it('drops a departed member library from peers without deletion records and rest
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     expectLibrary(fixture.rightSnapshot.databasePath, 'present');
+    await expectInventory(fixture.right, true);
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 90_000);
+
+async function expectInventory(peer: Parameters<typeof readFixtureInventory>[0], visible: boolean) {
+  const ids = (await readFixtureInventory(peer)).map(entry => entry.globalId);
+  expect([ids.includes(folderId), ids.includes(documentId)]).toEqual([visible, visible]);
+}
 
 function withMemberDb<T>(databasePath: string, task: () => T) {
   memberDb = new Database(databasePath);

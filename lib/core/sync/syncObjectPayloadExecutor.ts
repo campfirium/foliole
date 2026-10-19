@@ -1,4 +1,4 @@
-import { DEPARTED_EXTERNAL_FOLDER_SQL } from '../database/externalFolderRetirement.js';
+import { externalFolderVisibleSql } from '../database/externalFolderMembershipVisibility.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
@@ -98,7 +98,7 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncObjectRecor
   }
   if ((await port.query("SELECT 1 FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = ? AND deleted_at IS NOT NULL",
     [text(payload.folder_id) ?? ''])).length) return false;
-  if ((await port.query(DEPARTED_EXTERNAL_FOLDER_SQL, [text(payload.folder_id) ?? ''])).length) return false;
+  if (!(await port.query(`SELECT 1 WHERE ${externalFolderVisibleSql('?')}`, [text(payload.folder_id) ?? ''])).length) return false;
   await port.run(
     `INSERT INTO external_documents (` +
     `document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, source_modified_ms, ` +

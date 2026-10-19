@@ -1,4 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { externalFolderVisibleSql } from '../../lib/core/database/externalFolderMembershipVisibility.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 
@@ -35,13 +36,15 @@ export function normalizeExcludedDirs(value: unknown) {
   return [...new Set(value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean))];
 }
 
-export function readExternalSearchFolderRows() {
+/** Libraries of departed members stay hidden unless a writer needs every stored row. */
+export function readExternalSearchFolderRows(options: { includeDeparted?: boolean } = {}) {
   return openDatabaseConnection().driver.queryAll<ExternalSearchFolderRow>(
     `SELECT f.id, f.folder_path, f.attachment_mode,
       f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at,
       f.last_error, s.host_name, s.host_platform, s.root_path, s.path_flavor, s.source_type,
       s.type_settings_json, f.created_at, f.updated_at, f.source_ref
      FROM external_search_folders f JOIN desktop_sources s ON s.source_ref = f.source_ref
+     ${options.includeDeparted ? '' : `WHERE ${externalFolderVisibleSql('f.id')}`}
      ORDER BY f.created_at ASC`
   );
 }

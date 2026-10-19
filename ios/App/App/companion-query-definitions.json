@@ -1266,7 +1266,7 @@
     },
     "externalDocumentById": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ed.content AS content, ed.body_blob_hash, 'ready' AS content_status, updated_at FROM external_documents ed WHERE document_id = ? AND is_present = 1 LIMIT 1",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ed.content AS content, ed.body_blob_hash, 'ready' AS content_status, updated_at FROM external_documents ed WHERE document_id = ? AND is_present = 1 AND COALESCE(folder_id, '') NOT IN (SELECT departed_source.config_ref FROM desktop_sources departed_source\n  JOIN sync_group_devices departed_device ON departed_device.device_identity_key =\n    json_extract(departed_source.type_settings_json, '$.ownerDeviceIdentityKey')\n  WHERE departed_source.source_type = 'external' AND departed_device.state = 'left') LIMIT 1",
       "columns": [
         {
           "key": "document_id",
@@ -1337,7 +1337,7 @@
     },
     "externalDocumentSearch": {
       "resultKey": "documents",
-      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ed.content AS content, ed.body_blob_hash, 'ready' AS content_status, updated_at, max(0, instr(lower(ed.content), ?) - 1) AS match_start, trim(substr(ed.content, max(1, instr(lower(ed.content), ?) - 80), 160)) AS excerpt FROM external_documents ed WHERE is_present = 1 AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(ed.content), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
+      "sql": "SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ed.content AS content, ed.body_blob_hash, 'ready' AS content_status, updated_at, max(0, instr(lower(ed.content), ?) - 1) AS match_start, trim(substr(ed.content, max(1, instr(lower(ed.content), ?) - 80), 160)) AS excerpt FROM external_documents ed WHERE is_present = 1 AND COALESCE(folder_id, '') NOT IN (SELECT departed_source.config_ref FROM desktop_sources departed_source\n  JOIN sync_group_devices departed_device ON departed_device.device_identity_key =\n    json_extract(departed_source.type_settings_json, '$.ownerDeviceIdentityKey')\n  WHERE departed_source.source_type = 'external' AND departed_device.state = 'left') AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 OR instr(lower(ed.content), ?) > 0) ORDER BY updated_at DESC LIMIT ?",
       "columns": [
         {
           "key": "document_id",
@@ -1418,7 +1418,7 @@
     },
     "externalSearchFolders": {
       "resultKey": "folders",
-      "sql": "SELECT id, folder_path, document_count FROM external_search_folders UNION ALL SELECT folder_id AS id, 'Readwise' AS folder_path, COUNT(*) AS document_count FROM external_documents WHERE is_present = 1 AND reference_kind = 'readwise_remote' AND folder_id NOT IN (SELECT id FROM external_search_folders) GROUP BY folder_id ORDER BY folder_path COLLATE NOCASE ASC",
+      "sql": "SELECT id, folder_path, document_count FROM external_search_folders WHERE COALESCE(id, '') NOT IN (SELECT departed_source.config_ref FROM desktop_sources departed_source\n  JOIN sync_group_devices departed_device ON departed_device.device_identity_key =\n    json_extract(departed_source.type_settings_json, '$.ownerDeviceIdentityKey')\n  WHERE departed_source.source_type = 'external' AND departed_device.state = 'left') UNION ALL SELECT folder_id AS id, 'Readwise' AS folder_path, COUNT(*) AS document_count FROM external_documents WHERE is_present = 1 AND reference_kind = 'readwise_remote' AND folder_id NOT IN (SELECT id FROM external_search_folders) GROUP BY folder_id ORDER BY folder_path COLLATE NOCASE ASC",
       "columns": [
         {
           "key": "id",
@@ -1439,7 +1439,7 @@
     },
     "externalDocumentDirectoryEntries": {
       "resultKey": "entries",
-      "sql": "SELECT CASE WHEN reference_kind = 'readwise_remote' THEN 'readwise-document:' || document_id ELSE 'external-document:' || document_id END AS absolute_path, document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
+      "sql": "SELECT CASE WHEN reference_kind = 'readwise_remote' THEN 'readwise-document:' || document_id ELSE 'external-document:' || document_id END AS absolute_path, document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at FROM external_documents WHERE is_present = 1 AND COALESCE(folder_id, '') NOT IN (SELECT departed_source.config_ref FROM desktop_sources departed_source\n  JOIN sync_group_devices departed_device ON departed_device.device_identity_key =\n    json_extract(departed_source.type_settings_json, '$.ownerDeviceIdentityKey')\n  WHERE departed_source.source_type = 'external' AND departed_device.state = 'left') ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC",
       "columns": [
         {
           "key": "document_id",

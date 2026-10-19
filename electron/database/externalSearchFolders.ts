@@ -96,7 +96,7 @@ export function saveExternalSearchFolders(folders: SaveFolderInput[]) {
   const hostName = loadOrCreateDesktopHostName(now);
   const inputs = normalizedInput(folders);
   driver.transaction(() => {
-    const rows = readExternalSearchFolderRows();
+    const rows = readExternalSearchFolderRows({ includeDeparted: true });
     const resolved: Array<{ input: (typeof inputs)[number]; id: string }> = [];
     for (const input of inputs) {
       const id = resolveLocalId(input, rows);

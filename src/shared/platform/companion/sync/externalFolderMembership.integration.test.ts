@@ -8,16 +8,20 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { upsertDesktopSource, resolveDesktopSourceAddress } from '../../../../../electron/database/desktopSources.js';
 import { loadExternalSearchFolders } from '../../../../../electron/database/externalSearchFolders.js';
+import { completeEligibleRemovals as completeDesktopEligibleRemovals } from '../../../../../electron/database/syncGroupMemberStateReads.js';
 import { applyDesktopSyncGroupMemberState, initiateDesktopSyncGroupDeviceRemoval,
   loadDesktopSyncGroupMemberState } from '../../../../../electron/database/syncGroupMemberStateStore.js';
 import { createDesktopSyncGroup, leaveDesktopSyncGroupDevice } from '../../../../../electron/database/syncGroupStore.js';
 import { closeLibraries, createPeer, joinPeers, root, startLibraries, type Peer } from '../../../../../electron/database/syncLibrary.testSupport.js';
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions.js';
 import { computeSyncContentHash } from '../../../../../lib/core/database/syncState.js';
+import { readFramedSyncObjectStateInventory } from '../../../../../lib/core/sync/framedSyncObjectStateInventory.js';
 import { applySyncObjectInTransaction } from '../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../../../../lib/core/sync/syncObjectPayloadSql.js';
 import type { NativeSyncObjectRecord } from '../../../../../lib/platform/nativeSyncContract.js';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract.js';
 
+import { completeEligibleRemovals as completeCompanionEligibleRemovals } from './syncGroupMemberStateReads';
 import { applyCompanionSyncGroupMemberState } from './syncGroupMemberStateStore';
 
 
@@ -52,7 +56,7 @@ beforeEach(async () => {
 });
 afterEach(closeLibraries);
 
-it.each(['remove', 'leave'] as const)('removes the departed provider library from other peers after %s and keeps it local on the provider', async (action) => {
+it.each(['remove', 'leave'] as const)('hides the departed provider library from other peers after %s, deletes it after seven days and keeps it local on the provider', async (action) => {
   const [a, b, c] = peers as [Peer, Peer, Peer];
   const standaloneId = randomUUID();
   c.db.prepare("INSERT INTO settings VALUES ('standalone_device_uuid', ?, 'now')").run(JSON.stringify(standaloneId));
@@ -96,27 +100,35 @@ it.each(['remove', 'leave'] as const)('removes the departed provider library fro
     if (peer === b) await applyCompanionSyncGroupMemberState(completed, a.id);
     else if (action === 'remove') applyDesktopSyncGroupMemberState(completed, a.id);
   }
+  current = a;
+  expect(loadExternalSearchFolders().map(folder => folder.id)).toEqual(['retained']);
+  for (const peer of [a, b]) await expectHiddenDuringGrace(peer);
+  const afterGrace = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
+  current = a;
+  completeDesktopEligibleRemovals('group', afterGrace);
+  current = b;
+  await completeCompanionEligibleRemovals(b.port, 'group', afterGrace);
   for (const peer of [a, b]) await expectRetired(peer, original);
   expectKeptLocally(c, standaloneId, folderPath);
   expect(a.db.prepare("SELECT id FROM external_search_folders WHERE id = 'retained'").get()).toEqual({ id: 'retained' });
   expect(await readFile(path.join(folderPath, 'note.md'), 'utf8')).toBe('Original file');
 });
 
-it('rolls back membership completion when external retirement fails', async () => {
-  const a = peers[0]!;
-  const c = peers[2]!;
+it('rolls back the grace-period purge when External removal fails', async () => {
+  const [a, , c] = peers as [Peer, Peer, Peer];
   current = c;
   const original = seedFolder('provided', '/not-read');
   current = a;
   await a.port.transaction(tx => applySyncObjectInTransaction(tx, original));
-  const before = a.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all();
+  leaveDesktopSyncGroupDevice(c.id, new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString());
+  const before = a.db.prepare("SELECT * FROM sync_object_state WHERE object_type = 'external_folder'").all();
+  expect(before).toHaveLength(1);
   a.db.exec(`CREATE TRIGGER reject_external_retirement BEFORE DELETE ON external_search_folders
     BEGIN SELECT RAISE(ABORT, 'retirement rejected'); END`);
-  expect(() => leaveDesktopSyncGroupDevice(c.id)).toThrow('retirement rejected');
-  expect(a.db.prepare('SELECT * FROM sync_group_devices ORDER BY device_identity_key').all()).toEqual(before);
+  expect(() => a.driver.transaction(() => completeDesktopEligibleRemovals('group', new Date().toISOString())))
+    .toThrow('retirement rejected');
   expect(a.db.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toEqual({ id: 'provided' });
-  expect(c.db.prepare('SELECT local_device_identity_key FROM sync_group_local_state').get())
-    .toEqual({ local_device_identity_key: c.id });
+  expect(a.db.prepare("SELECT * FROM sync_object_state WHERE object_type = 'external_folder'").all()).toEqual(before);
 });
 
 function expectKeptLocally(peer: Peer, standaloneId: string, folderPath: string) {
@@ -145,6 +157,19 @@ function expectForgotten(peer: Peer, folderId: string) {
     expect(reopened.prepare(`SELECT object_type FROM sync_object_state WHERE (object_type = 'external_folder' AND object_id = ?)
       OR (object_type = 'external_document' AND object_id LIKE ?)`).all(folderId, `${folderId}:%`)).toEqual([]);
   } finally { reopened.close(); }
+}
+
+async function expectHiddenDuringGrace(peer: Peer) {
+  current = peer;
+  const folders = peer.db.prepare(ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS.externalSearchFolders.sql).all() as Array<{ id: string }>;
+  expect(folders.map(folder => folder.id)).not.toContain('provided');
+  expect((peer.db.prepare(ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS.externalDocumentDirectoryEntries.sql).all() as Array<{ folder_id: string }>)
+    .map(entry => entry.folder_id)).not.toContain('provided');
+  expect(peer.db.prepare(ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS.externalDocumentById.sql).all('provided:note.md')).toEqual([]);
+  expect((await readFramedSyncObjectStateInventory(peer.port)).filter(entry => entry.globalId.startsWith('provided'))).toEqual([]);
+  expect(peer.db.prepare("SELECT id FROM external_search_folders WHERE id = 'provided'").get()).toEqual({ id: 'provided' });
+  expect(peer.db.prepare(`SELECT object_type, deleted_at FROM sync_object_state
+    WHERE object_type = 'external_folder' AND object_id = 'provided'`).all()).toEqual([{ object_type: 'external_folder', deleted_at: null }]);
 }
 
 async function expectRetired(peer: Peer, original: NativeSyncObjectRecord) {

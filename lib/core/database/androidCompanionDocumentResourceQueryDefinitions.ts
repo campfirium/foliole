@@ -1,8 +1,10 @@
 import { androidSearchExcerptExpression } from './androidCompanionDerivedReadSql.js';
+import { externalFolderVisibleSql } from './externalFolderMembershipVisibility.js';
 
 const EXTERNAL_DOCUMENT_CONTENT = 'ed.content';
 const EXTERNAL_DOCUMENT_STATUS = "'ready'";
 const EXTERNAL_DOCUMENT_EXCERPT_RADIUS = 80;
+const VISIBLE_DOCUMENT = externalFolderVisibleSql('folder_id');
 
 export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   externalDocumentById: {
@@ -10,7 +12,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
     sql:
       'SELECT document_id, folder_id, relative_path, file_name, extension, title, opening_text, reference_kind, reference_json, ' +
       `${EXTERNAL_DOCUMENT_CONTENT} AS content, ed.body_blob_hash, ${EXTERNAL_DOCUMENT_STATUS} AS content_status, updated_at ` +
-      'FROM external_documents ed WHERE document_id = ? AND is_present = 1 LIMIT 1',
+      `FROM external_documents ed WHERE document_id = ? AND is_present = 1 AND ${VISIBLE_DOCUMENT} LIMIT 1`,
     columns: externalDocumentColumns()
   },
   externalDocumentSearch: {
@@ -20,7 +22,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
       `${EXTERNAL_DOCUMENT_CONTENT} AS content, ed.body_blob_hash, ${EXTERNAL_DOCUMENT_STATUS} AS content_status, updated_at, ` +
       'max(0, instr(lower(' + EXTERNAL_DOCUMENT_CONTENT + '), ?) - 1) AS match_start, ' +
       `${androidSearchExcerptExpression(EXTERNAL_DOCUMENT_CONTENT, '?', EXTERNAL_DOCUMENT_EXCERPT_RADIUS)} AS excerpt ` +
-      'FROM external_documents ed WHERE is_present = 1 ' +
+      `FROM external_documents ed WHERE is_present = 1 AND ${VISIBLE_DOCUMENT} ` +
       'AND (instr(lower(title), ?) > 0 OR instr(lower(file_name), ?) > 0 ' +
       "OR instr(lower(relative_path), ?) > 0 OR instr(lower(coalesce(opening_text, '')), ?) > 0 " +
       `OR instr(lower(${EXTERNAL_DOCUMENT_CONTENT}), ?) > 0) ` +
@@ -33,7 +35,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
   },
   externalSearchFolders: {
     resultKey: 'folders',
-    sql: 'SELECT id, folder_path, document_count FROM external_search_folders UNION ALL ' +
+    sql: `SELECT id, folder_path, document_count FROM external_search_folders WHERE ${externalFolderVisibleSql('id')} UNION ALL ` +
       "SELECT folder_id AS id, 'Readwise' AS folder_path, COUNT(*) AS document_count FROM external_documents " +
       "WHERE is_present = 1 AND reference_kind = 'readwise_remote' " +
       'AND folder_id NOT IN (SELECT id FROM external_search_folders) GROUP BY folder_id ORDER BY folder_path COLLATE NOCASE ASC',
@@ -49,7 +51,7 @@ export const ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS = {
       "SELECT CASE WHEN reference_kind = 'readwise_remote' THEN 'readwise-document:' || document_id " +
       "ELSE 'external-document:' || document_id END AS absolute_path, " +
       'document_id, folder_id, relative_path, file_name, extension, title, opening_text, updated_at ' +
-      'FROM external_documents WHERE is_present = 1 ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC',
+      `FROM external_documents WHERE is_present = 1 AND ${VISIBLE_DOCUMENT} ORDER BY folder_id ASC, relative_path COLLATE NOCASE ASC`,
     columns: [
       { key: 'document_id', source: 'document_id', type: 'string' },
       { key: 'folder_id', source: 'folder_id', type: 'string' },

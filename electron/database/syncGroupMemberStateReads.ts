@@ -38,5 +38,5 @@ export function completeEligibleRemovals(groupId: string, now: string) {
     driver.execute(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`, [now, now, groupId, removal.target_device_identity_key]);
   }
-  forgetDepartedExternalFolders(driver, groupId);
+  forgetDepartedExternalFolders(driver, groupId, now);
 }

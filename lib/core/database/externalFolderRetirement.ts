@@ -3,6 +3,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { retireExternalFolderDocuments, retireExternalFolderDocumentsWithDbPort } from './externalFolderDocumentRetirement.js';
+import { externalDepartureCutoff } from './externalFolderMembershipVisibility.js';
 import { upsertExternalResourceSyncState } from './externalResourceSyncState.js';
 import { computeSyncContentHash } from './syncState.js';
 
@@ -29,17 +30,13 @@ export async function removeExternalFolderProjectionWithDbPort(port: DbPort, fol
   await port.run("DELETE FROM desktop_sources WHERE source_type = 'external' AND config_ref = ?", [folderId]);
 }
 
-const DEPARTED_EXTERNAL_FOLDERS_SQL = `SELECT source.config_ref FROM desktop_sources source
+const EXPIRED_DEPARTED_EXTERNAL_FOLDERS_SQL = `SELECT source.config_ref FROM desktop_sources source
   JOIN sync_group_devices device ON device.device_identity_key =
     json_extract(source.type_settings_json, '$.ownerDeviceIdentityKey')
-  WHERE source.source_type = 'external' AND device.group_id = ? AND device.state = 'left'`;
+  WHERE source.source_type = 'external' AND device.group_id = ? AND device.state = 'left'
+    AND COALESCE(device.left_at, device.updated_at) <= ?`;
 
-export const DEPARTED_EXTERNAL_FOLDER_SQL = `SELECT 1 FROM desktop_sources source
-  JOIN sync_group_devices device ON device.device_identity_key =
-    json_extract(source.type_settings_json, '$.ownerDeviceIdentityKey')
-  WHERE source.source_type = 'external' AND source.config_ref = ? AND device.state = 'left' LIMIT 1`;
-
-// A departed member's libraries leave the group view without deletion records, so they return on rejoin.
+// Local data of a departed member's libraries is dropped after the grace period, without deletion records.
 const FORGET_EXTERNAL_FOLDER_SQL = [
   `DELETE FROM sync_object_state WHERE object_type = 'external_document'
     AND object_id IN (SELECT document_id FROM external_documents WHERE folder_id = ?)`,
@@ -49,8 +46,10 @@ const FORGET_EXTERNAL_FOLDER_SQL = [
   "DELETE FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = ?"
 ];
 
-export function forgetDepartedExternalFolders(driver: DatabaseDriver, groupId: string) {
-  for (const folder of driver.queryAll<{ config_ref: string }>(DEPARTED_EXTERNAL_FOLDERS_SQL, [groupId])) {
+export function forgetDepartedExternalFolders(driver: DatabaseDriver, groupId: string, now: string) {
+  const expired = driver.queryAll<{ config_ref: string }>(EXPIRED_DEPARTED_EXTERNAL_FOLDERS_SQL,
+    [groupId, externalDepartureCutoff(now)]);
+  for (const folder of expired) {
     forgetExternalFolder(driver, folder.config_ref);
   }
 }
@@ -60,8 +59,9 @@ function forgetExternalFolder(driver: DatabaseDriver, folderId: string) {
   for (const sql of FORGET_EXTERNAL_FOLDER_SQL) driver.execute(sql, [folderId]);
 }
 
-export async function forgetDepartedExternalFoldersWithDbPort(port: DbPort, groupId: string) {
-  const folders = await port.query<{ config_ref: string }>(DEPARTED_EXTERNAL_FOLDERS_SQL, [groupId]);
+export async function forgetDepartedExternalFoldersWithDbPort(port: DbPort, groupId: string, now: string) {
+  const folders = await port.query<{ config_ref: string }>(EXPIRED_DEPARTED_EXTERNAL_FOLDERS_SQL,
+    [groupId, externalDepartureCutoff(now)]);
   for (const folder of folders) await forgetExternalFolderWithDbPort(port, folder.config_ref);
 }
 

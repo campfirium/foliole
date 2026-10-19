@@ -22,7 +22,9 @@ export async function applyExternalFolderObject(port: DbPort, record: SyncObject
   const owner = text(payload.owner_device_identity_key);
   if (owner && (await port.query(
     "SELECT 1 FROM sync_group_devices WHERE device_identity_key = ? AND state = 'left'", [owner])).length) {
-    await forgetExternalFolderWithDbPort(port, record.object_id);
+    // Late payloads of a departed provider never land; documents that arrived first are dropped.
+    const [local] = await port.query('SELECT 1 FROM external_search_folders WHERE id = ?', [record.object_id]);
+    if (!local) await forgetExternalFolderWithDbPort(port, record.object_id);
     return false;
   }
   const sourceRef = text(payload.source_ref) ?? '';

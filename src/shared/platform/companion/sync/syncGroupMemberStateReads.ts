@@ -35,5 +35,5 @@ export async function completeEligibleRemovals(db: DbPort, groupId: string, now:
     await db.run(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`, [now, now, groupId, removal.target_device_identity_key]);
   }
-  await forgetDepartedExternalFoldersWithDbPort(db, groupId);
+  await forgetDepartedExternalFoldersWithDbPort(db, groupId, now);
 }

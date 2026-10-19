@@ -6,6 +6,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions.js';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { forgetDepartedExternalFoldersWithDbPort } from '../../lib/core/database/externalFolderRetirement.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
@@ -23,6 +24,7 @@ it.each(['tombstone', 'membership'] as const)('removes the library through %s ag
     const port = createBetterSqliteDbPort(db);
     await bootstrapCompanionDatabase(port, { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'external_folder_host_preferences'").get()).toBeUndefined();
+    for (const query of Object.values(ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS)) expect(() => db.prepare(query.sql)).not.toThrow();
     const originalPath = path.join(root, 'article.md');
     writeFileSync(originalPath, 'Original article');
     await port.run(`INSERT INTO nodes (id, title, content, import_source_fingerprint, created_at, updated_at)
@@ -44,8 +46,10 @@ it.each(['tombstone', 'membership'] as const)('removes the library through %s ag
         await tx.run(`INSERT INTO sync_group_devices
           (group_id, device_identity_key, device_anchor, canonical_library_path, device_name, platform,
            state, joined_at, left_at, last_seen_at, updated_at)
-          VALUES ('group', 'provider', 'anchor', '/provider', 'Provider', 'darwin', 'left', 'now', 'now', 'now', 'now')`);
-        await forgetDepartedExternalFoldersWithDbPort(tx, 'group');
+          VALUES ('group', 'provider', 'anchor', '/provider', 'Provider', 'darwin', 'left', 'now', '2026-07-01T00:00:00.000Z', 'now', 'now')`);
+        await forgetDepartedExternalFoldersWithDbPort(tx, 'group', '2026-07-05T00:00:00.000Z');
+        expect((await tx.query('SELECT id FROM external_search_folders')).length).toBe(1);
+        await forgetDepartedExternalFoldersWithDbPort(tx, 'group', '2026-07-24T00:23:10.000Z');
       } else await applySyncObjectInTransaction(tx, { object_type: 'external_folder', object_id: folder.id,
         content_hash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone(folder.id)),
         payload_json: null, updated_at: '2026-07-24T00:23:10.000Z', deleted_at: '2026-07-24T00:23:10.000Z' });

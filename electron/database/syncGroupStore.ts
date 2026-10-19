@@ -137,7 +137,7 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
     }
     const departed = driver.queryOne<{ group_id: string }>(
       'SELECT group_id FROM sync_group_devices WHERE device_identity_key = ?', [deviceIdentityKey]);
-    if (departed) forgetDepartedExternalFolders(driver, departed.group_id);
+    if (departed) forgetDepartedExternalFolders(driver, departed.group_id, leftAt);
     if (local?.local_device_identity_key === deviceIdentityKey) {
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
       driver.execute('DELETE FROM sync_group_metadata');

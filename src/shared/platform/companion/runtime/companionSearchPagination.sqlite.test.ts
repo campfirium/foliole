@@ -17,6 +17,8 @@ function seedSearchDatabase(db: Database.Database) {
       body_blob_hash TEXT, updated_at TEXT, created_at TEXT, deleted_at TEXT);
     CREATE INDEX idx_nodes_parent_id ON nodes(parent_id);
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
+    CREATE TABLE desktop_sources (source_type TEXT, config_ref TEXT, type_settings_json TEXT);
+    CREATE TABLE sync_group_devices (device_identity_key TEXT, state TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
     CREATE TABLE pdf_page_text (attachment_id TEXT, page INTEGER, text TEXT, page_width REAL, page_height REAL);
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, folder_id TEXT, relative_path TEXT,
