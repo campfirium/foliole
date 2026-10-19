@@ -42,7 +42,7 @@ function mockFloatingBar() {
 }
 
 function mockWorkspaceSync() {
-  useCompanionWorkspaceSync.mockReturnValue({
+  const workspaceSync = {
     error: null,
     isWorkspaceSyncStateReady: true,
     syncParticipation: { participating: true },
@@ -54,7 +54,9 @@ function mockWorkspaceSync() {
       workspace_snapshot: null
     },
     status: 'idle'
-  });
+  };
+  useCompanionWorkspaceSync.mockReturnValue(workspaceSync);
+  return workspaceSync;
 }
 
 function createSurface(overrides?: Record<string, unknown>) {
@@ -110,11 +112,12 @@ function createReadableSurface() {
 
 async function renderShellWithSurface(surface: unknown) {
   mockFloatingBar();
-  mockWorkspaceSync();
+  const workspaceSync = mockWorkspaceSync();
   useCompanionArticleSurface.mockReturnValue(surface);
   const { CompanionShell } = await import('./CompanionShell');
   return {
     CompanionShell,
+    workspaceSync,
     rendered: render(<CompanionShell bootstrapState={BOOTSTRAP_STATE} />)
   };
 }
@@ -128,6 +131,17 @@ function touchArticle(type: string, body: HTMLElement, x = 10, y = 10) {
 }
 
 describe('CompanionShell article touch controls', () => {
+  it('keeps revealed reading controls when the same library uses another sync peer', async () => {
+    const { CompanionShell, rendered, workspaceSync } = await renderShellWithSurface(createReadableSurface());
+    fireEvent.click(screen.getByTestId('companion-article-document'));
+    expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
+    workspaceSync.state.endpoint_url = 'http://another-peer:38641';
+    rendered.rerender(<CompanionShell bootstrapState={BOOTSTRAP_STATE} />);
+    expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
+    rendered.rerender(<CompanionShell bootstrapState={{ ...BOOTSTRAP_STATE, database_path: 'other-library.db' }} />);
+    expect(screen.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  });
+
   it('reveals reading controls after a short touch without a compatibility click', async () => {
     await renderShellWithSurface(createReadableSurface());
     const body = screen.getByTestId('companion-article-document');

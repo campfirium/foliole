@@ -113,7 +113,6 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           onTouchStart={model.floatingBar.handleTouchStart}
         >
           <CompanionListViewportProvider scrollRef={scrollRef}
-            key={model.workspaceSync.state.endpoint_url ?? 'local'}
             sortIdentity={`${model.browseSortKey}:${model.browseSortDirection}`}>
             {renderCompanionMainContent(model)}
           </CompanionListViewportProvider>
