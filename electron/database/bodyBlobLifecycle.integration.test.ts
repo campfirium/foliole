@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
+import { hashTextBody, upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
@@ -81,11 +81,14 @@ it('rolls back an owned body replacement when retained holder facts are invalid'
   const peer = createPeer('source');
   peer.db.prepare("INSERT INTO nodes (id,kind,title,created_at,updated_at) VALUES ('topic','topic','Article',?,?)").run(NOW, NOW);
   writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: 'Original fact', updatedAt: NOW });
+  const originalHash = upsertTextBodyBlob(peer.driver, 'Original fact', NOW);
   peer.db.prepare('INSERT INTO editor_operation_history VALUES (1,?,?)').run('invalid json', NOW);
   expect(() => writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: 'Replacement fact', updatedAt: NOW })).toThrow();
   expect(peer.db.prepare('SELECT body_blob_hash FROM nodes WHERE id=?').get('topic'))
     .toEqual({ body_blob_hash: hashTextBody('Original fact') });
   expect(peer.db.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: 'Original fact' });
-  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Original fact'))).toBeUndefined();
+  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(originalHash)).toEqual({ hash: originalHash });
+  expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').pluck().get(originalHash))
+    .toEqual(Buffer.from('Original fact'));
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Replacement fact'))).toBeUndefined();
 });
