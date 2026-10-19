@@ -20,6 +20,7 @@ async function runSyncPackLoad({ markerPath, nodeCount, blockMs, mode = 'existin
       await profiler.post('Profiler.start');
     }
     const before = { ...fixture.timings };
+    fixture.writes.clear();
     const startedAt = Date.now();
     if (blockMs > 0) {
       const until = Date.now() + blockMs;
@@ -41,7 +42,8 @@ async function runSyncPackLoad({ markerPath, nodeCount, blockMs, mode = 'existin
     fixture.assertResult();
     const nodeCountAfter = fixture.db.prepare('SELECT COUNT(*) AS count FROM nodes').get().count;
     return { startedAt, endedAt, durationMs: endedAt - startedAt,
-      result: { mode, initialNodeCount, passes, nodeCount: nodeCountAfter, timings } };
+      result: { mode, initialNodeCount, passes, nodeCount: nodeCountAfter, timings,
+        writes: [...fixture.writes.values()].sort((left, right) => right.ms - left.ms) } };
   } finally {
     profiler?.disconnect();
     await fixture.close();
