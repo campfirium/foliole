@@ -29,7 +29,8 @@ describe('hosted-quality repair handoff', () => {
     const skill = fs.readFileSync(skillPath, 'utf8');
 
     expect(skill).toContain('A handoff is a locator, not failure or stage evidence');
-    expect(skill).toContain('Only an independent `.github/workflows/t7-hosted-quality.yml` run on `dev` is in repair scope');
+    expect(skill).toContain('Only an independent `.github/workflows/t7-hosted-quality.yml` run on `dev` is in repair scope for a monitor handoff');
+    expect(skill).toContain('is in scope only for the conversation that dispatched it');
     expect(skill).toContain('runTier=T7, failedStage=T5');
     expect(skill).toContain('runTier=T7, failedStage=T6');
     expect(skill).toContain('Set `failedStage=T5` only for failure in the nested admission chain');

@@ -1,4 +1,4 @@
 interface:
   display_name: "Foliole Hosted Quality Repair"
-  short_description: "Repair one dev Scheduled Dev Quality failure"
-  default_prompt: "Use $foliole-hosted-quality-repair to repair one failed Foliole dev Scheduled Dev Quality run locally, or route a Release failure back to its existing pinned release task."
+  short_description: "Repair one failed dev hosted quality run"
+  default_prompt: "Use $foliole-hosted-quality-repair to repair one failed Foliole dev Scheduled Dev Quality or quality:remote run locally, or route a Release failure back to its existing pinned release task."
