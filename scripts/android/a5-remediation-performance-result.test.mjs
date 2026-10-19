@@ -4,7 +4,7 @@ import { assertRemediationPerformanceResult } from './a5-remediation-performance
 function result() {
   return { status: 'passed', scenario: 'remediation-performance',
     appId: 'com.campfirium.foliole.android.acceptance', platform: 'android', cleanup: true,
-    fixtureNodes: 1000, scan: { staleScanRejected: true, queryCount: 21, references: 1, scanMs: 10, scoreWaitAndWriteMs: 11 },
+    fixtureNodes: 1000, scan: { scanDiscardedForWrite: true, queryCount: 21, references: 1, scanMs: 10, scoreWaitAndWriteMs: 11 },
     mixed: { fullReads: 0, snapshotMatches: true, elapsedMs: 3 },
     details: { queryCount: 1, expandedNodes: 500, detailsMatch: true, elapsedMs: 2 } };
 }

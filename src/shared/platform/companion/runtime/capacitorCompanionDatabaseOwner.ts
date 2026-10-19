@@ -38,6 +38,7 @@ export class CapacitorCompanionDatabaseOwner {
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
   private path: string | null = null;
   private operationTail: Promise<void> = Promise.resolve();
+  private readonly backgroundReaders = new Set<AbortController>();
   private snapshots: CompanionRequestSyncSnapshots | null = null;
 
   constructor(
@@ -95,7 +96,21 @@ export class CapacitorCompanionDatabaseOwner {
     return this.path;
   }
 
+  async readBackgroundSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal) {
+    const controller = new AbortController();
+    const cancel = () => controller.abort(signal?.reason);
+    if (signal?.aborted) cancel();
+    else signal?.addEventListener('abort', cancel, { once: true });
+    this.backgroundReaders.add(controller);
+    try { return await this.readSnapshot(task, controller.signal); }
+    finally {
+      this.backgroundReaders.delete(controller);
+      signal?.removeEventListener('abort', cancel);
+    }
+  }
+
   runWriter<T>(task: (db: DbPort) => Promise<T>): Promise<T> {
+    for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
     return this.enqueue(() => task(this.requireDb()));
   }
 

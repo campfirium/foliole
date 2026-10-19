@@ -27,7 +27,8 @@ it('measures real scan contention, mixed persistence and batched detail reads on
     const result = await measureRemediationPerformance({ ...library, fullReads: library.fullDirectoryQueries },
       phase => phases.push(phase));
     expect(phases).toEqual(['attachment-scan', 'reading-settings', 'sync-details']);
-    expect(result.scan).toMatchObject({ queryCount: 21, references: 1 });
+    expect(result.scan).toMatchObject({ references: 1, scanDiscardedForWrite: true });
+    expect(result.scan.queryCount).toBeLessThanOrEqual(131);
     expect(result.scan.scoreWaitAndWriteMs).toBeGreaterThan(0);
     expect(result.mixed).toMatchObject({ fullReads: 0, readingNodes: 2, snapshotMatches: true });
     expect(result.details).toMatchObject({ queryCount: 1, expandedNodes: 500, detailsMatch: true });

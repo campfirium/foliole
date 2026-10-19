@@ -18,7 +18,7 @@ it('allows a committed write during the readonly scan and rejects its stale conc
       wroteDuringScan = true;
       return task(db);
     }, signal);
-    await expect(readCompanionAttachmentReferences(library.owner)).rejects.toThrow('attachment_scan_database_changed');
+    await expect(readCompanionAttachmentReferences(library.owner)).rejects.toThrow('attachment_scan_foreground_write');
     expect(wroteDuringScan).toBe(true);
     expect(await library.owner.read(db => db.query("SELECT title FROM nodes WHERE id = 'a'")))
       .toEqual([{ title: 'Edited' }]);

@@ -7,13 +7,14 @@ export async function attachmentDatabaseRevision(port: DbPort) {
   return JSON.stringify([data, changes]);
 }
 
-export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: AbortSignal) {
+export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: AbortSignal, batchSize = 128) {
+  if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 128) throw new Error('attachment_scan_batch_invalid');
   const revision = await attachmentDatabaseRevision(port);
   const articles = await port.query<{ id: string }>('SELECT id FROM nodes ORDER BY id');
   const storageKeys = new Set<string>();
-  for (let offset = 0; offset < articles.length; offset += 128) {
+  for (let offset = 0; offset < articles.length; offset += batchSize) {
     signal?.throwIfAborted();
-    const result = await loadNodeOwnedArticleResourceNeeds(port, articles.slice(offset, offset + 128).map(article => article.id));
+    const result = await loadNodeOwnedArticleResourceNeeds(port, articles.slice(offset, offset + batchSize).map(article => article.id));
     if (result.unreadableArticleIds.length) throw new Error('attachment_scan_body_unreadable');
     for (const need of result.needs) storageKeys.add(need.storageKey);
   }

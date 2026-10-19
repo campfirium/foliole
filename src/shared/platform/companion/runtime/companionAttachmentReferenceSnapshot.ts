@@ -4,7 +4,7 @@ import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDataba
 
 export async function readCompanionAttachmentReferences(owner: CapacitorCompanionDatabaseOwner, signal?: AbortSignal) {
   const revision = await owner.read(attachmentDatabaseRevision);
-  const snapshot = await owner.readSnapshot(db => readAttachmentReferenceSnapshot(db, signal), signal);
+  const snapshot = await owner.readBackgroundSnapshot(db => readAttachmentReferenceSnapshot(db, signal, 16), signal);
   // Both comparisons use the writer connection; readonly connection counters are not comparable.
   await owner.read(async db => {
     signal?.throwIfAborted();

@@ -57,17 +57,17 @@ async function measureScan({ owner }: Fixture) {
     score = saveCompanionSyncNodeReviewRecord({ nodeId: 'remediation-0', review })
       .then(result => { requireValue(result, 'Review write did not persist'); scoreCompletedAt = performance.now(); });
   })), signal);
-  let staleScanRejected = false;
+  let scanDiscardedForWrite = false;
   try { await readCompanionAttachmentReferences(owner); }
   catch (error) {
-    if (!(error instanceof Error) || error.message !== 'attachment_scan_database_changed') throw error;
-    staleScanRejected = true;
+    if (!(error instanceof Error) || !['attachment_scan_database_changed', 'attachment_scan_foreground_write'].includes(error.message)) throw error;
+    scanDiscardedForWrite = true;
   } finally { owner.readSnapshot = readSnapshot; await score; }
-  requireValue(score && staleScanRejected, 'Concurrent write must invalidate the scan');
-  requireValue(queryCount <= 21, 'Attachment scan exceeded the batch query bound');
+  requireValue(score && scanDiscardedForWrite, 'Concurrent write must invalidate the scan');
+  requireValue(queryCount <= 131, 'Attachment scan exceeded the batch query bound');
   const persisted = await owner.readSnapshot(db => db.query('SELECT reps FROM node_review WHERE node_id = ?', ['remediation-0']));
   requireValue(persisted[0]?.reps === 1, 'Queued review did not reach SQLite');
-  return { scanMs, scoreWaitAndWriteMs: scoreCompletedAt - queuedAt, queryCount, references: 1, staleScanRejected };
+  return { scanMs, scoreWaitAndWriteMs: scoreCompletedAt - queuedAt, queryCount, references: 1, scanDiscardedForWrite };
 }
 
 async function measureMixedBatch(fixture: Fixture) {
