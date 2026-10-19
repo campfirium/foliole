@@ -28,7 +28,7 @@ it('synchronizes folder deletion over production HTTP and preserves it after bot
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let target = fixture.rightSnapshot;
   try {
-    await seedFolder(fixture.leftSnapshot.databasePath);
+    await seedFolder(fixture.leftSnapshot.databasePath, fixture.leftSnapshot.deviceId);
     await fixture.left.seed({ nodeId: 'independent-topic', title: 'Imported topic', content: 'Independent content' });
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     assertDocument(fixture.rightSnapshot.databasePath, true);
@@ -59,7 +59,7 @@ it('synchronizes folder deletion over production HTTP and preserves it after bot
   }
 }, 60_000);
 
-async function seedFolder(databasePath: string) {
+async function seedFolder(databasePath: string, ownerDeviceIdentityKey: string) {
   const db = new Database(databasePath);
   try {
     const hostName = z.string().parse(JSON.parse(z.string().parse(
@@ -67,7 +67,7 @@ async function seedFolder(databasePath: string) {
     )));
     const port = createBetterSqliteDbPort(db);
     const folder = { id: 'removed-folder', source_ref: 'external:removed-folder', host_name: hostName,
-      host_platform: 'darwin', attachment_mode: 'document_relative', excluded_dirs_json: '[]' };
+      owner_device_identity_key: ownerDeviceIdentityKey, host_platform: process.platform, attachment_mode: 'document_relative', excluded_dirs_json: '[]' };
     const document = { body_blob_hash: bodyHash, content_hash: bodyHash, document_id: documentId,
       extension: 'md', file_name: 'original.md', folder_id: folder.id, reference_json: null,
       reference_kind: 'local_path', relative_path: 'original.md', title: 'Original' };

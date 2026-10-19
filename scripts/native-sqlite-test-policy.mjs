@@ -204,6 +204,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companion/sync/workspace-state/companionReadingStateRefresh.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncMixedReview.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionRequestSyncProjection.integration.test.ts',
+  'src/shared/platform/companion/sync/externalFolderMembership.integration.test.ts',
   'src/shared/platform/companion/sync/syncGroupStore.test.ts',
   'src/shared/platform/companion/sync/syncGroupMemberStateStore.test.ts',
   'src/shared/platform/companion/runtime/companionArticleImageStore.test.ts',

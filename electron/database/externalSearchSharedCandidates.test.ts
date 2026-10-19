@@ -45,7 +45,9 @@ beforeEach(async () => {
   initializeDatabase();
   saveExternalSearchFolders([{ id: 'mirror', folder_path: path.join(tempRoot, 'source'),
     attachment_mode: 'document_relative_first_then_fixed_root', attachment_root_path: null, excluded_dirs: [] }]);
-  openDatabaseConnection().sqlite.prepare("UPDATE desktop_sources SET host_name = 'other-host' WHERE config_ref = 'mirror'").run();
+  openDatabaseConnection().sqlite.prepare(`UPDATE desktop_sources SET host_name = 'other-host',
+    type_settings_json = json_set(type_settings_json, '$.ownerDeviceIdentityKey', 'remote-provider')
+    WHERE config_ref = 'mirror'`).run();
   seedDocuments();
 });
 

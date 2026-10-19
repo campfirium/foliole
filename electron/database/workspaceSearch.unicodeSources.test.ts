@@ -46,7 +46,9 @@ beforeEach(async () => {
   saveExternalSearchFolders([{ id: 'mirror', folder_path: path.join(tempRoot, 'source'),
     attachment_mode: 'document_relative_first_then_fixed_root', attachment_root_path: null, excluded_dirs: [] }]);
   const { driver } = openDatabaseConnection();
-  driver.execute("UPDATE desktop_sources SET host_name = 'other-host' WHERE config_ref = 'mirror'");
+  driver.execute(`UPDATE desktop_sources SET host_name = 'other-host',
+    type_settings_json = json_set(type_settings_json, '$.ownerDeviceIdentityKey', 'remote-provider')
+    WHERE config_ref = 'mirror'`);
   driver.execute(`INSERT INTO keep_import_items (rule_id, source_path, source_mtime_ms, source_size_bytes,
     source_state, local_node_state, last_status, first_seen_at, last_seen_at)
     VALUES ('rule', '/Missing/retained.md', 1, 1, 'present', 'locally_deleted', 'blocked_deleted', 'now', 'now')`);
