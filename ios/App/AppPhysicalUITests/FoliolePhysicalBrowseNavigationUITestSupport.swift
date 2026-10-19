@@ -18,6 +18,7 @@ extension FoliolePhysicalSyncGroupUITests {
 
     private func navigateToBrowseDirectory(in app: XCUIApplication, body: XCUIElement) {
         let deadline = Date().addingTimeInterval(60)
+        var browseSelected = false
         while Date() < deadline {
             let directory = localizedButton(named: "Directory", in: app)
             let browse = localizedButton(named: "Browse", in: app)
@@ -26,11 +27,18 @@ extension FoliolePhysicalSyncGroupUITests {
             }, object: app)
             guard XCTWaiter.wait(for: [ready], timeout: max(0, deadline.timeIntervalSinceNow)) == .completed
             else { break }
-            if directory.isHittable {
+            if !browseSelected && browse.isHittable {
+                browse.tap()
+                browseSelected = true
+            } else if directory.isHittable {
+                let reviewToolbar = app.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label == %@", "Companion review toolbar")).firstMatch
+                XCTAssertFalse(reviewToolbar.exists, "Leave review before opening the browse directory.")
                 directory.tap()
                 return
             } else if browse.isHittable {
                 browse.tap()
+                browseSelected = true
             } else if openReviewBreadcrumb(in: app) {
                 continue
             } else if body.exists {
@@ -39,14 +47,7 @@ extension FoliolePhysicalSyncGroupUITests {
                     XCTAssertTrue(passage.waitForExistence(timeout: 30), "The active topic text is unavailable.")
                     passage.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 }
-                if directory.isHittable {
-                    directory.tap()
-                    return
-                }
-                if browse.isHittable {
-                    browse.tap()
-                    continue
-                }
+                if directory.isHittable || browse.isHittable { continue }
                 tapButton(named: "Exit", in: app, timeout: 30)
                 waitForDisappearance(body, timeout: 30,
                                      message: "Fri did not leave its restored topic.")
