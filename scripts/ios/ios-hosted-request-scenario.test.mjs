@@ -50,7 +50,9 @@ it('roundtrips real request HTTP from 145 through phone 146/147 to provider 148 
   await fixture.round();
   const read = sqlite => sqlite.prepare('SELECT version_id,object_id,parent_version_id,content_hash FROM node_sync_versions ORDER BY version_id').all();
   const before = read(fixture.phone);
-  expect(before.map(row => row.version_id)).toEqual(['145', '146', '147', '148'].map(version));
+  expect(before.filter(row => row.object_id !== 'special-inbox').map(row => row.version_id))
+    .toEqual(['145', '146', '147', '148'].map(version));
+  expect(before.filter(row => row.object_id === 'special-inbox')).toHaveLength(1);
   expect(before.find(row => row.version_id === version('148'))).toMatchObject({ object_id: 'phone-dynamic-capture', parent_version_id: version('146') });
   expect(fixture.phone.prepare('SELECT title,content,current_version_id FROM nodes WHERE id=?').get('phone-dynamic-capture'))
     .toEqual({ title: 'Mac successor acceptance', content: 'Mac successor body', current_version_id: version('148') });
