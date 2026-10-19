@@ -135,7 +135,8 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       "n.hide_title_heading, '' AS content, n.opening_text, " +
       "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END AS body_status, " +
       "CASE WHEN LENGTH(TRIM(COALESCE(n.content, ''))) > 0 THEN 1 ELSE 0 END AS has_content, " +
-      "CASE WHEN substr(replace(n.content, char(13) || char(10), char(10)), 1, 4) = '---' || char(10) " +
+      "CASE WHEN substr(CAST(n.content AS TEXT), 1, 4) = '---' || char(10) " +
+      "OR substr(CAST(n.content AS TEXT), 1, 5) = '---' || char(13) || char(10) " +
       "THEN substr(replace(n.content, char(13) || char(10), char(10)), 1, " +
       "instr(substr(replace(n.content, char(13) || char(10), char(10)), 5), char(10) || '---' || char(10)) + 8) " +
       'ELSE NULL END AS collection_source_content, ' +
