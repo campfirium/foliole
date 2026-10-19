@@ -57,12 +57,22 @@ async function initializeGroup(args: Record<string, unknown>) {
   }
   return { origin, identity: identity.identity_key, database: openDatabaseConnection().dbPath, device: identity, backupDirectory: resolveManagedBackupDirectory(loadBackupSettings()) };
 }
-function seed(args: Record<string, unknown>) {
+function seed(args: Record<string, unknown>, flush = true) {
   const body = args.id ? String(args.content) : `${String(args.content)}\n![Restore image](asset://9fb389cdb800b9b838af19935ce1615574a0e4d43f7c9b2786560ee9dba67322.png)`;
   upsertNodeSnapshot({ nodeId: String(args.id ?? 'topic'), kind: 'topic', title: String(args.content),
     content: body, parentNodeId: args.parentId ? String(args.parentId) : null, position: 0, anchorLink: null, reveal: null,
     isTitleManual: true, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
-  flushDirtyNodeSyncVersions();
+  if (flush) flushDirtyNodeSyncVersions();
+}
+function seedBatch(args: Record<string, unknown>) {
+  const nodes = args.nodes as Array<Record<string, unknown>> | undefined;
+  openDatabaseConnection().driver.transaction(() => {
+    for (const node of nodes ?? Array.from({ length: 40 }, (_, index) => ({
+      id: `batch-${index}`, content: `Batch ${index}`
+    }))) seed(node, false);
+    flushDirtyNodeSyncVersions();
+  });
+  return null;
 }
 function snapshot() {
   const driver = openDatabaseConnection().driver;
@@ -167,10 +177,7 @@ async function run(action: string, args: Record<string, unknown>) {
     return null;
   }
   if (action === 'seed') return runWithDatabaseConnectionOwner(() => seed(args));
-  if (action === 'batch') {
-    for (let index = 0; index < 40; index++) seed({ id: `batch-${index}`, content: `Batch ${index}` });
-    return null;
-  }
+  if (action === 'batch') return runWithDatabaseConnectionOwner(() => seedBatch(args));
   if (action === 'facts') return appendRestoreFacts();
   if (action === 'delete') return deletePausedNode();
   if (action === 'readFacts') return restoreFactsSnapshot();
