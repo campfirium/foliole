@@ -37,6 +37,7 @@ export function formatInternalBuildVersion(packageVersion, date = new Date()) {
 export function createInternalBuilderConfig(baseConfig, internalVersion) {
   return {
     ...baseConfig,
+    electronDist: 'node_modules/electron/dist',
     appId: INTERNAL_APP_ID,
     productName: INTERNAL_PRODUCT_NAME,
     directories: {

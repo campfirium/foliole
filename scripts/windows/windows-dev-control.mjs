@@ -3,6 +3,7 @@
 
 import { extractSqliteDiagnosticMode } from './windows-dev-action-contract.mjs';
 import { copyWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
+import { prepareWindowsInternalRuntime } from './windows-internal-runtime-transfer.mjs';
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -124,7 +125,8 @@ export async function runWindowsDevControl({
   executeGit = (args, options) => execute('git', args, options),
   executeScp = (args, options) => execute('scp', args, options),
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
-  repoRoot = process.cwd(), stdout = process.stdout
+  repoRoot = process.cwd(), stdout = process.stdout,
+  prepareInternalRuntime = prepareWindowsInternalRuntime
 } = {}) {
   const { action, diagnosticMode, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
   const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
@@ -145,6 +147,9 @@ export async function runWindowsDevControl({
   const localCandidate = ['frozen-revision-preflight', 'multi-device-sync-candidate'].includes(action)
     ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
   if (revision) assertPinnedDevRevision(repoRoot, revision);
+  if (action === 'internal-install') {
+    await prepareInternalRuntime({ repoRoot, revision, executeGit, executeScp, host, env });
+  }
   const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef, revision);
   await executeGit(spec.args, { env: spec.env });
   if (action === 'multi-device-sync-candidate') {

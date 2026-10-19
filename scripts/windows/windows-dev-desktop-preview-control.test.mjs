@@ -57,12 +57,14 @@ it('aligns the fixed checkout before launching native preview', () => {
 it('aligns the fixed checkout before installing the internal package', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
   const pull = '& $systemNode $puller';
-  const dependencies = '& $systemNode $systemNpmCli ci';
-  const electron = '& $systemNode $electronInstaller';
+  const dependencies = '& $systemNode $systemNpmCli ci --offline --ignore-scripts';
+  const electron = '& $systemNode $electronInstaller ".tmp/artifacts/windows-internal-runtime"';
   const install = '& $systemNode $systemNpmCli run windows:package:internal:install';
   expect(source).toContain('$Action -eq "internal-install"');
   expect(source).toContain(dependencies);
   expect(source).toContain(electron);
+  expect(source).toContain('windows-electron-offline-prepare.mjs');
+  expect(source).not.toContain('node_modules\\electron\\install.js');
   expect(source).toContain(install);
   expect(source.indexOf(pull)).toBeLessThan(source.indexOf(dependencies));
   expect(source.indexOf(dependencies)).toBeLessThan(source.indexOf(electron));

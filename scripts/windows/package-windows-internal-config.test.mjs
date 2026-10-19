@@ -28,6 +28,7 @@ describe('internal Windows package config', () => {
 
     expect(config.appId).toBe(INTERNAL_APP_ID);
     expect(config.productName).toBe(INTERNAL_PRODUCT_NAME);
+    expect(config.electronDist).toBe('node_modules/electron/dist');
     expect(config.directories.buildResources).toBe(INTERNAL_BUILD_RESOURCES_DIR);
     expect(config.nsis.include).toBe(INTERNAL_NSIS_INCLUDE_PATH);
     expect(config.nsis.shortcutName).toBe(INTERNAL_PRODUCT_NAME);
