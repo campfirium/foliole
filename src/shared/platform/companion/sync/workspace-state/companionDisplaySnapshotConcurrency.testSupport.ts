@@ -22,10 +22,10 @@ function readProjectionPlan(database: Database.Database, sql: string, params: un
   return { kind: sql.includes('selected_nodes') ? 'nodes' : 'attachments', details: plan.map(row => row.detail) };
 }
 
-export function createDisplayLibrary(platform: 'android' | 'ios') {
+export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?: string) {
   invalidateCompanionReadingScope();
   const root = mkdtempSync(path.join(os.tmpdir(), 'companion-display-wal-'));
-  const file = path.join(root, 'library.db');
+  const file = existingFile ?? path.join(root, 'library.db');
   const writer = new Database(file);
   const reading = deferred();
   const release = deferred();
@@ -68,7 +68,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios') {
       return adapt(database);
     },
     isConnection: async () => ({ result: false }),
-    isDatabase: async () => ({ result: false }),
+    isDatabase: async () => ({ result: Boolean(existingFile) }),
     retrieveConnection: async () => adapt(writer)
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);

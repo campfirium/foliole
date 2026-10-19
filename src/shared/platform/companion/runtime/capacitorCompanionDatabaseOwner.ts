@@ -83,7 +83,12 @@ export class CapacitorCompanionDatabaseOwner {
     return this.enqueue(() => task(this.requireDb()));
   }
 
-  async readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_read'));
+    return this.enqueueSnapshot(task, signal);
+  }
+
+  private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
     const registered = await this.enqueue(() => {
       this.requireDb();
       return Promise.resolve({ result: this.snapshots!.read(task, signal) });
@@ -102,7 +107,7 @@ export class CapacitorCompanionDatabaseOwner {
     if (signal?.aborted) cancel();
     else signal?.addEventListener('abort', cancel, { once: true });
     this.backgroundReaders.add(controller);
-    try { return await this.readSnapshot(task, controller.signal); }
+    try { return await this.enqueueSnapshot(task, controller.signal); }
     finally {
       this.backgroundReaders.delete(controller);
       signal?.removeEventListener('abort', cancel);

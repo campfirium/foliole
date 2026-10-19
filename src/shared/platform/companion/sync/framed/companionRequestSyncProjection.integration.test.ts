@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { COMPANION_DATABASE_VERSION } from '../../../../../../lib/platform/nativeCompanionContract.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 import { saveCompanionSyncNodeViewState } from '../../../companionSyncStateWriters.js';
 import * as companionRuntime from '../../../companionWorkspaceRuntimeRepository.js';
@@ -9,6 +10,9 @@ import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnaps
 import { companionWorkspaceSnapshots } from '../../companionWorkspaceSnapshotStore.js';
 import { saveCompanionContentEdit } from '../../editing/companionContentEditing.js';
 import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope.js';
+import { readCompanionAttachmentReferences } from '../../runtime/companionAttachmentReferenceSnapshot.js';
+import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
+import { createDisplayLibrary } from '../workspace-state/companionDisplaySnapshotConcurrency.testSupport.js';
 import { loadIosCompanionWorkspaceSnapshot } from '../workspace-state/iosCompanionWorkspaceSnapshotStore.js';
 
 it('publishes a scoped projection after a real HTTP body update and agrees with a complete read', async () => {
@@ -50,4 +54,54 @@ it('publishes a scoped projection after a real HTTP body update and agrees with 
     invalidateCompanionReadingScope();
     await host.close();
   }
+}, 30000);
+
+it('finishes a real HTTP update when its snapshot interrupts attachment observation', async () => {
+  const host = await createCompanionRequestFixture();
+  const library = createDisplayLibrary('android', host.fixture.leftSnapshot.databasePath);
+  const owner = getIosCompanionDatabaseOwner();
+  try {
+    // The shared-schema HTTP fixture starts with the desktop lifecycle marker.
+    host.sqlite.pragma(`user_version = ${COMPANION_DATABASE_VERSION}`);
+    host.sqlite.prepare("INSERT INTO companion_meta VALUES ('device_id', ?, 'now')").run(host.fixture.leftSnapshot.deviceId);
+    await library.owner.open({ expectedHostName: 'Mobile', allowCreate: false, now: '2026-10-19T00:00:00.000Z' });
+    const writer = vi.spyOn(owner, 'runWriter').mockImplementation(library.owner.runWriter.bind(library.owner));
+    const reading = vi.spyOn(owner, 'read').mockImplementation(library.owner.read.bind(library.owner));
+    const snapshots = vi.spyOn(owner, 'readSnapshot').mockImplementation(library.owner.readSnapshot.bind(library.owner));
+    try {
+      await host.fixture.right.seed({ nodeId: 'scan-topic', title: 'Topic', content: 'First body' });
+      await host.sync();
+      await host.fixture.right.seed({ nodeId: 'scan-topic', title: 'Topic', content: 'Updated body' });
+      let batches = 0;
+      snapshots.mockImplementationOnce(async (read, signal) => {
+        const original = library.owner.readBackgroundSnapshot.bind(library.owner);
+        let foreground: ReturnType<typeof read> | undefined;
+        library.owner.readBackgroundSnapshot = (task, backgroundSignal) => original(db => task({
+          ...db,
+          async query(sql, params) {
+            const result = await db.query(sql, params);
+            if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
+              batches++;
+              foreground ??= library.owner.readSnapshot(read, signal);
+            }
+            return result;
+          }
+        }), backgroundSignal);
+        try {
+          await expect(readCompanionAttachmentReferences(library.owner)).rejects.toThrow('attachment_scan_foreground_read');
+          if (!foreground) throw new Error('foreground_snapshot_not_requested');
+          return await foreground;
+        } finally { library.owner.readBackgroundSnapshot = original; }
+      });
+      await host.sync();
+      expect(batches).toBe(1);
+      const remote = new Database(host.fixture.rightSnapshot.databasePath, { readonly: true });
+      try {
+        const sql = "SELECT content, current_version_id FROM nodes WHERE id = 'scan-topic'";
+        expect(host.sqlite.prepare(sql).get()).toEqual(remote.prepare(sql).get());
+        expect(host.sqlite.prepare(sql).get()).toMatchObject({ content: 'Updated body' });
+      } finally { remote.close(); }
+      expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
+    } finally { writer.mockRestore(); reading.mockRestore(); snapshots.mockRestore(); }
+  } finally { await library.close(); await host.close(); }
 }, 30000);
