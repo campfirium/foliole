@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import type { DbParams, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
@@ -48,8 +49,8 @@ it.each(['android', 'ios'] as const)('%s yields an attachment scan to foreground
     let batches = 0;
     library.owner.readBackgroundSnapshot = (task, signal) => original(db => task({
       ...db,
-      async query(sql, params) {
-        const result = await db.query(sql, params);
+      async query<T extends DbRow>(sql: string, params?: DbParams) {
+        const result = await db.query<T>(sql, params);
         if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
           batches += 1;
           foreground ??= library.owner.readSnapshot(reader => reader.query("SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'scan-%'"));

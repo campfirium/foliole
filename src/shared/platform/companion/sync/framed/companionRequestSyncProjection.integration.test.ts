@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import type { DbParams, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { COMPANION_DATABASE_VERSION } from '../../../../../../lib/platform/nativeCompanionContract.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 import { saveCompanionSyncNodeViewState } from '../../../companionSyncStateWriters.js';
@@ -78,8 +79,8 @@ it('finishes a real HTTP update when its snapshot interrupts attachment observat
         let foreground: ReturnType<typeof read> | undefined;
         library.owner.readBackgroundSnapshot = (task, backgroundSignal) => original(db => task({
           ...db,
-          async query(sql, params) {
-            const result = await db.query(sql, params);
+          async query<T extends DbRow>(sql: string, params?: DbParams) {
+            const result = await db.query<T>(sql, params);
             if (sql.includes('resource_references, content FROM nodes WHERE id IN')) {
               batches++;
               foreground ??= library.owner.readSnapshot(read, signal);
