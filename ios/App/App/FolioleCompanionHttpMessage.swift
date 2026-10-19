@@ -46,13 +46,14 @@ struct FolioleCompanionHttpMessage {
     }
 
     static func expectedLength(_ data: Data) throws -> Int? {
-        guard let head = try FolioleCompanionHttpHead.parse(data) else { return nil }
-        return head.bodyOffset + head.bodyLength
+        guard let head = try FolioleCompanionHttpHead.parse(data), let length = head.bodyLength else { return nil }
+        return head.bodyOffset + length
     }
 
     static func parse(_ data: Data) throws -> FolioleCompanionHttpMessage {
         guard let head = try FolioleCompanionHttpHead.parse(data),
-              data.count == head.bodyOffset + head.bodyLength else { throw invalid("invalid_http_request") }
+              let length = head.bodyLength,
+              data.count == head.bodyOffset + length else { throw invalid("invalid_http_request") }
         return try from(head: head, data: Data(data.dropFirst(head.bodyOffset)))
     }
 

@@ -54,6 +54,7 @@ let package = Package(
                 "FolioleCompanionDeviceAnchorStore.swift",
                 "FolioleCompanionHttpMessage.swift",
                 "FolioleCompanionHttpRequestReader.swift",
+                "FolioleHttpChunkDecoder.swift",
                 "FolioleCompanionSyncGroupJoinCrypto.swift",
                 "FolioleCompanionSyncGroupAdvertisement.swift",
                 "FolioleCompanionSyncGroupDiscoveryPayload.swift",

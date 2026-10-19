@@ -7,7 +7,7 @@ struct FolioleCompanionHttpHead {
     let method: String
     let path: String
     let bodyOffset: Int
-    let bodyLength: Int
+    let bodyLength: Int?
     var framed: Bool { method == "POST" && path.split(separator: "?").first == "/companion/framed-sync" }
 
     static func parse(_ data: Data) throws -> Self? {
@@ -26,13 +26,20 @@ struct FolioleCompanionHttpHead {
         for line in lines.dropFirst() {
             guard let colon = line.firstIndex(of: ":") else { throw invalid("invalid_http_headers") }
             let name = line[..<colon].trimmingCharacters(in: .whitespaces).lowercased()
-            guard !name.isEmpty, name != "content-length" || headers[name] == nil else {
+            guard !name.isEmpty,
+                  !["content-length", "transfer-encoding"].contains(name) || headers[name] == nil else {
                 throw invalid("invalid_http_headers")
             }
             headers[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
-        guard headers["transfer-encoding"] == nil,
-              let length = Int(headers["content-length"] ?? "0"), length >= 0,
+        if let coding = headers["transfer-encoding"] {
+            guard coding.lowercased() == "chunked", headers["content-length"] == nil else {
+                throw invalid("invalid_http_headers")
+            }
+            return Self(headers: headers, method: String(parts[0]), path: String(parts[1]),
+                        bodyOffset: separator.upperBound, bodyLength: nil)
+        }
+        guard let length = Int(headers["content-length"] ?? "0"), length >= 0,
               length <= Int.max - separator.upperBound else { throw invalid("request_too_large") }
         let value = Self(headers: headers, method: String(parts[0]), path: String(parts[1]),
                          bodyOffset: separator.upperBound, bodyLength: length)
@@ -110,6 +117,7 @@ final class FolioleCompanionHttpRequestReader {
     private var body = Data()
     private var received = 0
     private var finished = false
+    private let chunks = FolioleHttpChunkDecoder()
     private let directory: URL
 
     init(directory: URL = FileManager.default.temporaryDirectory.appendingPathComponent("Foliole-http"),
@@ -132,8 +140,31 @@ final class FolioleCompanionHttpRequestReader {
     }
 
     private func appendBody(_ data: Data) throws -> FolioleCompanionHttpMessage? {
-        guard let head, data.count <= head.bodyLength - received else {
+        guard let head else { throw FolioleCompanionHttpHead.invalid("invalid_http_request") }
+        if let length = head.bodyLength {
+            guard data.count <= length - received else {
+                throw FolioleCompanionHttpHead.invalid("http_body_length_exceeded")
+            }
+            try consumeBody(data)
+            guard received == length else { return nil }
+        } else {
+            try chunks.append(data) { try self.consumeBody($0) }
+            guard chunks.finished else { return nil }
+        }
+        try file?.finish()
+        var request = try FolioleCompanionHttpMessage.from(head: head, data: body, file: file)
+        request.payloadBudget = payloadBudget; request.payloadCancellation = payloadCancellation
+        finished = true
+        self.file = nil
+        return request
+    }
+
+    private func consumeBody(_ data: Data) throws {
+        guard let head, data.count <= Int.max - received else {
             throw FolioleCompanionHttpHead.invalid("http_body_length_exceeded")
+        }
+        if !head.framed && data.count > FolioleCompanionHttpMessage.maximumBytes - head.bodyOffset - received {
+            throw FolioleCompanionHttpHead.invalid("request_too_large")
         }
         if head.framed && firstLane == nil {
             framedPrefix.append(data.prefix(112 - framedPrefix.count))
@@ -148,13 +179,6 @@ final class FolioleCompanionHttpRequestReader {
         }
         if let file { try file.append(data) } else { body.append(data) }
         received += data.count
-        guard received == head.bodyLength else { return nil }
-        try file?.finish()
-        var request = try FolioleCompanionHttpMessage.from(head: head, data: body, file: file)
-        request.payloadBudget = payloadBudget; request.payloadCancellation = payloadCancellation
-        finished = true
-        self.file = nil
-        return request
     }
 
     func finish() throws {
