@@ -31,6 +31,8 @@ extension FoliolePhysicalSyncGroupUITests {
                 return
             } else if browse.isHittable {
                 browse.tap()
+            } else if openReviewBreadcrumb(in: app) {
+                continue
             } else if body.exists {
                 if !localizedButton(named: "Exit", in: app).exists {
                     let passage = body.staticTexts.firstMatch
@@ -51,5 +53,19 @@ extension FoliolePhysicalSyncGroupUITests {
             }
         }
         XCTFail("Fri did not reach Browse directory from its restored surface.")
+    }
+
+    private func openReviewBreadcrumb(in app: XCUIApplication) -> Bool {
+        let breadcrumb = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label BEGINSWITH %@ OR label BEGINSWITH %@",
+            "Review breadcrumb", "复习面包屑"
+        )).firstMatch
+        guard breadcrumb.exists else { return false }
+        let destination = breadcrumb.buttons.firstMatch
+        guard destination.isHittable else { return false }
+        destination.tap()
+        waitForDisappearance(breadcrumb, timeout: 30,
+                             message: "Fri did not leave review through its breadcrumb.")
+        return true
     }
 }
