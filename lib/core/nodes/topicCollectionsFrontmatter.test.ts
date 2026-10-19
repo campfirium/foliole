@@ -9,6 +9,16 @@ import {
 } from './topicCollectionsFrontmatter.js';
 
 describe('topic collections frontmatter', () => {
+  it('keeps strict leading delimiters and incomplete-header errors', () => {
+    for (const content of [' ---\ncollections:\n  - Guide\n---', '---\r',
+      `${'Body '.repeat(200_000)}\n---\ncollections:\n  - Guide\n---`]) {
+      expect(readTopicCollections(content)).toEqual([]);
+      expect(addTopicCollection(content, 'Next')).toBe(`---\ncollections:\n  - "Next"\n---\n${content}`);
+    }
+    expect(() => readTopicCollections('---')).toThrow(TopicCollectionsFrontmatterError);
+    expect(readTopicCollections('---\n---')).toEqual([]);
+  });
+
   it('reads and updates BOM frontmatter without changing its prefix or complete body', () => {
     const content = '\ufeff---\r\nauthor: Ada\r\ncollections:\r\n  - "Guide"\r\n---\r\nComplete article 中😀\r\n';
     expect(readTopicCollections(content)).toEqual(['Guide']);

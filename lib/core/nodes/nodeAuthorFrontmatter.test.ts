@@ -13,6 +13,13 @@ it('ignores author-like text outside leading frontmatter', () => {
   expect(readNodeAuthorText('Body\nauthor: Ada')).toBeNull();
 });
 
+it('preserves delimiter whitespace and ignores metadata after a long opening paragraph', () => {
+  expect(readNodeAuthorText(' \t--- \r\nauthor: Ada\r\n --- \r\nBody')).toBe('Ada');
+  expect(readNodeAuthorText(`${'Body '.repeat(200_000)}\n---\nauthor: Ada\n---`)).toBeNull();
+  expect(readNodeAuthorText('---')).toBeNull();
+  expect(readNodeAuthorText('---\nauthor: Ada')).toBeNull();
+});
+
 
 it('reads scalar and list authors from BOM and CRLF frontmatter', () => {
   const content = '\ufeff---\r\nauthor:\r\n  - Ada\r\n  - [[Grace Hopper]]\r\n---\r\nBody 😀\r\n';

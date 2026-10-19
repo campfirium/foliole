@@ -58,6 +58,9 @@ function createFrontmatter(content: string, values: string[]) {
 }
 
 function readFrontmatterRange(content: string): FrontmatterRange | null {
+  const firstBreak = content.indexOf('\n');
+  const firstLine = firstBreak < 0 ? content : content.slice(0, firstBreak).replace(/\r$/, '');
+  if (firstLine.replace(/^\ufeff/, '') !== '---') return null;
   const newline = content.includes('\r\n') ? '\r\n' : '\n';
   const lines = content.split(/\r?\n/);
   if (lines[0]?.replace(/^\ufeff/, '') !== '---') return null;

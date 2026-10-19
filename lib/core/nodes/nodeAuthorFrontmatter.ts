@@ -8,6 +8,8 @@ function normalizeAuthorValue(value: string) {
 }
 
 function readFrontmatterLines(content: string) {
+  const firstBreak = content.indexOf('\n');
+  if (firstBreak < 0 || !FRONTMATTER_DELIMITER_PATTERN.test(content.slice(0, firstBreak))) return [];
   const lines = content.split(/\r?\n/);
   if (lines.length < 3 || !FRONTMATTER_DELIMITER_PATTERN.test(lines[0] ?? '')) {
     return [];
