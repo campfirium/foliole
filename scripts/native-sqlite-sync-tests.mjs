@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'electron/ipc/commands.readwise-network-owner.test.ts',
   'src/test/attachmentThroughputFixture.integration.test.ts',
   'electron/sync/desktopSlowNetworkDiagnostic.integration.test.ts',
   'electron/sync/attachmentDemandQueue.integration.test.ts',

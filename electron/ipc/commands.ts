@@ -128,6 +128,7 @@ const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
   NATIVE_COMMANDS.compactSqliteDatabase,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
   NATIVE_COMMANDS.previewReadwiseIdentityBindings,
+  NATIVE_COMMANDS.resolveReadwiseJoinDecision,
   NATIVE_COMMANDS.restoreSqliteDatabase,
   NATIVE_COMMANDS.runReadwiseSourceCutover,
   NATIVE_COMMANDS.syncCompanionNow
