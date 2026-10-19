@@ -20,6 +20,9 @@ export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string
     if (!Array.isArray(values) || values.length !== columns.length) {
       throw new Error('workspace_snapshot_row_invalid');
     }
-    return Object.fromEntries(columns.map((column, index) => [column, values[index]]));
+    const decoded: DbRow = {};
+    let index = 0;
+    for (const column of columns) decoded[column] = values[index++];
+    return decoded;
   });
 }
