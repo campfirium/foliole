@@ -26,6 +26,7 @@ import { holdSyncRound, reopenAfterSyncStops, startContendedSync } from './conte
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
+import { loadDesktopSyncActivity } from './desktopSyncActivityStore.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
@@ -214,7 +215,13 @@ process.on('message', (message: { id: number; action: string; args: Record<strin
       : message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
   void handler(message.action, message.args).then(
     (result) => process.send?.({ id: message.id, result }),
-    (error: unknown) => process.send?.({ id: message.id, error: error instanceof Error ? `${message.action}: ${error.stack}` : String(error) })
+    async (error: unknown) => {
+      if (message.action === 'joinComplete') {
+        const activity = await runWithDatabaseConnectionOwner(loadDesktopSyncActivity);
+        console.error('[join-completion-failure]', JSON.stringify(activity.slice(0, 40)));
+      }
+      process.send?.({ id: message.id, error: error instanceof Error ? `${message.action}: ${error.stack}` : String(error) });
+    }
   );
 });
 void fs.mkdir(process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT!, { recursive: true });

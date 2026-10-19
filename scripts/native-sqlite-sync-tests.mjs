@@ -1,4 +1,10 @@
 export const controlledSyncSqliteTests = [
+  'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
+  'lib/core/sync/framedSyncInventoryDigest.integration.test.ts',
+  'lib/core/sync/requestSyncBucketScale.integration.test.ts',
+  'lib/core/sync/requestSyncNodeMetadata.integration.test.ts',
+  'lib/core/sync/topicHistoryProtection.integration.test.ts',
+  'lib/core/sync/topicHistoryReclamation.integration.test.ts',
   'electron/ipc/commands.readwise-network-owner.test.ts',
   'src/test/attachmentThroughputFixture.integration.test.ts',
   'electron/sync/desktopSlowNetworkDiagnostic.integration.test.ts',

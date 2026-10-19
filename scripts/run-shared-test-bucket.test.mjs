@@ -57,6 +57,15 @@ async function expandSharedBucketTargets() {
 }
 
 describe('run-shared-test-bucket', () => {
+  it('routes text database fixtures through the native library bucket', () => {
+    const targets = SHARED_TEST_BUCKETS.find(({ label }) => label === 'lib-native').targets;
+    for (const file of [
+      'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
+      ...['framedSyncInventoryDigest', 'requestSyncBucketScale', 'requestSyncNodeMetadata',
+        'topicHistoryProtection', 'topicHistoryReclamation'].map(name => `lib/core/sync/${name}.integration.test.ts`)
+    ]) expect(targets).toContain(file);
+  });
+
   it('keeps every library test once in isolated native or renderer buckets', async () => {
     const buckets = SHARED_TEST_BUCKETS.filter(({ label }) => label.startsWith('lib'));
     const targets = buckets.flatMap(({ targets }) => targets).sort();
