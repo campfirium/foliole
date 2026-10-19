@@ -109,14 +109,6 @@ function buildVerdicts(args: {
       severity: 'warning'
     });
   }
-  if (args.storage.node_blob_references_missing_rows > 0) {
-    verdicts.push({
-      code: 'desktop_has_node_blob_references_missing_rows',
-      evidence: { count: args.storage.node_blob_references_missing_rows },
-      message: 'Some desktop topics reference missing content blob rows.',
-      severity: 'error'
-    });
-  }
   if (args.maxStateSeq === null || args.maxStateSeq <= 0) {
     verdicts.push({
       code: 'desktop_no_state_rows',
@@ -150,7 +142,7 @@ export function buildCompanionSyncDiagnostics(args: {
     connection,
     content: {
       missing_attachment_resource_count: 0,
-      missing_content_blob_count: storage.node_blob_references_missing_rows,
+      missing_content_blob_count: 0,
       missing_external_document_body_count: 0,
       missing_topic_body_count: 0
     },

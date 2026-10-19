@@ -27,7 +27,8 @@ beforeEach(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-diagnostics-'));
   sqlite = new Database(path.join(root, 'foliole.db'));
   state.setDriver(createBetterSqlite3Driver(sqlite));
-  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT, deleted_at TEXT, body_blob_hash TEXT);
+  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT, deleted_at TEXT, body_blob_hash TEXT,
+    content TEXT NOT NULL DEFAULT '');
     CREATE TABLE sync_object_state (object_type TEXT, object_id TEXT, sync_dirty INTEGER, state_seq INTEGER);
     CREATE TABLE content_blobs (hash TEXT);
     CREATE TABLE external_documents (id TEXT);
@@ -59,4 +60,15 @@ it('still reports ordinary topics missing sync state and versions', () => {
   expect(result.storage.missing_node_version_count).toBe(1);
   expect(result.verdicts.map(item => item.code)).toContain('desktop_has_nodes_missing_state_rows');
   expect(result.verdicts.map(item => item.code)).toContain('desktop_has_nodes_missing_versions');
+});
+
+it.each(['Current body', ''])('does not treat retired blob references as missing current topic content: %j', content => {
+  sqlite.prepare('INSERT INTO nodes (id, current_version_id, body_blob_hash, content) VALUES (?, ?, ?, ?)')
+    .run('topic', 'version', 'retired-blob', content);
+  sqlite.prepare("INSERT INTO sync_object_state VALUES ('node', 'topic', 0, 1)").run();
+  const result = buildCompanionSyncDiagnostics({ appVersion: 'test', serverStatus: null });
+  expect(result.storage.node_blob_references_missing_rows).toBe(1);
+  expect(result.content.missing_content_blob_count).toBe(0);
+  expect(result.content.missing_topic_body_count).toBe(0);
+  expect(result.verdicts.map(item => item.code)).not.toContain('desktop_has_node_blob_references_missing_rows');
 });
