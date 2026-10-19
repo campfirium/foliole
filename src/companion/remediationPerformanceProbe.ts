@@ -49,8 +49,8 @@ async function measureScan({ owner }: Fixture) {
   let queuedAt = 0;
   let score: Promise<unknown> | undefined;
   let scoreCompletedAt = 0;
-  const readSnapshot = owner.readSnapshot.bind(owner);
-  owner.readSnapshot = (task, signal) => readSnapshot(db => task(countQueries(db, () => {
+  const readBackgroundSnapshot = owner.readBackgroundSnapshot.bind(owner);
+  owner.readBackgroundSnapshot = (task, signal) => readBackgroundSnapshot(db => task(countQueries(db, () => {
     queryCount++;
     if (score) return;
     queuedAt = performance.now();
@@ -62,7 +62,7 @@ async function measureScan({ owner }: Fixture) {
   catch (error) {
     if (!(error instanceof Error) || !['attachment_scan_database_changed', 'attachment_scan_foreground_write'].includes(error.message)) throw error;
     scanDiscardedForWrite = true;
-  } finally { owner.readSnapshot = readSnapshot; await score; }
+  } finally { owner.readBackgroundSnapshot = readBackgroundSnapshot; await score; }
   requireValue(score && scanDiscardedForWrite, 'Concurrent write must invalidate the scan');
   requireValue(queryCount <= 131, 'Attachment scan exceeded the batch query bound');
   const persisted = await owner.readSnapshot(db => db.query('SELECT reps FROM node_review WHERE node_id = ?', ['remediation-0']));
