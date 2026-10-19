@@ -69,7 +69,7 @@ const nativeStoreTests = [
 export const SHARED_TEST_BUCKETS = [
   { label: 'lib-native', fileParallelism: true, report: '.tmp/vitest/shared-lib-native.json',
     targets: libraryTests.filter((target) => nativeTests.has(target)) },
-  { label: 'lib', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-lib.json',
+  { label: 'lib', fileParallelism: true, report: '.tmp/vitest/shared-lib.json',
     targets: libraryTests.filter((target) => !nativeTests.has(target)) },
   {
     label: 'shared-core',

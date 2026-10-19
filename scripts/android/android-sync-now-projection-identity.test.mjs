@@ -39,10 +39,7 @@ it('allows daily Sync Now evidence while keeping general projection isolated', (
   try {
     const file = path.join(directory, 'IdentityFixture.java');
     fs.writeFileSync(file, java);
-    const compile = spawnSync(binary('javac'), ['-d', directory, file], { encoding: 'utf8', timeout: 30000 });
-    expect(compile.stderr).toBe('');
-    expect(compile.status).toBe(0);
-    const result = spawnSync(binary('java'), ['-cp', directory, 'IdentityFixture'], { encoding: 'utf8', timeout: 5000 });
+    const result = spawnSync(binary('java'), [file], { encoding: 'utf8', timeout: 5000 });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }

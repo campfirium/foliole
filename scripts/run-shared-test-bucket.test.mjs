@@ -75,7 +75,12 @@ describe('run-shared-test-bucket', () => {
     expect(new Set(targets).size).toBe(targets.length);
     expect(buckets.find(({ label }) => label === 'lib-native').pool).toBeUndefined();
     expect(buckets.find(({ label }) => label === 'lib-native').fileParallelism).toBe(true);
-    expect(buckets.find(({ label }) => label === 'lib').pool).toBe('threads');
+    const library = buckets.find(({ label }) => label === 'lib');
+    const env = sharedBucketEnvironment(library, { VITEST_POOL: 'forks' });
+    const invocation = buildSharedBucketInvocation('lib.json', library.targets, '/electron', '/repo', env);
+    expect(invocation.args).toContain('--pool=forks');
+    expect(invocation.args).toContain('--fileParallelism');
+    expect(invocation.args).toContain('--maxWorkers=2');
   });
 
   it('keeps split feature buckets covering every top-level feature directory', async () => {
