@@ -84,7 +84,6 @@ export class CapacitorCompanionDatabaseOwner {
   }
 
   readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_read'));
     return this.enqueueSnapshot(task, signal);
   }
 

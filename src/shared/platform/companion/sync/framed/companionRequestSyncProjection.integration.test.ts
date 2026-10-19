@@ -89,7 +89,7 @@ it('finishes a real HTTP update when its snapshot interrupts attachment observat
           }
         }), backgroundSignal);
         try {
-          await expect(readCompanionAttachmentReferences(library.owner)).rejects.toThrow('attachment_scan_foreground_read');
+          expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
           if (!foreground) throw new Error('foreground_snapshot_not_requested');
           return await foreground;
         } finally { library.owner.readBackgroundSnapshot = original; }
