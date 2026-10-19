@@ -8,6 +8,7 @@ import { hostedProviderLifecyclePassed } from './ios-hosted-provider-evidence.mj
 
 const SERVICE_RELATIVE_PATH = 'scripts/ios/ios-sync-group-provider-fixture.js';
 const providerReady = new WeakMap();
+const providerStops = new WeakMap();
 
 export function createSyncGroupProviderCompileArgs(repoRoot, artifactDir) {
   return [
@@ -78,6 +79,15 @@ function createProviderReady(service) {
 }
 
 export function stopSyncGroupProvider(service) {
+  let stopped = providerStops.get(service);
+  if (!stopped) {
+    stopped = stopProvider(service);
+    providerStops.set(service, stopped);
+  }
+  return stopped;
+}
+
+function stopProvider(service) {
   return new Promise((resolve, reject) => {
     if (service.exitCode !== null || service.signalCode !== null) {
       if (service.exitCode === 0 && service.signalCode === null) return resolve();

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { type IncomingMessage, type ServerResponse } from 'node:http';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -17,6 +17,7 @@ import { createIosHostedRequestScenario } from './ios-hosted-request-scenario.js
 import { createIosSyncGroupProviderContract } from './ios-sync-group-provider-contract.ts';
 import {
   closeProviderHttpServer,
+  createProviderHttpServer,
   readProviderJson,
   readProviderText,
   sendProviderResponse
@@ -37,6 +38,10 @@ const corpusScenario = [
 mkdirSync(artifactDir, { recursive: true });
 
 const observations = createIosSyncGroupProviderObservations();
+const discoveryTransport = {
+  connections: [] as { at: string; address: string | null }[],
+  requests: [] as { at: string; repliedAt: string | null }[]
+};
 const workgroupKey = randomBytes(32).toString('base64url');
 let requestLibrary: Awaited<ReturnType<typeof createIosHostedRequestLibrary>> | null = null;
 const provider = createIosSyncGroupProviderContract(observations, { workgroupKey,
@@ -60,7 +65,8 @@ const lifecycleService = createIosForegroundSyncLifecycleService({
 });
 
 function writeObservations() {
-  writeFileSync(path.join(artifactDir, 'service-observations.json'), `${JSON.stringify(observations, null, 2)}\n`);
+  writeFileSync(path.join(artifactDir, 'service-observations.json'),
+    `${JSON.stringify({ ...observations, discovery_transport: discoveryTransport }, null, 2)}\n`);
 }
 
 async function handleJoinRequest(request: IncomingMessage, response: ServerResponse) {
@@ -127,12 +133,19 @@ async function handleRequestSync(request: IncomingMessage, response: ServerRespo
   writeObservations();
 }
 
-const server = createServer(async (request, response) => {
+const server = createProviderHttpServer(async (request, response) => {
   try {
     if (await handleCompanionSyncSession(request, response)) return;
     if (request.method === 'POST' && new URL(request.url ?? '/', 'http://localhost').pathname === '/companion/framed-sync') {
       await handleRequestSync(request, response);
     } else if (request.method === 'GET' && request.url === '/companion/discovery') {
+      const arrival = { at: new Date().toISOString(), repliedAt: null as string | null };
+      discoveryTransport.requests.push(arrival);
+      response.once('finish', () => {
+        arrival.repliedAt = new Date().toISOString();
+        writeObservations();
+      });
+      writeObservations();
       sendProviderResponse(response, 200, provider.discovery);
     } else if (request.method === 'POST' && request.url === '/sync-group/join-requests') {
       await handleJoinRequest(request, response);
@@ -199,6 +212,10 @@ async function stop(exitCode: number) {
   app.exit(exitCode);
 }
 
+server.on('connection', socket => {
+  discoveryTransport.connections.push({ at: new Date().toISOString(), address: socket.remoteAddress ?? null });
+  writeObservations();
+});
 server.on('error', (error) => failRegistration(error));
 process.on('message', (message) => {
   if ((message as { kind?: string })?.kind === 'stop') void stop(0);
