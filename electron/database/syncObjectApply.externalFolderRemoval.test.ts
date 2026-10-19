@@ -59,6 +59,7 @@ it('deletes a folder mirror when its source tombstone is applied', async () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne('SELECT id FROM external_search_folders WHERE id = ?', ['folder-1'])).toBeUndefined();
   expect(driver.queryOne('SELECT document_id FROM external_documents WHERE folder_id = ?', ['folder-1'])).toBeUndefined();
+  expect(driver.queryAll('SELECT * FROM external_folder_host_preferences WHERE folder_id = ?', ['folder-1'])).toEqual([]);
   expect(driver.queryOne("SELECT source_ref FROM desktop_sources WHERE source_type = 'external' AND config_ref = ?",
     ['folder-1'])).toBeUndefined();
   expect(driver.queryOne('SELECT source_ref FROM desktop_sources WHERE source_ref = ?', [other.source_ref]))
@@ -78,12 +79,16 @@ it('rolls back folder and document retirement when source cleanup fails', async 
     .toEqual({ id: 'folder-1' });
   expect(driver.queryOne('SELECT document_id FROM external_documents WHERE folder_id = ?', ['folder-1']))
     .toEqual({ document_id: 'folder-1:note.md' });
+  expect(driver.queryOne('SELECT enabled FROM external_folder_host_preferences WHERE folder_id = ?', ['folder-1']))
+    .toEqual({ enabled: 0 });
   expect(driver.queryOne("SELECT deleted_at FROM sync_object_state WHERE object_type = 'external_folder' AND object_id = ?",
     ['folder-1'])).toBeUndefined();
 });
 
 function seedExternalFolderMirror() {
   const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO external_folder_host_preferences (host_name, folder_id, enabled, updated_at)
+    VALUES ('local', 'folder-1', 0, 'now')`);
   const source = upsertDesktopSource({
     configRef: 'folder-1', rootPath: '/remote', sourceType: 'external', updatedAt: 'now'
   });

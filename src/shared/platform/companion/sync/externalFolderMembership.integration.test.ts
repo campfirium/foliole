@@ -136,7 +136,7 @@ it('keeps an existing local library owned by the same device when creating a gro
   current.db.prepare("INSERT INTO settings VALUES ('standalone_device_uuid', ?, 'now')").run(JSON.stringify(current.anchor));
   seedFolder('local', '/local');
   const device = createSyncGroupDeviceIdentity({ device_anchor: current.anchor, group_id: 'new-group',
-    library_path: current.file, path_flavor: 'posix' });
+    library_path: current.file, path_flavor: process.platform === 'win32' ? 'windows' : 'posix' });
   createDesktopSyncGroup({ device, deviceName: 'Renamed computer', platform: 'darwin' });
   expect(resolveDesktopSourceAddress('external:local', 'doc.md', { requireAvailableRoot: false })).toBe('/local/doc.md');
   const row = current.driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, ['local'])!;

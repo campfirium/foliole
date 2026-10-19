@@ -12,6 +12,7 @@ test(`removes an indexed external folder through ${mode} deletion and keeps dura
 }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopApp.evaluate(async () => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const moduleApi = process.getBuiltinModule('module')!;
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;

@@ -23,7 +23,9 @@ export function retireExternalFolder(driver: DatabaseDriver, folderId: string, n
 export async function removeExternalFolderProjectionWithDbPort(port: DbPort, folderId: string, now: string) {
   await retireExternalFolderDocumentsWithDbPort(port, { folderId, deletedAt: now, hostName: 'sync-membership' });
   await port.run('DELETE FROM external_documents WHERE folder_id = ?', [folderId]);
-  await port.run('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [folderId]);
+  const [desktopPreferences] = await port.query(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'external_folder_host_preferences'");
+  if (desktopPreferences) await port.run('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [folderId]);
   await port.run('DELETE FROM external_search_folders WHERE id = ?', [folderId]);
   await port.run("DELETE FROM desktop_sources WHERE source_type = 'external' AND config_ref = ?", [folderId]);
 }
