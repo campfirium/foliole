@@ -94,6 +94,8 @@ function lineNumberAt(content: string, position: number) {
 }
 
 function resolveFrontmatterBoundsFromParser(content: string): FrontmatterBounds | null {
+  const firstLineEnd = content.indexOf('\n');
+  if (!isDelimiterLine(content.slice(0, firstLineEnd < 0 ? content.length : firstLineEnd))) return null;
   const tree = folioleMarkdownParser.parse(content);
   const frontmatter = findFrontmatterNode(tree.topNode);
   return frontmatter

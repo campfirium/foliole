@@ -11,12 +11,10 @@ function isCollapsedSelectionOutsideRange(transaction: Transaction, from: number
   });
 }
 
-function deletesUneditedMathRangeFromOutside(transaction: Transaction) {
+function deletesUneditedMathRangeFromOutside(transaction: Transaction, mathRanges: ReturnType<typeof collectMarkdownMathRanges>) {
   if (!transaction.docChanged) return false;
 
-  const source = transaction.startState.doc.toString();
   const editedMathRange = getEditedMathRange(transaction.startState);
-  const mathRanges = collectMarkdownMathRanges(source);
   let deletesMathRange = false;
 
   transaction.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
@@ -33,12 +31,10 @@ function deletesUneditedMathRangeFromOutside(transaction: Transaction) {
   return deletesMathRange;
 }
 
-function changesBlockMathClosingBoundaryFromOutside(transaction: Transaction) {
+function changesBlockMathClosingBoundaryFromOutside(transaction: Transaction, mathRanges: ReturnType<typeof collectMarkdownMathRanges>) {
   if (!transaction.docChanged) return false;
 
-  const source = transaction.startState.doc.toString();
   const editedMathRange = getEditedMathRange(transaction.startState);
-  const mathRanges = collectMarkdownMathRanges(source);
   let changesClosingBoundary = false;
 
   transaction.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
@@ -57,7 +53,9 @@ function changesBlockMathClosingBoundaryFromOutside(transaction: Transaction) {
 }
 
 export const protectCollapsedMathDeletion = EditorState.transactionFilter.of((transaction) => {
-  return deletesUneditedMathRangeFromOutside(transaction) || changesBlockMathClosingBoundaryFromOutside(transaction)
+  if (!transaction.docChanged) return transaction;
+  const mathRanges = collectMarkdownMathRanges(transaction.startState.doc.toString());
+  return deletesUneditedMathRangeFromOutside(transaction, mathRanges) || changesBlockMathClosingBoundaryFromOutside(transaction, mathRanges)
     ? []
     : transaction;
 });

@@ -121,6 +121,8 @@ export function shouldMapDocumentInputDecorations(args: {
 }
 
 function syncMappedMarkdownImageWidgetRanges(view: EditorView) {
+  const widgets = Array.from(view.dom.querySelectorAll<HTMLElement>('.cm-md-image-widget'));
+  if (widgets.length === 0) return;
   const localDocumentPath = view.state.facet(localDocumentPathFacet);
   const imageMatches = collectImageMatches(0, view.state.doc.toString(), new Map(), {
     allowRelativeImages: Boolean(localDocumentPath)
@@ -128,7 +130,6 @@ function syncMappedMarkdownImageWidgetRanges(view: EditorView) {
   if (imageMatches.length === 0) return;
   const editorNodeId = view.state.facet(activeNodeIdFacet);
   const usedWidgets = new Set<HTMLElement>();
-  const widgets = Array.from(view.dom.querySelectorAll<HTMLElement>('.cm-md-image-widget'));
 
   for (const imageMatch of imageMatches) {
     const widget = widgets.find((candidate) =>

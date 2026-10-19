@@ -47,5 +47,6 @@ export function collectMarkdownMathRangesFromTree(tree: MarkdownSyntaxTree, sour
 }
 
 export function collectMarkdownMathRanges(source: string): MarkdownMathRange[] {
+  if (!source.includes('$') && !source.includes('\\(') && !source.includes('\\[')) return [];
   return collectMarkdownMathRangesFromTree(folioleMarkdownParser.parse(source), source);
 }
