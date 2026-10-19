@@ -9,9 +9,12 @@ import { companionDesktopSessionId } from '../../network/companionDesktopSession
 let host: Awaited<ReturnType<typeof createJoiningMobile>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 
-it('adopts a real approved mobile member without a notification session and persists the first round', async () => {
+it.each([1, 3808])('adopts %i approved provider topics without a notification session and persists them', async (count) => {
   host = await createJoiningMobile();
   await host.provider.send('seed', { id: 'first-mobile-body', content: 'Approved provider content' });
+  for (let index = 1; index < count; index++) {
+    await host.provider.send('seed', { id: `adoption-body-${index}`, content: `Approved provider content ${index}` });
+  }
   const args = { databasePath: host.local.database, endpointUrl: host.peer.origin,
     groupId: host.groupId, mode: 'use-group' as const };
   const pending = await requestCompanionSyncGroupJoin(args);
@@ -30,6 +33,11 @@ it('adopts a real approved mobile member without a notification session and pers
   expect(mobile.http.mock.calls.some(([request]) => request.url.includes('/sync-session'))).toBe(false);
   host.reopen();
   await completeCompanionSyncGroupJoin(complete);
+  expect(host.sqlite.prepare("SELECT id, content FROM nodes WHERE id = 'first-mobile-body' OR id LIKE 'adoption-body-%'").all())
+    .toEqual(expect.arrayContaining(Array.from({ length: count }, (_, index) => ({
+      id: index ? `adoption-body-${index}` : 'first-mobile-body',
+      content: index ? `Approved provider content ${index}` : 'Approved provider content'
+    }))));
   expect(host.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('first-mobile-body'))
     .toBe('Approved provider content');
   expect(host.sqlite.prepare('SELECT COUNT(*) FROM node_sync_versions WHERE body_text=?').pluck().get('Approved provider content')).toBe(1);
