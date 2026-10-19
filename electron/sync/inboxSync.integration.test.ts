@@ -16,6 +16,17 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 const inbox = 'special-inbox';
 const at = '2026-10-19T06:00:00.000Z';
 
+function seedInboxVersion(databasePath: string) {
+  const sqlite = new Database(databasePath);
+  const initialAt = '2026-10-19T05:00:00.000Z';
+  try {
+    // Both independent roots must predate the scripted edits, regardless of the runner clock.
+    sqlite.prepare('UPDATE nodes SET created_at = ?, updated_at = ? WHERE id = ?')
+      .run(initialAt, initialAt, inbox);
+    flushNodeSyncVersionWithDriver(createBetterSqlite3Driver(sqlite), inbox, 'inbox-bootstrap', initialAt);
+  } finally { sqlite.close(); }
+}
+
 async function changeInbox(databasePath: string, counter: number, children: string[], openedAt: string) {
   const sqlite = new Database(databasePath);
   const db = createBetterSqliteDbPort(sqlite);
@@ -53,6 +64,7 @@ it('syncs Inbox attributes, ordering and opening time in both directions and ret
   const round = () => fixture.left.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: b.origin,
     peer: { deviceId: b.deviceId, libraryEpoch: `${b.deviceId}-epoch` } } });
   try {
+    for (const device of [a, b]) seedInboxVersion(device.databasePath);
     for (const nodeId of ['inbox-a', 'inbox-b']) {
       await fixture.left.seed({ nodeId, parentNodeId: inbox, content: nodeId, title: nodeId });
     }

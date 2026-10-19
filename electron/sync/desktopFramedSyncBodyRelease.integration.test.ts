@@ -15,13 +15,15 @@ function readBodies(databasePath: string) {
   try {
     return {
       blobs: db.prepare<[], { hash: string }>('SELECT hash FROM content_blob_data').all().map((row) => row.hash),
-      nodes: db.prepare(`SELECT id, current_version_id, content FROM nodes ORDER BY id`).all(),
+      nodes: db.prepare(`SELECT id, current_version_id, content FROM nodes WHERE id IN ('article', 'holder') ORDER BY id`).all(),
       versions: db.prepare<[], { version_id: string; parent_version_id: string | null; body_text: string | null;
         body_deleted: number | null; body_hash: string; content_hash: string }>(`SELECT version_id, parent_version_id, body_text,
         content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_hash,
         json_extract(snapshot_json, '$.body_deleted') AS body_deleted
-        FROM node_sync_versions ORDER BY version_id`).all(),
-      edges: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()
+        FROM node_sync_versions WHERE object_id IN ('article', 'holder') ORDER BY version_id`).all(),
+      edges: db.prepare(`SELECT * FROM node_sync_version_parents WHERE version_id IN
+        (SELECT version_id FROM node_sync_versions WHERE object_id IN ('article', 'holder'))
+        ORDER BY version_id, ordinal`).all()
     };
   } finally { db.close(); }
 }

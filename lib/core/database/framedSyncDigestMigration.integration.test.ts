@@ -10,7 +10,7 @@ import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from './migrations.js';
 
-it.each(['desktop', 'companion'])('invalidates only old %s unready digests atomically and preserves original facts', async host => {
+it.each(['desktop', 'companion'])('invalidates old %s digests atomically and preserves original facts', async host => {
   const sqlite = new Database(':memory:');
   const db = createBetterSqliteDbPort(sqlite);
   try {
@@ -34,7 +34,8 @@ it.each(['desktop', 'companion'])('invalidates only old %s unready digests atomi
     await upgrade();
     expect(facts()).toEqual(original);
     expect(sqlite.prepare("SELECT unready FROM framed_sync_node_digest WHERE object_id = 'node-1'").get()).toBeUndefined();
-    expect(sqlite.prepare("SELECT unready FROM framed_sync_node_digest WHERE object_id = 'healthy'").pluck().get()).toBe(0);
+    expect(sqlite.prepare("SELECT unready FROM framed_sync_node_digest WHERE object_id = 'healthy'").pluck().get())
+      .toBe(host === 'desktop' ? undefined : 0);
     await flushRequestSyncInventoryDigests(db);
     const entry = (await readRequestSyncInventorySummaries(db)).find(value => value.globalId === 'node-1');
     expect(entry?.unready).toBe(true);

@@ -64,9 +64,12 @@ function readFacts(file: string) {
   try {
     return {
       versions: db.prepare(`SELECT version_id, object_id, parent_version_id, host_name, created_at,
-        content_hash, body_text, snapshot_json FROM node_sync_versions ORDER BY version_id`)
+        content_hash, body_text, snapshot_json FROM node_sync_versions
+        WHERE object_id = 't326-invalidated-request' ORDER BY version_id`)
         .all() as Array<{ snapshot_json: string; [key: string]: unknown }>,
-      parents: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()
+      parents: db.prepare(`SELECT * FROM node_sync_version_parents WHERE version_id IN
+        (SELECT version_id FROM node_sync_versions WHERE object_id = 't326-invalidated-request')
+        ORDER BY version_id, ordinal`).all()
     };
   } finally { db.close(); }
 }

@@ -25,9 +25,10 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     await fixture.left.invoke('collect_content');
     const db = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     try {
-      expect(db.prepare('SELECT COUNT(*) AS count FROM node_sync_versions WHERE body_text IS NULL')
+      expect(db.prepare("SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = 'retired-history' AND body_text IS NULL")
         .get()).toEqual({ count: 1 });
-      expect(db.prepare('SELECT COUNT(*) AS count FROM node_sync_version_parents').get())
+      expect(db.prepare(`SELECT COUNT(*) AS count FROM node_sync_version_parents WHERE version_id IN
+        (SELECT version_id FROM node_sync_versions WHERE object_id = 'retired-history')`).get())
         .toEqual({ count: 1 });
     } finally {
       db.close();
@@ -40,11 +41,14 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     const left = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
-      const versions = 'SELECT version_id, object_id, content_hash, body_text, parent_version_id FROM node_sync_versions ORDER BY version_id';
+      const versions = `SELECT version_id, object_id, content_hash, body_text, parent_version_id
+        FROM node_sync_versions WHERE object_id = 'retired-history' ORDER BY version_id`;
+      const parents = `SELECT * FROM node_sync_version_parents WHERE version_id IN
+        (SELECT version_id FROM node_sync_versions WHERE object_id = 'retired-history') ORDER BY version_id, ordinal`;
       const expected = left.prepare(versions).all();
       expect(right.prepare(versions).all()).toEqual(expected);
-      expect(right.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all())
-        .toEqual(left.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all());
+      expect(right.prepare(parents).all())
+        .toEqual(left.prepare(parents).all());
     } finally { left.close(); right.close(); }
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();

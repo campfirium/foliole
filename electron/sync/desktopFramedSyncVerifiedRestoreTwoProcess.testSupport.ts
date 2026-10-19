@@ -135,8 +135,8 @@ export function installObjectCommitFailure(databasePath: string, rejectAfterObje
   const sqlite = new Database(databasePath);
   try {
     sqlite.exec(`CREATE TRIGGER reject_identity_restore_object BEFORE INSERT ON nodes
-      WHEN NOT EXISTS (SELECT 1 FROM nodes WHERE id = NEW.id)
-        AND (SELECT count(*) FROM nodes WHERE current_version_id IS NOT NULL) >= ${rejectAfterObjects}
+      WHEN NEW.id <> 'special-inbox' AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = NEW.id)
+        AND (SELECT count(*) FROM nodes WHERE id <> 'special-inbox' AND current_version_id IS NOT NULL) >= ${rejectAfterObjects}
       BEGIN SELECT RAISE(ABORT, 'identity_restore_object_rejected'); END`);
   } finally { sqlite.close(); }
 }

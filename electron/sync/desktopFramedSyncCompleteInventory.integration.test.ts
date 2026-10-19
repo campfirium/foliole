@@ -17,7 +17,10 @@ it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconcili
     expect(await fixture.left.invoke('seed_complete_inventory', { count }))
       .toEqual({ nodeCount: count, bodyBytes: 8192 });
     const before = await readFixtureInventory(fixture.left);
-    expect(before.filter((entry) => entry.objectType === 'node')).toHaveLength(count);
+    const nodes = before.filter((entry) => entry.objectType === 'node');
+    expect(nodes.filter(entry => entry.globalId.startsWith('t326-complete-'))).toHaveLength(count);
+    expect(nodes.filter(entry => entry.globalId === 'special-inbox')).toHaveLength(1);
+    expect(nodes).toHaveLength(count + 1);
     // Exercise the coordinator: a wall-budget yield must resume without another user/timer trigger.
     await fixture.left.invoke('activation_start');
     await fixture.left.invoke('activation_stop');

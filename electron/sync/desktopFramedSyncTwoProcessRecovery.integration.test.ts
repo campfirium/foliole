@@ -35,6 +35,7 @@ async function setup() {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
+  await fixture.left.synchronize(fixture.rightSnapshot.origin);
   return fixture;
 }
 
