@@ -5,7 +5,7 @@ export function assertRemediationPerformanceResult(result) {
   if (result?.status !== 'passed' || result.scenario !== 'remediation-performance'
     || result.appId !== 'com.campfirium.foliole.android.acceptance' || result.platform !== 'android'
     || result.cleanup !== true || result.fixtureNodes !== 1000
-    || result.scan?.queryCount > 21 || result.scan?.references !== 1
+    || result.scan?.staleScanRejected !== true || result.scan?.queryCount > 21 || result.scan?.references !== 1
     || result.mixed?.fullReads !== 0 || result.mixed?.snapshotMatches !== true
     || result.details?.queryCount !== 1 || result.details?.expandedNodes !== 500
     || result.details?.detailsMatch !== true) throw new Error('Remediation measurement assertions failed');

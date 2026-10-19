@@ -1,9 +1,9 @@
-import { readAttachmentReferenceSnapshot } from '../../lib/core/attachments/attachmentReferenceSnapshot';
 import type { DbPort } from '../../lib/core/sync/dbPort';
 import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests } from '../../lib/core/sync/framedSyncInventoryDigest';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead';
 import { framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { readCompanionAttachmentReferences } from '../shared/platform/companion/runtime/companionAttachmentReferenceSnapshot';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 import {
   saveCompanionSyncNodeReadingRecord, saveCompanionSyncNodeReviewRecord,
@@ -40,27 +40,34 @@ export async function measureRemediationPerformance(fixture: Fixture, phase: (va
 }
 
 async function measureScan({ owner }: Fixture) {
+  const started = performance.now();
+  const references = await readCompanionAttachmentReferences(owner);
+  const scanMs = performance.now() - started;
+  requireValue(references.storageKeys.length === 1 && references.storageKeys[0] === remediationImage,
+    'Attachment reference set changed');
   let queryCount = 0;
   let queuedAt = 0;
   let score: Promise<unknown> | undefined;
   let scoreCompletedAt = 0;
-  const started = performance.now();
-  const references = await owner.runWriter(db => readAttachmentReferenceSnapshot(countQueries(db, () => {
+  const readSnapshot = owner.readSnapshot.bind(owner);
+  owner.readSnapshot = (task, signal) => readSnapshot(db => task(countQueries(db, () => {
     queryCount++;
     if (score) return;
     queuedAt = performance.now();
     score = saveCompanionSyncNodeReviewRecord({ nodeId: 'remediation-0', review })
       .then(result => { requireValue(result, 'Review write did not persist'); scoreCompletedAt = performance.now(); });
-  })));
-  const scanMs = performance.now() - started;
-  requireValue(score, 'Concurrent review was not scheduled');
-  await score;
+  })), signal);
+  let staleScanRejected = false;
+  try { await readCompanionAttachmentReferences(owner); }
+  catch (error) {
+    if (!(error instanceof Error) || error.message !== 'attachment_scan_database_changed') throw error;
+    staleScanRejected = true;
+  } finally { owner.readSnapshot = readSnapshot; await score; }
+  requireValue(score && staleScanRejected, 'Concurrent write must invalidate the scan');
   requireValue(queryCount <= 21, 'Attachment scan exceeded the batch query bound');
-  requireValue(references.storageKeys.length === 1 && references.storageKeys[0] === remediationImage,
-    'Attachment reference set changed');
   const persisted = await owner.readSnapshot(db => db.query('SELECT reps FROM node_review WHERE node_id = ?', ['remediation-0']));
   requireValue(persisted[0]?.reps === 1, 'Queued review did not reach SQLite');
-  return { scanMs, scoreWaitAndWriteMs: scoreCompletedAt - queuedAt, queryCount, references: 1 };
+  return { scanMs, scoreWaitAndWriteMs: scoreCompletedAt - queuedAt, queryCount, references: 1, staleScanRejected };
 }
 
 async function measureMixedBatch(fixture: Fixture) {

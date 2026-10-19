@@ -1,21 +1,37 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
-import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
+import { attachmentDatabaseRevision } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
 import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
+import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
+import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
+
+const maintenanceTails = new WeakMap<object, Promise<unknown>>();
 
 export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const owner = getIosCompanionDatabaseOwner();
-  return owner.runWriter(async (db) => {
+  const run = (maintenanceTails.get(owner) ?? Promise.resolve()).then(() => maintain(owner, request, signal));
+  maintenanceTails.set(owner, run.catch(() => undefined));
+  return run;
+}
+
+function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    let activeDb: DbPort | undefined;
+    let expectedRevision: string | undefined;
+    const write = <T>(task: (db: DbPort) => Promise<T>) => activeDb ? task(activeDb) : owner.runWriter(task);
     const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
     const updateAvailability = async (operation: 'move' | 'remove-trash', storageKey: string, trash?: boolean) => {
+      signal?.throwIfAborted();
       attachmentSourceVerification.invalidate(storageKey);
       const result = await files({ operation, storageKey, ...(trash === undefined ? {} : { trash }) });
       if (typeof result.available !== 'boolean') throw new Error('attachment_availability_missing');
-      await recordFramedSyncResourceAvailability(db, [storageKey.slice(0, 64)], result.available);
+      const available = result.available;
+      await write(db => recordFramedSyncResourceAvailability(db, [storageKey.slice(0, 64)], available));
     };
     const now = new Date();
     const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
@@ -25,7 +41,11 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
         if (!result.generation) throw new Error('attachment_database_generation_missing');
         return result.generation;
       },
-      references: () => readAttachmentReferenceSnapshot(db, signal),
+      references: async () => {
+        const snapshot = await readCompanionAttachmentReferences(owner, signal);
+        expectedRevision = snapshot.revision;
+        return snapshot;
+      },
       inventory: async (trash) => {
         const result = await files({ operation: 'inventory', trash });
         if (!result.files) throw new Error('attachment_inventory_missing');
@@ -39,13 +59,17 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
         signal?.throwIfAborted();
         await files({ operation: 'write-state', state: JSON.stringify(state) });
       },
-      withStableRevision: (revision, action) => db.transaction(async (tx) => {
-        if (revision !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
+      withStableRevision: (revision, action) => owner.runWriter(db => db.transaction(async (tx) => {
+        if ((expectedRevision ?? revision) !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
         signal?.throwIfAborted();
-        return action();
-      }),
+        activeDb = tx;
+        try {
+          const result = await action();
+          expectedRevision = await attachmentDatabaseRevision(tx);
+          return result;
+        } finally { activeDb = undefined; }
+      })),
       move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
       removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
     }, request, day, signal);
-  });
 }

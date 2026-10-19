@@ -1,6 +1,8 @@
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  'src/shared/platform/companion/runtime/companionAttachmentMaintenance.test.ts',
+  'src/shared/platform/companion/runtime/companionAttachmentReferenceSnapshot.test.ts',
   'src/companion/remediationPerformanceProbe.test.ts',
   'electron/database/syncGroupMemberNames.test.ts',
   'lib/core/attachments/attachmentReferenceSnapshot.test.ts',
