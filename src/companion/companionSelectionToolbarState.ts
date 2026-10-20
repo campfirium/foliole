@@ -64,11 +64,12 @@ function resolveToolbarPosition(fallback: CompanionSelectionClientPoint) {
 }
 
 export function resolveSelectionToolbarState(args: {
+  content: string;
   fallback: CompanionSelectionClientPoint;
   payload: SelectionCommandPayload;
   snapshot: WorkspaceSnapshot | null;
 }): CompanionSelectionAnnotationToolbarState {
-  const existingHighlight = findCompanionExistingHighlightFromPayload(args.snapshot, args.payload);
+  const existingHighlight = findCompanionExistingHighlightFromPayload(args.snapshot, args.payload, args.content);
   return {
     ...resolveToolbarPosition(args.fallback),
     payload: existingHighlight ? null : args.payload,

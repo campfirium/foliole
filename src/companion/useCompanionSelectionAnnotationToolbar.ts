@@ -43,11 +43,12 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
         }
         toolbarDom.clearCompanionActiveHighlightElements();
       }
-      const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
-      if (payload) {
+      const adapter = args.editorRef.current;
+      const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
+      if (payload && adapter) {
         toolbarDom.clearCompanionActiveHighlightElements();
         args.lastPayloadRef.current = payload;
-        args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
+        args.setSelectionToolbar(resolveSelectionToolbarState({ content: adapter.getContent(), fallback, payload, snapshot: args.snapshot }));
       }
       else args.scheduleSelectionToolbarOpen(fallback, false);
     });
@@ -88,11 +89,12 @@ function useCompanionSelectionAnnotationScheduler(args: {
           args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
           return;
         }
-        const payload = resolveCompanionSelectionCommandPayload(args.nodeId, args.editorRef.current);
-        if (payload) {
+        const adapter = args.editorRef.current;
+        const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
+        if (payload && adapter) {
           toolbarDom.clearCompanionActiveHighlightElements();
           args.lastPayloadRef.current = payload;
-          args.setSelectionToolbar(resolveSelectionToolbarState({ fallback, payload, snapshot: args.snapshot }));
+          args.setSelectionToolbar(resolveSelectionToolbarState({ content: adapter.getContent(), fallback, payload, snapshot: args.snapshot }));
           return;
         }
         args.setSelectionToolbar(null);

@@ -37,24 +37,22 @@ function toExistingHighlightTarget(node: WorkspaceNodeSnapshot | undefined): Com
 
 export function findCompanionExistingHighlightFromPayload(
   snapshot: WorkspaceSnapshot | null,
-  payload: SelectionCommandPayload | null
+  payload: SelectionCommandPayload | null,
+  parentContent: string
 ): CompanionExistingHighlightTarget | null {
   if (!snapshot || !payload || payload.entries.length !== 1) return null;
   const locator = payload.entries[0]?.locator;
-  if (!locator) return null;
-  const parentNodeId = payload.parentNodeId;
-  const trashed = new Set(snapshot.trashedNodeIds);
-  const node = Object.values(snapshot.nodesById).find((candidate) =>
-    candidate.parentNodeId === parentNodeId &&
-    candidate.anchorLink?.kind === 'highlight' &&
-    !trashed.has(candidate.id) &&
-    getTextAnchorLocators(candidate.anchorLink?.locator).some((match) =>
-      match.from === locator.from &&
-      match.to === locator.to &&
-      match.originalText === locator.originalText
-    )
-  );
-  return toExistingHighlightTarget(node);
+  const parent = snapshot.nodesById[payload.parentNodeId];
+  if (!locator || !parent) return null;
+  const match = findTextAnchorAtPosition(payload.parentNodeId, {
+    ...snapshot.nodesById,
+    [parent.id]: { ...parent, content: parentContent }
+  }, Math.floor((locator.from + locator.to) / 2), snapshot.trashedNodeIds);
+  if (!match || match.locator.from !== locator.from || match.locator.to !== locator.to ||
+      match.originalText !== locator.originalText) return null;
+  return match.kind === 'cloze'
+    ? { kind: 'cloze', nodeId: match.nodeId, originalText: match.originalText }
+    : toExistingHighlightTarget(snapshot.nodesById[match.nodeId]);
 }
 
 export function findCompanionExistingHighlightAtPosition(args: {
