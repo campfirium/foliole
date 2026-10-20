@@ -35,8 +35,16 @@ enum FolioleCompanionBonjourEndpoint {
               let host = preferredResolvedIPv4(numericIPv4Addresses(service.addresses))
                 ?? resolvedHost(service.hostName)
         else { return nil }
-        return "http://\(host):\(service.port)"
+        return "http://\(hostedAcceptanceLoopbackHost ?? host):\(service.port)"
     }
+
+#if FOLIOLE_IOS_HOSTED_LOOPBACK_ENDPOINT && targetEnvironment(simulator)
+    // Hosted CI simulators share the runner's network stack; the resolved service must still
+    // exist, but requests use loopback instead of the runner's virtual LAN address.
+    private static let hostedAcceptanceLoopbackHost: String? = "127.0.0.1"
+#else
+    private static let hostedAcceptanceLoopbackHost: String? = nil
+#endif
 
     static func preferredResolvedIPv4(
         _ values: [String], localSubnets: [FolioleIPv4Subnet]? = nil

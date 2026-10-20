@@ -104,6 +104,8 @@ jobs:
     env:
       FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
+      # Staged rollout: only this bucket reaches the hosted provider over loopback until it is proven stable.
+      FOLIOLE_IOS_HOSTED_LOOPBACK_ENDPOINT: ${{ matrix.bucket == 'sync-group-and-content' && '1' || '' }}
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Check out target snapshot
