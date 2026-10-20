@@ -90,6 +90,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/fri-dev-failure.test.mjs',
   'scripts/ios/fri-dev-workflow.test.mjs',
   'scripts/ios/fri-physical-readiness.test.mjs',
+  'scripts/ios/fri-pinned-revision.test.mjs',
   'scripts/ios/fri-run-result.test.mjs',
   'scripts/ios/fri-s220-journey-contract.test.mjs',
   'scripts/ios/fri-s220-postflight.test.mjs',
