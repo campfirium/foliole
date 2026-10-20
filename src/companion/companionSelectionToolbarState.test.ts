@@ -2,7 +2,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 
-import { resolveSelectionToolbarState } from './companionSelectionToolbarState';
+import { resolveExistingHighlightAtPoint, resolveSelectionToolbarState } from './companionSelectionToolbarState';
+import { createSnapshot } from './useCompanionWorkspaceSync.testSupport';
 
 const payload: SelectionCommandPayload = {
   anchorId: 'anchor-1',
@@ -64,4 +65,25 @@ it('places the touch toolbar above a low selection without clipping the controls
 
 it('retains the compact above-selection placement for pointer devices', () => {
   expect(resolvePosition(0)).toMatchObject({ noteTop: 128, top: 52 });
+});
+
+it.each(['highlight', 'cloze'] as const)('recognizes a rendered %s when the parent snapshot omits its stored body', (kind) => {
+  const snapshot = createSnapshot();
+  const parent = snapshot.nodesById['topic-1']!;
+  parent.content = '';
+  snapshot.nodesById.annotation = {
+    ...parent, id: 'annotation', parentNodeId: parent.id,
+    kind: kind === 'cloze' ? 'item' : 'topic', content: 'Beta',
+    anchorLink: { id: 'anchor-beta', kind, locator: { from: 6, to: 10, originalText: 'Beta' } }
+  };
+  const target = resolveExistingHighlightAtPoint({
+    editorRef: { current: {
+      getContent: () => 'Alpha Beta Gamma',
+      getDocumentPositionAtClientPoint: () => 8,
+      getSelection: () => ({ from: 6, to: 10 })
+    } as never },
+    nodeId: parent.id, point: { clientX: 100, clientY: 120 }, snapshot
+  });
+  expect(target).toMatchObject({ nodeId: 'annotation', originalText: 'Beta', ...(kind === 'cloze' ? { kind } : {}) });
+  expect(parent.content).toBe('');
 });
