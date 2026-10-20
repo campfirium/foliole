@@ -87,6 +87,13 @@ describe('hosted npm ci recovery', () => {
     });
   });
 
+  it('retries one npm registry network reset after one backoff', async () => {
+    const reset = 'npm error code ECONNRESET\nnpm error syscall read\nnpm error network read ECONNRESET';
+    const state = await execute([result(152, reset), result(0)]);
+    expect(state.runAttempt).toHaveBeenCalledTimes(2);
+    expect(state.final).toMatchObject({ attempts: 2, firstFailureClassification: 'npm-registry-transient-transfer', status: 0 });
+  });
+
   it.each([
     ['lockfile mismatch', 'npm error npm ci can only install with an existing package-lock.json'],
     ['dependency resolution', 'npm error code ERESOLVE\nnpm error unable to resolve dependency tree'],

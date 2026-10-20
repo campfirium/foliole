@@ -36,6 +36,17 @@ export function isHostedNodeHeadersTransferFailure(output, options = {}) {
     TRANSIENT_TRANSFER_FAILURE.some((pattern) => pattern.test(output));
 }
 
+// npm reports its own registry transport failures with a network code and a network section.
+const NPM_REGISTRY_NETWORK_FAILURE = [
+  /^npm error code (?:ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENETUNREACH|ECONNREFUSED)$/mu,
+  /^npm error network\b/mu
+];
+
+export function isHostedNpmRegistryTransferFailure(output, options = {}) {
+  if (!isGithubHosted(options.env ?? process.env)) return false;
+  return NPM_REGISTRY_NETWORK_FAILURE.every((pattern) => pattern.test(output));
+}
+
 export async function runHostedNpmCi(options = {}) {
   const args = options.args ?? [];
   const env = options.env ?? process.env;
@@ -60,7 +71,9 @@ export async function runHostedNpmCi(options = {}) {
       ? 'electron-transient-transfer'
       : isHostedNodeHeadersTransferFailure(output, { args, env })
         ? 'node-headers-transient-transfer'
-        : null;
+        : isHostedNpmRegistryTransferFailure(output, { env })
+          ? 'npm-registry-transient-transfer'
+          : null;
     const retryable = attempt === 1 && !result.signal && Number.isInteger(result.status) &&
       failureClassification !== null;
     if (!retryable) {
