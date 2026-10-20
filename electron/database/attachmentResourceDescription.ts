@@ -7,7 +7,11 @@ import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { resolveDatabasePath } from './connection.js';
 
 export function currentLibraryScope() {
-  return createHash('sha256').update(resolveDatabasePath()).digest('hex');
+  return libraryScopeForDatabasePath(resolveDatabasePath());
+}
+
+export function libraryScopeForDatabasePath(databasePath: string) {
+  return createHash('sha256').update(databasePath).digest('hex');
 }
 
 export async function loadAttachmentResourceDescription(storageKey: string): Promise<AttachmentResourceDescription | null> {

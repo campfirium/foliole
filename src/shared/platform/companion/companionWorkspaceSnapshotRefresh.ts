@@ -15,7 +15,7 @@ type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
 
 async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
   return getIosCompanionDatabaseOwner().readSnapshot(async db => {
-    const scoped = input.current && input.scope.kind === 'nodes'
+    const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
       ? await readScoped(db, input.current, input.scope) : null;
     return scoped ?? loadIosCompanionWorkspaceSnapshot(db);
   });

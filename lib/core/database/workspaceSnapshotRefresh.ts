@@ -11,6 +11,7 @@ export type WorkspaceRefreshScope =
     readingNodeIds?: readonly string[];
     openStateNodeIds?: readonly string[];
     activeNode?: boolean;
+    structure?: boolean;
   };
 
 interface PendingRefresh {
@@ -37,6 +38,7 @@ function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
   if (readingNodeIds.length) scope.readingNodeIds = readingNodeIds;
   if (openStateNodeIds.length) scope.openStateNodeIds = openStateNodeIds;
   if (scopes.some(item => item.activeNode)) scope.activeNode = true;
+  if (scopes.some(item => item.structure)) scope.structure = true;
   return scope;
 }
 

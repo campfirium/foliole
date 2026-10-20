@@ -12,6 +12,7 @@ import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDe
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
+import { appliedStateWorkspaceScope, joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
 import { withRequestSyncCurrentVersion, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
 import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
@@ -67,14 +68,16 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     }
     for (const source of sources) for await (const fact of source(tx, [3, 4])) {
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
-      if (fact.kind === 4) workspaceScope = { kind: 'full' };
+      if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
     }
     for (const source of sources) for await (const fact of source(tx, [1])) {
       if (fact.kind === 1 && await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions)) {
-        workspaceScope = { kind: 'full' };
+        workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
       }
     }
-    if (await flushCurrentParentOrderProjectionsWithDbPort(tx)) workspaceScope = { kind: 'full' };
+    if (await flushCurrentParentOrderProjectionsWithDbPort(tx)) {
+      workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [], structure: true });
+    }
     return { generatedChanges, workspaceScope };
   });
 }

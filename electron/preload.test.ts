@@ -1,52 +1,6 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import vm from 'node:vm';
-
 import { expect, it, vi } from 'vitest';
 
-const PRELOAD_PATH = path.resolve(process.cwd(), 'electron', 'preload.cjs');
-
-function executePreload(env: Record<string, string | undefined> = {}) {
-  const source = readFileSync(PRELOAD_PATH, 'utf8');
-  const exposeInMainWorld = vi.fn();
-  const ipcInvoke = vi.fn();
-  const ipcOn = vi.fn();
-  const ipcRemoveListener = vi.fn();
-  const sandboxRequire = vi.fn((specifier: string) => {
-    if (specifier === 'electron') {
-      return {
-        contextBridge: { exposeInMainWorld },
-        ipcRenderer: {
-          invoke: ipcInvoke,
-          on: ipcOn,
-          removeListener: ipcRemoveListener,
-          send: vi.fn()
-        }
-      };
-    }
-
-    throw new Error(`unsupported require: ${specifier}`);
-  });
-
-  const sandbox = {
-    __dirname: path.dirname(PRELOAD_PATH),
-    __filename: PRELOAD_PATH,
-    exports: {},
-    module: { exports: {} },
-    process: { env },
-    require: sandboxRequire
-  };
-
-  vm.runInNewContext(source, sandbox, { filename: PRELOAD_PATH });
-
-  return {
-    exposeInMainWorld,
-    ipcInvoke,
-    ipcOn,
-    ipcRemoveListener,
-    sandboxRequire
-  };
-}
+import { executePreload, PRELOAD_PATH } from './preload.testSupport.js';
 
 const readwiseIndexProgressPayload = {
   currentSourcePath: 'High Fanout.md',
@@ -187,14 +141,16 @@ const sanitizedCompletedReadwiseProgressPayload = {
     listener({}, {
       appliedNodeIds: ['node-1', 1],
       appliedObjectIds: ['node_reading:node-1'],
-      appliedReviewOpIds: [null, 'op-1']
+      appliedReviewOpIds: [null, 'op-1'],
+      libraryScope: 'library', workspaceScope: { kind: 'nodes', nodeIds: ['node-1', 7], structure: true }
     });
 
     expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-sync-applied', expect.any(Function));
     expect(handler).toHaveBeenCalledWith({
       appliedNodeIds: ['node-1'],
       appliedObjectIds: ['node_reading:node-1'],
-      appliedReviewOpIds: ['op-1']
+      appliedReviewOpIds: ['op-1'],
+      libraryScope: 'library', workspaceScope: { kind: 'nodes', nodeIds: ['node-1'], structure: true }
     });
   });
 

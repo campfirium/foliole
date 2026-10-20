@@ -1,5 +1,8 @@
+import { loadWorkspaceListProjection } from '../../lib/core/database/workspaceListProjection.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { foregroundTimeHistoryArgsSchema } from '../../lib/platform/nativeForegroundTimeContract.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { loadEditorOperationHistory, saveEditorOperationHistory } from '../database/editorOperationHistory.js';
 import { loadForegroundTimeHistory } from '../database/foregroundTimeHistory.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
@@ -62,6 +65,20 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   }
   if (command === NATIVE_COMMANDS.loadSyncNodeConflicts) {
     return loadSyncNodeConflicts(Array.isArray(args.objectIds) ? asStringArray(args.objectIds, 'objectIds') : undefined);
+  }
+  if (command === NATIVE_COMMANDS.loadWorkspaceListProjection) {
+    if (asString(args.libraryScope, 'libraryScope') !== currentLibraryScope()) {
+      throw new Error('workspace_projection_library_changed');
+    }
+    const projection = loadWorkspaceListProjection(openDatabaseConnection().driver, {
+      nodeIds: asStringArray(args.nodeIds, 'nodeIds'), structure: args.structure === true,
+      ...(args.ancestorNodeIds === undefined ? {} : { ancestorNodeIds: asStringArray(args.ancestorNodeIds, 'ancestorNodeIds') })
+    });
+    const libraryScope = currentLibraryScope();
+    for (const node of Object.values(projection.nodesById)) {
+      if (node.attachments) node.attachments = node.attachments.map(attachment => ({ ...attachment, libraryScope }));
+    }
+    return projection;
   }
   if (command === NATIVE_COMMANDS.loadWorkspaceListSnapshot) {
     return loadWorkspaceListSnapshot({

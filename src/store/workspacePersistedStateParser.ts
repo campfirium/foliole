@@ -168,6 +168,7 @@ export function parsePersistedWorkspaceState(value: unknown): Partial<WorkspaceP
   const trashedNodeDeletedAtById = parseStringValueRecord(value.trashedNodeDeletedAtById);
   const untitledSequenceByParent = parseNumberValueRecord(value.untitledSequenceByParent);
   const parsedState = {
+    ...(typeof value.libraryScope === 'string' ? { libraryScope: value.libraryScope } : {}),
     ...(nodesById ? { nodesById } : {}),
     ...(capturedWorkspaceVersion !== undefined ? { capturedWorkspaceVersion } : {}),
     ...(activeNodeId !== undefined ? { activeNodeId } : {}),

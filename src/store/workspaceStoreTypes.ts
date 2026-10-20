@@ -12,6 +12,7 @@ import type { WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
 
 export interface WorkspaceState {
+  libraryScope?: string;
   activeNodeId: string | null;
   browseRootNodeId: string;
   appActionHistory: WorkspaceActionHistoryState;
@@ -136,6 +137,7 @@ export interface WorkspaceNodeCreationOptions {
 }
 
 export interface WorkspacePersistedState {
+  libraryScope?: string;
   activeNodeId: string | null;
   browseRootNodeId?: string;
   capturedWorkspaceVersion?: string | null;

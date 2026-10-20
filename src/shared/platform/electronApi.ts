@@ -1,3 +1,4 @@
+import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeInvoke } from '../../../lib/platform/nativeContract';
 import type { NativeDesktopUpdateState } from '../../../lib/platform/nativeUpdateContract';
@@ -32,6 +33,8 @@ export interface WorkspaceSyncAppliedPayload {
   appliedNodeIds: string[];
   appliedObjectIds: string[];
   appliedReviewOpIds: string[];
+  workspaceScope?: WorkspaceRefreshScope;
+  libraryScope?: string;
 }
 
 export interface ReadwiseReaderImportProgressPayload {

@@ -5,7 +5,7 @@ import {
   onWorkspaceContentChanged,
   onWorkspaceSyncApplied
 } from '../../shared/platform/runtimeShellEvents';
-import { requestWorkspaceStateRefresh } from '../../store/workspaceRefreshScheduler';
+import { requestWorkspaceStateRefresh, requestWorkspaceSyncRefresh } from '../../store/workspaceRefreshScheduler';
 
 type WorkspaceSyncAppliedPayload = Parameters<Parameters<typeof onWorkspaceSyncApplied>[0]>[0];
 
@@ -35,7 +35,9 @@ export function useWorkspaceSyncAppliedRefresh() {
     let unlisten: (() => void) | null = null;
     void onWorkspaceSyncApplied((payload) => {
       if (!disposed) {
-        if (syncAppliedChangesWorkspace(payload)) requestWorkspaceStateRefresh('sync-applied');
+        if (payload.workspaceScope && payload.libraryScope) {
+          requestWorkspaceSyncRefresh(payload.workspaceScope, payload.libraryScope);
+        } else if (syncAppliedChangesWorkspace(payload)) requestWorkspaceStateRefresh('sync-applied');
         void hydrateRuntimeSystemEntryDisplayNames().catch(() => undefined);
       }
     }).then((nextUnlisten) => {

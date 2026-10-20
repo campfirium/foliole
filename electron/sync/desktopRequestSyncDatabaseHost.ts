@@ -1,6 +1,7 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { libraryScopeForDatabasePath } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
@@ -22,6 +23,7 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
     },
     objectApplied: async object => {
       notifyWorkspaceSyncApplied({
+        workspaceScope: object.workspaceScope, libraryScope: libraryScopeForDatabasePath(databasePath),
         appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
         appliedObjectIds: [object.globalId], appliedReviewOpIds: [] }, sourceSession);
       await reportDesktopSyncGroupObjectCommitted(object);

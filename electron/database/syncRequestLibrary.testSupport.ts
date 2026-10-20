@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
@@ -20,7 +21,7 @@ function proof(peer: Peer) {
 }
 
 /** Transfer actual inventory differences through the production snapshot and object transaction. */
-export async function syncRequestLibrary(source: Peer, target: Peer) {
+export async function syncRequestLibrary(source: Peer, target: Peer, onApplied?: (scope: WorkspaceRefreshScope) => void) {
   const differences = compareFramedSyncInventories({
     local: await readFramedSyncInventory(source.port), remote: await readFramedSyncInventory(target.port)
   }).filter(value => value.direction === 'local_to_remote');
@@ -29,7 +30,7 @@ export async function syncRequestLibrary(source: Peer, target: Peer) {
     difference => withRequestSyncFiles(files, async request => {
       await writeRequestSyncSnapshot(source.port, difference, request);
       const sender = proof(source);
-      await applyRequestSyncObject(target.port, {
+      const applied = await applyRequestSyncObject(target.port, {
         context: { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
           senderDeviceId: source.id, senderLibraryEpoch: sender.library_epoch,
           receiverDeviceId: target.id, receiverLibraryEpoch: proof(target).library_epoch },
@@ -39,6 +40,7 @@ export async function syncRequestLibrary(source: Peer, target: Peer) {
         requestId: new Uint8Array(16), facts: async function* () { yield* request.readFacts(); },
         loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
       });
+      onApplied?.(applied.workspaceScope);
       return 'delivered' as const;
     }));
   if (deferred.length) throw new Error(`test_request_sync_dependencies_unresolved:${deferred.map(value => value.globalId).join(',')}`);

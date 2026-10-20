@@ -25,7 +25,7 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 it('notifies committed node and tombstone identities once across normal repeated rounds', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
-  const events: ReturnType<typeof notification>[] = [];
+  const events: import('../ipc/contracts.js').WorkspaceSyncAppliedEvent[] = [];
   let deleted = false;
   osBoundary.send = (channel, payload) => {
     expect(channel).toBe('foliole:workspace-sync-applied');
@@ -36,7 +36,7 @@ it('notifies committed node and tombstone identities once across normal repeated
       expect(persisted.prepare("SELECT version_id FROM node_sync_tombstones WHERE node_id = 'topic'").get())
         .toEqual(deleted ? { version_id: 'deleted-version' } : undefined);
     } finally { persisted.close(); }
-    events.push(payload as ReturnType<typeof notification>);
+    events.push(payload as import('../ipc/contracts.js').WorkspaceSyncAppliedEvent);
   };
   const targetHost = { ...createDesktopRequestSyncDatabaseHost(target.file), ...target.host };
   try {
@@ -107,7 +107,8 @@ it('waits after a durable object commit and resumes remaining objects after reop
 });
 
 function notification() {
-  return { appliedNodeIds: ['topic'], appliedObjectIds: ['topic'], appliedReviewOpIds: [] };
+  return expect.objectContaining({ appliedNodeIds: ['topic'], appliedObjectIds: ['topic'], appliedReviewOpIds: [],
+    libraryScope: expect.any(String), workspaceScope: expect.objectContaining({ kind: expect.stringMatching(/^(nodes|full)$/u) }) });
 }
 
 function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSyncDatabaseHost, signal?: AbortSignal) {

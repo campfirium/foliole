@@ -1,3 +1,6 @@
+import { WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh';
+import { logRuntimeError } from '../shared/platform/runtimeLogging';
+
 import {
   isEditorInputDiagnosticEnabled,
   logEditorInputDiagnostic,
@@ -5,6 +8,7 @@ import {
 } from './workspaceEditorInputDiagnostics';
 import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry';
 import { useWorkspaceStore } from './workspaceStore';
+import { refreshWorkspaceSyncProjection } from './workspaceSyncProjectionRefresh';
 
 export type WorkspaceRefreshSource =
   | 'content-changed'
@@ -22,8 +26,8 @@ export type WorkspaceRefreshSource =
   | 'search-palette-import'
   | 'sync-applied';
 
-let workspaceRefreshInFlight: Promise<void> | null = null;
-let workspaceRefreshQueued = false;
+let refreshLibraryScope: string | undefined;
+const refreshes = new WorkspaceSnapshotRefresh(null);
 let workspaceRefreshDebounceId: ReturnType<typeof globalThis.setTimeout> | null = null;
 let workspaceRefreshDebouncedSource: WorkspaceRefreshSource = 'content-changed';
 
@@ -39,48 +43,66 @@ function logWorkspaceRehydrateDiagnostic(
   logEditorInputDiagnostic(event, details);
 }
 
-export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'content-changed') {
-  if (workspaceRefreshInFlight) {
-    workspaceRefreshQueued = true;
-    reportWorkspaceHydrateBootStage('refresh_queued', { source });
-    logWorkspaceRehydrateDiagnostic('workspace-rehydrate-queued', { source });
-    await workspaceRefreshInFlight;
-    return;
-  }
-  workspaceRefreshQueued = false;
+async function rehydrateWorkspace() {
+  await useWorkspaceStore.persist.rehydrate();
+  const error = useWorkspaceStore.getState().workspaceHydrationError;
+  if (error) throw new Error(error);
+}
+
+async function refreshRegisteredWorkspaceState(source: WorkspaceRefreshSource) {
   const startedAt = readEditorInputDiagnosticTime();
   reportWorkspaceHydrateBootStage('refresh_start', { source });
   logWorkspaceRehydrateDiagnostic('workspace-rehydrate-start', { source });
-  workspaceRefreshInFlight = Promise.resolve(useWorkspaceStore.persist.rehydrate()).finally(() => {
-    workspaceRefreshInFlight = null;
-  });
   try {
-    await workspaceRefreshInFlight;
+    await refreshes.refresh(async ({ scope }) => {
+      const libraryScope = refreshLibraryScope;
+      if (scope.kind === 'nodes' && !scope.activeNode && libraryScope && useWorkspaceStore.getState().isHydrated) {
+        try { await refreshWorkspaceSyncProjection(scope, libraryScope); }
+        catch (error) {
+          logRuntimeError('workspace projection refresh failed', {
+            area: 'persistence', action: 'refresh_workspace_projection', fallback: 'full_refresh', error
+          });
+          await rehydrateWorkspace();
+        }
+      } else await rehydrateWorkspace();
+      return null;
+    });
   } finally {
     const totalMs = readEditorInputDiagnosticTime() - startedAt;
-    reportWorkspaceHydrateBootStage('refresh_end', {
-      queued: workspaceRefreshQueued,
-      source,
-      totalMs
-    });
-    logWorkspaceRehydrateDiagnostic('workspace-rehydrate-end', {
-      queued: workspaceRefreshQueued,
-      source,
-      totalMs
-    });
-  }
-  if (workspaceRefreshQueued) {
-    await refreshWorkspaceState('queued');
+    reportWorkspaceHydrateBootStage('refresh_end', { source, totalMs });
+    logWorkspaceRehydrateDiagnostic('workspace-rehydrate-end', { source, totalMs });
   }
 }
 
+export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'content-changed') {
+  refreshes.register({ kind: 'full' });
+  await refreshRegisteredWorkspaceState(source);
+}
+
+export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string) {
+  if (refreshLibraryScope !== libraryScope) {
+    refreshLibraryScope = libraryScope;
+    refreshes.reset(null);
+  }
+  refreshes.register(scope);
+  scheduleWorkspaceRefresh('sync-applied');
+}
+
 export function requestWorkspaceStateRefresh(source: WorkspaceRefreshSource) {
+  refreshes.register({ kind: 'full' });
+  scheduleWorkspaceRefresh(source);
+}
+
+function scheduleWorkspaceRefresh(source: WorkspaceRefreshSource) {
   workspaceRefreshDebouncedSource = source;
   if (workspaceRefreshDebounceId) {
     globalThis.clearTimeout(workspaceRefreshDebounceId);
   }
   workspaceRefreshDebounceId = globalThis.setTimeout(() => {
     workspaceRefreshDebounceId = null;
-    void refreshWorkspaceState(workspaceRefreshDebouncedSource);
+    void refreshRegisteredWorkspaceState(workspaceRefreshDebouncedSource).catch(error => {
+      logRuntimeError('workspace refresh failed', { area: 'persistence', action: 'refresh_workspace',
+        fallback: 'retain_pending_refresh', error });
+    });
   }, WORKSPACE_REFRESH_EVENT_DEBOUNCE_MS);
 }

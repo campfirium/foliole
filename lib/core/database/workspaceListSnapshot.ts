@@ -26,7 +26,7 @@ interface WorkspaceMetaRow extends DatabaseRow {
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
-function queryWorkspaceRows(driver: DatabaseDriver) {
+export function queryWorkspaceRows(driver: DatabaseDriver, nodeIds?: readonly string[]) {
   const hostName = requireDatabaseHostName(driver);
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
@@ -78,8 +78,9 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
-     LEFT JOIN node_review nr ON nr.node_id = n.id`
-    , [hostName]
+     LEFT JOIN node_review nr ON nr.node_id = n.id
+     ${nodeIds ? 'WHERE n.id IN (SELECT value FROM json_each(?))' : ''}`
+    , nodeIds ? [hostName, JSON.stringify(nodeIds)] : [hostName]
   );
 }
 

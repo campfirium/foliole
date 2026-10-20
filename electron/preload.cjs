@@ -70,6 +70,19 @@ function normalizeReadwiseBookEpubProgressPayload(payload) {
   };
 }
 
+function sanitizeWorkspaceScope(payload) {
+  if (typeof payload?.libraryScope !== 'string' || !payload.libraryScope) return {};
+  const scope = payload.workspaceScope;
+  if (scope?.kind === 'full') return { libraryScope: payload.libraryScope, workspaceScope: { kind: 'full' } };
+  if (scope?.kind !== 'nodes' || !Array.isArray(scope.nodeIds)) return {};
+  const next = { kind: 'nodes', nodeIds: scope.nodeIds.filter(value => typeof value === 'string') };
+  for (const key of ['reviewNodeIds', 'readingNodeIds', 'openStateNodeIds']) {
+    if (Array.isArray(scope[key])) next[key] = scope[key].filter(value => typeof value === 'string');
+  }
+  for (const key of ['activeNode', 'structure']) if (scope[key] === true) next[key] = true;
+  return { libraryScope: payload.libraryScope, workspaceScope: next };
+}
+
 function subscribe(channel, handler) {
   if (!SUBSCRIBABLE_CHANNELS.has(channel)) return () => undefined;
 
@@ -167,7 +180,8 @@ function subscribe(channel, handler) {
       handler({
         appliedNodeIds: Array.isArray(payload?.appliedNodeIds) ? payload.appliedNodeIds.filter((value) => typeof value === 'string') : [],
         appliedObjectIds: Array.isArray(payload?.appliedObjectIds) ? payload.appliedObjectIds.filter((value) => typeof value === 'string') : [],
-        appliedReviewOpIds: Array.isArray(payload?.appliedReviewOpIds) ? payload.appliedReviewOpIds.filter((value) => typeof value === 'string') : []
+        appliedReviewOpIds: Array.isArray(payload?.appliedReviewOpIds) ? payload.appliedReviewOpIds.filter((value) => typeof value === 'string') : [],
+        ...sanitizeWorkspaceScope(payload)
       });
       return;
     }

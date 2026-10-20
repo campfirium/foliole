@@ -1,6 +1,7 @@
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite,
   type SyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
 import { clearReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 
 import { preserveDesktopIdentityRestore } from './preserveDesktopGroupRestore.js';
@@ -17,6 +18,6 @@ export async function prepareDesktopRequestSyncOverwrite(host: RequestSyncDataba
     clearReadwiseDeviceConnection();
     return result;
   });
-  if (reset.cleared) notifyWorkspaceSyncApplied({ appliedNodeIds: reset.removedNodeIds,
+  if (reset.cleared) notifyWorkspaceSyncApplied({ workspaceScope: { kind: 'full' }, libraryScope: currentLibraryScope(), appliedNodeIds: reset.removedNodeIds,
     appliedObjectIds: [], appliedReviewOpIds: [] });
 }

@@ -4,8 +4,10 @@ import { currentLibraryScope } from './attachmentResourceDescription.js';
 import { openDatabaseConnection } from './connection.js';
 
 export function loadWorkspaceListSnapshot(options?: { includePdfOpenings?: boolean }) {
-  const snapshot = loadWorkspaceListSnapshotViaDriver(openDatabaseConnection().driver, options);
-  if (!snapshot) return null;
+  const snapshot = loadWorkspaceListSnapshotViaDriver(openDatabaseConnection().driver, options) ?? {
+    activeNodeId: null, capturedWorkspaceVersion: new Date().toISOString(), nodeOrder: [], nodesById: {},
+    trashedNodeDeletedAtById: {}, trashedNodeIds: [], untitledSequenceByParent: {}
+  };
   const libraryScope = currentLibraryScope();
   return {
     ...snapshot,

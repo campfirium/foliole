@@ -19,6 +19,7 @@ vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn()
 vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync: vi.fn() }));
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -87,11 +88,32 @@ afterEach(async () => {
 });
 
 const POINT_COMMANDS: Array<[string, string, () => Record<string, unknown>]> = [
+  ['refreshing one synchronized article', NATIVE_COMMANDS.loadWorkspaceListProjection,
+    () => ({ nodeIds: [TARGET], structure: false, libraryScope: currentLibraryScope() })],
   ['opening one document', NATIVE_COMMANDS.loadNodeDocument, () => ({ nodeId: TARGET })],
   ['recording that a document was opened', NATIVE_COMMANDS.saveNodeOpenState,
     () => ({ lastOpenedAt: nextTimestamp(), nodeId: TARGET })],
   ['saving typed content of one document', NATIVE_COMMANDS.updateNodeContent, contentEditArgs]
 ];
+
+it('rejects a projection from a different library and malformed node identities', async () => {
+  await openLibrary(SMALL);
+  await expect(handleStorageCommand(NATIVE_COMMANDS.loadWorkspaceListProjection,
+    { nodeIds: [TARGET], structure: false, libraryScope: 'other-library' }))
+    .rejects.toThrow('workspace_projection_library_changed');
+  await expect(handleStorageCommand(NATIVE_COMMANDS.loadWorkspaceListProjection,
+    { nodeIds: 'not-an-array', structure: false, libraryScope: currentLibraryScope() }))
+    .rejects.toThrow();
+});
+
+it('returns an explicit empty library snapshot after an overwrite removes every node', async () => {
+  await openLibrary(SMALL);
+  openDatabaseConnection().driver.execute('DELETE FROM nodes');
+  await expect(handleStorageCommand(NATIVE_COMMANDS.loadWorkspaceListSnapshot, {})).resolves.toMatchObject({
+    activeNodeId: null, nodesById: {}, nodeOrder: [], trashedNodeIds: [], libraryScope: currentLibraryScope(),
+    capturedWorkspaceVersion: expect.any(String)
+  });
+});
 
 it.each(POINT_COMMANDS)('keeps SQL work for %s independent of library size', async (label, command, args) => {
   const { large, small } = await measureAtBothScales(command, args);

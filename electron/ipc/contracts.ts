@@ -1,3 +1,4 @@
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
 export const IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL = 'foliole:database-backups-changed';
@@ -47,6 +48,8 @@ export interface WorkspaceSyncAppliedEvent {
   appliedNodeIds: string[];
   appliedObjectIds: string[];
   appliedReviewOpIds: string[];
+  workspaceScope?: WorkspaceRefreshScope;
+  libraryScope?: string;
 }
 
 export interface WorkspaceContentChangedEvent {

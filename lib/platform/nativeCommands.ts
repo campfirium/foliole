@@ -151,6 +151,7 @@ export const NATIVE_COMMANDS = {
   windowSetNativeControlsVisible: 'window_set_native_controls_visible',
   windowToggleDevTools: 'window_toggle_dev_tools',
   windowToggleMaximize: 'window_toggle_maximize',
+  loadWorkspaceListProjection: 'load_workspace_list_projection',
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',
   loadNodeDocument: 'load_node_document',
   retainNodeEditorBase: 'retain_node_editor_base',

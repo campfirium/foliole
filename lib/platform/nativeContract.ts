@@ -1,3 +1,5 @@
+import type { WorkspaceListProjection } from '../core/database/workspaceListProjection.js';
+
 import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
 import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import type { NativeBackupSearchCommandMap } from './nativeBackupSearchContract.js';
@@ -88,6 +90,10 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.reviewPreview]: {
     args: NativeReviewPreviewArgs;
     result: NativeReviewPreviewResult;
+  };
+  [NATIVE_COMMANDS.loadWorkspaceListProjection]: {
+    args: { nodeIds: string[]; ancestorNodeIds?: string[]; structure: boolean; libraryScope: string };
+    result: WorkspaceListProjection;
   };
   [NATIVE_COMMANDS.loadWorkspaceListSnapshot]: {
     args: { includePdfOpenings?: boolean } | undefined;

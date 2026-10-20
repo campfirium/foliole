@@ -157,6 +157,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.windowSetNativeControlsVisible, route: 'windowAndUtility', capability: 'windowControl' },
   { command: NATIVE_COMMANDS.windowToggleDevTools, route: 'windowAndUtility', capability: 'windowControl' },
   { command: NATIVE_COMMANDS.windowToggleMaximize, route: 'windowAndUtility', capability: 'windowControl' },
+  { command: NATIVE_COMMANDS.loadWorkspaceListProjection, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadWorkspaceListSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadNodeDocument, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.retainNodeEditorBase, route: 'storage', capability: 'dataMutation' },
