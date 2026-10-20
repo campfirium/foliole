@@ -75,7 +75,8 @@ export function parseWindowsRemotePreflightArgs(argv, env = process.env) {
   return result;
 }
 
-const OUTDATED_WRAPPER = /parameter name 'PreflightBase'/u;
+// PowerShell localizes the message; the error id is stable across locales.
+const OUTDATED_WRAPPER = /NamedParameterNotFound|parameter name 'PreflightBase'/u;
 
 // COMPAT(windows-remote-preflight-bootstrap): a wrapper older than this action
 // rejects -PreflightBase before it pulls. A bare call pulls the current wrapper

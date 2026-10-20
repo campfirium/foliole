@@ -84,8 +84,10 @@ it('keeps the receipt of a failed Windows run', async () => {
   await expect(failed.promise).resolves.toMatchObject({ receipt: { runId: 'run-1' } });
 });
 
-it('aligns an outdated wrapper with a bare call before retrying with the base', async () => {
-  const outdated = "A parameter cannot be found that matches parameter name 'PreflightBase'.";
+it.each([
+  ['English', "A parameter cannot be found that matches parameter name 'PreflightBase'."],
+  ['localized', '+ FullyQualifiedErrorId : NamedParameterNotFound,windows-dev-action.ps1']
+])('aligns an outdated wrapper reporting %s errors before retrying with the base', async (_, outdated) => {
   const executeSsh = vi.fn()
     .mockRejectedValueOnce(Object.assign(new Error('bad'), { output: outdated }))
     .mockRejectedValueOnce(new Error('Unknown Windows DEV action'))
