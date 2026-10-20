@@ -57,3 +57,31 @@ it('includes the entry gate when full quality owns the whole reusable chain', ()
   });
   expect(report.current.criticalChain).toEqual({ nodes: ['dev-ref', 'full-quality'], observedSeconds: 19 });
 });
+
+it('warns about stages much slower than the recent success without hiding small drift', () => {
+  const at = (minutes) => new Date(Date.UTC(2026, 0, 1, 0, minutes)).toISOString();
+  const section = (electronMinutes, staticMinutes) => ({ run: { created_at: at(0) }, jobs: [
+    job('full-quality / t5-electron / Electron', at(0), at(0), at(electronMinutes)),
+    job('full-quality / t5-static / static', at(0), at(0), at(staticMinutes))
+  ] });
+  const report = analyzeHostedQualityTiming({
+    topology: 'remote-quality', current: section(13, 11), baseline: section(10, 10)
+  });
+  expect(report.slowdowns.map((entry) => entry.name)).toEqual([
+    'full-quality / t5-electron / Electron', 'workflow wall'
+  ]);
+  expect(report.slowdowns[0]).toMatchObject({ baselineSeconds: 600, currentSeconds: 780, ratio: 0.3 });
+  const markdown = renderHostedQualityTiming(report);
+  expect(markdown).toContain('Warning: slower than recent success');
+  expect(markdown).toContain('full-quality / t5-electron / Electron: 10m 0s → 13m 0s (+30%)');
+  expect(markdown).not.toContain('t5-static / static:');
+});
+
+it('stays quiet when there is no baseline to compare against', () => {
+  const report = analyzeHostedQualityTiming({ topology: 'remote-quality', baseline: null, current: {
+    run: { created_at: '2026-01-01T00:00:00Z' },
+    jobs: [job('dev-ref', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', '2026-01-01T01:00:00Z')]
+  } });
+  expect(report.slowdowns).toEqual([]);
+  expect(renderHostedQualityTiming(report)).not.toContain('Warning');
+});

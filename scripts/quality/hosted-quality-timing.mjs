@@ -5,6 +5,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { findTimingSlowdowns, renderTimingSlowdowns } from './hosted-quality-timing-slowdown.mjs';
+
 const TOPOLOGIES = {
   'remote-quality': {
     nodes: [
@@ -107,7 +109,9 @@ function metrics(section, topologyName) {
     peak: peakConcurrency(jobs),
     longestQueue: longestQueue ? { name: longestQueue.name, seconds: seconds(longestQueue.value) } : null,
     criticalChain: criticalChain(jobs, TOPOLOGIES[topologyName]),
-    incompleteJobs: jobs.filter((job) => job.started == null || job.completed == null).map((job) => job.name)
+    incompleteJobs: jobs.filter((job) => job.started == null || job.completed == null).map((job) => job.name),
+    jobExecutionSeconds: Object.fromEntries(jobs.filter((job) => job.started != null && job.completed != null)
+      .map((job) => [job.name, seconds(job.completed - job.started)]))
   };
 }
 
@@ -118,6 +122,7 @@ export function analyzeHostedQualityTiming(input) {
     topology: input.topology, current, baseline,
     wallDeltaSeconds: baseline && current.wallSeconds != null && baseline.wallSeconds != null
       ? current.wallSeconds - baseline.wallSeconds : null,
+    slowdowns: findTimingSlowdowns(current, baseline),
     dependencyPrecision: current.criticalChain
       ? 'top-level needs chain proven; nested reusable-workflow edges unknown'
       : 'unknown'
@@ -138,6 +143,7 @@ export function renderHostedQualityTiming(report) {
   return [
     '## Hosted quality capacity timing',
     '',
+    ...renderTimingSlowdowns(report.slowdowns ?? [], duration),
     `- Workflow wall: ${duration(current.wallSeconds)} (recent success: ${baseline}; delta: ${duration(report.wallDeltaSeconds)})`,
     `- API queue total: ${duration(current.queueSeconds)}; execution total: ${duration(current.executionSeconds)}`,
     `- Peak runner-backed jobs: ${current.peak}`,
