@@ -60,14 +60,15 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');
 });
 
-it('marks Sync as not yet available only after opening its settings page', () => {
+it('opens Sync settings without an obsolete development warning', () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
 
   const sidebar = screen.getByLabelText('Settings categories');
   expect(within(sidebar).getByRole('button', { name: 'Sync' })).toBeVisible();
   expect(within(sidebar).queryByText('In development · Not yet available')).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: 'Sync' })).toBeVisible();
-  expect(screen.getByText('In development · Not yet available')).toBeVisible();
+  expect(screen.queryByText('In development · Not yet available')).not.toBeInTheDocument();
+  expect(screen.getByText('Manage this device and its Sync Group.')).toBeVisible();
 });
 
 it('places the mouse gesture switch in the category header', () => {

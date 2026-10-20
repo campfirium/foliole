@@ -28,7 +28,6 @@ import {
 } from './useSettingsSearch';
 
 import { definedProps } from '@/shared/lib/definedProps';
-import { AppStatusBadge } from '@/shared/ui';
 
 interface SettingsPanelProps {
   desktopAdapters?: SettingsDesktopAdapters;
@@ -183,7 +182,6 @@ function createSettingsCategoryProps(
 }
 
 function SettingsPanelBody(props: SettingsPanelBodyProps) {
-  const t = useTranslation();
   const hotkeys = useHotkeySettings();
   const preview = useSettingsPreviewMode();
   const [isBackdropTransparent, setIsBackdropTransparent] = useState(false);
@@ -205,9 +203,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
       headerNotice={props.headerNotice}
       hotkeys={hotkeys}
       headerActions={
-        props.activeCategory === 'companion-sync' ? (
-          <AppStatusBadge label={t('settings.companionSync.status.inDevelopment')} />
-        ) : props.activeCategory === 'mouse-gestures' ? (
+        props.activeCategory === 'mouse-gestures' ? (
           <SettingsMouseGesturesHeaderControl />
         ) : undefined
       }
