@@ -10,6 +10,7 @@ import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
 
 export const WINDOWS_DEV_TARGET_REF = 'refs/heads/dev';
 const REVISION = /^[0-9a-f]{40}$/u;
+const PINNED_SOURCE_BRANCHES = ['dev', 'release'];
 
 export function extractCandidateRevision(args) {
   const remaining = [...args];
@@ -21,16 +22,16 @@ export function extractCandidateRevision(args) {
   return { args: remaining, revision };
 }
 
-export function assertPinnedDevRevision(repoRoot, revision, run = spawnSync) {
+export function assertPinnedCandidateRevision(repoRoot, revision, run = spawnSync) {
   if (!REVISION.test(revision ?? '')) throw new Error('Windows candidate revision must be a full SHA');
   const branch = run('git', ['branch', '--show-current'], { cwd: repoRoot, encoding: 'utf8' });
-  if (branch.status !== 0 || branch.stdout.trim() !== 'dev') {
-    throw new Error('Pinned Windows candidate requires Mac dev');
+  if (branch.status !== 0 || !PINNED_SOURCE_BRANCHES.includes(branch.stdout.trim())) {
+    throw new Error('Pinned Windows candidate requires Mac dev or release');
   }
-  const ancestor = run('git', ['merge-base', '--is-ancestor', revision, 'refs/heads/dev'], {
-    cwd: repoRoot
-  });
-  if (ancestor.status !== 0) throw new Error('Pinned Windows candidate must belong to Mac dev');
+  const owned = PINNED_SOURCE_BRANCHES.some((name) => run('git', [
+    'merge-base', '--is-ancestor', revision, `refs/heads/${name}`
+  ], { cwd: repoRoot }).status === 0);
+  if (!owned) throw new Error('Pinned Windows candidate must belong to Mac dev or release');
   return revision;
 }
 

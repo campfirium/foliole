@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
 
 import {
-  assertPinnedDevRevision, copyWindowsCandidateReceipt, extractCandidateRevision,
+  assertPinnedCandidateRevision, copyWindowsCandidateReceipt, extractCandidateRevision,
   extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
 import { parseWindowsDevControlArgs, windowsDevPushSpec } from './windows-dev-control.mjs';
@@ -60,12 +60,36 @@ it('freezes the committed dev tree while leaving Mac edits untouched', async () 
     expect(freezeWindowsCandidate(root, 'refs/heads/dev')).toMatchObject({
       clean: false, committed: true, revision
     });
-    expect(assertPinnedDevRevision(root, revision)).toBe(revision);
+    expect(assertPinnedCandidateRevision(root, revision)).toBe(revision);
     expect(fs.readFileSync(path.join(root, 'tracked.txt'), 'utf8')).toBe('working edit');
-    expect(() => assertPinnedDevRevision(root, 'f'.repeat(40))).toThrow('must belong to Mac dev');
+    expect(() => assertPinnedCandidateRevision(root, 'f'.repeat(40))).toThrow('must belong to Mac dev');
   } finally {
     await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
     expect(fs.existsSync(root)).toBe(false);
+  }
+}, 15_000);
+
+it('pins a release candidate commit while rejecting commits outside dev and release', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-release-candidate-'));
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  const commit = (message) => git('-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+    'commit', '-q', '--allow-empty', '-m', message);
+  try {
+    git('init', '-q', '-b', 'dev');
+    commit('baseline');
+    git('checkout', '-q', '-b', 'release');
+    commit('release version');
+    const release = git('rev-parse', 'HEAD');
+    git('checkout', '-q', '-b', 'scratch');
+    commit('unrelated');
+    const unrelated = git('rev-parse', 'HEAD');
+    git('checkout', '-q', 'release');
+    expect(assertPinnedCandidateRevision(root, release)).toBe(release);
+    expect(() => assertPinnedCandidateRevision(root, unrelated)).toThrow('must belong to Mac dev or release');
+    git('checkout', '-q', 'scratch');
+    expect(() => assertPinnedCandidateRevision(root, release)).toThrow('requires Mac dev or release');
+  } finally {
+    await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
   }
 }, 15_000);
 

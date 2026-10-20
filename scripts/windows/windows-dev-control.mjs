@@ -18,7 +18,7 @@ import {
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
 import {
-  assertPinnedDevRevision, collectWindowsCandidateControl, extractCandidateRevision,
+  assertPinnedCandidateRevision, collectWindowsCandidateControl, extractCandidateRevision,
   extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
 import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
@@ -154,7 +154,7 @@ export async function runWindowsDevControl({
   if (syncGroup) return syncGroup;
   const localCandidate = ['frozen-revision-preflight', 'multi-device-sync-candidate'].includes(action)
     ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
-  if (revision) assertPinnedDevRevision(repoRoot, revision);
+  if (revision) assertPinnedCandidateRevision(repoRoot, revision);
   if (action === 'internal-install') {
     await prepareInternalRuntime({ repoRoot, revision, executeGit, executeScp, host, env });
   }

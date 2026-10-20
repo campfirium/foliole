@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs';
 import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 import { assertFriRunSucceeded } from './fri-run-result.mjs';
+import { assertFriPinnedRevision, writeFriPinnedRevision } from './fri-pinned-revision.mjs';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_DEV_APP_ID = 'com.campfirium.foliole.ios.dev';
@@ -103,6 +104,8 @@ export async function runFriDevWorkflow({
   repoRoot = process.cwd(),
   readiness = createFriPhysicalReadinessAdapter(),
   retention = retainFriDevelopmentApps,
+  revision = null,
+  revisionCheck = assertFriPinnedRevision,
   runnerPath = FRI_XCUITEST_RUNNER,
   scenario = 'browse',
   run = execute
@@ -110,6 +113,7 @@ export async function runFriDevWorkflow({
   if (!fs.existsSync(runnerPath)) {
     throw new Error(`Fixed Fri XCUITest runner is missing: ${runnerPath}`);
   }
+  const pinned = revision === null ? null : revisionCheck(repoRoot, revision);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const commands = buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath, scenario });
   for (const entry of commands.slice(0, 2)) {
@@ -123,13 +127,19 @@ export async function runFriDevWorkflow({
   for (const entry of commands.slice(2)) {
     await run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
-  return { evidenceRoot, testIdentifier: commands[2].args[commands[2].args.indexOf('--only-testing') + 1] };
+  if (pinned) {
+    revisionCheck(repoRoot, revision);
+    writeFriPinnedRevision(evidenceRoot, pinned);
+  }
+  return { evidenceRoot, ...(pinned ? { revision: pinned.revision } : {}), testIdentifier: commands[2].args[commands[2].args.indexOf('--only-testing') + 1] };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const repoRoot = process.cwd();
   const evidenceRoot = path.resolve(option(process.argv.slice(2), '--artifacts-dir')
     ?? path.join(repoRoot, '.tmp/artifacts/t162-fri-dev-workflow', timestamp()));
-  const result = await runFriDevWorkflow({ evidenceRoot, repoRoot, scenario: option(process.argv.slice(2), '--scenario') ?? 'browse' });
+  const result = await runFriDevWorkflow({ evidenceRoot, repoRoot,
+    revision: process.argv.includes('--revision') ? option(process.argv.slice(2), '--revision') ?? '' : null,
+    scenario: option(process.argv.slice(2), '--scenario') ?? 'browse' });
   console.log(`[fri-dev-workflow] status=success evidence=${result.evidenceRoot}`);
 }
