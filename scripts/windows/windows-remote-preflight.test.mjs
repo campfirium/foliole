@@ -140,3 +140,26 @@ it('records exit codes and the output tail when a test step ends without a repor
   const tail = result.receipt.failure.steps[0].outputTail.join('\n');
   expect(tail.includes('\u001b') || tail.includes('\u00b7')).toBe(false);
 });
+
+it('keeps the npm cause of a failed offline install in the receipt', async () => {
+  const fixture = setup();
+  fs.writeFileSync(path.join(fixture.repoRoot, 'package-lock.json'), '{"lock":3}');
+  fixture.execute.mockImplementation(async (command, args) => {
+    if (command === 'git') {
+      if (args[0] === 'rev-parse') return { code: 0, stdout: args[1] === 'HEAD' ? TARGET : 'd'.repeat(40) };
+      return { code: 0, stdout: '' };
+    }
+    return { code: 1, output: [
+      'npm warn deprecated glob@7.2.3: old',
+      "npm warn cleanup     [Error: EPERM: operation not permitted, rmdir 'D:\\C\\foliole\\node_modules\\x'] {",
+      'npm error code ENOTCACHED',
+      "npm error request to https://registry.example/zod/-/zod-4.6.7.tgz failed: cache mode is 'only-if-cached'",
+      'npm error A complete log of this run can be found in: D:\\log'
+    ].join('\n') };
+  });
+  const result = await run(fixture);
+  expect(result.receipt).toMatchObject({ failure: { stage: 'dependencies' }, resultStatus: 'error' });
+  expect(result.receipt.failure.message).toMatch(/^dependencies exited 1: .*EPERM.*\| npm error code ENOTCACHED \| .*zod-4\.6\.7\.tgz/u);
+  expect(result.receipt.failure.message).not.toContain('complete log');
+  expect(result.receipt.failure.message).not.toContain('deprecated');
+});

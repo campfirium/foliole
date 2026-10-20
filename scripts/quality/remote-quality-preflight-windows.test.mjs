@@ -40,8 +40,16 @@ describe('Windows preflight receipt', () => {
   it('reports Windows test failures and setup errors as failures', () => {
     expect(() => verify(receipt({ failure: { failedFiles: [{ file: 'a.test.mjs', message: 'boom' }] },
       resultStatus: 'failed' }))).toThrow(/remote preflight failed[\s\S]*a\.test\.mjs: boom/u);
-    expect(() => verify(receipt({ failure: { message: 'npm ci exited 1', stage: 'dependencies' },
-      resultStatus: 'error' }))).toThrow('could not run (dependencies)');
+    expect(() => verify(receipt({ failure: { message: 'base missing', stage: 'base' },
+      resultStatus: 'error' }))).toThrow('could not run (base)');
+  });
+
+  it('names a dependency failure even though the receipt carries no target', () => {
+    const failed = { base: BASE, failure: { message: 'dependencies exited 1: npm error code ENOTCACHED',
+      stage: 'dependencies' }, resultStatus: 'error' };
+    expect(() => verify(failed)).toThrow(
+      'Windows dependency preparation failed (dependencies): dependencies exited 1: npm error code ENOTCACHED'
+    );
   });
 });
 

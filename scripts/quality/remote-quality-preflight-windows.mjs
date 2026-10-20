@@ -14,15 +14,19 @@ function formatFailedFiles(failure) {
 // A Windows receipt stands in for the local preflight only when it ran this
 // exact target from the same base and cap and covered every selected test.
 export function verifyWindowsPreflightReceipt({ base, cap, expected, receipt, target }) {
+  // A setup failure stops before the target is recorded, so it is reported first.
+  if (receipt?.resultStatus === 'error') {
+    const stage = receipt.failure?.stage ?? 'entry';
+    const what = stage.startsWith('dependencies') ? 'Windows dependency preparation failed'
+      : 'Windows preflight could not run';
+    throw new Error(`${what} (${stage}): ${receipt.failure?.message}`);
+  }
   if (receipt?.target?.revision !== target) {
     throw new Error(`Windows preflight ran ${receipt?.target?.revision ?? 'no revision'}, `
       + `not the dispatch target ${target}`);
   }
   if (receipt.base !== base) {
     throw new Error(`Windows preflight base ${receipt.base} differs from ${base}`);
-  }
-  if (receipt.resultStatus === 'error') {
-    throw new Error(`Windows preflight could not run (${receipt.failure?.stage}): ${receipt.failure?.message}`);
   }
   if (receipt.cap !== cap) throw new Error(`Windows preflight cap ${receipt.cap} differs from ${cap}`);
   const selected = new Set(receipt.selected ?? []);

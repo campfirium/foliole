@@ -52,6 +52,13 @@ export function assertCachedElectronHeaders({ fsApi, home = os.homedir(), paths 
   }
 }
 
+// npm prints the cause on `npm error` lines and failed cleanups as E-codes.
+export function npmFailureLines(output) {
+  return output.split(/\r?\n/u).filter((line) => (/^npm error (?!A complete log)/u.test(line)
+    || /^npm warn cleanup\s+\[Error: E[A-Z]+/u.test(line))).map((line) => line.trim().slice(0, 300))
+    .slice(0, 8);
+}
+
 // Installs the locked dependencies only when the lock or the installed tree
 // changed since this action last materialized them; any other action that
 // reinstalls node_modules moves the installed stamp and forces a refresh.
@@ -73,8 +80,9 @@ export async function ensureWindowsPreflightDependencies({ execute, fsApi, home,
     });
     output += result.output ?? '';
     if (result.code !== 0) {
-      throw Object.assign(new Error(`${command.stage} exited ${result.code}`),
-        { output, stage: command.stage });
+      const causes = npmFailureLines(result.output ?? '');
+      throw Object.assign(new Error(`${command.stage} exited ${result.code}`
+        + `${causes.length ? `: ${causes.join(' | ')}` : ''}`), { output, stage: command.stage });
     }
   }
   fsApi.mkdirSync(path.dirname(markerPath), { recursive: true });
