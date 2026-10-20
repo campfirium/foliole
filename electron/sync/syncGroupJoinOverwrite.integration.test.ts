@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
+import { buildRestoreFixture, completeJoinWithDiagnostics, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
 
 let root = '';
 const workers: ReturnType<typeof startRestoreFixture>[] = [];
@@ -143,7 +143,7 @@ it.each([false, true])('uses group data to replace local data with an empty prov
     join_request: { request_id: string }
   };
   await provider!.send('joinAccept', { requestId: request.join_request.request_id });
-  await source!.send('joinComplete');
+  await completeJoinWithDiagnostics(source!, provider!);
   await sync(source!, peers[1]!);
   await sync(provider!, peers[0]!);
   const local = await source!.send('reopen');

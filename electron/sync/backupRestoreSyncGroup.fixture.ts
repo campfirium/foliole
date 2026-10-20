@@ -203,6 +203,7 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'windowEvents') return windowEvents.splice(0);
   if (action === 'preserveConcurrent') return preserveWithConcurrentTransaction(String(args.groupId));
   if (action === 'snapshot') return runWithDatabaseConnectionOwner(snapshot);
+  if (action === 'syncActivity') return runWithDatabaseConnectionOwner(loadDesktopSyncActivity);
   if (action === 'reopen') return reopenAfterSyncStops().then(snapshot);
   if (action === 'close') {
     await stopLanWorkspaceSyncServer();

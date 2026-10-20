@@ -75,3 +75,13 @@ function terminate(child: ChildProcess) {
     child.kill();
   });
 }
+
+export async function completeJoinWithDiagnostics(
+  applicant: ReturnType<typeof startRestoreFixture>, provider: ReturnType<typeof startRestoreFixture>
+) {
+  try { return await applicant.send('joinComplete'); }
+  catch (error) {
+    console.error('[provider-join-failure]', await provider.send('syncActivity').catch(String));
+    throw error;
+  }
+}

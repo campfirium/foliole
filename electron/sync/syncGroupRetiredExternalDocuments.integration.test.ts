@@ -13,7 +13,7 @@ import { parseSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalA
 import { restorePreCurrentParentOrderFixture } from '../database/numberedMigrationTestSupport.js';
 import { seedRetiredExternalDocuments } from '../database/retiredExternalDocuments.testSupport.js';
 
-import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
+import { buildRestoreFixture, completeJoinWithDiagnostics, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
 
 it('resumes a blocked use-group adoption after provider migration without another identity or reverse overwrite', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-retired-external-adoption-'));
@@ -51,7 +51,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     withDatabase(peers[1]!.database, restorePreCurrentParentOrderFixture);
     await provider!.send('reopen');
     await provider!.send('joinProviderEnable');
-    await applicant!.send('joinComplete');
+    await completeJoinWithDiagnostics(applicant!, provider!);
     expect(localIdentity(peers[0]!.database)).toBe(identity);
     expect(readAdoption(peers[0]!.database)).toBeNull();
     const completed = withDatabase(peers[0]!.database, (db) => parseSyncGroupLocalAdoption(z.string().parse(
