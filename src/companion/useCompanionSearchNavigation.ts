@@ -39,7 +39,7 @@ export function useCompanionSearchNavigation(surface: ReturnType<typeof useCompa
     surface.handleExitSearchArticle();
   }, [surface]);
   const isTopicOpen = Boolean(
-    topicNodeId && surface.selectedBrowseNodeId === topicNodeId && surface.readableArticle?.nodeId === topicNodeId
+    topicNodeId && surface.selectedBrowseNodeId === topicNodeId
   );
   return {
     exitExternalDocument: () => setExternalDocument(null),
