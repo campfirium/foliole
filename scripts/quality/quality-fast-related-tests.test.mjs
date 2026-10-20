@@ -21,6 +21,15 @@ describe('quality fast related test routing', () => {
     expect(steps[1].args).toContain('src/companion/companionCaptureTextActions.ios.test.ts');
   });
 
+  it('runs Electron ABI tests in forked workers like the hosted Electron buckets', () => {
+    const [ordinary, electron] = buildRelatedTestSteps([
+      'src/companion/plain.test.ts', 'electron/database/syncObjects.test.ts'
+    ]);
+    expect(ordinary.args).toContain('--pool=threads');
+    expect(electron.args).toContain('--pool=forks');
+    expect(electron.args).not.toContain('--pool=threads');
+  });
+
   it('stops before the next ABI bucket when a related test bucket fails', async () => {
     const calls = [];
     await expect(runRelatedTests([

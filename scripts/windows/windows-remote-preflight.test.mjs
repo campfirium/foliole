@@ -112,3 +112,31 @@ it('refuses to rebuild native modules when Electron headers would be downloaded'
   expect(result.receipt.failure.message).toContain('refusing to download');
   expect(fixture.commands.filter(([command]) => command === 'node')).toHaveLength(2);
 });
+
+it('records exit codes and the output tail when a test step ends without a report', async () => {
+  const fixture = setup();
+  const crash = '\u001b[32m\u00b7\u001b[39m{"event":"timing_metric"}\n'
+    + '[vitest-summary] child exited: code=3221225477 signal=none\n'
+    + '[vitest-summary] report unavailable: .tmp/vitest/related-electron.json\n'
+    + '[electron-sqlite-runner] child exited status=1 signal=null\n';
+  fixture.execute.mockImplementation(async (command, args) => {
+    if (command === 'git') {
+      if (args[0] === 'rev-parse') return { code: 0, stdout: args[1] === 'HEAD' ? TARGET : 'd'.repeat(40) };
+      return { code: 0, stdout: '' };
+    }
+    return args[0] === 'runner.mjs' ? { code: 1, output: crash } : { code: 0, output: '' };
+  });
+  const runTests = async (files, runner) => {
+    if (await runner('node', ['runner.mjs', 'summary.mjs', '.tmp/vitest/related-electron.json']) !== 0) {
+      throw new Error('Electron ABI related tests failed');
+    }
+  };
+  const result = await run(fixture, { runTests });
+  expect(result.receipt.failure).toMatchObject({ failedFiles: [], steps: [{
+    code: 1, report: '.tmp/vitest/related-electron.json', vitestExitCode: 3221225477, vitestExitHex: '0xC0000005'
+  }] });
+  expect(result.receipt.failure.steps[0].outputTail.at(-1))
+    .toBe('[electron-sqlite-runner] child exited status=1 signal=null');
+  const tail = result.receipt.failure.steps[0].outputTail.join('\n');
+  expect(tail.includes('\u001b') || tail.includes('\u00b7')).toBe(false);
+});

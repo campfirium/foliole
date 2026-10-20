@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 
 import { runRelatedTests } from '../quality/quality-fast-related-tests.mjs';
 import { planPreflightSelection } from '../quality/remote-quality-preflight-plan.mjs';
@@ -57,24 +58,44 @@ function electronVersion(fsApi, repoRoot) {
   return readJson(fsApi, path.join(repoRoot, 'node_modules', 'electron', 'package.json'))?.version ?? null;
 }
 
+const CHILD_EXIT = /\[vitest-summary\] child exited: code=(\d+)/u;
+
+// A step that dies before vitest writes its report leaves no failed files, so
+// the step itself records its exit codes and the end of its output.
+export function describeTestStep(args, code, output) {
+  const report = args.find((arg) => /^\.tmp\/vitest\/.+\.json$/u.test(arg)) ?? null;
+  const childCode = Number(CHILD_EXIT.exec(output)?.[1] ?? Number.NaN);
+  const lines = stripVTControlCharacters(output).replaceAll('\u00b7', '').split(/\r?\n/u).filter((line) => line.trim());
+  return { code, report, ...(Number.isSafeInteger(childCode) ? {
+    vitestExitCode: childCode, vitestExitHex: `0x${childCode.toString(16).toUpperCase()}`
+  } : {}), outputTail: lines.slice(-20).map((line) => line.slice(0, 300)) };
+}
+
 async function runSelectedTests({ execute, files, paths, runTests }) {
   let output = '';
+  const steps = [];
   const runner = async (command, args) => {
+    let code;
+    let stepOutput;
     try {
       const result = await execute(command, args, { cwd: paths.repoRoot,
         timeoutCode: 'tests_timeout', timeoutMs: TEST_TIMEOUT_MS, windowsHide: true });
-      output += result.output ?? '';
-      return result.code;
+      ({ code } = result);
+      stepOutput = result.output ?? '';
     } catch (error) {
-      output += `${error.output ?? ''}\n${error.message}\n`;
-      return 1;
+      code = 1;
+      stepOutput = `${error.output ?? ''}\n${error.message}\n`;
     }
+    output += stepOutput;
+    steps.push(describeTestStep(args, code, stepOutput));
+    return code;
   };
   try {
     await runTests(files, runner);
     return { output, passed: true };
   } catch (error) {
-    return { message: error.message, output, passed: false };
+    return { message: error.message, output, passed: false,
+      steps: steps.filter((step) => step.code !== 0) };
   }
 }
 
@@ -129,7 +150,7 @@ export async function runWindowsRemotePreflight({
     receipt.resultStatus = tests.passed ? 'passed' : 'failed';
     if (!tests.passed) {
       receipt.failure = { failedFiles: collectFailedTestFiles(fsApi, paths.repoRoot),
-        message: tests.message, stage: 'tests' };
+        message: tests.message, stage: 'tests', steps: tests.steps };
     }
   } catch (error) {
     log += error.output ?? '';
