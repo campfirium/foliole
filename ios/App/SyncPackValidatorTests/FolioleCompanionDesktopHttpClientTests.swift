@@ -33,7 +33,17 @@ final class FolioleCompanionDesktopHttpClientTests: XCTestCase {
         XCTAssertNil(FolioleCompanionBonjourEndpoint.resolvedHost(nil))
     }
 
-    func testBonjourPreservesDeviceAndProtocolIdentityFromSharedHostFixture() throws {
+    func testBonjourKeepsAResolvedAddressWhenTheServiceResolvesAgain() {
+        let ip = "http://192.168.0.10:59324"
+        let host = "http://Maci-2.local:59324"
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredEndpoint(current: nil, resolved: host), host)
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredEndpoint(current: host, resolved: ip), ip)
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredEndpoint(current: ip, resolved: host), ip)
+        XCTAssertEqual(FolioleCompanionBonjourEndpoint.preferredEndpoint(
+            current: ip, resolved: "http://192.168.0.22:59324"), "http://192.168.0.22:59324")
+    }
+
+        func testBonjourPreservesDeviceAndProtocolIdentityFromSharedHostFixture() throws {
         let fixture = try JSONSerialization.jsonObject(with: Data(contentsOf: sharedFixtureURL()))
             as? [String: Any]
         let deviceKey = try XCTUnwrap(fixture?["device_txt_key"] as? String)

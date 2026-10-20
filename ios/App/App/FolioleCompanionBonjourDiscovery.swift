@@ -136,7 +136,9 @@ final class FolioleCompanionBonjourDiscoverySession: NSObject, NetServiceDelegat
         guard let entry = services.first(where: { $0.value === sender }),
               let data = sender.txtRecordData() else { return }
         let txt = FolioleCompanionBonjourTXT.decode(data)
-        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
+        guard let resolved = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
+        let endpoint = FolioleCompanionBonjourEndpoint.preferredEndpoint(
+            current: results[entry.key]?[candidateKey("endpointUrl")] as? String, resolved: resolved)
         var candidate: [String: Any] = [candidateKey("endpointUrl"): endpoint, candidateKey("source"): "nsd"]
         candidate[candidateKey("protocolTxt")] = txt
         let change = results[entry.key] == nil ? "found" : "changed"
@@ -164,7 +166,8 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
     private let completion: ([[String: Any]]) -> Void
     private let contract: FolioleCompanionNetworkContract
     private var finished = false
-    private var results: [[String: Any]] = []
+    private var results: [String: [String: Any]] = [:]
+    private var resultOrder: [String] = []
     private var services: [NetService] = []
     private var serviceKeys = Set<String>()
 
@@ -209,11 +212,12 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
 
     func netServiceDidResolveAddress(_ sender: NetService) {
         let txt = sender.txtRecordData().map(FolioleCompanionBonjourTXT.decode) ?? [:]
-        guard let endpoint = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
-        guard !results.contains(where: { $0[endpointKey] as? String == endpoint }) else { return }
-        var candidate: [String: Any] = [endpointKey: endpoint, sourceKey: "nsd"]
-        candidate[protocolTxtKey] = txt
-        results.append(candidate)
+        guard let resolved = FolioleCompanionBonjourEndpoint.url(service: sender) else { return }
+        let key = "\(sender.name)|\(sender.type)|\(sender.domain)"
+        let endpoint = FolioleCompanionBonjourEndpoint.preferredEndpoint(
+            current: results[key]?[endpointKey] as? String, resolved: resolved)
+        if results[key] == nil { resultOrder.append(key) }
+        results[key] = [endpointKey: endpoint, sourceKey: "nsd", protocolTxtKey: txt]
     }
 
     private func finish() {
@@ -222,7 +226,7 @@ final class FolioleCompanionBonjourDiscovery: NSObject, NetServiceDelegate {
         browser?.cancel()
         browser = nil
         services.forEach { $0.stop() }
-        completion(results)
+        completion(resultOrder.compactMap { results[$0] })
     }
 
     private var endpointKey: String { networkCandidateKey("endpointUrl") }
