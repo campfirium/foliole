@@ -30,6 +30,8 @@ import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyn
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { ReadingActionsSheet } from './CompanionReadingSheets';
+import { CompanionShellView } from './CompanionShellView';
+import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
 import { restoreCompanionTrashNode } from './companionTrashActions';
 import { createCompanionTrashRestoreHandler } from './companionTrashController';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -177,4 +179,36 @@ it('rejects an old restore handler after the database is reopened', async () => 
   await closeIosCompanionDatabase(); await openLibrary();
   await expect(handler('topic')).rejects.toThrow('companion_restore_library_changed');
   expect((await loadCompanionWorkspaceNode('topic'))?.deletedAt).toBeTruthy();
+});
+
+it('keeps an empty trash navigable after its selected topic is restored', async () => {
+  await seed('topic');
+  const before = await loadCompanionWorkspaceSyncState();
+  await restoreCompanionTrashNode({ deviceId: 'fixture', nodeId: 'topic', snapshot: before.workspace_snapshot });
+  const state = await loadCompanionWorkspaceSyncState();
+  expect(state.workspace_snapshot?.trashedNodeIds).not.toContain('topic');
+  const onBack = vi.fn();
+  renderWithLocalization(<CompanionShellView model={{
+    activeSecondaryDestinationId: 'directory',
+    companionTabs: { config: DEFAULT_COMPANION_TAB_CONFIG },
+    directoryReadingSequence: { capture: vi.fn() },
+    directorySelection: { kind: 'trash' },
+    floatingBar: {},
+    handleContainerScroll: vi.fn(),
+    handleNavigationAction: vi.fn(),
+    handleSecondaryDestination: vi.fn(),
+    isBrowseDirectoryOpen: true,
+    isCaptureSheetOpen: false,
+    isNavigationVisible: true,
+    setDirectorySelection: vi.fn(),
+    surface: { activeAction: 'recent', browsedFolder: null,
+      effectiveReviewSession: { currentCard: null },
+      readableArticle: { nodeId: 'topic' }, selectedBrowseNodeId: 'topic' },
+    topBarProps: { title: 'Trash', onBack, backLabel: 'Back' },
+    workspaceSync: { state, isWorkspaceSyncStateReady: true, status: 'idle' }
+  } as never} />);
+  expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
+  expect(screen.getByText('This folder is empty')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  expect(onBack).toHaveBeenCalledOnce();
 });

@@ -6,6 +6,7 @@ import {
   companionReviewBottomInsetClassName,
   companionViewportHeightClassName
 } from './companionCssCompatibility';
+import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionListViewportProvider } from './CompanionListViewport';
 import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
@@ -86,6 +87,7 @@ function renderCompanionMainContent(model: CompanionShellModel) {
 
 function isReadableArticleImmersive(model: CompanionShellModel) {
   return Boolean(model.searchExternalDocument || model.searchPdfResult) || (model.surface.activeAction === 'recent'
+    && (!model.isBrowseDirectoryOpen || canRenderCompanionDirectoryArticle(model))
     && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
     && !model.surface.browsedFolder);

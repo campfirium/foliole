@@ -9,6 +9,8 @@ export function canRenderCompanionDirectoryArticle(args: {
   surface: ReturnType<typeof useCompanionArticleSurface>;
   workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
 }) {
+  const kind = args.directorySelection.kind;
+  if (kind !== 'internal' && kind !== 'trash' && kind !== 'trashFolder' && kind !== 'virtual') return false;
   const selectedNodeId = args.surface.selectedBrowseNodeId;
   const isTrashSelection = args.directorySelection.kind === 'trash' || args.directorySelection.kind === 'trashFolder';
   const snapshot = args.workspaceSync.state.workspace_snapshot;

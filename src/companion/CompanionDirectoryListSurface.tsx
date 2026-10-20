@@ -85,7 +85,7 @@ export function CompanionDirectoryList(props: {
 }) {
   const { locale, t } = useLocalization();
   const entries = useMemo(() => flattenDirectorySections(props.sections), [props.sections]);
-  if (props.sections.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="px-1 py-6">
         <AppEmptyState
