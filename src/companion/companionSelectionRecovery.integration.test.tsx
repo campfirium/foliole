@@ -37,6 +37,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 let root = '';
 let database: Database.Database | null = null;
+let committedReadFailures = 0;
 
 async function openLibrary() {
   const file = path.join(root, 'companion.db');
@@ -44,6 +45,19 @@ async function openLibrary() {
   const sqlite = new Database(file);
   database = sqlite;
   const manager = createFakeCapacitorDatabaseManager(sqlite, existed, () => { database = null; });
+  const createConnection = manager.createConnection.bind(manager);
+  manager.createConnection = async (...args) => {
+    const connection = await createConnection(...args);
+    const query = connection.query.bind(connection);
+    connection.query = async (sql, values) => {
+      if (sql.startsWith('WITH RECURSIVE visible_nodes') && committedReadFailures > 0 && savedAnnotations().length) {
+        committedReadFailures -= 1;
+        throw new Error('Committed annotation snapshot unavailable');
+      }
+      return query(sql, values);
+    };
+    return connection;
+  };
   await initializeIosCompanionDatabase({
     booted_at: '2026-10-03T00:00:00Z', database_path: null, database_ready: false,
     host_name: 'Android mutation fixture', runtime_kind: 'android-capacitor'
@@ -51,6 +65,7 @@ async function openLibrary() {
 }
 
 beforeEach(async () => {
+  committedReadFailures = 0;
   root = mkdtempSync(path.join(os.tmpdir(), 'companion-capture-recovery-'));
   await openLibrary();
   database!.exec("INSERT INTO nodes (id, title, kind, created_at, updated_at) VALUES ('source', 'Source', 'topic', '2026-10-03', '2026-10-03')");
@@ -129,8 +144,7 @@ it.each(['highlight', 'note'])('preserves %s interaction across an incoming save
 it.each(['Highlight', 'Cloze', 'note'])('retries only the refresh after saving %s', async (kind) => {
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
   renderWithLocalization(<AnnotationSurface initial={await loadCompanionWorkspaceSyncState()} />);
-  const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
-    .mockRejectedValueOnce(new Error('Read unavailable'));
+  committedReadFailures = 1;
   if (kind === 'note') {
     fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
     fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'Reader note' } });
@@ -143,7 +157,7 @@ it.each(['Highlight', 'Cloze', 'note'])('retries only the refresh after saving %
   expect(screen.getByRole('alert')).toHaveTextContent('Annotation saved.');
   expect(screen.getByRole('button', { name: 'Highlight' })).toBeDisabled();
   if (kind === 'note') expect(screen.getByPlaceholderText('Add annotation...')).toBeDisabled();
-  refresh.mockRejectedValueOnce(new Error('Still unavailable'));
+  committedReadFailures = 1;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled());
   expect(savedAnnotations()).toEqual(saved);

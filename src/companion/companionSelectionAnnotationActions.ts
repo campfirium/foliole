@@ -138,14 +138,11 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
     if (!draft) return null;
-    await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion], undefined, 'local_mutation');
+    const appliedIds = await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion], undefined, 'local_mutation');
+    if (!appliedIds.includes(draft.node.id)) throw new Error('companion_annotation_not_applied');
     if (draft.review) {
       await saveCompanionSyncNodeReviewRecordWithinWriterTask({ nodeId: draft.node.id, review: draft.review });
     }
-    const nextSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
-    if (!nextSnapshot?.nodesById[draft.node.id]) {
-      throw new Error('companion_annotation_snapshot_not_converged');
-    }
-    return { nodeId: draft.node.id, snapshot: nextSnapshot };
+    return { nodeId: draft.node.id, snapshot: draft.snapshot };
   }, { kind: 'full' });
 }
