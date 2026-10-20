@@ -4,7 +4,9 @@ import { assertIdentity, requireValue } from './capacityAcceptanceSafety';
 import { runRemediationPerformanceProbe } from './remediationPerformanceProbe';
 
 export function mountRemediationPerformanceAcceptance(root: HTMLElement) {
+  root.className = 'flex flex-col gap-4 p-6 pt-[env(safe-area-inset-top)]';
   const button = document.createElement('button');
+  button.className = 'min-h-12';
   button.textContent = 'Run remediation measurements';
   button.dataset.testid = 'remediation-performance-start';
   const result = document.createElement('textarea');
