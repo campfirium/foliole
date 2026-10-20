@@ -22,9 +22,9 @@ const reading = { intervalDurationMs: 86400000, intervalGrowthFactor: 2,
 const review = { difficulty: 5, due: '2026-10-20T00:00:00.000Z', elapsedDays: 1, lapses: 0,
   lastReviewAt: '2026-10-19T00:00:00.000Z', reps: 1, scheduledDays: 1, stability: 1, state: 2 as const };
 
-export async function runRemediationPerformanceProbe(phase: (value: string) => void) {
+export async function runRemediationPerformanceProbe(platform: 'android' | 'ios', phase: (value: string) => void) {
   phase('fixture');
-  const fixture = await openRemediationPerformanceFixture();
+  const fixture = await openRemediationPerformanceFixture(platform);
   try { return await measureRemediationPerformance(fixture, phase); }
   finally { await fixture.close(); }
 }

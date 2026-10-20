@@ -30,7 +30,7 @@ function record(index: number): NativeSyncNodeRecord {
       opening_text: null, virtual_filter: null, reveal: null, image_regions: null } };
 }
 
-export async function openRemediationPerformanceFixture() {
+export async function openRemediationPerformanceFixture(platform: 'android' | 'ios') {
   const scratch = await createAcceptanceScratchDatabase('remediation_performance');
   let fullReads = 0;
   const manager: CapacitorCompanionDatabaseManager = { ...scratch.manager,
@@ -50,7 +50,7 @@ export async function openRemediationPerformanceFixture() {
   };
   try {
     await initializeIosCompanionDatabase({ booted_at: time, database_path: null, database_ready: false,
-      host_name: 'Remediation acceptance', runtime_kind: 'android-capacitor' }, manager);
+      host_name: 'Remediation acceptance', runtime_kind: platform === 'android' ? 'android-capacitor' : 'ios-capacitor' }, manager);
     const owner = getIosCompanionDatabaseOwner();
     await owner.runWriter(seedRemediationPerformanceFixture);
     return { owner, close, fullReads: () => fullReads };

@@ -17,8 +17,8 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', ()
 import { seedRemediationPerformanceFixture } from './remediationPerformanceFixture';
 import { measureRemediationPerformance } from './remediationPerformanceProbe';
 
-it('measures real scan contention, mixed persistence and batched detail reads on an isolated SQLite library', async () => {
-  const library = createDisplayLibrary('android');
+it.each(['android', 'ios'] as const)('%s measures scan contention, mixed persistence and batched detail reads on isolated SQLite', async platform => {
+  const library = createDisplayLibrary(platform);
   runtime.owner = library.owner;
   try {
     await library.owner.open({ expectedHostName: 'Remediation acceptance', now: '2026-10-19T00:00:00.000Z' });

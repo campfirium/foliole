@@ -24,8 +24,8 @@ export function mountRemediationPerformanceAcceptance(root: HTMLElement) {
       const platform = Capacitor.getPlatform();
       const identity = await registerPlugin<{ getInfo(): Promise<{ id: string }> }>('App').getInfo();
       assertIdentity(platform, identity.id);
-      requireValue(platform === 'android', 'Android acceptance required');
-      const measured = await runRemediationPerformanceProbe(phase => publish({ status: 'running', phase }));
+      requireValue(platform === 'android' || platform === 'ios', 'Native acceptance required');
+      const measured = await runRemediationPerformanceProbe(platform, phase => publish({ status: 'running', phase }));
       publish({ status: 'passed', scenario: 'remediation-performance', appId: identity.id,
         platform, cleanup: true, ...measured });
     } catch (error) { publish({ status: 'failed', error: String(error) }); }
