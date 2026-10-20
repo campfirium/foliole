@@ -94,13 +94,14 @@ describe('T5 canonical leaf ownership', () => {
     ));
   });
 
-  it('requests no more than seventeen runner-backed first-wave leaves', () => {
+  // The dev chain staggers short stages to stay within 20 jobs; see dev-quality-chain contract.
+  it('requests twenty-two runner-backed leaves in the gated release baseline wave', () => {
     const fixedLeaves = 4;
     const portableLeaves = portableHosts('shared').length + portableHosts('android-source').length;
     const bucketLeaves = [desktopSource, electron, tooling].reduce((total, workflow) => (
       total + Object.values(workflow.jobs)[0].strategy.matrix.include.length
     ), 0);
-    expect(fixedLeaves + portableLeaves + bucketLeaves).toBe(17);
+    expect(fixedLeaves + portableLeaves + bucketLeaves).toBe(22);
   });
 
   it('keeps every portable domain on its own hosts without cross-domain execution', () => {
@@ -223,14 +224,13 @@ describe('T5 canonical leaf ownership', () => {
     }
   });
 
-  it('balances every Electron host without changing shard coverage or leaf count', () => {
-    expect(electron.jobs['electron-tests'].strategy.matrix.include
-      .map(({ bucket, shards }) => ({ bucket, shards }))).toEqual([
-      { bucket: 'database-import', shards: ['database', 'import'] },
-      { bucket: 'services-ipc', shards: ['services', 'ipc'] },
-      { bucket: 'database-import', shards: ['database', 'import'] },
-      { bucket: 'services-ipc', shards: ['services', 'ipc'] }
-    ]);
+  it('balances every Electron host and runs every shard exactly once per host', () => {
+    const include = electron.jobs['electron-tests'].strategy.matrix.include;
+    for (const host of ['Ubuntu', 'Windows']) {
+      const shards = include.filter((entry) => entry.host === host).flatMap(({ shards }) => shards);
+      expect([...shards].sort()).toEqual([...DESKTOP_ELECTRON_SHARDS].sort());
+    }
+    expect(include).toHaveLength(7);
   });
 
   it('keeps every top-level caller within GitHub reusable workflow depth limits', () => {

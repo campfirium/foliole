@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { DESKTOP_ELECTRON_SHARDS } from './run-desktop-electron-test-bucket.mjs';
+
 const read = (file) => fs.readFileSync(file, 'utf8');
 const hostedBucketRunner = read('scripts/quality/hosted-quality-bucket.mjs');
 const sources = {
@@ -42,13 +44,18 @@ describe('Hosted leaf command coverage', () => {
     expect(workflows.ios.jobs.contract.env.FOLIOLE_IOS_RESOURCE_MODE).toBe('full');
     const portableMatrix = workflows.portableDomain.jobs['portable-domain-tests'].strategy.matrix.include;
     expect(portableMatrix).toBe(
-      "${{ fromJSON(inputs.domain == 'android-source' && '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\"}]'"
-      + " || '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\"},{\"host\":\"Windows\",\"runner\":\"windows-latest\"}]') }}"
+      "${{ fromJSON(inputs.domain == 'android-source' && '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\",\"part\":\"\"}]'"
+      + " || inputs.domain == 'shared' && '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\",\"part\":\"\"},"
+      + "{\"host\":\"Windows\",\"runner\":\"windows-latest\",\"part\":\"one\"},"
+      + "{\"host\":\"Windows\",\"runner\":\"windows-latest\",\"part\":\"two\"}]'"
+      + " || '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\",\"part\":\"\"},"
+      + "{\"host\":\"Windows\",\"runner\":\"windows-latest\",\"part\":\"\"}]') }}"
     );
+    expect(workflows.portableDomain.jobs['portable-domain-tests'].env.FOLIOLE_SHARED_TEST_PART).toBe('${{ matrix.part }}');
     expect(workflows.portableDomain.jobs['portable-domain-tests'].strategy['fail-fast']).toBe(false);
     const electronMatrix = workflows.electron.jobs['electron-tests'].strategy.matrix.include;
     const expectedElectronEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
-      ['database', 'import', 'ipc', 'services'].map((shard) => `${host}:${shard}`)
+      DESKTOP_ELECTRON_SHARDS.map((shard) => `${host}:${shard}`)
     )).sort();
     const actualElectronEntries = electronMatrix.flatMap(({ host, shards }) => (
       shards.map((shard) => `${host}:${shard}`)
@@ -56,7 +63,7 @@ describe('Hosted leaf command coverage', () => {
     expect(actualElectronEntries).toEqual(expectedElectronEntries);
     expect(new Set(actualElectronEntries).size).toBe(actualElectronEntries.length);
     expect(workflows.electron.jobs['electron-tests'].strategy['fail-fast']).toBe(false);
-    expect(electronMatrix).toHaveLength(4);
+    expect(electronMatrix).toHaveLength(7);
     const desktopSourceMatrix = workflows.desktopSource.jobs['desktop-source-tests'].strategy.matrix.include;
     const expectedDesktopSourceEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
       ['one', 'two', 'three', 'four'].map((shard) => `${host}:${shard}`)
@@ -67,9 +74,9 @@ describe('Hosted leaf command coverage', () => {
     expect(actualDesktopSourceEntries)
       .toEqual(expectedDesktopSourceEntries);
     expect(new Set(actualDesktopSourceEntries).size).toBe(8);
-    expect(desktopSourceMatrix).toHaveLength(3);
+    expect(desktopSourceMatrix).toHaveLength(5);
     expect(desktopSourceMatrix.filter(({ host }) => host === 'Windows').map(({ shards }) => shards))
-      .toEqual([['one', 'two'], ['three', 'four']]);
+      .toEqual([['one'], ['two'], ['three', 'four']]);
     expect(sources.portableDomain).not.toContain('paths:');
     expect(sources.portableDomain).not.toContain('paths-ignore:');
     expect(sources.portableDomain).not.toContain('changed-files');

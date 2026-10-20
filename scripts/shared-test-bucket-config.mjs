@@ -138,3 +138,17 @@ export const SHARED_TEST_BUCKETS = [
     ]
   }
 ];
+
+// Windows hosts run shared buckets as two jobs; the second part starts at the platform core bucket.
+export const SHARED_TEST_PARTS = ['one', 'two'];
+const SECOND_PART_PREFIXES = ['shared-platform-core', 'shared-ui', 'features-', 'store', 'scripts'];
+
+export function sharedTestPart(bucket) {
+  return SECOND_PART_PREFIXES.some((prefix) => bucket.label.startsWith(prefix)) ? 'two' : 'one';
+}
+
+export function selectSharedTestBuckets(part, buckets = SHARED_TEST_BUCKETS) {
+  if (!part) return buckets;
+  if (!SHARED_TEST_PARTS.includes(part)) throw new Error(`[shared-test-bucket] unknown part: ${part}`);
+  return buckets.filter((bucket) => sharedTestPart(bucket) === part);
+}

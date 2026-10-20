@@ -9,13 +9,15 @@ import { portableDomainHosts } from '../quality/portable-domain-hosts.test-suppo
 
 const workflow = parse(fs.readFileSync('.github/workflows/hosted-quality-portable-domain.yml', 'utf8'));
 const job = workflow.jobs['portable-domain-tests'];
-const UBUNTU = { host: 'Ubuntu', runner: 'ubuntu-latest' };
-const WINDOWS = { host: 'Windows', runner: 'windows-latest' };
+const UBUNTU = { host: 'Ubuntu', runner: 'ubuntu-latest', part: '' };
+const WINDOWS = { host: 'Windows', runner: 'windows-latest', part: '' };
 
 describe('hosted Android source pool contract', () => {
   it('runs Android source on Ubuntu only and keeps both hosts for shared domains', () => {
     expect(portableDomainHosts(workflow, 'android-source')).toEqual([UBUNTU]);
-    expect(portableDomainHosts(workflow, 'shared')).toEqual([UBUNTU, WINDOWS]);
+    expect(portableDomainHosts(workflow, 'shared')).toEqual([
+      UBUNTU, { ...WINDOWS, part: 'one' }, { ...WINDOWS, part: 'two' }
+    ]);
     expect(portableDomainHosts(workflow, 'android-shared')).toEqual([UBUNTU, WINDOWS]);
   });
 

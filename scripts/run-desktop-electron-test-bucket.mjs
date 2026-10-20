@@ -19,10 +19,14 @@ const SYNC_CHUNK_SIZE = 20;
 const IPC_CHUNK_SIZE = 10;
 const EPUB_IPC_CHUNK_SIZE = 3;
 const MISSING_REPORT_RETRY_LIMIT = 3;
-export const DESKTOP_ELECTRON_SHARDS = ['database', 'import', 'ipc', 'services'];
-const LARGE_SYNC_TESTS = [
+export const DESKTOP_ELECTRON_SHARDS = [
+  'database-one', 'database-two', 'import', 'ipc', 'services', 'sync-heavy', 'sync-rest'
+];
+// Each of these files takes minutes, so they share one hosted shard apart from the other sync chunks.
+const HEAVY_SYNC_TESTS = [
   'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
-  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts'
+  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
+  'electron/sync/desktopRequestSyncScale.integration.test.ts'
 ];
 const SINGLE_FILE_IMPORT_BUCKETS = new Set([
   'electron/import/importManagerSettings.test.ts',
@@ -30,7 +34,7 @@ const SINGLE_FILE_IMPORT_BUCKETS = new Set([
 ]);
 
 function printUsage() {
-  console.error('Usage: node scripts/run-desktop-electron-test-bucket.mjs <report.json> [database|import|ipc|services]');
+  console.error(`Usage: node scripts/run-desktop-electron-test-bucket.mjs <report.json> [${DESKTOP_ELECTRON_SHARDS.join('|')}]`);
 }
 
 function toPosix(filePath) {
@@ -81,6 +85,13 @@ function chunkFiles(labelPrefix, files, size) {
   return buckets;
 }
 
+// Chunk labels stay global; the first half of the chunks forms one hosted shard.
+function buildDatabaseBuckets() {
+  const chunks = chunkFiles('database', collectTestFiles('electron/database'), DATABASE_CHUNK_SIZE);
+  const half = Math.ceil(chunks.length / 2);
+  return chunks.map((bucket, index) => ({ ...bucket, shard: index < half ? 'database-one' : 'database-two' }));
+}
+
 export function buildDesktopElectronBuckets() {
   const importFiles = collectTestFiles('electron/import');
   const singleImportFiles = importFiles.filter((file) => SINGLE_FILE_IMPORT_BUCKETS.has(file));
@@ -89,7 +100,7 @@ export function buildDesktopElectronBuckets() {
   const epubIpcFiles = ipcFiles.filter((file) => path.basename(file).startsWith('epubImport'));
   const chunkedIpcFiles = ipcFiles.filter((file) => !epubIpcFiles.includes(file));
   return [
-    ...chunkFiles('database', collectTestFiles('electron/database'), DATABASE_CHUNK_SIZE),
+    ...buildDatabaseBuckets(),
     ...singleImportFiles.map((file) => ({
       label: `import-${path.basename(file, '.test.ts')}`,
       report: `.tmp/vitest/desktop-electron-import-${path.basename(file, '.test.ts')}.json`,
@@ -100,9 +111,9 @@ export function buildDesktopElectronBuckets() {
     ...chunkFiles('ipc-epub', epubIpcFiles, EPUB_IPC_CHUNK_SIZE),
     ...chunkFiles('ipc', chunkedIpcFiles, IPC_CHUNK_SIZE),
     { label: 'attachments', report: '.tmp/vitest/desktop-electron-attachments.json', targets: collectTestFiles('electron/attachments') },
-    { label: 'sync-large', report: '.tmp/vitest/desktop-electron-sync-large.json',
-      targets: LARGE_SYNC_TESTS, workers: 2, fileParallelism: true },
-    ...chunkFiles('sync', collectTestFiles('electron/sync').filter((file) => !LARGE_SYNC_TESTS.includes(file)), SYNC_CHUNK_SIZE)
+    { label: 'sync-heavy', report: '.tmp/vitest/desktop-electron-sync-heavy.json',
+      targets: HEAVY_SYNC_TESTS, workers: 2, fileParallelism: true },
+    ...chunkFiles('sync', collectTestFiles('electron/sync').filter((file) => !HEAVY_SYNC_TESTS.includes(file)), SYNC_CHUNK_SIZE)
       .map((bucket) => ({ ...bucket, fileParallelism: true })),
     { label: 'mirror', report: '.tmp/vitest/desktop-electron-mirror.json', targets: collectTestFiles('electron/mirror') },
     { label: 'diagnostics', report: '.tmp/vitest/desktop-electron-diagnostics.json', targets: collectTestFiles('electron/diagnostics') },
@@ -119,7 +130,10 @@ export function buildDesktopElectronBuckets() {
 }
 
 function shardForBucket(bucket) {
-  return DESKTOP_ELECTRON_SHARDS.find((shard) => bucket.label.startsWith(shard)) ?? 'services';
+  if (bucket.shard) return bucket.shard;
+  if (bucket.label === 'sync-heavy') return 'sync-heavy';
+  if (/^sync-\d+$/u.test(bucket.label)) return 'sync-rest';
+  return ['import', 'ipc'].find((shard) => bucket.label.startsWith(shard)) ?? 'services';
 }
 
 export function buildDesktopElectronShardBuckets(shard, buckets = buildDesktopElectronBuckets()) {

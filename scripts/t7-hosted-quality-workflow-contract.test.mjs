@@ -10,7 +10,7 @@ const hosted = parse(hostedSource);
 const release = parse(read('.github/workflows/t7-release.yml'));
 
 describe('T7 hosted quality workflow contract', () => {
-  it('owns the scheduled and manual dev entry above reusable T6', () => {
+  it('owns the scheduled and manual dev entry above the reusable dev chain', () => {
     expect(hosted.name).toBe('Scheduled Dev Quality');
     expect(hosted['run-name']).toBe('Scheduled Dev Quality @ ${{ github.sha }}');
     expect(hosted.on.schedule.map(({ cron }) => cron)).toEqual(['40 3 * * *', '40 14 * * *']);
@@ -20,7 +20,7 @@ describe('T7 hosted quality workflow contract', () => {
     expect(hosted.jobs.skipped_notice.name).toBe('Scheduled dev run skipped');
     expect(hosted.jobs.skipped_notice.if).toBe("needs.context.outputs.should_run != 'true'");
     expect(hosted.jobs.skipped_notice.steps[0].run).toContain('ADMISSION_REASON');
-    expect(hosted.jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
+    expect(hosted.jobs.t6_quality.uses).toBe('./.github/workflows/dev-quality-chain.yml');
     expect(hosted.jobs.t6_quality.with.execution_lane).toBe('dev-t7');
     expect(hosted.jobs.t6_quality.if).toBe("needs.context.outputs.should_run == 'true'");
   });

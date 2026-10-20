@@ -1,0 +1,218 @@
+# Dev lanes do not wait for an accepted T5 stage set; release-t7 keeps t6-hosted-quality.yml.
+# Long stages start with the context. Short stages wait for an earlier stage only to keep a full
+# run within 20 concurrent hosted jobs: each waits for one stage that releases at least as many
+# runners, and `!cancelled()` lets it run whatever that stage concluded.
+name: Dev Quality Chain
+run-name: Dev Quality Chain (${{ inputs.execution_lane }}) @ ${{ inputs.target_sha }}
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      execution_lane:
+        required: true
+        type: string
+      trigger_ref:
+        required: true
+        type: string
+      stages:
+        required: false
+        type: string
+        default: all
+    outputs:
+      accepted_sha:
+        description: Exact commit admitted by every selected dev chain stage
+        value: ${{ jobs.quality-admission.outputs.accepted_sha }}
+permissions:
+  contents: read
+concurrency:
+  group: dev-chain-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    outputs:
+      stages: ${{ steps.select.outputs.stages }}
+    steps:
+      - &chain-checkout
+        name: Check out chain implementation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Require a dev lane
+        if: ${{ !startsWith(inputs.execution_lane, 'dev-') }}
+        run: exit 1
+      - name: Validate chain selection
+        id: select
+        env:
+          CHAIN_LANE: ${{ inputs.execution_lane }}
+          CHAIN_STAGES: ${{ inputs.stages }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: node scripts/quality/chain-verdict.mjs select
+  t5-static:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-static') }}
+    uses: ./.github/workflows/hosted-quality-static.yml
+    with: &target-context
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context, t5-android-source]
+  t5-desktop-static:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-desktop-static') }}
+    uses: ./.github/workflows/hosted-quality-desktop-static.yml
+    with: *target-context
+    needs: [context]
+  t5-dependency-hardening:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-dependency-hardening') }}
+    uses: ./.github/workflows/hosted-quality-dependency-hardening.yml
+    with: *target-context
+    needs: [context, t5-tooling]
+  t5-windows-core:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-windows-core') }}
+    uses: ./.github/workflows/hosted-quality-windows-core.yml
+    with: *target-context
+    needs: [context, t5-tooling]
+  t5-shared:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-shared') }}
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: shared
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t5-android-source:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-android-source') }}
+    uses: ./.github/workflows/hosted-quality-portable-domain.yml
+    with:
+      domain: android-source
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t5-desktop-source:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-desktop-source') }}
+    uses: ./.github/workflows/hosted-quality-desktop-source.yml
+    with: *target-context
+    needs: [context]
+  t5-electron:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-electron') }}
+    uses: ./.github/workflows/hosted-quality-electron.yml
+    with: *target-context
+    needs: [context]
+  t5-tooling:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-tooling') }}
+    uses: ./.github/workflows/hosted-quality-tooling.yml
+    with: *target-context
+    needs: [context]
+  t6-desktop-build:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-desktop-build') }}
+    uses: ./.github/workflows/hosted-quality-desktop-build.yml
+    with: *target-context
+    needs: [context, t5-static]
+  t6-android-web-build:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-web-build') }}
+    uses: ./.github/workflows/hosted-quality-android-web-build.yml
+    with: *target-context
+    needs: [context, t6-ios-contract]
+  t6-windows-acceptance:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-windows-acceptance') }}
+    uses: ./.github/workflows/hosted-quality-windows-acceptance.yml
+    with: *target-context
+    needs: [context]
+  t6-linux-responsiveness:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-linux-responsiveness') }}
+    uses: ./.github/workflows/hosted-quality-linux-responsiveness.yml
+    with: *target-context
+    needs: [context, t6-ios-contract]
+  t6-android-host:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-host') }}
+    uses: ./.github/workflows/hosted-quality-android-host.yml
+    with: *target-context
+    needs: [context, t5-dependency-hardening]
+  t6-ios-contract:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-contract') }}
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      run_contract: true
+      run_simulator: false
+      scope: full
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t6-ios-sync-group-content:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') }}
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"sync-group-and-content","scenarios":["sync-group-signed-transport","content-resource-read"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t6-ios-state-writeback:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-state-writeback') }}
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t6-ios-sync-pack:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') }}
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  t6-ios-foreground:
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-foreground') }}
+    uses: ./.github/workflows/hosted-quality-ios.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      run_contract: false
+      scope: full
+      simulator_matrix: '[{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+    needs: [context]
+  quality-admission:
+    if: ${{ always() }}
+    needs:
+      - context
+      - t5-static
+      - t5-desktop-static
+      - t5-dependency-hardening
+      - t5-windows-core
+      - t5-shared
+      - t5-android-source
+      - t5-desktop-source
+      - t5-electron
+      - t5-tooling
+      - t6-desktop-build
+      - t6-android-web-build
+      - t6-windows-acceptance
+      - t6-linux-responsiveness
+      - t6-android-host
+      - t6-ios-contract
+      - t6-ios-sync-group-content
+      - t6-ios-state-writeback
+      - t6-ios-sync-pack
+      - t6-ios-foreground
+    uses: ./.github/workflows/hosted-quality-chain-verdict.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      stages: ${{ inputs.stages }}
+      target_sha: ${{ inputs.target_sha }}
+      stage_results: ${{ toJSON(needs) }}

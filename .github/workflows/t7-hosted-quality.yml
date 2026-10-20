@@ -67,7 +67,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: ./.github/workflows/t6-hosted-quality.yml
+    uses: ./.github/workflows/dev-quality-chain.yml
     with:
       execution_lane: dev-t7
       target_sha: ${{ needs.context.outputs.target_sha }}

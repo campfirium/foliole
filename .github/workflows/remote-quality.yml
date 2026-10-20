@@ -69,7 +69,7 @@ jobs:
   full-quality:
     if: (inputs.scope == 'full' || inputs.scope == 'replay') && needs.dev-ref.result == 'success'
     needs: dev-ref
-    uses: ./.github/workflows/t6-hosted-quality.yml
+    uses: ./.github/workflows/dev-quality-chain.yml
     with:
       execution_lane: dev-remote
       target_sha: ${{ inputs.target_sha }}

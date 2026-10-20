@@ -25,20 +25,22 @@ permissions:
 
 jobs:
   portable-domain-tests:
-    name: ${{ matrix.host }} ${{ inputs.domain }}
+    name: ${{ matrix.host }} ${{ inputs.domain }}${{ matrix.part && format(' {0}', matrix.part) || '' }}
     if: inputs.domain == 'shared' || inputs.domain == 'android-source' || inputs.domain == 'android-shared'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.domain == 'shared' && 40 || 20 }}
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}-${{ github.run_id }}
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.domain }}-${{ matrix.host }}-${{ matrix.part }}-${{ github.run_id }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.domain == 'android-source' && '[{"host":"Ubuntu","runner":"ubuntu-latest"}]' || '[{"host":"Ubuntu","runner":"ubuntu-latest"},{"host":"Windows","runner":"windows-latest"}]') }}
+        # Windows shared runs as two parts; every other host runs its whole domain (part '').
+        include: ${{ fromJSON(inputs.domain == 'android-source' && '[{"host":"Ubuntu","runner":"ubuntu-latest","part":""}]' || inputs.domain == 'shared' && '[{"host":"Ubuntu","runner":"ubuntu-latest","part":""},{"host":"Windows","runner":"windows-latest","part":"one"},{"host":"Windows","runner":"windows-latest","part":"two"}]' || '[{"host":"Ubuntu","runner":"ubuntu-latest","part":""},{"host":"Windows","runner":"windows-latest","part":""}]') }}
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
+      FOLIOLE_SHARED_TEST_PART: ${{ matrix.part }}
       TARGET_SHA: ${{ inputs.target_sha }}
       VITEST_POOL: ${{ inputs.domain == 'shared' && matrix.host == 'Windows' && 'forks' || 'threads' }}
     steps:
@@ -83,7 +85,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: portable-${{ inputs.domain }}-${{ matrix.host }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          name: portable-${{ inputs.domain }}-${{ matrix.host }}${{ matrix.part && format('-{0}', matrix.part) || '' }}-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest

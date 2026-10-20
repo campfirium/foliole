@@ -11,8 +11,8 @@ import {
 describe('hosted quality bucket', () => {
   it('accepts reviewed items in declared order for every owner', () => {
     expect(parseHostedQualityBucket('desktop-source', '["one","two"]').items).toEqual(['one', 'two']);
-    expect(parseHostedQualityBucket('electron', '["database","import"]').items)
-      .toEqual(['database', 'import']);
+    expect(parseHostedQualityBucket('electron', '["database-two","import"]').items)
+      .toEqual(['database-two', 'import']);
     expect(parseHostedQualityBucket('tooling', '["integration-one","node-preview"]').items)
       .toEqual(['integration-one', 'node-preview']);
   });
@@ -20,8 +20,9 @@ describe('hosted quality bucket', () => {
   it('rejects unknown owners, empty buckets, duplicates, and cross-owner items', () => {
     expect(() => parseHostedQualityBucket('unknown', '["one"]')).toThrow();
     expect(() => parseHostedQualityBucket('desktop-source', '[]')).toThrow();
-    expect(() => parseHostedQualityBucket('electron', '["database","database"]')).toThrow();
-    expect(() => parseHostedQualityBucket('tooling', '["database"]')).toThrow();
+    expect(() => parseHostedQualityBucket('electron', '["sync-rest","sync-rest"]')).toThrow();
+    expect(() => parseHostedQualityBucket('electron', '["database"]')).toThrow();
+    expect(() => parseHostedQualityBucket('tooling', '["database-one"]')).toThrow();
   });
 
   it('runs sequentially and fails closed at the exact item', () => {

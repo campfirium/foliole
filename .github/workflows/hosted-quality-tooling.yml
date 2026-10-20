@@ -38,12 +38,8 @@ jobs:
             segments: [full]
           - host: Windows
             runner: windows-latest
-            bucket: core
-            segments: [core-one, core-two]
-          - host: Windows
-            runner: windows-latest
-            bucket: gate-integration-preview
-            segments: [gate-one, gate-two, integration-one, integration-two, node-preview]
+            bucket: all
+            segments: [core-one, core-two, gate-one, gate-two, integration-one, integration-two, node-preview]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"

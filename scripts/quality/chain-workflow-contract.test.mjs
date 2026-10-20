@@ -10,9 +10,11 @@ const workflow = name => parse(fs.readFileSync(`.github/workflows/${name}.yml`, 
 const chain = workflow('t6-hosted-quality');
 const summary = workflow('hosted-quality-chain-verdict').jobs.verdict;
 
-it('shares the complete chain across remote, scheduled, release, and release recheck entries', () => {
-  for (const [name, key] of [['remote-quality', 'full-quality'], ['t7-hosted-quality', 't6_quality'],
-    ['t7-release', 't6_quality'], ['release-quality-recheck', 'chain']]) {
+it('routes dev entries to the dev chain and release entries to the gated chain', () => {
+  for (const [name, key] of [['remote-quality', 'full-quality'], ['t7-hosted-quality', 't6_quality']]) {
+    expect(workflow(name).jobs[key].uses).toBe('./.github/workflows/dev-quality-chain.yml');
+  }
+  for (const [name, key] of [['t7-release', 't6_quality'], ['release-quality-recheck', 'chain']]) {
     expect(workflow(name).jobs[key].uses).toBe('./.github/workflows/t6-hosted-quality.yml');
   }
   expect(chain.on.workflow_call.inputs.stages.default).toBe('all');

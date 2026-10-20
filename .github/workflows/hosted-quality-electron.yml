@@ -35,19 +35,31 @@ jobs:
           - host: Ubuntu
             runner: ubuntu-latest
             bucket: database-import
-            shards: [database, import]
+            shards: [database-one, database-two, import]
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: services-ipc
-            shards: [services, ipc]
+            bucket: sync-heavy-services
+            shards: [sync-heavy, services]
+          - host: Ubuntu
+            runner: ubuntu-latest
+            bucket: sync-rest-ipc
+            shards: [sync-rest, ipc]
           - host: Windows
             runner: windows-latest
-            bucket: database-import
-            shards: [database, import]
+            bucket: sync-rest
+            shards: [sync-rest]
           - host: Windows
             runner: windows-latest
-            bucket: services-ipc
-            shards: [services, ipc]
+            bucket: sync-heavy-services
+            shards: [sync-heavy, services]
+          - host: Windows
+            runner: windows-latest
+            bucket: database-one-import
+            shards: [database-one, import]
+          - host: Windows
+            runner: windows-latest
+            bucket: database-two-ipc
+            shards: [database-two, ipc]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"

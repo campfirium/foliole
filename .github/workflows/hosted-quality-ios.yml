@@ -31,7 +31,8 @@ on:
     outputs:
       accepted_sha:
         description: Exact commit accepted by the requested host checks
-        value: ${{ jobs.contract.outputs.accepted_sha || jobs.simulator.outputs.accepted_sha }}
+        # Full scope accepts the contract only when the app compile accepted the same SHA.
+        value: ${{ (inputs.scope != 'full' || jobs.contract.outputs.accepted_sha == jobs.app-compile.outputs.accepted_sha) && jobs.contract.outputs.accepted_sha || jobs.simulator.outputs.accepted_sha }}
 
 permissions:
   contents: read
@@ -75,9 +76,6 @@ jobs:
         run: npm run ios:sync:preflight
       - name: Run iOS contract quality
         run: npm run quality:ios:contract
-      - name: Compile the complete iOS app without launching a simulator
-        if: inputs.scope == 'full'
-        run: node scripts/ios/ios-unsigned-app-compile.mjs
       - name: Upload iOS contract logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -89,6 +87,14 @@ jobs:
       - name: Export accepted SHA
         id: accepted
         run: echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
+
+  app-compile:
+    if: inputs.run_contract && inputs.scope == 'full'
+    uses: ./.github/workflows/hosted-quality-ios-app-compile.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
 
   simulator:
     name: iOS Simulator (${{ matrix.bucket }})

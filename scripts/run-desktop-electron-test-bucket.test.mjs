@@ -53,16 +53,30 @@ it('builds the expected desktop Electron buckets with explicit chunk bounds', ()
 it('runs isolated sync fixtures in bounded native fork workers', () => {
   const buckets = buildDesktopElectronBuckets();
   const parallel = buckets.filter((bucket) => bucket.fileParallelism);
-  const large = parallel.find(({ label }) => label === 'sync-large');
-  expect(large.targets).toEqual([
+  const heavy = parallel.find(({ label }) => label === 'sync-heavy');
+  expect(heavy.targets).toEqual([
     'electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts',
-    'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts'
+    'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
+    'electron/sync/desktopRequestSyncScale.integration.test.ts'
   ]);
-  expect(large.workers).toBe(2);
+  expect(heavy.workers).toBe(2);
   expect(parallel.every(({ label }) => label.startsWith('sync'))).toBe(true);
   expect(buckets.filter(({ label }) => /^sync-\d+$/u.test(label))
     .every(({ fileParallelism }) => fileParallelism === true)).toBe(true);
-  expect(buildDesktopElectronShardBuckets('services', buckets)).toContain(large);
+  expect(buildDesktopElectronShardBuckets('sync-heavy', buckets)).toEqual([heavy]);
+  expect(buildDesktopElectronShardBuckets('sync-rest', buckets).flatMap(({ targets }) => targets))
+    .not.toEqual(expect.arrayContaining([heavy.targets[2]]));
+});
+
+it('splits database chunks into two hosted halves without renaming chunks', () => {
+  const buckets = buildDesktopElectronBuckets();
+  const chunks = buckets.filter(({ label }) => /^database-\d+$/u.test(label));
+  const one = buildDesktopElectronShardBuckets('database-one', buckets);
+  const two = buildDesktopElectronShardBuckets('database-two', buckets);
+  expect([...one, ...two]).toEqual(chunks);
+  expect(one.length).toBe(Math.ceil(chunks.length / 2));
+  expect(one[0].label).toBe('database-01');
+  expect(() => buildDesktopElectronShardBuckets('database', buckets)).toThrow('unknown shard');
 });
 
 it('collects every Electron test exactly once', () => {
@@ -73,7 +87,9 @@ it('collects every Electron test exactly once', () => {
 });
 
 it('routes the public database upgrade matrix through the hosted database shard', () => {
-  const targets = buildDesktopElectronShardBuckets('database', buildDesktopElectronBuckets())
+  const buckets = buildDesktopElectronBuckets();
+  const targets = ['database-one', 'database-two']
+    .flatMap((shard) => buildDesktopElectronShardBuckets(shard, buckets))
     .flatMap((bucket) => bucket.targets);
 
   expect(targets).toContain('electron/database/publicDesktopDatabaseUpgrades.test.ts');

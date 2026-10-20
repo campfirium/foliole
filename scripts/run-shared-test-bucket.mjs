@@ -6,13 +6,13 @@ import path from 'node:path';
 
 import { ensureElectronBinary } from './electron-runtime-binary.mjs';
 import { assertElectronAbi } from './electron-sqlite-runner.mjs';
-import { SHARED_TEST_BUCKETS } from './shared-test-bucket-config.mjs';
+import { SHARED_TEST_BUCKETS, selectSharedTestBuckets } from './shared-test-bucket-config.mjs';
 import { runSharedBucketVitest } from './shared-test-bucket-runtime.mjs';
 
 export { SHARED_TEST_BUCKETS } from './shared-test-bucket-config.mjs';
 
 function printUsage() {
-  console.error('Usage: node scripts/run-shared-test-bucket.mjs <report.json>');
+  console.error('Usage: [FOLIOLE_SHARED_TEST_PART=one|two] node scripts/run-shared-test-bucket.mjs <report.json>');
 }
 
 function readReport(reportPath) {
@@ -129,6 +129,7 @@ async function main() {
     printUsage();
     return 1;
   }
+  const buckets = selectSharedTestBuckets(process.env.FOLIOLE_SHARED_TEST_PART);
 
   let exitCode = 0;
   const repoRoot = process.cwd();
@@ -136,14 +137,14 @@ async function main() {
   assertElectronAbi(electronPath, repoRoot);
   const totalTimeoutMs = resolveTotalTimeoutMs();
   const deadline = totalTimeoutMs === null ? Number.POSITIVE_INFINITY : Date.now() + totalTimeoutMs;
-  removeOldReports(reportPath);
-  combineReports(reportPath);
-  for (const bucket of SHARED_TEST_BUCKETS) {
+  removeOldReports(reportPath, buckets);
+  combineReports(reportPath, buckets);
+  for (const bucket of buckets) {
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) {
       writeBucketFailureReport(bucket, `[shared-test-bucket] ${bucket.label} skipped because total timeout was exhausted`);
       exitCode = 1;
-      combineReports(reportPath);
+      combineReports(reportPath, buckets);
       continue;
     }
     console.log(`[shared-test-bucket] running ${bucket.label}`);
@@ -164,7 +165,7 @@ async function main() {
         writeBucketFailureReport(bucket, `[shared-test-bucket] ${reason}`);
       }
     }
-    combineReports(reportPath);
+    combineReports(reportPath, buckets);
   }
   return exitCode;
 }

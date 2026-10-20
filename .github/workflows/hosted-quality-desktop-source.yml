@@ -34,15 +34,23 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: all
-            shards: [one, two, three, four]
-          - host: Windows
-            runner: windows-latest
             bucket: first
             shards: [one, two]
+          - host: Ubuntu
+            runner: ubuntu-latest
+            bucket: second
+            shards: [three, four]
           - host: Windows
             runner: windows-latest
-            bucket: second
+            bucket: one
+            shards: [one]
+          - host: Windows
+            runner: windows-latest
+            bucket: two
+            shards: [two]
+          - host: Windows
+            runner: windows-latest
+            bucket: three-four
             shards: [three, four]
     env:
       CI: "true"

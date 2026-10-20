@@ -66,6 +66,7 @@ const HOSTED_QUALITY_CONTRACTS = [
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
   'scripts/t4-desktop-canonical-workflow-contract.test.mjs',
   'scripts/quality/chain-workflow-contract.test.mjs',
+  'scripts/quality/dev-quality-chain-workflow-contract.test.mjs',
   'scripts/t5-quality-leaf-ownership-workflow-contract.test.mjs',
   'scripts/t6-hosted-quality-workflow-contract.test.mjs',
   'scripts/t7-hosted-quality-workflow-contract.test.mjs'
@@ -143,6 +144,7 @@ describe('quality critical test routes', () => {
       '.github/workflows/hosted-quality-core.yml',
       '.github/workflows/hosted-quality-tooling.yml',
       '.github/workflows/hosted-quality-windows-acceptance.yml',
+      '.github/workflows/dev-quality-chain.yml',
       '.github/workflows/t6-hosted-quality.yml',
       '.github/workflows/t7-hosted-quality.yml',
       'scripts/quality/t7-hosted-quality-admission.mjs'

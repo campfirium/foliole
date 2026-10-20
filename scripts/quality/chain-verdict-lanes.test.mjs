@@ -60,11 +60,14 @@ it('checks only the selected baseline stages for the lane', () => {
   expect(() => runChainCommand('baseline', env(RELEASE_LANE))).toThrow('Baseline did not accept');
 });
 
-it('lets dev tail stages run after a baseline failure while release keeps the gate', () => {
+it('starts dev tail stages with the baseline while release keeps the gate', () => {
   const workflow = fs.readFileSync('.github/workflows/t6-hosted-quality.yml', 'utf8');
   const gate = "(inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7')";
   expect(workflow.split(gate).length - 1).toBe(10);
   expect(workflow).toContain('execution_lane: ${{ inputs.execution_lane }}\n      stages: ${{ inputs.stages }}');
+  const dev = fs.readFileSync('.github/workflows/dev-quality-chain.yml', 'utf8');
+  expect(dev).not.toContain('needs.baseline');
+  expect(dev).toContain('execution_lane: ${{ inputs.execution_lane }}\n      stages: ${{ inputs.stages }}');
   const linux = fs.readFileSync('.github/workflows/hosted-quality-linux-responsiveness.yml', 'utf8');
   expect(linux).toContain("FOLIOLE_RESPONSIVENESS_SPEED_ADVISORY: ${{ startsWith(inputs.execution_lane, 'dev-') && '1' || '' }}");
 });

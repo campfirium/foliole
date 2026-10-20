@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+import { DESKTOP_ELECTRON_SHARDS } from '../run-desktop-electron-test-bucket.mjs';
 import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -16,7 +17,7 @@ const DEFINITIONS = {
   },
   electron: {
     command: 'test:desktop:electron',
-    items: ['database', 'import', 'ipc', 'services']
+    items: DESKTOP_ELECTRON_SHARDS
   },
   tooling: {
     command: 'quality:release:tooling',
