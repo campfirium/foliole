@@ -32,15 +32,7 @@ export function useCompanionFlowSession(args: {
   const mode = args.onlyReview ? 'review-first' : 'recommended';
   reconcileCurrentFlow(args.snapshot, current, mode, args.active);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
-  const wasActive = useRef(args.active);
-  useEffect(() => {
-    if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
-      current.session = resumeFlowSession(args.snapshot, mode, current.session.currentNodeId, new Date().toISOString());
-      current.generation += 1;
-      render();
-    }
-    wasActive.current = args.active;
-  }, [args.active]);
+  useFlowReentry(args, current, mode, render);
   useEffect(() => {
     if (!current.hydrated) return;
     void saveCompanionFlowResume(args.libraryScope, args.onlyReview, current.session.currentNodeId).catch((error: unknown) => {
@@ -71,6 +63,21 @@ export function useCompanionFlowSession(args: {
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
   return { view, capture, matches, advance, resume, reveal,
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
+}
+
+function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
+  current: FlowOwner, mode: 'review-first' | 'recommended', render: () => void) {
+  const wasActive = useRef(args.active);
+  useEffect(() => {
+    if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
+      if (!current.session.currentNodeId) {
+        current.session = resumeFlowSession(args.snapshot, mode, null, new Date().toISOString());
+      }
+      current.generation += 1;
+      render();
+    }
+    wasActive.current = args.active;
+  }, [args.active]);
 }
 
 function useFlowHydration(

@@ -119,7 +119,12 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
   const restored = await loadCompanionWorkspaceNode('cloze');
   expect(restored).toMatchObject({ content: before!.content, reveal: before!.reveal, anchorLink: before!.anchorLink });
   expect(restored?.deletedAt).toBeFalsy();
-  expect((await snapshot()).nodesById.cloze!.review).toBeNull();
+  const restoredSnapshot = await snapshot();
+  expect(restoredSnapshot.nodesById.cloze!.review).toBeNull();
+  const activeReading = reconcileFlowSession(deleted, reading, 'recommended');
+  expect(reconcileFlowSession(restoredSnapshot, activeReading, 'recommended')).toMatchObject({
+    currentNodeId: 'source', reviewedItemCount: reading.reviewedItemCount
+  });
   await sync(mobile, desktop);
   await sync(desktop, mobile);
   for (const peer of [desktop, mobile]) assertFacts(peer, false, log);

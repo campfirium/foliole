@@ -6,12 +6,31 @@ import { invalidateCompanionReadingScope } from '../shared/platform/companion/re
 import { deferred } from './companionContentEditingTestSupport';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { createCompanionArticleSnapshot, createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
+import { useCompanionFlowSession } from './useCompanionFlowSession';
 
 const writes = vi.hoisted(() => ({
   saveCompanionSyncActiveViewState: vi.fn(), saveCompanionSyncNodeViewState: vi.fn(),
   saveCompanionSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'reading', object_id: 'article-2' })),
   saveCompanionSyncNodeReviewRecord: vi.fn()
 }));
+
+it('resumes the unfinished reading topic after restoring a cloze outside Flow', async () => {
+  const snapshot = createCompanionArticleSnapshot();
+  const ui = renderHook(({ active, value }) => useCompanionFlowSession({
+    snapshot: value, active, ready: true, onlyReview: false, libraryScope: 'restore-flow'
+  }), { initialProps: { active: true, value: snapshot } });
+  await waitFor(() => expect(ui.result.current.ready).toBe(true));
+  const current = ui.result.current.view.currentCard!.nodeId;
+  ui.rerender({ active: false, value: snapshot });
+  const restored = { ...snapshot, nodeOrder: [...snapshot.nodeOrder, 'restored-cloze'],
+    nodesById: { ...snapshot.nodesById, 'restored-cloze': {
+      ...snapshot.nodesById[current]!, id: 'restored-cloze', kind: 'item' as const,
+      parentNodeId: current, reveal: 'answer'
+    } } };
+  ui.rerender({ active: false, value: restored });
+  ui.rerender({ active: true, value: restored });
+  await waitFor(() => expect(ui.result.current.view.currentCard?.nodeId).toBe(current));
+});
 vi.mock('../shared/platform/companionSyncObjects', () => writes);
 
 function setup() {
