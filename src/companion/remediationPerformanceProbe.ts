@@ -12,6 +12,7 @@ import {
 
 import { requireValue } from './capacityAcceptanceSafety';
 import { COMPANION_CUSTOM_CSS_SETTING_KEY, createEmptyCompanionCustomCssCollection } from './companionCustomCssModel';
+import { runExternalMembershipAcceptance } from './externalMembershipAcceptanceProbe';
 import { openRemediationPerformanceFixture, remediationImage } from './remediationPerformanceFixture';
 
 type Fixture = Awaited<ReturnType<typeof openRemediationPerformanceFixture>>;
@@ -36,7 +37,9 @@ export async function measureRemediationPerformance(fixture: Fixture, phase: (va
   phase('sync-details');
   await fixture.owner.runWriter(db => db.transaction(flushRequestSyncInventoryDigests));
   const details = await fixture.owner.readSnapshot(measureDetails);
-  return { fixtureNodes: 1000, bodyBytes: 4096, scan, mixed, details };
+  phase('external-lifecycle');
+  const externalLifecycle = await runExternalMembershipAcceptance(fixture.owner);
+  return { fixtureNodes: 1000, bodyBytes: 4096, scan, mixed, details, externalLifecycle };
 }
 
 async function measureScan({ owner }: Fixture) {

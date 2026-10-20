@@ -4,6 +4,8 @@ import { assertRemediationPerformanceResult } from './a5-remediation-performance
 function result() {
   return { status: 'passed', scenario: 'remediation-performance',
     appId: 'com.campfirium.foliole.android.acceptance', platform: 'android', cleanup: true,
+    externalLifecycle: { hiddenRetained: true, rejoinRestored: true, retainedBeforeExpiry: true,
+      purgedAtExpiry: true, activeProviderPreserved: true, noDeletionRecords: true },
     fixtureNodes: 1000, scan: { scanDiscardedForWrite: true, queryCount: 21, references: 1, scanMs: 10, scoreWaitAndWriteMs: 11 },
     mixed: { fullReads: 0, snapshotMatches: true, elapsedMs: 3 },
     details: { queryCount: 1, expandedNodes: 500, detailsMatch: true, elapsedMs: 2 } };
@@ -48,4 +50,13 @@ it('routes the fixed scenario to its single test and restores the isolated app',
     expect(calls.find(args => args.includes('uninstall'))).toContain(`${app}.test`);
     expect(calls.some(args => args.includes('clear'))).toBe(false);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+it.each(['hiddenRetained', 'rejoinRestored', 'retainedBeforeExpiry', 'purgedAtExpiry',
+  'activeProviderPreserved', 'noDeletionRecords'])('rejects absent or failed External proof: %s', key => {
+  const value = result();
+  value.externalLifecycle[key] = false;
+  expect(() => assertRemediationPerformanceResult(value)).toThrow('External lifecycle');
+  delete value.externalLifecycle[key];
+  expect(() => assertRemediationPerformanceResult(value)).toThrow('External lifecycle');
 });

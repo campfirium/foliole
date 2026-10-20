@@ -9,6 +9,10 @@ export function assertRemediationPerformanceResult(result) {
     || result.mixed?.fullReads !== 0 || result.mixed?.snapshotMatches !== true
     || result.details?.queryCount !== 1 || result.details?.expandedNodes !== 500
     || result.details?.detailsMatch !== true) throw new Error('Remediation measurement assertions failed');
+  for (const key of ['hiddenRetained', 'rejoinRestored', 'retainedBeforeExpiry', 'purgedAtExpiry',
+    'activeProviderPreserved', 'noDeletionRecords']) {
+    if (result.externalLifecycle?.[key] !== true) throw new Error(`External lifecycle evidence missing: ${key}`);
+  }
   for (const value of [result.scan.queryCount, result.scan.scanMs, result.scan.scoreWaitAndWriteMs,
     result.mixed.elapsedMs, result.details.elapsedMs]) {
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
