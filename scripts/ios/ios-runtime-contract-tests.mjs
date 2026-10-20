@@ -122,6 +122,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-capacitor-runtime-plugins-contract.test.mjs',
   'scripts/ios/ios-desktop-http-security-host-contract.test.mjs',
   'scripts/ios/ios-hosted-acceptance-bucket.test.mjs',
+  'scripts/ios/ios-hosted-loopback-endpoint.test.mjs',
   'scripts/ios/ios-hosted-provider-contract.test.mjs',
   'scripts/ios/ios-local-storage.test.mjs',
   'scripts/ios/ios-active-database-owner-contract.test.mjs',

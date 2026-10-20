@@ -63,6 +63,18 @@ describe('quality command registry', () => {
     }).classification).toBe('hosted-only');
   });
 
+  it('admits iOS Simulator journeys on local macOS and GitHub-hosted release runners only', () => {
+    for (const name of ['runner:ios-simulator', 'runner:ios-simulator-bucket']) {
+      expect(assertQualityCommandAllowed(name, { env: {}, platform: 'darwin' }).classification)
+        .toBe('local-acceptance');
+      expect(() => assertQualityCommandAllowed(name, { env: {}, platform: 'linux' }))
+        .toThrow('local macOS acceptance');
+      expect(assertQualityCommandAllowed(name, {
+        env: { GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted' }, platform: 'linux'
+      }).classification).toBe('local-acceptance');
+    }
+  });
+
   it('guards every directly reachable hosted runner', () => {
     const runnerSources = new Map([
       ['runner:quality-gate-target', new URL('./quality-gate-target.sh', import.meta.url)],

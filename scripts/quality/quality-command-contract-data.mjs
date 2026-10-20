@@ -112,8 +112,6 @@ export const HOSTED_RUNNERS = [
   ['runner:quality-gate-repair', 'quality-gate-repair.mjs'],
   ['runner:hosted-quality-bucket', 'sequential same-host quality owner bucket'],
   ['runner:ios-runtime-contract', 'ios-runtime-contract-tests.mjs'],
-  ['runner:ios-simulator-bucket', 'sequential hosted iOS Simulator scenario bucket'],
-  ['runner:ios-simulator', 'ios-bootstrap-acceptance.mjs'],
   ['runner:ios-sqlite-capability', 'ios-capacitor-sqlite-capability-gate.mjs'],
   ['runner:sql-surface-scan', 'sql-surface-scan.mjs'],
   ['runner:android-host-quality', 'native-linux-host.mjs hosted quality commands'],
@@ -122,6 +120,12 @@ export const HOSTED_RUNNERS = [
   ['runner:desktop-update-release-gate', 'same-run desktop updater identity, metadata, and compatibility validation'],
   ['runner:release-manifest-pages', 'published-release-guarded Pages manifest preparation'],
   ['runner:aggregate-package-check', 'registered non-quality aggregate npm check']
+];
+
+// iOS Simulator journeys are local macOS acceptance for dev changes; release chains still run them hosted.
+export const LOCAL_ACCEPTANCE_RUNNERS = [
+  ['runner:ios-simulator-bucket', 'sequential iOS Simulator scenario bucket'],
+  ['runner:ios-simulator', 'ios-bootstrap-acceptance.mjs']
 ];
 
 export const RELEASE_CONTROLS = [

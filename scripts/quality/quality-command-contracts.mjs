@@ -7,12 +7,14 @@ import { fileURLToPath } from 'node:url';
 import {
   HOSTED_ONLY_PACKAGES,
   HOSTED_RUNNERS,
+  LOCAL_ACCEPTANCE_RUNNERS,
   LOCAL_QUICK_PACKAGES,
   RELEASE_CONTROLS
 } from './quality-command-contract-data.mjs';
 
 export const COMMAND_CLASSIFICATIONS = [
   'local-quick',
+  'local-acceptance',
   'hosted-only',
   'orchestrator',
   'release-control'
@@ -70,6 +72,7 @@ const CONTRACTS = [
     surface: 'npm'
   })),
   ...HOSTED_RUNNERS.map(([name, target]) => contract(name, 'hosted-only', target)),
+  ...LOCAL_ACCEPTANCE_RUNNERS.map(([name, target]) => contract(name, 'local-acceptance', target)),
   contract('quality:remote', 'orchestrator', 'dev recheck or approved exact-source hosted acceptance', {
     runner: 'runner:remote-quality',
     surface: 'npm'
@@ -104,6 +107,12 @@ export function assertQualityCommandAllowed(name, options = {}) {
   if (entry.classification === 'hosted-only') {
     if (env.GITHUB_ACTIONS !== 'true' || env.RUNNER_ENVIRONMENT !== 'github-hosted') {
       throw new Error(`${name} is hosted-only and requires a GitHub-hosted Actions runner`);
+    }
+  }
+  if (entry.classification === 'local-acceptance') {
+    const hosted = env.GITHUB_ACTIONS === 'true' && env.RUNNER_ENVIRONMENT === 'github-hosted';
+    if (!hosted && (options.platform ?? process.platform) !== 'darwin') {
+      throw new Error(`${name} is local macOS acceptance or a GitHub-hosted release runner`);
     }
   }
   if (entry.classification === 'orchestrator' && env.GITHUB_ACTIONS === 'true') {
