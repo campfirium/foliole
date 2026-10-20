@@ -2,7 +2,7 @@ import type { FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_PREAMBLE } from './framedSyncContract.js';
 import type { FramedSyncExactByteReader } from './framedSyncExactByteReader.js';
 import { decodeFrameHeader, type FramedSyncFrameHeader } from './framedSyncFraming.js';
-import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES,
+import { FRAMED_SYNC_PAYLOAD_SLOT_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES,
   type FramedSyncPayloadBudget } from './framedSyncPayloadBudget.js';
 
 export async function* readFramedSyncWireFrames(input: {
@@ -25,7 +25,7 @@ export async function* readFramedSyncWireFrames(input: {
     }
     const lease = receipt
       ? await input.payloadBudget?.acquireReceipt({ direction: 'inbound', bytes: FRAMED_SYNC_RECEIPT_SLOT_BYTES })
-      : await input.payloadBudget?.acquire({ direction: 'inbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+      : await input.payloadBudget?.acquire({ direction: 'inbound', bytes: FRAMED_SYNC_PAYLOAD_SLOT_BYTES });
     try {
       if (input.reuseCiphertext && buffer.byteLength < header.ciphertextBytes) buffer = new Uint8Array(header.ciphertextBytes);
       const ciphertext = await input.reader.read(header.ciphertextBytes, 'framed_sync_frame_body_truncated',

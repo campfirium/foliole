@@ -1,4 +1,4 @@
-import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, type FramedSyncPayloadBudget,
+import { FRAMED_SYNC_PAYLOAD_SLOT_BYTES, type FramedSyncPayloadBudget,
   type FramedSyncPayloadDirection } from './framedSyncPayloadBudget.js';
 
 /** Reserve the bounded frame capacity before a source reads or encodes its next payload. */
@@ -9,7 +9,7 @@ export async function* leaseFramedSyncPayloads<T>(source: AsyncIterable<T> | Ite
   try {
     for (;;) {
       const acquiring = onTiming ? performance.now() : 0;
-      const lease = await budget?.acquire({ direction, bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+      const lease = await budget?.acquire({ direction, bytes: FRAMED_SYNC_PAYLOAD_SLOT_BYTES });
       try {
         onTiming?.('budget_wait', performance.now() - acquiring);
         const reading = onTiming ? performance.now() : 0;

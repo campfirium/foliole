@@ -1,4 +1,8 @@
-export const FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES = 2 * 1024 * 1024;
+/** One frame or body chunk in flight; a slow stream holds at most one slot. */
+export const FRAMED_SYNC_PAYLOAD_SLOT_BYTES = 2 * 1024 * 1024;
+/** Covers one data and one resource stream per peer, so a slow peer cannot stall the others. */
+export const FRAMED_SYNC_DIRECTION_PAYLOAD_SLOTS = 8;
+export const FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES = FRAMED_SYNC_DIRECTION_PAYLOAD_SLOTS * FRAMED_SYNC_PAYLOAD_SLOT_BYTES;
 export const FRAMED_SYNC_RECEIPT_SLOT_BYTES = 1024 * 1024;
 
 export type FramedSyncPayloadDirection = 'inbound' | 'outbound';

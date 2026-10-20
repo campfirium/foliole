@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
-import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES as capacity, FRAMED_SYNC_RECEIPT_SLOT_BYTES, FramedSyncPayloadBudget,
+import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES as capacity, FRAMED_SYNC_DIRECTION_PAYLOAD_SLOTS,
+  FRAMED_SYNC_PAYLOAD_SLOT_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES, FramedSyncPayloadBudget,
   type FramedSyncPayloadDirection } from './framedSyncPayloadBudget.js';
 
 function gate() {
@@ -26,29 +27,33 @@ it('cancels queued receipts on library close and drains only after the active re
     .rejects.toThrow('framed_sync_payload_budget_closed');
 });
 
-it('shares a 4 MiB payload maximum across connections and database/resource lines', async () => {
+it('grants eight frame slots per direction across connections and queues the ninth', async () => {
   const budget = new FramedSyncPayloadBudget();
   const pending = gate();
   const full = gate();
+  const slots = FRAMED_SYNC_DIRECTION_PAYLOAD_SLOTS * 2;
   let activeBytes = 0;
   let maximumBytes = 0;
   let started = 0;
-  const jobs = Array.from({ length: 12 }, (_, index) => (async () => {
+  const jobs = Array.from({ length: slots + 6 }, (_, index) => (async () => {
     const direction: FramedSyncPayloadDirection = index % 2 ? 'inbound' : 'outbound';
-    const lease = await budget.acquire({ direction, bytes: capacity / 2 });
-    activeBytes += capacity / 2;
+    const lease = await budget.acquire({ direction, bytes: FRAMED_SYNC_PAYLOAD_SLOT_BYTES });
+    activeBytes += FRAMED_SYNC_PAYLOAD_SLOT_BYTES;
     started += 1;
-    if (started === 4) full.resolve();
+    if (started === slots) full.resolve();
     maximumBytes = Math.max(maximumBytes, activeBytes);
     try { await pending.promise; }
-    finally { activeBytes -= capacity / 2; lease.release(); }
+    finally { activeBytes -= FRAMED_SYNC_PAYLOAD_SLOT_BYTES; lease.release(); }
   })());
   await full.promise;
-  expect(started).toBe(4);
-  expect(activeBytes).toBe(4 * 1024 * 1024);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(started).toBe(slots);
+  expect(capacity).toBe(8 * 2 * 1024 * 1024);
+  expect(activeBytes).toBe(2 * capacity);
   pending.resolve();
   await Promise.all(jobs);
-  expect(maximumBytes).toBe(4 * 1024 * 1024);
+  expect(started).toBe(slots + 6);
+  expect(maximumBytes).toBe(2 * capacity);
   expect(activeBytes).toBe(0);
   budget.close();
   await budget.drained;
