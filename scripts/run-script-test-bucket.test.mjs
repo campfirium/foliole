@@ -58,15 +58,15 @@ describe('run-script-test-bucket', () => {
       'scripts/sync/sql-surface-scan.test.mjs'
     ];
 
-    expect(selectScriptTestBucketFiles('core', files)).toEqual([
+    expect(selectScriptTestBucketFiles('core', files, 'linux')).toEqual([
       'scripts/check-ui-copy-guard.test.mjs',
       'scripts/codex/codex-task.test.mjs',
       'scripts/sync/sql-surface-scan.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate', files, 'linux')).toEqual([
       'scripts/quality/quality-skip-lint.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast.delegation.test.mjs',
       'scripts/quality/quality-gate-fast-light-related.test.mjs',
@@ -79,56 +79,56 @@ describe('run-script-test-bucket', () => {
       'scripts/quality/quality-gate-target.test.mjs',
       'scripts/quality/quality-gate-telemetry.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-routing', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-routing', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-critical-routes.integration.test.mjs',
       'scripts/quality/quality-gate-fast-light-related.test.mjs',
       'scripts/quality/quality-gate-fast-lib-routing.test.mjs',
       'scripts/quality/quality-gate-skip-lint-integration.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-fast-delegation', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-fast-delegation', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-fast.delegation.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-release-targets', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-release-targets', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-release-targets.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-release-tail', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-release-tail', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-release-tail-targets.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-targets', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-targets', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-target-collect.test.mjs',
       'scripts/quality/quality-gate-target-failures.test.mjs',
       'scripts/quality/quality-gate-target.test.mjs',
       'scripts/quality/quality-gate-telemetry.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-target-core', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-target-core', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-target.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-target-failures', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-target-failures', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-target-failures.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-target-collect', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-target-collect', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-target-collect.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('gate-integration-target-telemetry', files)).toEqual([
+    expect(selectScriptTestBucketFiles('gate-integration-target-telemetry', files, 'linux')).toEqual([
       'scripts/quality/quality-gate-telemetry.test.mjs'
     ]);
-    expect(selectScriptTestBucketFiles('node', files)).toEqual(['scripts/test-files.test.mjs']);
-    expect(selectScriptTestBucketFiles('preview', files)).toEqual([
+    expect(selectScriptTestBucketFiles('node', files, 'linux')).toEqual(['scripts/test-files.test.mjs']);
+    expect(selectScriptTestBucketFiles('preview', files, 'linux')).toEqual([
       'scripts/preview/preview-dedupe.test.mjs',
       'scripts/preview/preview-dedupe-batch.test.mjs'
     ]);
     const segmented = new Set([
-      ...selectScriptTestBucketFiles('core', files),
-      ...selectScriptTestBucketFiles('gate', files),
+      ...selectScriptTestBucketFiles('core', files, 'linux'),
+      ...selectScriptTestBucketFiles('gate', files, 'linux'),
       ...GATE_INTEGRATION_SCRIPT_NAMES.flatMap((scriptName) =>
-        selectScriptTestBucketFiles(scriptName.replace('test:quality:', '').replace(':', '-'), files)
+        selectScriptTestBucketFiles(scriptName.replace('test:quality:', '').replace(':', '-'), files, 'linux')
       ),
-      ...selectScriptTestBucketFiles('node', files),
-      ...selectScriptTestBucketFiles('preview', files)
+      ...selectScriptTestBucketFiles('node', files, 'linux'),
+      ...selectScriptTestBucketFiles('preview', files, 'linux')
     ]);
     expect([...segmented].sort()).toEqual([...files].sort());
-    expect(selectScriptTestBucketFiles('all', files)).toEqual(files);
-    expect(selectScriptTestBucketFiles('unknown', files)).toBeNull();
+    expect(selectScriptTestBucketFiles('all', files, 'linux')).toEqual(files);
+    expect(selectScriptTestBucketFiles('unknown', files, 'linux')).toBeNull();
   });
 
   it('keeps gate integration script names aligned with package and shell consumers', async () => {
