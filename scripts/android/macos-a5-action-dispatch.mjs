@@ -135,6 +135,8 @@ export async function dispatchMacosA5Action({
       env, pairingReadiness, paths, readiness, serial });
   }
   if (action === 'deploy') await deploy(paths, buildIdentity, markMutationBoundary, build);
+  if (action === 'deploy-acceptance') await deploy(paths, buildIdentity, markMutationBoundary,
+    build, 'com.campfirium.foliole.android.acceptance');
   if (action === 'capture-annotation') {
     await captureAnnotation(paths, buildIdentity, markMutationBoundary, build);
   }

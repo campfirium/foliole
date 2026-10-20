@@ -2,6 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
 
 def framedSyncProtobufVersion = '4.34.1'
+def folioleApplicationId = System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.campfirium.foliole.android"
+def folioleApplicationNames = [
+    'com.campfirium.foliole.android': 'Foliole',
+    'com.campfirium.foliole.android.acceptance': 'Foliole Acceptance',
+    'com.campfirium.foliole.android.s220acceptance': 'Foliole S220 Test',
+    'com.campfirium.foliole.android.t250dense': 'Foliole T250 Test'
+]
+def folioleApplicationName = folioleApplicationNames[folioleApplicationId] ?: "Foliole Test ${folioleApplicationId}"
 
 android {
     namespace = "com.foliole.android"
@@ -16,7 +24,9 @@ android {
         baseline file("lint-baseline.xml")
     }
     defaultConfig {
-        applicationId System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.campfirium.foliole.android"
+        applicationId folioleApplicationId
+        resValue "string", "app_name", folioleApplicationName
+        resValue "string", "title_activity_main", folioleApplicationName
         buildConfigField "int", "FOLIOLE_COMPANION_SYNC_PORT",
             System.getenv("FOLIOLE_ANDROID_COMPANION_SYNC_PORT") ?: "38641"
         minSdkVersion rootProject.ext.minSdkVersion

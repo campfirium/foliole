@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Foliole</string>
-    <string name="title_activity_main">Foliole</string>
     <string name="package_name">com.campfirium.foliole.android</string>
     <string name="custom_url_scheme">com.campfirium.foliole.android</string>
 </resources>

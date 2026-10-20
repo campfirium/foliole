@@ -178,7 +178,7 @@ function formalA5EvidenceLocator(context, descriptor) {
   throw new Error('Formal action evidence contract is unsupported.');
 }
 
-export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi = fs) {
+export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi = fs, packageIdentity = null) {
   const frozen = context.formalSourceClass === 'frozen-build';
   const locator = formalA5EvidenceLocator(context, manager.actionContract.formalEvidence);
   const bundle = context.action === 'bundle-release';
@@ -187,7 +187,7 @@ export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi 
   if (!fsApi.existsSync(locator)) throw new Error('Formal action evidence locator is missing.');
   return update(manager, {
     evidence: { locator, runId: context.runId, verifiedAt: manager.now() },
-    [bundle ? 'bundle' : 'apk']: frozen ? { digest: sha256(fsApi.readFileSync(artifact)),
+    [bundle ? 'bundle' : 'apk']: frozen ? { ...packageIdentity, digest: sha256(fsApi.readFileSync(artifact)),
       projectRelativePath: bundle ? 'android/app/build/outputs/bundle/release/app-release.aab'
         : 'android/app/build/outputs/apk/debug/app-debug.apk' } : null,
     source: { ...manager.receipt.source,

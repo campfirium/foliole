@@ -17,6 +17,7 @@ import {
 } from './macos-a5-action-dispatch.mjs';
 import { macosA5ActionEnv } from './macos-a5-extended-actions.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
+import { recordA5PackageIdentity } from './macos-a5-package-identity.mjs';
 import {
   createMacosA5CaptureIdentity as captureIdentity,
   runMacosA5CaptureReadiness,
@@ -42,7 +43,6 @@ export { macosA5GradleEnv, macosA5Paths } from './macos-a5-runtime-paths.mjs';
 
 export const A5_SERIAL = '87a33a4b';
 const APP_ID = 'com.campfirium.foliole.android';
-const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 export function assertFixedA5(paths) {
   checked(paths.adb, ['start-server']);
@@ -62,14 +62,14 @@ function pairingReadiness(paths) {
   runMacosA5PairingReadiness(checked, paths, A5_SERIAL, APP_ID);
 }
 
-export function build(paths, run = checked, onStage = () => {}) {
+export function build(paths, run = checked, onStage = () => {}, env = macosA5GradleEnv()) {
   onStage('web-build');
-  run('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot });
+  run('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot, env });
   onStage('capacitor-sync');
-  run(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot });
+  run(paths.cap, ['sync', 'android'], { cwd: paths.buildRoot, env });
   onStage('gradle-build');
   run(paths.gradle, ['--no-daemon', '--build-cache', 'assembleDebug', 'assembleDebugAndroidTest'], {
-    cwd: path.join(paths.buildRoot, 'android'), env: macosA5GradleEnv()
+    cwd: path.join(paths.buildRoot, 'android'), env
   });
   onStage('apk-check');
   if (!existsSync(paths.apk)) throw new Error(`Debug APK was not produced: ${paths.apk}`);
@@ -78,27 +78,34 @@ export function build(paths, run = checked, onStage = () => {}) {
   }
 }
 
-function launchAndVerify(paths) {
-  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', COMPONENT]);
+function launchAndVerify(paths, applicationId = APP_ID) {
+  const component = `${applicationId}/com.foliole.android.MainActivity`;
+  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', component]);
   checked(process.execPath, [
     path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
-    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
-    '--component', COMPONENT, '--timeout-seconds', '30', '--stability-seconds', '3'
+    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', applicationId,
+    '--component', component, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { cwd: paths.buildRoot });
 }
 
 async function deploy(
-  paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build
+  paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build,
+  applicationId = APP_ID
 ) {
   assertFixedA5(paths);
   buildAction(paths);
+  const env = macosA5GradleEnv();
+  const analyzer = path.join(env.ANDROID_SDK_ROOT, 'cmdline-tools/latest/bin/apkanalyzer');
+  if (captured(analyzer, ['manifest', 'application-id', paths.apk], { env }) !== applicationId) {
+    throw new Error('Built APK does not match the requested installation target.');
+  }
   markMutationBoundary();
   const runId = buildIdentity();
   const evidenceRoot = path.join(paths.artifactsRoot, 'a5-deploy', runId);
   mkdirSync(evidenceRoot, { recursive: true });
-  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
+  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', applicationId]);
   checked(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk]);
-  launchAndVerify(paths);
+  launchAndVerify(paths, applicationId);
   console.log(`[macos-a5-dev] deploy evidence=${evidenceRoot}`);
 }
 
@@ -165,6 +172,9 @@ export async function runMacosA5Action(
     const paths = macosA5Paths(context);
     const actionEnv = macosA5GradleEnv({
       ...macosA5ActionEnv(process.env, formal, actionContract.requiresHiddenDesktopRuntime),
+      ...(action === 'deploy-acceptance' ? {
+        FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: 'com.campfirium.foliole.android.acceptance'
+      } : {}),
       FOLIOLE_SHARED_CACHE_ROOT: sharedCacheRoot
     });
     assertSafeMacosA5Environment(paths);
@@ -190,15 +200,18 @@ export async function runMacosA5Action(
       ? markFormalA5Stage(receipt, 'action-preflight') : markFormalA5ActionRunning(receipt));
     const buildIdentity = formal ? () => context.runId : captureIdentity;
     const runBuild = (actionPaths) => build(actionPaths, checked,
-      (stage) => receipt && markFormalA5Stage(receipt, stage));
+      (stage) => receipt && markFormalA5Stage(receipt, stage), actionEnv);
     await dispatchMacosA5Action({ action, assertFixed: assertFixedA5, build: runBuild, buildIdentity,
       captureAnnotation, captured, checked, deploy, env: actionEnv, execute,
       markMutationBoundary: () => receipt && markFormalA5MutationBoundary(receipt),
       pairingReadiness, paths,
       protectData: runProtection, readiness, serial: A5_SERIAL });
+    const packageIdentity = actionContract.formalSourceClass === 'frozen-build'
+      && action !== 'bundle-release' && existsSync(paths.apk)
+      ? recordA5PackageIdentity({ captured, context, env: actionEnv, paths }) : null;
     if (receipt) {
       markFormalA5Stage(receipt, 'action-evidence');
-      prepareFormalA5ReceiptCompletion(receipt, context, paths);
+      prepareFormalA5ReceiptCompletion(receipt, context, paths, undefined, packageIdentity);
     }
   } catch (error) {
     failure = error;
