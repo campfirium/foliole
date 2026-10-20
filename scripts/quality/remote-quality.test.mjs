@@ -38,7 +38,7 @@ describe('remote quality dispatcher', () => {
     const dispatch = calls.find((call) => call.args.includes('--method'));
     expect(dispatch.args).toContain('X-GitHub-Api-Version: 2026-03-10');
     expect(JSON.parse(dispatch.options.input)).toEqual({
-      inputs: { scope: 'desktop', target_sha: SHA }, ref: 'dev'
+      inputs: { scope: 'desktop', target_sha: SHA, trigger_short: SHA.slice(0, 9) }, ref: 'dev'
     });
     expect(calls.some((call) => call.args.includes('.object.sha'))).toBe(true);
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);

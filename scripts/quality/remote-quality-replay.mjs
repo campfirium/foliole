@@ -1,13 +1,14 @@
 import { CHAIN_STAGES } from './chain-verdict.mjs';
 import { readChainVerdict } from './chain-verdict-read.mjs';
+import { isRemoteQualityTitle, parseRemoteQualityRun } from './remote-quality-run-title.mjs';
 
 export function testedSha(run) {
-  if (run.path === '.github/workflows/remote-quality.yml'
-    || /^Dev Quality Check \(/u.test(run.display_title ?? '')) {
-    const match = /^Dev Quality Check \((?:full|replay)\) @ ([0-9a-f]{40}) via ([0-9a-f]{40})$/u
-      .exec(run.display_title ?? '');
-    if (!match || match[2] !== run.head_sha) throw new Error('Replay source has no exact tested SHA');
-    return match[1];
+  if (run.path === '.github/workflows/remote-quality.yml' || isRemoteQualityTitle(run.display_title)) {
+    const parsed = parseRemoteQualityRun(run);
+    if (!parsed || (parsed.scope !== 'full' && parsed.scope !== 'replay')) {
+      throw new Error('Replay source has no exact tested SHA');
+    }
+    return parsed.testedSha;
   }
   return run.head_sha;
 }

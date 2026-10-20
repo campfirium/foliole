@@ -130,7 +130,8 @@ export async function runRemoteQuality(options = {}) {
     ], { cwd }))
   }) : undefined;
   const payload = JSON.stringify({
-    inputs: { scope: args.scope, target_sha: targetSha, ...(stages ? { stages } : {}) },
+    inputs: { scope: args.scope, target_sha: targetSha, trigger_short: targetSha.slice(0, 9),
+      ...(stages ? { stages } : {}) },
     ref: 'dev'
   });
   const dispatch = JSON.parse(await dispatchWorkflow(runner, [

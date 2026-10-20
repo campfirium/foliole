@@ -1,5 +1,11 @@
 name: Dev Quality Check
-run-name: Dev Quality Check (${{ inputs.scope }}) @ ${{ inputs.target_sha }} via ${{ github.sha }}
+# Expressions cannot slice strings, so the dispatcher passes the trigger commit's 9-character
+# prefix; the title only uses it when it really prefixes github.sha, otherwise both stay full.
+run-name: >-
+  Dev Quality Check (${{ inputs.scope }}) @ ${{
+  (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && inputs.target_sha == github.sha && inputs.trigger_short)
+  || (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && format('{0} via {1}', inputs.target_sha, inputs.trigger_short))
+  || format('{0} via {1}', inputs.target_sha, github.sha) }}
 
 on:
   workflow_dispatch:
@@ -23,6 +29,11 @@ on:
       target_sha:
         description: Exact commit SHA to validate with the current dev topology
         required: true
+        type: string
+      trigger_short:
+        description: Display-only 9-character prefix of the dev commit being dispatched
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -50,6 +61,10 @@ jobs:
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
+      - name: Validate trigger short SHA
+        env:
+          TRIGGER_SHORT: ${{ inputs.trigger_short }}
+        run: node -e "if (!/^([0-9a-f]{9})?$/.test(process.env.TRIGGER_SHORT ?? '')) throw new Error('trigger_short must be empty or a 9-character lowercase SHA prefix')"
 
   scoped-quality:
     if: inputs.scope != 'full' && inputs.scope != 'replay' && needs.dev-ref.result == 'success'

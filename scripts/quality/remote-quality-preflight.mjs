@@ -12,8 +12,7 @@ import {
   computePreflightFingerprint, PREFLIGHT_RECORD_FILE, preflightReuseMismatch,
   readPreflightRecord, writePreflightRecord
 } from './remote-quality-preflight-reuse.mjs';
-
-const RUN_TITLE_PATTERN = /^Dev Quality Check \((\w+)\) @ ([0-9a-f]{40})\b/u;
+import { parseRemoteQualityRun } from './remote-quality-run-title.mjs';
 
 function runCaptured(command, args, options = {}) {
   return new Promise((resolve) => {
@@ -27,22 +26,22 @@ function runCaptured(command, args, options = {}) {
   });
 }
 
-export function baseFromRunTitle(title, scope) {
-  const match = RUN_TITLE_PATTERN.exec(title ?? '');
-  if (!match) return null;
-  return match[1] === scope || match[1] === 'full' ? match[2] : null;
+export function baseFromRun(run, scope) {
+  const parsed = parseRemoteQualityRun(run);
+  if (!parsed) return null;
+  return parsed.scope === scope || parsed.scope === 'full' ? parsed.testedSha : null;
 }
 
 // The last green remote run covering this scope is the point where remote
 // assertions and code were known to agree.
 export async function resolvePreflightBase({ cwd, repo, runner, scope }) {
-  const titles = JSON.parse(await capture(runner, 'gh', [
+  const runs = JSON.parse(await capture(runner, 'gh', [
     'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
     `repos/${repo}/actions/workflows/remote-quality.yml/runs?branch=dev&status=success&per_page=50`,
-    '--jq', '[.workflow_runs[].display_title]'
+    '--jq', '[.workflow_runs[] | {display_title, head_sha}]'
   ], cwd));
-  for (const title of titles) {
-    const sha = baseFromRunTitle(title, scope);
+  for (const run of runs) {
+    const sha = baseFromRun(run, scope);
     if (!sha) continue;
     const known = await runner('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd });
     if (known.code === 0) return sha;

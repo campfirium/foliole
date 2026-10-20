@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  baseFromRunTitle, resolvePreflightBase, runRemoteQualityPreflight
+  baseFromRun, resolvePreflightBase, runRemoteQualityPreflight
 } from './remote-quality-preflight.mjs';
 import { selectPreflightTests } from './remote-quality-preflight-select.mjs';
 import { runRemoteQuality } from './remote-quality.mjs';
@@ -49,16 +49,25 @@ describe('remote quality preflight selection', () => {
 });
 
 describe('remote quality preflight base', () => {
+  const oldRun = (scope, sha) => ({ display_title: `Dev Quality Check (${scope}) @ ${sha} via ${sha}`, head_sha: sha });
+
   it('accepts green runs of the same scope or full only', () => {
-    expect(baseFromRunTitle(`Dev Quality Check (shared) @ ${BASE} via x`, 'shared')).toBe(BASE);
-    expect(baseFromRunTitle(`Dev Quality Check (full) @ ${BASE} via x`, 'ios')).toBe(BASE);
-    expect(baseFromRunTitle(`Dev Quality Check (desktop) @ ${BASE} via x`, 'ios')).toBeNull();
+    expect(baseFromRun(oldRun('shared', BASE), 'shared')).toBe(BASE);
+    expect(baseFromRun(oldRun('full', BASE), 'ios')).toBe(BASE);
+    expect(baseFromRun(oldRun('desktop', BASE), 'ios')).toBeNull();
+  });
+
+  it('reads new short titles through head_sha and rejects a short SHA of another commit', () => {
+    const title = `Dev Quality Check (full) @ ${BASE.slice(0, 9)}`;
+    expect(baseFromRun({ display_title: title, head_sha: BASE }, 'ios')).toBe(BASE);
+    expect(baseFromRun({ display_title: title, head_sha: OTHER }, 'ios')).toBeNull();
   });
 
   it('skips green runs whose commit is not available locally', async () => {
     const runner = vi.fn(async (command, args) => {
       if (command === 'gh') return { code: 0, stderr: '', stdout: JSON.stringify([
-        `Dev Quality Check (full) @ ${OTHER} via x`, `Dev Quality Check (full) @ ${BASE} via x`
+        { display_title: `Dev Quality Check (full) @ ${OTHER.slice(0, 9)}`, head_sha: OTHER },
+        oldRun('full', BASE)
       ]) };
       return { code: args[2].startsWith(BASE) ? 0 : 1, stderr: '', stdout: '' };
     });

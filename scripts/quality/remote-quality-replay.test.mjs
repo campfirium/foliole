@@ -51,8 +51,22 @@ it('reads the tested SHA when the dispatch topology advanced during preflight', 
   await expect(findCoveringFullRun({ runs: [run], targetSha: SHA, treeOf })).resolves.toBeNull();
 });
 
+it('reads a new short title through head_sha and a new replay title through its full target', async () => {
+  const targetSha = 'b'.repeat(40);
+  const read = vi.fn(() => ({ verdict: 'failed', stages: { 't5-shared': 'failure' } }));
+  for (const [display_title, expected] of [[`Dev Quality Check (full) @ ${SHA.slice(0, 9)}`, SHA],
+    [`Dev Quality Check (replay) @ ${targetSha} via ${SHA.slice(0, 9)}`, targetSha]]) {
+    await resolveReplayStages({ repository: 'o/r', runId: '123', read,
+      readRun: async () => ({ head_sha: SHA, path: '.github/workflows/remote-quality.yml', display_title }) });
+    expect(read).toHaveBeenLastCalledWith({ repository: 'o/r', runId: '123', targetSha: expected });
+  }
+});
+
 it.each(['Dev Quality Check (full)',
-  `Dev Quality Check (full) @ ${SHA} via ${'b'.repeat(40)}`])(
+  `Dev Quality Check (full) @ ${SHA} via ${'b'.repeat(40)}`,
+  `Dev Quality Check (full) @ ${'b'.repeat(9)}`,
+  `Dev Quality Check (replay) @ ${'b'.repeat(40)} via ${'b'.repeat(9)}`,
+  `Dev Quality Check (shared) @ ${SHA.slice(0, 9)}`])(
   'rejects ambiguous remote source metadata %s', async (display_title) => {
     const read = vi.fn();
     await expect(resolveReplayStages({ repository: 'o/r', runId: '123', read,
@@ -65,7 +79,8 @@ it.each(['Dev Quality Check (full)',
 it('matches same-SHA active full from either entry without confusing replay or scoped runs', async () => {
   const treeOf = async () => null;
   for (const metadata of [{ path: '.github/workflows/t7-hosted-quality.yml' },
-    { display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}` }]) {
+    { display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}` },
+    { display_title: `Dev Quality Check (full) @ ${SHA.slice(0, 9)}` }]) {
     const run = { head_sha: SHA, ...metadata };
     await expect(findCoveringFullRun({ runs: [run], targetSha: SHA, treeOf })).resolves.toBe(run);
     await expect(findCoveringFullRun({ runs: [run], targetSha: 'b'.repeat(40), treeOf })).resolves.toBeNull();
@@ -88,7 +103,8 @@ it('dispatches selected stages on current pushed dev and never reruns the old SH
   await runRemoteQuality({ args: ['--replay', '123'], runner,
     readChainVerdict: () => ({ verdict: 'failed', stages: { 't6-ios-contract': 'failure' } }) });
   expect(JSON.parse(calls.find(call => call.args.includes('--method')).options.input)).toEqual({
-    ref: 'dev', inputs: { scope: 'replay', target_sha: SHA, stages: 't6-ios-contract' }
+    ref: 'dev', inputs: { scope: 'replay', target_sha: SHA, trigger_short: SHA.slice(0, 9),
+      stages: 't6-ios-contract' }
   });
 });
 
