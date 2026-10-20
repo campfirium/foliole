@@ -6,15 +6,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { splitRelatedTests } from './quality-fast-capped.mjs';
 
-const VITEST_ARGS = [
-  '--silent=passed-only',
-  '--maxWorkers=2',
-  '--no-file-parallelism'
-];
 // Native SQLite under Electron-as-Node runs in forked workers, as the hosted
 // Electron buckets do; a thread worker that crashes takes down the whole run.
-const ORDINARY_POOL = '--pool=threads';
-const ELECTRON_POOL = '--pool=forks';
+const vitestArgs = (pool) => ['--silent=passed-only', pool, '--maxWorkers=2', '--no-file-parallelism'];
 const SCRIPTS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function runInherited(command, args) {
@@ -32,7 +26,7 @@ export function buildRelatedTestSteps(tests) {
     steps.push({
       args: [
         path.join(SCRIPTS_DIR, 'run-vitest-with-summary.mjs'), '.tmp/vitest/related.json',
-        '--', ORDINARY_POOL, ...VITEST_ARGS, ...related.ordinary
+        '--', ...vitestArgs('--pool=threads'), ...related.ordinary
       ],
       label: 'ordinary related tests'
     });
@@ -42,7 +36,7 @@ export function buildRelatedTestSteps(tests) {
       args: [
         path.join(SCRIPTS_DIR, 'electron-sqlite-runner.mjs'),
         path.join(SCRIPTS_DIR, 'run-vitest-with-summary.mjs'), '.tmp/vitest/related-electron.json',
-        '--', ELECTRON_POOL, ...VITEST_ARGS, ...related.electron
+        '--', ...vitestArgs('--pool=forks'), ...related.electron
       ],
       label: 'Electron ABI related tests'
     });
