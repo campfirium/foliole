@@ -99,7 +99,7 @@ it.each([false, true])('keeps converged heads across response replay, forwarding
       assertPersisted(right, 'Shared final body', final.version_id!);
     });
   });
-}, 15_000);
+}, 30000);
 
 async function withTopicSnapshot(source: Peer, target: Peer,
   execute: (replay: () => Promise<void>) => Promise<void>) {

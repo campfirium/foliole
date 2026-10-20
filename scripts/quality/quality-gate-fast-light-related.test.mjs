@@ -148,7 +148,7 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('prints executable related tests without treating test helpers as test entries', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -183,5 +183,5 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 });

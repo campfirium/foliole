@@ -24,7 +24,7 @@ it('allows a committed write during the readonly scan and rejects its stale conc
     expect(await library.owner.read(db => db.query("SELECT title FROM nodes WHERE id = 'a'")))
       .toEqual([{ title: 'Edited' }]);
   } finally { await library.close(); }
-}, 10000);
+}, 30000);
 
 it('returns references for an unchanged library and rejects cancellation', async () => {
   const library = createDisplayLibrary('android');

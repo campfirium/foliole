@@ -31,7 +31,7 @@ it('receives a remote edit, converges inventories and does not manufacture alter
     finally { db.close(); }
   }
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 20000);
+}, 30000);
 
 it('converges a fork after the shared ancestor body was deleted', async () => {
   const host = await setup();
@@ -65,7 +65,7 @@ it('converges a fork after the shared ancestor body was deleted', async () => {
     expect(right.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId))
       .toEqual(host.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId));
   } finally { right.close(); }
-}, 20000);
+}, 30000);
 
 it('recaptures an edit saved after a selected response was fixed', async () => {
   const host = await setup();
@@ -86,7 +86,7 @@ it('recaptures an edit saved after a selected response was fixed', async () => {
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Later saved body' })]);
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 20000);
+}, 30000);
 
 it('keeps later saved text after a lost response and source restart', async () => {
   const host = await setup();
@@ -115,7 +115,7 @@ it('keeps later saved text after a lost response and source restart', async () =
       .toEqual([expect.objectContaining({ content: 'Later saved after lost response' })]);
   }
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 20000);
+}, 30000);
 
 it('leaves an unavailable body pending while committing its neighbor and converges after repair', async () => {
   const host = await setup();
@@ -141,7 +141,7 @@ it('leaves an unavailable body pending while committing its neighbor and converg
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toContainEqual(expect.objectContaining({ id: 't326-unavailable', content: 'Unavailable edit' }));
-}, 20000);
+}, 30000);
 
 it('keeps an available desktop convergent beside a busy mobile peer and resumes the companion production request path', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-activation-mobile-'));

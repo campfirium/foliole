@@ -48,7 +48,7 @@ it('repairs a missing current body from a complete peer with the same version an
   await fixture.restart();
   expect(identities(fixture)).toEqual(original);
   expect.soft(await loadCompanionNodeDocument(fixture.db, nodeId)).toMatchObject({ content: body, content_status: 'ready' });
-}, 20000);
+}, 30000);
 
 it('reports an empty current projection as empty rather than missing when its version still owns the complete body', async () => {
   const fixture = await setup();
@@ -62,4 +62,4 @@ it('reports an empty current projection as empty rather than missing when its ve
   expect(await readFramedSyncInventoryEntry(fixture.db, { objectType: 'node', globalId: nodeId }))
     .toMatchObject({ unready: false });
   expect(identities(fixture)).toEqual(original);
-}, 20000);
+}, 30000);

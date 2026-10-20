@@ -135,7 +135,7 @@ describe('run-shared-test-bucket', () => {
       args: [
         'scripts/run-vitest-with-summary.mjs', 'report.json', '--',
         '--silent=passed-only', '--pool=threads', '--maxWorkers=2',
-        '--no-file-parallelism', '--testTimeout=15000', 'src/shared'
+        '--no-file-parallelism', '--testTimeout=30000', 'src/shared'
       ],
       electronPath: '/electron',
       options: {
@@ -151,7 +151,7 @@ describe('run-shared-test-bucket', () => {
       'report.json', ['src/shared'], '/electron', '/repo', { CI: 'true', VITEST_POOL: 'forks' }
     );
     expect(invocation.args).toContain('--pool=forks');
-    expect(invocation.args).toContain('--testTimeout=15000');
+    expect(invocation.args).toContain('--testTimeout=30000');
     expect(invocation.options.env.VITEST_POOL).toBe('forks');
     expect(() => buildSharedBucketInvocation('report.json', [], '/electron', '/repo', { VITEST_POOL: 'unknown' }))
       .toThrow('unsupported VITEST_POOL');

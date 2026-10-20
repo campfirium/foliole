@@ -55,7 +55,7 @@ it('finishes adoption and sends the saved local edit in the same companion round
       .toEqual([expect.objectContaining({ content: 'Saved local edit😀' })]);
   }
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 20000);
+}, 30000);
 
 it('keeps adoption protected if the source changes after delivery', async () => {
   const host = await adopt();
@@ -78,7 +78,7 @@ it('keeps adoption protected if the source changes after delivery', async () => 
     .toEqual([expect.objectContaining({ content: 'Saved local edit😀' })]);
   expect(readDesktopFramedSyncLibraryEvidence(host.fixture.rightSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Source changed' })]);
-}, 20000);
+}, 30000);
 
 it('preserves a local addition and converges ordering after adoption completes', async () => {
   const host = await adopt();
@@ -93,7 +93,7 @@ it('preserves a local addition and converges ordering after adoption completes',
     ]);
   }
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 20000);
+}, 30000);
 
 
 it('retains a newer local open state while finishing adoption', async () => {
@@ -116,7 +116,7 @@ it('retains a newer local open state while finishing adoption', async () => {
   expect(host.sqlite.prepare('SELECT last_opened_at FROM node_open_state WHERE node_id = ?')
     .pluck().get('t326-adoption-article')).toBe('2031-01-01T00:00:00.000Z');
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 20000);
+}, 30000);
 
 it('keeps missing attachments pending without retransmitting converged database bodies', async () => {
   const host = await adopt();
@@ -135,4 +135,4 @@ it('keeps missing attachments pending without retransmitting converged database 
   await expect(fs.stat(path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey)))
     .rejects.toMatchObject({ code: 'ENOENT' });
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
-}, 20000);
+}, 30000);

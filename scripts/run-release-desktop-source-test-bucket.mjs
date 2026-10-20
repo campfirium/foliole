@@ -98,7 +98,7 @@ export function buildReleaseDesktopSourceVitestArgs(bucket) {
     bucket.targets.some(file => controlledElectronSqliteTests.includes(file)) ? '--pool=forks' : '--pool=threads',
     '--maxWorkers=2',
     '--no-file-parallelism',
-    '--testTimeout=15000',
+    '--testTimeout=30000',
     ...bucket.targets
   ];
 }

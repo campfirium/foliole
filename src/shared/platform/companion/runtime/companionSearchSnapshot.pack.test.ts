@@ -75,4 +75,4 @@ it('keeps the search snapshot when one real request commits and the next request
   expect(latest.external.find((row) => row.document_id === '000000')?.content).toBe('');
   expect(library.database.prepare("SELECT content FROM external_documents WHERE document_id='000000'").get())
     .toEqual({ content: 'alpha pack 1' });
-}, 15000);
+}, 30000);

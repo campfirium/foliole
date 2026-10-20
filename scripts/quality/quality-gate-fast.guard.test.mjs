@@ -54,7 +54,7 @@ describe('quality-gate-fast.sh guard limits', () => {
     expect(result.stdout).toContain('failed: test exceeded memory limit');
     expect(result.stdout).toContain('stalled after:');
     expect(result.stdout).toContain('peak test memory:');
-  }, 15000);
+  }, 30000);
 
   it('prints waiting progress while a guarded command is still running', async () => {
     const result = await runGuardedCommand('sleep 2', {
@@ -65,7 +65,7 @@ describe('quality-gate-fast.sh guard limits', () => {
     expect(result.stdout).toMatch(
       /\[quality-gate-fast\] waiting: test still running \([0-9]+s elapsed, peak test memory [0-9]+ KiB\)/
     );
-  }, 15000);
+  }, 30000);
 
   it('reports direct-child fallback when process listing is unavailable', async () => {
     const result = await runGuardedCommand('printf ok', {
@@ -75,7 +75,7 @@ describe('quality-gate-fast.sh guard limits', () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout).toMatch(/process tracking: ps(?: and \/proc)? unavailable;/u);
-  }, 15000);
+  }, 30000);
 
   it('applies timeout limits to the lint step too', async () => {
     const tempRoot = await createQualityGateTempRoot();

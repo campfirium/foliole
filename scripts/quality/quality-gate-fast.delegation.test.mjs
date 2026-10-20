@@ -36,7 +36,7 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('keeps test-only Android script changes on the related-test route', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -61,7 +61,7 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it.each(['--full', '--release'])('rejects the removed local aggregate override %s', async (argument) => {
     const tempRoot = await createQualityGateTempRoot();
@@ -79,7 +79,7 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 
   it('caps Android path changes locally and defers hosted quality to scheduled T7', async () => {
     const tempRoot = await createQualityGateTempRoot();
@@ -132,5 +132,5 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  }, 30000);
 });

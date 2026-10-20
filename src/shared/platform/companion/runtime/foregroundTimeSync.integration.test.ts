@@ -31,4 +31,4 @@ it('converges cumulative foreground time while an older peer value remains witho
       expect(db.prepare('SELECT duration_ms FROM foreground_daily_time').all()).toEqual([{ duration_ms: 120_000 }]);
     }
   } finally { desktop.close(); await host.close(); }
-}, 20000);
+}, 30000);

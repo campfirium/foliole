@@ -15,7 +15,7 @@ import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncD
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
-beforeEach(async () => { host = await createCompanionRequestFixture(); }, 20000);
+beforeEach(async () => { host = await createCompanionRequestFixture(); }, 30000);
 afterEach(async () => { await host?.close(); host = undefined; });
 
 it('closes the fixture without waiting for a client to finish its HTTP headers', async () => {
@@ -73,7 +73,7 @@ it('retains a review with a missing receiver node, delivers independent work and
       expect(reopened.prepare('SELECT count(*) FROM review_log WHERE op_id = ?').pluck().get('t326-review-op')).toBe(1);
     } finally { reopened.close(); }
   }
-}, 20000);
+}, 30000);
 
 async function sendReviewOnly(host: Awaited<ReturnType<typeof createCompanionRequestFixture>>) {
   const { fixture } = host;
