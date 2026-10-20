@@ -12,6 +12,7 @@ import {
   encodeFramedSyncPreamble
 } from '../../lib/core/sync/framedSyncFraming.js';
 import { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
@@ -19,8 +20,11 @@ import {
   framedSyncPathWithIdentity,
   handleCompanionLanFramedSyncPost
 } from './companionLanFramedSyncPost.js';
+import { observeSlowRequest } from './companionLanRequestTiming.js';
 import type { authenticateCompanionRequest } from './companionRequestAuth.js';
 import type { FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+
+vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 
 const diagnostics = vi.hoisted(() => ({ append: vi.fn() }));
 vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
@@ -38,12 +42,17 @@ const binaryBody = Buffer.concat([Buffer.from(preamble), Buffer.from(header), Bu
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
   diagnostics.append.mockClear();
+  vi.restoreAllMocks();
+  vi.mocked(appendDiagnosticLog).mockClear();
 });
 
 async function startHandler(authenticate: typeof authenticateCompanionRequest,
   capture: (value: unknown) => void,
-  fault?: FramedSyncPayloadBudget) {
+  fault?: FramedSyncPayloadBudget, slowClock = false) {
   const server = http.createServer((request, response) => {
+    const clock = slowClock ? vi.spyOn(performance, 'now').mockReturnValue(performance.now() - 300) : undefined;
+    observeSlowRequest(request, response);
+    clock?.mockRestore();
     if (fault) {
       const writeHead = response.writeHead;
       response.writeHead = function (...args: [number,
@@ -164,3 +173,25 @@ function oversizedStream() {
   view.setUint16(12, 1);
   return Buffer.concat([Buffer.from(preamble), Buffer.from(oversizedHeader)]);
 }
+
+it('records HTTP stages while preserving exact authenticated binary response bytes', async () => {
+  const origin = await startHandler(() => ({
+    device_id: 'device-a', device_name: 'Device A', ok: true
+  }), () => {}, undefined, true);
+  const response = await fetch(`${origin}${requestPath}`, {
+    body: binaryBody, headers: requestHeaders(), method: 'POST'
+  });
+  expect(response.status).toBe(200);
+  expect(Buffer.from(await response.arrayBuffer())).toEqual(binaryBody);
+  await vi.waitFor(() => expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    event: 'companion_lan_slow_request', payload: expect.objectContaining({
+      httpPhases: expect.arrayContaining([
+        expect.objectContaining({ phase: 'body_verification', completed: true }),
+        expect.objectContaining({ phase: 'request_decode', completed: true }),
+        expect.objectContaining({ phase: 'business_handler', completed: true }),
+        expect.objectContaining({ phase: 'response_spool_inclusive', completed: true }),
+        expect.objectContaining({ phase: 'response_send', completed: false })
+      ])
+    })
+  })));
+});

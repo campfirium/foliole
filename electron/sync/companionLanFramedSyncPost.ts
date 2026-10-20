@@ -9,6 +9,7 @@ import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayl
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
+import { beginRequestHttpPhase } from './companionLanRequestTiming.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
 import { encodeFramedSyncHttpBody, writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
@@ -27,7 +28,7 @@ export { FRAMED_SYNC_PATH, FRAMED_SYNC_CONTENT_TYPE, FRAMED_SYNC_BODY_SHA256_HEA
 type Authenticator = typeof authenticateCompanionRequest;
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
-export async function handleCompanionLanFramedSyncPost(args: {
+type FramedPostArgs = {
   authenticate?: Authenticator;
   payloadBudget?: FramedSyncPayloadBudget | undefined;
   localIdentity: Readonly<{ deviceId: string; libraryEpoch: string }>;
@@ -38,7 +39,9 @@ export async function handleCompanionLanFramedSyncPost(args: {
   request: http.IncomingMessage;
   response: http.ServerResponse;
   onProgress?: () => void;
-}) {
+};
+
+export async function handleCompanionLanFramedSyncPost(args: FramedPostArgs) {
   const { request, response } = args;
   if (request.method !== 'POST' || pathname(request) !== FRAMED_SYNC_PATH) {
     writeError(response, 404, 'framed_sync_route_not_found');
@@ -51,35 +54,53 @@ export async function handleCompanionLanFramedSyncPost(args: {
   const context = authenticateContext(args);
   if (!context) return;
   const contentLength = readHeader(request, 'content-length');
+  const verified = beginRequestHttpPhase(response, 'body_verification');
   try {
     await withVerifiedFramedHttpBody({
       body: progressBytes(request, args.onProgress),
       payloadBudget: args.payloadBudget,
       expectedSha256: readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER)!,
       ...(contentLength === null ? {} : { contentLength })
-    }, async (body) => {
-      const units = readFramedSyncStreamSequence(body, args.payloadBudget);
-      const first = await units.next();
-      if (first.done) throw new Error('framed_sync_preamble_truncated');
-      const lane = decodeFramedSyncPreamble(first.value.preamble).contextKind === 'transfer' ? 'receipt' : 'payload';
-      const reply = await spoolDesktopFramedSyncSequence({ lane, payloadBudget: args.payloadBudget,
-        bodies: (async function* () {
-          try {
-            yield await args.onStream({ context, stream: first.value });
-            for await (const stream of units) yield await args.onStream({ context, stream });
-          } finally { await units.return(undefined); }
-        })()
-      });
-      response.writeHead(200, {
-        'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
-        [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
-        [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
-      });
-      await writeDesktopFramedSyncHttpBody(response, progressBytes(encodeFramedSyncHttpBody(reply), args.onProgress));
+    }, async body => {
+      verified();
+      await respondToVerifiedBody(args, context, body);
     });
   } catch (error) {
+    verified();
     handleResponseError(response, error);
   }
+}
+
+async function respondToVerifiedBody(args: FramedPostArgs, context: AuthenticatedContext,
+  body: AsyncIterable<Uint8Array>) {
+  const { response } = args;
+  const decoded = beginRequestHttpPhase(response, 'request_decode');
+  const units = readFramedSyncStreamSequence(body, args.payloadBudget);
+  const first = await units.next().finally(decoded);
+  if (first.done) throw new Error('framed_sync_preamble_truncated');
+  const lane = decodeFramedSyncPreamble(first.value.preamble).contextKind === 'transfer' ? 'receipt' : 'payload';
+  const spooled = beginRequestHttpPhase(response, 'response_spool_inclusive');
+  const reply = await spoolDesktopFramedSyncSequence({ lane, payloadBudget: args.payloadBudget,
+    bodies: (async function* () {
+      const handle = async (stream: FramedSyncStreamBody<FramedSyncWireFrame>) => {
+        const handled = beginRequestHttpPhase(response, 'business_handler');
+        try { return await args.onStream({ context, stream }); } finally { handled(); }
+      };
+      try {
+        yield await handle(first.value);
+        for await (const stream of units) yield await handle(stream);
+      } finally { await units.return(undefined); }
+    })()
+  }).finally(spooled);
+  const sent = beginRequestHttpPhase(response, 'response_send');
+  try {
+    response.writeHead(200, {
+      'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
+      [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
+      [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
+    });
+    await writeDesktopFramedSyncHttpBody(response, progressBytes(encodeFramedSyncHttpBody(reply), args.onProgress));
+  } finally { sent(); }
 }
 
 function handleResponseError(response: http.ServerResponse, error: unknown) {

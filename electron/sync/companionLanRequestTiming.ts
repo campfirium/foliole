@@ -9,6 +9,27 @@ export type RequestDatabasePhase = 'runtime_resolution' | 'write_owner_wait' | '
 export type RequestDatabaseTiming = (phase: RequestDatabasePhase, durationMs: number) => void;
 const databaseTimings = new WeakMap<http.ServerResponse, Partial<Record<RequestDatabasePhase, { calls: number; durationMs: number }>>>();
 
+export type RequestHttpPhase = 'body_verification' | 'request_decode' | 'business_handler' |
+  'response_spool_inclusive' | 'response_send';
+type HttpSpan = { phase: RequestHttpPhase; started: number; ended?: number };
+const httpTimings = new WeakMap<http.ServerResponse, HttpSpan[]>();
+
+/** Spooling includes handler work; sending includes replay and response spool cleanup. */
+export function beginRequestHttpPhase(response: http.ServerResponse, phase: RequestHttpPhase) {
+  const spans = httpTimings.get(response);
+  if (!spans) return () => {};
+  const span: HttpSpan = { phase, started: performance.now() };
+  spans.push(span);
+  return () => { span.ended ??= performance.now(); };
+}
+
+function completedHttpTimings(response: http.ServerResponse, ended: number) {
+  const spans = httpTimings.get(response);
+  httpTimings.delete(response);
+  return spans?.map(span => ({ phase: span.phase,
+    durationMs: (span.ended ?? ended) - span.started, completed: span.ended !== undefined }));
+}
+
 export function requestDatabaseTiming(response: http.ServerResponse): RequestDatabaseTiming {
   return (phase, durationMs) => {
     const timings = databaseTimings.get(response);
@@ -26,6 +47,7 @@ export function recordSyncSessionWaitTiming(response: http.ServerResponse, timin
 // A close event does not measure work that continues after the response disconnects.
 export function observeSlowRequest(request: http.IncomingMessage, response: http.ServerResponse) {
   databaseTimings.set(response, {});
+  httpTimings.set(response, []);
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
   const isSessionWait = request.method === 'GET' && url.pathname === '/companion/sync-session';
   const startedAt = Date.now();
@@ -39,7 +61,9 @@ export function observeSlowRequest(request: http.IncomingMessage, response: http
     request.off('end', onEnd);
     response.off('finish', onFinish);
     response.off('close', onClose);
-    const durationMs = performance.now() - started;
+    const ended = performance.now();
+    const durationMs = ended - started;
+    const httpPhases = completedHttpTimings(response, ended);
     const wait = sessionWaits.get(response);
     sessionWaits.delete(response);
     const database = databaseTimings.get(response);
@@ -50,7 +74,7 @@ export function observeSlowRequest(request: http.IncomingMessage, response: http
     void appendDiagnosticLog({ event: 'companion_lan_slow_request', level: 'debug',
       occurred_at: new Date().toISOString(), source: 'electron.main',
       payload: { durationMs, startedAt, endedAt: Date.now(), bodyReceivedAt, requestPath: url.pathname,
-        durationScope: 'response_lifetime', ...(wait ?? {}), databaseTimings: database,
+        durationScope: 'response_lifetime', ...(wait ?? {}), databaseTimings: database, httpPhases,
         method: request.method ?? null, completion, responseFinished: response.writableFinished,
         operation: url.searchParams.get('request'), statusCode: response.statusCode }
     }).catch(() => undefined);

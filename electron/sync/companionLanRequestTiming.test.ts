@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
-import { observeSlowRequest, recordSyncSessionWaitTiming, requestDatabaseTiming } from './companionLanRequestTiming.js';
+import { beginRequestHttpPhase, observeSlowRequest, recordSyncSessionWaitTiming, requestDatabaseTiming } from './companionLanRequestTiming.js';
 
 vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
@@ -93,5 +93,34 @@ it('keeps database phase totals on their response and stops collecting after com
     payload: expect.objectContaining({ databaseTimings: {
       write_owner_wait: { calls: 2, durationMs: 125 }, write_owner_held: { calls: 1, durationMs: 40 }
     } })
+  }));
+});
+
+it('reports nested phase durations without adding them and captures an active send at finish', () => {
+  const { response } = requestPair();
+  vi.mocked(performance.now).mockReturnValue(10);
+  const verified = beginRequestHttpPhase(response, 'body_verification');
+  vi.mocked(performance.now).mockReturnValue(30);
+  verified();
+  const spool = beginRequestHttpPhase(response, 'response_spool_inclusive');
+  const business = beginRequestHttpPhase(response, 'business_handler');
+  vi.mocked(performance.now).mockReturnValue(100);
+  business();
+  vi.mocked(performance.now).mockReturnValue(200);
+  spool();
+  const sent = beginRequestHttpPhase(response, 'response_send');
+  vi.mocked(performance.now).mockReturnValue(500);
+  response.emit('finish');
+  sent();
+  verified();
+  response.emit('close');
+  expect(appendDiagnosticLog).toHaveBeenCalledTimes(1);
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    payload: expect.objectContaining({ httpPhases: [
+      { phase: 'body_verification', durationMs: 20, completed: true },
+      { phase: 'response_spool_inclusive', durationMs: 170, completed: true },
+      { phase: 'business_handler', durationMs: 70, completed: true },
+      { phase: 'response_send', durationMs: 300, completed: false }
+    ] })
   }));
 });
