@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
@@ -41,6 +41,7 @@ it.each(['legacy', 'current'] as const)('records subsequent editing of pre-selec
   await withLibraryRequestSnapshot(a, b, replay => replay(), runtime);
   const current = (await loadCurrentSyncNodeRecord(b.port, 'topic'))!;
   expect(wholeBodies(current)).toContain('New complete user input');
+  await mkdir('.tmp/artifacts', { recursive: true });
   await writeFile(`.tmp/artifacts/t349-dual-head-edit-${mode}.json`, JSON.stringify({ mode,
     currentBody: current.body_text, alternatives: current.alternative_bodies,
     parents: current.parent_version_ids }, null, 2));

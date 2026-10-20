@@ -35,6 +35,7 @@ it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconcili
       try { expect(db.prepare('SELECT article_id FROM attachment_parse_queue').all()).toEqual([]); }
       finally { db.close(); }
     }
+    await fs.mkdir('.tmp/artifacts', { recursive: true });
     await fs.writeFile(`.tmp/artifacts/t369-complete-inventory-${count}.json`, JSON.stringify({
       count, first, firstRoundMs: firstFinished - started, continuationMs: performance.now() - firstFinished
     }, null, 2));

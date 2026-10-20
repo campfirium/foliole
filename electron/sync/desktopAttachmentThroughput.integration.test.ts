@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -94,6 +94,7 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
     const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, rounds, totalBlocks,
       ...measurement.metrics(),
       elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };
+    await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
     await writeFile(path.resolve('.tmp/artifacts/t357-attachment-throughput.json'), JSON.stringify(metrics, null, 2));
   } finally {
     measurement.close();
