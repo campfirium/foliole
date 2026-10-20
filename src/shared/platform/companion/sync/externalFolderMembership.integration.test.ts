@@ -103,16 +103,30 @@ it.each(['remove', 'leave'] as const)('hides the departed provider library from 
   current = a;
   expect(loadExternalSearchFolders().map(folder => folder.id)).toEqual(['retained']);
   for (const peer of [a, b]) await expectHiddenDuringGrace(peer);
-  const afterGrace = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
-  current = a;
-  completeDesktopEligibleRemovals('group', afterGrace);
-  current = b;
-  await completeCompanionEligibleRemovals(b.port, 'group', afterGrace);
+  for (const peer of [a, b]) await expectGraceBoundary(peer, c.id, peer === b);
   for (const peer of [a, b]) await expectRetired(peer, original);
   expectKeptLocally(c, standaloneId, folderPath);
   expect(a.db.prepare("SELECT id FROM external_search_folders WHERE id = 'retained'").get()).toEqual({ id: 'retained' });
   expect(await readFile(path.join(folderPath, 'note.md'), 'utf8')).toBe('Original file');
 });
+
+async function expectGraceBoundary(peer: Peer, providerId: string, companion: boolean) {
+  current = peer;
+  const leftAt = peer.db.prepare('SELECT left_at FROM sync_group_devices WHERE device_identity_key = ?')
+    .pluck().get(providerId) as string;
+  expect(leftAt).toEqual(expect.any(String));
+  const expiresAt = Date.parse(leftAt) + 7 * 24 * 60 * 60 * 1000;
+  const maintain = async (at: number) => {
+    const now = new Date(at).toISOString();
+    if (companion) await completeCompanionEligibleRemovals(peer.port, 'group', now);
+    else completeDesktopEligibleRemovals('group', now);
+  };
+  await maintain(expiresAt - 1);
+  await expectHiddenDuringGrace(peer);
+  expect(peer.db.prepare("SELECT content FROM external_documents WHERE document_id = 'provided:note.md'")
+    .pluck().get()).toBe('Original file');
+  await maintain(expiresAt);
+}
 
 it('rolls back the grace-period purge when External removal fails', async () => {
   const [a, , c] = peers as [Peer, Peer, Peer];
