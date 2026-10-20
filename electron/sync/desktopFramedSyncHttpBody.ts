@@ -9,6 +9,9 @@ import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLe
 import { readFramedSyncFileChunks } from './framedSyncFileChunks.js';
 
 const READ_BYTES = 64 * 1024;
+// Source wait includes transport and event-loop scheduling; file waits include worker-pool scheduling.
+export type HttpBodyTiming = (phase: 'budget_wait' | 'source_read' | 'file_prepare' |
+  'file_write' | 'file_close' | 'hash', durationMs: number) => void;
 
 /** A request-owned file is authenticated before any frame is decoded or durably staged. */
 export async function withVerifiedFramedHttpBody<T>(input: {
@@ -16,14 +19,18 @@ export async function withVerifiedFramedHttpBody<T>(input: {
   expectedSha256: string;
   contentLength?: string;
   payloadBudget?: FramedSyncPayloadBudget | undefined;
+  onTiming?: HttpBodyTiming;
 }, consume: (stream: AsyncIterable<Uint8Array> & Readonly<{ path: string }>) => Promise<T>): Promise<T> {
   if (!/^[0-9a-f]{64}$/u.test(input.expectedSha256)) throw new Error('invalid_signature');
   const expectedLength = parseLength(input.contentLength);
+  const preparing = performance.now();
   const root = await mkdtemp(join(tmpdir(), 'foliole-framed-http-'));
+  input.onTiming?.('file_prepare', performance.now() - preparing);
   const path = join(root, 'request.body');
   let stream: ReturnType<typeof readFramedSyncFileChunks> | undefined;
   try {
-    await spool(leaseFramedSyncPayloads(input.body, input.payloadBudget, 'inbound'), path, input.expectedSha256, expectedLength);
+    await spool(leaseFramedSyncPayloads(input.body, input.payloadBudget, 'inbound', input.onTiming),
+      path, input.expectedSha256, expectedLength, input.onTiming);
     stream = readFramedSyncFileChunks(path);
     return await consume(Object.assign(stream, { path }));
   } finally {
@@ -39,8 +46,11 @@ function parseLength(value?: string) {
   return length;
 }
 
-async function spool(body: AsyncIterable<Uint8Array>, path: string, expected: string, expectedLength: number | null) {
+async function spool(body: AsyncIterable<Uint8Array>, path: string, expected: string,
+  expectedLength: number | null, onTiming?: HttpBodyTiming) {
+  const opening = performance.now();
   const file = await open(path, 'wx');
+  onTiming?.('file_prepare', performance.now() - opening);
   const digest = createHash('sha256');
   let length = 0;
   try {
@@ -51,13 +61,24 @@ async function spool(body: AsyncIterable<Uint8Array>, path: string, expected: st
       }
       for (let offset = 0; offset < chunk.byteLength; offset += READ_BYTES) {
         const bytes = chunk.subarray(offset, offset + READ_BYTES);
+        const writing = performance.now();
         await writeAll(file, bytes);
+        onTiming?.('file_write', performance.now() - writing);
+        const hashing = performance.now();
         digest.update(bytes);
+        onTiming?.('hash', performance.now() - hashing);
       }
     }
     if (expectedLength !== null && length !== expectedLength) throw new Error('truncated_http_body');
-    if (!timingSafeEqual(digest.digest(), Buffer.from(expected, 'hex'))) throw new Error('invalid_signature');
-  } finally { await file.close(); }
+    const hashing = performance.now();
+    const valid = timingSafeEqual(digest.digest(), Buffer.from(expected, 'hex'));
+    onTiming?.('hash', performance.now() - hashing);
+    if (!valid) throw new Error('invalid_signature');
+  } finally {
+    const closing = performance.now();
+    await file.close();
+    onTiming?.('file_close', performance.now() - closing);
+  }
 }
 
 async function writeAll(file: Awaited<ReturnType<typeof open>>, bytes: Uint8Array) {

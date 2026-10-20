@@ -7,6 +7,8 @@ import { Readable } from 'node:stream';
 
 import { expect, it, vi } from 'vitest';
 
+import { FramedSyncPayloadBudget, FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
 
 async function* fixtureBytes(size: number) {
@@ -79,5 +81,41 @@ it('cleans a request file after decoding fails or the consumer does not drain it
     if (fails) await expect(result).rejects.toThrow('decode_failed');
     else await expect(result).resolves.toBe(1);
     await expect(access(dirname(path))).rejects.toMatchObject({ code: 'ENOENT' });
+  }
+});
+
+it('separates capacity waiting from source waiting without changing verified bytes', async () => {
+  const budget = new FramedSyncPayloadBudget();
+  const held = await budget.acquire({ direction: 'inbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  const acquire = vi.spyOn(budget, 'acquire');
+  const onTiming = vi.fn();
+  let clock = 0;
+  const now = vi.spyOn(performance, 'now').mockImplementation(() => clock);
+  const bytes = Buffer.from('verified body');
+  const expectedSha256 = createHash('sha256').update(bytes).digest('hex');
+  async function* body() { clock += 23; yield bytes; }
+  const result = withVerifiedFramedHttpBody({ body: body(), expectedSha256, payloadBudget: budget, onTiming },
+    async stream => {
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      return Buffer.concat(chunks);
+    });
+  try {
+    await vi.waitFor(() => expect(acquire).toHaveBeenCalled());
+    expect(onTiming).not.toHaveBeenCalledWith('source_read', expect.any(Number));
+    clock += 41;
+    held.release();
+    expect(await result).toEqual(bytes);
+    expect(onTiming).toHaveBeenCalledWith('budget_wait', 41);
+    expect(onTiming).toHaveBeenCalledWith('source_read', 23);
+    for (const phase of ['file_write', 'hash', 'file_close']) {
+      expect(onTiming).toHaveBeenCalledWith(phase, 0);
+    }
+  } finally {
+    held.release();
+    await result.catch(() => undefined);
+    now.mockRestore();
+    acquire.mockRestore();
+    budget.close();
   }
 });

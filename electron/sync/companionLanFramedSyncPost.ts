@@ -9,7 +9,7 @@ import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayl
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
-import { beginRequestHttpPhase } from './companionLanRequestTiming.js';
+import { beginRequestHttpPhase, requestBodyTiming } from './companionLanRequestTiming.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
 import { encodeFramedSyncHttpBody, writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
@@ -59,6 +59,7 @@ export async function handleCompanionLanFramedSyncPost(args: FramedPostArgs) {
     await withVerifiedFramedHttpBody({
       body: progressBytes(request, args.onProgress),
       payloadBudget: args.payloadBudget,
+      onTiming: requestBodyTiming(response),
       expectedSha256: readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER)!,
       ...(contentLength === null ? {} : { contentLength })
     }, async body => {

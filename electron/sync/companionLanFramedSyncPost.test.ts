@@ -185,6 +185,12 @@ it('records HTTP stages while preserving exact authenticated binary response byt
   expect(Buffer.from(await response.arrayBuffer())).toEqual(binaryBody);
   await vi.waitFor(() => expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
     event: 'companion_lan_slow_request', payload: expect.objectContaining({
+      bodyTimings: expect.objectContaining({
+        budget_wait: expect.objectContaining({ calls: expect.any(Number), durationMs: expect.any(Number) }),
+        source_read: expect.objectContaining({ calls: expect.any(Number), durationMs: expect.any(Number) }),
+        file_write: expect.objectContaining({ calls: expect.any(Number), durationMs: expect.any(Number) }),
+        hash: expect.objectContaining({ calls: expect.any(Number), durationMs: expect.any(Number) })
+      }),
       httpPhases: expect.arrayContaining([
         expect.objectContaining({ phase: 'body_verification', completed: true }),
         expect.objectContaining({ phase: 'request_decode', completed: true }),
