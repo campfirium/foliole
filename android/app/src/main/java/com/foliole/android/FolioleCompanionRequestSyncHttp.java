@@ -87,10 +87,13 @@ final class FolioleCompanionRequestSyncHttp {
                 operation.owner, call.getString("receiver_device_id"), roundId, "outbound", false);
         };
         operation.check();
-        return FramedSyncHttpTransport.postRawStream(new URL(call.getString("url")), call.getString("sync_group_id"),
+        URL url = new URL(call.getString("url"));
+        var timing = new FolioleRequestSyncTiming(requestId(call), url);
+        return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
-            output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check, progress),
-            input -> FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress), operation::opened);
+            output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check, progress, timing::chunk),
+            input -> FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress),
+            operation::opened, timing::phase);
     }
 
     private static FramedSyncPayloadBudget owner(PluginCall call) {

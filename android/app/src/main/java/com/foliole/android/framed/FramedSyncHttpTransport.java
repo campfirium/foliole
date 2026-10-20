@@ -74,6 +74,14 @@ public final class FramedSyncHttpTransport {
     public static <T> T postRawStream(URL url, String groupId, String expectedRemoteDeviceId,
         String expectedRemoteLibraryEpoch, Map<String, String> memberAuthHeaders,
         RawRequestBody requestBody, RawResponseBody<T> responseBody, ConnectionOwner owner) throws Exception {
+        return postRawStream(url, groupId, expectedRemoteDeviceId, expectedRemoteLibraryEpoch,
+            memberAuthHeaders, requestBody, responseBody, owner, FramedSyncHttpRequestTiming.NONE);
+    }
+
+    public static <T> T postRawStream(URL url, String groupId, String expectedRemoteDeviceId,
+        String expectedRemoteLibraryEpoch, Map<String, String> memberAuthHeaders,
+        RawRequestBody requestBody, RawResponseBody<T> responseBody, ConnectionOwner owner,
+        FramedSyncHttpRequestTiming.Observer timing) throws Exception {
         requireText(groupId, "sync_group_id_required");
         requireText(expectedRemoteDeviceId, "remote_device_id_required");
         requireText(expectedRemoteLibraryEpoch, "remote_library_epoch_required");
@@ -92,11 +100,8 @@ public final class FramedSyncHttpTransport {
         connection.setRequestProperty("X-Sync-Group-Id", groupId);
         try {
             owner.opened(connection);
-            try (OutputStream output = connection.getOutputStream()) {
-                requestBody.write(output);
-                output.flush();
-            }
-            int status = connection.getResponseCode();
+            FramedSyncHttpRequestTiming.send(connection, requestBody, timing);
+            int status = FramedSyncHttpRequestTiming.responseCode(connection, timing);
             if (status != 200) {
                 String detail = readSafeErrorDetail(connection.getErrorStream());
                 throw new IllegalStateException(

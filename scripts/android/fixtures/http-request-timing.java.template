@@ -1,0 +1,102 @@
+package com.foliole.android;
+
+import com.foliole.android.framed.FramedSyncFiles;
+import com.foliole.android.framed.FramedSyncHttpTransport;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.net.URL;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class HttpTimingFixture {
+    public static void main(String[] args) throws Exception {
+        boolean block = Boolean.parseBoolean(args[0]);
+        int size = Integer.parseInt(args[1]);
+        byte[] expected = new byte[size];
+        Arrays.fill(expected, (byte) 65);
+        var root = Files.createTempDirectory("foliole-body-probe-");
+        var files = new FramedSyncFiles(new android.content.Context(root.toFile()), "fixture");
+        String directory = "requests/probe";
+        files.write(directory + "/http-out-0", expected);
+        var headersSeen = new CountDownLatch(1);
+        var bodySeen = new CountDownLatch(1);
+        var progressEntered = new CountDownLatch(1);
+        var releaseProgress = new CountDownLatch(1);
+        var error = new AtomicReference<Throwable>();
+        var timing = new FolioleRequestSyncTiming("request-1", new URL("http://127.0.0.1:1234/probe?request=objects&secret=never-log-this"));
+        var received = new AtomicReference<byte[]>();
+        var times = new long[2];
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        configureServer(server, times, headersSeen, bodySeen, received, error);
+        server.start();
+        var url = new URL("http://127.0.0.1:" + server.getAddress().getPort() + "/probe");
+        Thread client = new Thread(() -> {
+            try {
+                FramedSyncHttpTransport.postRawStream(url, "group", "receiver", "epoch",
+                    Map.of("x-device-id", "sender", "x-nonce", "nonce", "x-signature", "signature", "x-timestamp", "time"),
+                    output -> FolioleRequestSyncHttpChunks.write(files, directory, 1, output, () -> {}, () -> {
+                        progressEntered.countDown();
+                        if (block && !releaseProgress.await(3, TimeUnit.SECONDS)) throw new IllegalStateException("probe_release_timeout");
+                    }, timing::chunk), input -> input.readAllBytes(), connection -> {}, timing::phase);
+            } catch (Throwable failure) { error.set(failure); }
+        });
+        boolean completeBeforeRelease;
+        try {
+            client.start();
+            if (!progressEntered.await(2, TimeUnit.SECONDS)) throw new AssertionError("progress_not_reached");
+            if (!headersSeen.await(2, TimeUnit.SECONDS)) throw new AssertionError("headers_not_received");
+            completeBeforeRelease = bodySeen.await(300, TimeUnit.MILLISECONDS);
+            releaseProgress.countDown();
+            client.join(2000);
+            if (client.isAlive() || error.get() != null) throw new AssertionError("transport_failure", error.get());
+            if (!Arrays.equals(expected, received.get())) throw new AssertionError("body_changed");
+            System.out.println("{\"blockedProgress\":" + block + ",\"bytes\":" + size
+                + ",\"bodyCompleteBeforeRelease\":" + completeBeforeRelease
+                + ",\"headersToBodyMs\":" + ((times[1] - times[0]) / 1_000_000.0) + "}");
+        } finally {
+            releaseProgress.countDown();
+            server.stop(0);
+            files.remove(directory);
+        }
+        if (completeBeforeRelease == block) throw new AssertionError("progress_wait_observation_changed");
+        verifyTiming(size, block);
+    }
+
+    private static void configureServer(HttpServer server, long[] times, CountDownLatch headersSeen,
+        CountDownLatch bodySeen, AtomicReference<byte[]> received, AtomicReference<Throwable> error) {
+        server.createContext("/probe", exchange -> {
+            try {
+                times[0] = System.nanoTime();
+                headersSeen.countDown();
+                received.set(exchange.getRequestBody().readAllBytes());
+                times[1] = System.nanoTime();
+                bodySeen.countDown();
+                exchange.getResponseHeaders().set("Content-Type", FramedSyncHttpTransport.CONTENT_TYPE);
+                exchange.getResponseHeaders().set("X-Foliole-Device-Id", "receiver");
+                exchange.getResponseHeaders().set("X-Foliole-Library-Epoch", "epoch");
+                exchange.sendResponseHeaders(200, -1);
+            } catch (Throwable failure) { error.set(failure); }
+            finally { exchange.close(); }
+        });
+    }
+
+    private static void verifyTiming(int size, boolean block) {
+        String logs = String.join("\n", android.util.Log.lines);
+        for (String phase : new String[] { "open_output", "write", "touch_round", "flush", "close_output", "response_code" }) {
+            if (!logs.contains("phase=" + phase + " ")) throw new AssertionError("missing_phase_" + phase);
+        }
+        if (!logs.contains("request_bytes=" + size)) throw new AssertionError("missing_byte_count");
+        if (logs.contains("never-log-this") || logs.contains("secret=") || logs.contains("signature")) {
+            throw new AssertionError("sensitive_metadata_logged");
+        }
+        String touch = android.util.Log.lines.stream().filter(line -> line.contains("phase=touch_round ")).findFirst().orElseThrow();
+        double duration = Double.parseDouble(touch.split("duration_ms=")[1].split(" ")[0]);
+        if (block && duration < 250) throw new AssertionError("bridge_wait_not_measured");
+        System.out.println("HTTP bytes, phase timing and metadata privacy verified");
+    }
+
+}
