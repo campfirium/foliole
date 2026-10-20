@@ -17,7 +17,7 @@ on:
         type: string
     outputs:
       accepted_sha:
-        description: Exact commit accepted by both hosts for one portable domain
+        description: Exact commit accepted by every host of one portable domain
         value: ${{ jobs.portable-domain-admission.outputs.accepted_sha }}
 
 permissions:
@@ -35,16 +35,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - host: Ubuntu
-            runner: ubuntu-latest
-          - host: Windows
-            runner: windows-latest
+        include: ${{ fromJSON(inputs.domain == 'android-source' && '[{"host":"Ubuntu","runner":"ubuntu-latest"}]' || '[{"host":"Ubuntu","runner":"ubuntu-latest"},{"host":"Windows","runner":"windows-latest"}]') }}
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
       TARGET_SHA: ${{ inputs.target_sha }}
-      VITEST_POOL: ${{ (inputs.domain == 'android-source' || inputs.domain == 'shared') && matrix.host == 'Windows' && 'forks' || 'threads' }}
+      VITEST_POOL: ${{ inputs.domain == 'shared' && matrix.host == 'Windows' && 'forks' || 'threads' }}
     steps:
       - name: Validate target SHA input
         run: node -e "if (!/^[0-9a-f]{40}$/.test(process.env.TARGET_SHA ?? '')) throw new Error('target_sha must be a full 40-character lowercase commit SHA')"
@@ -103,7 +99,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.require-domain.outputs.accepted_sha }}
     steps:
-      - name: Require both portable hosts
+      - name: Require every portable host
         id: require-domain
         env:
           DOMAIN_RESULT: ${{ needs.portable-domain-tests.result }}

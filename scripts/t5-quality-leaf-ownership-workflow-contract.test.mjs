@@ -25,6 +25,8 @@ import {
   isLinuxOnlyScriptTest,
   selectScriptTestBucketFiles
 } from './script-test-bucket-selection.mjs';
+import { isWindowsHostScriptTest, listWindowsHostScriptTests } from './script-test-windows-host-files.mjs';
+import { portableDomainHosts } from './quality/portable-domain-hosts.test-support.mjs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const parseWorkflow = (name) => parse(read(`.github/workflows/${name}`));
@@ -33,6 +35,7 @@ const desktopSource = parseWorkflow('hosted-quality-desktop-source.yml');
 const electron = parseWorkflow('hosted-quality-electron.yml');
 const t5 = parseWorkflow('t6-hosted-quality.yml');
 const tooling = parseWorkflow('hosted-quality-tooling.yml');
+const portableHosts = (domain) => portableDomainHosts(portable, domain);
 const t5LeafWorkflows = [
   portable, desktopSource, electron, tooling,
   parseWorkflow('hosted-quality-static.yml'),
@@ -91,21 +94,16 @@ describe('T5 canonical leaf ownership', () => {
     ));
   });
 
-  it('requests no more than eighteen runner-backed first-wave leaves', () => {
+  it('requests no more than seventeen runner-backed first-wave leaves', () => {
     const fixedLeaves = 4;
-    const portableLeaves = portable.jobs['portable-domain-tests'].strategy.matrix.include.length * 2;
+    const portableLeaves = portableHosts('shared').length + portableHosts('android-source').length;
     const bucketLeaves = [desktopSource, electron, tooling].reduce((total, workflow) => (
       total + Object.values(workflow.jobs)[0].strategy.matrix.include.length
     ), 0);
-    expect(fixedLeaves + portableLeaves + bucketLeaves).toBe(18);
+    expect(fixedLeaves + portableLeaves + bucketLeaves).toBe(17);
   });
 
-  it('keeps every original host by portable domain without cross-domain execution', () => {
-    const rows = portable.jobs['portable-domain-tests'].strategy.matrix.include;
-    expect(rows).toEqual([
-      { host: 'Ubuntu', runner: 'ubuntu-latest' },
-      { host: 'Windows', runner: 'windows-latest' }
-    ]);
+  it('keeps every portable domain on its own hosts without cross-domain execution', () => {
     expect(portable.jobs['portable-domain-tests'].strategy['fail-fast']).toBe(false);
     expect(portable.jobs['portable-domain-tests']['timeout-minutes'])
       .toBe("${{ inputs.domain == 'shared' && 40 || 20 }}");
@@ -146,8 +144,9 @@ describe('T5 canonical leaf ownership', () => {
       expect(files.length).toBeGreaterThan(0);
     }
     const leafHostDomainCollections = Object.fromEntries(
-      ['Ubuntu', 'Windows'].flatMap((host) => Object.entries(originalHostDomainCollections)
-        .map(([domain, files]) => [`${host}:${domain}`, files]))
+      Object.entries(originalHostDomainCollections).flatMap(([domain, files]) => (
+        portableHosts(domain).map(({ host }) => [`${host}:${domain}`, files])
+      ))
     );
     for (const [hostDomain, files] of Object.entries(leafHostDomainCollections)) {
       const domain = hostDomain.split(':')[1];
@@ -163,7 +162,8 @@ describe('T5 canonical leaf ownership', () => {
       (bucket) => selectScriptTestBucketFiles(bucket, files, 'win32')
     ).sort();
     expect(ubuntu).toEqual(files);
-    expect(windows).toEqual(files.filter((file) => !isLinuxOnlyScriptTest(file)));
+    expect(windows).toEqual(files.filter(isWindowsHostScriptTest));
+    expect(files).toEqual(expect.arrayContaining(listWindowsHostScriptTests()));
     expect(new Set(windows).size).toBe(windows.length);
     expect(files.filter(isLinuxOnlyScriptTest).length).toBeGreaterThan(0);
   });

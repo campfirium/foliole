@@ -67,9 +67,32 @@ describe('script test bucket root matching', () => {
       selectScriptTestBucketFiles('gate-two', files)
     ]);
     expectExactPartition(GATE_INTEGRATION_SCRIPT_NAMES, [
-      selectGateIntegrationScriptNames('integration-one'),
-      selectGateIntegrationScriptNames('integration-two')
+      selectGateIntegrationScriptNames('integration-one', 'linux'),
+      selectGateIntegrationScriptNames('integration-two', 'linux')
     ]);
+  });
+
+  it('runs only Windows host script tests on Windows tooling', () => {
+    const files = [
+      'scripts/quality/pinned-npm.test.mjs',
+      'scripts/release-doctor.test.mjs',
+      'scripts/quality/quality-gate-route-json.test.mjs',
+      'scripts/quality/quality-skip-lint.test.mjs',
+      'scripts/quality/quality-gate-target.test.mjs',
+      'scripts/quality/quality-gate-telemetry.test.mjs',
+      'scripts/preview/preview-dedupe.test.mjs',
+      'scripts/test-files.test.mjs'
+    ];
+    expect(selectScriptTestBucketFiles('core', files, 'win32')).toEqual([files[0]]);
+    expect(selectScriptTestBucketFiles('gate', files, 'win32')).toEqual([files[2]]);
+    expect(selectScriptTestBucketFiles('gate-integration', files, 'win32')).toEqual([files[4]]);
+    expect(selectScriptTestBucketFiles('preview', files, 'win32')).toEqual([files[6]]);
+    expect(selectScriptTestBucketFiles('node', files, 'win32')).toEqual([files[7]]);
+    expect(selectScriptTestBucketFiles('core', files, 'linux')).toEqual([files[0], files[1]]);
+    expect(selectScriptTestBucketFiles('all', files, 'win32')).toEqual(files);
+    expect(selectGateIntegrationScriptNames('integration-one', 'win32', files)).toEqual([]);
+    expect(selectGateIntegrationScriptNames('integration-two', 'win32', files))
+      .toEqual(['test:quality:gate-integration:target-core']);
   });
 
   it('exposes changed-file matching through the CLI command', () => {

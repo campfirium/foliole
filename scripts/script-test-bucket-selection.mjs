@@ -4,6 +4,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isWindowsHostScriptTest } from './script-test-windows-host-files.mjs';
+
 export const SCRIPT_TEST_ROOTS = [
   'scripts',
   'scripts/codex',
@@ -56,12 +58,19 @@ export function gateIntegrationScriptName(bucket) {
 
 export const GATE_INTEGRATION_SCRIPT_NAMES = GATE_INTEGRATION_PRIMARY_BUCKETS.map(gateIntegrationScriptName);
 
-export function selectGateIntegrationScriptNames(shard) {
+export function selectGateIntegrationScriptNames(shard, platform = process.platform, files = null) {
   const shardIndex = { 'integration-one': 0, 'integration-two': 1 }[shard];
   if (shardIndex === undefined) {
     return null;
   }
-  return GATE_INTEGRATION_SCRIPT_NAMES.filter((_scriptName, index) => index % 2 === shardIndex);
+  const buckets = GATE_INTEGRATION_PRIMARY_BUCKETS.filter((_bucket, index) => index % 2 === shardIndex);
+  if (platform !== 'win32') {
+    return buckets.map(gateIntegrationScriptName);
+  }
+  const candidates = files ?? collectScriptTestFiles();
+  return buckets
+    .filter((bucket) => selectScriptTestBucketFiles(bucket, candidates, platform).length > 0)
+    .map(gateIntegrationScriptName);
 }
 
 export function isQualityGateTest(filePath) {
@@ -135,6 +144,9 @@ export function selectScriptTestBucketFiles(bucket, files, platform = process.pl
   if (bucket === 'all') {
     return files;
   }
+  if (platform === 'win32') {
+    files = files.filter(isWindowsHostScriptTest);
+  }
   if (bucket === 'gate') {
     return files.filter((file) => isQualityGateTest(file) && !isQualityGateIntegrationTest(file));
   }
@@ -159,8 +171,7 @@ export function selectScriptTestBucketFiles(bucket, files, platform = process.pl
     return files.filter((file) => (
       !isQualityGateTest(file) &&
       !isPreviewDedupeTest(file) &&
-      !isNodeOnlyScriptTest(file) &&
-      (platform !== 'win32' || !isLinuxOnlyScriptTest(file))
+      !isNodeOnlyScriptTest(file)
     ));
   }
   if (bucket === 'core-one' || bucket === 'core-two') {

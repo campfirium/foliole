@@ -41,10 +41,10 @@ describe('Hosted leaf command coverage', () => {
     ]);
     expect(workflows.ios.jobs.contract.env.FOLIOLE_IOS_RESOURCE_MODE).toBe('full');
     const portableMatrix = workflows.portableDomain.jobs['portable-domain-tests'].strategy.matrix.include;
-    expect(portableMatrix).toEqual([
-      { host: 'Ubuntu', runner: 'ubuntu-latest' },
-      { host: 'Windows', runner: 'windows-latest' }
-    ]);
+    expect(portableMatrix).toBe(
+      "${{ fromJSON(inputs.domain == 'android-source' && '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\"}]'"
+      + " || '[{\"host\":\"Ubuntu\",\"runner\":\"ubuntu-latest\"},{\"host\":\"Windows\",\"runner\":\"windows-latest\"}]') }}"
+    );
     expect(workflows.portableDomain.jobs['portable-domain-tests'].strategy['fail-fast']).toBe(false);
     const electronMatrix = workflows.electron.jobs['electron-tests'].strategy.matrix.include;
     const expectedElectronEntries = ['Ubuntu', 'Windows'].flatMap((host) => (
@@ -87,7 +87,7 @@ describe('Hosted leaf command coverage', () => {
         'check-workspace-settings-boundary.mjs', 'quality:release:android:tail'
       ],
       Windows: [
-        'test:release:desktop-src', 'test:release:android', 'test:release:shared',
+        'test:release:desktop-src', 'test:release:shared',
         'test:desktop:electron', 'quality:release:tooling', 'quality:release:windows:core',
         'build:vite-only', 'electron:compile', 'quality:release:windows:tail',
         'windows-ci-playwright-profile.mjs'
