@@ -59,7 +59,8 @@ export async function runT234WebViewSession({
       throw new Error(`Expected one fixed A5 process for ${appId}.`);
     }
     const socket = webViewSocketForPid(
-      captured(paths.adb, ['-s', serial, 'shell', 'cat', '/proc/net/unix']), pids[0]
+      captured(paths.adb, ['-s', serial, 'shell',
+        `awk '$NF == "@webview_devtools_remote_${pids[0]}" { print }' /proc/net/unix`]), pids[0]
     );
     session = { appId, pid: Number(pids[0]), serial, socket, status: 'ready' };
     save();

@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,6 +8,26 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { runT234WebViewSession, webViewSocketForPid } from './macos-a5-t234-webview-session.mjs';
+
+it('discovers the fixed socket when unrelated system sockets exceed the capture buffer', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-webview-large-'));
+  const sockets = path.join(root, 'unix');
+  fs.writeFileSync(sockets, '000: unrelated_socket\n'.repeat(80000) + '001: @webview_devtools_remote_42\n');
+  try {
+    const captured = (_adb, args) => {
+      if (args.includes('pidof')) return '42';
+      if (args.includes('packages')) return '';
+      return execSync(args.slice(3).join(' ').replace('/proc/net/unix', sockets), { encoding: 'utf8' });
+    };
+    await runT234WebViewSession({
+      assertFixed: vi.fn(), buildIdentity: () => 'large', captured, checked: vi.fn(),
+      paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' },
+      serial: '87a33a4b', waitForEnd: async () => {}
+    });
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'a5-t234-webview-session/large/session.json'), 'utf8')))
+      .toMatchObject({ status: 'closed', socket: 'webview_devtools_remote_42' });
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 it('selects only the WebView socket belonging to the fixed app process', () => {
   const sockets = '000: @webview_devtools_remote_42\n001: @webview_devtools_remote_43\n';
