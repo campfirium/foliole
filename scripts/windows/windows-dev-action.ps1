@@ -4,7 +4,9 @@ param(
   [string]$Action,
   [ValidatePattern("^group-[0-9a-f-]{36}$")]
   [string]$ExpectedGroupId = "",
-  [string]$ExpectedGroupTag = ""
+  [string]$ExpectedGroupTag = "",
+  [ValidatePattern("^[0-9a-f]{40}$")]
+  [string]$PreflightBase = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,6 +15,7 @@ $systemNpmCli = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
 $puller = Join-Path $PSScriptRoot "windows-dev-pull.mjs"
 $runner = Join-Path $PSScriptRoot "windows-dev-build.mjs"
 $internalOpenRunner = Join-Path $PSScriptRoot "windows-internal-open.mjs"
+$remotePreflightRunner = Join-Path $PSScriptRoot "windows-remote-preflight.mjs"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $releaseRunner = Join-Path $PSScriptRoot "windows-sync-group-provider-release-control.mjs"
 $lockPath = Join-Path $env:LOCALAPPDATA "Foliole\windows-dev-control\build.lock"
@@ -86,6 +89,14 @@ try {
     } elseif ($Action -eq "internal-open") {
       & $systemNode $internalOpenRunner
       $runnerExit = $LASTEXITCODE
+    } elseif ($Action -eq "remote-preflight") {
+      Push-Location $repoRoot
+      try {
+        & $systemNode $remotePreflightRunner $PreflightBase
+        $runnerExit = $LASTEXITCODE
+      } finally {
+        Pop-Location
+      }
     } else {
       & $systemNode $runner $Action
       $runnerExit = $LASTEXITCODE

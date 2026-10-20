@@ -13,6 +13,7 @@ import {
 
 import { parseRemoteQualityArgs } from './remote-quality-args.mjs';
 import { runRemoteQualityPreflight } from './remote-quality-preflight.mjs';
+import { runWindowsRemoteQualityPreflight } from './remote-quality-preflight-windows.mjs';
 import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
 import { resolveReplayStages } from './remote-quality-replay.mjs';
 import { awaitCoveringFullRun, findActiveHostedQualityRuns } from './remote-quality-active.mjs';
@@ -115,8 +116,11 @@ export async function runRemoteQuality(options = {}) {
     return { jobs: active.jobs, reused: true, runId: active.runId, scope: args.scope,
       sourceRef: args.sourceRef, targetSha, url: active.url };
   }
-  if (options.preflight && !args.replay && !args.skipPreflight) {
-    await options.preflight({ cwd, head: targetSha, repo: repoInfo.nameWithOwner, runner, scope: args.scope });
+  // The chosen preflight host is explicit; a Windows failure never falls back to the Mac.
+  const preflight = args.preflightHost === 'windows' ? options.windowsPreflight : options.preflight;
+  if (args.preflightHost === 'windows' && !preflight) throw new Error('Windows preflight is not available');
+  if (preflight && !args.replay && !args.skipPreflight) {
+    await preflight({ cwd, head: targetSha, repo: repoInfo.nameWithOwner, runner, scope: args.scope });
   }
 
   const stages = args.replay ? await resolveReplayStages({
@@ -155,7 +159,8 @@ export async function runRemoteQuality(options = {}) {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     assertQualityCommandAllowed('runner:remote-quality');
-    const result = await runRemoteQuality({ preflight: runRemoteQualityPreflight });
+    const result = await runRemoteQuality({ preflight: runRemoteQualityPreflight,
+      windowsPreflight: runWindowsRemoteQualityPreflight });
     console.log(`[remote-quality] ${result.scope} quality passed for ${result.sourceRef} `
       + `at ${result.targetSha}`);
   } catch (error) {

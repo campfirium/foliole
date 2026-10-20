@@ -16,7 +16,8 @@ export const PREFLIGHT_CONFIG_FILES = [
   'vite.config.ts', 'vite.shared.ts', 'tsconfig.json',
   'scripts/run-vitest-with-summary.mjs', 'scripts/electron-sqlite-runner.mjs',
   'scripts/quality/quality-fast-capped.mjs', 'scripts/quality/quality-fast-related-tests.mjs',
-  'scripts/quality/remote-quality-preflight.mjs', 'scripts/quality/remote-quality-preflight-select.mjs',
+  'scripts/quality/remote-quality-preflight.mjs', 'scripts/quality/remote-quality-preflight-plan.mjs',
+  'scripts/quality/remote-quality-preflight-select.mjs',
   'scripts/quality/remote-quality-preflight-reuse.mjs'
 ];
 

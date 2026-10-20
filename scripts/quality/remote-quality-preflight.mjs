@@ -1,20 +1,18 @@
 /* global console, process */
 
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { runRelatedTests } from './quality-fast-related-tests.mjs';
 import {
-  capPreflightTests, isPreflightTestFile, selectPreflightTests
-} from './remote-quality-preflight-select.mjs';
+  capturePreflight as capture, MAX_PREFLIGHT_TESTS, planPreflightSelection
+} from './remote-quality-preflight-plan.mjs';
 import {
   computePreflightFingerprint, PREFLIGHT_RECORD_FILE, preflightReuseMismatch,
   readPreflightRecord, writePreflightRecord
 } from './remote-quality-preflight-reuse.mjs';
 
-const MAX_PREFLIGHT_TESTS = 120;
 const RUN_TITLE_PATTERN = /^Dev Quality Check \((\w+)\) @ ([0-9a-f]{40})\b/u;
 
 function runCaptured(command, args, options = {}) {
@@ -27,14 +25,6 @@ function runCaptured(command, args, options = {}) {
     child.on('error', (error) => resolve({ code: 1, stderr: error.message, stdout }));
     child.on('exit', (code) => resolve({ code: code ?? 1, stderr, stdout }));
   });
-}
-
-async function capture(runner, command, args, cwd) {
-  const result = await runner(command, args, { cwd });
-  if (result.code !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed: ${(result.stderr || result.stdout).trim()}`);
-  }
-  return result.stdout;
 }
 
 export function baseFromRunTitle(title, scope) {
@@ -75,26 +65,13 @@ export function preflightFailureMessage(files) {
   ].join('\n');
 }
 
-async function listChangedFiles(runner, cwd, base, head) {
-  const output = await capture(runner, 'git', ['diff', '--name-only', '--no-renames', base, head], cwd);
-  return output.split('\n').filter(Boolean);
-}
-
-async function listTestFiles(runner, cwd) {
-  const output = await capture(runner, 'git', ['ls-files'], cwd);
-  return output.split('\n').filter(isPreflightTestFile);
-}
-
 export async function runRemoteQualityPreflight(options) {
   const { cwd = process.cwd(), runner = runCaptured, log = console.log } = options;
   const base = options.base ?? await resolvePreflightBase({ ...options, cwd, runner });
   const head = options.head ?? 'HEAD';
-  const readText = options.readText ?? ((file) => readFileSync(path.join(cwd, file), 'utf8'));
-  const changedFiles = await listChangedFiles(runner, cwd, base, head);
-  const entries = selectPreflightTests({
-    changedFiles, readText, testFiles: await listTestFiles(runner, cwd)
+  const { changedFiles, deferred, entries, run } = await planPreflightSelection({
+    base, cap: options.cap ?? MAX_PREFLIGHT_TESTS, cwd, head, readText: options.readText, runner
   });
-  const { deferred, run } = capPreflightTests(entries, options.cap ?? MAX_PREFLIGHT_TESTS);
   log(`[remote-preflight] ${changedFiles.length} changed file(s) since ${base.slice(0, 12)}; `
     + `${entries.length} related test file(s)`);
   if (options.list) {

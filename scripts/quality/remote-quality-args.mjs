@@ -1,6 +1,7 @@
 import { normalizeRemoteQualitySourceRef } from './remote-quality-target.mjs';
 
 const ALLOWED_SCOPES = new Set(['android', 'desktop', 'full', 'ios', 'shared']);
+const PREFLIGHT_HOSTS = new Set(['mac', 'windows']);
 
 export function parseRemoteQualityArgs(args) {
   const result = { scope: '', sourceRef: 'refs/heads/dev' };
@@ -12,8 +13,15 @@ export function parseRemoteQualityArgs(args) {
       index -= 1;
     } else if (name === '--scope') result.scope = value;
     else if (name === '--replay') result.replay = value;
+    else if (name === '--preflight-host') result.preflightHost = value;
     else if (name === '--source-ref') result.sourceRef = normalizeRemoteQualitySourceRef(value);
     else throw new Error(`Unknown argument: ${name}`);
+  }
+  if (result.preflightHost !== undefined) {
+    if (!PREFLIGHT_HOSTS.has(result.preflightHost)) throw new Error('--preflight-host must be mac or windows');
+    if (result.skipPreflight || result.replay !== undefined) {
+      throw new Error('--preflight-host cannot be combined with --skip-preflight or --replay');
+    }
   }
   if (result.replay !== undefined) {
     if (!/^[1-9]\d*$/u.test(result.replay)) throw new Error('--replay requires a numeric run ID');

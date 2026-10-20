@@ -44,7 +44,7 @@ export function windowsDevTransportIdentity({ env = process.env, fsApi = fs,
 }
 
 export function windowsDevSshSpec(host, action, env = process.env, home = os.homedir(),
-  fsApi = fs) {
+  fsApi = fs, actionArgs = []) {
   const transport = windowsDevTransportIdentity({ env, fsApi, home, host });
   const expectedGroupId = env.FOLIOLE_T152_EXPECTED_GROUP_ID?.trim();
   const expectedGroupTag = env.FOLIOLE_T152_EXPECTED_GROUP_TAG?.trim();
@@ -58,7 +58,7 @@ export function windowsDevSshSpec(host, action, env = process.env, home = os.hom
     'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-File', REMOTE_ACTION, toWindowsDevWireAction(action),
     ...(expectedGroupId ? ['-ExpectedGroupId', expectedGroupId,
-      '-ExpectedGroupTag', expectedGroupTag] : [])];
+      '-ExpectedGroupTag', expectedGroupTag] : []), ...actionArgs];
 }
 
 export function windowsDevScpSpec(host, remotePath, localPath,

@@ -36,6 +36,8 @@ import {
 import {
   copyWindowsDesktopDnsSdHostFacts
 } from './windows-desktop-dnssd-host-facts-control.mjs';
+import { parseWindowsRemotePreflightArgs, runWindowsRemotePreflightControl,
+  WINDOWS_REMOTE_PREFLIGHT_ACTION } from './windows-remote-preflight-control.mjs';
 
 export {
   parseWindowsDevCaptureAnnotationEvidence, parseWindowsDevFailureEvidence,
@@ -126,8 +128,14 @@ export async function runWindowsDevControl({
   executeScp = (args, options) => execute('scp', args, options),
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
   repoRoot = process.cwd(), stdout = process.stdout,
-  prepareInternalRuntime = prepareWindowsInternalRuntime
+  prepareInternalRuntime = prepareWindowsInternalRuntime, verifyPushed
 } = {}) {
+  if (argv.includes(WINDOWS_REMOTE_PREFLIGHT_ACTION)) {
+    return runWindowsRemotePreflightControl({ ...parseWindowsRemotePreflightArgs(argv, env), env,
+      executeGit, executeScp, executeSsh, fsApi, prepareRuntime: prepareInternalRuntime,
+      pushSpec: windowsDevPushSpec, repoRoot, stdout,
+      ...(verifyPushed ? { verifyPushed } : {}) });
+  }
   const { action, diagnosticMode, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
   const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
     targetHost, remote, local, env, os.homedir(), fsApi);
