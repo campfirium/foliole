@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 
+import { assertNodeModulesUnoccupied, importWindowsNpmBundle } from './windows-npm-offline-import.mjs';
+
 const MARKER = ['.tmp', 'remote-preflight', 'dependencies.json'];
 // The Mac controller places the checksummed Electron archive here, as for internal-install.
 export const WINDOWS_PREFLIGHT_RUNTIME_ROOT = '.tmp/artifacts/windows-remote-preflight-runtime';
@@ -24,7 +26,7 @@ function installedStamp(fsApi, repoRoot) {
   }
 }
 
-// Same offline route as internal-install: cached npm tarballs without install
+// Same offline route as internal-install: npm tarballs from the Mac bundle without install
 // scripts, the transferred Electron archive, then a from-source native rebuild
 // that cannot fetch prebuilt binaries.
 export function windowsPreflightDependencyCommands(paths) {
@@ -71,7 +73,9 @@ export async function ensureWindowsPreflightDependencies({ execute, fsApi, home,
   if (stamp !== null && marker?.lockSha256 === lockSha256 && marker.installedStamp === stamp) {
     return { installed: false, lockSha256, output: '' };
   }
-  let output = '';
+  await assertNodeModulesUnoccupied({ execute, paths });
+  const bundle = await importWindowsNpmBundle({ execute, fsApi, paths });
+  let output = bundle.output;
   for (const command of windowsPreflightDependencyCommands(paths)) {
     command.before?.({ fsApi, home, paths });
     const result = await execute(paths.systemNode, command.args, {

@@ -7,7 +7,8 @@ import path from 'node:path';
 
 import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
 import { prepareWindowsInternalRuntime } from './windows-internal-runtime-transfer.mjs';
-import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from
+import { transferWindowsNpmBundle } from './windows-npm-offline-bundle.mjs';
+import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec, windowsDevTransportIdentity } from
   './windows-dev-remote-spec.mjs';
 
 export const WINDOWS_REMOTE_PREFLIGHT_ACTION = 'remote-preflight';
@@ -101,13 +102,15 @@ export async function runWindowsRemotePreflightControl({
   executeScp = (args, options) => execute('scp', args, options),
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
   host = env.FOLIOLE_WINDOWS_DEV_SSH || WINDOWS_DEV_DEFAULT_SSH, home = os.homedir(),
-  prepareRuntime = prepareWindowsInternalRuntime, pushSpec, repoRoot = process.cwd(), stdout = process.stdout, target, verifyPushed = assertPushedPreflightTarget
+  prepareRuntime = prepareWindowsInternalRuntime, transferNpm = transferWindowsNpmBundle, pushSpec, repoRoot = process.cwd(), stdout = process.stdout, target, verifyPushed = assertPushedPreflightTarget
 }) {
   if (!SHA.test(base ?? '')) throw new Error('remote preflight base must be a full SHA');
   if (!pushSpec) throw new Error('remote preflight requires the Windows DEV push spec');
   verifyPushed(repoRoot, target);
   // Windows installs dependencies offline, so the Electron archive comes from the Mac.
   await prepareRuntime({ env, executeGit, executeScp, host, repoRoot, revision: target });
+  await transferNpm({ env, executeScp, fsApi, home, host, repoRoot, revision: target,
+    transport: windowsDevTransportIdentity });
   const push = pushSpec(host, env, home, 'refs/heads/dev', target);
   await executeGit(push.args, { env: push.env });
   const { error: remoteError, output } = await runRemote({ base, env, executeSsh, fsApi, home, host });

@@ -17,7 +17,14 @@ function write(file, text = '') {
   fs.writeFileSync(file, text);
 }
 
-function setup({ dirty = false, headers = true } = {}) {
+const BLOB = 'e'.repeat(40);
+
+function extractBundle(root) {
+  write(path.join(root, 'manifest.json'), JSON.stringify({ files: [{ file: 'one.tgz' }, { file: 'two.tgz' }],
+    lockBlob: BLOB, schemaVersion: 1 }));
+}
+
+function setup({ bundle = true, dirty = false, headers = true, holders = [], override = () => null } = {}) {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-remote-preflight-'));
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-remote-preflight-home-'));
   roots.push(repoRoot, home);
@@ -29,17 +36,27 @@ function setup({ dirty = false, headers = true } = {}) {
       write(path.join(home, '.electron-gyp', '41.0.0', file), '11');
     }
   }
+  if (bundle) write(path.join(repoRoot, '.tmp', 'artifacts', `windows-npm-bundle-${BLOB}.tar`));
   const commands = [];
   const execute = vi.fn(async (command, args) => {
     commands.push([command, ...args]);
+    const overridden = override(command, args);
+    if (overridden) return overridden;
+    if (command === 'powershell.exe') return { code: 0, stdout: JSON.stringify(holders) };
+    if (command === 'tar') {
+      extractBundle(args[3]);
+      return { code: 0, output: '' };
+    }
     if (command !== 'git') return { code: 0, output: 'installed\n' };
-    if (args[0] === 'rev-parse') return { code: 0, stdout: args[1] === 'HEAD' ? TARGET : 'd'.repeat(40) };
+    if (args[0] === 'rev-parse') {
+      return { code: 0, stdout: { HEAD: TARGET, 'HEAD:package-lock.json': BLOB }[args[1]] ?? 'd'.repeat(40) };
+    }
     if (args[0] === 'status') return { code: 0, stdout: dirty ? ' M x' : '' };
     return { code: 0, stdout: '' };
   });
   const plan = vi.fn(async () => ({ cap: 120, changedFiles: ['x.mjs'], deferred: [{ file: 'z.test.mjs' }],
     entries: [], run: [{ file: 'a.test.mjs' }, { file: 'b.test.mjs' }] }));
-  const paths = { gitPath: 'git', repoRoot, systemNode: 'node', systemNpmCli: 'npm-cli.js' };
+  const paths = { gitPath: 'git', repoRoot, systemNode: 'node', systemNpmCli: 'npm-cli.js', tarPath: 'tar' };
   return { commands, execute, home, paths, plan, repoRoot };
 }
 
@@ -92,16 +109,18 @@ it('installs locked dependencies once and reuses them while the lock is unchange
   const fixture = setup();
   await run(fixture);
   const installs = () => fixture.commands.filter(([command]) => command === 'node').length;
-  expect(installs()).toBe(3);
+  expect(installs()).toBe(4);
   await run(fixture);
-  expect(installs()).toBe(3);
+  expect(installs()).toBe(4);
   fs.writeFileSync(path.join(fixture.repoRoot, 'package-lock.json'), '{"lock":2}');
   await run(fixture);
-  expect(installs()).toBe(6);
-  const args = fixture.commands.filter(([command]) => command === 'node').slice(0, 3).map((c) => c.slice(1));
-  expect(args[0]).toEqual(['npm-cli.js', 'ci', '--offline', '--ignore-scripts']);
-  expect(args[1][0]).toMatch(/windows-electron-offline-prepare\.mjs$/u);
-  expect(args[2]).toEqual(expect.arrayContaining(['exec', '--offline', 'electron-rebuild', '--build-from-source']));
+  expect(installs()).toBe(8);
+  const args = fixture.commands.filter(([command]) => command === 'node').slice(0, 4).map((c) => c.slice(1));
+  expect(args[0].slice(0, 4)).toEqual(['npm-cli.js', 'cache', 'add', '--offline']);
+  expect(args[0].slice(4).map((file) => path.basename(file))).toEqual(['one.tgz', 'two.tgz']);
+  expect(args[1]).toEqual(['npm-cli.js', 'ci', '--offline', '--ignore-scripts']);
+  expect(args[2][0]).toMatch(/windows-electron-offline-prepare\.mjs$/u);
+  expect(args[3]).toEqual(expect.arrayContaining(['exec', '--offline', 'electron-rebuild', '--build-from-source']));
   expect(fixture.commands.flat().some((arg) => String(arg).endsWith('install.js'))).toBe(false);
 });
 
@@ -110,22 +129,32 @@ it('refuses to rebuild native modules when Electron headers would be downloaded'
   const result = await run(fixture);
   expect(result.receipt).toMatchObject({ failure: { stage: 'dependencies-native' }, resultStatus: 'error' });
   expect(result.receipt.failure.message).toContain('refusing to download');
-  expect(fixture.commands.filter(([command]) => command === 'node')).toHaveLength(2);
+  expect(fixture.commands.filter(([command]) => command === 'node')).toHaveLength(3);
+});
+
+it('stops before npm ci when repository processes may hold node_modules', async () => {
+  const fixture = setup({ holders: [{ Name: 'java.exe', ProcessId: 42 }] });
+  const result = await run(fixture);
+  expect(result.receipt).toMatchObject({ failure: { stage: 'dependencies-occupied' }, resultStatus: 'error' });
+  expect(result.receipt.failure.message).toContain('java.exe#42');
+  expect(fixture.commands.some(([command]) => command === 'node')).toBe(false);
+});
+
+it('stops before npm ci when the Mac bundle for this lock is missing', async () => {
+  const fixture = setup({ bundle: false });
+  const result = await run(fixture);
+  expect(result.receipt).toMatchObject({ failure: { stage: 'dependencies-bundle' }, resultStatus: 'error' });
+  expect(result.receipt.failure.message).toContain(`lock ${BLOB} was not transferred`);
+  expect(fixture.commands.some(([command]) => command === 'node')).toBe(false);
 });
 
 it('records exit codes and the output tail when a test step ends without a report', async () => {
-  const fixture = setup();
   const crash = '\u001b[32m\u00b7\u001b[39m{"event":"timing_metric"}\n'
     + '[vitest-summary] child exited: code=3221225477 signal=none\n'
     + '[vitest-summary] report unavailable: .tmp/vitest/related-electron.json\n'
     + '[electron-sqlite-runner] child exited status=1 signal=null\n';
-  fixture.execute.mockImplementation(async (command, args) => {
-    if (command === 'git') {
-      if (args[0] === 'rev-parse') return { code: 0, stdout: args[1] === 'HEAD' ? TARGET : 'd'.repeat(40) };
-      return { code: 0, stdout: '' };
-    }
-    return args[0] === 'runner.mjs' ? { code: 1, output: crash } : { code: 0, output: '' };
-  });
+  const fixture = setup({ override: (command, args) => (args[0] === 'runner.mjs'
+    ? { code: 1, output: crash } : null) });
   const runTests = async (files, runner) => {
     if (await runner('node', ['runner.mjs', 'summary.mjs', '.tmp/vitest/related-electron.json']) !== 0) {
       throw new Error('Electron ABI related tests failed');
@@ -142,21 +171,13 @@ it('records exit codes and the output tail when a test step ends without a repor
 });
 
 it('keeps the npm cause of a failed offline install in the receipt', async () => {
-  const fixture = setup();
-  fs.writeFileSync(path.join(fixture.repoRoot, 'package-lock.json'), '{"lock":3}');
-  fixture.execute.mockImplementation(async (command, args) => {
-    if (command === 'git') {
-      if (args[0] === 'rev-parse') return { code: 0, stdout: args[1] === 'HEAD' ? TARGET : 'd'.repeat(40) };
-      return { code: 0, stdout: '' };
-    }
-    return { code: 1, output: [
+  const fixture = setup({ override: (command, args) => (args[1] !== 'ci' ? null : { code: 1, output: [
       'npm warn deprecated glob@7.2.3: old',
       "npm warn cleanup     [Error: EPERM: operation not permitted, rmdir 'D:\\C\\foliole\\node_modules\\x'] {",
       'npm error code ENOTCACHED',
       "npm error request to https://registry.example/zod/-/zod-4.6.7.tgz failed: cache mode is 'only-if-cached'",
       'npm error A complete log of this run can be found in: D:\\log'
-    ].join('\n') };
-  });
+  ].join('\n') }) });
   const result = await run(fixture);
   expect(result.receipt).toMatchObject({ failure: { stage: 'dependencies' }, resultStatus: 'error' });
   expect(result.receipt.failure.message).toMatch(/^dependencies exited 1: .*EPERM.*\| npm error code ENOTCACHED \| .*zod-4\.6\.7\.tgz/u);

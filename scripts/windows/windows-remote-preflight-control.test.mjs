@@ -51,6 +51,7 @@ it('refuses a target that is not on pushed origin/dev', () => {
 function control(executeSsh, verifyPushed = () => TARGET) {
   const calls = [];
   const prepareInternalRuntime = vi.fn(async ({ revision }) => { calls.push(['runtime', revision]); });
+  const transferNpm = vi.fn(async ({ revision }) => { calls.push(['npm-bundle', revision]); });
   const executeScp = vi.fn(async (args) => {
     const local = args.at(-1);
     fs.writeFileSync(local, local.endsWith('receipt.json')
@@ -60,7 +61,7 @@ function control(executeSsh, verifyPushed = () => TARGET) {
     argv: ['remote-preflight', '--revision', TARGET, '--preflight-base', BASE],
     env: transport.env, executeGit: async (args) => { calls.push(args); },
     executeScp, executeSsh, fsApi: transport.fsApi, prepareInternalRuntime, repoRoot,
-    stdout: { write: vi.fn() }, verifyPushed
+    remotePreflight: { transferNpm, verifyPushed }, stdout: { write: vi.fn() }
   });
   return { calls, executeScp, promise };
 }
@@ -69,8 +70,8 @@ it('mirrors the exact pushed target, passes the base and copies the receipt', as
   const executeSsh = vi.fn(async () => LINE);
   const { calls, executeScp, promise } = control(executeSsh);
   const result = await promise;
-  expect(calls[0]).toEqual(['runtime', TARGET]);
-  expect(calls[1]).toContain(`+${TARGET}:refs/heads/dev`);
+  expect(calls.slice(0, 2)).toEqual([['runtime', TARGET], ['npm-bundle', TARGET]]);
+  expect(calls[2]).toContain(`+${TARGET}:refs/heads/dev`);
   expect(executeSsh.mock.calls[0][0].slice(-3)).toEqual(['remote-preflight', '-PreflightBase', BASE]);
   expect(executeScp.mock.calls.map(([args]) => args.at(-2)))
     .toEqual([`${WINDOWS_DEV_DEFAULT_SSH}:${ROOT}/receipt.json`, `${WINDOWS_DEV_DEFAULT_SSH}:${ROOT}/action.log`]);
