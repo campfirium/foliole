@@ -26,7 +26,11 @@ it('keeps the release full chain unchanged and omits duplicated or host stages f
   for (const lane of ['dev-remote', 'dev-t7']) {
     expect(requestedStages('all', lane)).toEqual(CHAIN_STAGES.filter(stage => !DEV_FULL_OMITTED_STAGES.includes(stage)));
   }
-  expect(DEV_FULL_OMITTED_STAGES).toEqual(['t5-desktop-static', 't6-windows-acceptance']);
+  expect(DEV_FULL_OMITTED_STAGES).toEqual([
+    't5-desktop-static', 't6-windows-acceptance', 't6-ios-sync-group-content',
+    't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
+  ]);
+  expect(requestedStages('all', 'dev-remote')).toContain('t6-ios-contract');
   expect(requestedStages('t6-windows-acceptance', 'dev-remote')).toEqual(['t6-windows-acceptance']);
 });
 

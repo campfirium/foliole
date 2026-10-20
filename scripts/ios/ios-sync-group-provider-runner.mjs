@@ -1,6 +1,6 @@
 /* global clearTimeout, process, setTimeout */
 
-import { rmSync } from 'node:fs';
+import { rmSync, symlinkSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -115,6 +115,9 @@ export function compileSyncGroupProvider(repoRoot, artifactDir) {
     stdio: 'inherit'
   });
   if (result.status !== 0) throw new Error(`Failed to compile iOS Sync Group provider (${result.status}).`);
+  // The artifact root may live outside the checkout (a linked .tmp), so package
+  // imports from the compiled provider resolve through the checkout dependencies.
+  symlinkSync(path.join(repoRoot, 'node_modules'), path.join(outputDirectory, 'node_modules'), 'dir');
 }
 
 export function verifySyncGroupTransportAcceptance(first, second, observations) {

@@ -21,6 +21,7 @@
 
 - 任务涉及 Electron 信任边界、preload、IPC、bridge 时，先读 `.lab/specs/desktop/electron/runtime-trust.md`。
 - 任务涉及 Windows 预览、桌面启动、热重启、镜像同步或桌面验收时，先读 `.lab/specs/desktop/electron/windows-dev-loop.md`。
+- dev 远程 full 不再运行 Windows 预览验收阶段（release 链与显式单阶段触发保留）；改动 Windows 宿主、原生 shell 或预览恢复链路时，推送前经 `scripts/windows/windows-dev-control.mjs` 已登记动作在 Windows 开发机完成对应验收并绑定候选版本，源码与判据未变时证据继续有效。
 - 任务涉及 workspace 桌面表面或桌面 UI 验收时，按需补读 `.lab/specs/desktop/workspace/**` 对应条目。
 
 ## Implementation Rules

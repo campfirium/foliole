@@ -12,8 +12,12 @@ export const TAIL_STAGES = [
   't6-ios-sync-group-content', 't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
 ];
 export const CHAIN_STAGES = [...BASELINE_STAGES, ...TAIL_STAGES];
-// Dev full chains omit duplicated or host-acceptance stages; they remain selectable explicitly.
-export const DEV_FULL_OMITTED_STAGES = ['t5-desktop-static', 't6-windows-acceptance'];
+// Dev full chains omit duplicated stages and host journeys verified as local acceptance;
+// they remain selectable explicitly, and release chains still run them.
+export const DEV_FULL_OMITTED_STAGES = [
+  't5-desktop-static', 't6-windows-acceptance', 't6-ios-sync-group-content',
+  't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
+];
 export const RELEASE_LANE = 'release-t7';
 
 export function fullChainStages(lane) {

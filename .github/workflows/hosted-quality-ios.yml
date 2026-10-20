@@ -75,6 +75,9 @@ jobs:
         run: npm run ios:sync:preflight
       - name: Run iOS contract quality
         run: npm run quality:ios:contract
+      - name: Compile the complete iOS app without launching a simulator
+        if: inputs.scope == 'full'
+        run: node scripts/ios/ios-unsigned-app-compile.mjs
       - name: Upload iOS contract logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -104,8 +107,6 @@ jobs:
     env:
       FOLIOLE_IOS_ACCEPTANCE_SCENARIOS: ${{ toJSON(matrix.scenarios) }}
       FOLIOLE_IOS_RESOURCE_MODE: full
-      # Staged rollout: only this bucket reaches the hosted provider over loopback until it is proven stable.
-      FOLIOLE_IOS_HOSTED_LOOPBACK_ENDPOINT: ${{ matrix.bucket == 'sync-group-and-content' && '1' || '' }}
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Check out target snapshot
