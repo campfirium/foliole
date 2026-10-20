@@ -9,8 +9,8 @@ import {
   assertCandidateStillFrozen, prepareCandidate, prepareCandidateStage
 } from './multi-device-sync-candidate-preparation.mjs';
 
-const candidate = { branch: 'codex/t121-8', revision: 'a'.repeat(40),
-  sourceRef: 'refs/heads/codex/t121-8', treeDigest: 'b'.repeat(40) };
+const candidate = { branch: 'dev', revision: 'a'.repeat(40),
+  sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) };
 
 function fixture(runId) {
   const repoRoot = path.join(process.cwd(), '.tmp', 'artifacts', 'candidate-preparation-test');
@@ -75,7 +75,7 @@ it('prepares Windows only when the selected stage closure contains C', async () 
     calls.push([command, args]);
     return { stdout: args.includes('multi-device-sync-candidate')
       ? `[windows-dev-control] candidate-receipt=${JSON.stringify({
-        revision: 'a'.repeat(40), sourceRef: 'refs/heads/codex/t121-8',
+        revision: 'a'.repeat(40), sourceRef: 'refs/heads/dev',
         targetRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40)
       })}\n` : '' };
   };
@@ -86,10 +86,10 @@ it('prepares Windows only when the selected stage closure contains C', async () 
   expect(calls.filter(([, args]) => args.some((arg) => arg.endsWith('windows-dev-control.mjs'))))
     .toHaveLength(1);
   expect(receipt.preparedHosts).toContain('windows-c');
-  expect(receipt.windowsReceipt).toMatchObject({ sourceRef: 'refs/heads/codex/t121-8',
+  expect(receipt.windowsReceipt).toMatchObject({ sourceRef: 'refs/heads/dev',
     revision: 'a'.repeat(40), treeDigest: 'b'.repeat(40) });
   expect(calls.find(([, args]) => args.includes('multi-device-sync-candidate'))[1])
-    .toEqual(expect.arrayContaining(['--source-ref', 'refs/heads/codex/t121-8']));
+    .toEqual(expect.arrayContaining(['--source-ref', 'refs/heads/dev']));
   expect(progress).toEqual([
     'candidate-macos-started', 'candidate-macos-prepared', 'candidate-android-started',
     'candidate-android-built', 'candidate-android-installed', 'candidate-android-launched',
