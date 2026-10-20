@@ -64,7 +64,7 @@ describe('Windows preflight orchestration', () => {
       log: () => {}, plan, verifyPushed: () => TARGET })).resolves.toMatchObject({ host: 'windows' });
     expect(control).toHaveBeenCalledWith(['remote-preflight', '--revision', TARGET,
       '--preflight-base', BASE]);
-    expect(plan).toHaveBeenCalledWith(expect.objectContaining({ head: TARGET, revision: true }));
+    expect(plan).toHaveBeenCalledWith(expect.objectContaining({ head: TARGET, host: 'windows', revision: true }));
   });
 });
 

@@ -52,7 +52,9 @@ it('runs the shared selection on the aligned target and records a passed receipt
   const fixture = setup();
   const result = await run(fixture);
   expect(result.exitCode).toBe(0);
-  expect(fixture.plan).toHaveBeenCalledWith(expect.objectContaining({ base: BASE, head: TARGET, revision: true }));
+  expect(fixture.plan).toHaveBeenCalledWith(expect.objectContaining({
+    base: BASE, head: TARGET, host: 'windows', revision: true
+  }));
   const saved = JSON.parse(fs.readFileSync(result.receiptPath, 'utf8'));
   expect(saved).toMatchObject({ base: BASE, cap: 120, deferred: ['z.test.mjs'], resultStatus: 'passed',
     selected: ['a.test.mjs', 'b.test.mjs'], target: { revision: TARGET, tree: 'd'.repeat(40) } });

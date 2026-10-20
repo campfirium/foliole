@@ -69,7 +69,7 @@ export async function runRemoteQualityPreflight(options) {
   const { cwd = process.cwd(), runner = runCaptured, log = console.log } = options;
   const base = options.base ?? await resolvePreflightBase({ ...options, cwd, runner });
   const head = options.head ?? 'HEAD';
-  const { changedFiles, deferred, entries, run } = await planPreflightSelection({
+  const { changedFiles, deferred, entries, estimatedSeconds, heavy = [], run } = await planPreflightSelection({
     base, cap: options.cap ?? MAX_PREFLIGHT_TESTS, cwd, head, readText: options.readText, runner
   });
   log(`[remote-preflight] ${changedFiles.length} changed file(s) since ${base.slice(0, 12)}; `
@@ -79,8 +79,8 @@ export async function runRemoteQualityPreflight(options) {
     return { base, deferred, run };
   }
   if (deferred.length > 0) {
-    log(`[remote-preflight] over cap; ${deferred.length} lower-priority test file(s) left to remote `
-      + '(see --list)');
+    log(`[remote-preflight] ${deferred.length} test file(s) left to remote, ${heavy.length} of them known `
+      + `heavy; running ${run.length} estimated at ${Math.round(estimatedSeconds ?? 0)}s (see --list)`);
   }
   if (run.length === 0) return { base, deferred, run };
   const files = run.map(({ file }) => file);

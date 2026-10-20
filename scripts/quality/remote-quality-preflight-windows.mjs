@@ -45,7 +45,7 @@ export async function runWindowsRemoteQualityPreflight(options) {
   const base = options.base ?? await resolvePreflightBase({ ...options, cwd, runner });
   const cap = options.cap ?? MAX_PREFLIGHT_TESTS;
   const plan = await (options.plan ?? planPreflightSelection)({
-    base, cap, cwd, head, revision: true, runner
+    base, cap, cwd, head, host: 'windows', revision: true, runner
   });
   const expected = plan.run.map(({ file }) => file);
   log(`[remote-preflight] ${plan.changedFiles.length} changed file(s) since ${base.slice(0, 12)}; `

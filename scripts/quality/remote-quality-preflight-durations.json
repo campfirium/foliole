@@ -1,0 +1,42 @@
+{
+  "source": "Passed local vitest reports (files at least 5 seconds), refreshed by `node scripts/quality/remote-quality-preflight-budget.mjs refresh`; desktopRequestSyncScale is the hosted Ubuntu measurement of 2026-10-20.",
+  "seconds": {
+    "electron/database/companionDatabaseLifecycle.test.ts": 12,
+    "electron/database/databaseCompaction.test.ts": 6,
+    "electron/sync/desktopAttachmentThroughput.integration.test.ts": 23,
+    "electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts": 159,
+    "electron/sync/desktopRequestSyncLargeOverwrite.integration.test.ts": 202,
+    "electron/sync/desktopRequestSyncScale.integration.test.ts": 230,
+    "electron/sync/desktopSlowNetworkDiagnostic.integration.test.ts": 5,
+    "electron/sync/desktopSyncGroupActivation.integration.test.ts": 5,
+    "electron/sync/syncGroupJoinOverwrite.integration.test.ts": 47,
+    "electron/sync/syncGroupRetiredExternalDocuments.integration.test.ts": 7,
+    "scripts/android/android-boundary-quality-gate.test.mjs": 33,
+    "scripts/git-hooks.test.mjs": 15,
+    "scripts/ios/ios-scene-lifecycle-host-contract.test.mjs": 6,
+    "scripts/preview/preview-dedupe-batch.test.mjs": 10,
+    "scripts/preview/preview-dedupe-waiting.test.mjs": 7,
+    "scripts/quality/quality-gate-critical-routes.integration.test.mjs": 9,
+    "scripts/quality/quality-gate-fast-light-related.test.mjs": 9,
+    "scripts/quality/quality-gate-fast-static-guards.test.mjs": 6,
+    "scripts/quality/quality-gate-fast.guard.test.mjs": 18,
+    "scripts/quality/quality-gate-hosted-targets.test.mjs": 14,
+    "scripts/quality/quality-gate-release-tail-targets.test.mjs": 13,
+    "scripts/quality/quality-gate-release-targets.test.mjs": 27,
+    "scripts/quality/quality-gate-shared-segments.test.mjs": 32,
+    "scripts/quality/quality-gate-skip-lint-integration.test.mjs": 8,
+    "scripts/quality/quality-gate-target-collect.test.mjs": 9,
+    "scripts/quality/quality-gate-target-failures.test.mjs": 30,
+    "scripts/quality/quality-gate-target.test.mjs": 24,
+    "src/companion/companionEditorHttp.integration.test.tsx": 18,
+    "src/companion/remediationPerformanceProbe.test.ts": 8,
+    "src/shared/platform/companion/network/companionDesktopSession.integration.test.ts": 14,
+    "src/shared/platform/companion/sync/framed/companionMobileSessionAdoption.integration.test.ts": 43,
+    "src/shared/platform/companion/sync/framed/companionRequestSyncContinuation.integration.test.ts": 13,
+    "src/shared/platform/companion/sync/framed/companionRequestSyncRequestedRetry.integration.test.ts": 29
+  },
+  "windowsSource": "Windows dev machine preflight of 2026-10-20 (receipt 20261020123410876-33a37db7): timed out at its 60-second test limit, so the value is a lower bound.",
+  "windowsSeconds": {
+    "src/shared/platform/companion/sync/framed/companionMobileSessionAdoption.integration.test.ts": 61
+  }
+}

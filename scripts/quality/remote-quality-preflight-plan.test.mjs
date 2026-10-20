@@ -58,3 +58,45 @@ it('applies the same cap on every host', async () => {
   expect(plan.run.map(({ file }) => file)).toEqual(['src/a.test.mjs', 'src/b.test.mjs']);
   expect(plan.deferred.map(({ file }) => file)).toEqual(['src/c.test.mjs']);
 });
+
+it('budgets with the duration table of the committed head on every host', async () => {
+  const { commit, write, root } = repo();
+  write('src/feature-module.mjs', 'export const a = 1;\n');
+  for (const name of ['a', 'b']) write(`src/${name}.test.mjs`, "import './feature-module.mjs';\n");
+  const base = commit();
+  write('src/feature-module.mjs', 'export const a = 2;\n');
+  const untabled = commit();
+  write('scripts/quality/remote-quality-preflight-durations.json',
+    JSON.stringify({ seconds: { 'src/a.test.mjs': 300 } }));
+  const head = commit();
+  write('scripts/quality/remote-quality-preflight-durations.json', JSON.stringify({ seconds: {} }));
+  const files = (plan) => plan.run.map(({ file }) => file);
+  const plan = await planPreflightSelection({ base, cwd: root, head, revision: true, runner });
+  expect(files(plan)).toEqual(['src/b.test.mjs']);
+  expect(plan.heavy.map(({ file }) => file)).toEqual(['src/a.test.mjs']);
+  const worktree = await planPreflightSelection({ base, cwd: root, head, runner });
+  expect(files(worktree)).toEqual(['src/a.test.mjs', 'src/b.test.mjs']);
+  const older = await planPreflightSelection({ base, cwd: root, head: untabled, revision: true, runner });
+  expect(files(older)).toEqual(['src/a.test.mjs', 'src/b.test.mjs']);
+});
+
+it('selects only hosted Windows tests and applies Windows durations for a Windows preflight', async () => {
+  const { commit, write, root } = repo();
+  write('src/feature-module.mjs', 'export const a = 1;\n');
+  const tests = ['scripts/macos/mac-only.test.mjs', 'src/features/editor/slow.test.mjs', 'src/features/editor/fast.test.mjs'];
+  for (const file of tests) write(file, "import '../../src/feature-module.mjs';\nimport './feature-module.mjs';\n");
+  const base = commit();
+  write('src/feature-module.mjs', 'export const a = 2;\n');
+  write('scripts/quality/remote-quality-preflight-durations.json', JSON.stringify({
+    seconds: { 'src/features/editor/slow.test.mjs': 10 }, windowsSeconds: { 'src/features/editor/slow.test.mjs': 61 }
+  }));
+  const head = commit();
+  const files = (plan) => plan.run.map(({ file }) => file);
+  const mac = await planPreflightSelection({ base, cwd: root, head, revision: true, runner });
+  expect(files(mac)).toEqual([
+    'scripts/macos/mac-only.test.mjs', 'src/features/editor/fast.test.mjs', 'src/features/editor/slow.test.mjs'
+  ]);
+  const windows = await planPreflightSelection({ base, cwd: root, head, host: 'windows', revision: true, runner });
+  expect(files(windows)).toEqual(['src/features/editor/fast.test.mjs']);
+  expect(windows.heavy.map(({ file }) => file)).toEqual(['src/features/editor/slow.test.mjs']);
+});

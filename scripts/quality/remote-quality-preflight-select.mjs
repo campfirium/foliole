@@ -77,7 +77,3 @@ export function selectPreflightTests({ changedFiles, readText, testFiles }) {
     priority(left) - priority(right) || left.file.localeCompare(right.file)
   ));
 }
-
-export function capPreflightTests(entries, cap) {
-  return { run: entries.slice(0, cap), deferred: entries.slice(cap) };
-}

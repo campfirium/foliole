@@ -91,7 +91,7 @@ async function prepare({ base, execute, fsApi, home, paths, plan }) {
   }
   const dependencies = await ensureWindowsPreflightDependencies({ execute, fsApi, home, paths });
   const selection = await plan({ base, cwd: paths.repoRoot, git: paths.gitPath, head: revision,
-    revision: true, runner: run });
+    host: 'windows', revision: true, runner: run });
   return { dependencies, revision, selection, tree };
 }
 

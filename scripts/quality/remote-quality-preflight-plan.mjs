@@ -1,11 +1,13 @@
 import { Buffer } from 'node:buffer';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
-  capPreflightTests, isPreflightTestFile, selectPreflightTests
-} from './remote-quality-preflight-select.mjs';
+  budgetPreflightTests, parsePreflightDurations, PREFLIGHT_DURATIONS_FILE
+} from './remote-quality-preflight-budget.mjs';
+import { isPreflightTestFile, selectPreflightTests } from './remote-quality-preflight-select.mjs';
+import { isWindowsRemoteTestFile } from './remote-quality-preflight-windows-scope.mjs';
 
 export const MAX_PREFLIGHT_TESTS = 120;
 
@@ -45,18 +47,31 @@ async function listTestFiles(runner, cwd, git, revision) {
   return output.split('\n').filter(isPreflightTestFile);
 }
 
-// The same base, head and cap yield the same ordered selection on any host;
-// `revision` reads the committed head instead of the working tree.
+// Durations come from the same tree as the tests, so every host budgets alike.
+async function readDurations({ cwd, git, head, host, revision, runner }) {
+  if (!revision) {
+    const file = path.join(cwd, PREFLIGHT_DURATIONS_FILE);
+    return parsePreflightDurations(existsSync(file) ? readFileSync(file, 'utf8') : '', host);
+  }
+  const result = await runner(git, ['show', `${head}:${PREFLIGHT_DURATIONS_FILE}`], { cwd });
+  return parsePreflightDurations(result.code === 0 ? result.stdout : '', host);
+}
+
+// The same base, head, cap and preflight host yield the same ordered selection
+// wherever it is planned; `revision` reads the committed head instead of the working tree.
+// A Windows preflight only selects tests that a hosted Windows leaf runs.
 export async function planPreflightSelection({
-  base, cap = MAX_PREFLIGHT_TESTS, cwd, git = 'git', head, readText, revision = false, runner
+  base, cap = MAX_PREFLIGHT_TESTS, cwd, git = 'git', head, host = 'mac', readText, revision = false, runner
 }) {
   const diff = await capturePreflight(runner, git,
     ['diff', '--name-only', '--no-renames', base, head], cwd);
   const changedFiles = diff.split('\n').filter(Boolean);
-  const testFiles = await listTestFiles(runner, cwd, git, revision ? head : null);
+  const testFiles = (await listTestFiles(runner, cwd, git, revision ? head : null))
+    .filter((file) => host !== 'windows' || isWindowsRemoteTestFile(file));
   const read = readText ?? (revision
     ? revisionTextReader({ cwd, files: testFiles, git, revision: head })
     : (file) => readFileSync(path.join(cwd, file), 'utf8'));
   const entries = selectPreflightTests({ changedFiles, readText: read, testFiles });
-  return { cap, changedFiles, entries, ...capPreflightTests(entries, cap) };
+  const durations = await readDurations({ cwd, git, head, host, revision, runner });
+  return { cap, changedFiles, entries, ...budgetPreflightTests(entries, { cap, durations }) };
 }
