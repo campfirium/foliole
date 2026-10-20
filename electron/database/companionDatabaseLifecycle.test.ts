@@ -32,15 +32,17 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   roots.push(root);
   const databasePath = path.join(root, 'fixture.db');
   const sqlite = new Database(databasePath);
-  sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  if (version < 82) for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
-    ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);
-  if (version < 40) sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
-  if (version < 56) sqlite.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema).join(';'));
-  if (version < 30) installLegacySyncGroupSchema(sqlite);
-  sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
-    .run('device_id', 'fixture-device', '2026-08-06T00:00:00Z');
-  sqlite.pragma(`user_version = ${version}`);
+  sqlite.transaction(() => {
+    sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    if (version < 82) for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
+      ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);
+    if (version < 40) sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
+    if (version < 56) sqlite.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema).join(';'));
+    if (version < 30) installLegacySyncGroupSchema(sqlite);
+    sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('device_id', 'fixture-device', '2026-08-06T00:00:00Z');
+    sqlite.pragma(`user_version = ${version}`);
+  })();
   return { databasePath, port: createBetterSqliteDbPort(sqlite), sqlite };
 }
 
