@@ -26,6 +26,7 @@ function expectFixedRowGeometry(rowGeometry: Awaited<ReturnType<typeof readRowGe
 }
 
 async function seedLargeFolder(desktopWindow: Page) {
+  await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await desktopWindow.evaluate(async ({ folderTitle, topicCount }) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     await api?.seedNodes?.([
@@ -39,6 +40,8 @@ async function seedLargeFolder(desktopWindow: Page) {
       }))
     ]);
   }, { folderTitle: FOLDER_TITLE, topicCount: TOPIC_COUNT });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
 }
 
 test('keeps a virtualized large-folder topic list visible', async ({ desktopWindow }, testInfo) => {
