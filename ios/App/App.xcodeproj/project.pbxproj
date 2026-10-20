@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		50F100991FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100981FED79650016851F; };
 		89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */; };
 		F10000000000000000000001 /* FoliolePhysicalReadonlySnapshotUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
@@ -138,6 +139,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		50F100981FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalClozeRecoveryUITests.swift; sourceTree = "<group>"; };
 		B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncRoute.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalReadonlySnapshotUITests.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 			isa = PBXGroup;
 			children = (
 				50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */,
+				50F100981FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift */,
 				F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */,
 				50F294021FED79650016851F /* FoliolePhysicalForegroundTimeUITests.swift */,
 				50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */,
@@ -662,6 +665,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				50F100211FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift in Sources */,
+				50F100991FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift in Sources */,
 				F10000000000000000000001 /* FoliolePhysicalReadonlySnapshotUITests.swift in Sources */,
 				50F294011FED79650016851F /* FoliolePhysicalForegroundTimeUITests.swift in Sources */,
 				50F203011FED79650016851F /* FoliolePhysicalArticleImageUITests.swift in Sources */,
