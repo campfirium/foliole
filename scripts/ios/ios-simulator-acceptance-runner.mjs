@@ -2,7 +2,6 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 
 export function selectSimulator(devicePayload) {
   const candidates = Object.entries(devicePayload.devices ?? {})
@@ -23,13 +22,7 @@ export function parseBootstrapSnapshot(output) {
   return { deviceId: deviceId?.trim() ?? '', tableCount: Number(tableCount) };
 }
 
-export const HOSTED_LOOPBACK_ENDPOINT_ENV = 'FOLIOLE_IOS_HOSTED_LOOPBACK_ENDPOINT';
-
 export function createSimulatorAcceptanceBuildArgs(options) {
-  const conditions = ['$(inherited)', 'FOLIOLE_IOS_BRIDGE_ACCEPTANCE'];
-  if ((options.env ?? process.env)[HOSTED_LOOPBACK_ENDPOINT_ENV] === '1') {
-    conditions.push(HOSTED_LOOPBACK_ENDPOINT_ENV);
-  }
   return [
     '-project', path.join(options.repoRoot, 'ios/App/App.xcodeproj'),
     '-scheme', 'App', '-configuration', 'Debug',
@@ -38,7 +31,7 @@ export function createSimulatorAcceptanceBuildArgs(options) {
     '-packageCachePath', path.join(options.derivedData, 'PackageCache'),
     ...options.resourceArgs,
     `FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX=${options.bundleId.slice('com.campfirium.foliole.ios'.length)}`,
-    `SWIFT_ACTIVE_COMPILATION_CONDITIONS=${conditions.join(' ')}`,
+    'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE',
     'build'
   ];
 }
