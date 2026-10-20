@@ -68,7 +68,10 @@ describe('remote quality preflight base', () => {
 
 describe('remote quality preflight run', () => {
   const changed = ['.github/workflows/remote-quality.yml'];
-  const options = { base: BASE, log: () => {}, readText: (file) => SOURCES[file] };
+  const options = {
+    base: BASE, fingerprint: () => null, log: () => {}, readText: (file) => SOURCES[file],
+    recordFile: '/nonexistent/remote-preflight-record.json'
+  };
 
   it('runs related tests locally and passes when they pass', async () => {
     const runTests = vi.fn(async () => {});

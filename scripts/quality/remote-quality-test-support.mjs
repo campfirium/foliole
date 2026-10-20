@@ -11,7 +11,7 @@ export function job(overrides = {}) {
 
 export function createRunner({
   authCode = 0, branch = 'dev', dispatchCode = 0, dispatchError = '', activeRuns = [],
-  jobSnapshots = [[job()]], localHead = SHA, logCodes = [0],
+  jobSnapshots = [[job()]], localHead = SHA, logCodes = [0], trees = {},
   runSnapshots = [{ conclusion: 'success', status: 'completed' }]
 } = {}) {
   const calls = [];
@@ -20,6 +20,10 @@ export function createRunner({
   let runsIndex = 0;
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ args, command, options });
+    if (command === 'git' && args.includes('--verify')) {
+      const tree = trees[args.at(-1).replace('^{tree}', '')];
+      return { code: tree ? 0 : 1, stderr: '', stdout: tree ? `${tree}\n` : '' };
+    }
     if (command === 'git') return { code: 0, stderr: '',
       stdout: args[0] === 'rev-parse' ? `${localHead}\n` : `${branch}\n` };
     if (args[0] === 'auth') return { code: authCode,

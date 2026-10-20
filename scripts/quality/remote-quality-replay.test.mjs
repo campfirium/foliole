@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 import { parseRemoteQualityArgs, runRemoteQuality } from './remote-quality.mjs';
-import { assertNoActiveFullReplay, resolveReplayStages, selectReplayStages } from './remote-quality-replay.mjs';
+import { resolveReplayStages, selectReplayStages } from './remote-quality-replay.mjs';
+import { findCoveringFullRun } from './remote-quality-active.mjs';
 import { createRunner, SHA } from './remote-quality-test-support.mjs';
 
 it('requires exactly one scope or numeric replay source', () => {
@@ -45,8 +46,9 @@ it('reads the tested SHA when the dispatch topology advanced during preflight', 
   await expect(resolveReplayStages({ repository: 'o/r', runId: '123', read,
     readRun: async () => run })).resolves.toBe('t5-shared');
   expect(read).toHaveBeenCalledWith({ repository: 'o/r', runId: '123', targetSha });
-  expect(() => assertNoActiveFullReplay([run], targetSha)).toThrow('still active');
-  expect(() => assertNoActiveFullReplay([run], SHA)).not.toThrow();
+  const treeOf = async () => null;
+  await expect(findCoveringFullRun({ runs: [run], targetSha, treeOf })).resolves.toBe(run);
+  await expect(findCoveringFullRun({ runs: [run], targetSha: SHA, treeOf })).resolves.toBeNull();
 });
 
 it.each(['Dev Quality Check (full)',
@@ -60,14 +62,17 @@ it.each(['Dev Quality Check (full)',
   }
 );
 
-it('rejects same-SHA active full from either entry without confusing replay or scoped runs', () => {
+it('matches same-SHA active full from either entry without confusing replay or scoped runs', async () => {
+  const treeOf = async () => null;
   for (const metadata of [{ path: '.github/workflows/t7-hosted-quality.yml' },
     { display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}` }]) {
-    expect(() => assertNoActiveFullReplay([{ head_sha: SHA, ...metadata }], SHA)).toThrow('still active');
-    expect(() => assertNoActiveFullReplay([{ head_sha: SHA, ...metadata }], 'b'.repeat(40))).not.toThrow();
+    const run = { head_sha: SHA, ...metadata };
+    await expect(findCoveringFullRun({ runs: [run], targetSha: SHA, treeOf })).resolves.toBe(run);
+    await expect(findCoveringFullRun({ runs: [run], targetSha: 'b'.repeat(40), treeOf })).resolves.toBeNull();
   }
-  expect(() => assertNoActiveFullReplay([{ head_sha: SHA,
-    display_title: 'Dev Quality Check (replay) @ exact via topology' }], SHA)).not.toThrow();
+  await expect(findCoveringFullRun({ runs: [{ head_sha: SHA,
+    display_title: 'Dev Quality Check (replay) @ exact via topology' }], targetSha: SHA, treeOf }))
+    .resolves.toBeNull();
 });
 
 function replayRunner(options) {
@@ -91,16 +96,5 @@ it('never dispatches when the production receipt reader rejects evidence', async
   const { runner, calls } = replayRunner();
   await expect(runRemoteQuality({ args: ['--replay', '123'], runner,
     readChainVerdict: () => ({ verdict: 'incomplete' }) })).rejects.toThrow('No usable');
-  expect(calls.some(call => call.args.includes('--method'))).toBe(false);
-});
-
-it('refuses dispatch when the current target already has an active full chain', async () => {
-  const { runner, calls } = replayRunner({ activeRuns: [{
-    head_branch: 'dev', head_sha: SHA, status: 'in_progress',
-    display_title: `Dev Quality Check (full) @ ${SHA} via ${SHA}`
-  }] });
-  await expect(runRemoteQuality({ args: ['--replay', '123'], runner,
-    readChainVerdict: () => ({ verdict: 'failed', stages: { 't5-tooling': 'failure' } }) }))
-    .rejects.toThrow('A full chain');
   expect(calls.some(call => call.args.includes('--method'))).toBe(false);
 });

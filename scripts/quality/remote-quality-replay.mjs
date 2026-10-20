@@ -1,7 +1,7 @@
 import { CHAIN_STAGES } from './chain-verdict.mjs';
 import { readChainVerdict } from './chain-verdict-read.mjs';
 
-function testedSha(run) {
+export function testedSha(run) {
   if (run.path === '.github/workflows/remote-quality.yml'
     || /^Dev Quality Check \(/u.test(run.display_title ?? '')) {
     const match = /^Dev Quality Check \((?:full|replay)\) @ ([0-9a-f]{40}) via ([0-9a-f]{40})$/u
@@ -33,12 +33,4 @@ export async function resolveReplayStages({ repository, runId, readRun, read = r
   }
   const receipt = await read({ repository, runId, targetSha });
   return selectReplayStages(receipt).join(',');
-}
-
-export function assertNoActiveFullReplay(runs, targetSha) {
-  const active = runs.find(run => (
-    run.path === '.github/workflows/t7-hosted-quality.yml'
-    || /^Dev Quality Check \(full\) @ /u.test(run.display_title ?? '')
-  ) && testedSha(run) === targetSha);
-  if (active) throw new Error(`A full chain for ${targetSha} is still active: ${active.html_url ?? active.id}`);
 }

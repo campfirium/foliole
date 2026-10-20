@@ -9,6 +9,10 @@ import { runRelatedTests } from './quality-fast-related-tests.mjs';
 import {
   capPreflightTests, isPreflightTestFile, selectPreflightTests
 } from './remote-quality-preflight-select.mjs';
+import {
+  computePreflightFingerprint, PREFLIGHT_RECORD_FILE, preflightReuseMismatch,
+  readPreflightRecord, writePreflightRecord
+} from './remote-quality-preflight-reuse.mjs';
 
 const MAX_PREFLIGHT_TESTS = 120;
 const RUN_TITLE_PATTERN = /^Dev Quality Check \((\w+)\) @ ([0-9a-f]{40})\b/u;
@@ -103,13 +107,36 @@ export async function runRemoteQualityPreflight(options) {
   }
   if (run.length === 0) return { base, deferred, run };
   const files = run.map(({ file }) => file);
+  const recordFile = options.recordFile ?? path.join(cwd, PREFLIGHT_RECORD_FILE);
+  const fingerprint = () => safeFingerprint(options.fingerprint, cwd);
+  const before = fingerprint();
+  const mismatch = preflightReuseMismatch(readPreflightRecord(recordFile), before, files);
+  if (!mismatch) {
+    log(`[remote-preflight] reusing passed record for tree ${before.tree.slice(0, 12)}: `
+      + `${files.length} selected test file(s) already passed with the same config and environment`);
+    return { base, deferred, reused: true, run };
+  }
+  log(`[remote-preflight] no reusable record (${mismatch}); running related tests`);
   try {
     await (options.runTests ?? runRelatedTests)(files);
   } catch {
     throw new Error(preflightFailureMessage(files));
   }
   log('[remote-preflight] related assertions pass locally');
+  // A tree that moved while the tests ran is not the tree that passed.
+  const after = fingerprint();
+  if (before && after && !preflightReuseMismatch({ ...before, files }, after, files)) {
+    writePreflightRecord(recordFile, before, files);
+  }
   return { base, deferred, run };
+}
+
+function safeFingerprint(compute = computePreflightFingerprint, cwd) {
+  try {
+    return compute(cwd);
+  } catch {
+    return null;
+  }
 }
 
 export function parsePreflightArgs(args) {

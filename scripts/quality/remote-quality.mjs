@@ -1,4 +1,4 @@
-/* global console, process, setTimeout */
+/* global console, process */
 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -13,12 +13,13 @@ import {
 
 import { parseRemoteQualityArgs } from './remote-quality-args.mjs';
 import { runRemoteQualityPreflight } from './remote-quality-preflight.mjs';
-import { assertNoActiveFullReplay, resolveReplayStages } from './remote-quality-replay.mjs';
+import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
+import { resolveReplayStages } from './remote-quality-replay.mjs';
+import { awaitCoveringFullRun, findActiveHostedQualityRuns } from './remote-quality-active.mjs';
 export { parseRemoteQualityArgs } from './remote-quality-args.mjs';
+export { findActiveHostedQualityRuns } from './remote-quality-active.mjs';
+export { monitorRemoteQualityJobs } from './remote-quality-monitor.mjs';
 
-const ACTIVE_RUN_STATUSES = new Set(['in_progress', 'pending', 'queued', 'requested', 'waiting']);
-const PASSING_JOB_CONCLUSIONS = new Set(['neutral', 'skipped', 'success']);
-const POLL_INTERVAL_MS = 15_000;
 const QUALITY_WORKFLOWS = ['remote-quality.yml', 't7-hosted-quality.yml'];
 
 async function runProcess(command, args, options = {}) {
@@ -41,14 +42,6 @@ async function runProcess(command, args, options = {}) {
   });
 }
 
-async function requireSuccess(runner, command, args, options = {}) {
-  const result = await runner(command, args, options);
-  if (result.code !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed: ${result.stderr || result.stdout}`.trim());
-  }
-  return result.stdout.trim();
-}
-
 async function dispatchWorkflow(runner, args, options) {
   const result = await runner('gh', args, options);
   if (result.code === 0) return result.stdout.trim();
@@ -59,23 +52,6 @@ async function dispatchWorkflow(runner, args, options) {
   throw new Error(`gh ${args.join(' ')} failed: ${details}`.trim());
 }
 
-function parseJobs(value) {
-  const parsed = JSON.parse(value);
-  const pages = Array.isArray(parsed) ? parsed : [parsed];
-  if (pages.some((page) => !Array.isArray(page.jobs))) {
-    throw new Error('GitHub jobs response did not contain a jobs array');
-  }
-  return pages.flatMap((page) => page.jobs);
-}
-
-function parseWorkflowRun(value) {
-  const parsed = JSON.parse(value);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('GitHub workflow run response was not an object');
-  }
-  return parsed;
-}
-
 function parseWorkflowRuns(value) {
   const parsed = JSON.parse(value);
   if (!Array.isArray(parsed.workflow_runs)) {
@@ -84,16 +60,7 @@ function parseWorkflowRuns(value) {
   return parsed.workflow_runs;
 }
 
-export function findActiveHostedQualityRuns(workflowRuns, branch) {
-  return workflowRuns.flat().filter((run) => (
-    run.head_branch === branch && ACTIVE_RUN_STATUSES.has(run.status)
-  ));
-}
-
-// Correctness comes from the server-side concurrency groups; this check only
-// avoids a replay that would cancel an active full run of the same SHA.
-async function refuseReplayOverActiveFull(runner, repo, branch, cwd, replayTarget) {
-  if (!replayTarget) return;
+async function listActiveHostedQualityRuns(runner, repo, branch, cwd) {
   const responses = await Promise.all(QUALITY_WORKFLOWS.map((workflow) => requireSuccess(
     runner,
     'gh',
@@ -101,49 +68,26 @@ async function refuseReplayOverActiveFull(runner, repo, branch, cwd, replayTarge
       `repos/${repo}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&per_page=30`],
     { cwd }
   )));
-  assertNoActiveFullReplay(findActiveHostedQualityRuns(responses.map(parseWorkflowRuns), branch), replayTarget);
+  return findActiveHostedQualityRuns(responses.map(parseWorkflowRuns), branch);
 }
 
-function isFailedJob(job) {
-  return job.status === 'completed' && !PASSING_JOB_CONCLUSIONS.has(job.conclusion);
+async function resolveTree(runner, cwd, sha) {
+  const result = await runner('git', ['rev-parse', '--verify', '--quiet', `${sha}^{tree}`], { cwd });
+  return result.code === 0 ? result.stdout.trim() || null : null;
 }
 
-async function emitFailedJobLog(runner, repo, job, cwd) {
-  console.error(`[remote-quality] failed job: ${job.name} (${job.html_url ?? job.id})`);
-  return runner('gh', [
-    'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-    `repos/${repo}/actions/jobs/${job.id}/logs`
-  ], { capture: false, cwd });
-}
-
-export async function monitorRemoteQualityJobs(options) {
-  const { cwd, repo, runId, runner } = options;
-  const pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
-  const wait = options.wait ?? ((duration) => new Promise((resolve) => setTimeout(resolve, duration)));
-  const emittedFailures = new Set();
-  while (true) {
-    const [runStdout, jobsStdout] = await Promise.all([
-      requireSuccess(runner, 'gh', [
-        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-        `repos/${repo}/actions/runs/${runId}`
-      ], { cwd }),
-      requireSuccess(runner, 'gh', [
-        'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
-        '--paginate', '--slurp', `repos/${repo}/actions/runs/${runId}/jobs?per_page=100`
-      ], { cwd })
-    ]);
-    const run = parseWorkflowRun(runStdout);
-    const jobs = parseJobs(jobsStdout);
-    for (const job of jobs.filter(isFailedJob)) {
-      if (emittedFailures.has(job.id)) continue;
-      const log = await emitFailedJobLog(runner, repo, job, cwd);
-      if (log.code === 0) emittedFailures.add(job.id);
-    }
-    if (run.status === 'completed') {
-      return { failed: run.conclusion !== 'success', jobs, run };
-    }
-    await wait(pollIntervalMs);
-  }
+// A full or replay request waits on an active complete chain of the same tree
+// rather than dispatching a duplicate that the server group would cancel.
+function awaitActiveFullChain({ args, cwd, options, repo, runner, targetSha }) {
+  if (args.scope !== 'full' && args.scope !== 'replay') return null;
+  return awaitCoveringFullRun({
+    listRuns: () => listActiveHostedQualityRuns(runner, repo, 'dev', cwd),
+    log: console.log,
+    monitor: (runId) => monitorRemoteQualityJobs({ cwd, pollIntervalMs: options.pollIntervalMs,
+      repo, runId, runner, wait: options.wait }),
+    targetSha,
+    treeOf: (sha) => resolveTree(runner, cwd, sha)
+  });
 }
 
 export async function runRemoteQuality(options = {}) {
@@ -164,6 +108,13 @@ export async function runRemoteQuality(options = {}) {
   ], { cwd }), sourceBranch);
   assertRemoteQualitySourceContext({ defaultBranch: repoInfo.defaultBranchRef.name,
     localBranch: branch, sourceRef: args.sourceRef });
+  const active = await awaitActiveFullChain({ args, cwd, options, repo: repoInfo.nameWithOwner,
+    runner, targetSha });
+  if (active) {
+    if (active.failed) throw new Error(`Remote full quality failed: ${active.url}`);
+    return { jobs: active.jobs, reused: true, runId: active.runId, scope: args.scope,
+      sourceRef: args.sourceRef, targetSha, url: active.url };
+  }
   if (options.preflight && !args.replay && !args.skipPreflight) {
     await options.preflight({ cwd, head: targetSha, repo: repoInfo.nameWithOwner, runner, scope: args.scope });
   }
@@ -174,7 +125,6 @@ export async function runRemoteQuality(options = {}) {
       'api', `repos/${repoInfo.nameWithOwner}/actions/runs/${runId}`
     ], { cwd }))
   }) : undefined;
-  await refuseReplayOverActiveFull(runner, repoInfo.nameWithOwner, 'dev', cwd, stages && targetSha);
   const payload = JSON.stringify({
     inputs: { scope: args.scope, target_sha: targetSha, ...(stages ? { stages } : {}) },
     ref: 'dev'
