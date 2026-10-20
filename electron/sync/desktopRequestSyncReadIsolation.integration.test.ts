@@ -19,11 +19,42 @@ import { iterateRequestSyncInventory, decodeRequestSyncInventory } from '../../l
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
+
+it.each([false, true])('reports owner waiting separately from completed work, rollback=%s', async rollback => {
+  const connection = openDatabaseConnection();
+  const events: { phase: string; durationMs: number }[] = [];
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath, undefined, undefined,
+    (phase, durationMs) => events.push({ phase, durationMs }));
+  let release!: () => void;
+  let entered!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const owner = runWithDatabaseConnectionOwner(async () => { entered(); await waiting; });
+  await started;
+  let now = 100;
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+  const work = host.write(async db => {
+    await db.run("UPDATE nodes SET priority = 3 WHERE id = 'special-inbox'");
+    now = 500;
+    if (rollback) throw new Error('timed_write_failed');
+  });
+  expect(events).toEqual([]);
+  now = 200;
+  release();
+  await owner;
+  if (rollback) await expect(work).rejects.toThrow('timed_write_failed');
+  else await work;
+  clock.mockRestore();
+  expect(events).toEqual([{ phase: 'write_owner_wait', durationMs: 100 },
+    { phase: 'write_owner_held', durationMs: 300 }]);
+  expect(connection.sqlite.prepare("SELECT priority FROM nodes WHERE id = 'special-inbox'").pluck().get())
+    .toBe(rollback ? null : 3);
+});
 
 it.each([
   { searchWriter: false, dirty: false },

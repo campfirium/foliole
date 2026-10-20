@@ -11,6 +11,7 @@ import {
   FRAMED_SYNC_PATH,
   handleCompanionLanFramedSyncPost
 } from './companionLanFramedSyncPost.js';
+import { requestDatabaseTiming, type RequestDatabaseTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { requestDesktopRelaySync } from './desktopMemberSyncCadence.js';
@@ -31,7 +32,8 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     writeJson(args.request, args.response, 410, { error: 'request_sync_required' });
     return true;
   }
-  const runtime = await loadInboundRuntime(args.request);
+  const timing = requestDatabaseTiming(args.response);
+  const runtime = await loadInboundRuntime(args.request, timing);
   const controller = new AbortController();
   const round = parseRequestSyncPeerRound(
     url.searchParams.get('peer_round_id'), url.searchParams.get('peer_round_mode'));
@@ -58,7 +60,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
-        const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, relayInboundCommit);
+        const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, relayInboundCommit, timing);
         const reply = await respondDesktopRequestSyncHttp(host, {
           context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
@@ -113,8 +115,9 @@ function readHeader(request: http.IncomingMessage, name: string) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-function loadInboundRuntime(request: http.IncomingMessage) {
-  return runWithDatabaseConnectionOwner(() => {
+async function loadInboundRuntime(request: http.IncomingMessage, timing?: RequestDatabaseTiming) {
+  const startedAt = performance.now();
+  try { return await runWithDatabaseConnectionOwner(() => {
     const connection = openDatabaseConnection();
     const group = loadDesktopSyncGroupInfo();
     if (!group) throw new Error('sync_group_not_available');
@@ -133,5 +136,5 @@ function loadInboundRuntime(request: http.IncomingMessage) {
       groupKey: new Uint8Array(Buffer.from(group.workgroup_key, 'base64url')),
       libraryEpoch: loadDesktopLocalNodeProof().library_epoch
     };
-  });
+  }); } finally { timing?.('runtime_resolution', performance.now() - startedAt); }
 }

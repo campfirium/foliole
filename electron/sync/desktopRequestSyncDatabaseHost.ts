@@ -7,12 +7,13 @@ import { materializeDesktopSettingRecord, readDesktopHostName } from '../databas
 import { flushDirtyNodeSyncVersions, hasPendingNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
 
+import type { RequestDatabaseTiming } from './companionLanRequestTiming.js';
 import { createDesktopRequestSyncFiles } from './desktopRequestSyncFiles.js';
 import { reportDesktopSyncGroupObjectCommitted } from './desktopSyncGroupCursorCommit.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourceSession?: string,
-  onInboundCommitted?: () => void): RequestSyncDatabaseHost {
+  onInboundCommitted?: () => void, timing?: RequestDatabaseTiming): RequestSyncDatabaseHost {
   const files = createDesktopRequestSyncFiles(databasePath);
   return {
     objectOptions: async db => {
@@ -30,10 +31,14 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
     readSnapshot: async (read, signal) => {
       signal?.throwIfAborted();
       if (resolveDatabasePath() !== databasePath) throw new Error('request_sync_library_changed');
-      await prepareDesktopSyncRead(databasePath);
-      return withRequestSyncReadonlySnapshot(databasePath, read, signal);
+      const preparedAt = performance.now();
+      try { await prepareDesktopSyncRead(databasePath); }
+      finally { timing?.('read_prepare', performance.now() - preparedAt); }
+      const snapshotAt = performance.now();
+      try { return await withRequestSyncReadonlySnapshot(databasePath, read, signal); }
+      finally { timing?.('read_snapshot', performance.now() - snapshotAt); }
     },
-    write: write => withPreparedDesktopSyncConnection(databasePath, write)
+    write: write => withPreparedDesktopSyncConnection(databasePath, write, timing)
   };
 }
 
@@ -47,17 +52,23 @@ function prepareDesktopSyncRead(databasePath: string) {
   });
 }
 
-function withPreparedDesktopSyncConnection<T>(databasePath: string, execute: (db: DbPort) => Promise<T>) {
+function withPreparedDesktopSyncConnection<T>(databasePath: string, execute: (db: DbPort) => Promise<T>,
+  timing?: RequestDatabaseTiming) {
+  const queuedAt = performance.now();
   return runWithDatabaseConnectionOwner(async () => {
-    const connection = openDatabaseConnection();
-    if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
-    // Reserve only databases actually written; the attached search index has its own worker.
-    const db = createBetterSqliteDbPort(connection.sqlite, {
-      name: 'desktop-request-sync', transactionMode: 'deferred'
-    });
-    return db.transaction(async tx => {
-      if (!await syncGroupLocalPublicationBlockReason(tx)) flushDirtyNodeSyncVersions();
-      return execute(tx);
-    });
+    const acquiredAt = performance.now();
+    timing?.('write_owner_wait', acquiredAt - queuedAt);
+    try {
+      const connection = openDatabaseConnection();
+      if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
+      // Reserve only databases actually written; the attached search index has its own worker.
+      const db = createBetterSqliteDbPort(connection.sqlite, {
+        name: 'desktop-request-sync', transactionMode: 'deferred'
+      });
+      return await db.transaction(async tx => {
+        if (!await syncGroupLocalPublicationBlockReason(tx)) flushDirtyNodeSyncVersions();
+        return execute(tx);
+      });
+    } finally { timing?.('write_owner_held', performance.now() - acquiredAt); }
   });
 }

@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 
-import { observeSlowRequest, recordSyncSessionWaitTiming } from './companionLanRequestTiming.js';
+import { observeSlowRequest, recordSyncSessionWaitTiming, requestDatabaseTiming } from './companionLanRequestTiming.js';
 
 vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
@@ -77,4 +77,21 @@ it('omits fast requests', () => {
   vi.mocked(performance.now).mockReturnValue(100);
   response.emit('close');
   expect(appendDiagnosticLog).not.toHaveBeenCalled();
+});
+
+it('keeps database phase totals on their response and stops collecting after completion', () => {
+  const { response } = requestPair();
+  const timing = requestDatabaseTiming(response);
+  timing('write_owner_wait', 100);
+  timing('write_owner_wait', 25);
+  timing('write_owner_held', 40);
+  response.emit('finish');
+  timing('write_owner_held', 900);
+  response.emit('close');
+  expect(appendDiagnosticLog).toHaveBeenCalledTimes(1);
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    payload: expect.objectContaining({ databaseTimings: {
+      write_owner_wait: { calls: 2, durationMs: 125 }, write_owner_held: { calls: 1, durationMs: 40 }
+    } })
+  }));
 });
