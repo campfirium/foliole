@@ -19,10 +19,10 @@ async function seedReviewWorkspace(desktopWindow: Page) {
 }
 
 async function enterFlowMode(desktopWindow: Page) {
-  await desktopWindow.getByRole('button', { name: 'Enter Flow' }).click();
+  await desktopWindow.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ }).click();
   await expect(desktopWindow.getByRole('group', { name: 'Flow toolbar' })).toBeVisible();
   await desktopWindow.getByRole('button', { name: 'Playwright Review Escape Topic' }).click();
-  await expect(desktopWindow.getByRole('main', { name: 'Foliole workspace' })).toContainText('Playwright Review Escape Topic');
+  await expect(desktopWindow.getByRole('main', { name: /^(Foliole workspace|Foliole 工作区)$/ })).toContainText('Playwright Review Escape Topic');
 }
 
 async function focusPromptEditor(desktopWindow: Page) {
@@ -64,7 +64,7 @@ test('Escape closes postpone panel first, then leaves review editor editing', as
   await focusPromptEditor(desktopWindow);
 
   const editor = desktopWindow.getByRole('textbox').first();
-  await editor.press('Control+J');
+  await editor.press('ControlOrMeta+J');
   await expect(desktopWindow.getByRole('dialog')).toBeVisible();
   await editor.press('Escape');
   await expect(desktopWindow.getByRole('dialog')).toBeHidden();
