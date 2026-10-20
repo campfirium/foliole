@@ -25,6 +25,7 @@ export function buildSharedBucketInvocation(
     '--maxWorkers=2',
     env.SHARED_TEST_FILE_PARALLELISM === 'true' ? '--fileParallelism' : '--no-file-parallelism',
     '--testTimeout=30000',
+    '--hookTimeout=30000',
     ...targets
   ];
   return {

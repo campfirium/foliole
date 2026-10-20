@@ -15,7 +15,7 @@ import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
 const CHUNK_SIZE = 30;
 export const RELEASE_DESKTOP_SOURCE_SHARDS = ['one', 'two', 'three', 'four'];
-const ROOT_TESTS = ['src/startupBootstrap.test.ts', 'src/startupViewMode.test.ts'];
+export const RELEASE_DESKTOP_SOURCE_ROOT_TESTS = ['src/startupBootstrap.test.ts', 'src/startupViewMode.test.ts'];
 
 function toPosix(filePath) {
   return filePath.replaceAll('\\', '/');
@@ -35,7 +35,7 @@ function collectTestFiles(dirPath) {
 }
 
 export function collectReleaseDesktopSourceTestFiles() {
-  return [...collectTestFiles('src/app'), ...collectTestFiles('src/test'), ...ROOT_TESTS].sort();
+  return [...collectTestFiles('src/app'), ...collectTestFiles('src/test'), ...RELEASE_DESKTOP_SOURCE_ROOT_TESTS].sort();
 }
 
 function chunkFiles(label, reportLabel, files, chunkSize) {
@@ -54,11 +54,11 @@ function chunkFiles(label, reportLabel, files, chunkSize) {
 export function buildReleaseDesktopSourceBuckets(files = collectReleaseDesktopSourceTestFiles()) {
   const appFiles = files.filter((file) => file.startsWith('src/app/'));
   const smokeFiles = files.filter((file) => file.startsWith('src/test/'));
-  const rootFiles = files.filter((file) => ROOT_TESTS.includes(file));
+  const rootFiles = files.filter((file) => RELEASE_DESKTOP_SOURCE_ROOT_TESTS.includes(file));
   return [
     ...chunkFiles('app', 'app', appFiles, CHUNK_SIZE),
     ...chunkFiles('smoke', 'smoke', smokeFiles, 1),
-    ...chunkFiles('root', 'root', rootFiles, ROOT_TESTS.length)
+    ...chunkFiles('root', 'root', rootFiles, RELEASE_DESKTOP_SOURCE_ROOT_TESTS.length)
   ];
 }
 
@@ -99,6 +99,7 @@ export function buildReleaseDesktopSourceVitestArgs(bucket) {
     '--maxWorkers=2',
     '--no-file-parallelism',
     '--testTimeout=30000',
+    '--hookTimeout=30000',
     ...bucket.targets
   ];
 }
