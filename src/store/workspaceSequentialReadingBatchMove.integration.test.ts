@@ -26,6 +26,8 @@ import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot
 
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
 import { maintenanceTree } from './workspaceSequentialReadingMaintenance.testSupport';
+import { createInitialWorkspaceState, useWorkspaceStore, type WorkspaceState } from './workspaceStore';
+import { createMoveNodesAction } from './workspaceStoreTreeActions';
 
 afterEach(async () => {
   if (process.platform === 'win32' && process.env.CI) {
@@ -70,4 +72,32 @@ it('persists every unlocked descendant through the production move and database 
     expect(snapshot.nodesById[change.nodeId]?.reading).toEqual(change.afterReading);
   }
   expect(snapshot.nodesById.source?.sequentialReadingEnabled).toBe(true);
+});
+
+it.each(['topic', 'folder'] satisfies Array<'topic' | 'folder'>)('moves a complete subtree out of a %s source through the store action', async (sourceKind) => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-store-move-'));
+  initializeDatabase();
+  const tree = maintenanceTree(30);
+  const nodesById: WorkspaceState['nodesById'] = { ...tree.previousNodesById };
+  nodesById.source = { ...nodesById.source!, kind: sourceKind,
+    content: sourceKind === 'folder' ? '' : 'Source body', hasContent: sourceKind !== 'folder' };
+  let state: WorkspaceState = { ...useWorkspaceStore.getState(), ...createInitialWorkspaceState(), nodesById,
+    nodeOrder: tree.nodeOrder, isHydrated: true, activeNodeId: null };
+  for (const [position, node] of Object.values(state.nodesById).entries()) {
+    upsertNodeSnapshot({ nodeId: node.id, parentNodeId: node.parentNodeId, kind: node.kind,
+      title: node.title, isTitleManual: true, content: node.content, reveal: null, anchorLink: null,
+      position, reading: node.reading ?? null, sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
+      createdAt: node.createdAt, updatedAt: node.updatedAt });
+  }
+  const move = createMoveNodesAction(partial => {
+    state = { ...state, ...(typeof partial === 'function' ? partial(state) : partial) };
+  }, async payload => moveNodes(payload));
+  expect(await move(['moved'], 'destination', 'child')).toBe(true);
+  closeDatabaseConnection();
+  initializeDatabase();
+  const persisted = loadWorkspaceSnapshot()!;
+  expect(persisted.nodesById.moved?.parentNodeId).toBe('destination');
+  for (let index = 0; index < 30; index += 1) {
+    expect(persisted.nodesById[`reading-${index}`]?.reading).toMatchObject({ state: 'active', repetitionCount: 2 });
+  }
 });

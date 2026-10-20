@@ -12,6 +12,7 @@ async function readingFacts(session: DesktopSession) {
   return session.electronApp.evaluate(async (_, id) => {
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
+      await new Promise<void>(resolve => setImmediate(resolve));
     return connection.runWithDatabaseConnectionOwner(() => {
       const db = connection.openDatabaseConnection().sqlite;
       return { reading: db.prepare('SELECT * FROM node_reading WHERE node_id = ?').get(id),
@@ -26,6 +27,7 @@ async function seedReadingFacts(session: DesktopSession) {
     await session.electronApp.evaluate(async (_, { id, ghost }) => {
       const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
       const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
+      await new Promise<void>(resolve => setImmediate(resolve));
       const reading = require(`${process.cwd()}/dist/electron/database/nodeReadingState.js`);
       const nodes = require(`${process.cwd()}/dist/electron/database/nodeMutations.js`);
       await connection.runWithDatabaseConnectionOwner(() => {
@@ -45,7 +47,8 @@ async function seedReadingFacts(session: DesktopSession) {
 test('keeps reading progress through Trash, restart and restore while retiring an old orphan', async ({ desktopSession, desktopWindow }, testInfo) => {
   let reopened: DesktopSession | null = null;
   let restored: DesktopSession | null = null;
-  const env = desktopSession.env;
+  const env = { ...process.env,
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: desktopSession.target.runtimeStateRoot };
   try {
     await expectWorkspaceShell(desktopWindow);
     await desktopWindow.evaluate(async ({ id, ghost }) => {
@@ -55,7 +58,7 @@ test('keeps reading progress through Trash, restart and restore while retiring a
       ], { persist: true });
     }, { id: NODE_ID, ghost: GHOST_ID });
     await seedReadingFacts(desktopSession);
-    await desktopSession.close();
+    await desktopSession.electronApp.close();
     reopened = await launchDesktopSession({ env });
     await expectWorkspaceShell(reopened.firstWindow);
     const before = await readingFacts(reopened);
@@ -81,6 +84,10 @@ test('keeps reading progress through Trash, restart and restore while retiring a
     const final = await readingFacts(restored);
     expect(final.reading).toEqual(before.reading);
     expect(final.positions).toEqual(before.positions);
+    await restored.firstWindow.evaluate(id => window.__folioleWorkspaceDebug?.openNode?.(id), NODE_ID);
+    await expect(restored.firstWindow.getByText('Retained reading body', { exact: true })).toBeVisible();
+    await testInfo.attach('restored-reading', {
+      body: await restored.firstWindow.screenshot({ path: `${process.cwd()}/.tmp/artifacts/unified-acceptance-20261020/t303-restored-reading.png` }), contentType: 'image/png' });
     await testInfo.attach('reading-trash-retention', { body: JSON.stringify({ before, trashed, afterRestart, final }, null, 2), contentType: 'application/json' });
   } finally {
     await restored?.close();
