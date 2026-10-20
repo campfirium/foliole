@@ -5,20 +5,26 @@ export type WorkloadInterval = { startedAt: number; endedAt: number; durationMs:
 
 function summarizeMeasurement(options: {
   targetSha: string; maximumResponseMs: number; maximumWorkloadMs: number;
-  minimumOverlappingSamples: number;
+  minimumOverlappingSamples: number; speedAdvisory?: boolean;
 }, workload: WorkloadInterval | undefined, workloadError: string | undefined,
 samples: ResponseSample[]) {
   const overlapping = workload ? samples.filter((sample) =>
     sample.sentAt < workload.endedAt && sample.receivedAt > workload.startedAt) : [];
-  const failures = [
+  const correctnessFailures = [
     ...(workloadError ? [`workload: ${workloadError}`] : []),
+    ...overlapping.filter((sample) => sample.error)
+      .map((sample) => `response ${sample.durationMs}ms: ${sample.error}`)
+  ];
+  const speedFindings = [
     ...(workload && workload.durationMs > options.maximumWorkloadMs
       ? [`workload ${workload.durationMs}ms > ${options.maximumWorkloadMs}ms`] : []),
     ...(overlapping.length < options.minimumOverlappingSamples
       ? [`overlapping samples ${overlapping.length} < ${options.minimumOverlappingSamples}`] : []),
-    ...overlapping.filter((sample) => sample.error || sample.durationMs > options.maximumResponseMs)
-      .map((sample) => `response ${sample.durationMs}ms${sample.error ? `: ${sample.error}` : ''}`)
+    ...overlapping.filter((sample) => !sample.error && sample.durationMs > options.maximumResponseMs)
+      .map((sample) => `response ${sample.durationMs}ms`)
   ];
+  const speedAdvisory = options.speedAdvisory === true;
+  const failures = speedAdvisory ? correctnessFailures : [...correctnessFailures, ...speedFindings];
   return {
     targetSha: options.targetSha,
     limits: { maximumResponseMs: options.maximumResponseMs,
@@ -26,7 +32,7 @@ samples: ResponseSample[]) {
       minimumOverlappingSamples: options.minimumOverlappingSamples },
     workload, samples, overlappingSampleCount: overlapping.length,
     maximumObservedResponseMs: Math.max(0, ...overlapping.map((sample) => sample.durationMs)),
-    failures
+    failures, speedAdvisory, speedFindings
   };
 }
 
@@ -40,6 +46,7 @@ export async function measureWorkloadResponsiveness(options: {
   maximumResponseMs: number;
   minimumOverlappingSamples: number;
   maximumWorkloadMs: number;
+  speedAdvisory?: boolean;
 }) {
   const samples: ResponseSample[] = [];
   const pending = new Set<Promise<void>>();

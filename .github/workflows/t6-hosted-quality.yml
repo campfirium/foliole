@@ -40,6 +40,7 @@ jobs:
       - name: Validate chain selection
         id: select
         env:
+          CHAIN_LANE: ${{ inputs.execution_lane }}
           CHAIN_STAGES: ${{ inputs.stages }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node scripts/quality/chain-verdict.mjs select
@@ -101,34 +102,34 @@ jobs:
     with: *target-context
     needs: *selected-baseline
   t6-desktop-build:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-desktop-build') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-desktop-build') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-desktop-build.yml
     with: *target-context
     needs: &selected-tail
       - context
       - baseline
   t6-android-web-build:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-web-build') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-web-build') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-android-web-build.yml
     with: *target-context
     needs: *selected-tail
   t6-windows-acceptance:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-windows-acceptance') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-windows-acceptance') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-windows-acceptance.yml
     with: *target-context
     needs: *selected-tail
   t6-linux-responsiveness:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-linux-responsiveness') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-linux-responsiveness') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-linux-responsiveness.yml
     with: *target-context
     needs: *selected-tail
   t6-android-host:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-host') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-host') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-android-host.yml
     with: *target-context
     needs: *selected-tail
   t6-ios-contract:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-contract') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-contract') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -139,7 +140,7 @@ jobs:
       trigger_ref: ${{ inputs.trigger_ref }}
     needs: *selected-tail
   t6-ios-sync-group-content:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -150,7 +151,7 @@ jobs:
       trigger_ref: ${{ inputs.trigger_ref }}
     needs: *selected-tail
   t6-ios-state-writeback:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-state-writeback') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-state-writeback') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -161,7 +162,7 @@ jobs:
       trigger_ref: ${{ inputs.trigger_ref }}
     needs: *selected-tail
   t6-ios-sync-pack:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -172,7 +173,7 @@ jobs:
       trigger_ref: ${{ inputs.trigger_ref }}
     needs: *selected-tail
   t6-ios-foreground:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-foreground') && (inputs.stages != 'all' || needs.baseline.result == 'success') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-foreground') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -199,6 +200,7 @@ jobs:
       - *chain-checkout
       - name: Require every baseline SHA
         env:
+          CHAIN_LANE: ${{ inputs.execution_lane }}
           CHAIN_NEEDS: ${{ toJSON(needs) }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: node scripts/quality/chain-verdict.mjs baseline
@@ -228,6 +230,7 @@ jobs:
       - t6-ios-foreground
     uses: ./.github/workflows/hosted-quality-chain-verdict.yml
     with:
+      execution_lane: ${{ inputs.execution_lane }}
       stages: ${{ inputs.stages }}
       target_sha: ${{ inputs.target_sha }}
       stage_results: ${{ toJSON(needs) }}

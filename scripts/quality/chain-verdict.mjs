@@ -12,9 +12,17 @@ export const TAIL_STAGES = [
   't6-ios-sync-group-content', 't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
 ];
 export const CHAIN_STAGES = [...BASELINE_STAGES, ...TAIL_STAGES];
+// Dev full chains omit duplicated or host-acceptance stages; they remain selectable explicitly.
+export const DEV_FULL_OMITTED_STAGES = ['t5-desktop-static', 't6-windows-acceptance'];
+export const RELEASE_LANE = 'release-t7';
 
-export function requestedStages(input) {
-  if (input === 'all') return [...CHAIN_STAGES];
+export function fullChainStages(lane) {
+  if (!lane || lane === RELEASE_LANE) return [...CHAIN_STAGES];
+  return CHAIN_STAGES.filter(stage => !DEV_FULL_OMITTED_STAGES.includes(stage));
+}
+
+export function requestedStages(input, lane) {
+  if (input === 'all') return fullChainStages(lane);
   const stages = input.split(',').map(stage => stage.trim());
   if (!stages.length || stages.some(stage => !CHAIN_STAGES.includes(stage))) {
     throw new Error('Unknown or empty chain stage selection');
@@ -30,13 +38,14 @@ export function stagesVerdict(stages, needs, targetSha) {
     ? 'passed' : 'failed';
 }
 
-export function createChainVerdict({ selection, targetSha, needs, runId, runAttempt }) {
+export function createChainVerdict({ selection, targetSha, needs, runId, runAttempt, lane }) {
   if (!/^[0-9a-f]{40}$/u.test(targetSha)) throw new Error('Chain target must be an exact SHA');
-  const requested = requestedStages(selection);
+  const requested = requestedStages(selection, lane);
   const verdict = stagesVerdict(requested, needs, targetSha);
   const receipt = {
     run_id: String(runId), run_attempt: Number(runAttempt),
     kind: selection === 'all' ? 'full' : 'replay', target_sha: targetSha,
+    ...(lane ? { lane } : {}),
     stages: Object.fromEntries(requested.map(stage => [stage, needs[stage]?.result ?? 'skipped'])),
     stage_shas: Object.fromEntries(requested.map(stage => [stage, needs[stage]?.outputs?.accepted_sha ?? ''])),
     verdict
@@ -48,21 +57,23 @@ export function createChainVerdict({ selection, targetSha, needs, runId, runAtte
 export function runChainCommand(command, env = process.env) {
   const selection = env.CHAIN_STAGES;
   const needs = JSON.parse(env.CHAIN_NEEDS ?? '{}');
+  const lane = env.CHAIN_LANE || undefined;
   if (command === 'select') {
-    const stages = requestedStages(selection);
+    const stages = requestedStages(selection, lane);
     if (!/^[0-9a-f]{40}$/u.test(env.TARGET_SHA)) throw new Error('Chain target must be an exact SHA');
     appendFileSync(env.GITHUB_OUTPUT, `stages=${JSON.stringify(stages)}\n`);
     return;
   }
   if (command === 'baseline') {
-    if (stagesVerdict(BASELINE_STAGES, needs, env.TARGET_SHA) !== 'passed') {
+    const baseline = BASELINE_STAGES.filter(stage => fullChainStages(lane).includes(stage));
+    if (stagesVerdict(baseline, needs, env.TARGET_SHA) !== 'passed') {
       throw new Error('Baseline did not accept the target SHA');
     }
     return;
   }
   if (command !== 'write') throw new Error('Unknown chain command');
   const receipt = createChainVerdict({ selection, targetSha: env.TARGET_SHA, needs,
-    runId: env.GITHUB_RUN_ID, runAttempt: env.GITHUB_RUN_ATTEMPT });
+    runId: env.GITHUB_RUN_ID, runAttempt: env.GITHUB_RUN_ATTEMPT, lane });
   writeFileSync('chain-verdict.json', `${JSON.stringify(receipt, null, 2)}\n`);
   appendFileSync(env.GITHUB_OUTPUT, `verdict=${receipt.verdict}\n`);
   if (receipt.accepted_sha) appendFileSync(env.GITHUB_OUTPUT, `accepted_sha=${receipt.accepted_sha}\n`);

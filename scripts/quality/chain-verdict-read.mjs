@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CHAIN_STAGES, stagesVerdict } from './chain-verdict.mjs';
+import { CHAIN_STAGES, fullChainStages, stagesVerdict } from './chain-verdict.mjs';
 
 export function consumeChainVerdict({ run, artifact, receipt, targetSha }) {
   const incomplete = { verdict: 'incomplete' };
@@ -17,7 +17,7 @@ export function consumeChainVerdict({ run, artifact, receipt, targetSha }) {
   if (!['full', 'replay'].includes(receipt.kind)) return incomplete;
   const stages = Object.keys(receipt.stages ?? {});
   if (!stages.length || stages.some(stage => !CHAIN_STAGES.includes(stage))) return incomplete;
-  if (receipt.kind === 'full' && CHAIN_STAGES.some(stage => !stages.includes(stage))) return incomplete;
+  if (receipt.kind === 'full' && fullChainStages(receipt.lane).some(stage => !stages.includes(stage))) return incomplete;
   const needs = Object.fromEntries(stages.map(stage => [stage, {
     result: receipt.stages[stage], outputs: { accepted_sha: receipt.stage_shas?.[stage] }
   }]));

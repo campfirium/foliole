@@ -2,6 +2,10 @@ name: Hosted chain verdict
 on:
   workflow_call:
     inputs:
+      execution_lane:
+        required: false
+        type: string
+        default: ''
       stages:
         required: true
         type: string
@@ -31,6 +35,7 @@ jobs:
       - name: Write chain verdict
         id: verdict
         env:
+          CHAIN_LANE: ${{ inputs.execution_lane }}
           CHAIN_STAGES: ${{ inputs.stages }}
           TARGET_SHA: ${{ inputs.target_sha }}
           CHAIN_NEEDS: ${{ inputs.stage_results }}

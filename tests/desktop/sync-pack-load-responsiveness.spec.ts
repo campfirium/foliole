@@ -38,6 +38,7 @@ for (const mode of ['new', 'existing'] as const) {
       maximumResponseMs: 750,
       minimumOverlappingSamples: 8,
       maximumWorkloadMs: 10_000,
+      speedAdvisory: process.env.FOLIOLE_RESPONSIVENESS_SPEED_ADVISORY === '1',
       probe: () => desktopWindow.evaluate(() => globalThis.window!.electronAPI!.invoke(
         'load_app_settings_state', {}))
     });
