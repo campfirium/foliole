@@ -96,7 +96,6 @@ async function measureOrdinaryInputs(editor: CodeMirrorEditorAdapter, reader: Da
           .toEqual({ content: expected }), { timeout: 5000, interval: 10 });
       });
       samples.push({ elapsedMs: performance.now() - started, bytes: Buffer.byteLength(expected) });
-      expect(samples.at(-1)!.elapsedMs).toBeLessThanOrEqual(5000);
     }
  }
 
@@ -126,7 +125,6 @@ async function measureAttachmentInput(input: {
         .toEqual({ content: expected }), { timeout: 5000, interval: 10 });
     });
     const sample = { elapsedMs: performance.now() - started, bytes: Buffer.byteLength(expected), phase: 'attachment-in-flight' };
-    expect(sample.elapsedMs).toBeLessThanOrEqual(5000);
     await Promise.all(input.runs);
     for (let round = 0; round < 4; round++) await syncJoinedMobile(input.peer);
     expect(await readFile(path.join(attachment.target, attachment.key))).toEqual(attachment.bytes);

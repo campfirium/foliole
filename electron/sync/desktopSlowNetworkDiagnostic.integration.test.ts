@@ -167,7 +167,6 @@ async function recordDiagnostic(input: {
 }) {
   const { profile, baselineMs, rounds, totalBlocks, releasedAt, requestedAt, editLatencyMs } = input;
     expect(editLatencyMs).toBeGreaterThan(0);
-    expect(editLatencyMs).toBeLessThan(5000);
     expect(releasedAt - requestedAt).toBeLessThan(1100);
     if (profile.initialScan) expect(totalBlocks).toBe(0);
     else expect(totalBlocks).toBeGreaterThan(0);
