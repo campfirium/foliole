@@ -38,6 +38,6 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.selection.savedRefreshError': 'Annotation saved. The page could not be refreshed.',
   'companion.selection.createError': 'Annotation could not be saved. Try again.',
   'companion.selection.refresh': 'Refresh',
-  'companion.selection.saveError': 'Changes could not be saved. Your note is still here.',
+  'companion.selection.saveError': 'Changes could not be saved. Please try again.',
   'companion.selection.retry': 'Retry'
 };
