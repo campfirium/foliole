@@ -100,8 +100,8 @@ async function createProvider(session: DesktopSession, windowPage: WindowPage) {
   const endpoint = `http://127.0.0.1:${port}`;
   await expect.poll(async () => {
     const descriptor = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json());
-    return descriptor.topology_role;
-  }).toBe('anchor');
+    return descriptor.group_id;
+  }).toBe(overview.sync_group.group_id);
   const discovery = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json()) as {
     group_display_name: string; group_tag: string; provider_device_id: string;
     provider_device_name: string; provider_platform: string;
