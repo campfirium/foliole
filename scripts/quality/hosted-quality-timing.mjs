@@ -40,11 +40,23 @@ const TOPOLOGIES = {
 const time = (value) => value ? Date.parse(value) : null;
 const seconds = (value) => value == null ? null : Math.round(value / 1000);
 
+// Each job keeps only its latest attempt; a job carried into a rerun attempt keeps the old
+// start time under the new creation time, so it has no queue of its own.
 function timedJobs(jobs) {
-  return jobs.filter((job) => !job.name.includes('Capacity timing summary')).map((job) => ({
-    conclusion: job.conclusion, created: time(job.created_at), completed: time(job.completed_at),
-    name: job.name, started: time(job.started_at), status: job.status
-  }));
+  const latest = new Map();
+  for (const job of jobs.filter((entry) => !entry.name.includes('Capacity timing summary'))) {
+    const previous = latest.get(job.name);
+    if (!previous || (job.run_attempt ?? 1) >= (previous.run_attempt ?? 1)) latest.set(job.name, job);
+  }
+  return [...latest.values()].map((job) => {
+    const created = time(job.created_at);
+    const started = time(job.started_at);
+    return {
+      carried: created != null && started != null && started < created,
+      conclusion: job.conclusion, created, completed: time(job.completed_at),
+      name: job.name, started, status: job.status
+    };
+  });
 }
 
 function peakConcurrency(jobs) {
@@ -95,12 +107,14 @@ function criticalChain(jobs, topology) {
 function metrics(section, topologyName) {
   const jobs = timedJobs(section.jobs);
   const complete = jobs.filter((job) => job.created != null && job.completed != null);
-  const queues = jobs.filter((job) => job.created != null && job.started != null)
+  const queues = jobs.filter((job) => job.created != null && job.started != null && !job.carried)
     .map((job) => ({ name: job.name, value: job.started - job.created }));
   const executions = jobs.filter((job) => job.started != null && job.completed != null)
     .map((job) => job.completed - job.started);
   const longestQueue = queues.sort((left, right) => right.value - left.value)[0] ?? null;
   return {
+    runAttempt: section.run.run_attempt ?? 1,
+    carriedJobs: jobs.filter((job) => job.carried).length,
     wallSeconds: complete.length ? seconds(
       Math.max(...complete.map((job) => job.completed)) - time(section.run.created_at)
     ) : null,
@@ -145,6 +159,7 @@ export function renderHostedQualityTiming(report) {
     '',
     ...renderTimingSlowdowns(report.slowdowns ?? [], duration),
     `- Workflow wall: ${duration(current.wallSeconds)} (recent success: ${baseline}; delta: ${duration(report.wallDeltaSeconds)})`,
+    `- Run attempt ${current.runAttempt} (${current.carriedJobs} job carried over from earlier attempts, excluded from queue)`,
     `- API queue total: ${duration(current.queueSeconds)}; execution total: ${duration(current.executionSeconds)}`,
     `- Peak runner-backed jobs: ${current.peak}`,
     `- Longest queue: ${current.longestQueue?.name ?? 'unknown'} (${duration(current.longestQueue?.seconds)})`,

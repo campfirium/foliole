@@ -23,7 +23,7 @@ async function collectJobs(repository, runId, token) {
   const jobs = [];
   for (let page = 1; ; page += 1) {
     const result = await githubJson(
-      `/repos/${repository}/actions/runs/${runId}/jobs?filter=all&per_page=100&page=${page}`,
+      `/repos/${repository}/actions/runs/${runId}/jobs?filter=latest&per_page=100&page=${page}`,
       token
     );
     jobs.push(...result.jobs);

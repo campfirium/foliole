@@ -85,3 +85,22 @@ it('stays quiet when there is no baseline to compare against', () => {
   expect(report.slowdowns).toEqual([]);
   expect(renderHostedQualityTiming(report)).not.toContain('Warning');
 });
+
+it('never reports negative queues for jobs carried over into a rerun attempt', () => {
+  const rerun = (name, attempt, created, started, completed) => ({
+    ...job(name, created, started, completed), run_attempt: attempt
+  });
+  const report = analyzeHostedQualityTiming({
+    topology: 'remote-quality', baseline: null,
+    current: { run: { created_at: '2026-01-01T00:00:00Z', run_attempt: 2 }, jobs: [
+      rerun('dev-ref', 1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:10Z', '2026-01-01T00:00:20Z'),
+      rerun('full-quality / iOS', 1, '2026-01-01T00:00:20Z', '2026-01-01T00:00:30Z', '2026-01-01T00:10:00Z'),
+      rerun('dev-ref', 2, '2026-01-01T01:00:00Z', '2026-01-01T00:00:10Z', '2026-01-01T00:00:20Z'),
+      rerun('full-quality / iOS', 2, '2026-01-01T01:00:00Z', '2026-01-01T01:01:00Z', '2026-01-01T01:11:00Z')
+    ] }
+  });
+  expect(report.current).toMatchObject({
+    runAttempt: 2, carriedJobs: 1, queueSeconds: 60, executionSeconds: 610
+  });
+  expect(renderHostedQualityTiming(report)).toContain('Run attempt 2 (1 job carried over');
+});
