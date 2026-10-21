@@ -10,7 +10,7 @@ import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.tes
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconciliation and restart', async (count) => {
+it.each([1000, 4097, 10000])('persists %i complete 8 KiB bodies through peer reconciliation and restart', async (count) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
