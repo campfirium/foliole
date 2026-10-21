@@ -36,7 +36,8 @@ async function observeSyncGroup(page: Page, create: boolean): Promise<SyncGroupO
   const device = devices.getByRole('listitem').first();
   const deviceName = (await device.locator('span').first().innerText()).trim();
   expect(deviceName).not.toBe('');
-  await expect(device.getByText('Windows', { exact: true })).toBeVisible();
+  // Windows 11 hosts are labelled 'Windows 11' since the Sync Group platform label distinguishes them.
+  await expect(device.getByText(/^Windows(?: 11)?$/)).toBeVisible();
 
   const groupTitle = (await section.getByRole('heading', { level: 5 }).innerText()).trim();
   expect([`${deviceName}'s Sync Group`, `${deviceName} 的同步组`]).toContain(groupTitle);
