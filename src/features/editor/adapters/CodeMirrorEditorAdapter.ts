@@ -5,6 +5,7 @@ import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalL
 import type { EditorTextEditOperationEntry } from '../model/editorOperationHistory';
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
+import { CodeMirrorDeferredFocus } from './codeMirrorDeferredFocus';
 import {
   applyCodeMirrorTextAnchorDecorationsWithPreview,
   replaceCodeMirrorRange,
@@ -71,6 +72,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null = null;
   private paragraphMarkerCompartment = new Compartment();
   private readOnlyCompartment = new Compartment();
+  private readonly deferredFocus = new CodeMirrorDeferredFocus(() => this.view);
   private searchDecorationsCompartment = new Compartment();
   private textAnchorDecorationsCompartment = new Compartment();
   private textHistory: CodeMirrorTextHistoryController;
@@ -139,7 +141,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     delete this.host.dataset.paragraphMarkerActive;
     this.view.destroy();
   }
-  focus() { this.view.focus(); }
+  focus() { this.deferredFocus.request(); }
   flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
   applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
@@ -173,6 +175,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   }
   setReadOnly(readOnly: boolean) {
     setCodeMirrorReadOnly(this.view, this.readOnlyCompartment, readOnly);
+    this.deferredFocus.resolve();
   }
   setNodeId(nodeId: string | null) {
     if (nodeId !== this.nodeId) clearRetainedRemoteImageSources(this.nodeId);
