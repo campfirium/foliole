@@ -145,6 +145,15 @@ it('discovers and persists an open-state change after 2050 already known version
       updated_at: payload.last_opened_at, deleted_at: null }));
     expect((await differences(source, target)).map(value => value.objectType)).toEqual(['node']);
     const difference = await send(source, target, 'node');
+    expect(difference.need.frontierFactIds).toEqual([]);
+    await withRequestSyncFiles(source.host.files, async files => {
+      await writeRequestSyncSnapshot(source.db, difference, files);
+      const facts = [];
+      for await (const fact of files.readFacts()) facts.push(fact);
+      expect(facts).toHaveLength(1);
+      expect(facts.filter(fact => fact.kind === 2)).toEqual([]);
+      expect(facts.flatMap(fact => fact.blobs)).toEqual([]);
+    });
     await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
       providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference, false);
     target.reopen();
