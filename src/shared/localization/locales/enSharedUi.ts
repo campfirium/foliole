@@ -20,6 +20,8 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.startup.failedModule': 'Failed module: {module}',
   'shared.startup.logs': 'Logs: {path}',
   'shared.startup.unknownRendererException': 'Unknown renderer exception',
+  'shared.editorRenderFailure.title': "This content can't be displayed",
+  'shared.editorRenderFailure.body': 'Other topics are unaffected and nothing was changed. The original text is shown below.',
   'desktop.priorityQuickSet.slider': 'Priority',
   'desktop.priorityQuickSet.dialog': 'Set priority',
   'desktop.priorityQuickSet.title': 'Priority',

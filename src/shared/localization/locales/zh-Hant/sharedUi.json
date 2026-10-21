@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "失敗的模組：{module}",
   "shared.startup.logs": "日誌：{path}",
   "shared.startup.unknownRendererException": "未知渲染器異常",
+  "shared.editorRenderFailure.title": "此內容暫時無法顯示",
+  "shared.editorRenderFailure.body": "其他主題不受影響，內容也沒有被更動。原文顯示在下方。",
   "desktop.priorityQuickSet.slider": "優先權",
   "desktop.priorityQuickSet.dialog": "設定優先權",
   "desktop.priorityQuickSet.title": "優先權",

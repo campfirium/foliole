@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "Módulo fallido: {module}",
   "shared.startup.logs": "Registros: {path}",
   "shared.startup.unknownRendererException": "Excepción de renderizado desconocida",
+  "shared.editorRenderFailure.title": "Este contenido no se puede mostrar",
+  "shared.editorRenderFailure.body": "Los demás temas no se ven afectados y no se ha cambiado nada. El texto original se muestra a continuación.",
   "desktop.priorityQuickSet.slider": "Prioridad",
   "desktop.priorityQuickSet.dialog": "Establecer prioridad",
   "desktop.priorityQuickSet.title": "Prioridad",

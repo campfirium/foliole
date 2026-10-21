@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "失敗したモジュール: {module}",
   "shared.startup.logs": "ログ: {path}",
   "shared.startup.unknownRendererException": "不明なレンダラ例外",
+  "shared.editorRenderFailure.title": "このコンテンツを表示できません",
+  "shared.editorRenderFailure.body": "他のトピックには影響はなく、内容も変更されていません。原文を下に表示しています。",
   "desktop.priorityQuickSet.slider": "優先度",
   "desktop.priorityQuickSet.dialog": "優先度の設定",
   "desktop.priorityQuickSet.title": "優先度",

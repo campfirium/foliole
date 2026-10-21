@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "실패한 모듈: {module}",
   "shared.startup.logs": "로그: {path}",
   "shared.startup.unknownRendererException": "알 수 없는 렌더러 예외",
+  "shared.editorRenderFailure.title": "이 콘텐츠를 표시할 수 없습니다",
+  "shared.editorRenderFailure.body": "다른 주제에는 영향이 없으며 내용도 변경되지 않았습니다. 원문은 아래에 표시됩니다.",
   "desktop.priorityQuickSet.slider": "우선순위",
   "desktop.priorityQuickSet.dialog": "우선순위 설정",
   "desktop.priorityQuickSet.title": "우선순위",

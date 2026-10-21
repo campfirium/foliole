@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "Module défaillant : {module}",
   "shared.startup.logs": "Journaux : {path}",
   "shared.startup.unknownRendererException": "Exception de rendu inconnue",
+  "shared.editorRenderFailure.title": "Ce contenu ne peut pas être affiché",
+  "shared.editorRenderFailure.body": "Les autres sujets ne sont pas affectés et rien n'a été modifié. Le texte d'origine est affiché ci-dessous.",
   "desktop.priorityQuickSet.slider": "Priorité",
   "desktop.priorityQuickSet.dialog": "Définir la priorité",
   "desktop.priorityQuickSet.title": "Priorité",

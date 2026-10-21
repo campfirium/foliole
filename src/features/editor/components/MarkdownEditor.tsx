@@ -20,6 +20,7 @@ import {
 import { useMarkdownEditorImageEffects } from './markdownEditorImageEffects';
 import { useMarkdownEditorPropsDiagnostic } from './markdownEditorInputDiagnostic';
 import { useMarkdownEditorModelEffects } from './markdownEditorModelEffects';
+import { MarkdownEditorRenderBoundary } from './MarkdownEditorRenderBoundary';
 import { handleMarkdownEditorKeyDownCapture } from './markdownEditorReviewEscape';
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
@@ -190,6 +191,14 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
+  return (
+    <MarkdownEditorRenderBoundary nodeId={props.nodeId} value={props.value}>
+      <MarkdownEditorContent {...props} />
+    </MarkdownEditorRenderBoundary>
+  );
+}
+
+function MarkdownEditorContent(props: MarkdownEditorProps) {
   useMarkdownEditorPropsDiagnostic(props);
   const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
   useEffect(() => syncMarkdownEditorAriaLabel(hostRef.current, props.ariaLabel), [hostRef, props.ariaLabel]);

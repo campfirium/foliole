@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "Uszkodzony moduł: {module}",
   "shared.startup.logs": "Logi: {path}",
   "shared.startup.unknownRendererException": "Nieznany wyjątek modułu renderującego",
+  "shared.editorRenderFailure.title": "Nie można wyświetlić tej zawartości",
+  "shared.editorRenderFailure.body": "Inne tematy nie zostały naruszone i nic nie zostało zmienione. Oryginalny tekst jest widoczny poniżej.",
   "desktop.priorityQuickSet.slider": "Priorytet",
   "desktop.priorityQuickSet.dialog": "Ustaw priorytet",
   "desktop.priorityQuickSet.title": "Priorytet",

@@ -21,6 +21,8 @@ export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'shared.startup.failedModule': '失败模块：{module}',
   'shared.startup.logs': '日志：{path}',
   'shared.startup.unknownRendererException': '未知渲染器异常',
+  'shared.editorRenderFailure.title': '此内容暂时无法显示',
+  'shared.editorRenderFailure.body': '其他主题不受影响，内容也没有被改动。原文显示在下方。',
   'desktop.priorityQuickSet.slider': '优先级',
   'desktop.priorityQuickSet.dialog': '设置优先级',
   'desktop.priorityQuickSet.title': '优先级',

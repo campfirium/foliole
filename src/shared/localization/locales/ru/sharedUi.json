@@ -17,6 +17,8 @@
   "shared.startup.failedModule": "Неисправный модуль: {module}",
   "shared.startup.logs": "Журналы: {path}",
   "shared.startup.unknownRendererException": "Неизвестное исключение рендеринга",
+  "shared.editorRenderFailure.title": "Не удаётся показать это содержимое",
+  "shared.editorRenderFailure.body": "Другие темы не затронуты, ничего не изменено. Исходный текст показан ниже.",
   "desktop.priorityQuickSet.slider": "Приоритет",
   "desktop.priorityQuickSet.dialog": "Установить приоритет",
   "desktop.priorityQuickSet.title": "Приоритет",
