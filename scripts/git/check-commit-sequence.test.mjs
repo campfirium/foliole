@@ -68,65 +68,68 @@ it('checks only release commits after the pushed dev base', async () => {
   expect(result.status, result.stderr).toBe(0);
 });
 
-it('supports a release-first branch through repeated numbered merge-backs', async () => {
+function checkMessage(repoDir, messagePath) {
+  return spawnSync('node', [SCRIPT_PATH, 'commit-msg', messagePath], { cwd: repoDir, encoding: 'utf8' });
+}
+
+async function createReleaseRepo() {
   const repoDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-release-first-'));
   tempDirs.push(repoDir);
   git(repoDir, 'init', '-b', 'dev');
   git(repoDir, 'config', 'user.name', 'Sequence Test');
   git(repoDir, 'config', 'user.email', 'sequence@example.com');
-  const zeroSha = '0'.repeat(40);
   const seed = commit(repoDir, '000001 seed');
   git(repoDir, 'update-ref', 'refs/remotes/origin/dev', seed);
-  expect(checkPush(repoDir, 'refs/heads/release', seed, 'refs/heads/release', zeroSha).status).toBe(0);
-
   git(repoDir, 'branch', 'release', seed);
-  git(repoDir, 'update-ref', 'refs/remotes/origin/release', seed);
   git(repoDir, 'switch', 'release');
-  const releaseFixOne = commit(repoDir, '000002 fix release candidate');
-  expect(checkPush(
-    repoDir,
-    'refs/heads/release',
-    releaseFixOne,
-    'refs/heads/release',
-    seed
-  ).status).toBe(0);
-  git(repoDir, 'update-ref', 'refs/remotes/origin/release', releaseFixOne);
-
+  const releaseFix = commit(repoDir, '000002 fix release candidate');
+  expect(checkPush(repoDir, 'refs/heads/release', releaseFix, 'refs/heads/release', '0'.repeat(40)).status).toBe(0);
+  git(repoDir, 'update-ref', 'refs/remotes/origin/release', releaseFix);
   git(repoDir, 'switch', 'dev');
-  const devWork = commit(repoDir, '000002 continue development');
+  return { repoDir, seed };
+}
+
+it('rejects dev commits that reuse a sequence already taken by the release branch', async () => {
+  const { repoDir, seed } = await createReleaseRepo();
+  const messagePath = path.join(repoDir, 'message.txt');
+  await writeFile(messagePath, '000002 continue development\n', 'utf8');
+
+  const message = checkMessage(repoDir, messagePath);
+  expect(message.status).not.toBe(0);
+  expect(message.stderr).toContain('next sequence 000003');
+
+  const duplicate = commit(repoDir, '000002 continue development');
+  const push = checkPush(repoDir, 'refs/heads/dev', duplicate, 'refs/heads/dev', seed);
+  expect(push.status).not.toBe(0);
+  expect(push.stderr).toContain('duplicate sequence 000002');
+});
+
+it('numbers release and dev work as one continuous history through merge-backs', { meta: { calibratedMs: 15_000 } }, async () => {
+  const { repoDir, seed } = await createReleaseRepo();
+  const devWork = commit(repoDir, '000003 continue development');
   const messagePath = path.join(repoDir, 'merge-message.txt');
   await writeFile(messagePath, "Merge branch 'release' into dev\n", 'utf8');
-  const unnumbered = spawnSync('node', [SCRIPT_PATH, 'commit-msg', messagePath], {
-    cwd: repoDir,
-    encoding: 'utf8'
-  });
+  const unnumbered = checkMessage(repoDir, messagePath);
   expect(unnumbered.status).not.toBe(0);
-  expect(unnumbered.stderr).toContain('next sequence 000003');
-  git(repoDir, 'merge', '--no-ff', 'release', '-m', '000003 merge release fixes');
+  expect(unnumbered.stderr).toContain('next sequence 000004');
+  git(repoDir, 'merge', '--no-ff', 'release', '-m', '000004 merge release fixes');
   const firstMerge = git(repoDir, 'rev-parse', 'HEAD');
   expect(checkPush(repoDir, 'refs/heads/dev', firstMerge, 'refs/heads/dev', seed).status).toBe(0);
   git(repoDir, 'update-ref', 'refs/remotes/origin/dev', firstMerge);
 
   git(repoDir, 'switch', 'release');
-  const releaseFixTwo = commit(repoDir, '000003 fix release candidate again');
-  expect(checkPush(
-    repoDir,
-    'refs/heads/release',
-    releaseFixTwo,
-    'refs/heads/release',
-    releaseFixOne
-  ).status).toBe(0);
+  const releaseFixTwo = commit(repoDir, '000005 fix release candidate again');
+  const releaseBase = git(repoDir, 'rev-parse', 'refs/remotes/origin/release');
+  expect(checkPush(repoDir, 'refs/heads/release', releaseFixTwo, 'refs/heads/release', releaseBase).status).toBe(0);
+  git(repoDir, 'update-ref', 'refs/remotes/origin/release', releaseFixTwo);
   expect(spawnSync('git', ['merge-base', '--is-ancestor', devWork, releaseFixTwo], { cwd: repoDir }).status).not.toBe(0);
 
   git(repoDir, 'switch', 'dev');
-  git(repoDir, 'merge', '--no-ff', 'release', '-m', '000004 merge later release fixes');
+  git(repoDir, 'merge', '--no-ff', 'release', '-m', '000006 merge later release fixes');
   const finalDev = git(repoDir, 'rev-parse', 'HEAD');
   expect(checkPush(repoDir, 'refs/heads/dev', finalDev, 'refs/heads/dev', firstMerge).status).toBe(0);
-  expect(spawnSync('git', ['merge-base', '--is-ancestor', releaseFixTwo, finalDev], { cwd: repoDir }).status).toBe(0);
-  expect(git(repoDir, 'log', '--first-parent', '--pretty=%s', 'dev').split('\n')).toEqual([
-    '000004 merge later release fixes',
-    '000003 merge release fixes',
-    '000002 continue development',
-    '000001 seed'
-  ]);
-}, 15_000);
+  const numbers = git(repoDir, 'log', '--pretty=%s', 'dev').split('\n').map((subject) => subject.slice(0, 6));
+  expect(numbers.sort()).toEqual(['000001', '000002', '000003', '000004', '000005', '000006']);
+  const next = spawnSync('node', [SCRIPT_PATH, 'next'], { cwd: repoDir, encoding: 'utf8' });
+  expect(next.stdout.trim()).toBe('000007');
+});

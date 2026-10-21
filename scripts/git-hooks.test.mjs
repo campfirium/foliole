@@ -16,6 +16,7 @@ const AFFECTED_VALIDATION_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'pre-pus
 const CRITICAL_TEST_ROUTES_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'quality', 'quality-critical-test-routes.mjs');
 const SEQUENCE_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'check-commit-sequence.mjs');
 const REMOTE_COMMIT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'remote-commit.mjs');
+const SEQUENCE_HISTORY_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'git', 'commit-sequence-history.mjs');
 const PATH_DOMAINS_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domains.mjs');
 const PATH_DOMAIN_REGISTRY_PATH = path.join(REPO_ROOT, 'scripts', 'lib', 'path-domain-registry.mjs');
 const HOOK_INTEGRATION_TIMEOUT_MS = 30_000;
@@ -55,6 +56,7 @@ async function createRepo() {
   await mkdir(path.join(repoDir, 'scripts', 'quality'), { recursive: true });
   await copyFile(SEQUENCE_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'check-commit-sequence.mjs'));
   await copyFile(REMOTE_COMMIT_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'remote-commit.mjs'));
+  await copyFile(SEQUENCE_HISTORY_SCRIPT_PATH, path.join(repoDir, 'scripts', 'git', 'commit-sequence-history.mjs'));
   await copyFile(FILE_BUDGET_SCRIPT_PATH, path.join(repoDir, 'scripts', 'check-file-budget.mjs'));
   await copyFile(AFFECTED_VALIDATION_SCRIPT_PATH, path.join(repoDir, 'scripts', 'pre-push-affected-validation.mjs'));
   await copyFile(CRITICAL_TEST_ROUTES_SCRIPT_PATH, path.join(repoDir, 'scripts', 'quality', 'quality-critical-test-routes.mjs'));
@@ -147,6 +149,21 @@ describe('git hooks', () => {
     expect(duplicate.code).not.toBe(0);
     expect(duplicate.stderr).toContain('new commit sequence must be 000002');
   }, HOOK_INTEGRATION_TIMEOUT_MS);
+
+  it('continues the global sequence across parallel branches', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
+    const repoDir = await createRepo();
+    await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
+    const main = (await runCommand('git', ['branch', '--show-current'], repoDir)).stdout.trim();
+    await runCommand('git', ['switch', '-c', 'release'], repoDir);
+    await expect(commitFile(repoDir, 'r.txt', 'r\n', '000002 release fix')).resolves.toMatchObject({ code: 0 });
+    await runCommand('git', ['switch', main], repoDir);
+
+    const reused = await commitFile(repoDir, 'b.txt', 'b\n', '000002 parallel work');
+    expect(reused.code).not.toBe(0);
+    expect(reused.stderr).toContain('next sequence 000003');
+    const next = await runCommand('git', ['commit', '-m', '000003 parallel work'], repoDir);
+    expect(next.code, next.stderr).toBe(0);
+  });
 
   it('blocks branch pushes with non-continuous numbered history', async () => {
     const repoDir = await createRepo();

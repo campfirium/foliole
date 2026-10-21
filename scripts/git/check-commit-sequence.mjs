@@ -2,54 +2,23 @@
 /* global console, process */
 
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 
-import { findFirstParentRemoteBase, isCommitOnRemote } from './remote-commit.mjs';
+import {
+  formatSequence,
+  getNextGlobalSequence,
+  hasHead,
+  isReferencedCommit,
+  parseNumberedSubject,
+  readCommitSubjects,
+  readGlobalSequences,
+  runGit
+} from './commit-sequence-history.mjs';
 
-const NUMBERED_SUBJECT = /^(\d{6})\s+\S/;
 const ZERO_SHA = /^0{40}$/;
 const COMMIT_CONTEXT_PREFIX = '# foliole-commit-context: ';
 
-function runGit(args) {
-  const result = spawnSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `git ${args.join(' ')} failed`);
-  }
-  return result.stdout;
-}
-
-function hasHead() {
-  const result = spawnSync('git', ['rev-parse', '--verify', 'HEAD'], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  return result.status === 0;
-}
-
-function parseNumberedSubject(subject) {
-  const match = subject.match(NUMBERED_SUBJECT);
-  return match ? Number.parseInt(match[1], 10) : null;
-}
-
-function readHeadSubjects() {
-  if (!hasHead()) {
-    return [];
-  }
-  return runGit(['log', '--first-parent', '--pretty=%s']).split('\n').filter(Boolean);
-}
-
-function getNextSequence() {
-  const numbers = readHeadSubjects().map(parseNumberedSubject).filter((value) => value !== null);
-  const max = numbers.length > 0 ? Math.max(...numbers) : 0;
-  return max + 1;
-}
-
 function getHeadSequence() {
   return hasHead() ? parseNumberedSubject(runGit(['show', '-s', '--format=%s', 'HEAD']).trim()) : null;
-}
-
-function formatSequence(value) {
-  return String(value).padStart(6, '0');
 }
 
 function prepareCommitContext(messagePath, source, sourceCommit) {
@@ -80,9 +49,10 @@ function checkCommitMessage(messagePath) {
   const subject = readFileSync(messagePath, 'utf8').split(/\r?\n/u)[0] ?? '';
   const actual = parseNumberedSubject(subject);
   const amended = readAmendedSequence(messagePath);
-  const expected = amended ?? getNextSequence();
+  const expected = amended ?? getNextGlobalSequence();
   const headSequence = getHeadSequence();
 
+  // `--amend -m` carries no source commit; reference-transaction still rejects reuse by a new commit.
   if (actual === expected || (amended === null && actual === headSequence)) {
     return;
   }
@@ -106,7 +76,9 @@ function checkReferenceUpdate({ oldSha, newSha, refName }) {
   const oldCommit = readCommitIdentity(oldSha);
   const newCommit = readCommitIdentity(newSha);
   if (newCommit.parents[0] === oldSha) {
-    const expected = getMaxSequence(readSubjects(oldSha)) + 1;
+    // A fast-forward to a commit another branch already holds was checked when that commit was made.
+    if (isReferencedCommit(newSha)) return;
+    const expected = getNextGlobalSequence({ exclude: [newSha] });
     if (newCommit.sequence !== expected) {
       throw new Error(`${refName} new commit sequence must be ${formatSequence(expected)}.`);
     }
@@ -125,41 +97,46 @@ function checkReferenceTransaction(input, state) {
   });
 }
 
-function readSubjects(revision) {
-  return runGit(['log', '--first-parent', '--reverse', '--pretty=%s', revision]).split('\n').filter(Boolean);
+function readPushedCommits({ localSha, remoteSha }, extraArgs = []) {
+  const known = ZERO_SHA.test(remoteSha) ? [] : [remoteSha];
+  return readCommitSubjects([...extraArgs, localSha, '--not', '--remotes', ...known]);
 }
 
-function getMaxSequence(subjects) {
-  const numbers = subjects.map(parseNumberedSubject).filter((value) => value !== null);
-  return numbers.length > 0 ? Math.max(...numbers) : 0;
-}
-
-function readNewBranchSequence(revision) {
-  const base = findFirstParentRemoteBase(revision);
-  return {
-    start: base ? getMaxSequence(readSubjects(base)) + 1 : 1,
-    subjects: readSubjects(base ? `${base}..${revision}` : revision)
-  };
-}
-
-function checkContinuousSubjects(subjects, refName, start = 1) {
+function checkUniqueSequences(commits, refName, taken) {
   const seen = new Set();
-  let expected = start;
-
-  subjects.forEach((subject) => {
-    const actual = parseNumberedSubject(subject);
-    if (actual === null) {
+  commits.forEach(({ subject, sequence }) => {
+    if (sequence === null) {
       throw new Error(`${refName} contains an unnumbered commit subject: ${subject}`);
     }
-    if (actual !== expected) {
-      const actualText = actual === null ? 'missing' : formatSequence(actual);
-      throw new Error(`${refName} sequence must be ${formatSequence(expected)}; got ${actualText}.`);
+    if (taken.has(sequence) || seen.has(sequence)) {
+      throw new Error(`${refName} contains duplicate sequence ${formatSequence(sequence)}.`);
     }
-    if (seen.has(actual)) {
-      throw new Error(`${refName} contains duplicate sequence ${formatSequence(actual)}.`);
+    seen.add(sequence);
+  });
+  return seen;
+}
+
+function checkContinuousSequences(pushed, refName, taken) {
+  const sorted = [...pushed].sort((left, right) => left - right);
+  const below = [...taken.keys()].filter((value) => value < sorted[0]);
+  let expected = below.length > 0 ? Math.max(...below) + 1 : 1;
+  sorted.forEach((actual) => {
+    for (; expected < actual; expected += 1) {
+      if (!taken.has(expected)) {
+        throw new Error(`${refName} sequence must be ${formatSequence(expected)}; got ${formatSequence(actual)}.`);
+      }
     }
-    seen.add(actual);
-    expected += 1;
+    expected = actual + 1;
+  });
+}
+
+function checkIncreasingBranch(update) {
+  const sequences = readPushedCommits(update, ['--first-parent']).map(({ sequence }) => sequence).reverse();
+  sequences.forEach((sequence, index) => {
+    if (index > 0 && sequence <= sequences[index - 1]) {
+      const previous = formatSequence(sequences[index - 1]);
+      throw new Error(`${update.remoteRef} sequence must increase along the branch: ${formatSequence(sequence)} after ${previous}.`);
+    }
   });
 }
 
@@ -173,17 +150,13 @@ function parsePrePushInput(input) {
 
 function checkPrePush(input) {
   for (const update of parsePrePushInput(input)) {
-    if (ZERO_SHA.test(update.localSha) || !update.localRef.startsWith('refs/heads/')) {
-      continue;
-    }
-    if (ZERO_SHA.test(update.remoteSha)) {
-      if (isCommitOnRemote(update.localSha)) continue;
-      const sequence = readNewBranchSequence(update.localSha);
-      checkContinuousSubjects(sequence.subjects, update.remoteRef, sequence.start);
-      continue;
-    }
-    const expected = getMaxSequence(readSubjects(update.remoteSha)) + 1;
-    checkContinuousSubjects(readSubjects(`${update.remoteSha}..${update.localSha}`), update.remoteRef, expected);
+    if (ZERO_SHA.test(update.localSha) || !update.localRef.startsWith('refs/heads/')) continue;
+    const commits = readPushedCommits(update);
+    if (commits.length === 0) continue;
+    const taken = readGlobalSequences({ exclude: commits.map(({ sha }) => sha) });
+    const pushed = checkUniqueSequences(commits, update.remoteRef, taken);
+    checkContinuousSequences(pushed, update.remoteRef, taken);
+    checkIncreasingBranch(update);
   }
 }
 
@@ -205,7 +178,11 @@ function main() {
     checkReferenceTransaction(readFileSync(0, 'utf8'), messagePath);
     return;
   }
-  console.error('usage: check-commit-sequence.mjs commit-msg <message-file> | pre-push | reference-transaction <state>');
+  if (mode === 'next') {
+    console.log(formatSequence(getNextGlobalSequence()));
+    return;
+  }
+  console.error('usage: check-commit-sequence.mjs commit-msg <message-file> | pre-push | reference-transaction <state> | next');
   process.exit(2);
 }
 

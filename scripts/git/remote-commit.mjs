@@ -8,16 +8,6 @@ function runGit(args) {
   return result.stdout.trim();
 }
 
-export function isCommitOnRemote(revision) {
-  return runGit([
-    'for-each-ref',
-    '--contains',
-    revision,
-    '--format=%(refname)',
-    'refs/remotes'
-  ]).split('\n').some(Boolean);
-}
-
 export function findFirstParentRemoteBase(revision) {
   const commits = runGit([
     'rev-list',
