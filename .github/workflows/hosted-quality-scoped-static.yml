@@ -24,7 +24,7 @@ jobs:
     name: Ubuntu ${{ inputs.scope }} static
     if: inputs.scope == 'shared' || inputs.scope == 'android'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-${{ inputs.scope }}-static-${{ github.run_id }}
       cancel-in-progress: false

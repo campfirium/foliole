@@ -22,7 +22,7 @@ const qualityStages = [
   't6-desktop-build', 't6-android-web-build', 't6-windows-acceptance',
   't6-linux-responsiveness', 't6-android-host',
   't6-ios-contract', 't6-ios-sync-group-content', 't6-ios-state-writeback',
-  't6-ios-sync-pack', 't6-ios-foreground'
+  't6-ios-sync-pack'
 ];
 
 describe('T7 release workflow contract', () => {

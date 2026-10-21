@@ -58,7 +58,7 @@ jobs:
       execution_lane: ${{ inputs.execution_lane }}
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: [context, t5-android-source]
+    needs: [context, t5-shared]
   t5-desktop-static:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-desktop-static') }}
     uses: ./.github/workflows/hosted-quality-desktop-static.yml
@@ -68,12 +68,12 @@ jobs:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-dependency-hardening') }}
     uses: ./.github/workflows/hosted-quality-dependency-hardening.yml
     with: *target-context
-    needs: [context, t5-tooling]
+    needs: [context, t5-shared]
   t5-windows-core:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-windows-core') }}
     uses: ./.github/workflows/hosted-quality-windows-core.yml
     with: *target-context
-    needs: [context, t5-tooling]
+    needs: [context, t5-shared]
   t5-shared:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-shared') }}
     uses: ./.github/workflows/hosted-quality-portable-domain.yml
@@ -116,7 +116,7 @@ jobs:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-web-build') }}
     uses: ./.github/workflows/hosted-quality-android-web-build.yml
     with: *target-context
-    needs: [context, t6-ios-contract]
+    needs: [context, t5-desktop-source]
   t6-windows-acceptance:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-windows-acceptance') }}
     uses: ./.github/workflows/hosted-quality-windows-acceptance.yml
@@ -126,7 +126,7 @@ jobs:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-linux-responsiveness') }}
     uses: ./.github/workflows/hosted-quality-linux-responsiveness.yml
     with: *target-context
-    needs: [context, t6-ios-contract]
+    needs: [context, t5-desktop-source]
   t6-android-host:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-android-host') }}
     uses: ./.github/workflows/hosted-quality-android-host.yml
@@ -142,7 +142,7 @@ jobs:
       scope: full
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: [context]
+    needs: [context, t5-tooling]
   t6-ios-sync-group-content:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
@@ -161,10 +161,10 @@ jobs:
       execution_lane: ${{ inputs.execution_lane }}
       run_contract: false
       scope: full
-      simulator_matrix: '[{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]}]'
+      simulator_matrix: '[{"bucket":"state-writeback-and-foreground","scenarios":["state-writeback-runtime","foreground-sync-lifecycle"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: [context]
+    needs: [context, t5-android-source]
   t6-ios-sync-pack:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
@@ -173,17 +173,6 @@ jobs:
       run_contract: false
       scope: full
       simulator_matrix: '[{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]}]'
-      target_sha: ${{ inputs.target_sha }}
-      trigger_ref: ${{ inputs.trigger_ref }}
-    needs: [context]
-  t6-ios-foreground:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-foreground') }}
-    uses: ./.github/workflows/hosted-quality-ios.yml
-    with:
-      execution_lane: ${{ inputs.execution_lane }}
-      run_contract: false
-      scope: full
-      simulator_matrix: '[{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
     needs: [context]
@@ -209,7 +198,6 @@ jobs:
       - t6-ios-sync-group-content
       - t6-ios-state-writeback
       - t6-ios-sync-pack
-      - t6-ios-foreground
     uses: ./.github/workflows/hosted-quality-chain-verdict.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}

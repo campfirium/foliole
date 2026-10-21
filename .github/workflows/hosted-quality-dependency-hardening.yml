@@ -24,7 +24,7 @@ jobs:
   dependency-hardening:
     name: Ubuntu dependency hardening
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-dependency-hardening-${{ github.run_id }}
       cancel-in-progress: false

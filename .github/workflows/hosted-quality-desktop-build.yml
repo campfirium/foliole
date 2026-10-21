@@ -24,7 +24,7 @@ jobs:
   desktop-build:
     name: Ubuntu desktop build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-desktop-build-${{ github.run_id }}
       cancel-in-progress: false

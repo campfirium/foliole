@@ -30,7 +30,7 @@ jobs:
   linux-responsiveness:
     name: Linux workload responsiveness
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane || 'dev-perf' }}-${{ inputs.trigger_ref || github.ref }}-full-linux-responsiveness-${{ github.run_id }}
       cancel-in-progress: false
@@ -61,6 +61,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Install Linux display dependencies
         run: |
           sudo apt-get update

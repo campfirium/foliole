@@ -49,6 +49,8 @@ jobs:
       - name: Install dependencies
         id: npm_ci
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Rebuild and verify Electron native ABI
         id: native_abi
         run: |

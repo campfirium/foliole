@@ -119,9 +119,8 @@ describe('T10 shared, Android, and iOS canonical topology', () => {
     const buckets = JSON.parse(ios.on.workflow_call.inputs.simulator_matrix.default);
     expect(buckets).toEqual([
       { bucket: 'sync-group-and-content', scenarios: ['sync-group-signed-transport', 'content-resource-read'] },
-      { bucket: 'state-writeback-runtime', scenarios: ['state-writeback-runtime'] },
-      { bucket: 'sync-pack-runtime', scenarios: ['sync-pack-runtime'] },
-      { bucket: 'foreground-sync-lifecycle', scenarios: ['foreground-sync-lifecycle'] }
+      { bucket: 'state-writeback-and-foreground', scenarios: ['state-writeback-runtime', 'foreground-sync-lifecycle'] },
+      { bucket: 'sync-pack-runtime', scenarios: ['sync-pack-runtime'] }
     ]);
     const scenarios = buckets.flatMap((bucket) => bucket.scenarios);
     expect(new Set(scenarios).size).toBe(5);

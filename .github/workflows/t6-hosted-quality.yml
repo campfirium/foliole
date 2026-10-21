@@ -128,8 +128,10 @@ jobs:
     uses: ./.github/workflows/hosted-quality-android-host.yml
     with: *target-context
     needs: *selected-tail
+  # iOS stages start with T5: the Simulator buckets are the longest chain, so waiting
+  # for the baseline only delays the verdict; the admission still requires every stage.
   t6-ios-contract:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-contract') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-contract') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -138,9 +140,9 @@ jobs:
       scope: full
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: *selected-tail
+    needs: *selected-baseline
   t6-ios-sync-group-content:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-group-content') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -149,20 +151,20 @@ jobs:
       simulator_matrix: '[{"bucket":"sync-group-and-content","scenarios":["sync-group-signed-transport","content-resource-read"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: *selected-tail
+    needs: *selected-baseline
   t6-ios-state-writeback:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-state-writeback') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-state-writeback') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
       run_contract: false
       scope: full
-      simulator_matrix: '[{"bucket":"state-writeback-runtime","scenarios":["state-writeback-runtime"]}]'
+      simulator_matrix: '[{"bucket":"state-writeback-and-foreground","scenarios":["state-writeback-runtime","foreground-sync-lifecycle"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: *selected-tail
+    needs: *selected-baseline
   t6-ios-sync-pack:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
+    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-sync-pack') }}
     uses: ./.github/workflows/hosted-quality-ios.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}
@@ -171,18 +173,7 @@ jobs:
       simulator_matrix: '[{"bucket":"sync-pack-runtime","scenarios":["sync-pack-runtime"]}]'
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
-    needs: *selected-tail
-  t6-ios-foreground:
-    if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't6-ios-foreground') && (inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7') }}
-    uses: ./.github/workflows/hosted-quality-ios.yml
-    with:
-      execution_lane: ${{ inputs.execution_lane }}
-      run_contract: false
-      scope: full
-      simulator_matrix: '[{"bucket":"foreground-sync-lifecycle","scenarios":["foreground-sync-lifecycle"]}]'
-      target_sha: ${{ inputs.target_sha }}
-      trigger_ref: ${{ inputs.trigger_ref }}
-    needs: *selected-tail
+    needs: *selected-baseline
   baseline:
     if: ${{ !cancelled() && inputs.stages == 'all' }}
     needs:
@@ -227,7 +218,6 @@ jobs:
       - t6-ios-sync-group-content
       - t6-ios-state-writeback
       - t6-ios-sync-pack
-      - t6-ios-foreground
     uses: ./.github/workflows/hosted-quality-chain-verdict.yml
     with:
       execution_lane: ${{ inputs.execution_lane }}

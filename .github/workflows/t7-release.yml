@@ -28,7 +28,6 @@ on:
           - t6-ios-sync-group-content
           - t6-ios-state-writeback
           - t6-ios-sync-pack
-          - t6-ios-foreground
           - release-candidate
           - macos
           - windows

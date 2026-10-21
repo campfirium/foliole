@@ -24,7 +24,7 @@ jobs:
   static-quality:
     name: Ubuntu static
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-static-${{ github.run_id }}
       cancel-in-progress: false

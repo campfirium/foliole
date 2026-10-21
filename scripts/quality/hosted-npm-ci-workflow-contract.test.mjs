@@ -62,3 +62,21 @@ describe('hosted npm ci workflow contract', () => {
     }
   });
 });
+
+// Electron 44 has no postinstall: the first require('electron') downloads synchronously and
+// blocks the test process inside a test's time budget unless the runtime is installed first.
+describe('hosted test workflows install the Electron runtime before tests', () => {
+  it.each([
+    'desktop-source', 'electron', 'portable-domain', 'tooling', 'windows-core',
+    'windows-acceptance', 'linux-responsiveness', 'desktop-static'
+  ])('%s', (name) => {
+    const workflow = parse(fs.readFileSync(path.join(WORKFLOW_ROOT, `hosted-quality-${name}.yml`), 'utf8'));
+    for (const job of Object.values(workflow.jobs).filter((entry) => installCommands(entry.steps).length)) {
+      const steps = job.steps;
+      const dependencies = steps.findIndex((step) => step.run?.includes(RUNNER));
+      expect(steps[dependencies + 1]).toMatchObject({
+        name: 'Install Electron runtime', run: 'node node_modules/electron/install.js'
+      });
+    }
+  });
+});

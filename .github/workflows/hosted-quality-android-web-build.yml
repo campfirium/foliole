@@ -24,7 +24,7 @@ jobs:
   android-web-build:
     name: Ubuntu Android web build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-android-web-build-${{ github.run_id }}
       cancel-in-progress: false

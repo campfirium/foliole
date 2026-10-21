@@ -42,8 +42,10 @@ it('blocks every full tail stage until all baseline stages accepted the exact SH
     expect(result.status).toBe(failure ? 1 : 0);
   }
   for (const stage of TAIL_STAGES) {
-    expect(chain.jobs[stage].needs).toContain('baseline');
-    expect(chain.jobs[stage].if).toContain("inputs.stages != 'all' || needs.baseline.result == 'success'");
+    const startsWithBaseline = stage.startsWith('t6-ios-');
+    expect(chain.jobs[stage].needs.includes('baseline')).toBe(!startsWithBaseline);
+    expect(chain.jobs[stage].if.includes("inputs.stages != 'all' || needs.baseline.result == 'success'"))
+      .toBe(!startsWithBaseline);
     expect(chain.jobs[stage].if).toContain('!cancelled()');
   }
 });

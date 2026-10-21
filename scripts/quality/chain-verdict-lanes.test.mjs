@@ -26,11 +26,10 @@ it('keeps the release full chain unchanged and omits duplicated or host stages f
   for (const lane of ['dev-remote', 'dev-t7']) {
     expect(requestedStages('all', lane)).toEqual(CHAIN_STAGES.filter(stage => !DEV_FULL_OMITTED_STAGES.includes(stage)));
   }
-  expect(DEV_FULL_OMITTED_STAGES).toEqual([
-    't5-desktop-static', 't6-windows-acceptance', 't6-ios-sync-group-content',
-    't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
-  ]);
-  expect(requestedStages('all', 'dev-remote')).toContain('t6-ios-contract');
+  expect(DEV_FULL_OMITTED_STAGES).toEqual(['t5-desktop-static', 't6-windows-acceptance']);
+  expect(requestedStages('all', 'dev-remote')).toEqual(expect.arrayContaining([
+    't6-ios-contract', 't6-ios-sync-group-content', 't6-ios-state-writeback', 't6-ios-sync-pack'
+  ]));
   expect(requestedStages('t6-windows-acceptance', 'dev-remote')).toEqual(['t6-windows-acceptance']);
 });
 
@@ -63,7 +62,7 @@ it('checks only the selected baseline stages for the lane', () => {
 it('starts dev tail stages with the baseline while release keeps the gate', () => {
   const workflow = fs.readFileSync('.github/workflows/t6-hosted-quality.yml', 'utf8');
   const gate = "(inputs.stages != 'all' || needs.baseline.result == 'success' || inputs.execution_lane != 'release-t7')";
-  expect(workflow.split(gate).length - 1).toBe(10);
+  expect(workflow.split(gate).length - 1).toBe(5);
   expect(workflow).toContain('execution_lane: ${{ inputs.execution_lane }}\n      stages: ${{ inputs.stages }}');
   const dev = fs.readFileSync('.github/workflows/dev-quality-chain.yml', 'utf8');
   expect(dev).not.toContain('needs.baseline');

@@ -9,15 +9,13 @@ export const BASELINE_STAGES = [
 export const TAIL_STAGES = [
   't6-desktop-build', 't6-android-web-build', 't6-windows-acceptance',
   't6-linux-responsiveness', 't6-android-host', 't6-ios-contract',
-  't6-ios-sync-group-content', 't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
+  't6-ios-sync-group-content', 't6-ios-state-writeback', 't6-ios-sync-pack'
 ];
 export const CHAIN_STAGES = [...BASELINE_STAGES, ...TAIL_STAGES];
 // Dev full chains omit duplicated stages and host journeys verified as local acceptance;
-// they remain selectable explicitly, and release chains still run them.
-export const DEV_FULL_OMITTED_STAGES = [
-  't5-desktop-static', 't6-windows-acceptance', 't6-ios-sync-group-content',
-  't6-ios-state-writeback', 't6-ios-sync-pack', 't6-ios-foreground'
-];
+// they remain selectable explicitly, and release chains still run them. iOS Simulator
+// buckets count in dev full so every platform's result gates dev.
+export const DEV_FULL_OMITTED_STAGES = ['t5-desktop-static', 't6-windows-acceptance'];
 export const RELEASE_LANE = 'release-t7';
 
 export function fullChainStages(lane) {

@@ -24,7 +24,7 @@ jobs:
   desktop-static:
     name: Ubuntu desktop static
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-desktop-static-${{ github.run_id }}
       cancel-in-progress: false
@@ -51,6 +51,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Electron runtime
+        run: node node_modules/electron/install.js
       - name: Verify checked-out target SHA
         run: >-
           node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"

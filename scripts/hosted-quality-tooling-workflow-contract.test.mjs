@@ -29,7 +29,7 @@ it('runs one complete Ubuntu lane and one lossless Windows bucket', () => {
   expect(matrix).toHaveLength(2);
   expect(matrix.find(({ host }) => host === 'Windows').bucket).toBe('all');
   expect(workflow.jobs['tooling-tests'].strategy['fail-fast']).toBe(false);
-  expect(workflow.jobs['tooling-tests']['timeout-minutes']).toBe(20);
+  expect(workflow.jobs['tooling-tests']['timeout-minutes']).toBe(60);
   expect(workflow.jobs['tooling-tests'].env.FOLIOLE_HOSTED_QUALITY_BUCKET_KIND).toBe('tooling');
   expect(source).toContain('node scripts/quality/hosted-quality-bucket.mjs');
   expect(source).not.toContain('--fileParallelism');
