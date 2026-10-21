@@ -6,6 +6,25 @@ import { expect, it, vi } from 'vitest';
 
 import { parseA5SyncLogcat, readA5SyncLogs } from './macos-a5-sync-logs.mjs';
 
+it('retains current native request timing and discards unrelated or sensitive fields', () => {
+  const prefix = '1792547645.123 16250 16251 D FolioleSyncHttp: ';
+  const request = 'request_id=6b24f939-6649-4882-80f5-b809049296d5 origin=http://192.168.0.10:38641 operation=pulls ';
+  expect(parseA5SyncLogcat([
+    prefix + request + 'phase=response_code duration_ms=60001.25 request_bytes=1254 token=private',
+    prefix + request + 'phase=write duration_ms=3 chunk=0 bytes=1254 request_bytes=1254',
+    prefix + request + 'phase=unknown duration_ms=1 request_bytes=1',
+    prefix + request.replace(':38641 ', ':38641/private?token=secret ') + 'phase=flush duration_ms=1',
+    prefix + request + 'phase=flush duration_ms=NaN',
+    prefix + 'unrelated private message'
+  ].join('\n'))).toEqual([
+    { at: '2026-10-21T01:54:05.123Z', pid: 16250, requestId: '6b24f939-6649-4882-80f5-b809049296d5',
+      origin: 'http://192.168.0.10:38641', operation: 'pulls', phase: 'response_code', elapsedMs: 60001.25, requestBytes: 1254 },
+    { at: '2026-10-21T01:54:05.123Z', pid: 16250, requestId: '6b24f939-6649-4882-80f5-b809049296d5',
+      origin: 'http://192.168.0.10:38641', operation: 'pulls', phase: 'write', elapsedMs: 3,
+      requestBytes: 1254, chunk: 0, bytes: 1254 }
+  ]);
+});
+
 it('keeps only structured sync timing records from Android console logs', () => {
   const rows = parseA5SyncLogcat([
     '1759480000.001 12 13 I Capacitor/Console: File: index.js - Line 2 - Msg: [FolioleSync] {"runId":"run-1","stage":"structure_page","status":"started","page":1,"fromCursor":0}',
@@ -30,7 +49,7 @@ it('reads fixed A5 Logcat without changing the app or exposing other messages', 
       paths: { adb: '/fixed/adb', artifactsRoot }, serial: '87a33a4b' });
     expect(assertFixed).toHaveBeenCalledOnce();
     expect(captured).toHaveBeenCalledWith('/fixed/adb', [
-      '-s', '87a33a4b', 'logcat', '-d', '-v', 'epoch', '-s', 'Capacitor/Console:I'
+      '-s', '87a33a4b', 'logcat', '-d', '-v', 'epoch', '-s', 'Capacitor/Console:I', 'FolioleSyncHttp:D'
     ], { maxBuffer: 8 * 1024 * 1024 });
     expect(JSON.parse(fs.readFileSync(result.filePath, 'utf8')).rows).toMatchObject([
       { runId: 'run-2', stage: 'push', status: 'started' }
