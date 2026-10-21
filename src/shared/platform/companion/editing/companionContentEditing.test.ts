@@ -6,15 +6,13 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
-import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { NODE_TEXT_MAX_BYTES } from '../../../../../lib/core/nodes/nodeTextBudget';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../companionSyncNodeVersionsTestSupport';
-import { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
+import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 
 import type { CompanionContentEdit } from './companionContentEditContract';
 import { readCompanionContentSource, releaseCompanionContentBase, saveCompanionContentEdit } from './companionContentEditing';
+import { insertContentEditNode, openContentEditDatabase } from './companionContentEditing.testSupport';
 
 const state = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null, platform: 'ios' }));
 vi.mock('@capacitor/core', () => ({ Capacitor: {
@@ -34,8 +32,7 @@ function node(overrides: Partial<WorkspaceNodeSnapshot> = {}): WorkspaceNodeSnap
 }
 
 async function insert(value: WorkspaceNodeSnapshot, versionId: string) {
-  const record = await toWorkspaceNativeNodeVersion(value, 'remote', versionId);
-  await state.owner!.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
+  await insertContentEditNode(state.owner!, value, versionId);
 }
 
 function edit(content: string, versionId = 'local', baseVersionId = 'base'): CompanionContentEdit {
@@ -44,20 +41,7 @@ function edit(content: string, versionId = 'local', baseVersionId = 'base'): Com
 
 beforeEach(async () => {
   directory = mkdtempSync(path.join(tmpdir(), 'foliole-content-edit-'));
-  database = new Database(path.join(directory, 'companion.db'));
-  database.transaction(() => {
-    installCompanionNodeSchema(database);
-    database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)').run('device_id', 'test-mobile', now);
-  })();
-  const connection = { ...createFakeCapacitorConnection(database),
-    getUrl: async () => ({ url: path.join(directory, 'companion.db') }) };
-  const manager = {
-    closeConnection: async () => undefined, createConnection: async () => connection,
-    isConnection: async () => ({ result: true }), isDatabase: async () => ({ result: true }),
-    retrieveConnection: async () => connection
-  };
-  state.owner = new CapacitorCompanionDatabaseOwner(manager as never, 'ios');
-  await state.owner.open({ expectedHostName: 'mobile', now });
+  ({ database, owner: state.owner } = await openContentEditDatabase(directory, now));
   await insert(node(), 'base');
 });
 

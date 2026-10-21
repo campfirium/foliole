@@ -1,4 +1,5 @@
 import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
+import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
@@ -14,7 +15,6 @@ import {
   type UpdateNodeContentMetrics
 } from './workspaceNodeContentUpdateDiagnostics';
 import { markNodeContentEdited } from './workspaceNodeContentVersionGuard';
-import { resolveNodeDerivedTitle } from './workspaceNodeDerivedTitle';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
 import {

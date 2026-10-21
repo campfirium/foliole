@@ -3,10 +3,10 @@ import {
   replaceUniqueArticleTitleHeading
 } from '../features/nodes/model/articleTitleHeading';
 import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText, showNodeTitleShortenedNotice } from '../shared/ui/nodeTextSaveBudget';
 
-import { resolveNodeDerivedTitle } from './workspaceNodeDerivedTitle';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import {

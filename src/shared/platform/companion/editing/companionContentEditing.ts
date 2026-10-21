@@ -5,6 +5,7 @@ import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContent
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../../../../lib/core/sync/syncNodeGraph';
+import { resolveNodeDerivedTitle } from '../../../../features/nodes/model/nodeDerivedTitle';
 import { assertNodeTextForSave } from '../../../ui/nodeTextSaveBudget';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from '../../companionWorkspaceRuntimeRepository';
@@ -56,7 +57,8 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
         ...edit,
         hideTitleHeading: Boolean(base.snapshot.hide_title_heading),
         hostName,
-        title: base.snapshot.title
+        title: resolveNodeDerivedTitle({ isTitleManual: Boolean(base.snapshot.is_title_manual),
+          kind: base.snapshot.kind, title: base.snapshot.title }, edit.content)
       }, undefined, { enqueueSearchInvalidations: false });
       if (!result.current.version_id) throw new Error('content_edit_result_unavailable');
       if (edit.holdId) {
