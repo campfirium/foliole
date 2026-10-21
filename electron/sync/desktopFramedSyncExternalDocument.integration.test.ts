@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -61,9 +62,19 @@ it.each([false, true])('fills missing external document bytes with original iden
         .toEqual({ object_id: record.object_id, content_hash: record.content_hash });
       expect(db.prepare('SELECT body_blob_hash FROM external_documents WHERE document_id = ?').pluck().get(record.object_id)).toBe(hash);
     } finally { db.close(); }
-    expect(await readFixtureInventory(fixture.right)).toEqual(await readFixtureInventory(fixture.left));
+    // History detail is not compared since sync history became per-device; current shared state must match.
+    expect(compareFramedSyncDatabaseInventories({ local: await readFixtureInventory(fixture.left),
+      remote: await readFixtureInventory(fixture.right) })).toEqual([]);
+    expect(readCurrentNodes(receiver.databasePath)).toEqual(readCurrentNodes(fixture.leftSnapshot.databasePath));
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 60_000);
+
+function readCurrentNodes(databasePath: string) {
+  const database = new Database(databasePath, { readonly: true });
+  try {
+    return database.prepare('SELECT id, current_version_id, content, parent_id, deleted_at FROM nodes ORDER BY id').all();
+  } finally { database.close(); }
+}
