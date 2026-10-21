@@ -62,7 +62,7 @@ function runDedupe(repoRoot, label, env) {
 }
 
 describe('preview-dedupe waiting requests', () => {
-  it('stays alive through the validation window and then runs preview', async () => {
+  it('stays alive through the validation window and then runs preview', { meta: { calibratedMs: PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -88,9 +88,9 @@ describe('preview-dedupe waiting requests', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('does not run another preview for the same hash after the validation window', async () => {
+  it('does not run another preview for the same hash after the validation window', { meta: { calibratedMs: PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -117,5 +117,5 @@ describe('preview-dedupe waiting requests', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
+  });
 });

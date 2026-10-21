@@ -12,7 +12,7 @@ import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
 
-it('renders topic scheduling from reading cadence instead of FSRS fields', async () => {
+it('renders topic scheduling from reading cadence instead of FSRS fields', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   useWorkspaceStore.setState((state) => ({
     ...state,
     activeNodeId: 'topic-dev',
@@ -56,7 +56,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', async
   expect(screen.queryByText('Retention')).not.toBeInTheDocument();
   expect(screen.queryByText(/Default/)).not.toBeInTheDocument();
   expect(screen.queryByText('Flow')).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('renders item scheduling from FSRS review data', async () => {
   useWorkspaceStore.setState((state) => ({

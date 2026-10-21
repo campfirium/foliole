@@ -216,7 +216,7 @@ async function verifyPersistedJourney(
 }
 
 test('macOS local data and file journey stays isolated across relaunches', async ({ browserName }, testInfo) => {
-  test.setTimeout(240_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(240_000) });
   const stateRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-macos-local-data-'));
   const selectedLibrary = path.join(stateRoot, 'selected-library');
   const env = { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot };

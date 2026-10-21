@@ -47,7 +47,7 @@ function seedScale(sqlite: Database.Database) {
   })();
 }
 
-it('streams 256 MiB with 30000-node demand and inventory fixtures while admitting a data edit', async () => {
+it('streams 256 MiB with 30000-node demand and inventory fixtures while admitting a data edit', { meta: { calibratedMs: 240000 } }, async () => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
   const { local, target, keys } = await prepareScale(directory.root);
@@ -103,7 +103,7 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
-}, 240000);
+});
 
 async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange, targetPath: string) {
   const objectId = 'user_space:mac:desktop:*:search_aliases_document';

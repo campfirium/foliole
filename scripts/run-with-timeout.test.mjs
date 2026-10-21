@@ -26,15 +26,15 @@ describe('portable timeout runner', () => {
       .toEqual({ args: ['audit'], command: 'npm' });
   });
 
-  it('preserves a completed command exit code', async () => {
+  it('preserves a completed command exit code', { meta: { calibratedMs: 15_000 } }, async () => {
     await expect(run(['2', NODE_RUNTIME, '-e', 'process.exit(7)'])).resolves.toBe(7);
-  }, 15_000);
+  });
 
-  it('returns the conventional timeout code', async () => {
+  it('returns the conventional timeout code', { meta: { calibratedMs: 15_000 } }, async () => {
     await expect(run(['0.05', NODE_RUNTIME, '-e', 'setTimeout(() => {}, 1000)'])).resolves.toBe(124);
-  }, 15_000);
+  });
 
-  it('writes child stdout directly to a portable output file', async () => {
+  it('writes child stdout directly to a portable output file', { meta: { calibratedMs: 15_000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'run-with-timeout-'));
     const outputFile = path.join(tempRoot, 'output.json');
     try {
@@ -45,5 +45,5 @@ describe('portable timeout runner', () => {
     } finally {
       await rm(tempRoot, { force: true, recursive: true });
     }
-  }, 15_000);
+  });
 });

@@ -53,7 +53,7 @@ async function synchronize(worker: Worker, peer: { origin: string; identity: str
   }
 }
 
-it('lets a copied library sync beside its original as a separate member', async () => {
+it('lets a copied library sync beside its original as a separate member', { meta: { calibratedMs: 120_000 } }, async () => {
   await fs.mkdir(path.resolve('.tmp/artifacts/d4-rebind'), { recursive: true });
   root = await fs.realpath(await fs.mkdtemp(path.resolve('.tmp/artifacts/d4-rebind/multi-')));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
@@ -98,4 +98,4 @@ it('lets a copied library sync beside its original as a separate member', async 
   const members = await b.worker.send('memberState') as unknown as { devices: Array<{ device_identity_key: string; state: string }> };
   expect(members.devices.filter((device) => device.state === 'active').map((device) => device.device_identity_key))
     .toEqual(expect.arrayContaining([a.peer.identity, b.peer.identity, copy.peer.identity]));
-}, 120_000);
+});

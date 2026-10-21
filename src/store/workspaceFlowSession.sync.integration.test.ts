@@ -28,7 +28,7 @@ beforeEach(async () => {
   saveNodeReviewStateWithSync(desktop.driver, { nodeId: 'topic', hostName: desktop.name,
     review, updatedAt: '2026-09-30T00:00:00.000Z' });
   await sync(desktop, mobile);
-}, 20000);
+});
 afterEach(closeLibraries);
 
 it('keeps the same Flow material after a peer edit and skips its remotely handled grade after production sync', async () => {

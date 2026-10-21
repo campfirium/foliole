@@ -53,7 +53,7 @@ beforeEach(() => {
   mocks.markdownEditorMounted.mockReset();
 });
 
-it('remounts the floating external preview editor when editor appearance changes', async () => {
+it('remounts the floating external preview editor when editor appearance changes', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   mocks.loadPreview.mockResolvedValue({
     absolutePath: '/library/topic.md',
     content: '# Topic',
@@ -82,4 +82,4 @@ it('remounts the floating external preview editor when editor appearance changes
   await waitFor(() => {
     expect(mocks.markdownEditorMounted).toHaveBeenCalledTimes(2);
   });
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

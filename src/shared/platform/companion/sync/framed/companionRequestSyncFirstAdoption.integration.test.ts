@@ -15,7 +15,7 @@ import { createCompanionRequestFixture } from '../../../../../test/companionRequ
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 
-it('finishes first adoption into an empty companion and sends a later local capture', async () => {
+it('finishes first adoption into an empty companion and sends a later local capture', { meta: { calibratedMs: 20000 } }, async () => {
   host = await createCompanionRequestFixture();
   const { fixture } = host;
   await fixture.right.seed({ content: 'Provider body', nodeId: 't326-first-adoption-source', title: 'Provider' });
@@ -34,9 +34,9 @@ it('finishes first adoption into an empty companion and sends a later local capt
       expect.objectContaining({ id: 't326-first-adoption-source', content: 'Provider body' })
     ]);
   }
-}, 20000);
+});
 
-it('leaves only the three unavailable attachments pending in the iOS content corpus', async () => {
+it('leaves only the three unavailable attachments pending in the iOS content corpus', { meta: { calibratedMs: 20000 } }, async () => {
   host = await createCompanionRequestFixture();
   const { fixture } = host;
   const provider = new Database(fixture.rightSnapshot.databasePath);
@@ -54,9 +54,9 @@ it('leaves only the three unavailable attachments pending in the iOS content cor
     providerDeviceId: fixture.rightSnapshot.deviceId, providerDeviceName: 'Provider', providerPlatform: 'darwin' });
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0, remainingAttachmentResourceCount: 3 });
   expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
-}, 20000);
+});
 
-it('finishes first adoption from the historical iOS acceptance corpus', async () => {
+it('finishes first adoption from the historical iOS acceptance corpus', { meta: { calibratedMs: 20000 } }, async () => {
   host = await createCompanionRequestFixture();
   const { fixture } = host;
   const provider = new Database(fixture.rightSnapshot.databasePath);
@@ -80,4 +80,4 @@ it('finishes first adoption from the historical iOS acceptance corpus', async ()
   await fixture.left.seed({ content: 'Local capture', nodeId: 't326-historical-capture', title: 'Capture' });
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0,
     pushedNodeIds: expect.arrayContaining(['t326-historical-capture']) });
-}, 20000);
+});

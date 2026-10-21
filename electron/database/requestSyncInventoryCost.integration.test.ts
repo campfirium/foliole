@@ -11,7 +11,7 @@ import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNode
 
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
-it('measures digest preparation, full summary reads and hashing for 10000 persisted nodes', async () => {
+it('measures digest preparation, full summary reads and hashing for 10000 persisted nodes', { meta: { calibratedMs: 120000 } }, async () => {
   const host = textDevice();
   try {
     const records = Array.from({ length: 10000 }, (_, index) => {
@@ -43,7 +43,7 @@ it('measures digest preparation, full summary reads and hashing for 10000 persis
       excludes: ['disk I/O', 'network', 'mobile runtime', 'HTTP and encryption overhead']
     }, null, 2));
   } finally { host.sqlite.close(); }
-}, 120000);
+});
 
 async function measure(host: ReturnType<typeof textDevice>) {
   const measurements: Record<string, number> = {};

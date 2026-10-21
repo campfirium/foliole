@@ -40,7 +40,7 @@ async function converge(fixture: Awaited<ReturnType<typeof createDesktopFramedSy
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 }
 
-it('adds independent offline contributions once across authenticated transfers, replay and process restarts', async () => {
+it('adds independent offline contributions once across authenticated transfers, replay and process restarts', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await contribute(fixture.leftSnapshot.databasePath, leftSource, 600_000);
@@ -58,9 +58,9 @@ it('adds independent offline contributions once across authenticated transfers, 
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
-it('preserves unpublished maxima on overwrite and publishes them with later independent contributions after reopening', async () => {
+it('preserves unpublished maxima on overwrite and publishes them with later independent contributions after reopening', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const sourceFile = fixture.leftSnapshot.databasePath, receiverFile = fixture.rightSnapshot.databasePath;
@@ -96,4 +96,4 @@ it('preserves unpublished maxima on overwrite and publishes them with later inde
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});

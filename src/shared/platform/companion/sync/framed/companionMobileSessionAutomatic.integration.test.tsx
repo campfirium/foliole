@@ -19,7 +19,7 @@ import { syncCompanionIdentityObjects } from '../syncGroupIdentityCompanionResul
 let host: Awaited<ReturnType<typeof createJoiningMobile>> | undefined;
 afterEach(async () => { await closeCompanionDesktopSession(); await host?.close(); host = undefined; vi.unstubAllGlobals(); });
 
-it('opens notifications from the ready endpoint effect and recovers stale sessions after a desktop process restart', async () => {
+it('opens notifications from the ready endpoint effect and recovers stale sessions after a desktop process restart', { meta: { calibratedMs: 60000 } }, async () => {
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor);
   host = await createJoiningMobile();
@@ -77,4 +77,4 @@ it('opens notifications from the ready endpoint effect and recovers stale sessio
     hook.unmount();
     await closeCompanionDesktopSession();
   }
-}, 60000);
+});

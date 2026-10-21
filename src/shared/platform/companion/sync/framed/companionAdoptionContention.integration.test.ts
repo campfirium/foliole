@@ -5,7 +5,7 @@ import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/sync
 import { approveJoiningMobile, createJoiningMobile, mobile,
   syncJoinedMobile } from '../../../../../test/companionJoinedMobile.testSupport.js';
 
-it('finishes adoption after a competing automatic round reports busy, then syncs after reopening', async () => {
+it('finishes adoption after a competing automatic round reports busy, then syncs after reopening', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createJoiningMobile();
   let release!: () => void;
   let entered!: () => void;
@@ -38,4 +38,4 @@ it('finishes adoption after a competing automatic round reports busy, then syncs
     await adoption?.catch(() => undefined);
     await host.close();
   }
-}, 60_000);
+});

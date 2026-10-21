@@ -77,7 +77,7 @@ async function expectPhase(settings: Locator, expected: RegExp, screenshot: stri
 
 test('projects durable migration phases with truthful progress', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-20-'));
   let session: T178AcceptanceSession | null = null;
   try {

@@ -91,7 +91,7 @@ function seedAutoExpandState(includeSecondFolder = false) {
   }));
 }
 
-it('keeps branches collapsed by default without auto-expanding the active path', () => {
+it('keeps branches collapsed by default without auto-expanding the active path', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, () => {
   seedAutoExpandState(true);
 
   render(<App />);
@@ -111,7 +111,7 @@ it('keeps branches collapsed by default without auto-expanding the active path',
   });
   expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Article C' })).toBeInTheDocument();
   expect(within(getCurrentFolderPanel()).queryByRole('treeitem', { name: 'Highlight C1' })).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('keeps collapsed branches closed after focus moves', () => {
   seedAutoExpandState();

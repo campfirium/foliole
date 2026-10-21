@@ -20,7 +20,7 @@ beforeAll(async () => {
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
   script = path.join(root, 'fixture.mjs');
   await buildRestoreFixture(script);
-}, 60000);
+});
 afterEach(async () => { await Promise.all(workers.splice(0).map(worker => worker.close())); });
 
 async function group(count: number) {
@@ -48,7 +48,7 @@ function pending(value: SyncGroupMemberStatePayload) {
   return syncGroupRemovingEntries(value.devices, value.removals);
 }
 
-it('waits for an offline remaining member, excludes both removal targets, persists convergence and original data', async () => {
+it('waits for an offline remaining member, excludes both removal targets, persists convergence and original data', { meta: { calibratedMs: 90000 } }, async () => {
   const [a, b, c, d, e] = await group(5);
   await a!.worker.send('facts');
   const facts = await a!.worker.send('readFacts');
@@ -76,9 +76,9 @@ it('waits for an offline remaining member, excludes both removal targets, persis
   expect(await Promise.all([a!, b!, c!, d!, e!].map(member => member.worker.send('readFacts')))).toEqual(protectedFacts);
   await exchange(d!, a!);
   expect((await d!.worker.send('joinOverview') as unknown as { sync_group: unknown }).sync_group).toBeNull();
-}, 90000);
+});
 
-it('keeps target-exit insufficient and finishes after the initiator leaves and another member confirms', async () => {
+it('keeps target-exit insufficient and finishes after the initiator leaves and another member confirms', { meta: { calibratedMs: 90000 } }, async () => {
   const [a, b, c, d] = await group(4);
   await a!.worker.send('removeMember', { identity: d!.peer.identity });
   await exchange(d!, a!);
@@ -90,9 +90,9 @@ it('keeps target-exit insufficient and finishes after the initiator leaves and a
   await exchange(b!, c!);
   expect(pending(await state(b!.worker))).toEqual([]);
   expect(pending(await state(c!.worker))).toEqual([]);
-}, 90000);
+});
 
-it('preserves crossing decisions and distinct concurrent decisions, then supersedes old evidence on explicit rejoin', async () => {
+it('preserves crossing decisions and distinct concurrent decisions, then supersedes old evidence on explicit rejoin', { meta: { calibratedMs: 90000 } }, async () => {
   const [a, b, c, d] = await group(4);
   await a!.worker.send('removeMember', { identity: d!.peer.identity });
   await d!.worker.send('removeMember', { identity: a!.peer.identity });
@@ -111,9 +111,9 @@ it('preserves crossing decisions and distinct concurrent decisions, then superse
   const fresh = next.removals.find(item => !item.superseded_at && item.target_device_identity_key === d!.peer.identity);
   expect(fresh?.completed_at).toBeNull();
   expect(fresh?.confirmations.map(item => item.confirming_device_identity_key)).toEqual([b!.peer.identity]);
-}, 90000);
+});
 
-it('keeps concurrent decisions separate, waits for a remaining member, and converges after repeated exchanges', async () => {
+it('keeps concurrent decisions separate, waits for a remaining member, and converges after repeated exchanges', { meta: { calibratedMs: 90000 } }, async () => {
   const [a, b, c, d, e] = await group(5);
   await a!.worker.send('removeMember', { identity: e!.peer.identity });
   await b!.worker.send('removeMember', { identity: e!.peer.identity });
@@ -136,9 +136,9 @@ it('keeps concurrent decisions separate, waits for a remaining member, and conve
     expect(result.removals.every(item => new Set(item.confirmations.map(value => value.confirming_device_identity_key)).size ===
       item.confirmations.length)).toBe(true);
   }
-}, 90000);
+});
 
-it('waits for a newly admitted member before completing an existing decision', async () => {
+it('waits for a newly admitted member before completing an existing decision', { meta: { calibratedMs: 90000 } }, async () => {
   const [a, b, c, target] = await group(4);
   await a!.worker.send('removeMember', { identity: target!.peer.identity });
   await exchange(b!, a!);
@@ -155,4 +155,4 @@ it('waits for a newly admitted member before completing an existing decision', a
   await exchange(b!, a!);
   expect(pending(await state(b!.worker))).toEqual([]);
   expect((await state(newcomer.worker)).removals[0]?.completed_at).not.toBeNull();
-}, 90000);
+});

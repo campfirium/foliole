@@ -87,7 +87,7 @@ async function createQualityGateTempRoot() {
 }
 
 describe('quality-gate-fast lib routing', () => {
-  it('matches skip lint only for test or skip-governance changes', async () => {
+  it('matches skip lint only for test or skip-governance changes', { meta: { calibratedMs: 60000 } }, async () => {
     await expect(
       runRoutingHelper("quality_skip_lint_changed_files_match $'src/app/example.test.ts\\nsrc/app/example.ts'")
     ).resolves.toMatchObject({ code: 0 });
@@ -97,7 +97,7 @@ describe('quality-gate-fast lib routing', () => {
     await expect(
       runRoutingHelper("quality_skip_lint_changed_files_match 'src/app/example.ts'")
     ).resolves.toMatchObject({ code: 1 });
-  }, 60000);
+  });
 
   it('continues dynamic routing after a valid empty static route', async () => {
     await expect(runRoutingHelper("resolve_quality_gate_route 'src/features/cards/Card.tsx'")).resolves.toMatchObject({
@@ -117,7 +117,7 @@ describe('quality-gate-fast lib routing', () => {
     expect(result.stderr).toContain('path domain resolution failed');
   });
 
-  it('caps lib changes locally and defers hosted quality to scheduled T7', async () => {
+  it('caps lib changes locally and defers hosted quality to scheduled T7', { meta: { calibratedMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -149,9 +149,9 @@ describe('quality-gate-fast lib routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('explains lib changes as a shared gate route without running checks', async () => {
+  it('explains lib changes as a shared gate route without running checks', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -174,5 +174,5 @@ describe('quality-gate-fast lib routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 60000);
+  });
 });

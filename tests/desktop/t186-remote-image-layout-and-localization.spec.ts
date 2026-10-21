@@ -181,7 +181,7 @@ async function saveEvidence(page: Page, testInfo: TestInfo, evidence: unknown) {
 test('stabilizes remote layout and supports automatic and targeted image excerpts', async (
   { desktopApp, desktopWindow }, testInfo
 ) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(desktopWindow);
   await installControlledImages(desktopApp);
   await seed(desktopWindow);

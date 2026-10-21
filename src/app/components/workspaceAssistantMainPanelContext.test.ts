@@ -7,7 +7,7 @@ import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantM
 import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 
-it('projects a real Collection virtual node into the assistant context', () => {
+it('projects a real Collection virtual node into the assistant context', { meta: { calibratedMs: 15_000 } }, () => {
   const virtual = createNode('virtual-uk', '英国公司注册流程', '', 'folder');
   virtual.specialKind = 'virtual';
   virtual.virtualFilter = createCollectionVirtualNodeFilter(virtual.title);
@@ -27,7 +27,7 @@ it('projects a real Collection virtual node into the assistant context', () => {
     folder: { childCount: 1 },
     scope: 'node'
   });
-}, 15_000);
+});
 
 it('does not override assistant context outside virtual main panels', () => {
   expect(resolveAssistantMainPanelWorkspaceContext({

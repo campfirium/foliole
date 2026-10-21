@@ -79,7 +79,7 @@ async function round(size, sample, evidence) {
   }
 }
 
-for (const size of options.sizes) test(`fixed loopback HTTP sync at ${size} articles`, async () => {
+for (const size of options.sizes) test(`fixed loopback HTTP sync at ${size} articles`, { meta: { calibratedMs: Math.max(240_000, size * 200) } }, async () => {
   const evidence = { size, repeats: options.repeats, boundary: 'production desktop receive; loopback HTTP; synthetic text only',
     samples: [], completed: false };
   try {
@@ -91,4 +91,4 @@ for (const size of options.sizes) test(`fixed loopback HTTP sync at ${size} arti
     evidence.completed = true;
   } catch (error) { evidence.failure = String(error); throw error; }
   finally { await writeFile(path.join(output, `http-${size}.json`), JSON.stringify(evidence, null, 2)); }
-}, Math.max(240_000, size * 200));
+});

@@ -22,7 +22,7 @@ function chooseFolderSort(label: 'Last opened' | 'Date modified') {
   fireEvent.click(screen.getByRole('menuitem', { name: label }));
 }
 
-it('shows a folder list shell when an ordinary folder is selected', () => {
+it('shows a folder list shell when an ordinary folder is selected', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-1',
     nodeOrder: ['folder-1', 'note-1'],
@@ -51,7 +51,7 @@ it('shows a folder list shell when an ordinary folder is selected', () => {
   expect(screen.getByRole('searchbox', { name: 'Search folder contents' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open Child note' })).toBeInTheDocument();
   expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('opens the selected child content when a folder list item is clicked', async () => {
   useWorkspaceStore.setState((state) => ({

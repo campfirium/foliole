@@ -41,7 +41,7 @@ async function collectTestFilesFromDir(dirPath) {
 }
 
 describe('native sqlite test policy', () => {
-  it('keeps direct better-sqlite3 tests declared in the native sqlite policy', async () => {
+  it('keeps direct better-sqlite3 tests declared in the native sqlite policy', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const files = await testFiles();
     const sqliteTests = [];
     for (const file of files) {
@@ -54,7 +54,7 @@ describe('native sqlite test policy', () => {
 
     const manifest = JSON.parse(await readFile(path.resolve(process.cwd(), 'package.json'), 'utf8'));
     expect(manifest.scripts['test:sqlite:electron']).toBe('node scripts/electron-sqlite-runner.mjs scripts/test-files.mjs');
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 
   it('keeps Readwise sqlite visibility coverage on the Electron ABI test entry', () => {
     expect(controlledElectronSqliteTests).toContain('electron/database/externalDocumentImportVisibility.test.ts');

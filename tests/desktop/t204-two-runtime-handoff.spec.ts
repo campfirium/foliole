@@ -139,7 +139,7 @@ async function handoffWithHeldRunner(old: DesktopSession, candidate: DesktopSess
 
 test('hands off between independent runtimes only after the old runner drains', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   const [oldPort, newPort] = await Promise.all([freePort(), freePort()]);
   const groupKey = randomBytes(32).toString('base64url');
   const oldEnv = { ...process.env, FOLIOLE_COMPANION_SYNC_PORT: String(oldPort),
@@ -194,7 +194,7 @@ test('hands off between independent runtimes only after the old runner drains', 
 
 test('serializes simultaneous bootstrap candidates in two independent runtimes', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   const [oldPort, newPort] = await Promise.all([freePort(), freePort()]);
   const groupKey = randomBytes(32).toString('base64url');
   const oldEnv = { ...process.env, FOLIOLE_COMPANION_SYNC_PORT: String(oldPort),

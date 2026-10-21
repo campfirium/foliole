@@ -83,14 +83,14 @@ it('does not expand unused payloads and cleans the working directory after consu
   await expect(fs.stat(directory)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-it('accepts a highly compressible single chapter above the withdrawn 32 MiB limit', async () => {
+it('accepts a highly compressible single chapter above the withdrawn 32 MiB limit', { meta: { calibratedMs: 60_000 } }, async () => {
   const zip = bookZip(`<html><body><h1>Large chapter</h1><p>${' '.repeat(33 * 1024 * 1024)}Readable body survives.</p></body></html>`);
   const book = await readRawEpubBookBytes(zip, 'large-chapter.epub');
   try {
     expect(book.nodes[0]?.content).toContain('Readable body survives.');
     expect(book.nodes[0]?.title).toBe('Large chapter');
   } finally { await book.dispose?.(); }
-}, 60_000);
+});
 
 it('stops and removes partial output when the destination volume has insufficient free space', async () => {
   const zip = createTestZip([{ name: 'payload', content: 'a'.repeat(64 * 1024), compression: 'deflate' }]);

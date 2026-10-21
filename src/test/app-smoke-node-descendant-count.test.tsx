@@ -11,7 +11,7 @@ import { createNode, getCurrentFolderPanel } from './app-smoke.shared';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
-it('shows direct child counts at the end of node rows', () => {
+it('shows direct child counts at the end of node rows', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,
     nodeOrder: [INBOX_NODE_ID, 'root', 'child-1', 'grandchild', 'child-2'],
@@ -53,4 +53,4 @@ it('shows direct child counts at the end of node rows', () => {
   expect(within(listPanel).getByRole('treeitem', { name: 'Grandchild' })).not.toHaveTextContent('(0)');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).toHaveTextContent('Child 2');
   expect(within(listPanel).getByRole('treeitem', { name: 'Child 2' })).not.toHaveTextContent('(0)');
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

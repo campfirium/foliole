@@ -36,11 +36,11 @@ describe('iOS scene lifecycle host contract', () => {
     expect(state.hasSceneStoryboard).toBe(state.hasSceneManifest);
   });
 
-  it('requires UIScene before building with the iOS 27 SDK', () => {
+  it('requires UIScene before building with the iOS 27 SDK', { meta: { calibratedMs: 15_000 } }, () => {
     const sdkMajor = loadIphoneOsSdkMajor();
     const state = loadSceneLifecycleState();
     if (sdkMajor >= 27 && (!state.hasSceneManifest || !state.hasSceneDelegate || !state.hasSceneStoryboard)) {
       throw new Error('iOS 27 SDK requires a complete UIScene lifecycle migration before Foliole can launch.');
     }
-  }, 15_000);
+  });
 });

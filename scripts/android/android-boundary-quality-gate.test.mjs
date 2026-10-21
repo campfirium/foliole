@@ -157,7 +157,7 @@ const RELEASE_GATE_SCRIPTS = {
 };
 
 describe('Android boundary quality gate routing', () => {
-  it('runs the Android boundary check in the Android gate', async () => {
+  it('runs the Android boundary check in the Android gate', { meta: { calibratedMs: GATE_ROUTING_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
     try {
       await writePackageJson(tempRoot, ANDROID_GATE_SCRIPTS);
@@ -172,9 +172,9 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, GATE_ROUTING_TIMEOUT_MS);
+  });
 
-  it('runs the Android boundary check in the shared gate', async () => {
+  it('runs the Android boundary check in the shared gate', { meta: { calibratedMs: GATE_ROUTING_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
     try {
       await writePackageJson(tempRoot, SHARED_GATE_SCRIPTS);
@@ -190,9 +190,9 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, GATE_ROUTING_TIMEOUT_MS);
+  });
 
-  it('runs the Android boundary check in the full gate', async () => {
+  it('runs the Android boundary check in the full gate', { meta: { calibratedMs: GATE_ROUTING_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
     try {
       await writePackageJson(tempRoot, FULL_GATE_SCRIPTS);
@@ -208,9 +208,9 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, GATE_ROUTING_TIMEOUT_MS);
+  });
 
-  it('runs the Android boundary check in the release gate', async () => {
+  it('runs the Android boundary check in the release gate', { meta: { calibratedMs: GATE_ROUTING_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'android-boundary-gate-'));
     try {
       await writePackageJson(tempRoot, RELEASE_GATE_SCRIPTS);
@@ -226,5 +226,5 @@ describe('Android boundary quality gate routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, GATE_ROUTING_TIMEOUT_MS);
+  });
 });

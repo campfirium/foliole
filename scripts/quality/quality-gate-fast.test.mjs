@@ -12,7 +12,7 @@ import {
 } from './quality-gate-fast.test-support.mjs';
 
 describe('quality-gate-fast.sh output', () => {
-  it('suppresses successful script output in fail-only mode', async () => {
+  it('suppresses successful script output in fail-only mode', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -34,9 +34,9 @@ describe('quality-gate-fast.sh output', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('reports the failed script in fail-only mode', async () => {
+  it('reports the failed script in fail-only mode', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -56,9 +56,9 @@ describe('quality-gate-fast.sh output', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('prints the full failure log path and preserves the log file', async () => {
+  it('prints the full failure log path and preserves the log file', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -78,5 +78,5 @@ describe('quality-gate-fast.sh output', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 });

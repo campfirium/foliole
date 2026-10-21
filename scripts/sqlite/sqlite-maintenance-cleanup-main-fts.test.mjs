@@ -51,7 +51,7 @@ it('dry-runs legacy main FTS cleanup without snapshot or writes', async () => {
   await expect(fs.access(path.join(tempRoot, 'foliole-maintenance-snapshots'))).rejects.toBeTruthy();
 });
 
-it('applies legacy main FTS cleanup with an explicit snapshot directory', async () => {
+it('applies legacy main FTS cleanup with an explicit snapshot directory', { meta: { calibratedMs: 15_000 } }, async () => {
   const dbPath = path.join(tempRoot, 'foliole.db');
   const snapshotDir = path.join(tempRoot, 'operator-snapshots');
   createDatabaseWithLegacyMainFts(dbPath);
@@ -72,7 +72,7 @@ it('applies legacy main FTS cleanup with an explicit snapshot directory', async 
   expect(output.snapshot.destinationPath).toContain(snapshotDir);
   await expect(fs.access(output.snapshot.destinationPath)).resolves.toBeUndefined();
   expect(readLegacyMainFtsObjects(dbPath)).toEqual([]);
-}, 15_000);
+});
 
 it('uses a database-local snapshot directory by default on apply', async () => {
   const dbPath = path.join(tempRoot, 'nested', 'foliole.db');
@@ -110,7 +110,7 @@ it('keeps already-clean apply free of snapshots', async () => {
   await expect(fs.access(path.join(tempRoot, 'foliole-maintenance-snapshots'))).rejects.toBeTruthy();
 });
 
-it('refuses the default live database path unless the second confirmation flag is present', async () => {
+it('refuses the default live database path unless the second confirmation flag is present', { meta: { calibratedMs: 15_000 } }, async () => {
   await expect(runCleanup('--db-path', '/mnt/d/X/U/Foliole/Data/foliole.db', '--apply'))
     .rejects.toMatchObject({
       stderr: expect.stringContaining('"status":"refused-live-database"')
@@ -124,7 +124,7 @@ it('refuses the default live database path unless the second confirmation flag i
   )).rejects.toMatchObject({
     stderr: expect.stringContaining('--i-have-current-backup')
   });
-}, 15_000);
+});
 
 it('reports locked cleanup attempts with a machine-readable status', async () => {
   const dbPath = path.join(tempRoot, 'foliole.db');

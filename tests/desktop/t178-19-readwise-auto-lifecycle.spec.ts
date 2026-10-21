@@ -121,7 +121,7 @@ async function pause(session: T178AcceptanceSession) {
 
 test('restores the credential and completes a pending migration after startup', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-'));
   let session: T178AcceptanceSession | null = null;
   try {
@@ -146,7 +146,7 @@ test('restores the credential and completes a pending migration after startup', 
 
 test('keeps API preparation selected after navigating away', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-19-mode-'));
   let session: T178AcceptanceSession | null = null;
   try {

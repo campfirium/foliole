@@ -38,9 +38,9 @@ afterAll(() => {
 beforeEach(() => {
   window.localStorage.clear();
   delete window.electronAPI;
-}, 15_000);
+});
 
-it('opens the collection panel, applies a saved theme, closes on outside click, and removes favorites', async () => {
+it('opens the collection panel, applies a saved theme, closes on outside click, and removes favorites', { meta: { calibratedMs: 15_000 } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -82,9 +82,9 @@ it('opens the collection panel, applies a saved theme, closes on outside click, 
     const favorites = JSON.parse(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.workspaceSurfaceFavorites) ?? '[]');
     expect(favorites).toHaveLength(0);
   });
-}, 15_000);
+});
 
-it('applies auto palette options before writing into the free palette slots', async () => {
+it('applies auto palette options before writing into the free palette slots', { meta: { calibratedMs: 15_000 } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -102,7 +102,7 @@ it('applies auto palette options before writing into the free palette slots', as
       folderTopicSharedTone: true
     }));
   });
-}, 15_000);
+});
 
 it('resets workspace surface settings back to the product default theme', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);

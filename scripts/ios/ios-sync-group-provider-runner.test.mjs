@@ -26,7 +26,7 @@ it('preserves the first shutdown failure without sending to a killed provider ag
   } finally { vi.useRealTimers(); }
 });
 
-it('compiles the request provider and its runtime dependencies', () => {
+it('compiles the request provider and its runtime dependencies', { meta: { calibratedMs: 30_000 } }, () => {
   const outputDirectory = '.tmp/artifacts/ios-sync-group-provider-distribution-test';
   fs.rmSync(outputDirectory, { force: true, recursive: true });
   try {
@@ -40,4 +40,4 @@ it('compiles the request provider and its runtime dependencies', () => {
   } finally {
     fs.rmSync(outputDirectory, { force: true, recursive: true });
   }
-}, 30_000);
+});

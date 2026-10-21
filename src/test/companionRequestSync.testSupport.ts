@@ -55,7 +55,7 @@ beforeAll(async () => {
   compiledDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-companion-request-script-'));
   compiledScript = path.join(compiledDirectory, 'fixture.mjs');
   await buildDesktopFramedSyncFixture(compiledScript);
-}, 20000);
+});
 afterAll(async () => {
   if (compiledDirectory) await fs.rm(compiledDirectory, { recursive: true, force: true });
 });

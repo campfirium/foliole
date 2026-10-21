@@ -131,7 +131,7 @@ it('focuses PDF search from the shared find-in-document command', async () => {
   await waitFor(() => expect(searchInput).toHaveFocus());
 });
 
-it('supports in-view pdf search navigation and empty-state feedback', async () => {
+it('supports in-view pdf search navigation and empty-state feedback', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
@@ -165,7 +165,7 @@ it('supports in-view pdf search navigation and empty-state feedback', async () =
     expect(previousMatchButton).toBeDisabled();
     expect(nextMatchButton).toBeDisabled();
   }, RELEASE_GATE_WAIT_OPTIONS);
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('supports Enter and Shift+Enter for in-view pdf search navigation', async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);

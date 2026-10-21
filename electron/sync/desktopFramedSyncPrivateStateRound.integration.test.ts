@@ -44,7 +44,7 @@ function readPrivate(file: string) {
   } finally { db.close(); }
 }
 
-it('keeps each peer private UI state and identity across a complete business round and process restart', async () => {
+it('keeps each peer private UI state and identity across a complete business round and process restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Left original body', nodeId: 'left-topic', title: 'Left' });
@@ -70,4 +70,4 @@ it('keeps each peer private UI state and identity across a complete business rou
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

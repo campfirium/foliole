@@ -132,7 +132,7 @@ it('applies search invalidation pruning only to completed rows older than the bo
   ]);
 });
 
-it('rejects invalid search invalidation pruning arguments', async () => {
+it('rejects invalid search invalidation pruning arguments', { meta: { calibratedMs: 15000 } }, async () => {
   const dbPath = path.join(tempRoot, 'foliole.db');
   createSearchInvalidationDatabase(dbPath);
 
@@ -146,7 +146,7 @@ it('rejects invalid search invalidation pruning arguments', async () => {
     .rejects.toMatchObject({ stderr: expect.stringContaining('missing value for --retention-days') });
   await expect(runScript('prune-search-invalidations', '--db-path', dbPath, '--older-than-iso', '2026-05-01'))
     .rejects.toMatchObject({ stderr: expect.stringContaining('--older-than-iso must be an ISO timestamp with timezone') });
-}, 15000);
+});
 
 async function runScript(...args) {
   return execFileAsync(

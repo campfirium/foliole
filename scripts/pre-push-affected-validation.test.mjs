@@ -66,7 +66,7 @@ async function commitAll(repoDir, message) {
 }
 
 describe('pre-push affected validation', () => {
-  it('checks release identity without revalidating already-pushed history', async () => {
+  it('checks release identity without revalidating already-pushed history', { meta: { calibratedMs: AFFECTED_VALIDATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     try {
       await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
@@ -83,9 +83,9 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+  });
 
-  it('checks only release files after the pushed dev base', async () => {
+  it('checks only release files after the pushed dev base', { meta: { calibratedMs: AFFECTED_VALIDATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     try {
       await mkdir(path.join(repoDir, 'electron', 'database'), { recursive: true });
@@ -104,9 +104,9 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+  });
 
-  it('accepts historical sync paths without a retired test command', async () => {
+  it('accepts historical sync paths without a retired test command', { meta: { calibratedMs: AFFECTED_VALIDATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     try {
       await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
@@ -126,9 +126,9 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+  });
 
-  it('does not run release candidate checks for ordinary dev pushes', async () => {
+  it('does not run release candidate checks for ordinary dev pushes', { meta: { calibratedMs: AFFECTED_VALIDATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     try {
       await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
@@ -145,9 +145,9 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+  });
 
-  it('runs Android boundary checks when pushed commits affect Android sync Java', async () => {
+  it('runs Android boundary checks when pushed commits affect Android sync Java', { meta: { calibratedMs: AFFECTED_VALIDATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     try {
       await writeFile(path.join(repoDir, 'README.md'), 'seed\n');
@@ -168,5 +168,5 @@ describe('pre-push affected validation', () => {
     } finally {
       await rm(repoDir, { recursive: true, force: true });
     }
-  }, AFFECTED_VALIDATION_TIMEOUT_MS);
+  });
 });

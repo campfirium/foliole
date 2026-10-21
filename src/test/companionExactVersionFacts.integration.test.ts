@@ -14,7 +14,7 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport';
 
-it('keeps equal unready libraries pending without object streams, then repairs the available current body', async (context) => {
+it('keeps equal unready libraries pending without object streams, then repairs the available current body', { meta: { calibratedMs: 60000 } }, async (context) => {
   const started = performance.now();
   const stages: Record<string, number> = { creating: 0 };
   context.onTestFailed(() => console.error('[equal-unready-failure]', {
@@ -52,9 +52,9 @@ it('keeps equal unready libraries pending without object streams, then repairs t
         WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = ?)`).pluck().get(nodeId)).toBe('Retained current');
     } finally { target.close(); }
   } finally { await host.close(); }
-}, 60000);
+});
 
-it('converges different current references using already stored versions without transmitting a version fact', async () => {
+it('converges different current references using already stored versions without transmitting a version fact', { meta: { calibratedMs: 60000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const target = new Database(host.fixture.rightSnapshot.databasePath);
   const versions = [branch('base', 'Original')];
@@ -81,9 +81,9 @@ it('converges different current references using already stored versions without
       expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
     } finally { spy.mockRestore(); }
   } finally { target.close(); await host.close(); }
-}, 60000);
+});
 
-it.each([false, true])('converges stored concurrent heads after any local blocker clears: dirty=%s', async dirty => {
+it.each([false, true])('converges stored concurrent heads after any local blocker clears: dirty=%s', { meta: { calibratedMs: 60000 } }, async dirty => {
   const host = await createCompanionRequestFixture();
   const target = new Database(host.fixture.rightSnapshot.databasePath);
   const versions = [branch('left-head', 'Left branch'), branch('right-head', 'Right branch')];
@@ -108,9 +108,9 @@ it.each([false, true])('converges stored concurrent heads after any local blocke
       expect([host.sqlite, target].map(db => db.prepare('SELECT count(*) FROM node_sync_versions').pluck().get())).toEqual(counts);
     }
   } finally { target.close(); await host.close(); }
-}, 60000);
+});
 
-it.each(['push', 'pull'])('uses an empty authenticated single-object stream for known current versions: %s', async direction => {
+it.each(['push', 'pull'])('uses an empty authenticated single-object stream for known current versions: %s', { meta: { calibratedMs: 60000 } }, async direction => {
   const host = await createCompanionRequestFixture();
   const target = new Database(host.fixture.rightSnapshot.databasePath);
   const base = branch('single-base', 'Original');
@@ -148,9 +148,9 @@ it.each(['push', 'pull'])('uses an empty authenticated single-object stream for 
     expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
     expect(host.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('single-next');
   } finally { target.close(); await host.close(); }
-}, 60000);
+});
 
-it('defers a historical parent gap until the node changes and then restores the edge', async () => {
+it('defers a historical parent gap until the node changes and then restores the edge', { meta: { calibratedMs: 60000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const target = new Database(host.fixture.rightSnapshot.databasePath);
   const base = branch('edge-base', 'Original');
@@ -172,4 +172,4 @@ it('defers a historical parent gap until the node changes and then restores the 
     expect(target.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('edge-third');
     expect(target.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Changed again');
   } finally { facts.mockRestore(); decoded.mockRestore(); target.close(); await host.close(); }
-}, 60000);
+});

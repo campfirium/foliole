@@ -69,7 +69,7 @@ async function writeRepositoryRootBoundaryScript(rootDir, message = 'repository 
 }
 
 describe('quality-gate-target.sh collected failure mode', () => {
-  it('continues sequential desktop steps and reports all failures at the end', async () => {
+  it('continues sequential desktop steps and reports all failures at the end', { meta: { calibratedMs: 120000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));
     try {
       await writePackageJson(tempRoot, {
@@ -96,9 +96,9 @@ describe('quality-gate-target.sh collected failure mode', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 120000);
+  });
 
-  it('reports every failed release-build parallel step in collected mode', async () => {
+  it('reports every failed release-build parallel step in collected mode', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-collect-'));
     try {
       await writePackageJson(tempRoot, {
@@ -119,5 +119,5 @@ describe('quality-gate-target.sh collected failure mode', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

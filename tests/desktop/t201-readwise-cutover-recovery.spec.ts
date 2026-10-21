@@ -135,7 +135,7 @@ test.skip(
 
 test('shows a retryable import failure and recovers without replacing the legacy Topic', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t201-'));
   let session: T178AcceptanceSession | null = null;
   try {
@@ -195,7 +195,7 @@ test('shows a retryable import failure and recovers without replacing the legacy
 
 test('uses the saved device token when a restored library has no API source identity', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t201-restored-'));
   let session: T178AcceptanceSession | null = null;
   try {

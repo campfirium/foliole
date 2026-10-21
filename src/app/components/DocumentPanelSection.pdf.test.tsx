@@ -94,14 +94,14 @@ it('keeps document body for derived highlight nodes that inherit pdf source from
   expect(screen.queryByTestId('pdf-document-surface')).not.toBeInTheDocument();
 });
 
-it('renders the pdf reading container for linked pdf nodes', async () => {
+it('renders the pdf reading container for linked pdf nodes', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 
   renderSection();
 
   expect(await screen.findByTestId('pdf-document-surface', undefined, RELEASE_GATE_WAIT_OPTIONS)).toBeInTheDocument();
   expect(await screen.findByTestId('pdf-document-view', undefined, RELEASE_GATE_WAIT_OPTIONS)).toHaveAttribute('data-file', 'file:///tmp/sample.pdf');
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('passes app protocol pdf attachments through to the document loader', async () => {
   useNodeSourceDetails.mockReturnValue(

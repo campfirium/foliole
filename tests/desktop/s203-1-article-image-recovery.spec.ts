@@ -78,7 +78,7 @@ async function localizedKey(page: Page, id: string) {
 }
 
 test('recovers missing images and changes only the requesting article', async ({ desktopApp, desktopWindow: page }) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(page);
   await installImages(desktopApp);
   await seed(page);

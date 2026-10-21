@@ -185,7 +185,7 @@ describe('quality-gate-lib.sh', () => {
     expect(result.stdout.trim()).toBe('fail-only');
   });
 
-  it('records failed tests and prints the failed command rerun', async () => {
+  it('records failed tests and prints the failed command rerun', { meta: { calibratedMs: 15000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-lib-'));
     const failedSummary = path.join(tempRoot, 'test-run', 'failed.txt');
     try {
@@ -217,6 +217,6 @@ describe('quality-gate-lib.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  });
 
 });

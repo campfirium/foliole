@@ -47,7 +47,7 @@ it.each(['', '\ufeff中文😀\0后段', 'a'.repeat(1048576)])('applies exact fu
   expect((await host.current()).body_text === body).toBe(true);
 });
 
-it('keeps all conflict parents and the same complete main and alternatives while loading versions separately', async () => {
+it('keeps all conflict parents and the same complete main and alternatives while loading versions separately', { meta: { calibratedMs: 20000 } }, async () => {
   vi.useFakeTimers(); vi.setSystemTime(now);
   const host = textDevice(); const reference = textDevice(); hosts.push(host, reference);
   const base = textBranch('base', 'Base', undefined, '2026-10-07T00:00:00.000Z');
@@ -68,7 +68,7 @@ it('keeps all conflict parents and the same complete main and alternatives while
     'SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all();
   expect(edges(host)).toEqual(edges(reference));
   expect(current.parent_version_ids).toHaveLength(13);
-}, 20000);
+});
 
 it('rolls back earlier full writes when a later ready body is missing, then applies the same identities on retry', async () => {
   const host = textDevice(); hosts.push(host);

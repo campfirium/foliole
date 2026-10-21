@@ -75,7 +75,7 @@ describe('quality-gate-target.sh shared segments', () => {
     ['shared-test', ['test:shared']],
     ['shared-quality-tests', QUALITY_SCRIPT_STEPS],
     ['shared-build', ['build', 'electron:compile', 'android:web:build']]
-  ])('runs only the %s segment steps', async (target, expectedSteps) => {
+  ])('runs only the %s segment steps', { meta: { calibratedMs: 60000 } }, async (target, expectedSteps) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
     try {
       await writePackageJson(tempRoot);
@@ -90,9 +90,9 @@ describe('quality-gate-target.sh shared segments', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps shared quality tests on the sequential heavy-bucket route', async () => {
+  it('keeps shared quality tests on the sequential heavy-bucket route', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
     try {
       await writePackageJson(tempRoot);
@@ -105,9 +105,9 @@ describe('quality-gate-target.sh shared segments', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('skips shared quality script self-tests for ordinary product changes', async () => {
+  it('skips shared quality script self-tests for ordinary product changes', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
     try {
       await writePackageJson(tempRoot);
@@ -126,14 +126,14 @@ describe('quality-gate-target.sh shared segments', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
   it.each([
     ['empty changed files', ''],
     ['quality gate script change', 'scripts/quality/quality-gate-target.sh'],
     ['script bucket root change', 'scripts/demo/export-demo-pack.mjs'],
     ['bucket selector change', 'scripts/script-test-bucket-selection.mjs']
-  ])('keeps shared quality script self-tests for %s', async (_label, changedFiles) => {
+  ])('keeps shared quality script self-tests for %s', { meta: { calibratedMs: 60000 } }, async (_label, changedFiles) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
     try {
       await writePackageJson(tempRoot);
@@ -147,9 +147,9 @@ describe('quality-gate-target.sh shared segments', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps sequential and parallel quality script helpers on the same bucket set', async () => {
+  it('keeps sequential and parallel quality script helpers on the same bucket set', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-shared-segments-'));
     try {
       await writePackageJson(tempRoot);
@@ -164,5 +164,5 @@ describe('quality-gate-target.sh shared segments', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

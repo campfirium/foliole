@@ -14,7 +14,7 @@ afterEach(async () => {
   if (root) await fs.rm(root, { recursive: true, force: true });
 });
 
-it('converges a removed owner takeover across remaining peers and rejects the old member', async () => {
+it('converges a removed owner takeover across remaining peers and rejects the old member', { meta: { calibratedMs: 45000 } }, async () => {
   root = await fs.mkdtemp(path.resolve('.tmp/readwise-takeover-'));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
   const script = path.join(root, 'fixture.mjs');
@@ -49,4 +49,4 @@ it('converges a removed owner takeover across remaining peers and rejects the ol
   await expect(candidate!.send('readwiseRead')).resolves.toMatchObject({ assignment: {
     is_active: true, active_owner_epoch: 5
   }, guard: { state: 'active', epoch: 5, ownerId: peers[1]!.identity } });
-}, 45000);
+});

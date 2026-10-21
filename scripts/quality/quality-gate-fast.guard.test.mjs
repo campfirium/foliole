@@ -19,7 +19,7 @@ import {
 vi.setConfig({ testTimeout: 120000 });
 
 describe('quality-gate-fast.sh guard limits', () => {
-  it('fails fast and clears descendant processes when a guarded test exceeds the timeout', async () => {
+  it('fails fast and clears descendant processes when a guarded test exceeds the timeout', { meta: { calibratedMs: 45000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     const pidFile = path.join(tempRoot, 'child.pid');
     try {
@@ -39,9 +39,9 @@ describe('quality-gate-fast.sh guard limits', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 45000);
+  });
 
-  it('fails fast when a guarded test exceeds the memory limit', async () => {
+  it('fails fast when a guarded test exceeds the memory limit', { meta: { calibratedMs: 30000 } }, async () => {
     const result = await runGuardedCommand(
       'node -e \'const chunks=[]; setInterval(() => chunks.push(Buffer.alloc(16 * 1024 * 1024)), 10)\'',
       {
@@ -54,9 +54,9 @@ describe('quality-gate-fast.sh guard limits', () => {
     expect(result.stdout).toContain('failed: test exceeded memory limit');
     expect(result.stdout).toContain('stalled after:');
     expect(result.stdout).toContain('peak test memory:');
-  }, 30000);
+  });
 
-  it('prints waiting progress while a guarded command is still running', async () => {
+  it('prints waiting progress while a guarded command is still running', { meta: { calibratedMs: 30000 } }, async () => {
     const result = await runGuardedCommand('sleep 2', {
       QUALITY_GATE_HEARTBEAT_SECONDS: '1',
       QUALITY_GATE_TEST_TIMEOUT_SECONDS: '10'
@@ -65,9 +65,9 @@ describe('quality-gate-fast.sh guard limits', () => {
     expect(result.stdout).toMatch(
       /\[quality-gate-fast\] waiting: test still running \([0-9]+s elapsed, peak test memory [0-9]+ KiB\)/
     );
-  }, 30000);
+  });
 
-  it('reports direct-child fallback when process listing is unavailable', async () => {
+  it('reports direct-child fallback when process listing is unavailable', { meta: { calibratedMs: 30000 } }, async () => {
     const result = await runGuardedCommand('printf ok', {
       QUALITY_GATE_TEST_PRELUDE: 'quality_gate_has_ps() { return 1; }',
       QUALITY_GATE_TEST_TIMEOUT_SECONDS: '10'
@@ -75,9 +75,9 @@ describe('quality-gate-fast.sh guard limits', () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout).toMatch(/process tracking: ps(?: and \/proc)? unavailable;/u);
-  }, 30000);
+  });
 
-  it('applies timeout limits to the lint step too', async () => {
+  it('applies timeout limits to the lint step too', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     const pidFile = path.join(tempRoot, 'lint.pid');
     try {
@@ -109,9 +109,9 @@ describe('quality-gate-fast.sh guard limits', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('applies memory limits to the typecheck step too', async () => {
+  it('applies memory limits to the typecheck step too', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -132,5 +132,5 @@ describe('quality-gate-fast.sh guard limits', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

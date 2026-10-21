@@ -40,7 +40,7 @@ const save: CompanionContentSaveHandler = Object.assign(async (nodeId: string, c
   return saveCompanionContentEdit(edit);
 }, { readSource: readCompanionContentSource, retainHold: retainCompanionContentBase, releaseHold: releaseCompanionContentBase });
 
-it('delivers complete real editor input through automatic cadence and paced HTTP to independent SQLite', async () => {
+it('delivers complete real editor input through automatic cadence and paced HTTP to independent SQLite', { meta: { calibratedMs: 60_000 } }, async () => {
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor);
   host = await createJoiningMobile();
@@ -83,7 +83,7 @@ it('delivers complete real editor input through automatic cadence and paced HTTP
     unsubscribe(); cadence.stop(); editor.destroy(); hook.unmount(); element.remove(); reader.close();
     await closeCompanionDesktopSession(); await relay.close();
   }
-}, 60_000);
+});
 
 async function measureOrdinaryInputs(editor: CodeMirrorEditorAdapter, reader: Database.Database,
   samples: { elapsedMs: number; bytes: number }[]) {

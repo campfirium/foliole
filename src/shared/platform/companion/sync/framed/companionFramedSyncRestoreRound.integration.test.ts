@@ -52,7 +52,7 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 
-it('resumes companion request restore after an object fails without erasing the accepted object', async () => {
+it('resumes companion request restore after an object fails without erasing the accepted object', { meta: { calibratedMs: 30_000 } }, async () => {
   fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true);
   const sqlite = new Database(fixture.leftSnapshot.databasePath);
   sqlite.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
@@ -96,4 +96,4 @@ it('resumes companion request restore after an object fails without erasing the 
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes).toEqual(expected);
   const restarted = await fixture.restartLeft();
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual(expected);
-}, 30_000);
+});

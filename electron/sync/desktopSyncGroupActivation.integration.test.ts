@@ -9,7 +9,7 @@ import { expect, it } from 'vitest';
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('activates discovered peers and automatically persists later edits across independent libraries', async () => {
+it('activates discovered peers and automatically persists later edits across independent libraries', { meta: { calibratedMs: 60_000 } }, async () => {
   const buildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-activation-build-'));
   const script = path.join(buildRoot, 'fixture.mjs');
   await buildDesktopFramedSyncFixture(script, true);
@@ -35,7 +35,7 @@ it('activates discovered peers and automatically persists later edits across ind
     await fs.rm(fixture.root, { recursive: true, force: true });
     await fs.rm(buildRoot, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 function readContent(databasePath: string, nodeId: string) {
   const db = new Database(databasePath, { readonly: true, fileMustExist: true });
@@ -43,7 +43,7 @@ function readContent(databasePath: string, nodeId: string) {
   finally { db.close(); }
 }
 
-it('automatically relays an inbound committed edit to another discovered desktop', async () => {
+it('automatically relays an inbound committed edit to another discovered desktop', { meta: { calibratedMs: 30_000 } }, async () => {
   const buildRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-relay-build-'));
   const script = path.join(buildRoot, 'fixture.mjs');
   await buildDesktopFramedSyncFixture(script, true);
@@ -79,7 +79,7 @@ it('automatically relays an inbound committed edit to another discovered desktop
     await fs.rm(fixture.root, { recursive: true, force: true });
     await fs.rm(buildRoot, { recursive: true, force: true });
   }
-}, 30_000);
+});
 
 function readSyncResult(databasePath: string): { status: string; run_id: string } | null {
   const db = new Database(databasePath, { readonly: true, fileMustExist: true });

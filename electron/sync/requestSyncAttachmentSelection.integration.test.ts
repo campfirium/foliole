@@ -139,7 +139,7 @@ it('keeps availability and original facts unchanged when a file check fails and 
 });
 
 
-it('releases a selected attachment after a block when new data is waiting, then resumes intact', async () => {
+it('releases a selected attachment after a block when new data is waiting, then resumes intact', { meta: { calibratedMs: 15000 } }, async () => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
   const selected = attachment('Selected image bytes'.repeat(300000));
@@ -193,4 +193,4 @@ it('releases a selected attachment after a block when new data is waiting, then 
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
-}, 15000);
+});

@@ -49,7 +49,7 @@ function runTargetGate(cwd, target) {
 }
 
 describe('quality gate telemetry', () => {
-  it('records successful and failed fast-gate steps without changing exit status', async () => {
+  it('records successful and failed fast-gate steps without changing exit status', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -74,9 +74,9 @@ describe('quality gate telemetry', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('records target-gate parallel child steps and reports the slowest costs', async () => {
+  it('records target-gate parallel child steps and reports the slowest costs', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-telemetry-'));
     try {
       await writeFile(
@@ -110,7 +110,7 @@ describe('quality gate telemetry', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
   it('formats an empty telemetry run as an actionable report', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-report-'));
@@ -142,7 +142,7 @@ describe('quality gate telemetry', () => {
     }
   });
 
-  it('records missing target-gate scripts as failed telemetry entries', async () => {
+  it('records missing target-gate scripts as failed telemetry entries', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-telemetry-'));
     try {
       await writeFile(
@@ -171,5 +171,5 @@ describe('quality gate telemetry', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

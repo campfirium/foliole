@@ -129,7 +129,7 @@ test('keeps ordinary switching and placeholder display inert until one original-
   { desktopApp, desktopSession, desktopWindow },
   testInfo
 ) => {
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
   await desktopWindow.evaluate(async (ids) => window.__folioleWorkspaceDebug?.seedNodes?.(ids.map((id, index) => ({

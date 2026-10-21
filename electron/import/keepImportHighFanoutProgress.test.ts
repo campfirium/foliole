@@ -135,7 +135,7 @@ function expectHighFanoutProgress(progressEvents: KeepImportProgressEvent[]) {
   );
 }
 
-it('publishes source and highlight progress for high fanout Readwise imports', async () => {
+it('publishes source and highlight progress for high fanout Readwise imports', { meta: { calibratedMs: 20000 } }, async () => {
   const fixture = await seedHighFanoutFixture(305);
   const progressEvents: KeepImportProgressEvent[] = [];
   saveReadwiseKeepImportSettings(fixture);
@@ -172,7 +172,7 @@ it('publishes source and highlight progress for high fanout Readwise imports', a
     .prepare('SELECT COUNT(*) AS count FROM search_index_invalidations WHERE status != ?')
     .get('completed')).toEqual({ count: 0 });
   expectHighFanoutProgress(progressEvents);
-}, 20000);
+});
 
 it('marks the import degraded when search indexing fails after the write', async () => {
   const fixture = await seedHighFanoutFixture(2);

@@ -19,7 +19,7 @@ function business(file: string, serialized = true) {
   finally { db.close(); }
 }
 
-it('retires a mixed legacy publication and delivers its original business facts after upgrade and restart', async () => {
+it('retires a mixed legacy publication and delivers its original business facts after upgrade and restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'original', content: 'Frozen original body', title: 'Original' });
@@ -51,4 +51,4 @@ it('retires a mixed legacy publication and delivers its original business facts 
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

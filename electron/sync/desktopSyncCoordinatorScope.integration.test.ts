@@ -8,7 +8,7 @@ import { expect, it } from 'vitest';
 import { createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureSnapshot } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('persists all available libraries after manual sync overlaps a targeted automatic round', async () => {
+it('persists all available libraries after manual sync overlaps a targeted automatic round', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const third = await fixture.startThird();
   const gate = await createRequestGate(fixture.rightSnapshot.origin);
@@ -39,14 +39,14 @@ it('persists all available libraries after manual sync overlaps a targeted autom
     await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 function peerCommand(kind: string, peer: DesktopFramedSyncFixtureSnapshot) {
   return { kind, peer: { deviceId: peer.deviceId, libraryEpoch: `${peer.deviceId}-epoch` },
     peerOrigin: peer.origin };
 }
 
-it('completes current-state sync without rewriting an unrelated legacy historical body', async () => {
+it('completes current-state sync without rewriting an unrelated legacy historical body', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Original historical body' });
@@ -81,7 +81,7 @@ it('completes current-state sync without rewriting an unrelated legacy historica
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 function readContent(databasePath: string, id: string) {
   const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true });

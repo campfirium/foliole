@@ -21,7 +21,7 @@ function versions(databasePath: string) {
   finally { db.close(); }
 }
 
-it('retains undelivered image demand through source absence and receiver restart', async () => {
+it('retains undelivered image demand through source absence and receiver restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const f = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
   const id = 'zero-diff-resource-article';
@@ -50,4 +50,4 @@ it('retains undelivered image demand through source absence and receiver restart
     await Promise.allSettled([f.left.close(), f.right.close()]);
     await fs.rm(f.root, { recursive: true, force: true });
   }
-}, 60_000);
+});

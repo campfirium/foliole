@@ -47,7 +47,7 @@ it('pins Internal actions to a full commit instead of a later dev tip', () => {
     .toThrow('full SHA');
 });
 
-it('freezes the committed dev tree while leaving Mac edits untouched', async () => {
+it('freezes the committed dev tree while leaving Mac edits untouched', { meta: { calibratedMs: 15_000 } }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dirty-candidate-'));
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   try {
@@ -67,9 +67,9 @@ it('freezes the committed dev tree while leaving Mac edits untouched', async () 
     await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
     expect(fs.existsSync(root)).toBe(false);
   }
-}, 15_000);
+});
 
-it('pins a release candidate commit while rejecting commits outside dev and release', async () => {
+it('pins a release candidate commit while rejecting commits outside dev and release', { meta: { calibratedMs: 15_000 } }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-release-candidate-'));
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   const commit = (message) => git('-c', 'user.name=Test', '-c', 'user.email=test@example.com',
@@ -91,7 +91,7 @@ it('pins a release candidate commit while rejecting commits outside dev and rele
   } finally {
     await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
   }
-}, 15_000);
+});
 
 function output(identity) {
   return `[windows-dev-action] multi-device-sync-candidate identity=${identity} manifest=D:/C/foliole/.tmp/artifacts/windows-dev-action/${identity}/multi-device-sync-candidate.json\n`;

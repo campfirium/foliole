@@ -12,7 +12,7 @@ const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/readwise-cu
 
 test('finishes other sources, shows the failed item, and clears its warning after later sync', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-continuity-'));
   const session = await createT178ApiAcceptanceSession(stateRoot);
   try {

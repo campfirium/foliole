@@ -30,7 +30,7 @@ async function withFakeAdb(body, check) {
   }
 }
 
-it('preserves database bytes beyond the buffered command output limit', async () => {
+it('preserves database bytes beyond the buffered command output limit', { meta: { calibratedMs: 30_000 } }, async () => {
   await withFakeAdb(`
   const { once } = require('node:events');
   (async () => {
@@ -49,7 +49,7 @@ it('preserves database bytes beyond the buffered command output limit', async ()
       }
     } finally { await file.close(); }
   });
-}, 30_000);
+});
 
 it('rejects a failed transfer and removes its incomplete database', async () => {
   await withFakeAdb(`

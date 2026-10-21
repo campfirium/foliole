@@ -52,7 +52,7 @@ function assertOwnedBody(nodeId: string, content: string) {
   expect(driver.queryAll('PRAGMA foreign_key_check')).toEqual([]);
 }
 
-it.each(['default', 'body_with_highlight_sidecar'] as const)('preserves new, duplicate and updated %s imports with full node-owned text', (profile) => {
+it.each(['default', 'body_with_highlight_sidecar'] as const)('preserves new, duplicate and updated %s imports with full node-owned text', { meta: { calibratedMs: 20_000 } }, (profile) => {
   const input = prepared(profile);
   const first = runPreparedImport(input);
   if (!first.nodeId) throw new Error('import_node_missing');
@@ -72,7 +72,7 @@ it.each(['default', 'body_with_highlight_sidecar'] as const)('preserves new, dup
   expect(loadNodeBodyResolution(driver, child.id)).toMatchObject({ content: 'Prefix' });
   expect(recordPreparedImportFailure(next, 'source_read_failed'))
     .toMatchObject({ nodeId: first.nodeId, resultStatus: 'failed', duplicateSemantic: 'duplicate' });
-}, 20_000);
+});
 
 it('imports a local Markdown image and publishes the rewritten complete body', async () => {
   const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2ZkAAAAASUVORK5CYII=', 'base64');

@@ -25,7 +25,7 @@ const folderId = 'provided-folder';
 const documentId = `${folderId}:note.md`;
 const body = 'External document provided by a group member';
 
-it('hides a departed member library on peers without deletion records and shows it again on rejoin', async () => {
+it('hides a departed member library on peers without deletion records and shows it again on rejoin', { meta: { calibratedMs: 90_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const provider = fixture.leftSnapshot.deviceId;
@@ -59,7 +59,7 @@ it('hides a departed member library on peers without deletion records and shows 
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 90_000);
+});
 
 async function expectInventory(peer: Parameters<typeof readFixtureInventory>[0], visible: boolean) {
   const ids = (await readFixtureInventory(peer)).map(entry => entry.globalId);

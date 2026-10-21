@@ -8,7 +8,7 @@ import { createCompanionRequestFixture } from '../../test/companionRequestSync.t
 
 import { recordCompanionTopicDailyCount } from './companion/runtime/companionTopicDailyCounts';
 
-it('converges mobile daily counts through request synchronization without counting a topic twice', async () => {
+it('converges mobile daily counts through request synchronization without counting a topic twice', { meta: { calibratedMs: 20000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const desktop = new Database(host.fixture.rightSnapshot.databasePath);
   try {
@@ -32,4 +32,4 @@ it('converges mobile daily counts through request synchronization without counti
         .toEqual([{ node_id: 'topic-a' }, { node_id: 'topic-b' }]);
     }
   } finally { desktop.close(); await host.close(); }
-}, 20000);
+});

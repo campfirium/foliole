@@ -146,7 +146,7 @@ describe('lint-changed.mjs', () => {
     }
   });
 
-  it('filters changed files by android scope', async () => {
+  it('filters changed files by android scope', { meta: { calibratedMs: 15_000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
@@ -169,9 +169,9 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15_000);
+  });
 
-  it('filters changed files by desktop and shared scopes', async () => {
+  it('filters changed files by desktop and shared scopes', { meta: { calibratedMs: 15_000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     const marker = path.join(tempRoot, 'eslint.args');
     try {
@@ -208,9 +208,9 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15_000);
+  });
 
-  it('fails closed when the shared path domain module cannot load', async () => {
+  it('fails closed when the shared path domain module cannot load', { meta: { calibratedMs: 15_000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'lint-changed-'));
     try {
       const result = await runNode(
@@ -224,5 +224,5 @@ describe('lint-changed.mjs', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15_000);
+  });
 });

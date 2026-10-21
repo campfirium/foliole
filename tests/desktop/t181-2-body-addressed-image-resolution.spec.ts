@@ -100,7 +100,7 @@ async function writeEvidence(input: {
 }
 
 test('keeps a localized remote image and PDF readable after offline relaunch', async ({ desktopSession }, testInfo) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   const bytes = await fs.readFile(IMAGE_PATH);
   const storageKey = `${createHash('sha256').update(bytes).digest('hex')}.png`;
   const runId = randomUUID();

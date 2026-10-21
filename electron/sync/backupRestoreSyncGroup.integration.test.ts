@@ -93,7 +93,7 @@ async function synchronizeFully(worker: (typeof workers)[number], peer: { origin
 }
 
 for (const pause of [false, true]) {
-  it(`covers a whole group through independent production instances after ${pause ? 'pause and edits' : 'immediate restore'}`, async () => {
+  it(`covers a whole group through independent production instances after ${pause ? 'pause and edits' : 'immediate restore'}`, { meta: { calibratedMs: 90000 } }, async () => {
     const { members, groupId, peers, script } = await setup();
     let source = workers[0]!;
     const receiver = workers[1]!;
@@ -144,11 +144,11 @@ for (const pause of [false, true]) {
     expect(snapshots.some((snapshot) => snapshot.versions.some(
       (version) => version.body_text === 'Remote before restore'
     ))).toBe(true);
-  }, 90000);
+  });
 }
 
 for (const enabled of [false, true]) {
-  it(`adopts a retained group after local-only restore with Sync ${enabled ? 'on' : 'off'}`, async () => {
+  it(`adopts a retained group after local-only restore with Sync ${enabled ? 'on' : 'off'}`, { meta: { calibratedMs: 90000 } }, async () => {
     await fs.mkdir(path.resolve('.tmp/artifacts/sync-join'), { recursive: true });
     root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/multi-'));
     await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
@@ -204,5 +204,5 @@ for (const enabled of [false, true]) {
     expect(reopened.library.nodesById['restored-note']).toBeUndefined();
     expect((await provider.send('reopen')).library.nodesById['provider-note']?.content).toBe('Retained remote note');
     await expect(joining.send('joinRequest', { origin: peer.origin, mode: 'use-group' })).rejects.toThrow('sync_group_identity_mismatch');
-  }, 90000);
+  });
 }

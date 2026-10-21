@@ -9,7 +9,7 @@ import { companionDesktopSessionId } from '../../network/companionDesktopSession
 let host: Awaited<ReturnType<typeof createJoiningMobile>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 
-it.each([1, 3808])('adopts %i approved provider topics without a notification session and persists them', async (count) => {
+it.each([1, 3808])('adopts %i approved provider topics without a notification session and persists them', { meta: { calibratedMs: 60000 } }, async (count) => {
   const started = performance.now();
   const stages: Record<string, number> = { creating: 0 };
   let diagnostics = () => '';
@@ -54,4 +54,4 @@ it.each([1, 3808])('adopts %i approved provider topics without a notification se
   await host.restartProvider();
   expect((await host.provider.send('snapshot')).library.nodesById['first-mobile-body']?.content)
     .toBe('Approved provider content');
-}, 60000);
+});

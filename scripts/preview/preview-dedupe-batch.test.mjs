@@ -81,7 +81,7 @@ function runFailingDedupe(repoRoot, label, env) {
 }
 
 describe('preview-dedupe batching', () => {
-  it('lets a waiting request drive the next preview after the validation window', async () => {
+  it('lets a waiting request drive the next preview after the validation window', { meta: { calibratedMs: 30_000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -112,9 +112,9 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 30_000);
+  });
 
-  it('shares a failed batch result with other waiting requests for the same hash', async () => {
+  it('shares a failed batch result with other waiting requests for the same hash', { meta: { calibratedMs: 30_000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -143,9 +143,9 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 30_000);
+  });
 
-  it('keeps failed windows preview requests waiting when configured until a later preview succeeds', async () => {
+  it('keeps failed windows preview requests waiting when configured until a later preview succeeds', { meta: { calibratedMs: INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -185,9 +185,9 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('returns failed windows preview requests by default without waiting for a later success', async () => {
+  it('returns failed windows preview requests by default without waiting for a later success', { meta: { calibratedMs: INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -205,9 +205,9 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('runs a queued preview request after the active driver finishes', async () => {
+  it('runs a queued preview request after the active driver finishes', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -231,9 +231,9 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 10_000);
+  });
 
-  it('does not open a validation window after a failed run', async () => {
+  it('does not open a validation window after a failed run', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const env = {
@@ -254,5 +254,5 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 10_000);
+  });
 });

@@ -160,8 +160,8 @@ async function expectImportSettingsCommands() {
   expect(publishWatchedFolderGroupMemberState).toHaveBeenCalledOnce();
 }
 
-it('handles app, sync peer, library path, and import settings commands', async () => {
+it('handles app, sync peer, library path, and import settings commands', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   await expectSyncAndAppSettingsCommands();
   await expectLibraryPathCommands();
   await expectImportSettingsCommands();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

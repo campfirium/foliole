@@ -11,7 +11,7 @@ import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnaps
 import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope';
 import { loadIosCompanionWorkspaceSnapshot } from '../workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-it('preserves mobile grading and desktop text in the same HTTP sync round', async () => {
+it('preserves mobile grading and desktop text in the same HTTP sync round', { meta: { calibratedMs: 30000 } }, async () => {
   invalidateCompanionReadingScope();
   const host = await createCompanionRequestFixture();
   const { persistFlowMutation } = await import('../../../../../companion/companionFlowMutation');
@@ -48,4 +48,4 @@ it('preserves mobile grading and desktop text in the same HTTP sync round', asyn
     invalidateCompanionReadingScope();
     await host.close();
   }
-}, 30000);
+});

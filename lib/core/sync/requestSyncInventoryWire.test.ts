@@ -21,12 +21,12 @@ async function* decode(messages: Iterable<RequestSyncMessage>) {
   }
 }
 
-it('streams one inventory object beyond the old 64 MiB session ceiling with bounded frames', async () => {
+it('streams one inventory object beyond the old 64 MiB session ceiling with bounded frames', { meta: { calibratedMs: 30_000 } }, async () => {
   const versions = Array.from({ length: 20_000 }, (_, index) => `${index}:${'a'.repeat(3500)}`);
   const original = entry(versions);
   const decoded = await decodeRequestSyncInventory(decode(iterateRequestSyncInventory({ entries: [original], roundId: new Uint8Array(16) })));
   expect(decoded.entries).toEqual([original]);
-}, 30_000);
+});
 
 it.each(['missing-part', 'wrong-index', 'wrong-object', 'duplicate-part'] as const)('rejects %s before returning an inventory', async fault => {
   const messages = [...iterateRequestSyncInventory({ entries: [entry(Array.from({ length: 4000 }, (_, index) => `v${index}`))], roundId: new Uint8Array(16) })];

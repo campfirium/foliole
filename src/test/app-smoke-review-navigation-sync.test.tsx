@@ -113,7 +113,7 @@ function seedReviewNavigationMismatch() {
   }));
 }
 
-it('keeps review paused when navigation history jumps to another queued node during study', async () => {
+it('keeps review paused when navigation history jumps to another queued node during study', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   mockDocumentLoad();
   seedReviewNavigationMismatch();
   enablePersistedStudyMode();
@@ -136,4 +136,4 @@ it('keeps review paused when navigation history jumps to another queued node dur
   await waitFor(() => {
     expect(screen.getByTestId('editor-value')).toHaveValue('Read this first');
   });
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

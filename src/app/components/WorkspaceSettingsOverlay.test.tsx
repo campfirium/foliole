@@ -174,7 +174,7 @@ it('opens the demo settings preview without loading live settings state', async 
   expect(workspaceSettingsOverlayMocks.useImportSourceWorkspaceState).not.toHaveBeenCalled();
 });
 
-it('opens the keep import preview dialog from the watch folders table', async () => {
+it('opens the keep import preview dialog from the watch folders table', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   const handlePreviewKeepImport = vi.fn(async () => createPreviewSummary());
   workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReturnValue(
     createOpenOverlayImportSettings(handlePreviewKeepImport) as never
@@ -200,7 +200,7 @@ it('opens the keep import preview dialog from the watch folders table', async ()
   expect(screen.getByText('first highlight')).toBeInTheDocument();
   expect(screen.getByText('second highlight')).toBeInTheDocument();
   expect(screen.getByText('third highlight')).toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('confirms before enabling delete handling for a watch folder', async () => {
   const handleChangeAction = vi.fn();

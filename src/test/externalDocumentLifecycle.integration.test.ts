@@ -15,7 +15,7 @@ import { createCompanionRequestFixture } from './companionRequestSync.testSuppor
 
 const ids = ['local-folder:original.md', 'readwise-reader-import-articles:Article.md', 'readwise-api:remote'];
 
-it('keeps independent external documents current across two desktops and the mobile HTTP client, including offline deletions', async () => {
+it('keeps independent external documents current across two desktops and the mobile HTTP client, including offline deletions', { meta: { calibratedMs: 60_000 } }, async () => {
   const mobile = await createCompanionRequestFixture();
   const desktop = mobile.fixture.rightSnapshot;
   const third = await mobile.fixture.startThird();
@@ -54,7 +54,7 @@ it('keeps independent external documents current across two desktops and the mob
     await mobile.sync();
     for (const id of ids) assertDeleted(mobile.sqlite, id);
   } finally { source.close(); peer.close(); await third.process.close(); await mobile.close(); }
-}, 60_000);
+});
 
 function retire(sqlite: Database.Database, documentId: string) {
   expect(retireExternalDocument(createBetterSqlite3Driver(sqlite), {

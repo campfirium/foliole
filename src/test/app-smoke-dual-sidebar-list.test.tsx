@@ -70,7 +70,7 @@ function buildDualTreeSwitchState() {
   });
 }
 
-it('shows folders in the left tree and topics in the adjacent topic tree', () => {
+it('shows folders in the left tree and topics in the adjacent topic tree', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'folder-projects',
     browseRootNodeId: 'folder-projects',
@@ -130,7 +130,7 @@ it('shows folders in the left tree and topics in the adjacent topic tree', () =>
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Nested idea' })).toBeInTheDocument();
   expect(within(currentFolderPanel).getByRole('treeitem', { name: 'Key Card' })).toBeInTheDocument();
   expect(within(currentFolderPanel).queryByRole('treeitem', { name: 'Research' })).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('keeps the dual tree visible when inbox is selected', () => {
   useWorkspaceStore.setState((state) => ({

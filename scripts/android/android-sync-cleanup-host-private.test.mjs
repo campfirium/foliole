@@ -34,7 +34,7 @@ describe('android host-private sync cleanup', () => {
     expect(formatCleanupReport(report)).toContain('applied=no');
   });
 
-  it('requires destructive apply before deleting non-local host-private rows', async () => {
+  it('requires destructive apply before deleting non-local host-private rows', { meta: { calibratedMs: 30_000 } }, async () => {
     const dbPath = await createSeededDatabase();
 
     const readOnly = cleanupHostPrivateResidue(dbPath, { apply: true, destructive: false });
@@ -51,7 +51,7 @@ describe('android host-private sync cleanup', () => {
     expect(countRows(dbPath, 'node_reading_host_state')).toBe(1);
     expect(countRows(dbPath, 'sync_object_state')).toBe(1);
     expect(countRows(dbPath, 'sync_delivery_receipts')).toBe(1);
-  }, 30_000);
+  });
 
   it('parses database and destructive flags', () => {
     expect(parseArgs(['--db', '/tmp/android.db', '--apply', '--destructive'])).toEqual({

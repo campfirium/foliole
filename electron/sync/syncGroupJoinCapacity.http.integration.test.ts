@@ -15,7 +15,7 @@ afterEach(async () => {
   if (root) await fs.rm(root, { recursive: true, force: true });
 });
 
-it('bounds unauthenticated HTTP admission while preserving approval, rejection and one-time collection', async () => {
+it('bounds unauthenticated HTTP admission while preserving approval, rejection and one-time collection', { meta: { calibratedMs: 90000 } }, async () => {
   await fs.mkdir('.tmp/artifacts/sync-join', { recursive: true });
   root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/capacity-'));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
@@ -70,4 +70,4 @@ it('bounds unauthenticated HTTP admission while preserving approval, rejection a
     ...input.device, device_name: '界'.repeat(6000)
   } })).toMatchObject({ status: 413, body: { error: 'request_too_large' } });
   expect((await post('join-requests', input)).status).toBe(202);
-}, 90000);
+});

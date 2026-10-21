@@ -6,7 +6,7 @@ import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySn
 
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
 
-it('allows a committed write during the readonly scan and rejects its stale conclusion', async () => {
+it('allows a committed write during the readonly scan and rejects its stale conclusion', { meta: { calibratedMs: 30000 } }, async () => {
   const library = createDisplayLibrary('android');
   try {
     await library.owner.open({ expectedHostName: 'scan-fixture', now: '2026-10-19T00:00:00.000Z' });
@@ -24,7 +24,7 @@ it('allows a committed write during the readonly scan and rejects its stale conc
     expect(await library.owner.read(db => db.query("SELECT title FROM nodes WHERE id = 'a'")))
       .toEqual([{ title: 'Edited' }]);
   } finally { await library.close(); }
-}, 30000);
+});
 
 it('returns references for an unchanged library and rejects cancellation', async () => {
   const library = createDisplayLibrary('android');

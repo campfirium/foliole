@@ -22,7 +22,7 @@ function readAnchor(databasePath: string) {
   } finally { db.close(); }
 }
 
-it('keeps every page through IPC validation, SQLite, hydrate, editing, HTTP sync and process restart', async () => {
+it('keeps every page through IPC validation, SQLite, hydrate, editing, HTTP sync and process restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'pdf-source', title: 'PDF', content: '' });
@@ -47,4 +47,4 @@ it('keeps every page through IPC validation, SQLite, hydrate, editing, HTTP sync
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

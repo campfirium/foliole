@@ -43,7 +43,7 @@ async function adopt() {
   return host;
 }
 
-it('finishes adoption and sends the saved local edit in the same companion round', async () => {
+it('finishes adoption and sends the saved local edit in the same companion round', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await adopt();
   const result = await host.sync();
   expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
@@ -55,9 +55,9 @@ it('finishes adoption and sends the saved local edit in the same companion round
       .toEqual([expect.objectContaining({ content: 'Saved local edit😀' })]);
   }
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 30000);
+});
 
-it('keeps adoption protected if the source changes after delivery', async () => {
+it('keeps adoption protected if the source changes after delivery', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await adopt();
   let changed = false;
   native.post.mockImplementation(async input => {
@@ -78,9 +78,9 @@ it('keeps adoption protected if the source changes after delivery', async () => 
     .toEqual([expect.objectContaining({ content: 'Saved local edit😀' })]);
   expect(readDesktopFramedSyncLibraryEvidence(host.fixture.rightSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Source changed' })]);
-}, 30000);
+});
 
-it('preserves a local addition and converges ordering after adoption completes', async () => {
+it('preserves a local addition and converges ordering after adoption completes', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await adopt();
   await host.fixture.left.seed({ content: 'Local addition', nodeId: 't326-second-article', title: 'Local addition' });
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
@@ -93,10 +93,10 @@ it('preserves a local addition and converges ordering after adoption completes',
     ]);
   }
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 30000);
+});
 
 
-it('retains a newer local open state while finishing adoption', async () => {
+it('retains a newer local open state while finishing adoption', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await adopt();
   async function opened(db: DbPort, time: string) {
     const payload = { node_id: 't326-adoption-article', last_opened_at: time };
@@ -116,9 +116,9 @@ it('retains a newer local open state while finishing adoption', async () => {
   expect(host.sqlite.prepare('SELECT last_opened_at FROM node_open_state WHERE node_id = ?')
     .pluck().get('t326-adoption-article')).toBe('2031-01-01T00:00:00.000Z');
   expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
-}, 30000);
+});
 
-it('keeps missing attachments pending without retransmitting converged database bodies', async () => {
+it('keeps missing attachments pending without retransmitting converged database bodies', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await adopt();
   await host.sync();
   const { fixture } = host;
@@ -135,4 +135,4 @@ it('keeps missing attachments pending without retransmitting converged database 
   await expect(fs.stat(path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey)))
     .rejects.toMatchObject({ code: 'ENOENT' });
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
-}, 30000);
+});

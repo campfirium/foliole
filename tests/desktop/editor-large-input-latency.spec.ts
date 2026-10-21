@@ -10,7 +10,7 @@ const BODY = 'Ordinary paragraph with enough text for a large document.\n\n'.rep
 const INPUT = '012345678901234567890123456789';
 
 test('measures real input frames and persists the complete large document', async ({ desktopWindow: page }) => {
-  test.setTimeout(120000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120000) });
   await expectWorkspaceShell(page);
   await page.evaluate(async ({ id, content }) => {
     await window.__folioleWorkspaceDebug?.seedNodes?.([{ id, content, kind: 'topic', title: 'Large input latency' }], { persist: true });

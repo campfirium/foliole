@@ -15,6 +15,6 @@
     "rootDir": "..",
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../lib/**/*.ts", "../scripts/agent-control/foliole-agent-routes.mjs"],
+  "include": ["./**/*.ts", "../lib/**/*.ts", "../scripts/agent-control/foliole-agent-routes.mjs", "../src/test/vitestTaskMeta.d.ts"],
   "exclude": ["../lib/core/database/androidCompanion*.ts"]
 }

@@ -12,7 +12,7 @@ afterEach(async () => { await host?.close(); host = undefined; });
 
 it.each([
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'a'.repeat(64)
-])('converges retired hash disagreement through real HTTP without rewriting history (%s)', async leftHash => {
+])('converges retired hash disagreement through real HTTP without rewriting history (%s)', { meta: { calibratedMs: 30000 } }, async leftHash => {
   host = await createCompanionRequestFixture();
   const { fixture } = host;
   const nodeId = 't326-retired-hash';
@@ -45,9 +45,9 @@ it.each([
       expect(db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('New local edit');
     }
   } finally { right.close(); }
-}, 30000);
+});
 
-it('discards a fixed request after its source summary changes and rebuilds it finitely', async () => {
+it('discards a fixed request after its source summary changes and rebuilds it finitely', { meta: { calibratedMs: 30000 } }, async () => {
   host = await createCompanionRequestFixture();
   const current = host;
   const nodeId = 't326-stale-summary';
@@ -63,9 +63,9 @@ it('discards a fixed request after its source summary changes and rebuilds it fi
   expect(await current.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
   expect(pulls).toBeGreaterThan(1);
   expect(current.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Fresh snapshot');
-}, 30000);
+});
 
-it('rejects a previous-generation HTTP request before data apply and accepts a fresh retry', async () => {
+it('rejects a previous-generation HTTP request before data apply and accepts a fresh retry', { meta: { calibratedMs: 30000 } }, async () => {
   host = await createCompanionRequestFixture();
   const current = host;
   await current.fixture.left.seed({ nodeId: 't326-protocol-boundary', title: 'Topic', content: 'Protected' });
@@ -86,4 +86,4 @@ it('rejects a previous-generation HTTP request before data apply and accepts a f
   await expect(current.sync()).rejects.toThrow('framed_sync_protocol_version_unsupported');
   expect(await readFixtureInventory(current.fixture.right)).toEqual(before);
   expect(await current.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
-}, 30000);
+});

@@ -71,7 +71,7 @@ async function readOwnerFacts(app: ElectronApplication) {
 test('shows the import device and keeps an offline switch pending', async ({
   desktopApp, desktopSession, desktopWindow
 }) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(desktopWindow);
   const sourceRoot = path.join(desktopSession.target.runtimeStateRoot, 'Readwise');
   await seedIsolatedLibrary(desktopApp, sourceRoot);
@@ -96,7 +96,7 @@ test('shows the import device and keeps an offline switch pending', async ({
 test('asks for an import device instead of trusting a v0.7.14 device name', async ({
   desktopApp, desktopSession, desktopWindow
 }) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(desktopWindow);
   const sourceRoot = path.join(desktopSession.target.runtimeStateRoot, 'Readwise');
   await seedIsolatedLibrary(desktopApp, sourceRoot, { host_name: 'Offline Desktop' });

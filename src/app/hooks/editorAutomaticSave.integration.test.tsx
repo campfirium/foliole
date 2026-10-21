@@ -66,7 +66,7 @@ async function mountDesktopEditor(size: number) {
   return { baseVersionId, node, hook, host, reader };
 }
 
-it.each([0, 1024 * 1024 - 4096])('persists real desktop editor input with one idle wait and %i extra characters', async size => {
+it.each([0, 1024 * 1024 - 4096])('persists real desktop editor input with one idle wait and %i extra characters', { meta: { calibratedMs: 30_000 } }, async size => {
   const { baseVersionId, node, hook, host, reader } = await mountDesktopEditor(size);
   try {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
@@ -107,4 +107,4 @@ it.each([0, 1024 * 1024 - 4096])('persists real desktop editor input with one id
     }
     expect(reader.prepare('SELECT COUNT(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 4 });
   } finally { reader.close(); hook.unmount(); host.remove(); }
-}, 30_000);
+});

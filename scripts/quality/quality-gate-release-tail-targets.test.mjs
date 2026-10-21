@@ -75,7 +75,7 @@ describe('quality-gate release base and tail targets', () => {
       rejected: ['test:release:desktop-src', 'test:windows:native-preview'],
       target: 'release-tooling'
     }
-  ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
+  ])('keeps $target isolated to $name', { meta: { calibratedMs: 60000 } }, async ({ expected, rejected, target }) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -89,9 +89,9 @@ describe('quality-gate release base and tail targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps release-ios-tail isolated to the iOS release placeholder', async () => {
+  it('keeps release-ios-tail isolated to the iOS release placeholder', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -109,9 +109,9 @@ describe('quality-gate release base and tail targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps release gate acceleration scoped to bucket-level parallelism by default', async () => {
+  it('keeps release gate acceleration scoped to bucket-level parallelism by default', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -127,9 +127,9 @@ describe('quality-gate release base and tail targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('lets callers lower release gate acceleration when a machine is constrained', async () => {
+  it('lets callers lower release gate acceleration when a machine is constrained', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -149,5 +149,5 @@ describe('quality-gate release base and tail targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

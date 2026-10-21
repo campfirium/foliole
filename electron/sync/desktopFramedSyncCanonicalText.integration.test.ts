@@ -20,7 +20,7 @@ const source = { source_fingerprint: 'large-source', provider: 'desktop_text_fil
   remote_provider: null, remote_connection_ref: null, remote_document_id: null,
   remote_annotations_json: '[]', remote_import_state_json: importedState };
 
-it('transfers a canonical import payload above 64 KiB intact over production HTTP and across restart', async () => {
+it('transfers a canonical import payload above 64 KiB intact over production HTTP and across restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'imported-topic', title: 'Imported article', content: 'Imported body' });
@@ -42,7 +42,7 @@ it('transfers a canonical import payload above 64 KiB intact over production HTT
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 function assertPayload(databasePath: string) {
   const db = new Database(databasePath, { readonly: true });

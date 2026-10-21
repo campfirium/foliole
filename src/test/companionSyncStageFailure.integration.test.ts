@@ -6,7 +6,7 @@ import { describeCompanionSyncPassResult } from '../companion/companionSyncPassR
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport';
 
-it('offers attachments a bounded slice after exhausting the data passes', async () => {
+it('offers attachments a bounded slice after exhausting the data passes', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   try {
     const nodeId = 't326-pending-data-before-attachments';
@@ -36,9 +36,9 @@ it('offers attachments a bounded slice after exhausting the data passes', async 
         .toContainEqual(expect.objectContaining({ id: nodeId, content: 'Revision 4' }));
     }
   } finally { await host.close(); }
-}, 60_000);
+});
 
-it('keeps committed text successful when attachment HTTP fails and resumes without new document versions', async () => {
+it('keeps committed text successful when attachment HTTP fails and resumes without new document versions', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   try {
     await host.fixture.left.seed({ nodeId: 't326-stage-mobile', title: 'Mobile', content: 'Mobile text' });
@@ -64,4 +64,4 @@ it('keeps committed text successful when attachment HTTP fails and resumes witho
     expect(describeCompanionSyncPassResult(retried).outcome).toBe('completed');
     expect(host.sqlite.prepare('SELECT COUNT(*) FROM node_sync_versions').pluck().get()).toBe(versions);
   } finally { await host.close(); }
-}, 60_000);
+});

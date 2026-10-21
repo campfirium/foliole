@@ -44,7 +44,7 @@ beforeAll(() => {
   expect(compiled.error ?? compiled.stderr).toBe('');
   expect(compiled.status).toBe(0);
   javaBinary = binary('java');
-}, 30000);
+});
 afterAll(() => { if (directory) fs.rmSync(directory, { recursive: true, force: true }); });
 
 it('allows daily Sync Now evidence while keeping general projection isolated', () => {

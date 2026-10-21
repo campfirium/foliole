@@ -82,7 +82,7 @@ async function stopRuns(runs) {
 }
 
 describe('preview-dedupe status contract', () => {
-  it('does not print a success status while a validation-window request is waiting', async () => {
+  it('does not print a success status while a validation-window request is waiting', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -116,9 +116,9 @@ describe('preview-dedupe status contract', () => {
       await stopRuns(runs);
       await removeRepo(repoRoot);
     }
-  }, 10_000);
+  });
 
-  it('keeps waiting-for-success visible without printing success before a later run passes', async () => {
+  it('keeps waiting-for-success visible without printing success before a later run passes', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -149,9 +149,9 @@ describe('preview-dedupe status contract', () => {
       await stopRuns(runs);
       await removeRepo(repoRoot);
     }
-  }, 10_000);
+  });
 
-  it('prints a stable android success status from the dedupe layer', async () => {
+  it('prints a stable android success status from the dedupe layer', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -165,9 +165,9 @@ describe('preview-dedupe status contract', () => {
       await stopRuns(runs);
       await removeRepo(repoRoot);
     }
-  }, 10_000);
+  });
 
-  it('drives a real preview for a covered windows hash when the runtime is stale', async () => {
+  it('drives a real preview for a covered windows hash when the runtime is stale', { meta: { calibratedMs: 10_000 } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -195,5 +195,5 @@ describe('preview-dedupe status contract', () => {
       await stopRuns(runs);
       await removeRepo(repoRoot);
     }
-  }, 10_000);
+  });
 });

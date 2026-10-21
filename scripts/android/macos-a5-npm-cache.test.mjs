@@ -131,7 +131,7 @@ function verifyRecovery(repo, install, revision, cache, integrity, requests) {
   expect(failure).toEqual([expect.objectContaining({ stage: 'dependencies', resultStatus: 'failed' })]);
 }
 
-it('reuses verified downloads across frozen capsules and repairs corrupt cache without sharing installs', async () => {
+it('reuses verified downloads across frozen capsules and repairs corrupt cache without sharing installs', { meta: { calibratedMs: 60000 } }, async () => {
   const deadline = Date.now() + 60000;
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-npm-cache-'));
   let server;
@@ -162,4 +162,4 @@ it('reuses verified downloads across frozen capsules and repairs corrupt cache w
     await server?.worker.terminate();
     await fs.promises.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
-}, 60000);
+});

@@ -7,7 +7,7 @@ import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.tes
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('delivers a parent beyond the active batch before its child and preserves both directions after reopen', async () => {
+it('delivers a parent beyond the active batch before its child and preserves both directions after reopen', { meta: { calibratedMs: 120_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
@@ -32,4 +32,4 @@ it('delivers a parent beyond the active batch before its child and preserves bot
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     if (passed) await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 120_000);
+});

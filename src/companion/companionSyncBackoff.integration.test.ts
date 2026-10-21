@@ -30,7 +30,7 @@ vi.mock('../shared/platform/companion/network/companionSyncGroupMemberState', ()
 vi.mock('./companionReviewSchedulerSettingsHydration', () => ({ hydrateCompanionReviewSchedulerSettings: async () => undefined }));
 vi.mock('./companionSystemEntryDisplayNamesHydration', () => ({ hydrateCompanionSystemEntryDisplayNames: async () => undefined }));
 
-it('releases a busy automatic round and lets a manual production round persist both directions during backoff', async () => {
+it('releases a busy automatic round and lets a manual production round persist both directions during backoff', { meta: { calibratedMs: 60_000 } }, async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-t351-'));
   const script = path.join(root, 'fixture.mjs');
   await buildDesktopFramedSyncFixture(script, true);
@@ -80,9 +80,9 @@ it('releases a busy automatic round and lets a manual production round persist b
     await host.close();
     await fs.rm(root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
-it('distinguishes a committed neighbor from repeated unchanged pending and resumes after the source is available', async () => {
+it('distinguishes a committed neighbor from repeated unchanged pending and resumes after the source is available', { meta: { calibratedMs: 30_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   const sync = () => runCompanionStreamSync({ cancelled: () => false,
@@ -116,10 +116,10 @@ it('distinguishes a committed neighbor from repeated unchanged pending and resum
         .toContainEqual(expect.objectContaining({ id: 't326-backoff-unavailable', content: 'Saved edit' }));
     }
   } finally { await host.close(); }
-}, 30_000);
+});
 
 
-it('backs off real transfers when concurrent edits keep differences from shrinking, then persists convergence', async () => {
+it('backs off real transfers when concurrent edits keep differences from shrinking, then persists convergence', { meta: { calibratedMs: 30_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   const nodeId = 't326-backoff-changing-source';
@@ -153,9 +153,9 @@ it('backs off real transfers when concurrent edits keep differences from shrinki
         .toContainEqual(expect.objectContaining({ id: nodeId, content: `Revision ${revision}` }));
     }
   } finally { await host.close(); }
-}, 30_000);
+});
 
-it('preserves a manual click joined during automatic preparation through peer waiting and durable exchange', async () => {
+it('preserves a manual click joined during automatic preparation through peer waiting and durable exchange', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   try {
@@ -200,4 +200,4 @@ it('preserves a manual click joined during automatic preparation through peer wa
       ]));
     }
   } finally { vi.restoreAllMocks(); await host.close(); }
-}, 60_000);
+});

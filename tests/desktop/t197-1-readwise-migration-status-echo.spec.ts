@@ -93,7 +93,7 @@ async function captureConnection(section: Locator, testInfo: TestInfo, name: str
 
 test('echoes the active migration below the connection and removes it on completion', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const activeStateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t197-1-active-'));
   const completedStateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t197-1-completed-'));
   let session: T178AcceptanceSession | null = null;

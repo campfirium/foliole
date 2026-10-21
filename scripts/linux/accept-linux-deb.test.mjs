@@ -106,7 +106,7 @@ it('records every mDNS event exposed by the observer library', () => {
   });
 });
 
-it('closes the control pipe so a spawned observer exits on discovery failure', async () => {
+it('closes the control pipe so a spawned observer exits on discovery failure', { meta: { calibratedMs: 3_000 } }, async () => {
   const observerSource = `
     process.stdout.write(JSON.stringify({ status: 'ready' }) + '\\n');
     process.stdin.setEncoding('utf8');
@@ -126,4 +126,4 @@ it('closes the control pipe so a spawned observer exits on discovery failure', a
 
   await expect(observer.discover()).rejects.toThrow('Foliole mDNS service was not discovered');
   expect(Date.now() - startedAt).toBeLessThan(2_000);
-}, 3_000);
+});

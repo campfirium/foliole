@@ -96,7 +96,7 @@ test('shows successful and degraded EPUB chapters immediately without restarting
 test('imports a large EPUB with large images through the desktop import command', async ({
   desktopApp, desktopWindow
 }, testInfo) => {
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const fixturePath = testInfo.outputPath('large.epub');
   await fs.mkdir(path.dirname(fixturePath), { recursive: true });
   await createLargeStoredImageBook(fixturePath);

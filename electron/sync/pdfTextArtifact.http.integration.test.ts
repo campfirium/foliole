@@ -27,7 +27,7 @@ import { attachmentGroupKey, attachmentHttpDirectory, attachmentHttpServer,
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 
-it('transfers PDF text over authenticated resumable attachments and imports it once without page inventory', async () => {
+it('transfers PDF text over authenticated resumable attachments and imports it once without page inventory', { meta: { calibratedMs: 60_000 } }, async () => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
   const pdf = Buffer.from('PDF resource'); const hash = createHash('sha256').update(pdf).digest('hex');
@@ -82,7 +82,7 @@ it('transfers PDF text over authenticated resumable attachments and imports it o
     clearDesktopSyncGroupMemberStateReadiness(); clearCompanionRequestNonceCache();
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
-}, 60_000);
+});
 
 function trackArtifactBlocks(host: Awaited<ReturnType<typeof attachmentHttpSource>>['host'], onBlock: () => void) {
   const receive = host.receive.bind(host);

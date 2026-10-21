@@ -67,7 +67,7 @@ it('recovers a published file after its owner is killed before writing availabil
 });
 
 it.each([['prefix', 3], ['tail', 3], ['aligned', 3], ['short', 3], ['prefix', 30], ['tail', 30],
-  ['prefix', 300], ['tail', 300]])('recovers %s after process death with %s MiB of original bytes', async (mode, mebibytes) => {
+  ['prefix', 300], ['tail', 300]])('recovers %s after process death with %s MiB of original bytes', { meta: { calibratedMs: 90_000 } }, async (mode, mebibytes) => {
   const fixture = await createLargeCrashFixture(Number(mebibytes));
   const worker = (action: string) => fork(path.resolve('electron/sync/desktopAttachmentCrash.fixture.ts'),
     [fixture.root, fixture.resource.storageKey, action, String(fixture.resource.byteLength), fixture.sourcePath], {
@@ -110,7 +110,7 @@ it.each([['prefix', 3], ['tail', 3], ['aligned', 3], ['short', 3], ['prefix', 30
     }
     await fixture.close();
   }
-}, 90_000);
+});
 
 async function reacquire(open: Awaited<ReturnType<typeof createBlockReceiverFixture>>['open']) {
   const deadline = Date.now() + 5000;

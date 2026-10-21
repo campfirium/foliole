@@ -162,28 +162,28 @@ describe('test-files', () => {
     }
   });
 
-  it('refuses real sqlite tests outside the Electron ABI runner', async () => {
+  it('refuses real sqlite tests outside the Electron ABI runner', { meta: { calibratedMs: ABI_GUARD_TEST_TIMEOUT_MS } }, async () => {
     const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts']);
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
     expect(result.stderr).toContain('npm run test:sqlite:electron');
-  }, ABI_GUARD_TEST_TIMEOUT_MS);
+  });
 
-  it('refuses indirect database connection tests outside the Electron ABI runner', async () => {
+  it('refuses indirect database connection tests outside the Electron ABI runner', { meta: { calibratedMs: ABI_GUARD_TEST_TIMEOUT_MS } }, async () => {
     const result = await runTestFiles(['electron/database/externalDocumentImportVisibility.test.ts']);
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
     expect(result.stderr).toContain('electron/database/externalDocumentImportVisibility.test.ts');
-  }, ABI_GUARD_TEST_TIMEOUT_MS);
+  });
 
-  it('refuses spoofed Electron-as-Node environment under the ordinary Node ABI', async () => {
+  it('refuses spoofed Electron-as-Node environment under the ordinary Node ABI', { meta: { calibratedMs: ABI_GUARD_TEST_TIMEOUT_MS } }, async () => {
     const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts'], {
       ELECTRON_RUN_AS_NODE: '1'
     });
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
-  }, ABI_GUARD_TEST_TIMEOUT_MS);
+  });
 });

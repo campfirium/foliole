@@ -80,7 +80,7 @@ function createReadingNode(id: string, title: string, content: string, nextAt = 
   });
 }
 
-it('switches toolbar actions when review queue advances from fsrs card to reading card', async () => {
+it('switches toolbar actions when review queue advances from fsrs card to reading card', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   mockDocumentLoad();
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'fsrs-1',
@@ -133,7 +133,7 @@ it('switches toolbar actions when review queue advances from fsrs card to readin
   });
   expect(screen.getByRole('button', { name: 'Later' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Show Answer' })).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('keeps review paused when clicking another queued node during study', async () => {
   mockDocumentLoad();

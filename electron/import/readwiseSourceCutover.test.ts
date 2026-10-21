@@ -157,7 +157,7 @@ it('reruns the API migration instead of accepting a historical v2 completion', a
   });
 });
 
-it('binds the remote identity and highlights while preserving the legacy body and local cloze', async () => {
+it('binds the remote identity and highlights while preserving the legacy body and local cloze', { meta: { calibratedMs: 20_000 } }, async () => {
   await seedMigratableSource(state.sourcePath);
   ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   const fetchImpl = migrationFetch();
@@ -203,7 +203,7 @@ it('binds the remote identity and highlights while preserving the legacy body an
   expect(requestUrls.filter((url) => url.pathname === '/api/v2/export/')).toHaveLength(1);
   expect(requestUrls.filter((url) => url.searchParams.has('category'))).toHaveLength(0);
   expect(requestUrls.filter((url) => url.searchParams.has('id'))).toHaveLength(0);
-}, 20_000);
+});
 
 it('rolls back the final completion record when the source mode cannot commit', async () => {
   await seedMigratableSource(state.sourcePath);

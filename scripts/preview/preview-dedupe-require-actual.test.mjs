@@ -65,7 +65,7 @@ async function waitForOutput(output, pattern, timeoutMs = 2000) {
 }
 
 describe('preview-dedupe required real preview', () => {
-  it('does not skip a covered windows hash when a queued request becomes the driver', async () => {
+  it('does not skip a covered windows hash when a queued request becomes the driver', { meta: { calibratedMs: PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -99,9 +99,9 @@ describe('preview-dedupe required real preview', () => {
       }
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('takes over a dead active driver immediately instead of waiting for the stale window', async () => {
+  it('takes over a dead active driver immediately instead of waiting for the stale window', { meta: { calibratedMs: PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     const runs = [];
     try {
@@ -141,5 +141,5 @@ describe('preview-dedupe required real preview', () => {
       }
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
+  });
 });

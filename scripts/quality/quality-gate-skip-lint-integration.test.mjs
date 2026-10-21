@@ -50,7 +50,7 @@ async function writeEslintShim(rootDir) {
 }
 
 describe('quality gate skip lint integration', () => {
-  it('runs skip lint for skip-governance changes before quality-gate-fast completes', async () => {
+  it('runs skip lint for skip-governance changes before quality-gate-fast completes', { meta: { calibratedMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
     try {
       await writePackageJson(tempRoot, {
@@ -70,9 +70,9 @@ describe('quality gate skip lint integration', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('skips skip lint for source-only fast changes', async () => {
+  it('skips skip lint for source-only fast changes', { meta: { calibratedMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
     try {
       await writePackageJson(tempRoot, {
@@ -92,9 +92,9 @@ describe('quality gate skip lint integration', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('blocks full target quality gates before target steps run', async () => {
+  it('blocks full target quality gates before target steps run', { meta: { calibratedMs: QUALITY_GATE_INTEGRATION_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-skip-lint-'));
     try {
       await writePackageJson(tempRoot, {
@@ -117,5 +117,5 @@ describe('quality gate skip lint integration', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, QUALITY_GATE_INTEGRATION_TIMEOUT_MS);
+  });
 });

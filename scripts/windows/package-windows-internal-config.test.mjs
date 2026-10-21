@@ -34,7 +34,7 @@ describe('internal Windows package config', () => {
     expect(config.nsis.shortcutName).toBe(INTERNAL_PRODUCT_NAME);
   });
 
-  it('writes the generated NSIS include beside the internal builder config', () => {
+  it('writes the generated NSIS include beside the internal builder config', { meta: { calibratedMs: 15_000 } }, () => {
     const root = mkdtempSync(join(tmpdir(), 'foliole-internal-config-test-'));
     try {
       mkdirSync(join(root, 'electron'), { recursive: true });
@@ -53,5 +53,5 @@ describe('internal Windows package config', () => {
     } finally {
       rmSync(root, { force: true, recursive: true });
     }
-  }, 15_000);
+  });
 });

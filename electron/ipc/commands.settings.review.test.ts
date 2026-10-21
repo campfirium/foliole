@@ -7,7 +7,7 @@ beforeEach(() => {
   resetCommandsSettingsTestDoubles();
 });
 
-it('handles review scheduler storage commands', async () => {
+it('handles review scheduler storage commands', { meta: { calibratedMs: 15000 } }, async () => {
   await expect(handleInvokeRequest({ command: 'load_review_scheduler_settings' })).resolves.toMatchObject({
     desiredRetention: 0.9
   });
@@ -41,4 +41,4 @@ it('handles review scheduler storage commands', async () => {
       readingIntervalGrowthFactorRange: { min: 1.08, max: 1.42 }
     }
   });
-}, 15000);
+});

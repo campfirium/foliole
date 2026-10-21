@@ -16,7 +16,7 @@ it.each([
   { scenario: 'continuous edits', desktop: false },
   { scenario: 'unavailable object', desktop: false },
   { scenario: 'unavailable object', desktop: true }
-])('finishes an attachment despite $scenario with desktop initiator=$desktop', async ({ scenario, desktop }) => {
+])('finishes an attachment despite $scenario with desktop initiator=$desktop', { meta: { calibratedMs: 60_000 } }, async ({ scenario, desktop }) => {
   const host = await createCompanionRequestFixture();
   const bytes = Buffer.alloc(2 * ATTACHMENT_BLOCK_BYTES + 19, 0x61);
   const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
@@ -71,9 +71,9 @@ it.each([
       if (scenario === 'continuous edits') expect(edit).toBeGreaterThanOrEqual(12);
     } finally { release(); }
   } finally { await host.close(); }
-}, 60_000);
+});
 
-it('uses the normal attachment budget when repeated data requests make no progress', async () => {
+it('uses the normal attachment budget when repeated data requests make no progress', { meta: { calibratedMs: 60000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const bytes = Buffer.alloc(16 * 1024 * 1024, 0x62);
   const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
@@ -104,4 +104,4 @@ it('uses the normal attachment budget when repeated data requests make no progre
     const target = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
     expect((await readFile(target)).equals(bytes)).toBe(true);
   } finally { await host.close(); }
-}, 60000);
+});

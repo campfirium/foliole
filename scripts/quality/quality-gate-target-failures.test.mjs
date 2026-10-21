@@ -97,7 +97,7 @@ async function writePackageJson(rootDir, scripts) {
 }
 
 describe('quality-gate-target.sh failure reporting', () => {
-  it('reports every failed parallel step', async () => {
+  it('reports every failed parallel step', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -121,9 +121,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('reports missing scripts from parallel steps', async () => {
+  it('reports missing scripts from parallel steps', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -143,9 +143,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('prints heartbeat while parallel steps are still running', async () => {
+  it('prints heartbeat while parallel steps are still running', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -167,9 +167,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('fails for an unknown target', async () => {
+  it('fails for an unknown target', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {});
@@ -184,9 +184,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('fails when a required package script is missing', async () => {
+  it('fails when a required package script is missing', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -205,9 +205,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('prints a compact failure excerpt instead of dumping the whole log', async () => {
+  it('prints a compact failure excerpt instead of dumping the whole log', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -231,9 +231,9 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 
-  it('keeps the full failure log on disk and prints its absolute path', async () => {
+  it('keeps the full failure log on disk and prints its absolute path', { meta: { calibratedMs: FAILURE_REPORT_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -253,5 +253,5 @@ describe('quality-gate-target.sh failure reporting', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, FAILURE_REPORT_TIMEOUT_MS);
+  });
 });

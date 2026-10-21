@@ -111,7 +111,7 @@ async function runContendedImport(app: ElectronApplication) {
 
 test('imports a Reader article after another database owner releases the connection', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t185-auto-'));
   const session = await createT178ApiAcceptanceSession(stateRoot);
   try {

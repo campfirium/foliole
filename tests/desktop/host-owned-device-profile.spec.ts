@@ -127,7 +127,7 @@ async function seedCopiedLibrary(session: Awaited<ReturnType<typeof launchDeskto
 
 test('a copied library opens as a distinct member without taking its original sources', async ({ browserName }, info) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/copied-device-profile-'));
   const originalRoot = path.join(root, 'original');
   const copiedRoot = path.join(root, 'copied');

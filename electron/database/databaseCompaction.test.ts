@@ -69,7 +69,7 @@ it('compacts the database, preserves data, and keeps a verified Safety snapshot'
     .some((name) => name.startsWith('.foliole-compact-'))).toBe(false);
 });
 
-it('keeps the main database bytes and availability unchanged when replacement fails', async () => {
+it('keeps the main database bytes and availability unchanged when replacement fails', { meta: { calibratedMs: 30_000 } }, async () => {
   createFreePages();
   const connection = openDatabaseConnection();
   loadBackupSettings();
@@ -86,7 +86,7 @@ it('keeps the main database bytes and availability unchanged when replacement fa
     .toEqual({ count: 10 });
   expect((await fs.readdir(path.dirname(databasePath)))
     .some((name) => name.startsWith('.foliole-compact-'))).toBe(false);
-}, 30_000);
+});
 
 function createFreePages() {
   const sqlite = openDatabaseConnection().sqlite;

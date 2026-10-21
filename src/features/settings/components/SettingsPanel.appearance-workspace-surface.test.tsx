@@ -39,7 +39,7 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('persists workspace surface palette and region assignments from appearance settings', async () => {
+it('persists workspace surface palette and region assignments from appearance settings', { meta: { calibratedMs: 15000 } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -55,7 +55,7 @@ it('persists workspace surface palette and region assignments from appearance se
     expect(palette[5]).toBe('#c9d4e7');
     expect(assignments['main-document']).toBe(5);
   });
-}, 15000);
+});
 
 it('resets the free palette back to five colors', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);

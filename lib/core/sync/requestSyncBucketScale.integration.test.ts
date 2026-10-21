@@ -18,7 +18,7 @@ import { respondRequestSyncDatabase } from './requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncWireFrame } from './requestSyncWire.js';
 
-it('keeps one-change wire volume bounded at both fixed library scales using narrow SQLite reads', async () => {
+it('keeps one-change wire volume bounded at both fixed library scales using narrow SQLite reads', { meta: { calibratedMs: 60_000 } }, async () => {
   const evidence = [];
   for (const count of [5150, 35000]) {
     const left = textDevice();
@@ -67,7 +67,7 @@ it('keeps one-change wire volume bounded at both fixed library scales using narr
   }
   await mkdir('.tmp/artifacts/t357', { recursive: true });
   await writeFile('.tmp/artifacts/t357/bucket-scale.json', JSON.stringify(evidence, null, 2));
-}, 60_000);
+});
 
 function seedScale(device: ReturnType<typeof textDevice>, count: number) {
   const nodes = count === 35000 ? 30000 : count;

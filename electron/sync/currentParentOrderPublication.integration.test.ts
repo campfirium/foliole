@@ -30,7 +30,7 @@ function roundArgs(peer: DesktopFramedSyncFixtureSnapshot) {
     libraryEpoch: `${peer.deviceId}-epoch` }, peerOrigin: peer.origin } };
 }
 
-it.each(['left', 'right'] as const)('keeps the %s writer through offline group leave and rejoin', async (side) => {
+it.each(['left', 'right'] as const)('keeps the %s writer through offline group leave and rejoin', { meta: { calibratedMs: 60_000 } }, async (side) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b', 'c']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
@@ -52,9 +52,9 @@ it.each(['left', 'right'] as const)('keeps the %s writer through offline group l
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
-it('delivers the latest saved order after offline edits, collection and restart', async () => {
+it('delivers the latest saved order after offline edits, collection and restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b', 'c']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
@@ -79,9 +79,9 @@ it('delivers the latest saved order after offline edits, collection and restart'
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
-it('propagates a changed source set even when both rendered arrays already match', async () => {
+it('propagates a changed source set even when both rendered arrays already match', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
@@ -108,9 +108,9 @@ it('propagates a changed source set even when both rendered arrays already match
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
-it('reprojects a renamed unconstrained addition on both peers and after restart without new order sources', async () => {
+it('reprojects a renamed unconstrained addition on both peers and after restart without new order sources', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     for (const nodeId of ['a', 'b']) await fixture.left.seed({ nodeId, content: 'Body', title: nodeId });
@@ -135,4 +135,4 @@ it('reprojects a renamed unconstrained addition on both peers and after restart 
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

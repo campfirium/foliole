@@ -36,7 +36,7 @@ it.each([
   { platform: 'ios', earlyResume: false },
   { platform: 'ios', earlyResume: true },
   { platform: 'android', earlyResume: false, pausedStillActive: true }
-] as const)('$platform generates a stable snapshot and waits for active state (earlyResume=$earlyResume)', async scenario => {
+] as const)('$platform generates a stable snapshot and waits for active state (earlyResume=$earlyResume)', { meta: { calibratedMs: 30_000 } }, async scenario => {
   const { platform, earlyResume } = scenario;
   const pausedStillActive = 'pausedStillActive' in scenario;
   const root = await mkdtemp(path.resolve('.tmp/artifacts/request-snapshot-probe-'));
@@ -89,7 +89,7 @@ it.each([
     fixture.close();
     await rm(root, { recursive: true, force: true });
   }
-}, 30_000);
+});
 
 type Input = { database: string; readonly?: boolean; statement: string; statements: string; values: unknown[] };
 

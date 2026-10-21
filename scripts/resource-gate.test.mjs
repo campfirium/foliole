@@ -76,7 +76,7 @@ async function withFixture(fn) {
 }
 
 describe('resource gate', () => {
-  it('serializes node-heavy commands', async () => {
+  it('serializes node-heavy commands', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       const env = { RESOURCE_GATE_LOG: logFile };
       const first = runGate({ className: 'node-heavy', command: [process.execPath, stub, 'first', '100'], env, runtimeDir });
@@ -87,9 +87,9 @@ describe('resource gate', () => {
       expect(results.map((result) => result.code)).toEqual([0, 0]);
       expect(log.indexOf('first:end') < log.indexOf('second:start') || log.indexOf('second:end') < log.indexOf('first:start')).toBe(true);
     });
-  }, 10000);
+  });
 
-  it('keeps a fresh initializing lock until its owner releases it', async () => {
+  it('keeps a fresh initializing lock until its owner releases it', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });
       const lockFile = path.join(runtimeDir, 'resource-gate.node-heavy.lock');
@@ -105,9 +105,9 @@ describe('resource gate', () => {
       expect(await queued).toMatchObject({ code: 0 });
       expect(await readFile(logFile, 'utf8')).toContain('queued:end');
     });
-  }, 10000);
+  });
 
-  it('makes preview conflict with node-heavy', async () => {
+  it('makes preview conflict with node-heavy', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       const env = { RESOURCE_GATE_LOG: logFile };
       const preview = runGate({ className: 'preview', command: [process.execPath, stub, 'preview', '120'], env, runtimeDir });
@@ -117,9 +117,9 @@ describe('resource gate', () => {
 
       expect(log.indexOf('preview:end') < log.indexOf('test:start') || log.indexOf('test:end') < log.indexOf('preview:start')).toBe(true);
     });
-  }, 10000);
+  });
 
-  it('passes through when the resource is already held by the current chain', async () => {
+  it('passes through when the resource is already held by the current chain', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });
       await writeFile(path.join(runtimeDir, 'resource-gate.node-heavy.lock'), '{"pid":99999999}\n', 'utf8');
@@ -133,9 +133,9 @@ describe('resource gate', () => {
       expect(result.code).toBe(0);
       expect(await readFile(logFile, 'utf8')).toContain('reentrant:end');
     });
-  }, 10000);
+  });
 
-  it('preserves command failure and lets the next caller proceed', async () => {
+  it('preserves command failure and lets the next caller proceed', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       const env = { RESOURCE_GATE_LOG: logFile };
       const failed = await runGate({ className: 'node-heavy', command: [process.execPath, stub, 'bad', '1', '6'], env, runtimeDir });
@@ -145,9 +145,9 @@ describe('resource gate', () => {
       expect(next.code).toBe(0);
       expect(await readFile(logFile, 'utf8')).toContain('next:end');
     });
-  }, 10000);
+  });
 
-  it('terminates timed out commands and lets the next caller proceed', async () => {
+  it('terminates timed out commands and lets the next caller proceed', { meta: { calibratedMs: 20000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       const baseEnv = {
         FOLIOLE_WINDOWS_PROCESS_EXIT_TIMEOUT_MS: '1000',
@@ -178,9 +178,9 @@ describe('resource gate', () => {
       expect(log).not.toContain('slow:end');
       expect(log).toContain('after-timeout:end');
     });
-  }, 20000);
+  });
 
-  it('takes over stale locks and prints safe queue progress', async () => {
+  it('takes over stale locks and prints safe queue progress', { meta: { calibratedMs: 10000 } }, async () => {
     await withFixture(async ({ logFile, runtimeDir, stub }) => {
       await mkdir(runtimeDir, { recursive: true });
       await writeFile(
@@ -206,7 +206,7 @@ describe('resource gate', () => {
       expect(message).not.toMatch(/preview|failed|error|STARTED|SYNCED/iu);
       expect(() => assertAgentCompletionMessage(message)).not.toThrow();
     });
-  }, 10000);
+  });
 
   it('launches npm through cmd on Windows', () => {
     expect(normalizeSpawnCommand(['npm', 'run', 'electron:compile:raw'], 'win32')).toEqual({

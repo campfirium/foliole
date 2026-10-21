@@ -24,7 +24,7 @@ const documentId = 'removed-folder:original.md';
 const body = 'Original external document retained independently of folder configuration';
 const bodyHash = hashTextBody(body);
 
-it('synchronizes folder deletion over production HTTP and preserves it after both peers reopen', async () => {
+it('synchronizes folder deletion over production HTTP and preserves it after both peers reopen', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let target = fixture.rightSnapshot;
   try {
@@ -57,7 +57,7 @@ it('synchronizes folder deletion over production HTTP and preserves it after bot
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 async function seedFolder(databasePath: string, ownerDeviceIdentityKey: string) {
   const db = new Database(databasePath);

@@ -49,12 +49,12 @@ async function sync(worker: (typeof workers)[number], peer: Awaited<ReturnType<t
   await worker.send('sync', { ...peer });
 }
 
-it('preserves restore data while another asynchronous database transaction is active', async () => {
+it('preserves restore data while another asynchronous database transaction is active', { meta: { calibratedMs: 90000 } }, async () => {
   const { groupId } = await setup(false);
   expect(await workers[0]!.send('preserveConcurrent', { groupId })).toBe(true);
-}, 90000);
+});
 
-it('supplies an overwrite to the approving device without prior local membership records', async () => {
+it('supplies an overwrite to the approving device without prior local membership records', { meta: { calibratedMs: 90000 } }, async () => {
   const { peers } = await setup(false);
   const [source, provider] = workers;
   await source!.send('seed', { id: 'local-note', content: 'Fresh source data' });
@@ -70,10 +70,10 @@ it('supplies an overwrite to the approving device without prior local membership
   const received = await provider!.send('reopen');
   expect(received.library.nodesById['remote-note']).toBeUndefined();
   expect(received.library.nodesById['local-note']?.content).toBe('Fresh source data');
-}, 90000);
+});
 
 for (const mode of ['overwrite']) {
-  it(`${mode} join overwrites the whole group despite retained history`, async () => {
+  it(`${mode} join overwrites the whole group despite retained history`, { meta: { calibratedMs: 90000 } }, async () => {
     const { peers, groupId, script } = await setup();
     const [source, provider, offline] = workers;
     await source!.send('seed', { id: 'local-note', content: 'Local chosen data' });
@@ -125,10 +125,10 @@ for (const mode of ['overwrite']) {
     expect((await source!.send('reopen')).library.nodesById['after-overwrite']?.content).toBe('Normal sync afterwards');
     const safety = await provider!.send('safety') as unknown as Array<{ nodes: Array<{ id: string }> }>;
     expect(safety.some((entry) => entry.nodes.some((node) => node.id === 'remote-note'))).toBe(true);
-  }, 90000);
+  });
 }
 
-it.each([false, true])('uses group data to replace local data with an empty provider: %s', async (emptyProvider) => {
+it.each([false, true])('uses group data to replace local data with an empty provider: %s', { meta: { calibratedMs: 90000 } }, async (emptyProvider) => {
   const { peers } = await setup(false);
   const [source, provider] = workers;
   await source!.send('seed', { id: 'local-note', content: 'Local data' });
@@ -154,7 +154,7 @@ it.each([false, true])('uses group data to replace local data with an empty prov
     expect(state.library.nodesById['local-note']).toBeUndefined();
     if (!emptyProvider) expect(state.library.nodesById['remote-note']?.content).toBe('Independent data');
   }
-}, 90000);
+});
 
 async function assertOfflineCatchup(script: string, groupId: string, peer: Awaited<ReturnType<ReturnType<typeof startRestoreFixture>['send']>>, restoreId: string) {
   const returning = startRestoreFixture(script, path.join(root, 'Offline'), await port());

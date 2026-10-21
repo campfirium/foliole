@@ -52,7 +52,7 @@ function seedCrossFolderGoToContext() {
   }));
 }
 
-it('runs go to node from the command palette without replacing workspace search', async () => {
+it('runs go to node from the command palette without replacing workspace search', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   seedCrossFolderGoToContext();
 
   render(<App />);
@@ -86,7 +86,7 @@ it('runs go to node from the command palette without replacing workspace search'
   expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Atlas Overview' })).toBeInTheDocument();
   expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Weekly Log' })).toBeInTheDocument();
   expect(screen.queryByRole('dialog', { name: 'Go to' })).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('shows nodes immediately and puts the last used target first when reopened', async () => {
   useWorkspaceStore.setState((state) => ({

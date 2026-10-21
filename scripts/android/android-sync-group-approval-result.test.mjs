@@ -29,7 +29,7 @@ beforeAll(() => {
   });
   expect(compiled.error ?? compiled.stderr).toBe('');
   expect(compiled.status).toBe(0);
-}, 90_000);
+});
 
 afterAll(() => {
   if (directory) fs.rmSync(directory, { recursive: true, force: true });

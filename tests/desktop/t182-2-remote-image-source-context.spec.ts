@@ -132,7 +132,7 @@ async function attachEvidence(testInfo: TestInfo, evidence: unknown) {
 test('keeps source priority and reuses failure provenance across retry', async (
   { desktopApp, desktopWindow }, testInfo
 ) => {
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   await expectWorkspaceShell(desktopWindow);
   await seedWorkspace(desktopWindow);
   await installMainProbe(desktopApp);

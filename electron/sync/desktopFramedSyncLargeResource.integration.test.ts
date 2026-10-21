@@ -28,7 +28,7 @@ async function createResource(file: string) {
   } finally { await output.close(); }
 }
 
-it('transfers a deterministic incompressible 50 MiB file through independent authenticated HTTP libraries', async () => {
+it('transfers a deterministic incompressible 50 MiB file through independent authenticated HTTP libraries', { meta: { calibratedMs: 120_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const source = path.join(fixture.root, 'large-resource.png');
@@ -53,4 +53,4 @@ it('transfers a deterministic incompressible 50 MiB file through independent aut
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 120_000);
+});

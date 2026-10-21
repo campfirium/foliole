@@ -28,7 +28,7 @@ function expectedVitestArgs(prefix, testFile) {
 }
 
 describe('quality-gate-fast.sh routing', () => {
-  it('keeps deleted override files out of lint and related test targets', async () => {
+  it('keeps deleted override files out of lint and related test targets', { meta: { calibratedMs: 15000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -63,9 +63,9 @@ describe('quality-gate-fast.sh routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  });
 
-  it('uses the mid level for props signature changes and runs related tests', async () => {
+  it('uses the mid level for props signature changes and runs related tests', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));
     const lintMarker = toFixtureShellPath(path.join(tempRoot, 'lint.marker'));
@@ -108,9 +108,9 @@ describe('quality-gate-fast.sh routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('prints related tests for mid-level route plans', async () => {
+  it('prints related tests for mid-level route plans', { meta: { calibratedMs: 15000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -136,5 +136,5 @@ describe('quality-gate-fast.sh routing', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 15000);
+  });
 });

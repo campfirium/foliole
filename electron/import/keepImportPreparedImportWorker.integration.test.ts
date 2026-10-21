@@ -47,7 +47,7 @@ async function importInWorker(prepared: PreparedImportRecord) {
   }
 }
 
-it('persists complete owned bodies and 300 highlights in a real worker', async () => {
+it('persists complete owned bodies and 300 highlights in a real worker', { meta: { calibratedMs: 20_000 } }, async () => {
   const connection = openDatabaseConnection();
   const matchedHighlights = Array.from({ length: 300 }, (_, i) => ({ content: `Sentence ${i}.`, label: null }));
   const content = '\ufeff中😀\0\n' + matchedHighlights.map((h) => h.content).join('\n') + '\nSentence 300.';
@@ -77,4 +77,4 @@ it('persists complete owned bodies and 300 highlights in a real worker', async (
     .toBe(content);
   expect(connection.driver.queryAll('SELECT * FROM content_blob_data')).toEqual([]);
   expect(connection.driver.queryAll('PRAGMA foreign_key_check')).toEqual([]);
-}, 20_000);
+});

@@ -32,7 +32,7 @@ async function writeLargeSetting(file: string, entries = 15_000) {
   return { hash, id, value, payloadBytes: Buffer.byteLength(payloadJson) };
 }
 
-it('receives a shared setting above one MiB through ordinary sync without changing its value or hash', async () => {
+it('receives a shared setting above one MiB through ordinary sync without changing its value or hash', { meta: { calibratedMs: 120_000 } }, async () => {
   receiver = await createCompanionRequestFixture();
   const setting = await writeLargeSetting(receiver.fixture.rightSnapshot.databasePath);
   expect(setting.payloadBytes).toBeGreaterThan(1024 * 1024);
@@ -45,9 +45,9 @@ it('receives a shared setting above one MiB through ordinary sync without changi
   expect((await receiver.sync()).remainingStructureChangeCount).toBe(0);
   expect(receiver.sqlite.prepare('SELECT value_json, content_hash FROM setting_records WHERE key = ?')
     .get('readwise_source_cutover_v2')).toEqual({ value_json: setting.value, content_hash: setting.hash });
-}, 120_000);
+});
 
-it('rejects an oversized setting during ordinary sync without changing local data or acknowledging it', async () => {
+it('rejects an oversized setting during ordinary sync without changing local data or acknowledging it', { meta: { calibratedMs: 120_000 } }, async () => {
   receiver = await createCompanionRequestFixture();
   await receiver.fixture.left.seed({ nodeId: 'old-local', title: 'Protected', content: 'Protected until complete adoption' });
   const setting = await writeLargeSetting(receiver.fixture.rightSnapshot.databasePath, 25_000);
@@ -66,4 +66,4 @@ it('rejects an oversized setting during ordinary sync without changing local dat
       .get('readwise_source_cutover_v2')).toBe(setting.value);
     expect(source.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_outbound_fact_refs'").get()).toBeUndefined();
   } finally { source.close(); }
-}, 120_000);
+});

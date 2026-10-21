@@ -58,7 +58,7 @@ async function withHistory(run: (fixture: Awaited<ReturnType<typeof createDeskto
   }
 }
 
-it('keeps locally cleaned history out of the next comparison', async () => withHistory(async fixture => {
+it('keeps locally cleaned history out of the next comparison', { meta: { calibratedMs: 60_000 } }, async () => withHistory(async fixture => {
   const before = versions(fixture.rightSnapshot.databasePath);
   expect(cleanSupersededHistory(fixture.leftSnapshot.databasePath)).toBe(2);
   const transfers = await objectTransfers(fixture.right);
@@ -68,9 +68,9 @@ it('keeps locally cleaned history out of the next comparison', async () => withH
   expect(versions(fixture.leftSnapshot.databasePath).map(version => version.version_id))
     .toEqual([before.at(-1)!.version_id]);
   expect(versions(fixture.rightSnapshot.databasePath)).toEqual(before);
-}), 60_000);
+}));
 
-it('still synchronizes a later edit after one side cleaned its history', async () => withHistory(async fixture => {
+it('still synchronizes a later edit after one side cleaned its history', { meta: { calibratedMs: 60_000 } }, async () => withHistory(async fixture => {
   cleanSupersededHistory(fixture.leftSnapshot.databasePath);
   await fixture.right.seed({ content: 'Edited on the other device', nodeId: NODE_ID, title: 'History cleanup' });
   expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
@@ -83,4 +83,4 @@ it('still synchronizes a later edit after one side cleaned its history', async (
   const transfers = await objectTransfers(fixture.right);
   expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
   expect(await objectTransfers(fixture.right) - transfers).toBe(0);
-}), 60_000);
+}));

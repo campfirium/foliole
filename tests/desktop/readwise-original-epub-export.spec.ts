@@ -102,7 +102,7 @@ async function importBook(app: ElectronApplication) {
 
 test('exports a Readwise original EPUB after the save location is chosen', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-epub-export-e2e-'));
   const outputPath = path.join(stateRoot, 'Export Book.epub');
   const session = await createT178ApiAcceptanceSession(stateRoot);

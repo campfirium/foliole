@@ -82,7 +82,7 @@ async function writeEvidence(input: {
 }
 
 test('imports misleading image extension to one canonical key across relaunch', async ({ desktopSession }, testInfo) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   const stateRoot = desktopSession.target.runtimeStateRoot;
   const libraryHome = desktopSession.launchOptions.env.FOLIOLE_LIBRARY_HOME;
   if (!libraryHome) throw new Error('missing isolated library home');

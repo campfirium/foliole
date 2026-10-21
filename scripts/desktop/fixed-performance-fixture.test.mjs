@@ -16,7 +16,7 @@ import fixture from './fixed-performance-fixture.cjs';
 const services = { createDriver: createBetterSqlite3Driver, upsert: upsertNodeSnapshot,
   flushVersion: flushNodeSyncVersionWithDriver, replaceOrder: replaceNodeOrder };
 
-test('offline fixture persists exact bodies, current versions and order across reopen', () => {
+test('offline fixture persists exact bodies, current versions and order across reopen', { meta: { calibratedMs: 120_000 } }, () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'foliole-benchmark-fixture-'));
   const file = path.join(root, 'fixture.db');
   let db = new Database(file);
@@ -45,4 +45,4 @@ test('offline fixture persists exact bodies, current versions and order across r
       .get('parent-child-order:root').child_ids_json).filter((id) => id.startsWith('benchmark-')))
       .toEqual(nodes.map((node) => node.id));
   } finally { db.close(); rmSync(root, { recursive: true, force: true }); }
-}, 120_000);
+});

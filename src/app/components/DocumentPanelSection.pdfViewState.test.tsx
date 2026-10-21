@@ -126,7 +126,7 @@ beforeEach(() => {
   } as never);
 });
 
-it('writes pdf page and zoom through onPersistPdfViewState callback', async () => {
+it('writes pdf page and zoom through onPersistPdfViewState callback', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   const onPersistPdfViewState = vi.fn();
 
   renderWithLocalization(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
@@ -144,7 +144,7 @@ it('writes pdf page and zoom through onPersistPdfViewState callback', async () =
       }),
     RELEASE_GATE_WAIT_OPTIONS
   );
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('keeps fit width as the default persisted zoom mode for a new pdf', async () => {
   const onPersistPdfViewState = vi.fn();

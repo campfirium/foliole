@@ -61,7 +61,7 @@ function seedActiveTopicMoveContext() {
   }));
 }
 
-it('moves the active node under an empty target node from the command palette', async () => {
+it('moves the active node under an empty target node from the command palette', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   seedActiveTopicMoveContext();
 
   render(<App />);
@@ -101,7 +101,7 @@ it('moves the active node under an empty target node from the command palette', 
   });
   expect(within(getCurrentFolderPanel()).getByRole('treeitem', { name: 'Article A' })).toBeInTheDocument();
   expect(screen.queryByRole('dialog', { name: 'Move to' })).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('keeps non-derived topics as move targets even when they already have content', async () => {
   useWorkspaceStore.setState((state) => ({

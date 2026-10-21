@@ -19,7 +19,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('backs up and restores a fixture database into an isolated target with redacted checks', async () => {
+it('backs up and restores a fixture database into an isolated target with redacted checks', { meta: { calibratedMs: 15_000 } }, async () => {
   const report = await runRecoveryDrill({ workDir: tempRoot });
 
   expect(report.status).toBe('ok');
@@ -36,13 +36,13 @@ it('backs up and restores a fixture database into an isolated target with redact
   expect(serializedReport).not.toContain('fixture prompt body');
   expect(serializedReport).not.toContain('fixture answer body');
   expect(serializedReport).not.toContain('fixture-trash');
-}, 15_000);
+});
 
 it.each([
   "UPDATE nodes SET content = 'changed' WHERE id = 'node-root'",
   "UPDATE nodes SET parent_id = 'node-root' WHERE id = 'node-qa'",
   "UPDATE workspace_meta SET value = 'node-qa' WHERE key = 'active_node_id'"
-])('rejects semantic drift even when integrity and row counts are unchanged: %s', async (sql) => {
+])('rejects semantic drift even when integrity and row counts are unchanged: %s', { meta: { calibratedMs: 15_000 } }, async (sql) => {
   const report = await runRecoveryDrill({ workDir: tempRoot });
   const db = new Database(report.restorePath);
   try { db.exec(sql); } finally { db.close(); }
@@ -51,7 +51,7 @@ it.each([
   expect(restored.tableCounts).toEqual(report.source.tableCounts);
   expect(buildChecks(report.source, restored).find((check) =>
     check.name === 'content, relationships and permanent settings')?.status).toBe('failed');
-}, 15_000);
+});
 
 it('fails before restore when the isolated target database already exists', async () => {
   const backupPath = path.join(tempRoot, 'backup.db');

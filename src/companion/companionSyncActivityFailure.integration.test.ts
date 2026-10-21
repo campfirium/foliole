@@ -30,7 +30,7 @@ vi.mock('../shared/platform/companion/network/companionDesktopSession.js', async
 vi.mock('./companionReviewSchedulerSettingsHydration', () => ({ hydrateCompanionReviewSchedulerSettings: async () => undefined }));
 vi.mock('./companionSystemEntryDisplayNamesHydration', () => ({ hydrateCompanionSystemEntryDisplayNames: async () => undefined }));
 
-it('persists both directions and reports completion even when both activity writes fail', async () => {
+it('persists both directions and reports completion even when both activity writes fail', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   try {
@@ -59,10 +59,10 @@ it('persists both directions and reports completion even when both activity writ
       ]));
     }
   } finally { vi.restoreAllMocks(); await host.close(); }
-}, 60_000);
+});
 
 
-it('persists a new desktop-bound change while independent mobile discovery remains pending', async () => {
+it('persists a new desktop-bound change while independent mobile discovery remains pending', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   let finishDiscovery!: (targets: []) => void;
@@ -100,4 +100,4 @@ it('persists a new desktop-bound change while independent mobile discovery remai
     vi.restoreAllMocks();
     await host.close();
   }
-}, 60_000);
+});

@@ -64,7 +64,7 @@ function runDedupe(repoRoot, command, env = {}) {
 }
 
 describe('preview-dedupe explicit refresh', () => {
-  it('runs a covered windows preview and forwards the refresh env', async () => {
+  it('runs a covered windows preview and forwards the refresh env', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const runLog = path.join(repoRoot, 'runs.log');
@@ -92,5 +92,5 @@ describe('preview-dedupe explicit refresh', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 });

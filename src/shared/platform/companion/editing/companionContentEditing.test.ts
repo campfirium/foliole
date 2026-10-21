@@ -194,7 +194,7 @@ it('rejects an input whose parent was moved to trash before the writer ran', asy
 });
 
 
-it('opens editable content promptly with ten thousand visible topics', async () => {
+it('opens editable content promptly with ten thousand visible topics', { meta: { calibratedMs: 15000 } }, async () => {
   const add = database.prepare(`INSERT INTO nodes
     (id, parent_id, kind, title, content, created_at, updated_at)
     VALUES (?, ?, 'topic', 'Capacity topic', '', ?, ?)`);
@@ -207,7 +207,7 @@ it('opens editable content promptly with ten thousand visible topics', async () 
   expect(await readCompanionContentSource('topic')).toEqual({ content: baseline, versionId: 'base' });
   process.stdout.write(JSON.stringify({ event: 'timing_metric', test: 'companionContentEditing ten thousand topics',
     name: 'readSourceMs', valueMs: performance.now() - started, budgetMs: 1000 }) + '\n');
-}, 15000);
+});
 
 it('rejects reading editable content below a trashed ancestor', async () => {
   await insert(node({ id: 'folder', kind: 'folder', content: '' }), 'folder-base');

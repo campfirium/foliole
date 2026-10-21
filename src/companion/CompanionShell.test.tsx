@@ -207,7 +207,7 @@ function createReviewEmptySurface() {
 }
 
 describe('CompanionShell review surfaces', () => {
-  it('opens settings from the settings action before entering sync details', async () => {
+  it('opens settings from the settings action before entering sync details', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     await renderShellWithSurface({
       ...createReviewEmptySurface(),
       activeAction: 'more'
@@ -230,9 +230,9 @@ describe('CompanionShell review surfaces', () => {
     const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
     expect(settingsButtons).toHaveLength(2);
     expect(settingsButtons.some((button) => button.getAttribute('aria-current') === 'page')).toBe(true);
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 
-  it('hides Tabs settings while showing Directory as the default first tab', async () => {
+  it('hides Tabs settings while showing Directory as the default first tab', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const surface = { ...createReviewEmptySurface(), activeAction: 'more' };
     await renderShellWithSurface(surface);
 
@@ -245,6 +245,6 @@ describe('CompanionShell review surfaces', () => {
       orderedTabIds: ['shortcut', 'browse', 'learn', 'search', 'settings'],
       shortcut: { destinationId: 'directory', enabled: true }
     });
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 
 });

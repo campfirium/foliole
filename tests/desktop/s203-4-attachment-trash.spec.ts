@@ -5,7 +5,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 test('configures cleanup, moves an unused attachment, restores it for reading, and explicitly empties trash', async ({ desktopApp, desktopWindow: page }) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(page);
   const key = await desktopApp.evaluate(({ nativeImage }) => {
     const pathApi = process.getBuiltinModule('path')!;

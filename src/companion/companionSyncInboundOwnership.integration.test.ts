@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import { readDesktopFramedSyncLibraryEvidence } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createCompanionRequestFixture, native } from '../test/companionRequestSync.testSupport';
 
-it('refuses a manual outbound round while its peer owns an inbound round, then persists both directions after release', async () => {
+it('refuses a manual outbound round while its peer owns an inbound round, then persists both directions after release', { meta: { calibratedMs: 60_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   try {
@@ -31,9 +31,9 @@ it('refuses a manual outbound round while its peer owns an inbound round, then p
       ]));
     }
   } finally { await host.close(); }
-}, 60_000);
+});
 
-it.each([false, true])('prioritizes the waiting manual round over an immediate new inbound, already converged=%s', async converged => {
+it.each([false, true])('prioritizes the waiting manual round over an immediate new inbound, already converged=%s', { meta: { calibratedMs: 60_000 } }, async converged => {
   const host = await createCompanionRequestFixture();
   const { fixture } = host;
   try {
@@ -74,4 +74,4 @@ it.each([false, true])('prioritizes the waiting manual round over an immediate n
       ]));
     }
   } finally { await host.close(); }
-}, 60_000);
+});

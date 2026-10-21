@@ -34,7 +34,7 @@ beforeAll(() => {
   expect(compiled.error ?? compiled.stderr).toBe('');
   expect(compiled.status).toBe(0);
   javaBinary = binary('java');
-}, 30000);
+});
 afterAll(() => { if (directory) fs.rmSync(directory, { recursive: true, force: true }); });
 
 it('allows writer-owned file maintenance to finish while signing waits for a credential read', () => {

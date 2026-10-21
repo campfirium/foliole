@@ -43,7 +43,7 @@ async function runBatch(app: ElectronApplication) {
 }
 
 test('fetches only current article files once and preserves bodies through 404 and disconnect', async ({ desktopApp, desktopWindow: page }) => {
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   await expectWorkspaceShell(page);
   const settings = await openSettingsCategory(page, 'Sync');
   await settings.getByRole('button', { name: /^(Create Sync Group|建立同步组)$/ }).click();

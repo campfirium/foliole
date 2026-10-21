@@ -8,7 +8,7 @@ import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncP
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('returns pending for an unchanged unavailable body while committing neighbors, then resumes after restart', async () => {
+it('returns pending for an unchanged unavailable body while committing neighbors, then resumes after restart', { meta: { calibratedMs: 15_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let restarted: Awaited<ReturnType<typeof fixture.restartRight>> | undefined;
   try {
@@ -50,9 +50,9 @@ it('returns pending for an unchanged unavailable body while committing neighbors
     await Promise.allSettled([fixture.left.close(), restarted?.process.close() ?? fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 15_000);
+});
 
-it('delivers complete current text and already retired ancestry to a new member over HTTP', async () => {
+it('delivers complete current text and already retired ancestry to a new member over HTTP', { meta: { calibratedMs: 15_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let restarted: Awaited<ReturnType<typeof fixture.restartRight>> | undefined;
   try {
@@ -83,4 +83,4 @@ it('delivers complete current text and already retired ancestry to a new member 
     await Promise.allSettled([fixture.left.close(), restarted?.process.close() ?? fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 15_000);
+});

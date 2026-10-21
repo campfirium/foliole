@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 const run = promisify(execFile);
 
 describe.runIf(process.platform === 'darwin')('desktop update compatibility gate integration', () => {
-  it('uses the real macOS updater provider to parse metadata and download the complete ZIP', async () => {
+  it('uses the real macOS updater provider to parse metadata and download the complete ZIP', { meta: { calibratedMs: 35_000 } }, async () => {
     const directory = await mkdtemp(path.join(tmpdir(), 'foliole-updater-gate-integration-'));
     const target = 'Foliole-macOS-arm64-0.8.1.zip';
     const bytes = Buffer.from('production-shaped-update-payload');
@@ -42,5 +42,5 @@ describe.runIf(process.platform === 'darwin')('desktop update compatibility gate
     });
     expect(result.stdout).toContain('status: VERIFIED from=0.8.0 to=0.8.1');
     expect(result.stdout).toContain('updater=MacUpdater executor=ElectronHttpExecutor');
-  }, 35_000);
+  });
 });

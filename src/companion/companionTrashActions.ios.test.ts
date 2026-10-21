@@ -28,7 +28,7 @@ async function seedTrashedNode() {
     { ...node, currentVersionId: null }, 'ios-device', 'desktop#base')]);
 }
 
-it('persists an iOS trash restore and synchronizes its whole body after restart', async () => {
+it('persists an iOS trash restore and synchronizes its whole body after restart', { meta: { calibratedMs: 20000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const desktop = new Database(host.fixture.rightSnapshot.databasePath);
   try {
@@ -50,9 +50,9 @@ it('persists an iOS trash restore and synchronizes its whole body after restart'
         .toEqual([{ parent_version_id: 'desktop#base' }]);
     }
   } finally { desktop.close(); await host.close(); }
-}, 20000);
+});
 
-it('rejects an iOS restore when its persisted base has advanced without changing either version', async () => {
+it('rejects an iOS restore when its persisted base has advanced without changing either version', { meta: { calibratedMs: 20000 } }, async () => {
   const host = await createCompanionRequestFixture();
   try {
     await seedTrashedNode();
@@ -65,7 +65,7 @@ it('rejects an iOS restore when its persisted base has advanced without changing
       snapshot: createSnapshot() })).rejects.toThrow('local_restore_not_applied');
     expect(read()).toEqual(before);
   } finally { await host.close(); }
-}, 20000);
+});
 
 function createSnapshot(): WorkspaceSnapshot {
   return {

@@ -93,7 +93,7 @@ async function restoredApplicant(platform: string) {
   return { groupId, local, peer, provider };
 }
 
-it.each(['ios-capacitor', 'android-capacitor'])('%s rejects the removed merge mode and explicitly joins by overwrite', async (platform) => {
+it.each(['ios-capacitor', 'android-capacitor'])('%s rejects the removed merge mode and explicitly joins by overwrite', { meta: { calibratedMs: 90000 } }, async (platform) => {
   const { groupId, local, peer, provider } = await restoredApplicant(platform);
   const clientPath = '../../src/shared/platform/companionSyncGroupJoinClient';
   const { requestCompanionSyncGroupJoin, completeCompanionSyncGroupJoin } = await import(clientPath);
@@ -117,4 +117,4 @@ it.each(['ios-capacitor', 'android-capacitor'])('%s rejects the removed merge mo
   expect(sqlite.prepare('SELECT group_id, source_device_identity_key FROM sync_group_restore_events').all())
     .toEqual([{ group_id: groupId, source_device_identity_key: local.identity }]);
   expect(sqlite.prepare('SELECT state FROM sync_group_local_state').get()).toEqual({ state: 'active' });
-}, 90000);
+});

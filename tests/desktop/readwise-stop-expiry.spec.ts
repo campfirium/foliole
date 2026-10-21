@@ -1,7 +1,7 @@
 import { expect, test } from './harness/fixtures';
 
 test('releases an abandoned Readwise stop without changing its persisted owner', async ({ desktopApp }) => {
-  test.setTimeout(90_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(90_000) });
   const result = await desktopApp.evaluate(async () => {
     const pathApi = process.getBuiltinModule('path')!;
     const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));

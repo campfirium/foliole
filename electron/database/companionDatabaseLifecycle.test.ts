@@ -95,7 +95,7 @@ describe('shared companion database migration executor', () => {
 });
 
 describe('shared companion database migration history', () => {
-  it('upgrades every supported historical version through one DbPort contract', async () => {
+  it('upgrades every supported historical version through one DbPort contract', { meta: { calibratedMs: 60_000 } }, async () => {
     for (let version = 2; version < COMPANION_DATABASE_VERSION; version += 1) {
       const { port, sqlite } = fixture(version);
       sqlite.prepare('INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)')
@@ -108,7 +108,7 @@ describe('shared companion database migration history', () => {
         .pluck().get()).toBe('workgroup_key');
       sqlite.close();
     }
-  }, 60_000);
+  });
 
   it('runs the legacy state-sequence command migration without losing rows', async () => {
     const { port, sqlite } = fixture(4);

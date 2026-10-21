@@ -20,7 +20,7 @@ function storage(databasePath: string) {
   } finally { db.close(); }
 }
 
-it('measures saved parent edits through the authenticated production round in two processes', async () => {
+it('measures saved parent edits through the authenticated production round in two processes', { meta: { calibratedMs: 3_600_000 } }, async () => {
   const count = Number(process.env.FOLIOLE_ORDER_PERFORMANCE_COUNT ?? 200);
   const rounds = Number(process.env.FOLIOLE_ORDER_PERFORMANCE_ROUNDS ?? 1);
   const output = path.resolve(process.env.FOLIOLE_ORDER_PERFORMANCE_OUTPUT ??
@@ -73,4 +73,4 @@ it('measures saved parent edits through the authenticated production round in tw
       await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     }
   }
-}, 3_600_000);
+});

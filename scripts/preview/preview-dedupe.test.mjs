@@ -69,7 +69,7 @@ async function readHash(repoRoot, target) {
 }
 
 describe('preview-dedupe', () => {
-  it('stores a new tracked diff after successful preview and skips the same hash later', async () => {
+  it('stores a new tracked diff after successful preview and skips the same hash later', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       const runLog = path.join(repoRoot, 'runs.log');
@@ -96,9 +96,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('runs a covered windows preview when the native runtime is stopped', async () => {
+  it('runs a covered windows preview when the native runtime is stopped', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
@@ -125,9 +125,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('runs a covered windows preview when the native runtime window is unresponsive', async () => {
+  it('runs a covered windows preview when the native runtime window is unresponsive', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
@@ -153,9 +153,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('does not mark a failed preview hash as successfully covered', async () => {
+  it('does not mark a failed preview hash as successfully covered', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await writeFile(path.join(repoRoot, 'tracked.txt'), 'changed\n', 'utf8');
@@ -175,9 +175,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('includes untracked files when matching the preview hash', async () => {
+  it('includes untracked files when matching the preview hash', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await mkdir(path.join(repoRoot, '.lab', 'internal', 'runtime'), { recursive: true });
@@ -195,9 +195,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('ignores files outside the target preview surface', async () => {
+  it('ignores files outside the target preview surface', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await mkdir(path.join(repoRoot, 'src', 'app'), { recursive: true });
@@ -220,9 +220,9 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
-  it('ignores gitignored untracked files when matching the preview hash', async () => {
+  it('ignores gitignored untracked files when matching the preview hash', { meta: { calibratedMs: 15000 } }, async () => {
     const repoRoot = await createRepo();
     try {
       await writeFile(path.join(repoRoot, '.gitignore'), 'before-run.hash\nruns.log\nignored.txt\n', 'utf8');
@@ -243,6 +243,6 @@ describe('preview-dedupe', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, 15000);
+  });
 
 });

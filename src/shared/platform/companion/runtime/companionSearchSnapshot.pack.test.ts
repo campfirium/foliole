@@ -55,10 +55,10 @@ beforeEach(async () => {
   target = { ...source, id: 'receiver', name: 'Search', db: library.database,
     port: createBetterSqliteDbPort(library.database) };
   joinPeers(source, target);
-}, 30000);
+});
 afterEach(async () => { await library?.close(); await closeLibraries(); });
 
-it('keeps the search snapshot when one real request commits and the next request fails', async () => {
+it('keeps the search snapshot when one real request commits and the next request fails', { meta: { calibratedMs: 30000 } }, async () => {
   const before = await searchCompanionFullTextSnapshot('alpha');
   const original = JSON.stringify(before);
   const apply = (seq: number) => {
@@ -75,4 +75,4 @@ it('keeps the search snapshot when one real request commits and the next request
   expect(latest.external.find((row) => row.document_id === '000000')?.content).toBe('');
   expect(library.database.prepare("SELECT content FROM external_documents WHERE document_id='000000'").get())
     .toEqual({ content: 'alpha pack 1' });
-}, 30000);
+});

@@ -148,7 +148,7 @@ async function inspectProjection(app: ElectronApplication) {
 
 test('routes four representative folder and API inputs through the same policy', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   for (const mode of ['folder', 'api'] as const) {
     const stateRoot = await mkdtemp(path.join(os.tmpdir(), `foliole-t178-15-${mode}-`));
     let session: T178AcceptanceSession | null = null;

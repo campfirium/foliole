@@ -47,7 +47,7 @@ async function withDb<T>(path: string, work: (db: DbPort, sqlite: Database.Datab
   finally { sqlite.close(); }
 }
 
-it('transfers every child with its node, preserves concurrent text, and relays child deletions over HTTP', async () => {
+it('transfers every child with its node, preserves concurrent text, and relays child deletions over HTTP', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const { left, right, leftSnapshot: a, rightSnapshot: b } = fixture;
   const round = () => left.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: b.origin,
@@ -97,7 +97,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
     await Promise.allSettled([left.close(), right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 async function assertGrouped(db: DbPort) {
   expect(await db.query('SELECT * FROM sync_node_child_owners ORDER BY object_type')).toEqual([

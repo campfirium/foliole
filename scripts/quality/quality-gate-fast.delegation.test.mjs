@@ -14,7 +14,7 @@ import {
 const DRY_RUN_ENV = { QUALITY_GATE_TEST_DRY_RUN_STEPS: '1' };
 
 describe('quality-gate-fast.sh delegation', () => {
-  it('routes mixed android and shared runtime changes to the shared gate', async () => {
+  it('routes mixed android and shared runtime changes to the shared gate', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -36,9 +36,9 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('keeps test-only Android script changes on the related-test route', async () => {
+  it('keeps test-only Android script changes on the related-test route', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -61,9 +61,9 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it.each(['--full', '--release'])('rejects the removed local aggregate override %s', async (argument) => {
+  it.each(['--full', '--release'])('rejects the removed local aggregate override %s', { meta: { calibratedMs: 30000 } }, async (argument) => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -79,9 +79,9 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('caps Android path changes locally and defers hosted quality to scheduled T7', async () => {
+  it('caps Android path changes locally and defers hosted quality to scheduled T7', { meta: { calibratedMs: 90000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -111,9 +111,9 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 90000);
+  });
 
-  it('routes iOS changes to hosted contract quality without starting a local Simulator', async () => {
+  it('routes iOS changes to hosted contract quality without starting a local Simulator', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -132,5 +132,5 @@ describe('quality-gate-fast.sh delegation', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 });

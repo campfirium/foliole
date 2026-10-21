@@ -74,7 +74,7 @@ async function completeJoin(worker: (typeof workers)[number], firstAction = 'joi
   }
 }
 
-it('continues ordinary UUID sync with a previously synchronized offline member after local adoption', async () => {
+it('continues ordinary UUID sync with a previously synchronized offline member after local adoption', { meta: { calibratedMs: 90000 } }, async () => {
   const peers = await setup(false);
   const [applicant, provider, other] = workers;
   for (const worker of workers) await worker.send('register', {
@@ -100,10 +100,10 @@ it('continues ordinary UUID sync with a previously synchronized offline member a
     expect(state.library.nodesById['group-source']?.content).toBe('Group data');
     expect(state.restore).toBeNull();
   }
-}, 90000);
+});
 
 for (const mode of ['use-group']) {
-  it(`${mode} joins by UUID without publishing an applicant restore`, async () => {
+  it(`${mode} joins by UUID without publishing an applicant restore`, { meta: { calibratedMs: 90000 } }, async () => {
     const peers = await setup();
     const [applicant, provider, other] = workers;
     const localId = randomUUID();
@@ -136,10 +136,10 @@ for (const mode of ['use-group']) {
     expect(local.restore).toBeNull();
     expect(remote.restore).toBeNull();
     expect((await other!.send('reopen')).library.nodesById['other-original']?.content).toBe('Other member data');
-  }, 90000);
+  });
 }
 
-it('accepts repeated completion after a background round has already completed local adoption', async () => {
+it('accepts repeated completion after a background round has already completed local adoption', { meta: { calibratedMs: 90000 } }, async () => {
   const peers = await setup();
   const [applicant, provider] = workers;
   await expect(applicant!.send('joinComplete')).rejects.toThrow('sync_group_join_not_pending');
@@ -161,9 +161,9 @@ it('accepts repeated completion after a background round has already completed l
   expect(reopened.library.nodesById).toEqual(before.library.nodesById);
   expect(reopened.restore).toBeNull();
   expect((await provider!.send('snapshot')).library.nodesById['local-before']).toBeUndefined();
-}, 90000);
+});
 
-it('resumes local adoption after interruption and database reopening without publishing old data', async () => {
+it('resumes local adoption after interruption and database reopening without publishing old data', { meta: { calibratedMs: 90000 } }, async () => {
   const peers = await setup();
   const [applicant, provider] = workers;
   await applicant!.send('seed', { id: 'local-before', content: 'Local data' });
@@ -190,4 +190,4 @@ it('resumes local adoption after interruption and database reopening without pub
   expect(completed.library.nodesById['group-source']?.content).toBe('Group data');
   expect(completed.restore).toBeNull();
   expect((await provider!.send('reopen')).library.nodesById['local-before']).toBeUndefined();
-}, 90000);
+});

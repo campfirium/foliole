@@ -18,7 +18,7 @@ for (const mode of ['new', 'existing'] as const) {
   test(`keeps a real renderer to main IPC read responsive during ${mode} request object apply`, async ({
     desktopSession, desktopWindow
   }, testInfo) => {
-    test.setTimeout(90_000);
+    test.info().annotations.push({ type: 'calibrated-ms', description: String(90_000) });
     const markerPath = testInfo.outputPath('workload-ready');
     const evidencePath = testInfo.outputPath('sync-pack-load-responsiveness.json');
     const blockMs = Number(process.env.FOLIOLE_PERF_TEST_BLOCK_MS ?? '0');

@@ -129,7 +129,7 @@ describe('git-state commitTrackedChanges', () => {
     expect(subject.stdout.trim()).toMatch(/^\d{6} /);
   });
 
-  it('filters blocklisted temp artifacts out of untracked auto commits', async () => {
+  it('filters blocklisted temp artifacts out of untracked auto commits', { meta: { calibratedMs: 10000 } }, async () => {
     const repoDir = await createRepo();
     await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n.tmp-vitest/\n');
     await writeFile(path.join(repoDir, 'tracked.txt'), 'before\n');
@@ -149,7 +149,7 @@ describe('git-state commitTrackedChanges', () => {
     const stagedNames = await runCommand('git', ['show', '--pretty=', '--name-only', 'HEAD'], { cwd: repoDir });
     expect(stagedNames.stdout).toContain('scripts/new-task.mjs');
     expect(stagedNames.stdout).not.toContain('.tmp-vitest/node-compile-cache/cache.bin');
-  }, 10000);
+  });
 
   it('skips commit when only ignored .lab files changed', async () => {
     const repoDir = await createRepo();

@@ -7,7 +7,7 @@ import { computeSyncContentHash } from '../../../../../../lib/core/database/sync
 import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
 
-it('persists received time without a tree reload and still invalidates the tree for received text', async () => {
+it('persists received time without a tree reload and still invalidates the tree for received text', { meta: { calibratedMs: 30_000 } }, async () => {
   const host = await createCompanionRequestFixture();
   try {
     await host.sync();
@@ -34,4 +34,4 @@ it('persists received time without a tree reload and still invalidates the tree 
     expect(host.sqlite.prepare('SELECT duration_ms FROM foreground_daily_time WHERE source_id = ?')
       .pluck().get(sourceId)).toBe(60_000);
   } finally { await host.close(); }
-}, 30_000);
+});

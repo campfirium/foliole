@@ -89,7 +89,7 @@ async function expectStateIconUsesBase() {
   });
 }
 
-it('stores compact topic and item icon rows plus per-state topic and item icon styling', async () => {
+it('stores compact topic and item icon rows plus per-state topic and item icon styling', { meta: { calibratedMs: 30000 } }, async () => {
   openAppearance();
   openIconEditor();
   editSvg('Edit Topic (base) shape', '<svg viewBox="0 0 16 16"><path d="M2 12L14 4" fill="none" stroke="currentColor"/></svg>');
@@ -103,9 +103,9 @@ it('stores compact topic and item icon rows plus per-state topic and item icon s
   await expectStoredNodeIconSettings();
   await expectStateIconUsesBase();
   await expectNodeIconSettingsReset();
-}, 30000);
+});
 
-it('uses compact icon defaults and closes nested icon editing before settings', () => {
+it('uses compact icon defaults and closes nested icon editing before settings', { meta: { calibratedMs: 15000 } }, () => {
   const onClose = vi.fn();
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} onClose={onClose} />);
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -127,7 +127,7 @@ it('uses compact icon defaults and closes nested icon editing before settings', 
   expect(screen.queryByRole('dialog', { name: 'Edit Topic (base) marker' })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Settings dialog')).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
-}, 15000);
+});
 
 it('presents scheduled outline and inner ring controls as separate rows', () => {
   openAppearance();

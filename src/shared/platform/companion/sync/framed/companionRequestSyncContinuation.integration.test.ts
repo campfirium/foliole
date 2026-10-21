@@ -15,7 +15,7 @@ let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 async function setup() { host = await createCompanionRequestFixture(); return host; }
 
-it('receives a remote edit, converges inventories and does not manufacture alternatives', async () => {
+it('receives a remote edit, converges inventories and does not manufacture alternatives', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await setup();
   const { fixture } = host;
   const nodeId = 't326-continuation-topic';
@@ -31,9 +31,9 @@ it('receives a remote edit, converges inventories and does not manufacture alter
     finally { db.close(); }
   }
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 30000);
+});
 
-it('converges a fork after the shared ancestor body was deleted', async () => {
+it('converges a fork after the shared ancestor body was deleted', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await setup();
   const { fixture } = host;
   const nodeId = 't326-ancestor-fork';
@@ -65,9 +65,9 @@ it('converges a fork after the shared ancestor body was deleted', async () => {
     expect(right.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId))
       .toEqual(host.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId));
   } finally { right.close(); }
-}, 30000);
+});
 
-it('recaptures an edit saved after a selected response was fixed', async () => {
+it('recaptures an edit saved after a selected response was fixed', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await setup();
   const { fixture } = host;
   const nodeId = 't326-late-edit';
@@ -86,9 +86,9 @@ it('recaptures an edit saved after a selected response was fixed', async () => {
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Later saved body' })]);
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 30000);
+});
 
-it('keeps later saved text after a lost response and source restart', async () => {
+it('keeps later saved text after a lost response and source restart', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await setup();
   const { fixture } = host;
   const nodeId = 't326-lost-response';
@@ -115,9 +115,9 @@ it('keeps later saved text after a lost response and source restart', async () =
       .toEqual([expect.objectContaining({ content: 'Later saved after lost response' })]);
   }
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
-}, 30000);
+});
 
-it('leaves an unavailable body pending while committing its neighbor and converges after repair', async () => {
+it('leaves an unavailable body pending while committing its neighbor and converges after repair', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await setup();
   const { fixture } = host;
   for (const nodeId of ['t326-unavailable', 't326-neighbor']) {
@@ -141,9 +141,9 @@ it('leaves an unavailable body pending while committing its neighbor and converg
   expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toContainEqual(expect.objectContaining({ id: 't326-unavailable', content: 'Unavailable edit' }));
-}, 30000);
+});
 
-it('keeps an available desktop convergent beside a busy mobile peer and resumes the companion production request path', async () => {
+it('keeps an available desktop convergent beside a busy mobile peer and resumes the companion production request path', { meta: { calibratedMs: 60_000 } }, async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-activation-mobile-'));
   const script = path.join(root, 'fixture.mjs');
   await buildDesktopFramedSyncFixture(script, true);
@@ -173,4 +173,4 @@ it('keeps an available desktop convergent beside a busy mobile peer and resumes 
     await host.close();
     await fs.rm(root, { recursive: true, force: true });
   }
-}, 60_000);
+});

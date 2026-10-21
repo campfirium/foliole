@@ -155,7 +155,7 @@ async function runIncremental(app: ElectronApplication) {
 
 test('separates exact legacy migration, first discovery, and checkpointed increment', async ({ browserName }, testInfo: TestInfo) => {
   void browserName;
-  test.setTimeout(180_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-30-'));
   let session: T178AcceptanceSession | null = null;
   try {

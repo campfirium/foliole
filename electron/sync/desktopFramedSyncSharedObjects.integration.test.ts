@@ -44,7 +44,7 @@ const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload:
     query: "SELECT duration_ms FROM foreground_daily_time WHERE source_id = '11111111-1111-4111-8111-111111111111'", expected: 123456 }
 ];
 
-it.each(cases)('discovers and persists the original $type payload through a normal round', async (sample) => {
+it.each(cases)('discovers and persists the original $type payload through a normal round', { meta: { calibratedMs: 60_000 } }, async (sample) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original body', nodeId: 'topic', title: 'Original' });
@@ -73,7 +73,7 @@ it.each(cases)('discovers and persists the original $type payload through a norm
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 function readCurrentNodes(databasePath: string) {
   const database = new Database(databasePath, { readonly: true });
@@ -82,7 +82,7 @@ function readCurrentNodes(databasePath: string) {
   } finally { database.close(); }
 }
 
-it('keeps a retired dirty review out of inventory and transfers unrelated live state', async () => {
+it('keeps a retired dirty review out of inventory and transfers unrelated live state', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Live body', nodeId: 'topic', title: 'Live' });
@@ -116,4 +116,4 @@ it('keeps a retired dirty review out of inventory and transfers unrelated live s
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

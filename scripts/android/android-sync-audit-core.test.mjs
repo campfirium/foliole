@@ -80,7 +80,7 @@ describe('android sync audit core', () => {
     tempDir = '';
   });
 
-  it('reports structural gaps and likely broken layer from sqlite snapshots', async () => {
+  it('reports structural gaps and likely broken layer from sqlite snapshots', { meta: { calibratedMs: 120_000 } }, async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));
     const desktop = createDatabase('desktop.db');
     const android = createDatabase('android.db');
@@ -115,7 +115,7 @@ describe('android sync audit core', () => {
       nonLocalNodeViewStateRows: 1
     });
     expect(output).toContain('=== Suspected Broken Layer ===');
-  }, 120_000);
+  });
 
   it('does not infer pending transfers or convergence from desktop sequence numbers', async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), 'android-sync-audit-'));

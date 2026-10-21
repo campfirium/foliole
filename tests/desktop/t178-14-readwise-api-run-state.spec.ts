@@ -154,7 +154,7 @@ async function activateAndResume(app: ElectronApplication) {
 
 test('recovers an abandoned worker and retries only two failed candidates', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t178-14-'));
   let session: T178AcceptanceSession | null = null;
   try {

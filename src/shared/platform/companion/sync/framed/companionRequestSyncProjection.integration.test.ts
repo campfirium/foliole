@@ -16,7 +16,7 @@ import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabase
 import { createDisplayLibrary } from '../workspace-state/companionDisplaySnapshotConcurrency.testSupport.js';
 import { loadIosCompanionWorkspaceSnapshot } from '../workspace-state/iosCompanionWorkspaceSnapshotStore.js';
 
-it('publishes a scoped projection after a real HTTP body update and agrees with a complete read', async () => {
+it('publishes a scoped projection after a real HTTP body update and agrees with a complete read', { meta: { calibratedMs: 30000 } }, async () => {
   invalidateCompanionReadingScope();
   const host = await createCompanionRequestFixture();
   try {
@@ -55,9 +55,9 @@ it('publishes a scoped projection after a real HTTP body update and agrees with 
     invalidateCompanionReadingScope();
     await host.close();
   }
-}, 30000);
+});
 
-it('finishes a real HTTP update when its snapshot interrupts attachment observation', async () => {
+it('finishes a real HTTP update when its snapshot interrupts attachment observation', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const library = createDisplayLibrary('android', host.fixture.leftSnapshot.databasePath);
   const owner = getIosCompanionDatabaseOwner();
@@ -105,4 +105,4 @@ it('finishes a real HTTP update when its snapshot interrupts attachment observat
       expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
     } finally { writer.mockRestore(); reading.mockRestore(); snapshots.mockRestore(); }
   } finally { await library.close(); await host.close(); }
-}, 30000);
+});

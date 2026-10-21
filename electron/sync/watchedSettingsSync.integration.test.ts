@@ -14,7 +14,7 @@ afterEach(async () => {
   if (root) await fs.rm(root, { recursive: true, force: true });
 });
 
-it('publishes a saved watched path through canonical sync without manual synchronization', async () => {
+it('publishes a saved watched path through canonical sync without manual synchronization', { meta: { calibratedMs: 30000 } }, async () => {
   root = await fs.mkdtemp(path.resolve('.tmp/watched-settings-'));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
   const script = path.join(root, 'fixture.mjs');
@@ -44,4 +44,4 @@ it('publishes a saved watched path through canonical sync without manual synchro
     { timeout: 5000 }).toEqual([changed]);
   await receiver!.send('reopen');
   expect((await read()).bindings.map(binding => binding.primary_path)).toEqual([changed]);
-}, 30000);
+});

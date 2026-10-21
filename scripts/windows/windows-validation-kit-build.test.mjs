@@ -42,7 +42,7 @@ describe('Windows validation kit build', () => {
     expect(() => collectValidationSourceClosure(root, ['bad.ts'])).toThrow('unsupported validation-kit bare import');
   });
 
-  it('builds a hashed minimal kit and rejects identity, Node, or file tampering', () => {
+  it('builds a hashed minimal kit and rejects identity, Node, or file tampering', { meta: { calibratedMs: 15_000 } }, () => {
     const artifactRoot = tempRoot('foliole-validation-artifact-');
     const installerName = 'Foliole-Windows-x64-test.exe';
     const installer = Buffer.from('installer');
@@ -79,5 +79,5 @@ describe('Windows validation kit build', () => {
     const packageJson = path.join(kitRoot, 'package.json');
     fs.appendFileSync(packageJson, 'tamper');
     expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '22.14.0' })).toThrow('hash mismatch');
-  }, 15_000);
+  });
 });

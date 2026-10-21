@@ -10,7 +10,7 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('repairs a retained historical body that exists only on the sender', async () => {
+it('repairs a retained historical body that exists only on the sender', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const nodeId = 'historical-repair';
   try {
@@ -48,4 +48,4 @@ it('repairs a retained historical body that exists only on the sender', async ()
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});

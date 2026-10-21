@@ -55,7 +55,7 @@ function clearActiveNodeSelection() {
   });
 }
 
-it('opens the guided sample when no topic exists yet', async () => {
+it('opens the guided sample when no topic exists yet', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   keepOnlyInboxWithoutActiveNode();
 
   render(<App />);
@@ -67,7 +67,7 @@ it('opens the guided sample when no topic exists yet', async () => {
     )).toBe(true);
   });
   expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('shows the document empty state when no note is selected', () => {
   clearActiveNodeSelection();

@@ -36,7 +36,7 @@ function removeBody(databasePath: string, versionId: string) {
 }
 
 it.each(['unused-ancestor', 'current-one-source', 'current-both-missing'])(
-  'requires current text while allowing retired ancestor gaps: %s', async missing => {
+  'requires current text while allowing retired ancestor gaps: %s', { meta: { calibratedMs: 60_000 } }, async missing => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original 中文\r\n😀', nodeId: 'history-state', title: 'History' });
@@ -76,9 +76,9 @@ it.each(['unused-ancestor', 'current-one-source', 'current-both-missing'])(
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
-it('keeps an offline editor branch and converges three production request peers after reconnect', async () => {
+it('keeps an offline editor branch and converges three production request peers after reconnect', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const third = await fixture.startThird();
   try {
@@ -117,9 +117,9 @@ it('keeps an offline editor branch and converges three production request peers 
     await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
-it.each(['restore', 'adoption'] as const)('preserves deletion and full current text through %s and restart', async mode => {
+it.each(['restore', 'adoption'] as const)('preserves deletion and full current text through %s and restart', { meta: { calibratedMs: 60_000 } }, async mode => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Historical body', nodeId: 'history-state', title: 'History' });
@@ -145,4 +145,4 @@ it.each(['restore', 'adoption'] as const)('preserves deletion and full current t
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});

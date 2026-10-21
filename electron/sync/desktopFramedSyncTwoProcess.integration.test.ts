@@ -97,7 +97,7 @@ it('moves exact full body bytes through a request round and preserves them after
   expect(reopened.versions).toEqual(received.versions);
 });
 
-it('commits the Node independently and fills its image in the ordinary resource phase', async () => {
+it('commits the Node independently and fills its image in the ordinary resource phase', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await setup();
   const bytes = Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -130,7 +130,7 @@ it('commits the Node independently and fills its image in the ordinary resource 
   processes.push(restarted.process);
   await expect(fs.readFile(target)).resolves.toEqual(bytes);
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual(received.nodes);
-}, 60_000);
+});
 
 it('rejects an unauthenticated current request without changing business state', async () => {
   const fixture = await setup();

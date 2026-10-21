@@ -104,7 +104,7 @@ it.each([
   expect(driver.queryAll('SELECT * FROM nodes')).toEqual(before);
 });
 
-it('preserves a source larger than five megabytes without truncation or replacement', async () => {
+it('preserves a source larger than five megabytes without truncation or replacement', { meta: { calibratedMs: 20_000 } }, async () => {
   const body = 'Complete 中文 😀 line\r\n'.repeat(200_000);
   const bytes = Buffer.from(body);
   expect(bytes.length).toBeGreaterThan(5_000_000);
@@ -120,4 +120,4 @@ it('preserves a source larger than five megabytes without truncation or replacem
     expect(Buffer.byteLength(persisted.content)).toBeLessThanOrEqual(1048576);
     expect(persisted.content).not.toContain('\ufffd');
   }
-}, 20_000);
+});

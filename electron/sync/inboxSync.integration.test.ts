@@ -58,7 +58,7 @@ function assertInbox(databasePath: string, priority: number, children: string[],
   } finally { db.close(); }
 }
 
-it('syncs Inbox attributes, ordering and opening time in both directions and retains them after restart', async () => {
+it('syncs Inbox attributes, ordering and opening time in both directions and retains them after restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const { leftSnapshot: a, rightSnapshot: b } = fixture;
   const round = () => fixture.left.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: b.origin,
@@ -82,4 +82,4 @@ it('syncs Inbox attributes, ordering and opening time in both directions and ret
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

@@ -88,7 +88,7 @@ async function renderShell() {
 }
 
 describe('CompanionShell sync ready gate', () => {
-  it('shows sync loading content and hides bottom navigation before local state is ready', async () => {
+  it('shows sync loading content and hides bottom navigation before local state is ready', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     mockFloatingBar();
     mockWorkspaceSync(false);
     mockSurface();
@@ -98,9 +98,9 @@ describe('CompanionShell sync ready gate', () => {
     expect(screen.getByText('Opening synced workspace')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 
-  it('shows settings and bottom navigation after local state is ready without a snapshot', async () => {
+  it('shows settings and bottom navigation after local state is ready without a snapshot', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     mockFloatingBar();
     mockWorkspaceSync(true);
     mockSurface();
@@ -109,5 +109,5 @@ describe('CompanionShell sync ready gate', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 });

@@ -169,7 +169,7 @@ function expectBrowseMenuSheet() {
 }
 
 describe('CompanionShell secondary surfaces', () => {
-  it('opens Browse directory and Capture from the top bar', async () => {
+  it('opens Browse directory and Capture from the top bar', { meta: { calibratedMs: 15000 } }, async () => {
     await renderShellWithSurface(createSurface('recent'));
 
     const bottomBar = screen.getByTestId('companion-bottom-tab-bar');
@@ -187,9 +187,9 @@ describe('CompanionShell secondary surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expectBrowseMenuSheet();
-  }, 15000);
+  });
 
-  it('opens Only Review as an FSRS-only empty state without mixed cards', async () => {
+  it('opens Only Review as an FSRS-only empty state without mixed cards', { meta: { calibratedMs: 15000 } }, async () => {
     await renderShellWithSurface(createSurface('review'));
 
     const topOnlyReviewButton = screen.getAllByRole('button', { name: 'Only Review' }).at(0);
@@ -199,7 +199,7 @@ describe('CompanionShell secondary surfaces', () => {
     expect(screen.getByText('No topics synced yet')).toBeInTheDocument();
     expect(screen.getByText('Connect to desktop to bring review work onto this device.')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-review-card')).not.toBeInTheDocument();
-  }, 15000);
+  });
 
   it('shows Search as an independent input surface', async () => {
     searchCompanionFullText.mockResolvedValue({ external: [], pdf: [], strategy: 'word-based', topics: [] });
@@ -217,7 +217,7 @@ describe('CompanionShell secondary surfaces', () => {
 });
 
 describe('CompanionShell search topic routing', () => {
-  it('opens a search topic through the readable article path and exits back to Search', async () => {
+  it('opens a search topic through the readable article path and exits back to Search', { meta: { calibratedMs: 15000 } }, async () => {
     searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
     const surface = createSurface('search');
     makeSearchSurfaceOpenReadable(surface);
@@ -233,9 +233,9 @@ describe('CompanionShell search topic routing', () => {
 
     expect(surface.handleExitSearchArticle).toHaveBeenCalled();
     expect(screen.getByRole('searchbox', { name: 'Search topics' })).toHaveValue('alpha');
-  }, 15000);
+  });
 
-  it('opens an external search result in the shared reader and exits back to Search', async () => {
+  it('opens an external search result in the shared reader and exits back to Search', { meta: { calibratedMs: 15000 } }, async () => {
     searchCompanionFullText.mockResolvedValue(createCompanionSearchResultsFixture());
     const surface = createSurface('search');
 
@@ -249,5 +249,5 @@ describe('CompanionShell search topic routing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
 
     expect(screen.getByRole('searchbox', { name: 'Search topics' })).toHaveValue('alpha');
-  }, 15000);
+  });
 });

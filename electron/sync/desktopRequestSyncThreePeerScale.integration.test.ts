@@ -24,12 +24,12 @@ const costsSchema = z.object({ aborted: z.number(), requests: z.array(z.object({
 const fullScale = process.env.FOLIOLE_SYNC_THREE_PEER_SCALE === '1';
 const [smallCount, largeCount] = fullScale ? [5150, 30000] : [1000, 5150];
 
-it(`relays one edit across three persistent peers without library-sized wire growth at ${largeCount} nodes`, async () => {
+it(`relays one edit across three persistent peers without library-sized wire growth at ${largeCount} nodes`, { meta: { calibratedMs: fullScale ? 1_800_000 : 600_000 } }, async () => {
   const small = await measureScale(smallCount);
   const large = await measureScale(largeCount);
   // The library grows at least fivefold; doubling traffic already rejects linear growth.
   expect(large.bytes).toBeLessThan(small.bytes * 2);
-}, fullScale ? 1_800_000 : 600_000);
+});
 
 async function measureScale(count: number) {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);

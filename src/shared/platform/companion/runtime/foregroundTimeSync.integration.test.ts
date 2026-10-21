@@ -16,7 +16,7 @@ async function save(host: Awaited<ReturnType<typeof createCompanionRequestFixtur
       objectId: record.id, contentHash: record.hash, updatedAt: record.updatedAt }) });
 }
 
-it('converges cumulative foreground time while an older peer value remains without adding it twice', async () => {
+it('converges cumulative foreground time while an older peer value remains without adding it twice', { meta: { calibratedMs: 30000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const desktop = new Database(host.fixture.rightSnapshot.databasePath);
   try {
@@ -31,4 +31,4 @@ it('converges cumulative foreground time while an older peer value remains witho
       expect(db.prepare('SELECT duration_ms FROM foreground_daily_time').all()).toEqual([{ duration_ms: 120_000 }]);
     }
   } finally { desktop.close(); await host.close(); }
-}, 30000);
+});

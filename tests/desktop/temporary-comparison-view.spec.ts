@@ -182,7 +182,7 @@ test('contiguous temporary comparison diff lines only round their outer edges', 
 });
 
 test('long temporary comparison remains editable after diff rendering', async ({ desktopApp, desktopWindow }) => {
-  test.setTimeout(90_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(90_000) });
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.setViewportSize({ height: 576, width: 1024 });
   await seedTopic(desktopWindow, LONG_CURRENT_CONTENT);

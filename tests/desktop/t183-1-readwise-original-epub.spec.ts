@@ -147,7 +147,7 @@ async function openRebuildMenu(session: T178AcceptanceSession, nodeId: string) {
 
 test('confirms and repeatedly rebuilds one Reader API book from EPUB', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t183-2-'));
   let session: T178AcceptanceSession | null = null;
   try {

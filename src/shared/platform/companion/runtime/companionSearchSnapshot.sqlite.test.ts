@@ -92,7 +92,7 @@ it('serializes all categories with a real writer and keeps committed facts after
   expect(current.pdf.some((row) => row.page === 2)).toBe(true);
 });
 
-it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each category', async (count) => {
+it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each category', { meta: { calibratedMs: 30000 } }, async (count) => {
   library = await createSearchLibrary(count);
   let writerWaitMs = 0;
   let waiting: Promise<void> | null = null;
@@ -121,4 +121,4 @@ it.each([1000, 10000])('measures a lightweight snapshot for %s matches in each c
   mkdirSync(artifact, { recursive: true });
   writeFileSync(`${artifact}/capacity-${count}.json`, JSON.stringify({ countPerKind: count, elapsedMs: elapsed,
     serializedBytes: bytes, writerWaitMs, heapGrowthBytes: heapGrowth, processRssBytes: process.memoryUsage().rss }, null, 2));
-}, 30000);
+});

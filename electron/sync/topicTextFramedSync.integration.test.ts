@@ -28,7 +28,7 @@ async function write(databasePath: string, records: NativeSyncNodeRecord[]) {
   finally { db.close(); }
 }
 
-it('converges forks and an adopted attachment over authenticated production HTTP across restart', async () => {
+it('converges forks and an adopted attachment over authenticated production HTTP across restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const base = textBranch('base', 'Base');
@@ -62,7 +62,7 @@ it('converges forks and an adopted attachment over authenticated production HTTP
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 function anchoredChild(id: string, kind: 'highlight' | 'cloze', parent: NativeSyncNodeRecord) {
   const record = textBranch(`${id}-version`, `${kind} body`);
@@ -94,7 +94,7 @@ function children(databasePath: string) {
   } finally { db.close(); }
 }
 
-it('preserves both body forks and their highlight and cloze anchors while order sources converge', async () => {
+it('preserves both body forks and their highlight and cloze anchors while order sources converge', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const base = textBranch('base', 'Alpha Beta');
@@ -129,4 +129,4 @@ it('preserves both body forks and their highlight and cloze anchors while order 
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

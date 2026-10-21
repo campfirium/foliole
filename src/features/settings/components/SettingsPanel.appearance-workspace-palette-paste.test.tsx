@@ -44,7 +44,7 @@ beforeEach(() => {
   });
 });
 
-it('pastes five hex colors into the free workspace palette', async () => {
+it('pastes five hex colors into the free workspace palette', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -60,7 +60,7 @@ it('pastes five hex colors into the free workspace palette', async () => {
     expect(assignments['main-document']).toBe(4);
     expect(screen.queryByRole('button', { name: 'Palette color 6' })).not.toBeInTheDocument();
   });
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('labels the free palette paste action with a tour tip', () => {
   vi.useFakeTimers();

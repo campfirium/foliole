@@ -67,7 +67,7 @@ describe('hosted quality target boundaries', () => {
       rejected: ['test:release:desktop-src', 'test:release:android', 'test:windows:native-preview'],
       target: 'release-windows-core'
     }
-  ])('keeps $target on its job boundary', async ({ expected, rejected, target }) => {
+  ])('keeps $target on its job boundary', { meta: { calibratedMs: 60000 } }, async ({ expected, rejected, target }) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-hosted-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -82,7 +82,7 @@ describe('hosted quality target boundaries', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
   it('consumes a hosted tooling segment before child test processes start', async () => {
     const result = await runIsolatedTargetGate('release-tooling', {
@@ -94,7 +94,7 @@ describe('hosted quality target boundaries', () => {
     expect(dryRunSteps(result.stdout)).toEqual(['test:quality:gate-two']);
   });
 
-  it('keeps staged Common jobs exactly equivalent to the hosted Common gate', async () => {
+  it('keeps staged Common jobs exactly equivalent to the hosted Common gate', { meta: { calibratedMs: 60000 } }, async () => {
     const [original, staticGate, toolingGate, buildGate] = await Promise.all([
       runIsolatedTargetGate('release-hosted-common'),
       runIsolatedTargetGate('release-static'),
@@ -118,5 +118,5 @@ describe('hosted quality target boundaries', () => {
     expect(staged.toSorted()).toEqual(dryRunSteps(original.stdout).toSorted());
     expect(staged.filter((step) => step === 'test:quality:preview')).toHaveLength(1);
     expect(staged).not.toContain('test:windows:core');
-  }, 60000);
+  });
 });

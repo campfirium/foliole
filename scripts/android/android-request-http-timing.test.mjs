@@ -43,7 +43,7 @@ beforeAll(() => {
   { encoding: 'utf8', timeout: 30000 });
   expect(compile.error).toBeUndefined();
   expect(compile.status, compile.stderr).toBe(0);
-}, 30000);
+});
 afterAll(() => { if (directory) fs.rmSync(directory, { recursive: true, force: true }); });
 
 it.each([4096, 100000])('preserves a %i-byte HTTP body and distinguishes a blocked renewal from output waits', size => {

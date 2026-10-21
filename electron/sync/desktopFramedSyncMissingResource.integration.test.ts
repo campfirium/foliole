@@ -8,7 +8,7 @@ import { expect, it } from 'vitest';
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('leaves externally removed files absent when the adopted article is unchanged', async () => {
+it('leaves externally removed files absent when the adopted article is unchanged', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const bytes = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(128, 1)]);
   const nodeId = 'same-reference-missing-image';
@@ -39,4 +39,4 @@ it('leaves externally removed files absent when the adopted article is unchanged
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

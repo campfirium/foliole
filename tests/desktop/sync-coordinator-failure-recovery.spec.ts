@@ -42,7 +42,7 @@ test('settles every queued offline target and retains the durable failure after 
 });
 
 test('settles an unresponsive mobile round and shows the persisted wait after reload', async ({ desktopApp, desktopWindow }, info) => {
-  test.setTimeout(90_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(90_000) });
   await expectWorkspaceShell(desktopWindow);
   const result = await desktopApp.evaluate(async () => {
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);

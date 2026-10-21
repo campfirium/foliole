@@ -102,7 +102,7 @@ describe('quality-gate-target.sh', () => {
     expect(source).not.toContain('export VITEST_POOL');
   });
 
-  it('runs the desktop gate steps in order', async () => {
+  it('runs the desktop gate steps in order', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -138,9 +138,9 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('runs the android gate including host test', async () => {
+  it('runs the android gate including host test', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -173,9 +173,9 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('runs the shared gate without requiring android host test', async () => {
+  it('runs the shared gate without requiring android host test', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-target-'));
     try {
       await writePackageJson(tempRoot, {
@@ -211,5 +211,5 @@ describe('quality-gate-target.sh', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

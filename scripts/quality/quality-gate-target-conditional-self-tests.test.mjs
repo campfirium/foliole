@@ -73,7 +73,7 @@ describe('quality-gate-target.sh conditional quality self-tests', () => {
   it.each([
     ['desktop', ['lint:desktop:full', 'typecheck:desktop', 'test:desktop', 'test:windows:core', 'build', 'electron:compile']],
     ['android', ['check:android-boundary', 'lint:android:full', 'typecheck:android', 'test:android', 'android:sync', 'android:host:lint', 'android:host:test']]
-  ])('skips quality script self-tests for ordinary %s product changes', async (target, expectedSteps) => {
+  ])('skips quality script self-tests for ordinary %s product changes', { meta: { calibratedMs: 60000 } }, async (target, expectedSteps) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-conditional-'));
     try {
       await writePackageJson(tempRoot);
@@ -91,5 +91,5 @@ describe('quality-gate-target.sh conditional quality self-tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

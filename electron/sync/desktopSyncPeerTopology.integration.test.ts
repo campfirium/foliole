@@ -17,7 +17,7 @@ const peer = (device: Device, origin = device.snapshot.origin) => ({ kind: 'requ
   peer: { deviceId: device.snapshot.deviceId, libraryEpoch: `${device.snapshot.deviceId}-epoch` } });
 const round = (source: Device, target: Device) => source.process.invoke('round', { input: peer(target) });
 
-it('converges simultaneous initiators and relays through one peer without an A/B connection', async () => {
+it('converges simultaneous initiators and relays through one peer without an A/B connection', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const a = { process: fixture.left, snapshot: fixture.leftSnapshot };
   const b = { process: fixture.right, snapshot: fixture.rightSnapshot };
@@ -52,9 +52,9 @@ it('converges simultaneous initiators and relays through one peer without an A/B
     await Promise.allSettled([a.process.close(), fixture.right.close(), hub?.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
-it('continues an available peer after another peer is offline and persists pending status', async () => {
+it('continues an available peer after another peer is offline and persists pending status', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const a = { process: fixture.left, snapshot: fixture.leftSnapshot };
   const b = { process: fixture.right, snapshot: fixture.rightSnapshot };
@@ -78,7 +78,7 @@ it('continues an available peer after another peer is offline and persists pendi
     await Promise.allSettled([a.process.close(), b.process.close(), offline?.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 function assertBodies(device: Device, ids: string[]) {
   const db = new Database(device.snapshot.databasePath, { readonly: true, fileMustExist: true });

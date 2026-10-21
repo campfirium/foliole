@@ -28,7 +28,7 @@ async function openRightPanelFromMenu(label: string) {
   fireEvent.click(await screen.findByRole('menuitem', { name: new RegExp(label, 'i') }));
 }
 
-it('reveals document highlights from the right sidebar list', async () => {
+it('reveals document highlights from the right sidebar list', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   const parentContent = '# Parent Needle\n\nSecond mark';
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'node-2',
@@ -62,7 +62,7 @@ it('reveals document highlights from the right sidebar list', async () => {
     expect(mockEditorState.selectionFrom).toBe(expectedFrom);
     expect(mockEditorState.selectionTo).toBe(expectedFrom);
   });
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('renders the full ancestor path and keeps nested topics navigable', () => {
   useWorkspaceStore.setState((state) => ({

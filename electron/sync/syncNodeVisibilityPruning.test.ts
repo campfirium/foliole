@@ -60,7 +60,7 @@ it('retires orphaned reading and review state after the node no longer exists', 
   expect(sqlite.pragma('foreign_key_check')).toEqual([]);
 });
 
-it('keeps a single version write from spending seconds pruning an unchanged 10k library', async () => {
+it('keeps a single version write from spending seconds pruning an unchanged 10k library', { meta: { calibratedMs: 30_000 } }, async () => {
   sqlite.transaction(() => {
     node('root', null);
     for (let index = 1; index < 10_000; index++) node(`node-${index}`, 'root');
@@ -73,4 +73,4 @@ it('keeps a single version write from spending seconds pruning an unchanged 10k 
   expect(remaining()).toEqual(before);
   process.stdout.write(JSON.stringify({ event: 'timing_metric', test: 'syncNodeVisibilityPruning unchanged 10k library',
     name: 'pruneMs', valueMs: elapsed, budgetMs: 1_000 }) + '\n');
-}, 30_000);
+});

@@ -59,7 +59,7 @@ beforeEach(async () => {
 afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-}, 30_000);
+});
 
 async function seedReadwisePdfTopic() {
   const readwiseRoot = path.join(tempRoot, 'Readwise');

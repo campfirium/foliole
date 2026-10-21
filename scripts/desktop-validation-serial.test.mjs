@@ -33,7 +33,7 @@ describe('desktop-validation-serial.mjs', () => {
     ]);
   });
 
-  it('runs lint before preview within one invocation', async () => {
+  it('runs lint before preview within one invocation', { meta: { calibratedMs: 30_000 } }, async () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {
       const env = { SERIAL_TEST_LOG: logFile };
       const commands = stubCommands(stub, 80, 80);
@@ -49,9 +49,9 @@ describe('desktop-validation-serial.mjs', () => {
         'single:preview:end'
       ]);
     });
-  }, 30_000);
+  });
 
-  it('stops before preview when lint fails', async () => {
+  it('stops before preview when lint fails', { meta: { calibratedMs: 30_000 } }, async () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {
       const env = { SERIAL_TEST_LOG: logFile };
       const result = await runSerial({
@@ -67,9 +67,9 @@ describe('desktop-validation-serial.mjs', () => {
       expect(log).toContain('failed:lint:end');
       expect(log).not.toContain('failed:preview:start');
     });
-  }, 30_000);
+  });
 
-  it('stops its active child when interrupted', async () => {
+  it('stops its active child when interrupted', { meta: { calibratedMs: 10000 } }, async () => {
     await withTempFixture(async ({ logFile, runtimeDir, stub }) => {
       const running = serialProcess({
         commands: stubCommands(stub, 1000, 10),
@@ -85,5 +85,5 @@ describe('desktop-validation-serial.mjs', () => {
       expect(result.code).not.toBe(0);
       expect(await readFile(logFile, 'utf8')).toContain('interrupted:lint:start');
     });
-  }, 10000);
+  });
 });

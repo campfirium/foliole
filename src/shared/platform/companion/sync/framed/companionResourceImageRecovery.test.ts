@@ -73,7 +73,7 @@ beforeEach(async () => {
   seed(sqlite);
   native.db = createBetterSqliteDbPort(sqlite);
   native.files = createDesktopFramedSyncFiles(path.join(root, 'transport'));
-}, 20000);
+});
 
 afterEach(async () => {
   if (widget) { disposeMarkdownImageWidgetDom(widget); widget.remove(); }

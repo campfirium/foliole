@@ -20,7 +20,7 @@ vi.mock('./signedRequest.js', () => ({ createSignedRequestHeaders: async (input:
 }) => (await native.sign({ endpoint_url: input.endpointUrl, method: input.method,
   path_with_query: input.pathWithQuery, sync_group_id: 't326-group' })).headers }));
 
-it('notifies queued desktop data while the previous round is still handling attachments', async () => {
+it('notifies queued desktop data while the previous round is still handling attachments', { meta: { calibratedMs: 60_000 } }, async () => {
   const { subscribeDesktopSyncCadence } = await import('../../../../companion/companionDesktopSyncCadence.js');
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
@@ -75,9 +75,9 @@ it('notifies queued desktop data while the previous round is still handling atta
     await manual?.catch(() => undefined);
     await mobile.close();
   }
-}, 60_000);
+});
 
-it('delivers an edit committed after final inventory but before finish, using the pre-round marker', async () => {
+it('delivers an edit committed after final inventory but before finish, using the pre-round marker', { meta: { calibratedMs: 60_000 } }, async () => {
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
@@ -111,9 +111,9 @@ it('delivers an edit committed after final inventory but before finish, using th
     await expect(mobile.sync()).rejects.toThrow();
     await requestCompanionSyncSession(endpoint, { operation: 'close', session: reopened.session });
   } finally { await closeCompanionDesktopSession(); await mobile.close(); }
-}, 60_000);
+});
 
-it('joins a desktop manual request to phone scheduling and persists concurrent changes without reverse HTTP', async () => {
+it('joins a desktop manual request to phone scheduling and persists concurrent changes without reverse HTTP', { meta: { calibratedMs: 60_000 } }, async () => {
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
@@ -137,9 +137,9 @@ it('joins a desktop manual request to phone scheduling and persists concurrent c
       .toEqual([{ id: 'desktop-change', content: 'Desktop body' }, { id: 'phone-change', content: 'Phone body' }]);
     expect(await mobile.fixture.left.invoke('request_counts')).toEqual(before);
   } finally { unsubscribe(); await closeCompanionDesktopSession(); await mobile.close(); }
-}, 60_000);
+});
 
-it('automatically pulls desktop changes while the phone waits and reconciles after reconnecting', async () => {
+it('automatically pulls desktop changes while the phone waits and reconciles after reconnecting', { meta: { calibratedMs: 60_000 } }, async () => {
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
@@ -177,9 +177,9 @@ it('automatically pulls desktop changes while the phone waits and reconciles aft
     expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('automatic-edit'))
       .toBe('While disconnected');
   } finally { unsubscribe(); await closeCompanionDesktopSession(); await mobile.close(); }
-}, 60_000);
+});
 
-it('confirms desktop manual data synchronization before stalled attachments finish', async () => {
+it('confirms desktop manual data synchronization before stalled attachments finish', { meta: { calibratedMs: 60_000 } }, async () => {
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
@@ -224,4 +224,4 @@ it('confirms desktop manual data synchronization before stalled attachments fini
     await closeCompanionDesktopSession();
     await mobile.close();
   }
-}, 60_000);
+});

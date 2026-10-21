@@ -26,7 +26,7 @@ let initialPeers: Awaited<ReturnType<typeof diverge>>;
 beforeEach(async () => {
   await startLibraries();
   initialPeers = await diverge();
-}, 30_000);
+});
 afterEach(closeLibraries);
 
 async function annotate(peer: Peer, versionId: string, content: string) {
@@ -72,7 +72,7 @@ function reopen(peer: Peer) {
   peer.port = createBetterSqliteDbPort(peer.db);
 }
 
-it.each([false, true])('keeps converged heads across response replay, forwarding, and reopen (replyLost=%s)', async replyLost => {
+it.each([false, true])('keeps converged heads across response replay, forwarding, and reopen (replyLost=%s)', { meta: { calibratedMs: 30000 } }, async replyLost => {
   const { left, right } = initialPeers;
   edit(left, 'Intermediate body', 'Title A');
   edit(right, 'Intermediate body', 'Title B');
@@ -99,7 +99,7 @@ it.each([false, true])('keeps converged heads across response replay, forwarding
       assertPersisted(right, 'Shared final body', final.version_id!);
     });
   });
-}, 30000);
+});
 
 async function withTopicSnapshot(source: Peer, target: Peer,
   execute: (replay: () => Promise<void>) => Promise<void>) {

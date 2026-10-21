@@ -13,7 +13,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => ({}))
 }));
 
-it('persists an iOS quick capture and synchronizes its whole body through requests after restart', async () => {
+it('persists an iOS quick capture and synchronizes its whole body through requests after restart', { meta: { calibratedMs: 20000 } }, async () => {
   const host = await createCompanionRequestFixture();
   const desktop = new Database(host.fixture.rightSnapshot.databasePath);
   try {
@@ -34,7 +34,7 @@ it('persists an iOS quick capture and synchronizes its whole body through reques
     expect(desktop.prepare('SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = ?').get(result.nodeId))
       .toEqual({ count: 1 });
   } finally { desktop.close(); await host.close(); }
-}, 20000);
+});
 
 function createSnapshot(): WorkspaceSnapshot {
   const timestamp = '2026-07-21T00:00:00.000Z';

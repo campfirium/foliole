@@ -99,7 +99,7 @@ async function retrySync(worker: Worker, peer: Peer) {
   throw lastError;
 }
 
-it('keeps a converged version stable through concurrent HTTP sync, a stale relay, reopen, and retry', async () => {
+it('keeps a converged version stable through concurrent HTTP sync, a stale relay, reopen, and retry', { meta: { calibratedMs: 90000 } }, async () => {
   const peers = await setup();
   await workers[0]!.send('seed', { id: 'topic', content: 'Original' });
   await exchange(peers, 0, 1);
@@ -133,4 +133,4 @@ it('keeps a converged version stable through concurrent HTTP sync, a stale relay
   await exchange(peers, 1, 2);
   await exchange(peers, 2, 0);
   expect(peers.map(persisted)).toEqual(beforeRetry);
-}, 90000);
+});

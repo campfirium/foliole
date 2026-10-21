@@ -15,7 +15,7 @@ import { seedRetiredExternalDocuments } from '../database/retiredExternalDocumen
 
 import { buildRestoreFixture, completeJoinWithDiagnostics, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
 
-it('resumes a blocked use-group adoption after provider migration without another identity or reverse overwrite', async () => {
+it('resumes a blocked use-group adoption after provider migration without another identity or reverse overwrite', { meta: { calibratedMs: 90_000 } }, async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-retired-external-adoption-'));
   const workers: ReturnType<typeof startRestoreFixture>[] = [];
   try {
@@ -73,7 +73,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     await Promise.allSettled(workers.map((worker) => worker.close()));
     await fs.rm(root, { recursive: true, force: true });
   }
-}, 90_000);
+});
 
 async function expectReopenedAdoption(worker: ReturnType<typeof startRestoreFixture>) {
   const state = await worker.send('reopen');

@@ -119,14 +119,14 @@ beforeEach(() => {
 });
 
 describe('CompanionApp bootstrap progress', () => {
-  it('shows a booting state before the native bootstrap resolves', async () => {
+  it('shows a booting state before the native bootstrap resolves', { meta: { calibratedMs: 30_000 } }, async () => {
     useCompanionBootstrap.mockReturnValue({ status: 'booting' });
     const { CompanionApp } = await import('./CompanionApp');
 
     render(<CompanionApp />);
 
     expect(screen.getByText('Starting companion runtime')).toBeInTheDocument();
-  }, 30_000);
+  });
 
   it('shows a failure state when bootstrap rejects', async () => {
     useCompanionBootstrap.mockReturnValue({

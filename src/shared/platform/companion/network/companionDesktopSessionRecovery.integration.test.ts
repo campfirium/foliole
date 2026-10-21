@@ -14,7 +14,7 @@ vi.mock('./signedRequest.js', () => ({ createSignedRequestHeaders: async (input:
 }) => (await native.sign({ endpoint_url: input.endpointUrl, method: input.method,
   path_with_query: input.pathWithQuery, sync_group_id: 't326-group' })).headers }));
 
-it.each(['before-request', 'after-response', 'session-close'])('recovers the next data round when finish is lost %s', async loss => {
+it.each(['before-request', 'after-response', 'session-close'])('recovers the next data round when finish is lost %s', { meta: { calibratedMs: 60_000 } }, async loss => {
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
   const endpoint = mobile.fixture.rightSnapshot.origin;
@@ -54,9 +54,9 @@ it.each(['before-request', 'after-response', 'session-close'])('recovers the nex
     expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('after-lost-finish'))
       .toBe('Next committed body');
   } finally { unsubscribe(); await closeCompanionDesktopSession(); await mobile.close(); }
-}, 60_000);
+});
 
-it('automatically reconciles changes after an unconfirmed finish without another user edit', async () => {
+it('automatically reconciles changes after an unconfirmed finish without another user edit', { meta: { calibratedMs: 60_000 } }, async () => {
   const { subscribeDesktopSyncCadence } = await import('../../../../companion/companionDesktopSyncCadence.js');
   const mobile = await createCompanionRequestFixture();
   installSessionHttpBoundary();
@@ -93,4 +93,4 @@ it('automatically reconciles changes after an unconfirmed finish without another
     await closeCompanionDesktopSession();
     await mobile.close();
   }
-}, 60_000);
+});

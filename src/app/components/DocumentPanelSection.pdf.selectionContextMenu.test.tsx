@@ -115,7 +115,7 @@ beforeEach(() => {
   } as never);
 });
 
-it('shows the PDF highlight toolbar on selection completion and preserves the right-click fallback', async () => {
+it('shows the PDF highlight toolbar on selection completion and preserves the right-click fallback', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   const onCreatePdfHighlight = vi.fn(() => true);
 
   render(<DocumentPanelSection {...defaultProps} onCreatePdfHighlight={onCreatePdfHighlight} />);
@@ -150,4 +150,4 @@ it('shows the PDF highlight toolbar on selection completion and preserves the ri
   expect(onCreatePdfHighlight).toHaveBeenCalledTimes(2);
   await waitFor(() => expect(screen.queryByRole('toolbar')).not.toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
   selection?.removeAllRanges();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

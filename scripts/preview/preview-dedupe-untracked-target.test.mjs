@@ -59,7 +59,7 @@ function previewEnv(repoRoot) {
   };
 }
 
-it('ignores untracked files outside the selected preview target', async () => {
+it('ignores untracked files outside the selected preview target', { meta: { calibratedMs: PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS } }, async () => {
   const repoRoot = await setupRepo();
   try {
     const first = await run(NODE_RUNTIME, [
@@ -93,4 +93,4 @@ it('ignores untracked files outside the selected preview target', async () => {
   } finally {
     await rm(repoRoot, { force: true, recursive: true });
   }
-}, PREVIEW_DEDUPE_INTEGRATION_TIMEOUT_MS);
+});

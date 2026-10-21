@@ -48,11 +48,11 @@ beforeAll(() => {
   fs.chmodSync(keystore, 0o600);
   fs.writeFileSync(configFile, JSON.stringify({ keystore, passwordFile, alias: 'upload' }), { mode: 0o600 });
   config = loadUploadSigning(configFile, repo);
-}, 30000);
+});
 
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 
-it('keeps unsigned source and produces an integrity verified upload signed sample with no secrets in receipt', () => {
+it('keeps unsigned source and produces an integrity verified upload signed sample with no secrets in receipt', { meta: { calibratedMs: 30000 } }, () => {
   const receipt = unsignedBundle('success');
   const signed = signReleaseBundle({ receipt, config, java, env: {} });
   expect(hash(receipt.artifact)).toBe(receipt.digest);
@@ -65,16 +65,16 @@ it('keeps unsigned source and produces an integrity verified upload signed sampl
   run(path.join(path.dirname(java), 'jar'), ['--update', '--file', signed.artifact,
     '-C', path.dirname(receipt.artifact), 'payload.txt']);
   expect(() => verifyUploadBundle({ artifact: signed.artifact, config, java, env: {} })).toThrow('jarsigner failed');
-}, 30000);
+});
 
-it('rejects an unsigned archive and the wrong signer alias', () => {
+it('rejects an unsigned archive and the wrong signer alias', { meta: { calibratedMs: 30000 } }, () => {
   const receipt = unsignedBundle('failure');
   expect(() => verifyUploadBundle({ artifact: receipt.artifact, config, java, env: {} })).toThrow();
   expect(() => signReleaseBundle({ receipt, config: { ...config, alias: 'absent' }, java, env: {} }))
     .toThrow('jarsigner failed');
   expect(fs.existsSync(path.join(path.dirname(receipt.artifact), 'app-release-signed.aab'))).toBe(false);
   expect(hash(receipt.artifact)).toBe(receipt.digest);
-}, 30000);
+});
 
 it('rejects shared credential permissions and repository contained credentials', () => {
   fs.chmodSync(config.passwordFile, 0o644);

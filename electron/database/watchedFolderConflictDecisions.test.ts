@@ -58,7 +58,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it.each([false, true])('imports watched files only for the selected local source: %s', async (selected) => {
+it.each([false, true])('imports watched files only for the selected local source: %s', { meta: { calibratedMs: 15000 } }, async (selected) => {
   const { folder, local, conflict } = await conflictingSources();
   const ruleId = 'draft-import-source-101';
   saveImportManagerSettings({ sources: [{
@@ -86,7 +86,7 @@ it.each([false, true])('imports watched files only for the selected local source
   if (selected) await vi.waitFor(() => expect(isKeepImportMonitorSnapshotFresh(ruleId)).toBe(true));
   expect(imported()).toEqual(saved);
   expect(await fs.readFile(file, 'utf8')).toBe(body);
-}, 15000);
+});
 
 async function conflictingSources(localRule = 'draft-import-source-101',
   remoteRule = 'draft-import-source-102') {

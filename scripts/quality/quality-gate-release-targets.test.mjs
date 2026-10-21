@@ -41,7 +41,7 @@ describe('quality-gate release split targets', () => {
     );
   });
 
-  it('keeps release-core isolated from preview recovery and android host checks', async () => {
+  it('keeps release-core isolated from preview recovery and android host checks', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -77,7 +77,7 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
   it.each([
     {
@@ -107,7 +107,7 @@ describe('quality-gate release split targets', () => {
       rejected: ['test:release:desktop-src', 'test:windows:native-preview'],
       target: 'release-script-preview'
     }
-  ])('keeps $target isolated to $name', async ({ expected, rejected, target }) => {
+  ])('keeps $target isolated to $name', { meta: { calibratedMs: 60000 } }, async ({ expected, rejected, target }) => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -121,9 +121,9 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps release-preview-recovery isolated to slow Windows recovery tests', async () => {
+  it('keeps release-preview-recovery isolated to slow Windows recovery tests', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -139,9 +139,9 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps full isolated to release core plus preview recovery without android host checks', async () => {
+  it('keeps full isolated to release core plus preview recovery without android host checks', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -182,9 +182,9 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps full release coverage as core plus preview recovery plus android host', async () => {
+  it('keeps full release coverage as core plus preview recovery plus android host', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -201,9 +201,9 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 
-  it('keeps release-android-host isolated to sync and host checks', async () => {
+  it('keeps release-android-host isolated to sync and host checks', { meta: { calibratedMs: 60000 } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-release-target-'));
     try {
       await writePackageJson(tempRoot, releaseScripts());
@@ -221,5 +221,5 @@ describe('quality-gate release split targets', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 60000);
+  });
 });

@@ -35,7 +35,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it('imports a 272 MiB EPUB with 68 MiB images locally and through streamed Readwise preparation', async () => {
+it('imports a 272 MiB EPUB with 68 MiB images locally and through streamed Readwise preparation', { meta: { calibratedMs: 120_000 } }, async () => {
   const filePath = path.join(root, 'large.epub');
   const { imageSize } = await createLargeStoredImageBook(filePath);
   expect((await fs.stat(filePath)).size).toBeGreaterThan(256 * 1024 * 1024);
@@ -66,7 +66,7 @@ it('imports a 272 MiB EPUB with 68 MiB images locally and through streamed Readw
     expect(candidate.stages[0]?.sizeBytes).toBe(imageSize);
   } finally { await downloaded.dispose(); }
   await expect(fs.stat(downloaded.filePath)).rejects.toMatchObject({ code: 'ENOENT' });
-}, 120_000);
+});
 
 it('rejects a forged chapter before writing any library content', async () => {
   const zip = bookZip(`<html><body><p>${'a'.repeat(64 * 1024)}</p></body></html>`);

@@ -46,7 +46,7 @@ afterEach(async () => {
       throw error;
     }
   }
-}, 30_000);
+});
 
 it('blocks database reopen while Library Home data is moving', async () => {
   const initialPaths = await loadLibraryPathSettings();

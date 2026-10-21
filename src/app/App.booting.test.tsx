@@ -165,7 +165,7 @@ afterEach(() => {
   restoreWindowDescriptor('requestAnimationFrame');
 });
 
-it('renders the workspace chrome immediately without a boot-only shell', async () => {
+it('renders the workspace chrome immediately without a boot-only shell', { meta: { calibratedMs: 15000 } }, async () => {
   useAppController.mockReturnValue({
     ...createClosedOverlayState(),
     hotkeySettings: {},
@@ -184,9 +184,9 @@ it('renders the workspace chrome immediately without a boot-only shell', async (
   });
   expect(reportRuntimeAppReady).not.toHaveBeenCalled();
   expect(prewarmWorkspaceSettingsOverlay).not.toHaveBeenCalled();
-}, 15000);
+});
 
-it('prewarms interactive surfaces after the hydrated workspace is ready', async () => {
+it('prewarms interactive surfaces after the hydrated workspace is ready', { meta: { calibratedMs: 15000 } }, async () => {
   const requestIdleCallback = vi.fn((callback: IdleRequestCallback) => {
     callback({ didTimeout: false, timeRemaining: () => 20 });
     return 1;
@@ -216,9 +216,9 @@ it('prewarms interactive surfaces after the hydrated workspace is ready', async 
   expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
   expect(prewarmImportSourceWorkspace).toHaveBeenCalledTimes(1);
   expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2500 });
-}, 15000);
+});
 
-it('skips settings overlay prewarm in the Demo runtime', async () => {
+it('skips settings overlay prewarm in the Demo runtime', { meta: { calibratedMs: 15000 } }, async () => {
   demoRuntimeMock.isDemo = true;
   const requestIdleCallback = vi.fn((callback: IdleRequestCallback) => {
     callback({ didTimeout: false, timeRemaining: () => 20 });
@@ -248,4 +248,4 @@ it('skips settings overlay prewarm in the Demo runtime', async () => {
   expect(prewarmAppOverlayStack).toHaveBeenCalledTimes(1);
   expect(prewarmWorkspaceRightSidebarPanels).toHaveBeenCalledTimes(1);
   expect(prewarmWorkspaceSettingsOverlay).not.toHaveBeenCalled();
-}, 15000);
+});

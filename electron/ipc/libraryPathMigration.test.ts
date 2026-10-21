@@ -45,7 +45,7 @@ afterEach(async () => {
       throw error;
     }
   }
-}, 30_000);
+});
 
 it('moves existing assets into the new assets folder', async () => {
   const initialPaths = await loadLibraryPathSettings();

@@ -10,7 +10,7 @@ import { saveIosSetting } from '../../runtime/iosCompanionActiveDatabaseWrites.j
 let host: Awaited<ReturnType<typeof createJoiningMobile>> | undefined;
 afterEach(async () => { await host?.close(); host = undefined; });
 
-it('rejects empty, forged, closed and replaced IDs instead of retrying without a session', async () => {
+it('rejects empty, forged, closed and replaced IDs instead of retrying without a session', { meta: { calibratedMs: 60000 } }, async () => {
   host = await createJoiningMobile();
   await approveJoiningMobile(host);
   const endpoint = host.peer.origin;
@@ -38,9 +38,9 @@ it('rejects empty, forged, closed and replaced IDs instead of retrying without a
   mobile.post.mockImplementation(post);
   await expect(syncJoinedMobile(host)).resolves.toMatchObject({ remainingStructureChangeCount: 0 });
   await requestCompanionSyncSession(endpoint, { operation: 'close', session: valid.session });
-}, 60000);
+});
 
-it('notifies an existing session of production writes from a sessionless round without completing it', async () => {
+it('notifies an existing session of production writes from a sessionless round without completing it', { meta: { calibratedMs: 60000 } }, async () => {
   host = await createJoiningMobile();
   await approveJoiningMobile(host);
   const opened = syncSessionReplySchema.parse(await requestCompanionSyncSession(host.peer.origin, { operation: 'open' }));
@@ -64,4 +64,4 @@ it('notifies an existing session of production writes from a sessionless round w
       expect(db.prepare('SELECT value_json FROM setting_records WHERE key=?').pluck().get('readwise_source_cutover_v2')).toBe('"saved"');
     }
   } finally { provider.close(); }
-}, 60000);
+});

@@ -36,7 +36,7 @@ function assertNoTransportRows(databasePath: string) {
   } finally { db.close(); }
 }
 
-it('converges independent processes through inventory, HTTP, resource transfer and reopening without transport rows', async () => {
+it('converges independent processes through inventory, HTTP, resource transfer and reopening without transport rows', { meta: { calibratedMs: 120_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
@@ -58,9 +58,9 @@ it('converges independent processes through inventory, HTTP, resource transfer a
   expect(await reconnectFixturePeer(reopened.process, fixture.leftSnapshot)).toMatchObject({ complete: true });
   expect(readDesktopFramedSyncLibraryEvidence(reopened.snapshot.databasePath).versions).toEqual(right.versions);
   assertNoTransportRows(reopened.snapshot.databasePath);
-}, 120_000);
+});
 
-it('delivers the same requested content again after file retirement and process restart', async () => {
+it('delivers the same requested content again after file retirement and process restart', { meta: { calibratedMs: 120_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
@@ -77,9 +77,9 @@ it('delivers the same requested content again after file retirement and process 
   expect(after.versions).toEqual(before.versions);
   assertNoTransportRows(restarted.snapshot.databasePath);
   assertNoTransportRows(fixture.rightSnapshot.databasePath);
-}, 120_000);
+});
 
-it('versions remapped child anchors and converges both durable libraries after a remote parent edit', async () => {
+it('versions remapped child anchors and converges both durable libraries after a remote parent edit', { meta: { calibratedMs: 120_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   root = fixture.root;
   processes.push(fixture.left, fixture.right);
@@ -115,4 +115,4 @@ it('versions remapped child anchors and converges both durable libraries after a
   expect(await reconnectFixturePeer(restarted.process, fixture.leftSnapshot)).toMatchObject({ complete: true });
   expect(read(restarted.snapshot.databasePath)).toEqual(settled);
   expect(read(fixture.leftSnapshot.databasePath)).toEqual(settled);
-}, 120_000);
+});

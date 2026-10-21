@@ -10,6 +10,7 @@ import {
   readVitestReport,
   validateExpectedTestFiles
 } from './vitest-report-contract.mjs';
+import { runWithSoftTimeouts } from './vitest-soft-timeouts.mjs';
 
 const DEFAULT_SLOW_LIMIT = 10;
 
@@ -196,21 +197,21 @@ function printSummary(reportPath) {
 
 async function main() {
   const { reportPath, vitestArgs } = parseArgs(process.argv.slice(2));
-  mkdirSync(path.dirname(reportPath), { recursive: true });
-  rmSync(reportPath, { force: true });
-  const args = [
-    'run',
-    '--reporter=dot',
-    '--reporter=json',
-    `--outputFile.json=${reportPath}`,
-    ...resolveVitestArgs(vitestArgs, process.env)
-  ];
   const vitestCommand = resolveVitestCommand();
   const vitestEnv = { ...process.env };
   delete vitestEnv.FOLIOLE_EXPECTED_TEST_FILES;
-  const exitCode = await runVitest(vitestCommand, args, vitestEnv);
-  printSummary(reportPath);
-  const report = readVitestReport(reportPath);
+  const runAndRead = async (args, outputPath) => {
+    mkdirSync(path.dirname(outputPath), { recursive: true });
+    rmSync(outputPath, { force: true });
+    const exitCode = await runVitest(vitestCommand, [
+      'run', '--reporter=dot', '--reporter=json', `--outputFile.json=${outputPath}`, ...args
+    ], vitestEnv);
+    printSummary(outputPath);
+    return { exitCode, report: readVitestReport(outputPath) };
+  };
+  const { exitCode, report } = await runWithSoftTimeouts({
+    args: resolveVitestArgs(vitestArgs, process.env), reportPath, runAndRead
+  });
   const expectedFilesSatisfied = !process.env.FOLIOLE_EXPECTED_TEST_FILES || Boolean(
     report && validateExpectedTestFiles(report, process.env.FOLIOLE_EXPECTED_TEST_FILES)
   );

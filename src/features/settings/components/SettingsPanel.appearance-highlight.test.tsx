@@ -13,7 +13,7 @@ beforeEach(() => {
   delete window.electronAPI;
 });
 
-it('persists and resets selection, highlight, and cloze colors from appearance settings', async () => {
+it('persists and resets selection, highlight, and cloze colors from appearance settings', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -42,7 +42,7 @@ it('persists and resets selection, highlight, and cloze colors from appearance s
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.highlightColor)).toBe('#38bdf8');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.clozeColor)).toBe('#facc15');
   });
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('persists and resets font color from appearance settings', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
@@ -86,7 +86,7 @@ it('renders a directly clickable native font color input', async () => {
   expect(screen.getByLabelText('Font color picker')).toHaveClass('cursor-pointer');
 });
 
-it('stores appearance colors in the active base color mode', async () => {
+it('stores appearance colors in the active base color mode', { meta: { calibratedMs: 15_000 } }, async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
@@ -110,7 +110,7 @@ it('stores appearance colors in the active base color mode', async () => {
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColor)).toBe('#336699');
     expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.selectionColorDark)).toBe('#224488');
   });
-}, 15_000);
+});
 
 it('uses dark color defaults for appearance color reset controls', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);

@@ -28,7 +28,7 @@ function expectedVitestArgs(prefix, testFile) {
 }
 
 describe('quality-gate-fast.sh light related tests', () => {
-  it('uses the light level for local component changes and skips related tests', async () => {
+  it('uses the light level for local component changes and skips related tests', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));
     const lintMarker = toFixtureShellPath(path.join(tempRoot, 'lint.marker'));
@@ -66,9 +66,9 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('uses the light level for local component changes and runs adjacent tests', async () => {
+  it('uses the light level for local component changes and runs adjacent tests', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     const typecheckMarker = toFixtureShellPath(path.join(tempRoot, 'typecheck.marker'));
     const lintMarker = toFixtureShellPath(path.join(tempRoot, 'lint.marker'));
@@ -115,9 +115,9 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('prints a light route plan without running checks', async () => {
+  it('prints a light route plan without running checks', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -148,9 +148,9 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 
-  it('prints executable related tests without treating test helpers as test entries', async () => {
+  it('prints executable related tests without treating test helpers as test entries', { meta: { calibratedMs: 30000 } }, async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -183,5 +183,5 @@ describe('quality-gate-fast.sh light related tests', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 30000);
+  });
 });

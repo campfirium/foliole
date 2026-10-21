@@ -60,7 +60,7 @@ describe('trash root model', () => {
     expect(filterTrashRootIdsByTitle(['folder'], nodeOrder, nodesById, ['folder', 'topic', 'item'], 'needle')).toEqual(['folder']);
   });
 
-  it('keeps root selection stable for large covered trash subtrees', () => {
+  it('keeps root selection stable for large covered trash subtrees', { meta: { calibratedMs: 15000 } }, () => {
     const manyNodesById: Record<string, WorkspaceListNode> = {
       root: createNode('root', 'Root'),
       solo: createNode('solo', 'Solo')
@@ -79,7 +79,7 @@ describe('trash root model', () => {
     manyTrashedNodeIds.push('solo');
 
     expect(selectTrashRootIds(manyNodeOrder, manyNodesById, manyTrashedNodeIds)).toEqual(['root', 'solo']);
-  }, 15000);
+  });
 
   it('matches deep covered descendants without changing root order', () => {
     expect(filterTrashRootIdsByTitle(['folder', 'solo'], nodeOrder, nodesById, ['folder', 'topic', 'item', 'solo'], 'needle')).toEqual(['folder']);

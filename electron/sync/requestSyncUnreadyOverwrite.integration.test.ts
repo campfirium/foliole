@@ -7,7 +7,7 @@ import { expect, it } from 'vitest';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('keeps equal unready overwrite libraries pending without empty requests, then completes after repair', async () => {
+it('keeps equal unready overwrite libraries pending without empty requests, then completes after repair', { meta: { calibratedMs: 60000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const source = new Database(fixture.leftSnapshot.databasePath);
   const target = new Database(fixture.rightSnapshot.databasePath);
@@ -51,4 +51,4 @@ it('keeps equal unready overwrite libraries pending without empty requests, then
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60000);
+});

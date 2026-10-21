@@ -52,7 +52,7 @@ function rendererNode(versionId: string, content: string, updatedAt: string): No
 }
 
 it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
-  'preserves both whole bodies and the real edit basis: %s', async (timing) => {
+  'preserves both whole bodies and the real edit basis: %s', { meta: { calibratedMs: 60_000 } }, async (timing) => {
     const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     let succeeded = false;
     try {
@@ -101,7 +101,7 @@ it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
       if (succeeded) await fs.rm(fixture.root, { recursive: true, force: true });
       else console.info('Concurrent editor fixture:', fixture.root);
     }
-  }, 60_000);
+  });
 
 function assertRetiredVersion(databasePath: string, versionId: string, body: string) {
   expect(persisted(databasePath).versions.find((version) => version.version_id === versionId))
@@ -115,7 +115,7 @@ function editorHolds(databasePath: string) {
   finally { db.close(); }
 }
 
-it('returns a saved edit based on the received version without introducing a text alternative', async () => {
+it('returns a saved edit based on the received version without introducing a text alternative', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
@@ -141,7 +141,7 @@ it('returns a saved edit based on the received version without introducing a tex
     if (succeeded) await fs.rm(fixture.root, { recursive: true, force: true });
     else console.info('Sequential editor fixture:', fixture.root);
   }
-}, 60_000);
+});
 
 function assertIndependentEditorState(databasePath: string, baseId: string, inputId: string) {
   expect(editorHolds(databasePath)).toEqual([{ hold_id: 'editor', version_id: inputId },
@@ -151,7 +151,7 @@ function assertIndependentEditorState(databasePath: string, baseId: string, inpu
   assertRetiredVersion(databasePath, inputId, localBody);
 }
 
-it('continues newer input from its acknowledged branch while independent edit holds survive synchronization', async () => {
+it('continues newer input from its acknowledged branch while independent edit holds survive synchronization', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
   try {
@@ -209,4 +209,4 @@ it('continues newer input from its acknowledged branch while independent edit ho
     if (succeeded) await fs.rm(fixture.root, { recursive: true, force: true });
     else console.info('Editor acknowledgement fixture:', fixture.root);
   }
-}, 60_000);
+});

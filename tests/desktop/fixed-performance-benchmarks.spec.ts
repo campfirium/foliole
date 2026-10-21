@@ -14,7 +14,8 @@ const options = parseBenchmarkOptions([process.env.FOLIOLE_BENCHMARK_MODE ?? 'co
 
 for (const size of options.sizes) {
   test(`fixed performance scenarios at ${size} articles`, async ({ browserName }, testInfo) => {
-    test.setTimeout(options.sustainedMs + 900_000);
+    test.info().annotations.push({ type: 'calibrated-ms', description: String(options.sustainedMs + 900_000) });
+    test.setTimeout(Math.max(options.sustainedMs + 900_000, test.info().timeout));
     void browserName;
     const root = testInfo.outputPath('state');
     await mkdir(root, { recursive: true });

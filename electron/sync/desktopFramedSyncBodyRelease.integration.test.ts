@@ -28,7 +28,7 @@ function readBodies(databasePath: string) {
   } finally { db.close(); }
 }
 
-it('releases replaced bytes across real processes, preserves another node holder and survives restart', async () => {
+it('releases replaced bytes across real processes, preserves another node holder and survives restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const third = await fixture.startThird();
   try {
@@ -82,4 +82,4 @@ it('releases replaced bytes across real processes, preserves another node holder
     await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 60_000);
+});

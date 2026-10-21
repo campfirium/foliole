@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('converges original order facts and current order through a normal production peer round', async () => {
+it('converges original order facts and current order through a normal production peer round', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Body', nodeId: 'independent-order', title: 'Ordered' });
@@ -38,4 +38,4 @@ it('converges original order facts and current order through a normal production
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});

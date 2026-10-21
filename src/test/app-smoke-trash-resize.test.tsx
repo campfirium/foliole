@@ -36,7 +36,7 @@ async function openTrashView() {
   await getTrashTree();
 }
 
-it('restores and permanently deletes nodes from trash context menu actions', async () => {
+it('restores and permanently deletes nodes from trash context menu actions', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,
     nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
@@ -62,7 +62,7 @@ it('restores and permanently deletes nodes from trash context menu actions', asy
   fireEvent.contextMenu(await getTrashTreeItem('Child'), { clientX: 56, clientY: 64 });
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete Permanently' }));
   await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']!).toBeUndefined());
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});
 
 it('supports multi-select permanent delete inside trash', async () => {
   useWorkspaceStore.setState((state) => ({

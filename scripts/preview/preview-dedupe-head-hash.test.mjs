@@ -56,7 +56,7 @@ function runDedupe(repoRoot, label) {
 }
 
 describe('preview-dedupe committed target hash', () => {
-  it('runs again after a committed target file changes even with a clean worktree', async () => {
+  it('runs again after a committed target file changes even with a clean worktree', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const repoRoot = await createRepo();
     try {
       const first = await runDedupe(repoRoot, 'first');
@@ -72,5 +72,5 @@ describe('preview-dedupe committed target hash', () => {
     } finally {
       await rm(repoRoot, { force: true, recursive: true });
     }
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 });

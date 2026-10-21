@@ -33,7 +33,7 @@ async function startLegacyGroup() {
   return { mac: workers[0]!, windows: workers[1]!, peers };
 }
 
-it('keeps a v0.7.14 owner confirmation visibly pending while another desktop is offline', async () => {
+it('keeps a v0.7.14 owner confirmation visibly pending while another desktop is offline', { meta: { calibratedMs: 45000 } }, async () => {
   const { mac, windows, peers } = await startLegacyGroup();
   await expect(mac.send('readwiseRead')).resolves.toMatchObject({ assignment: {
     is_active: false, active_host_name: null, active_device_identity_key: null, legacy_unassigned: true
@@ -48,4 +48,4 @@ it('keeps a v0.7.14 owner confirmation visibly pending while another desktop is 
   await expect(mac.send('readwiseRead')).resolves.toMatchObject({ assignment: {
     is_active: false, handoff_pending: true
   } });
-}, 45000);
+});

@@ -9,7 +9,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 for (const count of [100, 1000]) {
   test(`persists ${count} foreground creations and edits with automatic search maintenance`, async ({ browserName }, testInfo) => {
-    test.setTimeout(180_000);
+    test.info().annotations.push({ type: 'calibrated-ms', description: String(180_000) });
     void browserName;
     const root = testInfo.outputPath('state');
     await mkdir(root, { recursive: true });

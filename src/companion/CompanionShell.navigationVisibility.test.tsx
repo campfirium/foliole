@@ -65,7 +65,7 @@ function mockBrowseSurface() {
 }
 
 describe('CompanionShell navigation visibility', () => {
-  it('keeps bottom navigation visible when Browse content scrolls down', async () => {
+  it('keeps bottom navigation visible when Browse content scrolls down', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     useFloatingBarVisibility.mockReturnValue({
       handleContainerScroll: vi.fn(),
       handleTouchEnd: vi.fn(),
@@ -91,5 +91,5 @@ describe('CompanionShell navigation visibility', () => {
     );
 
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 });

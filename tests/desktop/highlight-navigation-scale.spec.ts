@@ -2,7 +2,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 test('parent and highlight child stay responsive with 3500 topics', async ({ desktopWindow }, testInfo) => {
-  test.setTimeout(90_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(90_000) });
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
     const nodes = Array.from({ length: 3498 }, (_, index) => ({

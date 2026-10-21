@@ -48,6 +48,6 @@ await import('./companionBoundary.js');
 const { runScenario, scenarioNames } = await import('./run.js');
 const selected = process.env.FOLIOLE_SIM_SCENARIOS?.split(',') ?? scenarioNames;
 const output = process.env.FOLIOLE_SIM_OUTPUT ?? path.resolve('.tmp/artifacts/sync-simulator', `test-${Date.now()}`);
-for (const name of selected) it(`sync simulator: ${name}`, async () => {
+for (const name of selected) it(`sync simulator: ${name}`, { meta: { calibratedMs: name.startsWith('real') ? 1_200_000 : 600_000 } }, async () => {
   await runScenario(name, path.join(output, name));
-}, name.startsWith('real') ? 1_200_000 : 600_000);
+});

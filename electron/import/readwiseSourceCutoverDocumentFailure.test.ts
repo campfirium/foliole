@@ -101,7 +101,7 @@ it('uses frozen API body for PDFs without requesting a stalled original file', a
     .toHaveLength(0);
 });
 
-it('classifies a large off-policy cohort in one pass without stalling the merge', async () => {
+it('classifies a large off-policy cohort in one pass without stalling the merge', { meta: { calibratedMs: 5_000 } }, async () => {
   const documentCount = 1_000;
   await expect(runReadwiseSourceCutover({
     dependencies: { fetchImpl: migrationWithSuppressedDocuments(documentCount), minIntervalMs: 0 }
@@ -113,7 +113,7 @@ it('classifies a large off-policy cohort in one pass without stalling the merge'
   expect(journal).toMatchObject({ status: 'api' });
   expect(journal.documents).toHaveLength(documentCount);
   expect(journal.documents.every((item: { status: string }) => item.status === 'suppressed')).toBe(true);
-}, 5_000);
+});
 
 function migrationWithHungOriginalFile() {
   return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {

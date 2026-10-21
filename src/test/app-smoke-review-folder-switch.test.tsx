@@ -30,7 +30,7 @@ function enablePersistedStudyMode() {
   setDevReviewStatusBarOpen(true);
 }
 
-it('keeps folder navigation available while the review status bar is open', async () => {
+it('keeps folder navigation available while the review status bar is open', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: 'qa-1',
     nodeOrder: ['folder-a', 'qa-1', 'folder-b', 'topic-b'],
@@ -84,4 +84,4 @@ it('keeps folder navigation available while the review status bar is open', asyn
   expect(within(screen.getByRole('complementary', { name: 'Current folder contents' })).getByRole('treeitem', {
     name: 'Topic B'
   })).toBeInTheDocument();
-}, RELEASE_GATE_TEST_TIMEOUT_MS);
+});

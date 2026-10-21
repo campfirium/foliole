@@ -55,7 +55,7 @@ test('applies real request versions and replays identical facts without changing
   } finally { await fixture.close(); }
 });
 
-test.each(['new', 'existing'])('keeps first and unchanged measurements with the sustained %s request workload', async mode => {
+test.each(['new', 'existing'])('keeps first and unchanged measurements with the sustained %s request workload', { meta: { calibratedMs: 30_000 } }, async mode => {
   const report = await benchmark.runFixedSyncBenchmark({ nodeCount: 25, repeats: 2 }, services);
   expect(report.boundary).toContain('production request batch receive');
   for (const mode of ['first', 'unchanged']) {
@@ -76,4 +76,4 @@ test.each(['new', 'existing'])('keeps first and unchanged measurements with the 
     expect(result.durationMs).toBeGreaterThanOrEqual(2200);
     expect(result.endedAt - result.startedAt).toBe(result.durationMs);
   } finally { rmSync(root, { recursive: true, force: true }); }
-}, 30_000);
+});

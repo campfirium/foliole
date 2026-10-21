@@ -99,13 +99,13 @@ async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
 }
 
 describe('CompanionShell review breadcrumb', () => {
-  it('stops at the article topic under the folder instead of showing the nested review topic title', async () => {
+  it('stops at the article topic under the folder instead of showing the nested review topic title', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     await renderBreadcrumbShell();
 
     expect(screen.getByText('Inbox')).toBeInTheDocument();
     expect(screen.getByText('Topic node title')).toBeInTheDocument();
     expect(screen.queryByText('Inner review topic')).not.toBeInTheDocument();
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 
   it('routes folder breadcrumbs to the folder browse surface target', async () => {
     const { surface } = await renderBreadcrumbShell();

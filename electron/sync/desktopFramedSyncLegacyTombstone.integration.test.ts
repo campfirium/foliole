@@ -16,7 +16,7 @@ import { closeLibraries, createPeer, edit, startLibraries } from '../database/sy
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('converges a proven legacy permanent deletion through a normal two-process HTTP round and restart', async () => {
+it('converges a proven legacy permanent deletion through a normal two-process HTTP round and restart', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const nodeId = 'legacy-deleted-node';
@@ -66,9 +66,9 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
-it.each([false, true])('synchronizes a standalone historical tombstone with missing parent=%s without inventing member positions', async (missingParent) => {
+it.each([false, true])('synchronizes a standalone historical tombstone with missing parent=%s without inventing member positions', { meta: { calibratedMs: 60_000 } }, async (missingParent) => {
   await startLibraries();
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
@@ -105,7 +105,7 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
     await closeLibraries();
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
-}, 60_000);
+});
 
 function persistentFacts(databasePath: string) {
   const db = new Database(databasePath, { readonly: true });

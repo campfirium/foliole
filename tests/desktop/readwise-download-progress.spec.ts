@@ -74,7 +74,7 @@ async function beginImport(app: ElectronApplication) {
 
 test('keeps unknown-total download counts live and restores them after switching settings tabs', async ({ browserName }, testInfo) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-progress-'));
   const session = await createT178ApiAcceptanceSession(stateRoot);
   try {

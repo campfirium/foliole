@@ -34,7 +34,7 @@ function runBash(script, cwd, env = {}) {
 }
 
 describe('quality gate failure summary', () => {
-  it('prefers vitest json reports when recording failed test files', async () => {
+  it('prefers vitest json reports when recording failed test files', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-gate-failure-summary-'));
     const failedSummary = path.join(tempRoot, 'logs', 'test-run', 'failed.txt');
     try {
@@ -79,5 +79,5 @@ describe('quality gate failure summary', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  });
 });

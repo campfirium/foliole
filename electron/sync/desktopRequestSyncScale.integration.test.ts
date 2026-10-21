@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('measures an empty receiver pulling a 3800-node and 24000-state library over production HTTP', async () => {
+it('measures an empty receiver pulling a 3800-node and 24000-state library over production HTTP', { meta: { calibratedMs: 20 * 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const output = path.resolve('.tmp/artifacts/t343-request-scale.json');
   let passed = false;
@@ -49,4 +49,4 @@ it('measures an empty receiver pulling a 3800-node and 24000-state library over 
     if (passed) await fs.rm(fixture.root, { recursive: true, force: true });
     else console.info('Request scale fixture:', fixture.root);
   }
-}, 20 * 60_000);
+});

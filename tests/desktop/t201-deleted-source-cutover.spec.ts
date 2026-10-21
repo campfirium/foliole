@@ -102,7 +102,7 @@ test.skip(process.platform !== 'darwin' || process.env.FOLIOLE_ELECTRON_NATIVE_H
 
 test('keeps a permanently deleted legacy book suppressed during native API cutover', async ({ browserName }) => {
   void browserName;
-  test.setTimeout(120_000);
+  test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t201-deleted-'));
   let session: Awaited<ReturnType<typeof createT178ApiAcceptanceSession>> | null = null;
   try {

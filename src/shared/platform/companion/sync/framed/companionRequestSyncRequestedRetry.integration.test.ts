@@ -16,7 +16,7 @@ const bodies = [{ label: 'empty', content: '' },
   { label: 'BOM Unicode NUL CRLF', content: '\ufeff---\r\n中文😀\0\r\n---\r\n' + '中😀'.repeat(149_000) }];
 const cases = bodies.flatMap(body => [false, true].map(restartSender => ({ ...body, restartSender })));
 
-it.each(cases)('retries $label after receiver restart and sender restart=$restartSender', async ({ content, restartSender }) => {
+it.each(cases)('retries $label after receiver restart and sender restart=$restartSender', { meta: { calibratedMs: 30000 } }, async ({ content, restartSender }) => {
   host = await createCompanionRequestFixture();
   const current = host;
   const { fixture } = current;
@@ -57,7 +57,7 @@ it.each(cases)('retries $label after receiver restart and sender restart=$restar
   expect(readFacts(fixture.leftSnapshot.databasePath)).toEqual(applied);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ id: nodeId, content })]);
-}, 30000);
+});
 
 function readFacts(file: string) {
   const db = new Database(file, { readonly: true });

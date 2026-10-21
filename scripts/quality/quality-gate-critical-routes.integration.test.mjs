@@ -31,7 +31,7 @@ async function writeFileWithDirs(root, relativePath, content, mode) {
 }
 
 describe('quality gate critical routes integration', () => {
-  it('routes staged and unstaged deletions while keeping an existing sibling test', async () => {
+  it('routes staged and unstaged deletions while keeping an existing sibling test', { meta: { calibratedMs: 90000 } }, async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
     try {
       await writeFile(path.join(root, 'package.json'), '{}\n');
@@ -61,7 +61,7 @@ describe('quality gate critical routes integration', () => {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 90000);
+  });
 
   it('propagates a critical resolver failure from route-json planning', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
@@ -93,7 +93,7 @@ describe('quality gate critical routes integration', () => {
     }
   });
 
-  it('runs an overlapping critical and related test once on a heavy route', async () => {
+  it('runs an overlapping critical and related test once on a heavy route', { meta: { calibratedMs: 180000 } }, async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
     const testMarker = path.join(root, 'test.marker');
     const env = {
@@ -149,9 +149,9 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 180000);
+  });
 
-  it('keeps critical tests in the plan for non-source triggers', async () => {
+  it('keeps critical tests in the plan for non-source triggers', { meta: { calibratedMs: 90000 } }, async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
     try {
       await writeFile(path.join(root, 'package.json'), '{}\n');
@@ -171,9 +171,9 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 90000);
+  });
 
-  it('runs critical routed tests for backlinks contract changes', async () => {
+  it('runs critical routed tests for backlinks contract changes', { meta: { calibratedMs: 90000 } }, async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'quality-critical-routes-'));
     const lintMarker = toFixtureShellPath(path.join(root, 'lint.marker'));
     try {
@@ -220,5 +220,5 @@ if (process.argv.includes('--run')) {
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
-  }, 90000);
+  });
 });

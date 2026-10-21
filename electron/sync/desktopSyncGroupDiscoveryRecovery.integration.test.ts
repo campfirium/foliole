@@ -7,7 +7,7 @@ import { expect, it } from 'vitest';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('retries two expired discovery requests and commits the next round through production HTTP', async () => {
+it('retries two expired discovery requests and commits the next round through production HTTP', { meta: { calibratedMs: 30_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let probes = 0;
   const roundIds = new Set<string>();
@@ -51,4 +51,4 @@ it('retries two expired discovery requests and commits the next round through pr
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });
   }
-}, 30_000);
+});
