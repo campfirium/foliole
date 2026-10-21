@@ -150,7 +150,7 @@ it.each(['push', 'pull'])('uses an empty authenticated single-object stream for 
   } finally { target.close(); await host.close(); }
 }, 60000);
 
-it('repairs a missing parent edge without sending either complete endpoint version', async () => {
+it('defers a historical parent gap until the node changes and then restores the edge', async () => {
   const host = await createCompanionRequestFixture();
   const target = new Database(host.fixture.rightSnapshot.databasePath);
   const base = branch('edge-base', 'Original');
@@ -164,7 +164,12 @@ it('repairs a missing parent edge without sending either complete endpoint versi
     const full = [...facts.mock.calls.map(([fact]) => fact), ...decoded.mock.calls.map(([message]) => canonicalFactFromValidatedMessage(message))]
       .filter(fact => fact.kind === 2 && fact.blobs.length);
     expect(full).toEqual([]);
-    expect(target.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?').pluck().get('edge-next')).toBe('edge-base');
+    expect(target.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?').pluck().get('edge-next')).toBeUndefined();
     expect(target.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('edge-next');
+    await applySyncNodesWithDbPort(host.db, [branch('edge-third', 'Changed again', next)]);
+    expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
+    expect(target.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?').pluck().get('edge-next')).toBe('edge-base');
+    expect(target.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('edge-third');
+    expect(target.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Changed again');
   } finally { facts.mockRestore(); decoded.mockRestore(); target.close(); await host.close(); }
 }, 60000);

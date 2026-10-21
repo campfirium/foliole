@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 
@@ -47,7 +46,7 @@ function peerCommand(kind: string, peer: DesktopFramedSyncFixtureSnapshot) {
     peerOrigin: peer.origin };
 }
 
-it('completes real sync when a legacy historical version has text but lacks its body hash', async () => {
+it('completes current-state sync without rewriting an unrelated legacy historical body', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ nodeId: 'legacy-topic', title: 'Legacy', content: 'Original historical body' });
@@ -73,9 +72,10 @@ it('completes real sync when a legacy historical version has text but lacks its 
     const restarted = await fixture.restartLeft();
     const stored = new Database(restarted.snapshot.databasePath, { readonly: true });
     try {
-      expect(stored.prepare(`SELECT json_extract(snapshot_json, '$.body_blob_hash') FROM node_sync_versions
-        WHERE version_id = ?`).pluck().get(base))
-        .toBe(createHash('sha256').update('Original historical body').digest('hex'));
+      expect(stored.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS body_hash FROM node_sync_versions
+        WHERE version_id = ?`).get(base))
+        .toEqual({ body_text: 'Original historical body', body_hash: null });
+      expect(readContent(restarted.snapshot.databasePath, 'legacy-topic')).toBe('Current body');
     } finally { stored.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

@@ -101,8 +101,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Version 94 rebuilds shared projections to include Inbox.
-      Math.max(94, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Version 95 invalidates digests after history leaves comparison hashes.
+      Math.max(95, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });
