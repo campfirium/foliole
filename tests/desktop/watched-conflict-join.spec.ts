@@ -27,14 +27,12 @@ async function syncResult(app: ElectronApplication) {
     const require = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
     const connection = require(pathApi.join(electronApp.getAppPath(), 'database', 'connection.js'));
     const coordinator = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'));
-    const topology = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopAnchorTopologyRole.js'));
     const routes = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncGroupRoutes.js'));
     const members = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncGroupMemberStateSession.js'));
     const groupStore = require(pathApi.join(electronApp.getAppPath(), 'database', 'syncGroupStore.js'));
     return connection.runWithDatabaseConnectionOwner(() => ({
       result: coordinator.loadDesktopSyncTriggerResult(),
       active: Boolean(coordinator.loadActiveDesktopSyncRun()),
-      topology: topology.loadDesktopAnchorTopologyState(),
       routes: routes.loadDesktopSyncGroupRoutes(groupStore.loadDesktopSyncGroup()?.group_id ?? ''),
       endpoints: members.loadDesktopSyncGroupMemberEndpoints(groupStore.loadDesktopSyncGroup()?.group_id ?? '')
     }));
