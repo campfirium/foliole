@@ -18,8 +18,12 @@ function notifyFormulaClozePresentationChanged(editorNodeId: string) {
   );
 }
 
+// Each notification rebuilds every formula widget and cancels an in-progress region drag, so an
+// identical re-registration stays silent.
 export function registerFormulaClozeEditorPresentation(editorNodeId: string, presentation: FormulaClozeEditorPresentation) {
+  const previous = presentationByEditorNodeId.get(editorNodeId);
   presentationByEditorNodeId.set(editorNodeId, presentation);
+  if (previous && JSON.stringify(previous) === JSON.stringify(presentation)) return;
   notifyFormulaClozePresentationChanged(editorNodeId);
 }
 

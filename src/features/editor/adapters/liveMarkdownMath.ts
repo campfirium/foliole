@@ -44,6 +44,7 @@ class MarkdownMathWidget extends WidgetType {
     const wrapper = document.createElement(this.mathRange.display === 'block' ? 'div' : 'span');
     wrapper.className = this.mathRange.display === 'block' ? 'cm-md-math-widget-block' : 'cm-md-math-widget-inline';
     wrapper.dataset.mdMathDisplay = this.mathRange.display;
+    wrapper.dataset.mdMathEditorNodeId = this.editorNodeId ?? '';
     wrapper.dataset.mdMathFrom = String(this.mathRange.from);
     wrapper.dataset.mdMathPresentationVersion = String(this.presentationVersion);
     wrapper.dataset.mdMathTo = String(this.mathRange.to);
@@ -66,6 +67,7 @@ class MarkdownMathWidget extends WidgetType {
   override updateDOM(dom: HTMLElement) {
     if (
       dom.dataset.mdMathDisplay !== this.mathRange.display ||
+      dom.dataset.mdMathEditorNodeId !== (this.editorNodeId ?? '') ||
       dom.dataset.mdMathFrom !== String(this.mathRange.from) ||
       dom.dataset.mdMathTo !== String(this.mathRange.to) ||
       dom.dataset.mdMathTex !== this.mathRange.tex ||
