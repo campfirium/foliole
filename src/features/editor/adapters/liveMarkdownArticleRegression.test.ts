@@ -81,4 +81,18 @@ describe('live markdown imported article regressions', () => {
 
     adapter.destroy();
   });
+
+  it.each([
+    ['destination on the next line', '[foo]:\n  https://example.com/a\n  "Title"'],
+    ['title on the next line', '[foo]: https://example.com/a\n"Title"']
+  ])('opens imported notes whose link reference definition puts the %s', (_label, definition) => {
+    const { adapter, host } = createAdapterHost(['# Imported', '', definition, '', 'See [foo].'].join('\n'));
+    const text = host.querySelector('.cm-content')?.textContent ?? '';
+
+    expect(text).toContain('See foo.');
+    expect(text).not.toContain('https://example.com/a');
+    expect(text).not.toContain('Title');
+
+    adapter.destroy();
+  });
 });

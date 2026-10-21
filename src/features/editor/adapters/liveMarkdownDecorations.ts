@@ -1,4 +1,4 @@
-import { type Range } from '@codemirror/state';
+import { type Range, type Text } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView } from '@codemirror/view';
 
 import type { InlinePresentationPlan } from '../model/inlinePresentationPlans';
@@ -96,12 +96,18 @@ function addEditedMathSourceDecoration(
 
 function hideLinkReferenceDefinition(
   ranges: Range<Decoration>[],
+  doc: Text,
   lineFrom: number,
   linkReferenceRangeByLineFrom: ReadonlyMap<number, MarkdownLinkReferenceRange>
 ) {
   const linkReferenceRange = linkReferenceRangeByLineFrom.get(lineFrom);
   if (!linkReferenceRange) return false;
-  addReplace(ranges, linkReferenceRange.from, linkReferenceRange.to);
+  // Definitions may continue onto following lines; plugin replace decorations must stay within one line.
+  for (let pos = linkReferenceRange.from; pos < linkReferenceRange.to;) {
+    const line = doc.lineAt(pos);
+    addReplace(ranges, pos, Math.min(line.to, linkReferenceRange.to));
+    pos = line.to + 1;
+  }
   return true;
 }
 
@@ -183,7 +189,7 @@ export function buildPreviewDecorationSet(
     ...context,
     calloutPrefixRangeByLineFrom: data.calloutPrefixRangeByLineFrom,
     hideLinkReferenceDefinition: (targetRanges, lineFrom) =>
-      hideLinkReferenceDefinition(targetRanges, lineFrom, data.linkReferenceRangeByLineFrom),
+      hideLinkReferenceDefinition(targetRanges, view.state.doc, lineFrom, data.linkReferenceRangeByLineFrom),
     mermaidLineFroms: collectPreviewMermaidLineFroms(data.source, data.codeFenceProjection, view),
     prefixRangesByLineFrom: data.prefixRangesByLineFrom
   });
