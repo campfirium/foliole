@@ -99,14 +99,14 @@ it('completes an accepted request when the active discovery session publishes a 
     candidates: [candidate], change: 'changed', error_code: null, status: 'results'
   }));
   await waitFor(() => expect(result.current.joined).toBe(true));
-  expect(runtime.complete).toHaveBeenCalledWith({
+  expect(runtime.complete).toHaveBeenCalledWith(expect.objectContaining({
     databasePath: '/library/foliole.db',
     endpointUrl: candidate.endpoint_url,
     providerDeviceId: candidate.provider_device_id,
     providerDeviceName: candidate.provider_device_name,
     providerPlatform: candidate.provider_platform,
     requestId: 'request-1'
-  });
+  }));
   expect(result.current.pendingRequest).toBeNull();
 });
 

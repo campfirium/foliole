@@ -59,12 +59,14 @@ export async function completeCompanionSyncGroupJoin(args: {
   providerDeviceName: string;
   providerPlatform: string;
   requestId: string;
+  onAccepted?(): void;
 }) {
   const existing = await loadCompanionSyncGroup();
   if (existing) {
     if (!existing.devices.some((device) => device.device_identity_key === args.providerDeviceId)) {
       throw new Error('sync_group_identity_mismatch');
     }
+    args.onAccepted?.();
     await completeCompanionSyncGroupAdoption();
     cancelCompanionSyncGroupJoin(args.requestId);
     return existing;
@@ -95,6 +97,7 @@ export async function completeCompanionSyncGroupJoin(args: {
     provider,
     workgroupKey: info.workgroup_key
   });
+  args.onAccepted?.();
   if (pending!.mode === 'use-group') await completeCompanionSyncGroupAdoption();
   dropCompanionSyncGroupJoinPrivateKey(keyId);
   keyIds.delete(args.requestId);

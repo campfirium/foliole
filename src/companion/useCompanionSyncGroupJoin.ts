@@ -18,7 +18,7 @@ import type {
   PendingSyncGroupJoinRequest
 } from './companionSyncGroupJoinModel';
 
-export type CompanionSyncGroupJoinStatus = 'idle' | 'discovering' | 'requesting' | 'awaiting-acceptance';
+export type CompanionSyncGroupJoinStatus = 'idle' | 'discovering' | 'requesting' | 'awaiting-acceptance' | 'adopting';
 
 interface SyncGroupJoinArgs {
   bootstrapState: NativeCompanionBootstrapState;
@@ -59,6 +59,7 @@ function matchesPending(candidate: Parameters<typeof mapCandidates>[0]['candidat
 function useJoinCompletion(args: {
   config: SyncGroupJoinArgs;
   pendingRequest: PendingSyncGroupJoinRequest | null;
+  pendingRequestRef: React.MutableRefObject<PendingSyncGroupJoinRequest | null>;
   setJoined(value: boolean): void;
   setPendingRequest(value: PendingSyncGroupJoinRequest | null): void;
   setStatus(value: CompanionSyncGroupJoinStatus): void;
@@ -67,7 +68,7 @@ function useJoinCompletion(args: {
   const onErrorRef = useRef(args.config.onError);
   onErrorRef.current = args.config.onError;
   const databasePath = args.config.bootstrapState.database_path;
-  const { pendingRequest, setJoined, setPendingRequest, setStatus } = args;
+  const { pendingRequest, pendingRequestRef, setJoined, setPendingRequest, setStatus } = args;
   return useCallback(async (request = pendingRequest) => {
     if (!request || !databasePath) return null;
     completionRef.current ??= completeCompanionSyncGroupJoin({
@@ -76,6 +77,9 @@ function useJoinCompletion(args: {
       providerDeviceId: request.providerDeviceId,
       providerDeviceName: request.providerDeviceName,
       providerPlatform: request.providerPlatform,
+      onAccepted: () => {
+        if (pendingRequestRef.current?.requestId === request.requestId) setStatus('adopting');
+      },
       requestId: request.requestId
     }).then((group) => {
       setPendingRequest(null); setStatus('idle'); onErrorRef.current(null);
@@ -84,7 +88,7 @@ function useJoinCompletion(args: {
       return group;
     }).finally(() => { completionRef.current = null; });
     return completionRef.current;
-  }, [databasePath, pendingRequest, setJoined, setPendingRequest, setStatus]);
+  }, [databasePath, pendingRequest, pendingRequestRef, setJoined, setPendingRequest, setStatus]);
 }
 
 function useJoinCancellation(args: {
@@ -170,7 +174,8 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const [joined, setJoined] = useState(false);
   const pendingRequestRef = useRef<PendingSyncGroupJoinRequest | null>(null);
   const stopRef = useRef<null | (() => Promise<void>)>(null);
-  const complete = useJoinCompletion({ config: args, pendingRequest, setJoined, setPendingRequest, setStatus });
+  const complete = useJoinCompletion({ config: args, pendingRequest, pendingRequestRef,
+    setJoined, setPendingRequest, setStatus });
   const cancel = useJoinCancellation({ config: args, pendingRequest, pendingRequestRef, setPendingRequest, setStatus });
   const stopDiscovery = useCallback(async () => {
     const stop = stopRef.current;

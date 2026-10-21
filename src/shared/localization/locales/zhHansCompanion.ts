@@ -101,6 +101,8 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.syncSetup.approval.title': '正在请求同步组成员批准这台设备',
   'companion.syncSetup.approval.detail': '在当前可用的同步组成员上点击批准。批准后这里会自动继续。',
   'companion.syncSetup.expired': '请求已过期。点取消后重试。',
+  'companion.syncSetup.receiving.title': '正在接收同步组资料',
+  'companion.syncSetup.receiving.detail': '这台设备已获批准。资料准备好之前，请保持两台设备开启并连接网络。',
   'companion.syncSetup.waiting': '正在等待批准... 还剩 {seconds} 秒',
   'companion.syncSetup.title': '连接同步组',
   'companion.syncSetup.instructions': '在同一网络的可用成员上打开同步组，然后批准这台设备。',

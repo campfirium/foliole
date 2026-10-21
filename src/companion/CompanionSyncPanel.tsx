@@ -11,7 +11,7 @@ import type { CompanionSyncGroupDiscovery, PendingSyncGroupJoinRequest } from '.
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
 import { useCompanionSyncProtocolNoticeRetry } from './CompanionSyncProtocolNotice';
-import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
+import { AwaitingApprovalState, EmptyDiscoveryState, ReceivingGroupDataState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionSyncGroupJoinStatus } from './useCompanionSyncGroupJoin';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -109,7 +109,8 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
       <div className="flex flex-col gap-5">
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
-        {props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
+        {props.joinStatus === 'adopting' ? <ReceivingGroupDataState />
+          : props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
           onPull={(url) => { retryProtocolNotice(); return props.onPull(url); }}
           manualSyncFailureDetail={formatManualSyncFailure(props.error, t)} />
           : props.joinRequest

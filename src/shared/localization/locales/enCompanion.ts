@@ -101,6 +101,8 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.syncSetup.approval.detail':
     "Look at the desktop you're connecting to and tap Approve. We'll continue automatically as soon as you do.",
   'companion.syncSetup.expired': 'Request expired. Tap Cancel and try again.',
+  'companion.syncSetup.receiving.title': 'Receiving sync group data',
+  'companion.syncSetup.receiving.detail': 'This device has been approved. Keep both devices open and connected until the data is ready.',
   'companion.syncSetup.waiting': 'Waiting for approval... {seconds}s left',
   'companion.syncSetup.title': 'Connect to a Sync Group',
   'companion.syncSetup.instructions':

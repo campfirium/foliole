@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
@@ -34,6 +34,7 @@ vi.mock('../shared/platform/companionSyncGroupJoinClient', () => ({
   requestCompanionSyncGroupJoin: runtime.request
 }));
 
+import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { useCompanionSyncGroupJoin } from './useCompanionSyncGroupJoin';
 
 const candidate = {
@@ -135,6 +136,43 @@ it('does not resume when cancelled during the persisted membership check', async
     expect(result.current.status).toBe('idle');
     expect(runtime.complete).toHaveBeenCalledTimes(1);
   } finally {
+    unmount();
+    vi.useRealTimers();
+  }
+});
+
+it('does not show an approved request as expired while group data is still arriving', async () => {
+  vi.useFakeTimers();
+  const client = await vi.importActual<typeof import('../shared/platform/companionSyncGroupJoinClient')>(
+    '../shared/platform/companionSyncGroupJoinClient');
+  const { result, unmount } = await startPendingJoin();
+  const group = { group_id: candidate.group_id,
+    devices: [{ device_identity_key: candidate.provider_device_id }] };
+  runtime.loadGroup.mockResolvedValue(group);
+  runtime.complete.mockImplementation(client.completeCompanionSyncGroupJoin);
+  let finishAdoption!: () => void;
+  runtime.adopt.mockReturnValue(new Promise<void>((resolve) => { finishAdoption = resolve; }));
+  let view: ReturnType<typeof render> | undefined;
+  try {
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    view = render(<CompanionSyncPanel
+      bootstrapState={{ database_path: '/library/foliole.db' } as never}
+      discoveries={[]} endpointUrl={candidate.endpoint_url} error={null}
+      joinRequest={result.current.pendingRequest} joinStatus={result.current.status}
+      lastSyncedAt={null} rememberedTargets={[]} syncConflictCount={0}
+      syncEvents={[]} syncProgress={null} syncGroup={null}
+      onCancelJoin={result.current.cancel} onClearError={vi.fn()} onDiscover={vi.fn()}
+      onLeaveSyncGroup={vi.fn()} onPull={vi.fn()} onRemoveRememberedTarget={vi.fn()}
+      onRequestJoin={vi.fn()} onSaveEndpoint={vi.fn()} onOpenSettingsPage={vi.fn()}
+      page="sync" status="idle" />);
+    expect(screen.queryByText('companion.syncSetup.expired')).not.toBeInTheDocument();
+    expect(screen.queryByText('companion.syncSetup.approval.title')).not.toBeInTheDocument();
+    expect(screen.getByText('companion.syncSetup.receiving.title')).toBeInTheDocument();
+    expect(result.current.joined).toBe(false);
+    await act(async () => { finishAdoption(); });
+    expect(result.current.joined).toBe(true);
+  } finally {
+    view?.unmount();
     unmount();
     vi.useRealTimers();
   }

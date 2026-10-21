@@ -89,6 +89,14 @@ export function AwaitingApprovalState(props: {
   );
 }
 
+export function ReceivingGroupDataState() {
+  const t = useTranslation();
+  return <SyncStatusCard title={t('companion.syncSetup.receiving.title')}
+    detail={t('companion.syncSetup.receiving.detail')}>
+    <AppSpinner decorative size="sm" />
+  </SyncStatusCard>;
+}
+
 export function EmptyDiscoveryState(props: {
   disabled: boolean;
   onTryAgain(): void;
