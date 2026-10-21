@@ -33,7 +33,8 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
 ): Promise<CompanionWorkspaceSyncTarget[]> {
   const normalized = normalizeEndpointUrl(endpointUrl);
   const group = await loadCompanionSyncGroup().catch(() => null);
-  if (!group || !isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
+  if (!isNativeCompanionNetworkRuntime()) return [{ endpointUrl: normalized }];
+  if (!group) return [];
   const active = companionDesktopSessionTarget(group.group_id);
   if (active && !options.mobilePeersOnly) {
     options.onSessionReused?.();
