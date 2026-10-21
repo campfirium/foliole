@@ -139,6 +139,9 @@ export function saveNodeReadingStateWithSync(driver: DatabaseDriver, input: Writ
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   );
   driver.transaction(() => {
+    if (input.reading === null && input.hostName && !hasExistingNodeReading(driver, input.nodeId)) {
+      recordNodeReadingTombstone(driver, { ...input, hostName: input.hostName });
+    }
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: deleteDeviceState.run,
       deleteReading: deleteReading.run,
