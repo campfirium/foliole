@@ -9,6 +9,7 @@ import { asAnchorLink } from '../ipc/commandParserAnchorLink.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
 import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInventory.fixture.js';
+import { createSyncCostMeasurement } from './desktopFramedSyncCost.fixture.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
@@ -40,7 +41,9 @@ let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
 
 const requestCounts: Record<string, number> = {};
+const cost = createSyncCostMeasurement();
 const server = createServer((request, response) => {
+  cost.observe(request, response);
   const route = new URL(request.url ?? '/', 'http://localhost');
   const label = route.searchParams.get('request') ?? route.pathname;
   requestCounts[label] = (requestCounts[label] ?? 0) + 1;
@@ -56,6 +59,7 @@ const server = createServer((request, response) => {
     (error: unknown) => writeHttpError(response, error)
   );
 });
+cost.attach(server);
 
 function requiredEnvironment(name: string) {
   const value = process.env[name];
@@ -145,19 +149,13 @@ function seedRelationReview(args: Readonly<Record<string, unknown>>) {
 
 async function run(command: Command) {
   if (command.action === 'init') {
-    await initializeFixtureDatabase(deviceId);
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(0, '127.0.0.1', resolve);
-    });
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('fixture_http_port_missing');
-    origin = `http://127.0.0.1:${address.port}`;
-    return snapshot();
+    return initializeProcessFixture();
   }
   if (command.action.startsWith('activation_')) return runActivationFixtureCommand(command.action, command.args);
   if (command.action === 'seed_request_scale') return seedRequestSyncScaleFixture();
   if (command.action === 'request_counts') return { ...requestCounts };
+  if (command.action === 'cost_start') return cost.start();
+  if (command.action === 'cost_stop') return cost.stop();
   if (command.action === 'seed') return seed(command.args);
   if (command.action === 'seed_parent_order_performance') return seedParentOrderPerformance(command.args);
   if (command.action === 'edit_parent_order_performance') return editParentOrderPerformance(command.args);
@@ -230,3 +228,15 @@ process.on('message', (value: unknown) => {
     })
   );
 });
+
+async function initializeProcessFixture() {
+  await initializeFixtureDatabase(deviceId);
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('fixture_http_port_missing');
+  origin = `http://127.0.0.1:${address.port}`;
+  return snapshot();
+}
