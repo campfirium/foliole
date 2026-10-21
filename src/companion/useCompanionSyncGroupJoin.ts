@@ -173,6 +173,8 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   const [status, setStatus] = useState<CompanionSyncGroupJoinStatus>('idle');
   const [joined, setJoined] = useState(false);
   const pendingRequestRef = useRef<PendingSyncGroupJoinRequest | null>(null);
+  const onResumeErrorRef = useRef(args.onError);
+  onResumeErrorRef.current = args.onError;
   const stopRef = useRef<null | (() => Promise<void>)>(null);
   const complete = useJoinCompletion({ config: args, pendingRequest, pendingRequestRef,
     setJoined, setPendingRequest, setStatus });
@@ -210,9 +212,16 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
   useEffect(() => {
     void loadCompanionSyncGroup().then(async (group) => {
-      if (group) await completeCompanionSyncGroupAdoption();
+      if (group) {
+        setStatus('adopting');
+        await completeCompanionSyncGroupAdoption();
+      }
+      setStatus('idle');
       setJoined(Boolean(group));
-    }).catch(() => setJoined(false));
+    }).catch(() => {
+      setJoined(false); setStatus('idle');
+      onResumeErrorRef.current('sync_group_local_adoption_failed');
+    });
   }, [args.bootstrapState.database_path]);
   useJoinAcceptancePolling(pendingRequest, complete);
   return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };

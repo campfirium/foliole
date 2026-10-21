@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
@@ -60,6 +60,21 @@ beforeEach(() => {
     request_id: 'request-1'
   });
   runtime.complete.mockResolvedValue({ group_id: candidate.group_id });
+});
+
+it('reports a failed resumed adoption and releases the receiving screen', async () => {
+  const onError = vi.fn();
+  runtime.loadGroup.mockResolvedValue({ group_id: candidate.group_id });
+  runtime.adopt.mockRejectedValue(new Error('sync_group_local_adoption_source_unavailable'));
+  const { result, unmount } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError, onSaveEndpoint: vi.fn()
+  }));
+  try {
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('sync_group_local_adoption_failed'));
+    expect(result.current.joined).toBe(false);
+    expect(result.current.status).toBe('idle');
+  } finally { unmount(); }
 });
 
 it('finishes an approved replacement after the original request deadline', async () => {

@@ -227,8 +227,10 @@ it('waits for a resumed local replacement before showing successful membership',
   }));
   await waitFor(() => expect(runtime.adopt).toHaveBeenCalledOnce());
   expect(result.current.joined).toBe(false);
+  expect(result.current.status).toBe('adopting');
   await act(async () => finish());
   expect(result.current.joined).toBe(true);
+  expect(result.current.status).toBe('idle');
 });
 
 it('passes the group-to-device choice through the applicant UI', async () => {
