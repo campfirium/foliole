@@ -79,6 +79,35 @@ it('omits fast requests', () => {
   expect(appendDiagnosticLog).not.toHaveBeenCalled();
 });
 
+it('records a sync socket timeout without changing or destroying the connection', () => {
+  const { request, response } = requestPair('POST', '/companion/framed-sync?request=pulls&secret=private');
+  const destroy = vi.spyOn(request.socket, 'destroy');
+  const setTimeout = vi.spyOn(request.socket, 'setTimeout');
+  vi.mocked(performance.now).mockReturnValue(10);
+  response.emit('finish');
+  expect(appendDiagnosticLog).not.toHaveBeenCalled();
+  request.socket.emit('timeout');
+  expect(appendDiagnosticLog).toHaveBeenCalledWith(expect.objectContaining({
+    event: 'companion_sync_socket_timeout', payload: expect.objectContaining({
+      operation: 'pulls', responseFinishedAt: expect.any(Number), requestStartedAt: expect.any(Number)
+    })
+  }));
+  expect(JSON.stringify(vi.mocked(appendDiagnosticLog).mock.calls)).not.toContain('private');
+  expect(setTimeout).not.toHaveBeenCalled();
+  expect(destroy).not.toHaveBeenCalled();
+});
+
+it('keeps only the last request on a reused socket and stops tracking other routes', () => {
+  const { request } = requestPair('POST', '/companion/framed-sync?request=inventory');
+  request.url = '/companion/framed-sync?request=pulls';
+  observeSlowRequest(request, new http.ServerResponse(request));
+  expect(request.socket.listenerCount('timeout')).toBe(1);
+  request.url = '/health';
+  observeSlowRequest(request, new http.ServerResponse(request));
+  request.socket.emit('timeout');
+  expect(appendDiagnosticLog).not.toHaveBeenCalled();
+});
+
 it('keeps database phase totals on their response and stops collecting after completion', () => {
   const { response } = requestPair();
   const timing = requestDatabaseTiming(response);

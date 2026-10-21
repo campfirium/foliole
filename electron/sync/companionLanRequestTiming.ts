@@ -1,4 +1,5 @@
 import type http from 'node:http';
+import type { Socket } from 'node:net';
 
 import { SYNC_SESSION_WAIT_MS } from '../../lib/platform/syncSessionContract.js';
 import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
@@ -17,6 +18,29 @@ type HttpSpan = { phase: RequestHttpPhase; started: number; ended?: number };
 const httpTimings = new WeakMap<http.ServerResponse, HttpSpan[]>();
 type BodyPhase = Parameters<HttpBodyTiming>[0];
 const bodyTimings = new WeakMap<http.ServerResponse, Partial<Record<BodyPhase, { calls: number; durationMs: number }>>>();
+const socketTimeoutObservers = new WeakMap<Socket, () => void>();
+
+function observeSyncSocketTimeout(request: http.IncomingMessage, response: http.ServerResponse, url: URL) {
+  const socket = request.socket;
+  const previous = socketTimeoutObservers.get(socket);
+  if (previous) socket.off('timeout', previous);
+  socketTimeoutObservers.delete(socket);
+  if (url.pathname !== '/companion/framed-sync') return;
+  const payload = { requestStartedAt: Date.now(), responseFinishedAt: null as number | null,
+    remoteAddress: socket.remoteAddress, remotePort: socket.remotePort,
+    operation: url.searchParams.get('request'), socketTimeoutMs: socket.timeout };
+  response.once('finish', () => { payload.responseFinishedAt = Date.now(); });
+  const observe = () => {
+    void appendDiagnosticLog({ event: 'companion_sync_socket_timeout', level: 'debug',
+      occurred_at: new Date().toISOString(), source: 'electron.main', payload: {
+        ...payload, socketTimeoutMs: socket.timeout, bytesRead: socket.bytesRead,
+        bytesWritten: socket.bytesWritten
+      }
+    }).catch(() => undefined);
+  };
+  socketTimeoutObservers.set(socket, observe);
+  socket.once('timeout', observe);
+}
 
 export function requestBodyTiming(response: http.ServerResponse): HttpBodyTiming {
   return (phase, durationMs) => {
@@ -63,6 +87,7 @@ export function observeSlowRequest(request: http.IncomingMessage, response: http
   httpTimings.set(response, []);
   bodyTimings.set(response, {});
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+  observeSyncSocketTimeout(request, response, url);
   const isSessionWait = request.method === 'GET' && url.pathname === '/companion/sync-session';
   const startedAt = Date.now();
   const started = performance.now();
