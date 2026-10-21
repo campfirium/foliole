@@ -110,8 +110,14 @@ function useJoinAcceptancePolling(
     let active = true;
     let timer: number | null = null;
     const poll = async () => {
-      if (!active || Date.now() >= new Date(pendingRequest.expiresAt).getTime()) return;
-      try { await complete(pendingRequest); }
+      if (!active) return;
+      try {
+        if (Date.now() >= new Date(pendingRequest.expiresAt).getTime()) {
+          const group = await loadCompanionSyncGroup();
+          if (!active || group?.group_id !== pendingRequest.groupId) return;
+        }
+        await complete(pendingRequest);
+      }
       catch { if (active) timer = window.setTimeout(poll, 1_000); }
     };
     timer = window.setTimeout(poll, 250);
