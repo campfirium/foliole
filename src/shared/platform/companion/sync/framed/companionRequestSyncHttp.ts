@@ -53,12 +53,11 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
     try {
       const response = await operation;
       input.signal?.throwIfAborted();
+      if (input.peerRound) input.peerRound.admitted = true;
       const stream = await readFramedSyncStream(touchRequestSyncStream(
         companionRequestSyncHttpChunks(files, temporary.directory, response, input.signal), input.peerRound?.lease));
       try {
-        const result = await consume(stream);
-        if (input.peerRound) input.peerRound.admitted = true;
-        return result;
+        return await consume(stream);
       }
       finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
     } finally {

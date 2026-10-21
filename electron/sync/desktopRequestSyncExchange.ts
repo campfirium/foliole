@@ -25,9 +25,8 @@ export function createDesktopRequestSyncExchange(input: {
       ...(input.peerRound ? { onProgress: () => input.peerRound?.lease.touch() } : {}),
       ...(input.signal ? { signal: input.signal } : {}) });
     try {
-      const result = await consume({ ...response.stream, frames: touchRequestSyncStream(response.stream.frames, input.peerRound?.lease) });
       if (input.peerRound) input.peerRound.admitted = true;
-      return result;
+      return await consume({ ...response.stream, frames: touchRequestSyncStream(response.stream.frames, input.peerRound?.lease) });
     } finally { await response.stream.frames[Symbol.asyncIterator]().return?.(); }
   } };
 }
