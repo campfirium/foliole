@@ -60,6 +60,11 @@ export function isPidAlive(pid) {
   }
 }
 
+// Windows reports EPERM while a just-released lock file is still pending deletion.
+export function isLockHeldError(error, platform = process.platform) {
+  return error?.code === 'EEXIST' || (platform === 'win32' && error?.code === 'EPERM');
+}
+
 async function tryAcquireLock(lockFile) {
   let handle = null;
   try {
@@ -68,7 +73,7 @@ async function tryAcquireLock(lockFile) {
     await handle.writeFile(`${JSON.stringify({ createdAt: Date.now(), pid: process.pid })}\n`);
     return true;
   } catch (error) {
-    if (error?.code !== 'EEXIST') {
+    if (!isLockHeldError(error)) {
       throw error;
     }
     return false;

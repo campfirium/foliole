@@ -18,7 +18,7 @@ vi.mock('node:fs/promises', async () => {
   return { ...actual, rename: fsMock.rename };
 });
 
-const { withStateLock } = await import('./preview-dedupe-state-store.mjs');
+const { isLockHeldError, withStateLock } = await import('./preview-dedupe-state-store.mjs');
 
 describe('preview-dedupe state store', () => {
   afterEach(() => {
@@ -64,5 +64,14 @@ describe('preview-dedupe state store', () => {
     } finally {
       await rm(runtimeDir, { force: true, recursive: true });
     }
+  });
+});
+
+describe('preview state lock contention', () => {
+  it('treats a Windows pending-delete EPERM as a held lock and other errors as failures', () => {
+    expect(isLockHeldError({ code: 'EEXIST' }, 'darwin')).toBe(true);
+    expect(isLockHeldError({ code: 'EPERM' }, 'win32')).toBe(true);
+    expect(isLockHeldError({ code: 'EPERM' }, 'darwin')).toBe(false);
+    expect(isLockHeldError({ code: 'EACCES' }, 'win32')).toBe(false);
   });
 });
