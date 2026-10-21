@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "読書設定を保存できませんでした。以前の設定が引き続き使用されます。",
   "companion.reading.font.size": "サイズ",
   "companion.reading.font.size.small": "小",
   "companion.reading.font.size.default": "Default",

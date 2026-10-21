@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "Bereich für die Datenbankwartung",
+  "settings.backups.database.sectionTitle": "Datenbank",
+  "settings.backups.database.title": "Datenbankspeicher",
+  "settings.backups.database.description": "{size} gesamt · {reclaimable} freigebbar ({percent}%)",
+  "settings.backups.database.unavailable": "Informationen zum Datenbankspeicher sind nicht verfügbar.",
+  "settings.backups.database.action": "Datenbank komprimieren",
+  "settings.backups.database.compacting": "Wird komprimiert...",
+  "settings.backups.database.success": "Datenbank komprimiert.",
+  "settings.backups.database.failed": "Komprimieren der Datenbank fehlgeschlagen: {message}",
+  "settings.backups.kind.preCompact": "Sicherheitsschnappschuss vor der Datenbankkomprimierung"
+}

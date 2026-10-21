@@ -227,7 +227,7 @@ export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKe
   'settings.backups.restore.action': '恢复',
   'settings.backups.restore.failure.unchanged': '所选备份未能恢复。当前资料库保持原状。',
   'settings.backups.restore.failure.recovered': '所选备份未能恢复。当前资料库已回滚到恢复前的状态。',
-  'settings.backups.restore.failure.unavailable': '所选备份未能恢复，当前资料库无法重新打开。请保留备份文件，重启 Foliole 后再进行更改。',
+  'settings.backups.restore.failure.unavailable': '所选备份未能恢复，Foliole 也无法重新打开当前资料库。请保留备份文件，重启 Foliole 后再进行更改。',
   'settings.backups.restore.failure.runtimeUnavailable': '当前无法恢复备份。资料库保持原状。',
   'settings.backups.restore.failure.unknown': '备份未能恢复。请保留备份文件，重启 Foliole 后再进行更改。',
   'settings.backups.restore.reloadFailed': '备份已恢复，但 Foliole 未能重新加载资料库。请重启 Foliole 后再进行更改。',

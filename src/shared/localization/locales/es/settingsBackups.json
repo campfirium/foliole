@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Sección de búsqueda en copias de seguridad",
+  "settings.backups.search.sectionTitle": "Buscar en el contenido de las copias",
+  "settings.backups.search.description": "Descomprime las copias existentes una por una y busca en su contenido.",
+  "settings.backups.search.action": "Buscar en el contenido de las copias",
+  "settings.backups.search.title": "Buscar en el contenido de las copias",
+  "settings.backups.search.input": "Término de búsqueda",
+  "settings.backups.search.placeholder": "Escribe un término de búsqueda",
+  "settings.backups.search.submit": "Buscar",
+  "settings.backups.search.cancel": "Cancelar",
+  "settings.backups.search.continue": "Continuar la búsqueda",
+  "settings.backups.search.noMoreResults": "No hay más resultados",
+  "settings.backups.search.initial": "Escribe un término de búsqueda.",
+  "settings.backups.search.searchingBackups": "Buscando en el contenido de las copias...",
+  "settings.backups.search.failed": "La búsqueda en las copias se detuvo. {message}",
+  "settings.backups.search.cancelled": "Búsqueda en las copias cancelada.",
+  "settings.backups.search.complete": "No hay más contenido coincidente.",
+  "settings.backups.search.completePartial": "No hay más coincidencias legibles. No se pudieron leer {count} archivos de copia de seguridad.",
+  "settings.backups.search.trashed": "En la papelera"
+}

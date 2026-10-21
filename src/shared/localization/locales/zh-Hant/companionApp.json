@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "無法完成分享，請再試一次。",
+  "companion.search.unavailable": "此結果已無法使用。",
+  "companion.search.refresh": "重新搜尋",
+  "companion.link.unavailable": "無法在目前的資料庫開啟此連結。",
+  "companion.link.dismiss": "關閉",
   "companion.app.retry": "重試",
   "companion.app.starting.eyebrow": "伴侶運作時",
   "companion.app.starting.message": "在主題表面加載之前準備穩定的設備身份和本地配套存儲。",

@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "",
   "settings.mouseGestures.area.mainPanel": "Panneau principal",
   "settings.mouseGestures.bindings.sectionAria": "Section de liaison des gestes de la souris",
-  "settings.mouseGestures.bindings.title": "Reliures",
+  "settings.mouseGestures.bindings.title": "Actions des gestes",
   "settings.mouseGestures.gesture.left": "Gauche",
   "settings.mouseGestures.gesture.right": "Droite",
   "settings.mouseGestures.gesture.leftUp": "À gauche puis en haut",

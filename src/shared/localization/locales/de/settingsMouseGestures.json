@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "Bereich",
   "settings.mouseGestures.area.mainPanel": "Hauptfenster",
   "settings.mouseGestures.bindings.sectionAria": "Abschnitt „Mausgestenbindungen“.",
-  "settings.mouseGestures.bindings.title": "Bindungen",
+  "settings.mouseGestures.bindings.title": "Gestenaktionen",
   "settings.mouseGestures.gesture.left": "Links",
   "settings.mouseGestures.gesture.right": "Richtig",
   "settings.mouseGestures.gesture.leftUp": "Links, dann oben",

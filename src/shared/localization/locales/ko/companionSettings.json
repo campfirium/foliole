@@ -1,6 +1,6 @@
 {
   "companion.settings.sync.title": "동기화",
-  "companion.settings.sync.detail": "이 장치를 연결하거나 새로 고칩니다.",
+  "companion.settings.sync.detail": "콘텐츠를 동기화하고 동기화 상태를 확인합니다.",
   "companion.settings.device.title": "장치",
   "companion.settings.device.detail": "장치 세부정보를 아직 사용할 수 없습니다.",
   "companion.settings.storage.title": "저장",

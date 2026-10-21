@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "이번 복원의 동기화 설정",
+  "settings.backups.restore.sync.noGroup": "동기화 그룹 없음",
+  "settings.backups.restore.sync.backup": "백업의 동기화 그룹 설정 사용: {group}",
+  "settings.backups.restore.sync.current": "현재 동기화 설정 유지: {group}",
+  "settings.backups.restore.sync.actionTitle": "복원 후 동기화",
+  "settings.backups.restore.sync.actionDescription": "지금 동기화 그룹 전체를 교체할지, 먼저 이 기기만 복원할지 선택하세요.",
+  "settings.backups.restore.sync.overwrite": "지금 동기화하고 그룹 전체 덮어쓰기",
+  "settings.backups.restore.sync.pause": "동기화를 일시 중지하고 먼저 이 기기만 복원",
+  "settings.backups.restore.sync.resumeTitle": "동기화 재개",
+  "settings.backups.restore.sync.resumeDescription": "동기화를 재개하면 이 기기의 현재 라이브러리로 동기화 그룹 전체를 덮어씁니다. 계속할까요?",
+  "settings.backups.restore.sync.pendingTitle": "복원 후 동기화가 일시 중지됨",
+  "settings.backups.restore.sync.pendingDescription": "동기화를 재개하면 이후 편집을 포함한 이 기기의 현재 라이브러리로 동기화 그룹 전체를 덮어씁니다.",
+  "syncGroup.join.mode.title": "동기화 그룹 참여",
+  "syncGroup.join.mode.description": "사용할 데이터를 선택하세요. 그룹 데이터는 이 기기만 교체하고, 이 기기의 데이터는 그룹 전체를 교체합니다.",
+  "syncGroup.join.mode.overwrite": "이 기기의 데이터로 그룹 전체 덮어쓰기",
+  "syncGroup.join.mode.useGroup": "동기화 그룹의 데이터로 이 기기 덮어쓰기"
+}

@@ -2,5 +2,7 @@
   "language.system": "Sistema",
   "language.en": "Inglés",
   "language.zhHans": "Chino simplificado",
+  "shared.textLimit.exceeded": "Este cambio supera el límite de 1 MiB (UTF-8) de un solo campo de texto y no se ha guardado. Acorta el texto e inténtalo de nuevo.",
+  "shared.titleLimit.shortened": "Título acortado a 100 caracteres y guardado.",
   "common.cancel": "Cancelar"
 }

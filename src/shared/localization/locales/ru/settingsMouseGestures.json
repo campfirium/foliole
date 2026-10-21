@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "Площадь",
   "settings.mouseGestures.area.mainPanel": "Основная панель",
   "settings.mouseGestures.bindings.sectionAria": "Раздел привязки жестов мыши",
-  "settings.mouseGestures.bindings.title": "Привязки",
+  "settings.mouseGestures.bindings.title": "Действия жестов",
   "settings.mouseGestures.gesture.left": "Левый",
   "settings.mouseGestures.gesture.right": "Правильно",
   "settings.mouseGestures.gesture.leftUp": "Влево, затем вверх",

@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "면적",
   "settings.mouseGestures.area.mainPanel": "메인 패널",
   "settings.mouseGestures.bindings.sectionAria": "마우스 제스처 바인딩 섹션",
-  "settings.mouseGestures.bindings.title": "바인딩",
+  "settings.mouseGestures.bindings.title": "제스처 작업",
   "settings.mouseGestures.gesture.left": "왼쪽",
   "settings.mouseGestures.gesture.right": "오른쪽",
   "settings.mouseGestures.gesture.leftUp": "왼쪽 다음 위로",

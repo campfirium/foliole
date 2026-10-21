@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "確認",
   "shared.close": "閉じる",
   "shared.selection.commands": "選択コマンド",
+  "shared.startup.originalDataProtection": "ライブラリを保護するため、Foliole はこのアップグレードを停止しました。古い同期記録の一部の情報を現在のライブラリで確認できませんでした。再起動してもこの情報は復元されません。診断情報をコピーしてサポートにお問い合わせください。",
   "shared.startup.errorTitle": "Foliole の起動で問題が発生しました",
   "shared.startup.bootTitle": "Foliole を開始します",
   "shared.startup.bootHelp": "ワークスペース サービスを準備しています...",

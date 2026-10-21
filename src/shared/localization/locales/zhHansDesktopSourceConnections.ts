@@ -51,6 +51,6 @@ export const ZH_HANS_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS: Partial<Record<Tran
   'desktop.readwise.host.connectFirst': '请先在此设备连接 Readwise。',
   'desktop.readwise.join.title': 'Readwise 导入设备',
   'desktop.readwise.join.choose': '选择由哪台设备导入 Readwise。',
-  'desktop.readwise.join.waiting': '等待设备连接完成后继续。',
+  'desktop.readwise.join.waiting': 'Readwise 正在等待设备完成连接。',
   'desktop.readwise.join.later': '稍后'
 };

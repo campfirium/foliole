@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "Подтвердить",
   "shared.close": "Закрыть",
   "shared.selection.commands": "Команды выбора",
+  "shared.startup.originalDataProtection": "Чтобы защитить вашу библиотеку, Foliole остановил это обновление. Часть сведений из старых записей синхронизации не удалось подтвердить в текущей библиотеке. Перезапуск не восстановит эти сведения. Скопируйте диагностические данные и обратитесь в поддержку.",
   "shared.startup.errorTitle": "При запуске Foliole возникла проблема",
   "shared.startup.bootTitle": "Начиная с Foliole",
   "shared.startup.bootHelp": "Подготовка рабочего места сервисов...",

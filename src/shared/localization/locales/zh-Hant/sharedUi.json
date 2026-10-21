@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "確認",
   "shared.close": "關閉",
   "shared.selection.commands": "選擇命令",
+  "shared.startup.originalDataProtection": "為保護資料庫，Foliole 已停止本次升級。舊版同步記錄中的部分資訊未能在目前的資料庫中確認。重新啟動不會補齊這些資訊，請複製診斷資訊並聯絡支援。",
   "shared.startup.errorTitle": "Foliole啟動遇到問題",
   "shared.startup.bootTitle": "開始於Foliole",
   "shared.startup.bootHelp": "正在準備工作區服務...",

@@ -40,6 +40,8 @@
   "desktop.externalLibrary.preview.import": "Importuj",
   "desktop.externalLibrary.preview.openImported": "Otwórz zaimportowany temat",
   "desktop.externalLibrary.preview.importToFoliole": "Importuj do Foliole",
+  "desktop.externalLibrary.preview.openReader": "Otwórz w Reader",
+  "desktop.externalLibrary.preview.openSource": "Otwórz oryginał",
   "desktop.externalLibrary.preview.panel": "Zewnętrzny panel podglądu dokumentów",
   "desktop.externalLibrary.preview.documentFallback": "Dokument zewnętrzny",
   "desktop.externalLibrary.preview.openInLibrary": "Otwórz w bibliotece zewnętrznej",

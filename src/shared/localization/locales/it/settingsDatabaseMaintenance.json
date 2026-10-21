@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "Sezione di manutenzione del database",
+  "settings.backups.database.sectionTitle": "Database",
+  "settings.backups.database.title": "Spazio del database",
+  "settings.backups.database.description": "{size} in totale · {reclaimable} recuperabili ({percent}%)",
+  "settings.backups.database.unavailable": "Le informazioni sullo spazio del database non sono disponibili.",
+  "settings.backups.database.action": "Compatta il database",
+  "settings.backups.database.compacting": "Compattazione...",
+  "settings.backups.database.success": "Database compattato.",
+  "settings.backups.database.failed": "Compattazione del database non riuscita: {message}",
+  "settings.backups.kind.preCompact": "Istantanea di sicurezza prima della compattazione del database"
+}

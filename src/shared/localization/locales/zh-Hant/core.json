@@ -2,5 +2,7 @@
   "language.system": "系統",
   "language.en": "英語",
   "language.zhHans": "簡體中文",
+  "shared.textLimit.exceeded": "此變更超過單一文字欄位 1 MiB（UTF-8）的上限，未儲存。請縮短內容後再試一次。",
+  "shared.titleLimit.shortened": "標題已保留前 100 個字元並儲存。",
   "common.cancel": "取消"
 }

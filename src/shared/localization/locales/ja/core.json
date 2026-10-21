@@ -2,5 +2,7 @@
   "language.system": "システム",
   "language.en": "英語",
   "language.zhHans": "簡体字中国語",
+  "shared.textLimit.exceeded": "この変更は 1 つのテキスト項目の上限 1 MiB（UTF-8）を超えているため、保存されませんでした。テキストを短くしてもう一度お試しください。",
+  "shared.titleLimit.shortened": "タイトルを 100 文字に短縮して保存しました。",
   "common.cancel": "キャンセル"
 }

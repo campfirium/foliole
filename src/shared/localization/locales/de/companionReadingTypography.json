@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "Die Leseeinstellungen konnten nicht gespeichert werden. Ihre vorherigen Einstellungen werden weiterhin verwendet.",
   "companion.reading.font.size": "Größe",
   "companion.reading.font.size.small": "Klein",
   "companion.reading.font.size.default": "Default",

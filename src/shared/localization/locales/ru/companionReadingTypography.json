@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "Не удалось сохранить настройки чтения. По-прежнему используются предыдущие настройки.",
   "companion.reading.font.size": "Размер",
   "companion.reading.font.size.small": "Маленький",
   "companion.reading.font.size.default": "Default",

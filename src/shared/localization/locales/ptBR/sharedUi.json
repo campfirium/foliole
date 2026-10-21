@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "Confirmar",
   "shared.close": "Fechar",
   "shared.selection.commands": "Comandos de seleção",
+  "shared.startup.originalDataProtection": "Para proteger sua biblioteca, o Foliole interrompeu esta atualização. Algumas informações de registros de sincronização antigos não puderam ser verificadas na biblioteca atual. Reiniciar não restaurará essas informações. Copie os dados de diagnóstico e entre em contato com o suporte.",
   "shared.startup.errorTitle": "A inicialização de Foliole encontrou um problema",
   "shared.startup.bootTitle": "Iniciando Foliole",
   "shared.startup.bootHelp": "Preparando os serviços do espaço de trabalho...",

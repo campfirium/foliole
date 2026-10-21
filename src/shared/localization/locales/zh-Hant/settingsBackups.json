@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "搜尋備份設定區",
+  "settings.backups.search.sectionTitle": "搜尋備份內容",
+  "settings.backups.search.description": "逐份解壓縮現有備份，搜尋其中的內容。",
+  "settings.backups.search.action": "搜尋備份內容",
+  "settings.backups.search.title": "搜尋備份內容",
+  "settings.backups.search.input": "搜尋詞",
+  "settings.backups.search.placeholder": "輸入關鍵字",
+  "settings.backups.search.submit": "搜尋",
+  "settings.backups.search.cancel": "取消",
+  "settings.backups.search.continue": "繼續搜尋",
+  "settings.backups.search.noMoreResults": "沒有更多結果",
+  "settings.backups.search.initial": "輸入關鍵字。",
+  "settings.backups.search.searchingBackups": "正在搜尋備份內容...",
+  "settings.backups.search.failed": "備份搜尋已停止。{message}",
+  "settings.backups.search.cancelled": "已取消備份搜尋。",
+  "settings.backups.search.complete": "沒有更多相符內容。",
+  "settings.backups.search.completePartial": "沒有更多可讀取的相符內容；有 {count} 個備份檔案無法讀取。",
+  "settings.backups.search.trashed": "在垃圾桶"
+}

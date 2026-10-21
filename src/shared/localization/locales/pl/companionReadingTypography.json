@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "Nie udało się zapisać ustawień czytania. Nadal używane są poprzednie ustawienia.",
   "companion.reading.font.size": "Rozmiar",
   "companion.reading.font.size.small": "Mały",
   "companion.reading.font.size.default": "Default",

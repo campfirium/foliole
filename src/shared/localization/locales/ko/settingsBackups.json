@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "백업 검색 섹션",
+  "settings.backups.search.sectionTitle": "백업 내용 검색",
+  "settings.backups.search.description": "기존 백업을 하나씩 압축 해제하여 내용을 검색합니다.",
+  "settings.backups.search.action": "백업 내용 검색",
+  "settings.backups.search.title": "백업 내용 검색",
+  "settings.backups.search.input": "검색어",
+  "settings.backups.search.placeholder": "검색어 입력",
+  "settings.backups.search.submit": "검색",
+  "settings.backups.search.cancel": "취소",
+  "settings.backups.search.continue": "검색 계속",
+  "settings.backups.search.noMoreResults": "더 이상 결과 없음",
+  "settings.backups.search.initial": "검색어를 입력하세요.",
+  "settings.backups.search.searchingBackups": "백업 내용을 검색하는 중...",
+  "settings.backups.search.failed": "백업 검색이 중지되었습니다. {message}",
+  "settings.backups.search.cancelled": "백업 검색이 취소되었습니다.",
+  "settings.backups.search.complete": "더 이상 일치하는 내용이 없습니다.",
+  "settings.backups.search.completePartial": "더 이상 읽을 수 있는 일치 항목이 없습니다. 백업 파일 {count}개를 읽지 못했습니다.",
+  "settings.backups.search.trashed": "휴지통에 있음"
+}

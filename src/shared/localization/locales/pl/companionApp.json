@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Nie udało się dokończyć udostępniania. Spróbuj ponownie.",
+  "companion.search.unavailable": "Ten wynik nie jest już dostępny.",
+  "companion.search.refresh": "Wyszukaj ponownie",
+  "companion.link.unavailable": "Tego linku nie można otworzyć w tej bibliotece.",
+  "companion.link.dismiss": "Zamknij",
   "companion.app.retry": "Spróbuj ponownie",
   "companion.app.starting.eyebrow": "Czas działania towarzyszącego",
   "companion.app.starting.message": "Przygotowanie stabilnej tożsamości urządzenia i lokalnego magazynu towarzyszącego przed załadowaniem tematu.",

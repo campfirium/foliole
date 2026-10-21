@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "バックアップ検索セクション",
+  "settings.backups.search.sectionTitle": "バックアップの内容を検索",
+  "settings.backups.search.description": "既存のバックアップを 1 件ずつ展開して、その内容を検索します。",
+  "settings.backups.search.action": "バックアップの内容を検索",
+  "settings.backups.search.title": "バックアップの内容を検索",
+  "settings.backups.search.input": "検索語",
+  "settings.backups.search.placeholder": "検索語を入力",
+  "settings.backups.search.submit": "検索",
+  "settings.backups.search.cancel": "キャンセル",
+  "settings.backups.search.continue": "検索を続ける",
+  "settings.backups.search.noMoreResults": "これ以上の結果はありません",
+  "settings.backups.search.initial": "検索語を入力してください。",
+  "settings.backups.search.searchingBackups": "バックアップの内容を検索しています...",
+  "settings.backups.search.failed": "バックアップの検索が停止しました。{message}",
+  "settings.backups.search.cancelled": "バックアップの検索をキャンセルしました。",
+  "settings.backups.search.complete": "一致する内容はこれ以上ありません。",
+  "settings.backups.search.completePartial": "読み取り可能な一致はこれ以上ありません。{count} 件のバックアップファイルを読み取れませんでした。",
+  "settings.backups.search.trashed": "ゴミ箱内"
+}

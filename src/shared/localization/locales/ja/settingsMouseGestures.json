@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "エリア",
   "settings.mouseGestures.area.mainPanel": "メインパネル",
   "settings.mouseGestures.bindings.sectionAria": "マウス ジェスチャ バインディング セクション",
-  "settings.mouseGestures.bindings.title": "バインディング",
+  "settings.mouseGestures.bindings.title": "ジェスチャーの操作",
   "settings.mouseGestures.gesture.left": "左",
   "settings.mouseGestures.gesture.right": "右",
   "settings.mouseGestures.gesture.leftUp": "左、そして上",

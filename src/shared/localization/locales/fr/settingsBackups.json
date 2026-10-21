@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Section de recherche dans les sauvegardes",
+  "settings.backups.search.sectionTitle": "Rechercher dans le contenu des sauvegardes",
+  "settings.backups.search.description": "Décompresse les sauvegardes existantes une par une et recherche dans leur contenu.",
+  "settings.backups.search.action": "Rechercher dans le contenu des sauvegardes",
+  "settings.backups.search.title": "Rechercher dans le contenu des sauvegardes",
+  "settings.backups.search.input": "Terme de recherche",
+  "settings.backups.search.placeholder": "Saisissez un terme de recherche",
+  "settings.backups.search.submit": "Rechercher",
+  "settings.backups.search.cancel": "Annuler",
+  "settings.backups.search.continue": "Poursuivre la recherche",
+  "settings.backups.search.noMoreResults": "Aucun autre résultat",
+  "settings.backups.search.initial": "Saisissez un terme de recherche.",
+  "settings.backups.search.searchingBackups": "Recherche dans le contenu des sauvegardes...",
+  "settings.backups.search.failed": "Recherche dans les sauvegardes interrompue. {message}",
+  "settings.backups.search.cancelled": "Recherche dans les sauvegardes annulée.",
+  "settings.backups.search.complete": "Aucun autre contenu correspondant.",
+  "settings.backups.search.completePartial": "Aucune autre correspondance lisible. {count} fichiers de sauvegarde n’ont pas pu être lus.",
+  "settings.backups.search.trashed": "Dans la corbeille"
+}

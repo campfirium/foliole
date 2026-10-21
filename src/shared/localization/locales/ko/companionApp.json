@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "공유를 완료하지 못했습니다. 다시 시도하세요.",
+  "companion.search.unavailable": "이 결과는 더 이상 사용할 수 없습니다.",
+  "companion.search.refresh": "다시 검색",
+  "companion.link.unavailable": "이 링크는 이 라이브러리에서 열 수 없습니다.",
+  "companion.link.dismiss": "닫기",
   "companion.app.retry": "재시도",
   "companion.app.starting.eyebrow": "동반 런타임",
   "companion.app.starting.message": "주제 표면이 로드되기 전에 안정적인 장치 ID 및 로컬 동반 저장소를 준비합니다.",

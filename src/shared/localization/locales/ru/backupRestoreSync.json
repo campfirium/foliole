@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "Настройки синхронизации для этого восстановления",
+  "settings.backups.restore.sync.noGroup": "Нет группы синхронизации",
+  "settings.backups.restore.sync.backup": "Использовать настройки группы синхронизации из резервной копии: {group}",
+  "settings.backups.restore.sync.current": "Сохранить текущие настройки синхронизации: {group}",
+  "settings.backups.restore.sync.actionTitle": "Синхронизация после восстановления",
+  "settings.backups.restore.sync.actionDescription": "Выберите, заменить ли сейчас всю группу синхронизации или сначала восстановить только это устройство.",
+  "settings.backups.restore.sync.overwrite": "Синхронизировать сейчас и перезаписать всю группу",
+  "settings.backups.restore.sync.pause": "Приостановить синхронизацию и сначала восстановить только это устройство",
+  "settings.backups.restore.sync.resumeTitle": "Возобновить синхронизацию",
+  "settings.backups.restore.sync.resumeDescription": "При возобновлении синхронизации текущая библиотека этого устройства перезапишет всю группу синхронизации. Продолжить?",
+  "settings.backups.restore.sync.pendingTitle": "Синхронизация приостановлена после восстановления",
+  "settings.backups.restore.sync.pendingDescription": "При возобновлении синхронизации текущая библиотека этого устройства, включая последующие правки, перезапишет всю группу синхронизации.",
+  "syncGroup.join.mode.title": "Присоединиться к группе синхронизации",
+  "syncGroup.join.mode.description": "Выберите, какие данные использовать: данные группы заменяют только это устройство, а данные этого устройства заменяют всю группу.",
+  "syncGroup.join.mode.overwrite": "Перезаписать всю группу данными этого устройства",
+  "syncGroup.join.mode.useGroup": "Перезаписать это устройство данными группы синхронизации"
+}

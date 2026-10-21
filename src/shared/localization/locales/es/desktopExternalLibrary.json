@@ -40,6 +40,8 @@
   "desktop.externalLibrary.preview.import": "Importar",
   "desktop.externalLibrary.preview.openImported": "Abrir tema importado",
   "desktop.externalLibrary.preview.importToFoliole": "Importar a Foliole",
+  "desktop.externalLibrary.preview.openReader": "Abrir en Reader",
+  "desktop.externalLibrary.preview.openSource": "Abrir original",
   "desktop.externalLibrary.preview.panel": "Panel de vista previa de documento externo",
   "desktop.externalLibrary.preview.documentFallback": "Documento externo",
   "desktop.externalLibrary.preview.openInLibrary": "Abrir en biblioteca externa",

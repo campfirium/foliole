@@ -1,6 +1,6 @@
 {
   "companion.settings.sync.title": "Sincronización",
-  "companion.settings.sync.detail": "Conecte o actualice este dispositivo.",
+  "companion.settings.sync.detail": "Sincroniza contenido y consulta el estado de sincronización.",
   "companion.settings.device.title": "Dispositivo",
   "companion.settings.device.detail": "Los detalles del dispositivo aún no están disponibles.",
   "companion.settings.storage.title": "Almacenamiento",

@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 import {
   createFormulaClozePresentationRegion,
@@ -23,55 +23,71 @@ function registerParentFormulaPresentation(editorNodeId: string, activeNode: Nod
     outlinedRegionIds: regions.map((region) => region.id),
     regions
   });
-  return () => unregisterFormulaClozeEditorPresentation(editorNodeId);
+  return [editorNodeId];
 }
 
 function registerFocusedFormulaPresentation(editorNodeId: string, activeNode: Node, showAnswerNodeId: string | null) {
-  if (!activeNode.anchorLink) return undefined;
+  if (!activeNode.anchorLink) return [];
   const region = createFormulaClozePresentationRegion(activeNode.anchorLink);
   const locator = getFormulaClozeLocator(activeNode.anchorLink);
-  if (!region || !locator) return undefined;
+  if (!region || !locator) return [];
   registerFormulaClozeEditorPresentation(editorNodeId, {
     canCreate: false,
     hiddenRegionIds: [region.id],
     outlinedRegionIds: [],
     regions: [region]
   });
-  if (showAnswerNodeId) {
-    registerFormulaClozeEditorPresentation(showAnswerNodeId, {
-      canCreate: false,
-      hiddenRegionIds: [],
-      outlinedRegionIds: [region.id],
-      regions: [region]
-    });
-  }
-  return () => {
-    unregisterFormulaClozeEditorPresentation(editorNodeId);
-    if (showAnswerNodeId) unregisterFormulaClozeEditorPresentation(showAnswerNodeId);
-  };
+  if (!showAnswerNodeId) return [editorNodeId];
+  registerFormulaClozeEditorPresentation(showAnswerNodeId, {
+    canCreate: false,
+    hiddenRegionIds: [],
+    outlinedRegionIds: [region.id],
+    regions: [region]
+  });
+  return [editorNodeId, showAnswerNodeId];
 }
 
+function registerFormulaPresentation(args: {
+  activeNode: Node | undefined;
+  editorNodeId: string | null;
+  nodesById: Record<string, Node>;
+  trashedNodeIds: string[];
+}) {
+  if (!args.editorNodeId || !args.activeNode) return [];
+  if (isFormulaClozeNode(args.activeNode)) {
+    return registerFocusedFormulaPresentation(
+      args.editorNodeId,
+      args.activeNode,
+      getFormulaClozeAnswerEditorNodeId(args.editorNodeId)
+    );
+  }
+  return registerParentFormulaPresentation(args.editorNodeId, args.activeNode, args.nodesById, args.trashedNodeIds);
+}
+
+// Registrations are replaced in place: unregistering before each update would leave a moment where
+// rebuilt formula widgets read no presentation and an identical re-registration would not repaint them.
 export function useDocumentPanelFormulaClozePresentation(args: {
   activeNode: Node | undefined;
   editorNodeId: string | null;
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
+  const registeredIdsRef = useRef<string[]>([]);
   useLayoutEffect(() => {
-    return measureWorkspaceDiagnostic('document-panel-formula-cloze-layout-effect', {
+    measureWorkspaceDiagnostic('document-panel-formula-cloze-layout-effect', {
       activeNodeId: args.activeNode?.id,
       editorNodeId: args.editorNodeId,
       nodeCount: Object.keys(args.nodesById).length
     }, () => {
-      if (!args.editorNodeId || !args.activeNode) return undefined;
-      if (isFormulaClozeNode(args.activeNode)) {
-        return registerFocusedFormulaPresentation(
-          args.editorNodeId,
-          args.activeNode,
-          getFormulaClozeAnswerEditorNodeId(args.editorNodeId)
-        );
+      const registeredIds = registerFormulaPresentation(args);
+      for (const id of registeredIdsRef.current) {
+        if (!registeredIds.includes(id)) unregisterFormulaClozeEditorPresentation(id);
       }
-      return registerParentFormulaPresentation(args.editorNodeId, args.activeNode, args.nodesById, args.trashedNodeIds);
+      registeredIdsRef.current = registeredIds;
     });
   }, [args.activeNode, args.editorNodeId, args.nodesById, args.trashedNodeIds]);
+  useLayoutEffect(() => () => {
+    registeredIdsRef.current.forEach(unregisterFormulaClozeEditorPresentation);
+    registeredIdsRef.current = [];
+  }, []);
 }

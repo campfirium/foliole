@@ -40,6 +40,8 @@
   "desktop.externalLibrary.preview.import": "가져오기",
   "desktop.externalLibrary.preview.openImported": "가져온 주제 열기",
   "desktop.externalLibrary.preview.importToFoliole": "Foliole로 가져오기",
+  "desktop.externalLibrary.preview.openReader": "Reader에서 열기",
+  "desktop.externalLibrary.preview.openSource": "원문 열기",
   "desktop.externalLibrary.preview.panel": "외부 문서 미리보기 패널",
   "desktop.externalLibrary.preview.documentFallback": "외부 문서",
   "desktop.externalLibrary.preview.openInLibrary": "외부 라이브러리에서 열기",

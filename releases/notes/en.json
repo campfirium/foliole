@@ -1,4 +1,33 @@
 {
+  "0.7.15": {
+    "notes": [
+      "New",
+      "Synonym search: expand searches using a custom synonym list. Thanks to chiefdeepx-ship-it for the suggestion.",
+      "Simple review statistics: view daily review activity and usage time.",
+      "Local attachment management: check storage use, clean up unused attachments, and restore them from the attachment trash.",
+      "PDF reading offers Auto fit and Custom fit views and remembers the settings for each document. The top toolbar can auto-hide.",
+      "Imported PDFs and Readwise EPUBs can be exported as original files.",
+      "Improved",
+      "PDF excerpts can now span multiple columns and pages.",
+      "The annotation editor remembers its position and size after being moved or resized.",
+      "Editor undo and redo history is preserved across restarts.",
+      "The scheduling window for new item load balancing is now configurable.",
+      "EPUB imports use less memory during decompression, allowing large books that previously failed due to insufficient memory to be imported.",
+      "Fixed",
+      "Topics that fail to render display their original text while the rest of the workspace remains usable.",
+      "Markdown content with multi-line link reference definitions opens normally.",
+      "Outdated formula editing ranges no longer cause the editor to crash when the document changes.",
+      "Keyboard deletion now removes all selected Topics.",
+      "Pressing Enter during IME composition no longer submits a rename prematurely.",
+      "Copying or highlighting Devanagari text no longer drops characters at the start of a selection."
+    ],
+    "platformNotes": {
+      "linux": [
+        "New",
+        "Linux builds are now available as an AppImage, which requires the Electron sandbox to run."
+      ]
+    }
+  },
   "0.7.14": {
     "notes": [
       "New",

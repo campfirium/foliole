@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "No se pudieron guardar los ajustes de lectura. Se siguen usando tus ajustes anteriores.",
   "companion.reading.font.size": "Tamaño",
   "companion.reading.font.size.small": "Pequeño",
   "companion.reading.font.size.default": "Default",

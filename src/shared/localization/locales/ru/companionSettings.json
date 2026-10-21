@@ -1,6 +1,6 @@
 {
   "companion.settings.sync.title": "Синхронизировать",
-  "companion.settings.sync.detail": "Подключите или обновите это устройство.",
+  "companion.settings.sync.detail": "Синхронизация содержимого и просмотр её состояния.",
   "companion.settings.device.title": "Устройство",
   "companion.settings.device.detail": "Подробности об устройстве пока недоступны.",
   "companion.settings.storage.title": "Хранение",

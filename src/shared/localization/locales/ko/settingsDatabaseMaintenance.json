@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "데이터베이스 유지 관리 섹션",
+  "settings.backups.database.sectionTitle": "데이터베이스",
+  "settings.backups.database.title": "데이터베이스 저장 공간",
+  "settings.backups.database.description": "총 {size} · 회수 가능 {reclaimable}({percent}%)",
+  "settings.backups.database.unavailable": "데이터베이스 저장 공간 정보를 사용할 수 없습니다.",
+  "settings.backups.database.action": "데이터베이스 압축",
+  "settings.backups.database.compacting": "압축하는 중...",
+  "settings.backups.database.success": "데이터베이스를 압축했습니다.",
+  "settings.backups.database.failed": "데이터베이스 압축 실패: {message}",
+  "settings.backups.kind.preCompact": "데이터베이스 압축 전 안전 스냅샷"
+}

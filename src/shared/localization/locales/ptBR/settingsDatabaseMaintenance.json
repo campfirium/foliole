@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "Seção de manutenção do banco de dados",
+  "settings.backups.database.sectionTitle": "Banco de dados",
+  "settings.backups.database.title": "Armazenamento do banco de dados",
+  "settings.backups.database.description": "{size} no total · {reclaimable} recuperáveis ({percent}%)",
+  "settings.backups.database.unavailable": "As informações de armazenamento do banco de dados não estão disponíveis.",
+  "settings.backups.database.action": "Compactar banco de dados",
+  "settings.backups.database.compacting": "Compactando...",
+  "settings.backups.database.success": "Banco de dados compactado.",
+  "settings.backups.database.failed": "Falha ao compactar o banco de dados: {message}",
+  "settings.backups.kind.preCompact": "Snapshot de segurança antes da compactação do banco de dados"
+}

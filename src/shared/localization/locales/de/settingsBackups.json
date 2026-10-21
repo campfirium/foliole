@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Bereich für die Sicherungssuche",
+  "settings.backups.search.sectionTitle": "Sicherungsinhalte durchsuchen",
+  "settings.backups.search.description": "Vorhandene Sicherungen nacheinander entpacken und ihre Inhalte durchsuchen.",
+  "settings.backups.search.action": "Sicherungsinhalte durchsuchen",
+  "settings.backups.search.title": "Sicherungsinhalte durchsuchen",
+  "settings.backups.search.input": "Suchbegriff",
+  "settings.backups.search.placeholder": "Suchbegriff eingeben",
+  "settings.backups.search.submit": "Suchen",
+  "settings.backups.search.cancel": "Abbrechen",
+  "settings.backups.search.continue": "Suche fortsetzen",
+  "settings.backups.search.noMoreResults": "Keine weiteren Ergebnisse",
+  "settings.backups.search.initial": "Geben Sie einen Suchbegriff ein.",
+  "settings.backups.search.searchingBackups": "Sicherungsinhalte werden durchsucht...",
+  "settings.backups.search.failed": "Sicherungssuche angehalten. {message}",
+  "settings.backups.search.cancelled": "Sicherungssuche abgebrochen.",
+  "settings.backups.search.complete": "Keine weiteren passenden Inhalte.",
+  "settings.backups.search.completePartial": "Keine weiteren lesbaren Treffer. {count} Sicherungsdateien konnten nicht gelesen werden.",
+  "settings.backups.search.trashed": "Im Papierkorb"
+}

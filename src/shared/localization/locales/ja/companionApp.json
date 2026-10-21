@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "共有を完了できませんでした。もう一度お試しください。",
+  "companion.search.unavailable": "この結果は利用できなくなりました。",
+  "companion.search.refresh": "もう一度検索",
+  "companion.link.unavailable": "このリンクはこのライブラリでは開けません。",
+  "companion.link.dismiss": "閉じる",
   "companion.app.retry": "再試行",
   "companion.app.starting.eyebrow": "コンパニオン ランタイム",
   "companion.app.starting.message": "トピック サーフェスが読み込まれる前に、安定したデバイス ID とローカル コンパニオン ストレージを準備します。",

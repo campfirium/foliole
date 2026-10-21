@@ -1,6 +1,6 @@
 {
   "companion.settings.sync.title": "同步",
-  "companion.settings.sync.detail": "連接或刷新此裝置。",
+  "companion.settings.sync.detail": "同步內容並查看同步狀態。",
   "companion.settings.device.title": "裝置",
   "companion.settings.device.detail": "設備詳細資訊尚不可用。",
   "companion.settings.storage.title": "儲存",

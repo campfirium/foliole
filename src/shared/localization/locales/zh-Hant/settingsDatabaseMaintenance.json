@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "資料庫維護設定區",
+  "settings.backups.database.sectionTitle": "資料庫",
+  "settings.backups.database.title": "資料庫儲存空間",
+  "settings.backups.database.description": "共 {size} · 可回收 {reclaimable}（{percent}%）",
+  "settings.backups.database.unavailable": "暫時無法讀取資料庫儲存空間資訊。",
+  "settings.backups.database.action": "整理資料庫",
+  "settings.backups.database.compacting": "正在整理...",
+  "settings.backups.database.success": "資料庫已整理。",
+  "settings.backups.database.failed": "資料庫整理失敗：{message}",
+  "settings.backups.kind.preCompact": "資料庫整理前的安全快照"
+}
