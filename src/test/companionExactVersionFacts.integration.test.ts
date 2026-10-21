@@ -14,11 +14,17 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 
 import { createCompanionRequestFixture, native } from './companionRequestSync.testSupport';
 
-it('keeps equal unready libraries pending without object streams, then repairs the available current body', async () => {
+it('keeps equal unready libraries pending without object streams, then repairs the available current body', async (context) => {
+  const started = performance.now();
+  const stages: Record<string, number> = { creating: 0 };
+  context.onTestFailed(() => console.error('[equal-unready-failure]', {
+    stages, elapsedMs: performance.now() - started
+  }));
   const host = await createCompanionRequestFixture();
   const nodeId = 'equal-unready';
   try {
     await host.fixture.left.seed({ nodeId, title: 'Incomplete', content: 'Retained current' });
+    stages.initialSync = performance.now() - started;
     await host.sync();
     const target = new Database(host.fixture.rightSnapshot.databasePath);
     try {
@@ -31,13 +37,15 @@ it('keeps equal unready libraries pending without object streams, then repairs t
         if (kind && ['pull', 'pulls', 'object', 'objects'].includes(kind)) objectRequests.push(kind);
         return host.post(input);
       });
-      for (let pass = 0; pass < 3; pass++) expect(await host.sync()).toMatchObject({
-        remainingStructureChangeCount: 1, madeDatabaseProgress: false
-      });
+      for (let pass = 0; pass < 3; pass++) {
+        stages[`unreadyRound${pass}`] = performance.now() - started;
+        expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 1, madeDatabaseProgress: false });
+      }
       expect(objectRequests).toEqual([]);
       target.prepare(`UPDATE node_sync_versions SET body_text = 'Retained current',
         snapshot_json = json_set(snapshot_json, '$.content', 'Retained current')
         WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = ?)`).run(nodeId);
+      stages.repairSync = performance.now() - started;
       expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });
       expect(objectRequests).toContain('pulls');
       expect(host.sqlite.prepare(`SELECT body_text FROM node_sync_versions
