@@ -17,7 +17,11 @@ async function checkLocale(locale, domains) {
   const problems = [];
   for (const { domain, en } of domains) {
     const filePath = path.join(repoRoot, 'src/shared/localization/locales', localeDirectory(locale), `${domain}.json`);
-    const translated = JSON.parse(await fs.readFile(filePath, 'utf8'));
+    const translated = await readTranslatedDomain(filePath);
+    if (!translated) {
+      problems.push(`${locale}/${domain}: catalog file is missing`);
+      continue;
+    }
     const enKeys = Object.keys(en).sort();
     const translatedKeys = Object.keys(translated).sort();
     if (JSON.stringify(enKeys) !== JSON.stringify(translatedKeys)) {
@@ -29,6 +33,15 @@ async function checkLocale(locale, domains) {
     }
   }
   return problems;
+}
+
+export async function readTranslatedDomain(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf8'));
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 function localeDirectory(locale) {

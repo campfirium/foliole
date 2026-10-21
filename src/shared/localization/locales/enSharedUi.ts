@@ -1,5 +1,3 @@
-import { ORIGINAL_DATA_PROTECTION_COPY } from '../../../../lib/core/localization/startupOriginalDataProtection';
-
 export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.breadcrumb.aria': 'Breadcrumb',
   'shared.breadcrumb.expand': 'Expand breadcrumb path',
@@ -7,7 +5,7 @@ export const EN_SHARED_UI_TRANSLATIONS = {
   'shared.confirm.confirm': 'Confirm',
   'shared.close': 'Close',
   'shared.selection.commands': 'Selection commands',
-  'shared.startup.originalDataProtection': ORIGINAL_DATA_PROTECTION_COPY.en,
+  'shared.startup.originalDataProtection': 'To protect your library, Foliole has stopped this upgrade. Some information in older sync records could not be verified in the current library. Restarting will not restore this information. Please copy the diagnostics and contact support.',
   'shared.startup.errorTitle': 'Foliole startup encountered a problem',
   'shared.startup.bootTitle': 'Starting Foliole',
   'shared.startup.bootHelp': 'Preparing the workspace services...',
