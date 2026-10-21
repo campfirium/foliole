@@ -83,7 +83,10 @@ test('Create Topic focuses the new topic body for immediate typing', async ({ de
 
   await desktopWindow.keyboard.insertText(NEW_BODY);
   await expect.poll(() => getNodeContent(desktopWindow, newNodeId!)).toBe(NEW_BODY);
-  expect(await getNodeContent(desktopWindow, existingNodeId!)).toBe(EXISTING_BODY);
+  // Inactive topics keep their body outside the renderer store, so reopen the earlier topic to read it.
+  await desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id), existingNodeId!);
+  await expect.poll(() => getActiveNodeId(desktopWindow)).toBe(existingNodeId);
+  await expect.poll(() => getNodeContent(desktopWindow, existingNodeId!)).toBe(EXISTING_BODY);
 
   await testInfo.attach('topic-create-body-focus', {
     body: JSON.stringify({ existingNodeId, newNodeId, newBody: NEW_BODY }, null, 2),

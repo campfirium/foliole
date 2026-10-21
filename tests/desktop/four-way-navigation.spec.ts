@@ -89,12 +89,13 @@ test('four-way navigation saves title and body edits before structural and histo
   await expect.poll(() => activeNodeId(desktopWindow)).not.toBe(ROOT_ID);
   const bodyNavigationTarget = await activeNodeId(desktopWindow);
   expect([CANONICAL_LAST_CHILD_ID, OTHER_CHILD_ID]).toContain(bodyNavigationTarget);
+
+  // Inactive topics keep their body outside the renderer store, so read it back after returning.
+  await desktopWindow.keyboard.press(shortcut('Up'));
+  await expect.poll(() => activeNodeId(desktopWindow)).toBe(ROOT_ID);
   await expect.poll(() => desktopWindow.evaluate((nodeId) =>
     window.__folioleWorkspaceDebug?.getNode?.(nodeId)?.content ?? null, ROOT_ID
   )).toContain('saved draft');
-
-  await desktopWindow.keyboard.press(shortcut('Up'));
-  await expect.poll(() => activeNodeId(desktopWindow)).toBe(ROOT_ID);
   await desktopWindow.keyboard.press(shortcut('Left'));
   await expect.poll(() => activeNodeId(desktopWindow)).toBe(bodyNavigationTarget);
   await desktopWindow.keyboard.press(shortcut('Right'));
