@@ -59,6 +59,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  preempt_dev_quality:
+    name: Cancel running dev quality
+    if: github.event_name == 'push' || inputs.stage == 'full'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Cancel dev hosted quality so the release run owns the runners
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for workflow in remote-quality.yml t7-hosted-quality.yml; do
+            for status in in_progress queued waiting pending requested; do
+              gh run list --workflow "$workflow" --branch dev --status "$status" --limit 50 \
+                --json databaseId --jq '.[].databaseId' | while read -r run_id; do
+                echo "Cancelling $workflow run $run_id ($status)"
+                gh run cancel "$run_id" || echo "Run $run_id already finished"
+              done
+            done
+          done
+
   release_context:
     name: Resolve release identity
     runs-on: ubuntu-latest

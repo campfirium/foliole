@@ -42,7 +42,7 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: quality-dev-remote
+  group: quality-dev
   cancel-in-progress: true
 
 jobs:

@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: quality-dev-scheduled
+  group: quality-dev
   cancel-in-progress: false
 
 jobs:

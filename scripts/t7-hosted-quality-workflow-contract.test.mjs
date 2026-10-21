@@ -33,10 +33,10 @@ describe('T7 hosted quality workflow contract', () => {
     expect(hosted.permissions.actions).toBe('read');
   });
 
-  it('isolates scheduled dev, active dev, and release concurrency groups', () => {
+  it('serializes scheduled and manual dev quality while release keeps its own group', () => {
     const remote = parse(read('.github/workflows/remote-quality.yml'));
-    expect(remote.concurrency).toEqual({ group: 'quality-dev-remote', 'cancel-in-progress': true });
-    expect(hosted.concurrency).toEqual({ group: 'quality-dev-scheduled', 'cancel-in-progress': false });
+    expect(remote.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': true });
+    expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
     expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
     const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
     const referencing = workflows.filter((file) => read(`.github/workflows/${file}`).includes('quality-release'));

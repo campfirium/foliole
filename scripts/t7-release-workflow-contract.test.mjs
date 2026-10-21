@@ -72,6 +72,12 @@ describe('T7 release workflow contract', () => {
     expect(linuxResponsiveness.on.workflow_dispatch.inputs.target_sha.required).toBe(true);
     expect(linuxResponsiveness.on.workflow_dispatch.inputs.inject_block_ms.options)
       .toEqual(['0', '1200']);
+    expect(jobs.preempt_dev_quality.permissions).toEqual({ actions: 'write' });
+    expect(jobs.preempt_dev_quality.needs).toBeUndefined();
+    const preempt = jobs.preempt_dev_quality.steps.map((step) => step.run ?? '').join('\n');
+    for (const workflow of ['remote-quality.yml', 't7-hosted-quality.yml']) expect(preempt).toContain(workflow);
+    expect(preempt).toContain('--branch dev');
+    expect(preempt).toContain('gh run cancel');
     expect(jobs.t6_quality.uses).toBe('./.github/workflows/t6-hosted-quality.yml');
     expect(jobs.t6_quality.with.execution_lane).toBe('release-t7');
     expect(jobs.release_candidate.needs).toEqual(['release_context', 't6_quality']);
