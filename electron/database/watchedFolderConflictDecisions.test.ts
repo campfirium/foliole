@@ -12,6 +12,9 @@ vi.mock('../ipc/paths.js', () => ({
     app_config_dir: path.join(appDataDir, 'config'), app_log_dir: path.join(appDataDir, 'logs') })
 }));
 
+import { saveImportManagerSettings } from '../import/importManagerSettings.js';
+import { isKeepImportMonitorSnapshotFresh,
+  startKeepImportMonitor, stopKeepImportMonitor } from '../import/keepImportMonitorRuntime.js';
 import { previewWatchedFolderReconnect } from '../import/watchedFolderReconnect.js';
 import { applyWatchedPreparedImportIdentity } from '../import/watchedPreparedImportIdentity.js';
 
@@ -28,6 +31,8 @@ import {
 } from './watchedFolderConflictDecisions.js';
 import { applyRemoteWatchedFolderGroupSources } from './watchedFolderGroupSources.js';
 import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
+
+vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated() {} }));
 
 let root = '';
 beforeEach(async () => {
@@ -48,9 +53,40 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  stopKeepImportMonitor();
   closeDatabaseConnection();
   await fs.rm(root, { recursive: true, force: true });
 });
+
+it.each([false, true])('imports watched files only for the selected local source: %s', async (selected) => {
+  const { folder, local, conflict } = await conflictingSources();
+  const ruleId = 'draft-import-source-101';
+  saveImportManagerSettings({ sources: [{
+    actionMode: 'keep', archivePath: '', highlightMode: 'merged', highlightPath: '',
+    id: ruleId, keepPreview: null, keepState: 'enabled', primaryPath: folder
+  }] });
+  saveWatchedFolderConflictDecision(conflict.conflict_key, [selected ? local.binding_id : 'remote-binding']);
+  await startKeepImportMonitor();
+  const file = path.join(folder, 'selection.md');
+  const body = '# Selection file\nKeep the original bytes.';
+  await fs.writeFile(file, body);
+  const imported = () => openDatabaseConnection().driver.queryAll(
+    "SELECT source_fingerprint, latest_node_id FROM import_sources WHERE source_name = 'selection.md'"
+  );
+  if (selected) {
+    await vi.waitFor(() => expect(imported()).toHaveLength(1), { timeout: 10000 });
+    await vi.waitFor(() => expect(isKeepImportMonitorSnapshotFresh(ruleId)).toBe(true));
+  } else {
+    await new Promise(resolve => setTimeout(resolve, 750));
+    expect(imported()).toEqual([]);
+  }
+  const saved = imported();
+  await fs.writeFile(file, body);
+  await new Promise(resolve => setTimeout(resolve, 750));
+  if (selected) await vi.waitFor(() => expect(isKeepImportMonitorSnapshotFresh(ruleId)).toBe(true));
+  expect(imported()).toEqual(saved);
+  expect(await fs.readFile(file, 'utf8')).toBe(body);
+}, 15000);
 
 async function conflictingSources(localRule = 'draft-import-source-101',
   remoteRule = 'draft-import-source-102') {
