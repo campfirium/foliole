@@ -92,6 +92,8 @@ public final class FramedSyncHttpTransport {
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
         connection.setChunkedStreamingMode(64 * 1024);
+        // Streaming POST bodies cannot be replayed when an idle pooled connection closes.
+        connection.setRequestProperty("Connection", "close");
         connection.setRequestProperty("Accept", CONTENT_TYPE);
         connection.setRequestProperty("Content-Type", CONTENT_TYPE);
         for (Map.Entry<String, String> header : memberAuthHeaders.entrySet()) {
