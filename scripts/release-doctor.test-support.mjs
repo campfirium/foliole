@@ -152,7 +152,7 @@ export function githubResponses(version, candidate = {}, latestVersion = version
     },
     'gh run view 123 --repo campfirium/foliole-site --json jobs': {
       status: 0,
-      stdout: JSON.stringify({ jobs: ['build', 'deploy', 'deploy-origin'].map((name) => ({ conclusion: 'success', name })) }),
+      stdout: JSON.stringify({ jobs: ['manifest', 'build', 'deploy-origin'].map((name) => ({ conclusion: 'success', name })) }),
       stderr: ''
     },
     'gh api repos/campfirium/foliole-site/contents/content/downloads.json?ref=main --jq .content': {

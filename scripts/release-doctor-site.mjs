@@ -40,12 +40,12 @@ function checkDeploymentJobs(run, rootDir, commandRunner) {
     return createCheck('FAIL', 'site production deployment', 'site deployment jobs could not be verified.');
   }
   const jobs = parseJsonResult(result)?.jobs ?? [];
-  const required = ['build', 'deploy', 'deploy-origin'];
+  const required = ['build', 'deploy-origin'];
   const incomplete = required.filter((name) => jobs.find((job) => job?.name === name)?.conclusion !== 'success');
   return createCheck(
     incomplete.length === 0 ? 'PASS' : 'FAIL', 'site production deployment',
     incomplete.length === 0
-      ? 'site build, Pages deployment, and production origin deployment all succeeded.'
+      ? 'site build and production origin deployment both succeeded.'
       : `site jobs did not succeed: ${incomplete.join(', ')}.`
   );
 }

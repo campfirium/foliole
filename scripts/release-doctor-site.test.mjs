@@ -33,7 +33,6 @@ describe('post-public site download verification', () => {
       status: 0,
       stdout: JSON.stringify({ jobs: [
         { conclusion: 'success', name: 'build' },
-        { conclusion: 'skipped', name: 'deploy' },
         { conclusion: 'skipped', name: 'deploy-origin' }
       ] }),
       stderr: ''
@@ -42,6 +41,15 @@ describe('post-public site download verification', () => {
       version, '.', commandRunner(responses), async () => expected, async () => siteHome(expected)
     );
     expect(findCheck({ checks }, 'site production deployment')).toMatchObject({ status: 'FAIL' });
+  });
+
+  it('passes when the origin-only site workflow built and deployed', async () => {
+    const version = '0.9.0';
+    const expected = onlineDownloads(version);
+    const checks = await checkSiteSync(
+      version, '.', commandRunner(githubResponses(version)), async () => expected, async () => siteHome(expected)
+    );
+    expect(findCheck({ checks }, 'site production deployment')).toMatchObject({ status: 'PASS' });
   });
 
   it('fails when foliole.app still exposes the previous downloads', async () => {
