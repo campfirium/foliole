@@ -18,8 +18,10 @@ function documentFixture(): PreparedReadwiseApiDocument {
     annotations: [
       { content: 'alpha keyword\n※ PDF view note', contentHash: 'pdf-view', kind: 'highlight',
         locatorText: 'alpha keyword', parentRemoteId: 't320-pdf', remoteId: 'pdf-view', updatedAt: null },
-      { content: 'keyword\n※ Text view note', contentHash: 'text-view', kind: 'highlight',
-        locatorText: 'keyword', parentRemoteId: 't320-pdf', remoteId: 'text-view', updatedAt: null }
+      { content: 'enhanced text excerpt\n※ Text view note', contentHash: 'text-view', kind: 'highlight',
+        locatorText: 'enhanced text excerpt', parentRemoteId: 't320-pdf', remoteId: 'text-view', updatedAt: null },
+      { content: 'keyword\n※ Ambiguous note', contentHash: 'ambiguous', kind: 'highlight',
+        locatorText: 'keyword', parentRemoteId: 't320-pdf', remoteId: 'ambiguous', updatedAt: null }
     ],
     body: 'Reader converted text', category: 'pdf', coverImageUrl: null, degradedReason: null,
     id: 't320-pdf', metadata: { author: null, category: 'pdf', readerUrl: null, sourceUrl: null,
@@ -27,8 +29,8 @@ function documentFixture(): PreparedReadwiseApiDocument {
   };
 }
 
-async function importPdf(app: ElectronApplication) {
-  const bytes = await readFile('tests/desktop/fixtures/pdf-user-journey.pdf');
+async function importPdf(app: ElectronApplication, fixturePath: string) {
+  const bytes = await readFile(fixturePath);
   return app.evaluate(async (_electron, fixture) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
@@ -73,13 +75,13 @@ async function readNotes(app: ElectronApplication) {
       require(pathApi.join(process.cwd(), 'dist/lib/core/database/nodeBodyResolution.js'));
     const identity: typeof import('../../lib/core/readwise/readwiseApiImport') =
       require(pathApi.join(process.cwd(), 'dist/lib/core/readwise/readwiseApiImport.js'));
-    return connection.runWithDatabaseConnectionOwner(() => ['pdf-view', 'text-view'].map((id) =>
+    return connection.runWithDatabaseConnectionOwner(() => ['pdf-view', 'text-view', 'ambiguous'].map((id) =>
       body.loadNodeBodyResolution(connection.openDatabaseConnection().driver,
         identity.stableReadwiseAnnotationNodeId('t320-connection', id)).content).sort());
   });
 }
 
-async function openAndVerify(session: T178AcceptanceSession, nodeId: string, stage: string) {
+async function openAndVerify(session: T178AcceptanceSession, nodeId: string, stage: string, automatic: boolean) {
   const page = session.firstWindow;
   await expectWorkspaceShell(page);
   await page.evaluate(async (id) => {
@@ -90,21 +92,27 @@ async function openAndVerify(session: T178AcceptanceSession, nodeId: string, sta
   await expect(surface.locator('[data-pdf-page-state="ready"]').first()).toBeVisible();
   await expect(surface.locator('.textLayer').first()).toContainText('alpha keyword');
   await expect(surface.getByTestId('pdf-document-loading-overlay')).toHaveCount(0);
-  await surface.hover({ position: { x: 400, y: 5 } });
-  await surface.getByRole('button', { name: /^(Set zoom level|设置缩放级别)$/ }).click();
-  await page.getByRole('menuitem', { name: '100%', exact: true }).click();
-  await expect(surface.getByTestId('pdf-zoom-value')).toHaveText('100%');
-  const pageInput = surface.getByRole('textbox', { name: /^(PDF page|PDF 页码)$/ });
-  await pageInput.fill('1');
-  await pageInput.press('Enter');
-  await surface.getByTestId('pdf-scroll-container').hover();
-  await page.mouse.wheel(0, -10000);
-  await page.mouse.move(10, 500);
-  await expect(surface.getByTestId('pdf-highlight-rect')).toHaveCount(1);
-  await expect(surface.getByTestId('pdf-highlight-rect')).toBeVisible();
-  await expect(surface.getByTestId('pdf-highlight-rect')).toBeInViewport();
+  if (!automatic) {
+    await surface.hover({ position: { x: 400, y: 5 } });
+    await surface.getByRole('button', { name: /^(Set zoom level|设置缩放级别)$/ }).click();
+    await page.getByRole('menuitem', { name: '100%', exact: true }).click();
+    await expect(surface.getByTestId('pdf-zoom-value')).toHaveText('100%');
+    const pageInput = surface.getByRole('textbox', { name: /^(PDF page|PDF 页码)$/ });
+    await pageInput.fill('1');
+    await pageInput.press('Enter');
+    await surface.getByTestId('pdf-scroll-container').hover();
+    await page.mouse.wheel(0, -10000);
+    await page.mouse.move(10, 500);
+  }
+  const highlights = surface.getByTestId('pdf-highlight-rect');
+  await expect(highlights).toHaveCount(automatic ? 2 : 1);
+  for (const highlight of await highlights.all()) await expect(highlight).toBeInViewport();
   const notes = await readNotes(session.electronApp);
-  expect(notes).toEqual(['alpha keyword\n※ PDF view note', 'keyword\n※ Text view note']);
+  expect(notes).toEqual(['alpha keyword\n※ PDF view note', 'enhanced text excerpt\n※ Text view note', 'keyword\n※ Ambiguous note']);
+  if (automatic) {
+    await page.mouse.move(20, 500);
+    await expect(surface.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'false');
+  }
   const pixels = await session.electronApp.evaluate(async ({ BrowserWindow }) => {
     const window = BrowserWindow.getAllWindows()[0];
     if (!window) throw new Error('Missing acceptance window');
@@ -114,22 +122,24 @@ async function openAndVerify(session: T178AcceptanceSession, nodeId: string, sta
   await writeFile(path.join(artifactRoot, `${stage}.png`), Buffer.from(pixels, 'base64'));
 }
 
-test('Readwise PDF highlights and unlocated notes survive a process restart', async ({ browserName }) => {
+for (const automatic of [false, true]) {
+test(`Readwise PDF highlights survive restart with ${automatic ? 'automatic multiline' : 'free single-line'} view`, async ({ browserName }) => {
   void browserName;
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t320-'));
   let session: T178AcceptanceSession | null = null;
   try {
     await mkdir(artifactRoot, { recursive: true });
     session = await createT178ApiAcceptanceSession(stateRoot);
-    const nodeId = await importPdf(session.electronApp);
+    const nodeId = await importPdf(session.electronApp, `tests/desktop/fixtures/${automatic ? 'readwise-pdf-reading' : 'pdf-user-journey'}.pdf`);
     await session.firstWindow.reload();
-    await openAndVerify(session, nodeId, 'before-restart');
+    await openAndVerify(session, nodeId, `${automatic ? 'automatic' : 'free'}-before-restart`, automatic);
     await session.close();
     session = null;
     session = await createT178ApiAcceptanceSession(stateRoot);
-    await openAndVerify(session, nodeId, 'after-restart');
+    await openAndVerify(session, nodeId, `${automatic ? 'automatic' : 'free'}-after-restart`, automatic);
   } finally {
     await session?.close();
     await rm(stateRoot, { force: true, recursive: true });
   }
 });
+}
