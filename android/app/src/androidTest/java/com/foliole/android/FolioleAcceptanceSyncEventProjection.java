@@ -90,12 +90,29 @@ final class FolioleAcceptanceSyncEventProjection {
                 .put("group_id", groupId).put("diagnostic_events", diagnosticEvents)
                 .put("events", events).put("source_runs", sourceRuns)
                 .put("dirty_objects", dirtyObjects(database))
+                .put("reception_state", receptionState(database))
                 .put("syncEventsProjected", true);
             if ("com.campfirium.foliole.android.t250dense".equals(context.getPackageName())) {
                 result.put("dense_facts", denseFacts(database));
             }
             return result;
         }
+    }
+
+    private static JSONObject receptionState(SQLiteDatabase database) throws Exception {
+        JSONObject result = new JSONObject();
+        for (String key : new String[] { "sync_group_local_adoption",
+            "sync_group_overwrite_progress", "sync_group_completed_adoption" }) {
+            result.put(key, !scalar(database,
+                "SELECT value FROM sync_group_metadata WHERE key=?", new String[] { key }).isEmpty());
+        }
+        result.put("attachment_parse_count", Integer.parseInt(scalar(database,
+            "SELECT COUNT(*) FROM attachment_parse_queue")));
+        result.put("attachment_pending_count", Integer.parseInt(scalar(database,
+            "SELECT COUNT(*) FROM attachment_pending")));
+        result.put("unready_node_count", Integer.parseInt(scalar(database,
+            "SELECT COUNT(*) FROM framed_sync_node_digest WHERE unready <> 0")));
+        return result;
     }
 
     private static JSONArray dirtyObjects(SQLiteDatabase database) throws Exception {
