@@ -11,7 +11,8 @@ const LOCAL_ID = 't204-local';
 const REMOTE_ID = 't204-remote';
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t204');
 
-async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string) {
+async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string,
+  owner: Record<string, unknown> = { device_identity_key: REMOTE_ID, epoch: 0, host_name: 'Offline Desktop' }) {
   await app.evaluate(async (_electron, fixture) => {
     const crypto = process.getBuiltinModule('crypto')!;
     const fs = process.getBuiltinModule('fs')!;
@@ -47,11 +48,9 @@ async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string)
       imports.saveImportManagerSettings({ ...current, readwiseRootPath: fixture.root,
         readwiseSources: sources.map((source: { kind?: string; keepState: string }, index: number) =>
           index === 0 ? { ...source, keepState: 'draft' } : source) });
-      settings.saveJsonSetting('readwise_active_host', {
-        device_identity_key: fixture.remoteId, epoch: 0, host_name: 'Offline Desktop'
-      });
+      settings.saveJsonSetting('readwise_active_host', fixture.owner);
     });
-  }, { groupId: GROUP_ID, localId: LOCAL_ID, remoteId: REMOTE_ID, root: sourceRoot });
+  }, { groupId: GROUP_ID, localId: LOCAL_ID, remoteId: REMOTE_ID, root: sourceRoot, owner });
 }
 
 async function readOwnerFacts(app: ElectronApplication) {
@@ -92,4 +91,23 @@ test('shows the import device and keeps an offline switch pending', async ({
   await expect(dialog.getByRole('button', { name: /^(Switching…|切换中…)$/ })).toBeDisabled();
   await mkdir(ARTIFACT_DIR, { recursive: true });
   await dialog.screenshot({ path: path.join(ARTIFACT_DIR, 'readwise-switch-pending.png') });
+});
+
+test('asks for an import device instead of trusting a v0.7.14 device name', async ({
+  desktopApp, desktopSession, desktopWindow
+}) => {
+  test.setTimeout(180_000);
+  await expectWorkspaceShell(desktopWindow);
+  const sourceRoot = path.join(desktopSession.target.runtimeStateRoot, 'Readwise');
+  await seedIsolatedLibrary(desktopApp, sourceRoot, { host_name: 'Offline Desktop' });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  expect(await readOwnerFacts(desktopApp)).toMatchObject({ canRun: false, guard: null, assignment: {
+    active_host_name: null, active_device_identity_key: null, is_active: false, legacy_unassigned: true
+  } });
+  const chooser = desktopWindow.getByRole('dialog', { name: /^(Readwise import device|Readwise 导入设备)$/ });
+  await expect(chooser).toBeVisible();
+  await expect(chooser.getByText('Offline Desktop')).toHaveCount(0);
+  await mkdir(ARTIFACT_DIR, { recursive: true });
+  await chooser.screenshot({ path: path.join(ARTIFACT_DIR, 'readwise-legacy-name-owner.png') });
 });

@@ -57,7 +57,8 @@ it('never gives a name-only legacy owner to a matching, renamed, or duplicate me
       saveJsonSetting('readwise_active_host', { host_name: 'Old' });
       renameMembers(names);
       expect(loadReadwiseHostAssignment()).toMatchObject({
-        active_device_identity_key: null, active_host_name: 'Old', is_active: false
+        active_device_identity_key: null, active_host_name: null, is_active: false,
+        legacy_unassigned: true
       });
       closeDatabaseConnection();
       expect(loadReadwiseHostAssignment().is_active).toBe(false);

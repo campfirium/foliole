@@ -111,7 +111,7 @@ it('retains this device for an old backup while sync is paused and another membe
     WHERE key = 'readwise_active_host'`)).toEqual({ value_json: JSON.stringify(loadJsonSetting('readwise_active_host')) });
 });
 
-for (const missing of [null, {}, { host_name: 'Invalid owner', epoch: -1 }]) {
+for (const missing of [null, {}, { host_name: 'Invalid owner', epoch: -1 }, { host_name: 'Other desktop' }]) {
   it(`fills invalid owner information ${JSON.stringify(missing)} from the previous local responsibility`, async () => {
     group('same');
     saveJsonSetting('readwise_active_host', missing);
@@ -141,8 +141,7 @@ it('uses this device in the restored group even when that group differs from the
   await expectLocalOwnerAfterReopen();
 });
 
-for (const owner of [{ host_name: 'Other desktop' },
-  { device_identity_key: 'other-owner', host_name: 'Other desktop', epoch: 3 }]) {
+for (const owner of [{ device_identity_key: 'other-owner', host_name: 'Other desktop', epoch: 3 }]) {
   it(`keeps the backup's explicit owner ${JSON.stringify(owner)}`, async () => {
     group('same');
     saveJsonSetting('readwise_active_host', owner);

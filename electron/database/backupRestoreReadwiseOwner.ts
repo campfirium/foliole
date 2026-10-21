@@ -11,7 +11,7 @@ import { loadDesktopSyncGroup } from './syncGroupStore.js';
 export function retainReadwiseOwnerAfterBackupRestore(wasLocalOwner: boolean) {
   if (!wasLocalOwner) return;
   const stored = loadStoredReadwiseHost();
-  if ((stored.deviceId || stored.hostName) && stored.epoch >= 0) return;
+  if (stored.deviceId && stored.epoch >= 0) return;
 
   const group = loadDesktopSyncGroup();
   const assignment = loadReadwiseHostAssignment();

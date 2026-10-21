@@ -11,6 +11,10 @@ export async function runReadwiseTakeoverFixture(action: string, args: Record<st
   if (action === 'readwiseSeed') {
     const owner = String(args.owner);
     saveJsonSetting('readwise_source_mode', { mode: 'relay', version: 1 });
+    if (typeof args.legacyName === 'string') {
+      saveJsonSetting('readwise_active_host', { host_name: args.legacyName });
+      return { assignment: loadReadwiseHostAssignment(), guard: loadReadwiseOwnerGuard(group.group_id) };
+    }
     saveJsonSetting('readwise_active_host', { device_identity_key: owner, host_name: 'Owner', epoch: 4 });
     if (owner === group.local_device_identity_key) saveReadwiseOwnerGuard({
       epoch: 4, groupId: group.group_id, mode: 'relay', ownerId: owner, state: 'active', targetId: null

@@ -116,11 +116,11 @@ it('pauses an unassigned workgroup and rejects a switch without a handoff', asyn
   saveJsonSetting('readwise_active_host', { host_name: 'Office PC' });
 
   expect(loadReadwiseHostAssignment()).toMatchObject({
-    active_host_name: 'Office PC', current_host_name: currentHost, is_active: false,
-    legacy_unassigned: false, activation_blocked_reason: 'handoff-required'
+    active_host_name: null, current_host_name: currentHost, is_active: false,
+    legacy_unassigned: true, activation_blocked_reason: 'group-quiescence-required'
   });
   expect(canCurrentHostRunReadwise()).toBe(false);
-  expect(() => activateReadwiseOnThisHost()).toThrow('readwise_handoff-required');
+  expect(() => activateReadwiseOnThisHost()).toThrow('readwise_group-quiescence-required');
 
   driver.execute("UPDATE sync_group_devices SET state = 'left' WHERE device_identity_key = 'device-office-pc'");
   saveJsonSetting('readwise_active_host', null);
