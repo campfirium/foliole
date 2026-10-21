@@ -61,7 +61,7 @@ async function focusVisibleWindow(session: DesktopSession) {
   ).toBe(true);
 }
 
-async function normalizeDesktopWindow(session: DesktopSession) {
+export async function normalizeDesktopWindow(session: DesktopSession) {
   if (process.env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1') {
     // Hidden native mode must stay offscreen and must not call show() or focus().
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });

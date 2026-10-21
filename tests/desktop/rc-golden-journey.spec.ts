@@ -3,7 +3,7 @@ import process from 'node:process';
 import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
-import { expect, test, type DesktopSession } from './harness/fixtures';
+import { expect, normalizeDesktopWindow, test, type DesktopSession } from './harness/fixtures';
 import {
   collectFormulaRegionState,
   dragFormulaClozeRegion,
@@ -107,12 +107,15 @@ async function attachWorkspaceScreenshot(windowPage: WindowPage, name: string, t
 async function relaunchDesktopSession(session: DesktopSession) {
   const stateRoot = session.target.runtimeStateRoot;
   await closeDesktopApplication(session.electronApp);
-  return launchDesktopSession({
+  const relaunched = await launchDesktopSession({
     env: {
       ...process.env,
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot
     }
-  }) as Promise<DesktopSession>;
+  }) as DesktopSession;
+  // Match the fixture window size; hosted Windows screens are narrower than the journey layout.
+  await normalizeDesktopWindow(relaunched);
+  return relaunched;
 }
 
 test('keeps A and B topic edits isolated across switches and relaunch', async ({ desktopSession, desktopWindow }, testInfo) => {
