@@ -47,8 +47,7 @@ describe('iOS acceptance attempt orchestration', () => {
   }
 
   it.each([
-    'build failed', 'install failed', 'signature mismatch', 'bootstrap readiness timed out',
-    'lifecycle request timed out', 'bridge status failed', 'verifier failed'
+    'build failed', 'install failed', 'signature mismatch', 'bridge status failed', 'verifier failed'
   ])('does not recover from %s', async (message) => {
     const artifactRoot = temporaryRoot();
     try {
@@ -62,6 +61,40 @@ describe('iOS acceptance attempt orchestration', () => {
         }
       })).rejects.toThrow(message);
       expect(calls).toEqual([1]);
+    } finally {
+      fs.rmSync(artifactRoot, { force: true, recursive: true });
+    }
+  });
+
+  it.each(['bootstrap readiness timed out', 'Discovery request timed out.'])(
+    'reruns once after %s and warns that it passed only on rerun', async (message) => {
+      const artifactRoot = temporaryRoot();
+      const lines = [];
+      try {
+        await expect(runIosAcceptanceAttempts({
+          artifactRoot, log: (line) => lines.push(line),
+          runAttempt: ({ artifactDir, attemptNumber }) => {
+            writeOwner(artifactDir, `SIM-${attemptNumber}`);
+            if (attemptNumber === 1) throw new Error('scenario failed', { cause: new Error(message) });
+            return { status: 'passed' };
+          }
+        })).resolves.toEqual({ status: 'passed' });
+        expect(lines).toContain('::warning::iOS acceptance passed only on rerun after timeout');
+      } finally {
+        fs.rmSync(artifactRoot, { force: true, recursive: true });
+      }
+    });
+
+  it('fails after two consecutive timeouts', async () => {
+    const artifactRoot = temporaryRoot();
+    try {
+      await expect(runIosAcceptanceAttempts({
+        artifactRoot,
+        runAttempt: ({ artifactDir, attemptNumber }) => {
+          writeOwner(artifactDir, `SIM-${attemptNumber}`);
+          throw new Error(`lifecycle request timed out ${attemptNumber}`);
+        }
+      })).rejects.toThrow('timed out 2');
     } finally {
       fs.rmSync(artifactRoot, { force: true, recursive: true });
     }

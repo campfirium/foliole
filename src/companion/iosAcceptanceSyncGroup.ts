@@ -24,6 +24,25 @@ import {
 } from '../shared/platform/companionWorkspaceDiscovery';
 import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
+const VERIFY_PASSES = 3;
+const VERIFY_RETRY_DELAY_MS = 2000;
+
+// Advertisement verification follows periodic rediscovery: a pass whose probes only timed out
+// or could not connect is repeated, while identity, HTTP, or count mismatches fail at once.
+async function verifyHostedCandidates(candidates: DiscoveryCandidate[]) {
+  for (let pass = 1; ; pass += 1) {
+    const failures: CompanionDiscoveryFailure[] = [];
+    const discovered = await loadCompanionDiscoveryCandidates(candidates, failure => failures.push(failure));
+    const exact = discovered.filter((result) => matchesHostedIdentity(
+      candidates.find((candidate) => candidate.endpointUrl === result.endpointUrl)?.protocolTxt ?? null,
+      result.discovery
+    ));
+    const onlyRequestFailures = failures.length > 0 && failures.every((failure) => failure.kind === 'request');
+    if (exact.length > 0 || !onlyRequestFailures || pass === VERIFY_PASSES) return { discovered, exact, failures };
+    await new Promise((resolve) => setTimeout(resolve, VERIFY_RETRY_DELAY_MS));
+  }
+}
+
 export async function discoverIosHostedProvider() {
   const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
   const nativeCandidates = payload.candidates?.length
@@ -35,12 +54,7 @@ export async function discoverIosHostedProvider() {
       protocolTxt: candidate.protocol_txt ?? null,
       source: candidate.source
     } satisfies DiscoveryCandidate));
-  const failures: CompanionDiscoveryFailure[] = [];
-  const discovered = await loadCompanionDiscoveryCandidates(candidates, failure => failures.push(failure));
-  const exact = discovered.filter((result) => matchesHostedIdentity(
-    candidates.find((candidate) => candidate.endpointUrl === result.endpointUrl)?.protocolTxt ?? null,
-    result.discovery
-  ));
+  const { discovered, exact, failures } = await verifyHostedCandidates(candidates);
   if (exact.length !== 1) {
     const evidence = {
       nativeCount: nativeCandidates.length,

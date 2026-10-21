@@ -12,8 +12,20 @@ export class IosAcceptanceInfrastructureError extends Error {
   }
 }
 
+const TIMEOUT_MESSAGE = /timed out|timeout/iu;
+
+// A timeout is retried once on a fresh Simulator like other infrastructure failures;
+// a second consecutive timeout fails the scenario for same-platform local review.
+export function recoverableIosAcceptanceKind(error) {
+  if (error instanceof IosAcceptanceInfrastructureError && RECOVERABLE_KINDS.has(error.kind)) return error.kind;
+  for (let current = error; current; current = current.cause) {
+    if (TIMEOUT_MESSAGE.test(current instanceof Error ? current.message : String(current))) return 'timeout';
+  }
+  return null;
+}
+
 export function isRecoverableIosAcceptanceError(error) {
-  return error instanceof IosAcceptanceInfrastructureError && RECOVERABLE_KINDS.has(error.kind);
+  return recoverableIosAcceptanceKind(error) !== null;
 }
 
 export function runIosInfrastructureCommand(kind, action) {

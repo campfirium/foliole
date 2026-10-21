@@ -129,3 +129,36 @@ it('includes the failed HTTP verification in the existing acceptance error', asy
   });
   await expect(discoverIosHostedProvider()).rejects.toThrow(`"failures":[${JSON.stringify(failure)}]`);
 });
+
+it('verifies the same advertisement again after a timed-out discovery request, like periodic rediscovery', async () => {
+  vi.useFakeTimers();
+  try {
+    const timedOut = { endpointUrl, kind: 'request', message: 'Discovery request timed out.' };
+    runtime.load.mockImplementationOnce(async (_candidates, onFailure) => {
+      onFailure(timedOut);
+      return [];
+    });
+    const discovered = discoverIosHostedProvider();
+    await vi.runAllTimersAsync();
+    await expect(discovered).resolves.toMatchObject({ discovery, endpointUrl });
+    expect(runtime.load).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('stops after three timed-out verification passes', async () => {
+  vi.useFakeTimers();
+  try {
+    runtime.load.mockImplementation(async (_candidates, onFailure) => {
+      onFailure({ endpointUrl, kind: 'request', message: 'Discovery request timed out.' });
+      return [];
+    });
+    const discovered = expect(discoverIosHostedProvider()).rejects.toThrow('ios_hosted_sync_group_discovery_count_0');
+    await vi.runAllTimersAsync();
+    await discovered;
+    expect(runtime.load).toHaveBeenCalledTimes(3);
+  } finally {
+    vi.useRealTimers();
+  }
+});

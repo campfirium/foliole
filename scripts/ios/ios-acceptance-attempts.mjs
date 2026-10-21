@@ -3,7 +3,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { isRecoverableIosAcceptanceError } from './ios-acceptance-infrastructure-error.mjs';
+import { recoverableIosAcceptanceKind } from './ios-acceptance-infrastructure-error.mjs';
 
 const MAX_ATTEMPTS = 2;
 
@@ -34,6 +34,9 @@ export async function runIosAcceptanceAttempts(options) {
         attemptCount: attemptNumber, attempts, firstFailureClassification, status: 'passed'
       });
       log(`[ios-acceptance] attempt ${attemptNumber}/${MAX_ATTEMPTS} passed`);
+      if (attemptNumber > 1) {
+        log(`::warning::iOS acceptance passed only on rerun after ${firstFailureClassification ?? 'failure'}`);
+      }
       return result;
     } catch (error) {
       const udid = readOwnedUdid(artifactDir);
@@ -41,7 +44,7 @@ export async function runIosAcceptanceAttempts(options) {
         ? new Error('The recovery attempt reused the first Simulator UDID.', { cause: error })
         : error;
       if (attemptNumber === 1) firstUdid = udid;
-      const classification = isRecoverableIosAcceptanceError(finalError) ? finalError.kind : null;
+      const classification = recoverableIosAcceptanceKind(finalError);
       firstFailureClassification ??= classification;
       attempts.push({ attempt: attemptNumber, classification, status: 'failed', udid });
       const willRetry = attemptNumber === 1 && classification !== null;
