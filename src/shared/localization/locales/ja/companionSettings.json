@@ -1,6 +1,6 @@
 {
   "companion.settings.sync.title": "同期",
-  "companion.settings.sync.detail": "このデバイスを接続またはリフレッシュします。",
+  "companion.settings.sync.detail": "コンテンツを同期し、同期状況を確認します。",
   "companion.settings.device.title": "デバイス",
   "companion.settings.device.detail": "デバイスの詳細はまだ入手できません。",
   "companion.settings.storage.title": "ストレージ",

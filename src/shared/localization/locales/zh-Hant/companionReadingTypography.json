@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "無法儲存閱讀設定，仍使用先前的設定。",
   "companion.reading.font.size": "尺寸",
   "companion.reading.font.size.small": "小號",
   "companion.reading.font.size.default": "Default",

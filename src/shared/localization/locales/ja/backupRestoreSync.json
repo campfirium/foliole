@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "この復元の同期設定",
+  "settings.backups.restore.sync.noGroup": "同期グループなし",
+  "settings.backups.restore.sync.backup": "バックアップの同期グループ設定を使用：{group}",
+  "settings.backups.restore.sync.current": "現在の同期設定を維持：{group}",
+  "settings.backups.restore.sync.actionTitle": "復元後の同期",
+  "settings.backups.restore.sync.actionDescription": "今すぐ同期グループ全体を置き換えるか、まずこのデバイスだけを復元するかを選択します。",
+  "settings.backups.restore.sync.overwrite": "今すぐ同期してグループ全体を上書き",
+  "settings.backups.restore.sync.pause": "同期を一時停止し、まずこのデバイスだけを復元",
+  "settings.backups.restore.sync.resumeTitle": "同期を再開",
+  "settings.backups.restore.sync.resumeDescription": "同期を再開すると、このデバイスの現在のライブラリで同期グループ全体が上書きされます。続行しますか？",
+  "settings.backups.restore.sync.pendingTitle": "復元後、同期は一時停止中です",
+  "settings.backups.restore.sync.pendingDescription": "同期を再開すると、このデバイスの現在のライブラリ（その後の編集を含む）で同期グループ全体が上書きされます。",
+  "syncGroup.join.mode.title": "同期グループに参加",
+  "syncGroup.join.mode.description": "使用するデータを選択します。グループのデータはこのデバイスだけを置き換え、このデバイスのデータはグループ全体を置き換えます。",
+  "syncGroup.join.mode.overwrite": "このデバイスのデータでグループ全体を上書き",
+  "syncGroup.join.mode.useGroup": "同期グループのデータでこのデバイスを上書き"
+}

@@ -1,4 +1,10 @@
 {
+  "desktop.sourceUpdate.alternative.title": "代替本文",
+  "desktop.sourceUpdate.alternative.remove": "この代替本文を削除",
+  "desktop.sourceUpdate.alternative.selector": "代替本文（{count}）",
+  "desktop.sourceUpdate.alternative.option": "{host} · {date}",
+  "desktop.sourceUpdate.alternative.expires": "{date} まで利用可能",
+  "desktop.sourceUpdate.alternative.hint": "代替本文は最大 3 件、30 日間保持されます",
   "desktop.sourceUpdate.dialogTitle": "比較ビュー",
   "desktop.sourceUpdate.close": "ソース更新パネルを閉じる",
   "desktop.sourceUpdate.accept": "更新を受け入れる",

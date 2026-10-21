@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "확인",
   "shared.close": "닫기",
   "shared.selection.commands": "선택 명령",
+  "shared.startup.originalDataProtection": "라이브러리를 보호하기 위해 Foliole이 이번 업그레이드를 중지했습니다. 이전 동기화 기록의 일부 정보를 현재 라이브러리에서 확인하지 못했습니다. 다시 시작해도 이 정보는 복원되지 않습니다. 진단 정보를 복사해 지원팀에 문의하세요.",
   "shared.startup.errorTitle": "Foliole 시작에 문제가 발생했습니다.",
   "shared.startup.bootTitle": "Foliole 시작 중",
   "shared.startup.bootHelp": "작업공간 서비스 준비 중...",

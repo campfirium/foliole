@@ -2,5 +2,7 @@
   "language.system": "시스템",
   "language.en": "영어",
   "language.zhHans": "중국어 간체",
+  "shared.textLimit.exceeded": "이 변경 내용은 단일 텍스트 필드의 1MiB(UTF-8) 제한을 초과하여 저장되지 않았습니다. 텍스트를 줄인 후 다시 시도하세요.",
+  "shared.titleLimit.shortened": "제목을 100자로 줄여 저장했습니다.",
   "common.cancel": "취소"
 }

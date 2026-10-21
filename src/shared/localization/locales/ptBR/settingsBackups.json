@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Seção de pesquisa em backups",
+  "settings.backups.search.sectionTitle": "Pesquisar no conteúdo dos backups",
+  "settings.backups.search.description": "Descompacta os backups existentes um de cada vez e pesquisa seu conteúdo.",
+  "settings.backups.search.action": "Pesquisar no conteúdo dos backups",
+  "settings.backups.search.title": "Pesquisar no conteúdo dos backups",
+  "settings.backups.search.input": "Termo de pesquisa",
+  "settings.backups.search.placeholder": "Digite um termo de pesquisa",
+  "settings.backups.search.submit": "Pesquisar",
+  "settings.backups.search.cancel": "Cancelar",
+  "settings.backups.search.continue": "Continuar a pesquisa",
+  "settings.backups.search.noMoreResults": "Não há mais resultados",
+  "settings.backups.search.initial": "Digite um termo de pesquisa.",
+  "settings.backups.search.searchingBackups": "Pesquisando no conteúdo dos backups...",
+  "settings.backups.search.failed": "A pesquisa nos backups foi interrompida. {message}",
+  "settings.backups.search.cancelled": "Pesquisa nos backups cancelada.",
+  "settings.backups.search.complete": "Não há mais conteúdo correspondente.",
+  "settings.backups.search.completePartial": "Não há mais correspondências legíveis. {count} arquivos de backup não puderam ser lidos.",
+  "settings.backups.search.trashed": "Na lixeira"
+}

@@ -50,5 +50,5 @@ export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.join.title': 'Readwise import device',
   'desktop.readwise.join.choose': 'Choose which device imports from Readwise.',
   'desktop.readwise.join.waiting': 'Readwise is waiting for the devices to finish connecting.',
-  'desktop.readwise.join.later': 'Later'
+  'desktop.readwise.join.later': 'Not now'
 } as const;

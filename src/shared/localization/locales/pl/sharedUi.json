@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "Potwierdź",
   "shared.close": "Zamknij",
   "shared.selection.commands": "Polecenia wyboru",
+  "shared.startup.originalDataProtection": "Aby chronić Twoją bibliotekę, Foliole zatrzymał tę aktualizację. Części informacji ze starszych rekordów synchronizacji nie udało się zweryfikować w bieżącej bibliotece. Ponowne uruchomienie nie przywróci tych informacji. Skopiuj dane diagnostyczne i skontaktuj się z pomocą techniczną.",
   "shared.startup.errorTitle": "Podczas uruchamiania Foliole napotkano problem",
   "shared.startup.bootTitle": "Rozpoczęcie Foliole",
   "shared.startup.bootHelp": "Przygotowanie usług przestrzeni roboczej...",

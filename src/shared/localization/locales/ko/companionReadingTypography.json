@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "읽기 설정을 저장하지 못했습니다. 이전 설정이 계속 사용됩니다.",
   "companion.reading.font.size": "크기",
   "companion.reading.font.size.small": "소형",
   "companion.reading.font.size.default": "Default",

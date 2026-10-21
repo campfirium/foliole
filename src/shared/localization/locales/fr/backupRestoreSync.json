@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "Paramètres de synchronisation pour cette restauration",
+  "settings.backups.restore.sync.noGroup": "Aucun groupe de synchronisation",
+  "settings.backups.restore.sync.backup": "Utiliser les paramètres du groupe de synchronisation de la sauvegarde : {group}",
+  "settings.backups.restore.sync.current": "Conserver les paramètres de synchronisation actuels : {group}",
+  "settings.backups.restore.sync.actionTitle": "Synchronisation après la restauration",
+  "settings.backups.restore.sync.actionDescription": "Choisissez de remplacer maintenant tout le groupe de synchronisation ou de ne restaurer d’abord que cet appareil.",
+  "settings.backups.restore.sync.overwrite": "Synchroniser maintenant et écraser tout le groupe",
+  "settings.backups.restore.sync.pause": "Suspendre la synchronisation et ne restaurer d’abord que cet appareil",
+  "settings.backups.restore.sync.resumeTitle": "Reprendre la synchronisation",
+  "settings.backups.restore.sync.resumeDescription": "La reprise de la synchronisation écrasera tout le groupe de synchronisation avec la bibliothèque actuelle de cet appareil. Continuer ?",
+  "settings.backups.restore.sync.pendingTitle": "Synchronisation suspendue après la restauration",
+  "settings.backups.restore.sync.pendingDescription": "Lorsque vous reprendrez la synchronisation, la bibliothèque actuelle de cet appareil, y compris les modifications ultérieures, écrasera tout le groupe de synchronisation.",
+  "syncGroup.join.mode.title": "Rejoindre le groupe de synchronisation",
+  "syncGroup.join.mode.description": "Choisissez les données à utiliser : celles du groupe remplacent uniquement cet appareil, ou celles de cet appareil remplacent tout le groupe.",
+  "syncGroup.join.mode.overwrite": "Utiliser les données de cet appareil pour écraser tout le groupe",
+  "syncGroup.join.mode.useGroup": "Utiliser les données du groupe de synchronisation pour écraser cet appareil"
+}

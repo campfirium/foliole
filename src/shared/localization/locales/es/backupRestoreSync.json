@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "Ajustes de sincronización para esta restauración",
+  "settings.backups.restore.sync.noGroup": "Sin grupo de sincronización",
+  "settings.backups.restore.sync.backup": "Usar los ajustes del grupo de sincronización de la copia: {group}",
+  "settings.backups.restore.sync.current": "Mantener los ajustes de sincronización actuales: {group}",
+  "settings.backups.restore.sync.actionTitle": "Sincronización tras restaurar",
+  "settings.backups.restore.sync.actionDescription": "Elige si quieres reemplazar ahora todo el grupo de sincronización o restaurar primero solo este dispositivo.",
+  "settings.backups.restore.sync.overwrite": "Sincronizar ahora y sobrescribir todo el grupo",
+  "settings.backups.restore.sync.pause": "Pausar la sincronización y restaurar primero solo este dispositivo",
+  "settings.backups.restore.sync.resumeTitle": "Reanudar la sincronización",
+  "settings.backups.restore.sync.resumeDescription": "Al reanudar la sincronización, la biblioteca actual de este dispositivo sobrescribirá todo el grupo de sincronización. ¿Continuar?",
+  "settings.backups.restore.sync.pendingTitle": "Sincronización en pausa tras la restauración",
+  "settings.backups.restore.sync.pendingDescription": "Cuando reanudes la sincronización, la biblioteca actual de este dispositivo, incluidas las ediciones posteriores, sobrescribirá todo el grupo de sincronización.",
+  "syncGroup.join.mode.title": "Unirse al grupo de sincronización",
+  "syncGroup.join.mode.description": "Elige qué datos usar: los datos del grupo reemplazan solo este dispositivo, o los datos de este dispositivo reemplazan todo el grupo.",
+  "syncGroup.join.mode.overwrite": "Usar los datos de este dispositivo para sobrescribir todo el grupo",
+  "syncGroup.join.mode.useGroup": "Usar los datos del grupo de sincronización para sobrescribir este dispositivo"
+}

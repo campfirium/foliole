@@ -1,4 +1,10 @@
 {
+  "desktop.sourceUpdate.alternative.title": "Alternatywna treść",
+  "desktop.sourceUpdate.alternative.remove": "Usuń alternatywę",
+  "desktop.sourceUpdate.alternative.selector": "Alternatywne treści ({count})",
+  "desktop.sourceUpdate.alternative.option": "{host} · {date}",
+  "desktop.sourceUpdate.alternative.expires": "Dostępne do {date}",
+  "desktop.sourceUpdate.alternative.hint": "Do 3 alternatywnych treści, przechowywanych przez 30 dni",
   "desktop.sourceUpdate.dialogTitle": "Widok porównawczy",
   "desktop.sourceUpdate.close": "Zamknij panel aktualizacji źródła",
   "desktop.sourceUpdate.accept": "Zaakceptuj aktualizację",

@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "Sekcja konserwacji bazy danych",
+  "settings.backups.database.sectionTitle": "Baza danych",
+  "settings.backups.database.title": "Miejsce bazy danych",
+  "settings.backups.database.description": "Łącznie {size} · do odzyskania {reclaimable} ({percent}%)",
+  "settings.backups.database.unavailable": "Informacje o miejscu bazy danych są niedostępne.",
+  "settings.backups.database.action": "Kompaktuj bazę danych",
+  "settings.backups.database.compacting": "Kompaktowanie...",
+  "settings.backups.database.success": "Baza danych została skompaktowana.",
+  "settings.backups.database.failed": "Kompaktowanie bazy danych nie powiodło się: {message}",
+  "settings.backups.kind.preCompact": "Migawka bezpieczeństwa przed kompaktowaniem bazy danych"
+}

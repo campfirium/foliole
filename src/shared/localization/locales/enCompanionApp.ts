@@ -3,7 +3,7 @@ export const EN_COMPANION_APP_TRANSLATIONS = {
   'companion.search.unavailable': 'This result is no longer available.',
   'companion.search.refresh': 'Search again',
   'companion.link.unavailable': 'This link cannot be opened in this library.',
-  'companion.link.dismiss': 'Dismiss',
+  'companion.link.dismiss': 'Close',
   'companion.app.retry': 'Retry',
   'companion.app.starting.eyebrow': 'Companion runtime',
   'companion.app.starting.message':

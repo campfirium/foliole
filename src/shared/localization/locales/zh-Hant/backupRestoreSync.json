@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "本次還原的同步設定",
+  "settings.backups.restore.sync.noGroup": "無同步群組",
+  "settings.backups.restore.sync.backup": "使用備份的同步群組設定：{group}",
+  "settings.backups.restore.sync.current": "保留目前的同步設定：{group}",
+  "settings.backups.restore.sync.actionTitle": "還原後的同步",
+  "settings.backups.restore.sync.actionDescription": "選擇立即覆寫整個同步群組，或先只還原本機。",
+  "settings.backups.restore.sync.overwrite": "立即同步並覆寫整個群組",
+  "settings.backups.restore.sync.pause": "暫停同步，先只還原本機",
+  "settings.backups.restore.sync.resumeTitle": "繼續同步",
+  "settings.backups.restore.sync.resumeDescription": "繼續同步後，本機目前的資料庫將覆寫整個同步群組。要繼續嗎？",
+  "settings.backups.restore.sync.pendingTitle": "還原後同步已暫停",
+  "settings.backups.restore.sync.pendingDescription": "繼續同步時，本機目前的資料庫（包括之後的編輯）將覆寫整個同步群組。",
+  "syncGroup.join.mode.title": "加入同步群組",
+  "syncGroup.join.mode.description": "選擇使用哪一方的資料：同步群組資料只取代本機，本機資料則取代整個群組。",
+  "syncGroup.join.mode.overwrite": "用本機資料覆寫整個群組",
+  "syncGroup.join.mode.useGroup": "用同步群組資料覆寫本機"
+}

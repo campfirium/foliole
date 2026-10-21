@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Das Teilen konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
+  "companion.search.unavailable": "Dieses Ergebnis ist nicht mehr verfügbar.",
+  "companion.search.refresh": "Erneut suchen",
+  "companion.link.unavailable": "Dieser Link kann in dieser Bibliothek nicht geöffnet werden.",
+  "companion.link.dismiss": "Schließen",
   "companion.app.retry": "Wiederholen",
   "companion.app.starting.eyebrow": "Companion-Laufzeit",
   "companion.app.starting.message": "Vorbereiten einer stabilen Geräteidentität und eines lokalen Begleitspeichers, bevor die Themenoberfläche geladen wird.",

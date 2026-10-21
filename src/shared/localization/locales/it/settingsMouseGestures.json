@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "Zona",
   "settings.mouseGestures.area.mainPanel": "Pannello principale",
   "settings.mouseGestures.bindings.sectionAria": "Sezione associazioni dei gesti del mouse",
-  "settings.mouseGestures.bindings.title": "Rilegature",
+  "settings.mouseGestures.bindings.title": "Azioni dei gesti",
   "settings.mouseGestures.gesture.left": "Sinistra",
   "settings.mouseGestures.gesture.right": "Giusto",
   "settings.mouseGestures.gesture.leftUp": "A sinistra poi in alto",

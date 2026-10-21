@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Не удалось завершить отправку. Повторите попытку.",
+  "companion.search.unavailable": "Этот результат больше недоступен.",
+  "companion.search.refresh": "Искать снова",
+  "companion.link.unavailable": "Эту ссылку нельзя открыть в этой библиотеке.",
+  "companion.link.dismiss": "Закрыть",
   "companion.app.retry": "Повторить попытку",
   "companion.app.starting.eyebrow": "Сопутствующая среда выполнения",
   "companion.app.starting.message": "Подготовка стабильной идентификации устройства и локального сопутствующего хранилища перед загрузкой темы.",

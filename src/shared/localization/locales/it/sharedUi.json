@@ -5,6 +5,7 @@
   "shared.confirm.confirm": "Conferma",
   "shared.close": "Chiudi",
   "shared.selection.commands": "Comandi di selezione\nL'avvio di",
+  "shared.startup.originalDataProtection": "Per proteggere la tua libreria, Foliole ha interrotto questo aggiornamento. Alcune informazioni dei vecchi record di sincronizzazione non sono state verificate nella libreria attuale. Il riavvio non ripristinerà queste informazioni. Copia la diagnostica e contatta l’assistenza.",
   "shared.startup.errorTitle": "Foliole ha riscontrato un problema",
   "shared.startup.bootTitle": "Inizio Foliole",
   "shared.startup.bootHelp": "Preparazione dei servizi dell'area di lavoro...",

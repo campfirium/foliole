@@ -2,5 +2,7 @@
   "language.system": "",
   "language.en": "Anglais",
   "language.zhHans": "Chinois simplifié",
+  "shared.textLimit.exceeded": "Cette modification dépasse la limite de 1 Mio (UTF-8) d’un champ de texte et n’a pas été enregistrée. Raccourcissez le texte et réessayez.",
+  "shared.titleLimit.shortened": "Titre raccourci à 100 caractères et enregistré.",
   "common.cancel": "Annuler"
 }

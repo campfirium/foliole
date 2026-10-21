@@ -1,4 +1,10 @@
 {
+  "desktop.sourceUpdate.alternative.title": "Alternativer Text",
+  "desktop.sourceUpdate.alternative.remove": "Alternative entfernen",
+  "desktop.sourceUpdate.alternative.selector": "Alternative Texte ({count})",
+  "desktop.sourceUpdate.alternative.option": "{host} · {date}",
+  "desktop.sourceUpdate.alternative.expires": "Verfügbar bis {date}",
+  "desktop.sourceUpdate.alternative.hint": "Bis zu 3 alternative Texte, 30 Tage lang aufbewahrt",
   "desktop.sourceUpdate.dialogTitle": "Vergleichsansicht",
   "desktop.sourceUpdate.close": "Quellaktualisierungsfenster schließen",
   "desktop.sourceUpdate.accept": "Aktualisierung akzeptieren",

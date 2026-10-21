@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Раздел поиска по резервным копиям",
+  "settings.backups.search.sectionTitle": "Поиск по содержимому резервных копий",
+  "settings.backups.search.description": "Поочерёдно распаковывать существующие резервные копии и искать в их содержимом.",
+  "settings.backups.search.action": "Поиск по содержимому резервных копий",
+  "settings.backups.search.title": "Поиск по содержимому резервных копий",
+  "settings.backups.search.input": "Поисковый запрос",
+  "settings.backups.search.placeholder": "Введите поисковый запрос",
+  "settings.backups.search.submit": "Найти",
+  "settings.backups.search.cancel": "Отмена",
+  "settings.backups.search.continue": "Продолжить поиск",
+  "settings.backups.search.noMoreResults": "Больше результатов нет",
+  "settings.backups.search.initial": "Введите поисковый запрос.",
+  "settings.backups.search.searchingBackups": "Поиск по содержимому резервных копий...",
+  "settings.backups.search.failed": "Поиск по резервным копиям остановлен. {message}",
+  "settings.backups.search.cancelled": "Поиск по резервным копиям отменён.",
+  "settings.backups.search.complete": "Больше совпадений нет.",
+  "settings.backups.search.completePartial": "Больше читаемых совпадений нет. Не удалось прочитать файлов резервных копий: {count}.",
+  "settings.backups.search.trashed": "В корзине"
+}

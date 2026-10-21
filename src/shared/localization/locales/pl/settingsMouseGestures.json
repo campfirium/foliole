@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "Obszar",
   "settings.mouseGestures.area.mainPanel": "Panel główny",
   "settings.mouseGestures.bindings.sectionAria": "Sekcja powiązań gestów myszy",
-  "settings.mouseGestures.bindings.title": "Wiązania",
+  "settings.mouseGestures.bindings.title": "Akcje gestów",
   "settings.mouseGestures.gesture.left": "Lewy",
   "settings.mouseGestures.gesture.right": "Jasne",
   "settings.mouseGestures.gesture.leftUp": "W lewo, potem w górę",

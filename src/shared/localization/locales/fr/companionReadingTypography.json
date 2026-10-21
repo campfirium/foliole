@@ -1,4 +1,5 @@
 {
+  "companion.reading.font.saveError": "Impossible d’enregistrer les réglages de lecture. Vos réglages précédents restent appliqués.",
   "companion.reading.font.size": "Taille",
   "companion.reading.font.size.small": "Petit",
   "companion.reading.font.size.default": "Default",

@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "Раздел обслуживания базы данных",
+  "settings.backups.database.sectionTitle": "База данных",
+  "settings.backups.database.title": "Хранилище базы данных",
+  "settings.backups.database.description": "Всего {size} · можно освободить {reclaimable} ({percent}%)",
+  "settings.backups.database.unavailable": "Сведения о хранилище базы данных недоступны.",
+  "settings.backups.database.action": "Сжать базу данных",
+  "settings.backups.database.compacting": "Сжатие...",
+  "settings.backups.database.success": "База данных сжата.",
+  "settings.backups.database.failed": "Не удалось сжать базу данных: {message}",
+  "settings.backups.kind.preCompact": "Страховой снимок перед сжатием базы данных"
+}

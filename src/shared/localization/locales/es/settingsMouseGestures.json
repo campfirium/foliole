@@ -18,7 +18,7 @@
   "settings.mouseGestures.area.title": "Área",
   "settings.mouseGestures.area.mainPanel": "Panel principal",
   "settings.mouseGestures.bindings.sectionAria": "Sección de enlaces de gestos del mouse",
-  "settings.mouseGestures.bindings.title": "Encuadernaciones",
+  "settings.mouseGestures.bindings.title": "Acciones de gestos",
   "settings.mouseGestures.gesture.left": "Izquierda",
   "settings.mouseGestures.gesture.right": "Derecha",
   "settings.mouseGestures.gesture.leftUp": "Izquierda y luego arriba",

@@ -1,0 +1,18 @@
+{
+  "settings.backups.restore.sync.sourceTitle": "Ustawienia synchronizacji dla tego przywracania",
+  "settings.backups.restore.sync.noGroup": "Brak grupy synchronizacji",
+  "settings.backups.restore.sync.backup": "Użyj ustawień grupy synchronizacji z kopii: {group}",
+  "settings.backups.restore.sync.current": "Zachowaj bieżące ustawienia synchronizacji: {group}",
+  "settings.backups.restore.sync.actionTitle": "Synchronizacja po przywróceniu",
+  "settings.backups.restore.sync.actionDescription": "Wybierz, czy zastąpić teraz całą grupę synchronizacji, czy najpierw przywrócić tylko to urządzenie.",
+  "settings.backups.restore.sync.overwrite": "Synchronizuj teraz i nadpisz całą grupę",
+  "settings.backups.restore.sync.pause": "Wstrzymaj synchronizację i najpierw przywróć tylko to urządzenie",
+  "settings.backups.restore.sync.resumeTitle": "Wznów synchronizację",
+  "settings.backups.restore.sync.resumeDescription": "Wznowienie synchronizacji nadpisze całą grupę synchronizacji bieżącą biblioteką z tego urządzenia. Kontynuować?",
+  "settings.backups.restore.sync.pendingTitle": "Synchronizacja wstrzymana po przywróceniu",
+  "settings.backups.restore.sync.pendingDescription": "Po wznowieniu synchronizacji bieżąca biblioteka tego urządzenia, łącznie z późniejszymi zmianami, nadpisze całą grupę synchronizacji.",
+  "syncGroup.join.mode.title": "Dołącz do grupy synchronizacji",
+  "syncGroup.join.mode.description": "Wybierz, których danych użyć: dane grupy zastępują tylko to urządzenie, a dane tego urządzenia zastępują całą grupę.",
+  "syncGroup.join.mode.overwrite": "Nadpisz całą grupę danymi z tego urządzenia",
+  "syncGroup.join.mode.useGroup": "Nadpisz to urządzenie danymi grupy synchronizacji"
+}

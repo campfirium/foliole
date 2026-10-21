@@ -40,6 +40,8 @@
   "desktop.externalLibrary.preview.import": "インポート",
   "desktop.externalLibrary.preview.openImported": "インポートされたトピックを開く",
   "desktop.externalLibrary.preview.importToFoliole": "Foliole にインポート",
+  "desktop.externalLibrary.preview.openReader": "Reader で開く",
+  "desktop.externalLibrary.preview.openSource": "原文を開く",
   "desktop.externalLibrary.preview.panel": "外部ドキュメント プレビュー パネル",
   "desktop.externalLibrary.preview.documentFallback": "外部ドキュメント",
   "desktop.externalLibrary.preview.openInLibrary": "外部ライブラリで開く",

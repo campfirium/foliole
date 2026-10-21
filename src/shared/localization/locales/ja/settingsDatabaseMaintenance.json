@@ -1,0 +1,12 @@
+{
+  "settings.backups.database.sectionAria": "データベースのメンテナンスセクション",
+  "settings.backups.database.sectionTitle": "データベース",
+  "settings.backups.database.title": "データベースのストレージ",
+  "settings.backups.database.description": "合計 {size} · 回収可能 {reclaimable}（{percent}%）",
+  "settings.backups.database.unavailable": "データベースのストレージ情報を利用できません。",
+  "settings.backups.database.action": "データベースを最適化",
+  "settings.backups.database.compacting": "最適化しています...",
+  "settings.backups.database.success": "データベースを最適化しました。",
+  "settings.backups.database.failed": "データベースの最適化に失敗しました：{message}",
+  "settings.backups.kind.preCompact": "データベース最適化前の安全スナップショット"
+}

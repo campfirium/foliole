@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Le partage n’a pas pu aboutir. Réessayez.",
+  "companion.search.unavailable": "Ce résultat n’est plus disponible.",
+  "companion.search.refresh": "Rechercher à nouveau",
+  "companion.link.unavailable": "Ce lien ne peut pas être ouvert dans cette bibliothèque.",
+  "companion.link.dismiss": "Fermer",
   "companion.app.retry": "Réessayer",
   "companion.app.starting.eyebrow": "Runtime compagnon",
   "companion.app.starting.message": "Préparation d'une identité d'appareil stable et d'un stockage compagnon local avant le chargement de la surface du sujet.",

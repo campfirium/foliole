@@ -49,7 +49,7 @@ describe('companion system link entry', () => {
     expect(screen.getByText('Current page')).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('This link cannot be opened in this library.');
     expect(state.handleNavigationAction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('status')).toBeNull();
   });
 });

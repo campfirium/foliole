@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Não foi possível concluir o compartilhamento. Tente novamente.",
+  "companion.search.unavailable": "Este resultado não está mais disponível.",
+  "companion.search.refresh": "Pesquisar novamente",
+  "companion.link.unavailable": "Este link não pode ser aberto nesta biblioteca.",
+  "companion.link.dismiss": "Fechar",
   "companion.app.retry": "Tentar novamente",
   "companion.app.starting.eyebrow": "Tempo de execução complementar",
   "companion.app.starting.message": "Preparar uma identidade de dispositivo estável e armazenamento complementar local antes do carregamento da superfície do tópico.",

@@ -1,0 +1,20 @@
+{
+  "settings.backups.search.sectionAria": "Sekcja wyszukiwania w kopiach zapasowych",
+  "settings.backups.search.sectionTitle": "Przeszukaj zawartość kopii zapasowych",
+  "settings.backups.search.description": "Rozpakowuj istniejące kopie zapasowe po kolei i przeszukuj ich zawartość.",
+  "settings.backups.search.action": "Przeszukaj zawartość kopii zapasowych",
+  "settings.backups.search.title": "Przeszukaj zawartość kopii zapasowych",
+  "settings.backups.search.input": "Wyszukiwana fraza",
+  "settings.backups.search.placeholder": "Wpisz wyszukiwaną frazę",
+  "settings.backups.search.submit": "Szukaj",
+  "settings.backups.search.cancel": "Anuluj",
+  "settings.backups.search.continue": "Kontynuuj wyszukiwanie",
+  "settings.backups.search.noMoreResults": "Brak kolejnych wyników",
+  "settings.backups.search.initial": "Wpisz wyszukiwaną frazę.",
+  "settings.backups.search.searchingBackups": "Przeszukiwanie zawartości kopii zapasowych...",
+  "settings.backups.search.failed": "Wyszukiwanie w kopiach zapasowych zostało zatrzymane. {message}",
+  "settings.backups.search.cancelled": "Anulowano wyszukiwanie w kopiach zapasowych.",
+  "settings.backups.search.complete": "Brak kolejnych pasujących treści.",
+  "settings.backups.search.completePartial": "Brak kolejnych czytelnych wyników. Nie udało się odczytać plików kopii zapasowych: {count}.",
+  "settings.backups.search.trashed": "W koszu"
+}

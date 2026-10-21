@@ -1,4 +1,9 @@
 {
+  "companion.share.incomplete": "Impossibile completare la condivisione. Riprova.",
+  "companion.search.unavailable": "Questo risultato non è più disponibile.",
+  "companion.search.refresh": "Cerca di nuovo",
+  "companion.link.unavailable": "Questo link non può essere aperto in questa libreria.",
+  "companion.link.dismiss": "Chiudi",
   "companion.app.retry": "Riprova",
   "companion.app.starting.eyebrow": "Runtime complementare",
   "companion.app.starting.message": "Preparazione di un'identità del dispositivo stabile e di un'archiviazione complementare locale prima del caricamento della superficie dell'argomento.",

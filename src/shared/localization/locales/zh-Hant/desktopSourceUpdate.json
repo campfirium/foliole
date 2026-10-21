@@ -1,4 +1,10 @@
 {
+  "desktop.sourceUpdate.alternative.title": "備選內文",
+  "desktop.sourceUpdate.alternative.remove": "移除此備選",
+  "desktop.sourceUpdate.alternative.selector": "備選內文（{count}）",
+  "desktop.sourceUpdate.alternative.option": "{host} · {date}",
+  "desktop.sourceUpdate.alternative.expires": "保留至 {date}",
+  "desktop.sourceUpdate.alternative.hint": "最多保留 3 份備選內文，每份保留 30 天",
   "desktop.sourceUpdate.dialogTitle": "比較視圖",
   "desktop.sourceUpdate.close": "關閉來源更新面板",
   "desktop.sourceUpdate.accept": "接受更新",
