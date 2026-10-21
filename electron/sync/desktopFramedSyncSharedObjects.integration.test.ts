@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { pruneLearningRowsWithoutVisibleNodes } from '../../lib/core/sync/syncNodeVisibilityPruning.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -65,12 +66,21 @@ it.each(cases)('discovers and persists the original $type payload through a norm
     const target = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try { expect(target.prepare(sample.query).pluck().get()).toEqual(sample.expected); }
     finally { target.close(); }
-    expect(await readFixtureInventory(fixture.right)).toEqual(await readFixtureInventory(fixture.left));
+    expect(compareFramedSyncDatabaseInventories({ local: await readFixtureInventory(fixture.left),
+      remote: await readFixtureInventory(fixture.right) })).toEqual([]);
+    expect(readCurrentNodes(fixture.rightSnapshot.databasePath)).toEqual(readCurrentNodes(fixture.leftSnapshot.databasePath));
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 60_000);
+
+function readCurrentNodes(databasePath: string) {
+  const database = new Database(databasePath, { readonly: true });
+  try {
+    return database.prepare('SELECT id, current_version_id, content, parent_id, deleted_at FROM nodes ORDER BY id').all();
+  } finally { database.close(); }
+}
 
 it('keeps a retired dirty review out of inventory and transfers unrelated live state', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
