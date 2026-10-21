@@ -44,8 +44,9 @@ export function inventoryEntryFromRow(row: InventoryRow): FramedSyncInventoryEnt
   const frontierFactIds = ids.parse(JSON.parse(row.frontier_json));
   const unready = Boolean(state && (state[2].some(value => value[5] === 'missing') ||
     state[1] && !frontierFactIds.includes(state[1])));
+  // Comparison covers current node state only; version history moves when the node itself is synced.
   const hash = state ? sha256(new TextEncoder().encode(JSON.stringify([
-    state, JSON.parse(row.relations_json), JSON.parse(row.reviews_json), JSON.parse(row.states_json)
+    [state[0], state[1]], JSON.parse(row.reviews_json), JSON.parse(row.states_json)
   ]))) : hexToBytes(row.content_hash);
   return {
     frontierFactIds,

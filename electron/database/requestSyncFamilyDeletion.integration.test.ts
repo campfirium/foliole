@@ -77,8 +77,12 @@ it.each([1, 2])('receives a parent and %s child deletion facts in one request ro
       expect(JSON.parse(fact.snapshot_json)).toMatchObject(JSON.parse(originalFacts[index]!.snapshot_json));
     }
     expect(tombstones(source)).toEqual(originalFacts);
-    expect(target.sqlite.prepare('SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id').all())
-      .toEqual(source.sqlite.prepare('SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions ORDER BY version_id').all());
+    // History identities match; only the deletion (current) versions must carry the same body.
+    const identities = 'SELECT version_id, parent_version_id, content_hash FROM node_sync_versions ORDER BY version_id';
+    expect(target.sqlite.prepare(identities).all()).toEqual(source.sqlite.prepare(identities).all());
+    const currentBodies = `SELECT version.version_id, version.body_text FROM node_sync_versions version
+      JOIN node_sync_tombstones tomb ON tomb.version_id = version.version_id ORDER BY version.version_id`;
+    expect(target.sqlite.prepare(currentBodies).all()).toEqual(source.sqlite.prepare(currentBodies).all());
     expect(target.sqlite.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
   } finally { await fixture.close(); }

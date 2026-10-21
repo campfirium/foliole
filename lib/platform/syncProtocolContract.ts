@@ -47,9 +47,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'workgroup-aead-v1',
     WORKGROUP_RESTORE_CAPABILITY
   ].sort()),
-  max_supported_version: 28,
-  min_supported_version: 28,
-  version: 28
+  max_supported_version: 29,
+  min_supported_version: 29,
+  version: 29
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

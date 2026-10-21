@@ -39,7 +39,7 @@ it('transfers a new version without retransmitting the history already held by i
   } finally { await fixture.close(); }
 });
 
-it.each(['parent', 'current'])('repairs a missing %s reference without retransmitting known version bodies', async missing => {
+it.each(['current'])('repairs a missing %s reference without retransmitting known version bodies', async missing => {
   const fixture = await restoreFixture();
   try {
     const source = fixture.peer('source'); const target = fixture.peer('target');
@@ -71,5 +71,29 @@ it.each(['parent', 'current'])('repairs a missing %s reference without retransmi
       .toEqual([{ version_id: 'head', parent_version_id: 'root', ordinal: 0 }]);
     expect(target.sqlite.prepare("SELECT current_version_id, content FROM nodes WHERE id = 'node-1'").get())
       .toEqual({ current_version_id: 'head', content: 'Complete current body' });
+  } finally { await fixture.close(); }
+});
+
+it('leaves a missing parent edge out of comparison and repairs it with the next node change', async () => {
+  const fixture = await restoreFixture();
+  try {
+    const source = fixture.peer('source'); const target = fixture.peer('target');
+    const root = branch('root', 'Original'); const head = branch('head', 'Complete current body', root);
+    await applySyncNodesWithDbPort(source.db, [root, head]);
+    await receive(source, target, [root, head]);
+    target.sqlite.exec("DELETE FROM node_sync_version_parents WHERE version_id = 'head'");
+    expect(compareFramedSyncDatabaseInventories({ local: await readFramedSyncInventory(source.db),
+      remote: await readFramedSyncInventory(target.db) }).filter(value => value.globalId === 'node-1')).toEqual([]);
+    await applySyncNodesWithDbPort(source.db, [branch('next', 'Next body', head)]);
+    const difference = compareFramedSyncDatabaseInventories({ local: await readFramedSyncInventory(source.db),
+      remote: await readFramedSyncInventory(target.db) }).find(value => value.direction === 'local_to_remote' && value.globalId === 'node-1');
+    if (!difference) throw new Error('missing_node_difference');
+    await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+      providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference);
+    target.reopen();
+    expect(target.sqlite.prepare('SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents ORDER BY version_id').all())
+      .toEqual([{ version_id: 'head', parent_version_id: 'root', ordinal: 0 },
+        { version_id: 'next', parent_version_id: 'head', ordinal: 0 }]);
+    expect(target.sqlite.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Next body');
   } finally { await fixture.close(); }
 });

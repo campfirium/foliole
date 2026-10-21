@@ -38,25 +38,34 @@ it.each([null, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   }
 );
 
-it.each([0, 1, 2, 3, 6] as const)('still compares retired version fact field %s', async field => {
+it.each([0, 1, 2, 3, 6] as const)('keeps history field %s out of the comparison hash', async field => {
   const changed = version('b'.repeat(64));
   changed[field] = 'different';
   const local = await inventory(version('a'.repeat(64)));
   const remote = await inventory(changed);
-  expect(local.sharedStateHash).not.toEqual(remote.sharedStateHash);
+  expect(local.sharedStateHash).toEqual(remote.sharedStateHash);
+  expect(local.versionStates).not.toEqual(remote.versionStates);
 });
 
-it.each(['available', 'missing'] as const)('preserves the %s body requirement', async state => {
+it.each(['available', 'missing'] as const)('keeps the %s history body state out of the comparison hash', async state => {
   const active = version('a'.repeat(64));
   active[5] = state;
   const local = await inventory(active);
   const retired = await inventory(version(active[4]));
-  expect(local.sharedStateHash).not.toEqual(retired.sharedStateHash);
+  expect(local.sharedStateHash).toEqual(retired.sharedStateHash);
   expect(local.unready).toBe(state === 'missing');
-  if (state === 'available') {
-    active[4] = 'b'.repeat(64);
-    expect((await inventory(active)).sharedStateHash).not.toEqual(local.sharedStateHash);
-  }
+});
+
+it('compares the current version in the comparison hash', async () => {
+  const local = await inventory(version('a'.repeat(64)));
+  const row = { content_hash: JSON.stringify(['node', 'other-current', [version('a'.repeat(64))]]), object_id: 'node',
+    frontier_json: '["other-current"]', relations_json: '[]', resources_json: '[]', reviews_json: '[]', states_json: '[]',
+    version_body_hashes_json: JSON.stringify({ old: 'a'.repeat(64) }) };
+  const port: DbPort = { query: vi.fn().mockResolvedValue([row]),
+    run: async () => { throw new Error('inventory_must_not_write'); },
+    transaction: async <T>(task: (tx: DbPort) => Promise<T>) => task(port) };
+  const moved = await readFramedSyncInventoryEntry(port, { globalId: 'node', objectType: 'node' });
+  expect(moved!.sharedStateHash).not.toEqual(local.sharedStateHash);
 });
 
 it('resolves requested immutable fact IDs independently of a previous inventory hash', async () => {

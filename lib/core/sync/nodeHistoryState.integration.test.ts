@@ -32,12 +32,13 @@ async function host() {
 const deletion = { ...v1, body_text: null,
   snapshot: { ...v1.snapshot, content: null, body_deleted: true } };
 
-it('propagates deletion without changing identity or parents and ignores old complete input', async () => {
+it('applies history deletion without changing identity, parents or the comparison hash', async () => {
   const a = await host();
   const before = await readFramedSyncInventoryEntry(a.db, key);
   await upsertRemoteVersion(a.db, deletion);
   const after = await readFramedSyncInventoryEntry(a.db, key);
-  expect(after!.sharedStateHash).not.toEqual(before!.sharedStateHash);
+  expect(after!.sharedStateHash).toEqual(before!.sharedStateHash);
+  expect(after!.versionStates).not.toEqual(before!.versionStates);
   await upsertRemoteVersion(a.db, v1);
   const stored = await loadRetainedSyncNodeVersionFact(a.db, 'v1');
   expect(stored).toMatchObject({ body_text: null, content_hash: v1.content_hash, snapshot: { body_deleted: true } });
@@ -94,27 +95,30 @@ it('rolls back body state and its inventory together if the transaction fails', 
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBe(v1.body_text);
 });
 
-it('repairs a missing historical body hash when the complete body already exists', async () => {
+it('keeps a missing historical body hash out of comparison and repairs it when the version is applied', async () => {
   const [a, b] = await Promise.all([host(), host()]);
   a.sqlite.prepare(`UPDATE node_sync_versions SET snapshot_json =
     json_remove(snapshot_json, '$.body_blob_hash') WHERE version_id = ?`).run('v1');
   const complete = await readFramedSyncInventoryEntry(b.db, key);
   const missingHash = await readFramedSyncInventoryEntry(a.db, key);
   expect(missingHash!.unready).toBe(false);
-  expect(missingHash!.sharedStateHash).not.toEqual(complete!.sharedStateHash);
+  expect(missingHash!.sharedStateHash).toEqual(complete!.sharedStateHash);
+  expect(missingHash!.versionStates).not.toEqual(complete!.versionStates);
   await upsertRemoteVersion(a.db, v1);
-  expect((await readFramedSyncInventoryEntry(a.db, key))!.sharedStateHash).toEqual(complete!.sharedStateHash);
+  expect((await readFramedSyncInventoryEntry(a.db, key))!.versionStates).toEqual(complete!.versionStates);
   expect((await loadRetainedSyncNodeVersionFact(a.db, 'v1'))!.body_text).toBe(v1.body_text);
 });
 
-it('maintains the hash for head-only and parent-only changes and repairs missing parent identities', async () => {
+it('changes the hash for head changes only and repairs missing parent identities when the version is applied', async () => {
   const a = await host();
   const before = await readFramedSyncInventoryEntry(a.db, key);
   a.sqlite.prepare("UPDATE sync_object_state SET current_version_id = 'v1' WHERE object_type = 'node' AND object_id = 'topic'").run();
   expect((await readFramedSyncInventoryEntry(a.db, key))!.sharedStateHash).not.toEqual(before!.sharedStateHash);
   a.sqlite.prepare("UPDATE sync_object_state SET current_version_id = 'v2' WHERE object_type = 'node' AND object_id = 'topic'").run();
   a.sqlite.prepare("DELETE FROM node_sync_version_parents WHERE version_id = 'v2'").run();
-  expect((await readFramedSyncInventoryEntry(a.db, key))!.sharedStateHash).not.toEqual(before!.sharedStateHash);
+  const parentOnly = await readFramedSyncInventoryEntry(a.db, key);
+  expect(parentOnly!.sharedStateHash).toEqual(before!.sharedStateHash);
+  expect(parentOnly).not.toEqual(before);
   await upsertRemoteVersion(a.db, v2);
   expect(await readFramedSyncInventoryEntry(a.db, key)).toEqual(before);
 });

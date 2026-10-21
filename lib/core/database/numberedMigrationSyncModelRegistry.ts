@@ -2,7 +2,7 @@ import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateExternalFolderDisplayPaths } from './externalFolderDisplayPathMigration.js';
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
-import { INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
+import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { retireLegacySyncState } from './legacySyncRetirement.js';
 import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
@@ -32,5 +32,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     'node_version_local_origins', 'content_edit_image_input_hash', 'TEXT') },
   { version: 164, migrate: migrateAttachmentDemands },
   { version: 165, migrate: migrateExternalFolderDisplayPaths },
-  { version: 166, migrate: migrateMissingCurrentVersionInventory }
+  { version: 166, migrate: migrateMissingCurrentVersionInventory },
+  { version: 167, migrate: db => { db.exec(INVALIDATE_ALL_SYNC_DIGESTS); } }
 ];

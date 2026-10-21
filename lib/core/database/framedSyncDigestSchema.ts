@@ -3,6 +3,8 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
 export const INVALIDATE_UNREADY_SYNC_DIGESTS = 'DELETE FROM framed_sync_node_digest WHERE unready != 0';
+/** Node comparison hashes no longer cover version history; cached digests from older code must be rebuilt. */
+export const INVALIDATE_ALL_SYNC_DIGESTS = 'DELETE FROM framed_sync_node_digest';
 
 /** Rebuildable entry digests; invalidated in the same transaction as their source projection. */
 export const FRAMED_SYNC_DIGEST_TABLES = [
