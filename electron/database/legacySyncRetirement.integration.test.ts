@@ -57,7 +57,11 @@ it.each(['android', 'ios'])('reads %s acceptance facts after transmission retire
         .matchAll(/"SELECT[^"\n]*"(?:\s*\+\s*"[^"\n]*")*/gu)]
         .map(match => [...match[0].matchAll(/"([^"\n]*)"/gu)].map(part => part[1]).join(''));
     expect(queries.length).toBeGreaterThan(0);
-    for (const sql of queries) expect(() => db.prepare(sql).all(), sql).not.toThrow();
+    for (const sql of queries) {
+      // These empty-schema probes validate retained tables and columns, not selected values.
+      const parameters = [...sql.matchAll(/\?/gu)].map(() => null);
+      expect(() => db.prepare(sql).all(...parameters), sql).not.toThrow();
+    }
   } finally { db.close(); }
 });
 
