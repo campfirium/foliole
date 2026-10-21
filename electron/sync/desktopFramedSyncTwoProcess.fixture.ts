@@ -165,7 +165,7 @@ async function run(command: Command) {
     return runIdentityRestoreFixtureCommand(command.action, command.args, { deviceId, stateRoot });
   }
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
-  if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
+  if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count), Number(command.args.bodyBytes ?? 8192));
   if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
   if (['reorder', 'standalone_edit', 'rejoin', 'register_order_member', 'restore_local_order'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);
