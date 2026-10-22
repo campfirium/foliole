@@ -44,7 +44,10 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
   let left = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-a'), root: path.join(root, 'a'), script });
   let right = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-b'), root: path.join(root, 'b'), script });
   try {
-    const [leftSnapshot, rightSnapshot] = await Promise.all([left.init(), right.init()]);
+    // Separate devices never seed their special roots in the same millisecond; parallel init can, and the
+    // byte-identical concurrent roots then converge by random version id instead of a resolution version.
+    const leftSnapshot = await left.init();
+    const rightSnapshot = await right.init();
     return {
       get left() { return left; },
       leftSnapshot,
