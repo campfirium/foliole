@@ -157,7 +157,7 @@ function ExpiredMemberNotice(props: { busy: boolean; expired: boolean; onOverwri
   const t = useTranslation();
   const [unreachable, setUnreachable] = useState(false);
   if (!props.expired) return null;
-  const confirm = async () => {
+  const confirmOverwrite = async () => {
     if (!await requestAppConfirmation({ confirmLabel: t('settings.companionSync.expired.action'),
       description: t('settings.companionSync.expired.confirmDescription'),
       title: t('settings.companionSync.expired.confirmTitle') })) return;
@@ -171,7 +171,7 @@ function ExpiredMemberNotice(props: { busy: boolean; expired: boolean; onOverwri
   return (
     <SettingsRow description={description} title={t('settings.companionSync.expired.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-        <SettingsButton disabled={props.busy} onClick={() => void confirm()}>
+        <SettingsButton disabled={props.busy} onClick={() => void confirmOverwrite()}>
           {t('settings.companionSync.expired.action')}
         </SettingsButton>
       </SettingsControlSlot>
