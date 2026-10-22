@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "Il gruppo di sincronizzazione non conserva più i record meno recenti di cui questo dispositivo avrebbe bisogno. Per sincronizzare di nuovo, sovrascrivi questo dispositivo con i dati del gruppo; le modifiche fatte qui e mai sincronizzate non verranno conservate.",
   "settings.companionSync.expired.action": "Sovrascrivi questo dispositivo",
   "settings.companionSync.expired.confirmTitle": "Sovrascrivere questo dispositivo con i dati del gruppo di sincronizzazione?",
-  "settings.companionSync.expired.confirmDescription": "La libreria di questo dispositivo verrà sostituita con i dati del gruppo di sincronizzazione. Le modifiche di questo dispositivo mai sincronizzate andranno perse."
+  "settings.companionSync.expired.confirmDescription": "La libreria di questo dispositivo verrà sostituita con i dati del gruppo di sincronizzazione. Le modifiche di questo dispositivo mai sincronizzate andranno perse.",
+  "settings.companionSync.expired.unavailable": "Al momento nessun altro dispositivo del gruppo di sincronizzazione è raggiungibile. Mettine uno online e riprova."
 }

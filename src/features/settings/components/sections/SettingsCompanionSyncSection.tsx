@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
@@ -106,7 +108,7 @@ export function SettingsCompanionSyncSection() {
       />
       <PendingBackupRestoreNotice pending={Boolean(state.overview.pending_backup_restore)} />
       <ExpiredMemberNotice busy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
-        expired={Boolean(state.overview.expired_member)} onOverwrite={() => void state.overwriteExpiredMember()} />
+        expired={Boolean(state.overview.expired_member)} onOverwrite={state.overwriteExpiredMember} />
       <SyncNowRow
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
@@ -153,15 +155,21 @@ function PendingBackupRestoreNotice({ pending }: { pending: boolean }) {
 /** A device silent past the group's history window can only resume by taking the group's data. */
 function ExpiredMemberNotice(props: { busy: boolean; expired: boolean; onOverwrite(): Promise<unknown> | void }) {
   const t = useTranslation();
+  const [unreachable, setUnreachable] = useState(false);
   if (!props.expired) return null;
   const confirm = async () => {
     if (!await requestAppConfirmation({ confirmLabel: t('settings.companionSync.expired.action'),
       description: t('settings.companionSync.expired.confirmDescription'),
       title: t('settings.companionSync.expired.confirmTitle') })) return;
-    await props.onOverwrite();
+    setUnreachable(false);
+    try { await props.onOverwrite(); }
+    catch (error) { if (String(error).includes('sync_group_current_peer_unavailable')) setUnreachable(true); }
   };
+  const description = unreachable
+    ? <>{t('settings.companionSync.expired.description')}<br />{t('settings.companionSync.expired.unavailable')}</>
+    : t('settings.companionSync.expired.description');
   return (
-    <SettingsRow description={t('settings.companionSync.expired.description')} title={t('settings.companionSync.expired.title')}>
+    <SettingsRow description={description} title={t('settings.companionSync.expired.title')}>
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <SettingsButton disabled={props.busy} onClick={() => void confirm()}>
           {t('settings.companionSync.expired.action')}

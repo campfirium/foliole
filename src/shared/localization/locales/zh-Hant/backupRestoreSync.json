@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "同步組已不再保留本機需要的舊記錄。要繼續同步，需用同步組資料覆蓋本機；本機從未同步出去的變更不會保留。",
   "settings.companionSync.expired.action": "覆蓋本機",
   "settings.companionSync.expired.confirmTitle": "用同步組資料覆蓋本機？",
-  "settings.companionSync.expired.confirmDescription": "本機資料將替換為同步組資料，本機從未同步出去的變更會遺失。"
+  "settings.companionSync.expired.confirmDescription": "本機資料將替換為同步組資料，本機從未同步出去的變更會遺失。",
+  "settings.companionSync.expired.unavailable": "暫時連不上同步組裡的其他裝置。請讓其中一台上線後再試。"
 }

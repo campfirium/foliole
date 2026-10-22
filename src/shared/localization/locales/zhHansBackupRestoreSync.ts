@@ -20,4 +20,5 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.companionSync.expired.action': '覆盖本机',
   'settings.companionSync.expired.confirmTitle': '用同步组资料覆盖本机？',
   'settings.companionSync.expired.confirmDescription': '本机资料将替换为同步组资料，本机从未同步出去的改动会丢失。',
+  'settings.companionSync.expired.unavailable': '暂时连不上同步组里的其他设备。请让其中一台上线后再试。',
 };

@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "Die Synchronisierungsgruppe bewahrt die älteren Einträge, die dieses Gerät bräuchte, nicht mehr auf. Um wieder zu synchronisieren, überschreiben Sie dieses Gerät mit den Daten der Gruppe; nie synchronisierte Änderungen auf diesem Gerät bleiben nicht erhalten.",
   "settings.companionSync.expired.action": "Dieses Gerät überschreiben",
   "settings.companionSync.expired.confirmTitle": "Dieses Gerät mit den Daten der Synchronisierungsgruppe überschreiben?",
-  "settings.companionSync.expired.confirmDescription": "Die Bibliothek dieses Geräts wird durch die Daten der Synchronisierungsgruppe ersetzt. Nie synchronisierte Änderungen auf diesem Gerät gehen verloren."
+  "settings.companionSync.expired.confirmDescription": "Die Bibliothek dieses Geräts wird durch die Daten der Synchronisierungsgruppe ersetzt. Nie synchronisierte Änderungen auf diesem Gerät gehen verloren.",
+  "settings.companionSync.expired.unavailable": "Derzeit ist kein anderes Gerät der Synchronisierungsgruppe erreichbar. Bringen Sie eines online und versuchen Sie es erneut."
 }

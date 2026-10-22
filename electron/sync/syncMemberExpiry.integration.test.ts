@@ -41,6 +41,8 @@ it('leaves a member silent for over 90 days out of the group line and overwrites
   await started.process.invoke('round', { input: { kind: 'remember_peer', peerOrigin: fixture.leftSnapshot.origin,
     peer: { deviceId: fixture.leftSnapshot.deviceId, libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch` } } });
   await started.process.invoke('expired_overwrite');
+  // A second confirmation while the overwrite is under way must not restart it with a new library.
+  await expect(started.process.invoke('expired_overwrite')).rejects.toThrow('sync_group_local_adoption_pending');
   expect(await groupRound(started.process, fixture.leftSnapshot)).toMatchObject({ complete: true });
   expect(nodeTraces(third.databasePath, DELETED).node).toBe(0);
   expect(nodeTraces(third.databasePath, 'offline-only').node).toBe(0);

@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "동기화 그룹에 이 기기에 필요한 이전 기록이 더 이상 남아 있지 않습니다. 다시 동기화하려면 동기화 그룹의 데이터로 이 기기를 덮어쓰세요. 한 번도 동기화되지 않은 이 기기의 변경 사항은 유지되지 않습니다.",
   "settings.companionSync.expired.action": "이 기기 덮어쓰기",
   "settings.companionSync.expired.confirmTitle": "동기화 그룹의 데이터로 이 기기를 덮어쓸까요?",
-  "settings.companionSync.expired.confirmDescription": "이 기기의 라이브러리가 동기화 그룹의 데이터로 바뀝니다. 한 번도 동기화되지 않은 이 기기의 변경 사항은 사라집니다."
+  "settings.companionSync.expired.confirmDescription": "이 기기의 라이브러리가 동기화 그룹의 데이터로 바뀝니다. 한 번도 동기화되지 않은 이 기기의 변경 사항은 사라집니다.",
+  "settings.companionSync.expired.unavailable": "지금은 동기화 그룹의 다른 기기에 연결할 수 없습니다. 기기 하나를 온라인으로 만든 뒤 다시 시도하세요."
 }

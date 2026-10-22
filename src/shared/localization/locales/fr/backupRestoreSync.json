@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "Le groupe de synchronisation ne conserve plus les anciens enregistrements dont cet appareil aurait besoin. Pour synchroniser à nouveau, écrasez cet appareil avec les données du groupe ; les modifications faites ici et jamais synchronisées ne seront pas conservées.",
   "settings.companionSync.expired.action": "Écraser cet appareil",
   "settings.companionSync.expired.confirmTitle": "Écraser cet appareil avec les données du groupe de synchronisation ?",
-  "settings.companionSync.expired.confirmDescription": "La bibliothèque de cet appareil sera remplacée par les données du groupe de synchronisation. Les modifications de cet appareil jamais synchronisées seront perdues."
+  "settings.companionSync.expired.confirmDescription": "La bibliothèque de cet appareil sera remplacée par les données du groupe de synchronisation. Les modifications de cet appareil jamais synchronisées seront perdues.",
+  "settings.companionSync.expired.unavailable": "Aucun autre appareil du groupe de synchronisation n’est joignable pour le moment. Mettez-en un en ligne et réessayez."
 }

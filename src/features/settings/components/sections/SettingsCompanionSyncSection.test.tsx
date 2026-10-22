@@ -207,3 +207,14 @@ it('shows no overwrite notice for a current device', () => {
   renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, null, { expired_member: false });
   expect(screen.queryByRole('button', { name: 'Overwrite this device' })).toBeNull();
 });
+
+it('explains in the notice when no current device can provide the overwrite', async () => {
+  const unregister = registerAppConfirmationHandler(async () => true);
+  try {
+    const { overwriteExpiredMember } = renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, null, { expired_member: true });
+    overwriteExpiredMember.mockRejectedValue(new Error('Error invoking remote method: sync_group_current_peer_unavailable'));
+    fireEvent.click(screen.getByRole('button', { name: 'Overwrite this device' }));
+    expect(await screen.findByText(/No other device in the sync group is reachable right now. Bring one online and try again./))
+      .toBeTruthy();
+  } finally { unregister(); }
+});

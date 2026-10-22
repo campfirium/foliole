@@ -20,4 +20,5 @@ export const EN_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.companionSync.expired.action': 'Overwrite this device',
   'settings.companionSync.expired.confirmTitle': 'Overwrite this device with the sync group’s data?',
   'settings.companionSync.expired.confirmDescription': 'This device’s library will be replaced with the sync group’s data. Changes on this device that never synced will be lost.',
+  'settings.companionSync.expired.unavailable': 'No other device in the sync group is reachable right now. Bring one online and try again.',
 };

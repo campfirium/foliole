@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "同期グループには、このデバイスが必要とする古い記録がもう残っていません。再び同期するには、同期グループのデータでこのデバイスを上書きしてください。一度も同期されていないこのデバイスの変更は保持されません。",
   "settings.companionSync.expired.action": "このデバイスを上書き",
   "settings.companionSync.expired.confirmTitle": "同期グループのデータでこのデバイスを上書きしますか？",
-  "settings.companionSync.expired.confirmDescription": "このデバイスのライブラリは同期グループのデータに置き換えられます。一度も同期されていないこのデバイスの変更は失われます。"
+  "settings.companionSync.expired.confirmDescription": "このデバイスのライブラリは同期グループのデータに置き換えられます。一度も同期されていないこのデバイスの変更は失われます。",
+  "settings.companionSync.expired.unavailable": "現在、同期グループのほかのデバイスに接続できません。いずれかをオンラインにしてから、もう一度お試しください。"
 }

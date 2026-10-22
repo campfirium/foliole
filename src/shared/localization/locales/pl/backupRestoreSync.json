@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "Grupa synchronizacji nie przechowuje już starszych zapisów, których to urządzenie by potrzebowało. Aby znów synchronizować, nadpisz to urządzenie danymi grupy; zmiany wprowadzone tutaj i nigdy niezsynchronizowane nie zostaną zachowane.",
   "settings.companionSync.expired.action": "Nadpisz to urządzenie",
   "settings.companionSync.expired.confirmTitle": "Nadpisać to urządzenie danymi grupy synchronizacji?",
-  "settings.companionSync.expired.confirmDescription": "Biblioteka tego urządzenia zostanie zastąpiona danymi grupy synchronizacji. Niezsynchronizowane zmiany z tego urządzenia zostaną utracone."
+  "settings.companionSync.expired.confirmDescription": "Biblioteka tego urządzenia zostanie zastąpiona danymi grupy synchronizacji. Niezsynchronizowane zmiany z tego urządzenia zostaną utracone.",
+  "settings.companionSync.expired.unavailable": "Żadne inne urządzenie z grupy synchronizacji nie jest teraz osiągalne. Włącz jedno z nich i spróbuj ponownie."
 }

@@ -19,5 +19,6 @@
   "settings.companionSync.expired.description": "O grupo de sincronização não guarda mais os registros antigos de que este dispositivo precisaria. Para sincronizar de novo, substitua este dispositivo pelos dados do grupo; alterações feitas aqui que nunca foram sincronizadas não serão mantidas.",
   "settings.companionSync.expired.action": "Substituir este dispositivo",
   "settings.companionSync.expired.confirmTitle": "Substituir este dispositivo pelos dados do grupo de sincronização?",
-  "settings.companionSync.expired.confirmDescription": "A biblioteca deste dispositivo será substituída pelos dados do grupo de sincronização. Alterações deste dispositivo que nunca foram sincronizadas serão perdidas."
+  "settings.companionSync.expired.confirmDescription": "A biblioteca deste dispositivo será substituída pelos dados do grupo de sincronização. Alterações deste dispositivo que nunca foram sincronizadas serão perdidas.",
+  "settings.companionSync.expired.unavailable": "Nenhum outro dispositivo do grupo de sincronização está acessível agora. Deixe um deles on-line e tente novamente."
 }
