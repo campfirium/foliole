@@ -61,13 +61,13 @@
 
 ## Quality, Acceptance, And Preview
 
-- 每个 `/3` 闭环在下述本地行为测试门槛通过后勾选；当前 Mac 宿主的 Hidden Native E2E 按本地测试处理。只能在真机（A5、Fri、Windows 开发机）证明的场景先登记到真机清单 `.lab/atlas/0active/device-smoke-checklist.md`，方案中对应项写明“已转交真机清单、尚未证明”后勾选；任务在包含最终修改的 dev 远程 full 通过后经 `archive-record` 收口，汇报写明真机部分尚未证明。已有真机失败证据的任务不得凭 full 通过关闭。真机清单分固定冒烟、待验证改动与历史三段；发布批次由发布主任务在切出 `release` 的 dev 提交上跑全清单，用户可随时要求普通批次；清单超过约 15 行或积压超过两周时在汇报中提示一次。本条由根拥有，来源为用户 2026-10-21 决定；主要成本是平台专属回归最晚到下一批次才暴露；若批次显示某类改动反复在真机回归，只把该类改动改回逐项真机。
+- 每个 `/3` 闭环在下述本地行为测试门槛通过后勾选；当前 Mac 宿主的 Hidden Native E2E 按本地测试处理。真机（A5、Fri、Windows 开发机）验证只用固定冒烟清单 `.lab/atlas/0active/device-smoke-checklist.md` 与改动试用表 `.lab/atlas/trials-open.md` / `trials-closed.md`，各处所称“真机清单”即指它们；表格式、试用方、积压提示与发布阻断由 `task-ledger` 技能拥有。任务在本地门槛与包含最终修改的 dev 远程 full 通过、写好试用行后经 `archive-record` 关闭，汇报写明真机未证明；不为等试用保留任务，已有未复验真机失败的任务保持开放。批次在用户要求时或发布时由发布主任务运行。本条由根拥有，来源为用户 2026-10-21 与 10-22 决定；主要成本是平台专属回归最晚到下一批次、移动端回归最晚到 beta 才暴露。
 - 使用 `npm` 与 `package.json` 中登记的入口，不用不存在的 `npm test` 兜底，也不得降低检查标准。普通本地优先 `npm run quality:fast`，或显式 `npm run test:files -- <files>`、`npm run test:sqlite:electron -- <files>`、`npm run lint:files -- <files>`。
 - `test:changed`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 只在 hosted lane 执行。`scripts/quality/quality-command-contracts.mjs` 是命令分类真相；dev hosted recheck 只用 `npm run quality:remote -- --scope <desktop|shared|android|ios|full>`。
 - 测试按风险分档，由 Agent 在每个闭环自行决定，不逐个请用户确认：触及 Task And Risk Routing 所列高风险范围的行为，使用真实 SQLite 或生产链路的集成测试；其他新增或改变的可观察行为维护一个最小、独立于实现方式的测试 contract；纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。修复任何来源（本地、远程、真机、用户）发现的 bug 都补一个修复前会失败的回归测试；只有真机能复现的部分登记真机清单。证明本次差异的测试应因旧行为不符合目标而失败、因新行为符合目标而通过，不能以缺少新 helper 或文件代替行为失败。保护未改变行为的回归测试可以前后都通过；无法安全复跑旧版时如实说明证据限制。不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构，也不由测试合同推导控制面建设授权。
 - 测试只在以下情形删除或合并：与另一测试守同一 contract；守已退役语义；反复不稳定且当轮无法修复（先按 skip 规则标注，30 天内修复或删除）；只锁函数名、源码文本或偶然结构。删除时在提交的 `context` 写明它守的 contract 现由哪个测试覆盖；不得为缩短运行时间删除唯一守着某 contract 的测试。
 - **任务关闭与真机批次前，本轮全部适用本地行为测试必须通过。** Agent 主动从本轮验收目标确定场景，不等待用户指定测试方法；所有可本地复现的场景须覆盖初始状态、操作序列和结果断言。涉及多实例交互时，使用独立实例与临时数据运行生产链路的确定性集成测试，断言各端最终持久化结果；不得用 mock 替掉本次待验证链路。单元测试、lint、构建或独立原型通过不能替代该集成覆盖。存在未覆盖、失败或跳过的适用场景时，不得关闭任务或开始真机批次；场景可以提前登记到真机清单，但登记不替代测试、不作关闭依据；“全部”限本轮验收范围，不要求每次全仓测试。关闭或开始批次前在当前任务列明场景对应的测试、执行命令与通过结果；已有有效证据可复用，受影响证据随源码或判据变化失效。本条由根统一拥有，各宿主和技能只引用此前置条件。
-- 真机发现非平台专属 bug，先补本地失败回归、修复并通过上述门槛，再继续验收；不得以“预览、试跑、探索”名义重放产品场景验证修复。现场取证可先行，但限于取得构造复现或区分根因所需的证据，不替代修复后的本地验证。仅真实 OS、硬件、权限或网络栈才能验证的部分，以及无稳定自动化断言的纯视觉检查，可说明具体依赖与本地无法证明的原因后登记到真机清单；未写测试、搭建困难或根因未知不构成平台专属证据。例外只豁免该部分，仍须完成可本地覆盖部分；取得本地可复现证据后转回本地。普通批次中失败的场景回到来源任务修复，随下一批次复验；发布批次失败由发布主任务修复、形成新候选并复验，来源任务只保留追溯关系。
+- 真机发现非平台专属 bug，先补本地失败回归、修复并通过上述门槛，再继续验收；不得以“预览、试跑、探索”名义重放产品场景验证修复。现场取证可先行，但限于取得构造复现或区分根因所需的证据，不替代修复后的本地验证。仅真实 OS、硬件、权限或网络栈才能验证的部分，以及无稳定自动化断言的纯视觉检查，可说明具体依赖与本地无法证明的原因后登记到真机清单；未写测试、搭建困难或根因未知不构成平台专属证据。例外只豁免该部分，仍须完成可本地覆盖部分；取得本地可复现证据后转回本地。批次发现的问题：本地可复现的补回归测试后修复，随质量闸长期保留；只有真机能复现的修复后在 `trials-closed.md` 或固定冒烟运行记录记一行，同类第二次在真机出现时才加入固定冒烟；试用通过不新增长期测试。问题由仍开放的来源任务修复，来源已关闭或涉及多个任务时另开修复任务，随下一批次复验；发布批次失败由发布主任务修复、形成新候选并复验。
 - 运行时或用户可见行为改动，当前 Mac 宿主的可见验收按局部规则在单项内完成；其他宿主的真机部分登记到真机清单。文档、agent 规则、只读诊断、测试或脚本内部改动且不改变运行时行为时可跳过宿主验收，并在最终汇报说明。
 - 本机开发、诊断和提交前宿主试跑可消费当前工作区。真机批次与发布验收若需冻结候选，必须绑定精确 revision；单项任务关闭不需要多宿主 accepted tip。候选 revision 是验证输入，整体 accepted revision 是本轮适用的产品行为、质量检查与必要人工确认通过后的结论。单入口报告的 accepted tip 只证明该入口的验收范围。最终多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据；此要求不构成开始产品验证前等待 hosted quality 完成的条件。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
 - 新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
@@ -92,3 +92,9 @@
 - 方法论与治理：`.lab/specs/_product/methodology.md`、`.lab/specs/_governance/`
 - UI 与文案：`DESIGN.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/_product/terminology-and-copy.md`
 - 宿主架构：`.lab/specs/desktop/electron/windows-dev-loop.md`、`.lab/specs/desktop/workspace/shell-layout.md`、`.lab/specs/architecture/multi-target-repo-layout-expectation.md`
+
+## Claude Code Delegation
+
+- 适用于 Claude Code：主 Agent（Opus）负责整体任务、规划、关键决策、集成、最终 diff、验证与提交收口。用户已长期授权主 Agent 将任务委派给 `.claude/agents/implementer.md`（Sonnet），此授权仅覆盖该子 Agent，其他子代理仍按 Task And Risk Routing 的当次授权规则。
+- 仅当任务边界明确（文件、目标行为与验证命令可写清）、可独立执行且预计降低总消耗时才委派；简报须自足，主 Agent 必须复核其 diff 与验证结果。
+- 复杂、模糊、高度耦合或属高风险触发的工作由主 Agent 直接处理，不为节省额度强行拆分。
