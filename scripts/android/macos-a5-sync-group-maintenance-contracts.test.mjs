@@ -134,12 +134,3 @@ it('observes Leave through durable host state after the visible confirmation', (
   expect(test).toContain('sendDepartureEvidence(instrumentation, receipt)');
   expect(test).toContain('put("bindingPresent", false)');
 });
-
-it('rebuilds only the task-owned acceptance application from a fresh container', () => {
-  const source = fs.readFileSync(
-    'scripts/android/macos-a5-sync-group-maintenance-action.mjs', 'utf8'
-  );
-  expect(source).toContain('appId !== APP_ID');
-  expect(source).toContain("['-s', serial, 'uninstall', appId]");
-  expect(source).not.toMatch(/pm.*clear/u);
-});

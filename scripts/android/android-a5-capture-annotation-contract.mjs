@@ -19,6 +19,12 @@ export const CAPTURE_ANNOTATION_TEST_RUNNER =
 export const CAPTURE_ANNOTATION_RUNNER_IDENTITY =
   `instrumentation:${CAPTURE_ANNOTATION_TEST_RUNNER} (target=${CAPTURE_ANNOTATION_APP_ID})`;
 
+export function captureAnnotationPackages(appId = CAPTURE_ANNOTATION_APP_ID) {
+  const runner = `${appId}.test/androidx.test.runner.AndroidJUnitRunner`;
+  return { appId, runner, runnerIdentity: `instrumentation:${runner} (target=${appId})`,
+    testAppId: `${appId}.test` };
+}
+
 export function captureAnnotationFailure(message, stage, result) {
   return Object.assign(new Error(message), { exitCode: 74, result, stage });
 }

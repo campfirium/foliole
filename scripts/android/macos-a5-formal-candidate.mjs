@@ -26,10 +26,17 @@ export function parseMacosA5Invocation(argv) {
     }
     args.splice(revisionIndex, 2);
   }
-  if (args.length !== 1) {
-    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action> [--formal [--revision <sha>]]');
+  const identityIndex = args.indexOf('--identity');
+  const identity = identityIndex >= 0 ? args[identityIndex + 1] : undefined;
+  if (identityIndex >= 0) {
+    if (identity !== 'test') throw new Error('--identity only accepts test.');
+    args.splice(identityIndex, 2);
   }
-  return { action: args[0], formal, ...(revision ? { revision } : {}) };
+  if (args.length !== 1) {
+    throw new Error('Usage: node scripts/android/macos-a5-dev.mjs <registered-action> '
+      + '[--formal [--revision <sha>]] [--identity test]');
+  }
+  return { action: args[0], formal, ...(revision ? { revision } : {}), ...(identity ? { identity } : {}) };
 }
 
 export function beginFormalA5Candidate(repoRoot, execute, requestedRevision = 'HEAD') {

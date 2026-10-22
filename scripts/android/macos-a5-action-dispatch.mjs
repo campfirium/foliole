@@ -15,6 +15,9 @@ import { buildA5DatabasePerformance } from './a5-database-performance-build.mjs'
 import { runMacosA5DatabasePerformanceEntry } from './macos-a5-database-performance-entry.mjs';
 import { runMacosA5HiddenDesktopStatusEntry } from './macos-a5-hidden-desktop-status.mjs';
 import {
+  ACCEPTANCE_APP_ID, removeA5AcceptanceApplication
+} from './macos-a5-acceptance-package-cleanup.mjs';
+import {
   runMacosA5SyncGroupJoinPrepareEntry
 } from './macos-a5-sync-group-join-prepare-entry.mjs';
 import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
@@ -135,8 +138,12 @@ export async function dispatchMacosA5Action({
       env, pairingReadiness, paths, readiness, serial });
   }
   if (action === 'deploy') await deploy(paths, buildIdentity, markMutationBoundary, build);
-  if (action === 'deploy-acceptance') await deploy(paths, buildIdentity, markMutationBoundary,
-    build, 'com.campfirium.foliole.android.acceptance');
+  if (action === 'reset-test-app') {
+    assertFixed(paths);
+    markMutationBoundary();
+    await removeA5AcceptanceApplication({ env, execute, paths, serial });
+    console.log(`[macos-a5-dev] reset-test-app removed ${ACCEPTANCE_APP_ID}`);
+  }
   if (action === 'capture-annotation') {
     await captureAnnotation(paths, buildIdentity, markMutationBoundary, build);
   }

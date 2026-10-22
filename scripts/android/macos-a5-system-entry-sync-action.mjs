@@ -7,10 +7,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { inspectA5SystemEntryDisplayName } from './macos-a5-system-entry-display-inspection.mjs';
+import { macosA5AppId } from './macos-a5-app-identity.mjs';
 import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
-const APP_ID = 'com.campfirium.foliole.android';
 const ALIAS = 'T143 Synced Inbox';
 const SETTING_KEY = 'system_entry_display_names';
 
@@ -33,7 +33,7 @@ async function waitForA5Payload(context, expected, collectSnapshot = collectAndr
   let latest;
   while (Date.now() < deadline) {
     latest = await collectSnapshot({
-      adb: context.paths.adb, appId: APP_ID, databaseInspector: inspectSystemEntryDisplayNames,
+      adb: context.paths.adb, appId: macosA5AppId(context.env), databaseInspector: inspectSystemEntryDisplayNames,
       includeAttachments: false, includeEvents: false, serial: context.serial,
       tables: ['setting_records', 'sync_object_state']
     });
@@ -54,8 +54,9 @@ async function checkedA5Lifecycle(context, args) {
 }
 
 export async function restartA5(context) {
-  await checkedA5Lifecycle(context, ['force-stop', APP_ID]);
-  await checkedA5Lifecycle(context, ['start', '-W', '-n', `${APP_ID}/com.foliole.android.MainActivity`]);
+  const appId = macosA5AppId(context.env);
+  await checkedA5Lifecycle(context, ['force-stop', appId]);
+  await checkedA5Lifecycle(context, ['start', '-W', '-n', `${appId}/com.foliole.android.MainActivity`]);
 }
 
 function sessionOptions(context) {

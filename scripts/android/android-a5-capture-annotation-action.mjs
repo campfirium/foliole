@@ -5,10 +5,9 @@ import path from 'node:path';
 import { auditCaptureAnnotationDatabase } from './android-capture-annotation-audit.mjs';
 import { openReadonlySqliteDatabaseSync } from './sqlite-readonly.mjs';
 import {
-  CAPTURE_ANNOTATION_APP_ID, CAPTURE_ANNOTATION_EVIDENCE_FILES,
-  CAPTURE_ANNOTATION_RUNNER_IDENTITY, CAPTURE_ANNOTATION_TEST_APP_ID,
+  CAPTURE_ANNOTATION_EVIDENCE_FILES,
   CAPTURE_ANNOTATION_TEST_CLASS, CAPTURE_ANNOTATION_TEST_CLASS_NAME,
-  CAPTURE_ANNOTATION_TEST_METHOD, CAPTURE_ANNOTATION_TEST_RUNNER,
+  CAPTURE_ANNOTATION_TEST_METHOD, captureAnnotationPackages,
   captureAnnotationArtifactPaths, captureAnnotationFailure,
   parseCaptureAnnotationInstrumentation, parseCaptureAnnotationPackage
 } from './android-a5-capture-annotation-contract.mjs';
@@ -66,20 +65,20 @@ async function installedPackage({ adbPort, env, execute, packageName, paths, ser
 }
 
 async function requireInstalledScenario(options) {
-  const main = await installedPackage({ ...options, packageName: CAPTURE_ANNOTATION_APP_ID });
-  const test = await installedPackage({ ...options, packageName: CAPTURE_ANNOTATION_TEST_APP_ID });
-  const { adbPort, env, execute, paths, serial } = options;
+  const { adbPort, env, execute, packages, paths, serial } = options;
+  const main = await installedPackage({ ...options, packageName: packages.appId });
+  const test = await installedPackage({ ...options, packageName: packages.testAppId });
   const command = ['-P', adbPort, '-s', serial, 'shell'];
   const runners = await checked(execute, paths.adbPath, [...command, 'pm', 'list', 'instrumentation'],
     commandOptions(env, 'capture_runner_query_timeout', 30_000), 'installed-instrumentation');
   const matches = String(runners.stdout).split(/\r?\n/u).map((line) => line.trim())
-    .filter((line) => line === CAPTURE_ANNOTATION_RUNNER_IDENTITY);
+    .filter((line) => line === packages.runnerIdentity);
   if (matches.length !== 1) {
     throw captureAnnotationFailure('Required capture annotation runner is not uniquely registered', 'installed-instrumentation');
   }
   const inventory = await checked(execute, paths.adbPath, [
     ...command, 'am', 'instrument', '-w', '-r', '-e', 'log', 'true',
-    '-e', 'class', CAPTURE_ANNOTATION_TEST_CLASS_NAME, CAPTURE_ANNOTATION_TEST_RUNNER
+    '-e', 'class', CAPTURE_ANNOTATION_TEST_CLASS_NAME, packages.runner
   ], commandOptions(env, 'capture_test_inventory_timeout', 60_000), 'installed-test-inventory');
   const methods = String(inventory.stdout).split(/\r?\n/u)
     .filter((line) => line.startsWith('INSTRUMENTATION_STATUS: test='))
@@ -106,12 +105,12 @@ function auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, t
   } finally { database?.close(); }
 }
 
-async function cleanupInstalledTest({ adbPort, env, execute, paths, serial }) {
+async function cleanupInstalledTest({ adbPort, env, execute, packages, paths, serial }) {
   const forceStop = await checked(execute, paths.adbPath,
-    ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
+    ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', packages.appId],
     commandOptions(env, 'capture_cleanup_timeout', 30_000), 'capture-cleanup');
   const uninstall = await checked(execute, paths.adbPath,
-    ['-P', adbPort, '-s', serial, 'uninstall', CAPTURE_ANNOTATION_TEST_APP_ID],
+    ['-P', adbPort, '-s', serial, 'uninstall', packages.testAppId],
     commandOptions(env, 'capture_cleanup_timeout', 60_000), 'capture-cleanup');
   if (!/^Success\s*$/mu.test(uninstall.stdout)) {
     throw captureAnnotationFailure('Test APK cleanup did not report Success', 'capture-cleanup', uninstall);
@@ -120,11 +119,12 @@ async function cleanupInstalledTest({ adbPort, env, execute, paths, serial }) {
 }
 
 export async function runA5CaptureAnnotation({
-  adbPort, auditDatabase = auditCaptureAnnotationDatabase, buildIdentity, env,
+  adbPort, appId, auditDatabase = auditCaptureAnnotationDatabase, buildIdentity, env,
   evidenceRoot, execute, fsApi = fs, openDatabase = openReadonlySqliteDatabaseSync,
   paths, protectData, serial
 }) {
   fsApi.mkdirSync(evidenceRoot, { recursive: true });
+  const packages = captureAnnotationPackages(appId);
   const artifacts = captureAnnotationArtifactPaths(evidenceRoot);
   const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
   const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
@@ -138,25 +138,25 @@ export async function runA5CaptureAnnotation({
   let proof;
   try {
     output.push((await checked(execute, paths.adbPath,
-      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
+      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', packages.appId],
       commandOptions(env, 'capture_quiesce_timeout', 30_000), 'capture-quiesce')).output);
     output.push((await installApk({ adbPort, env, execute, filePath: builtApks.main.filePath,
       paths, serial, testOnly: false })).output);
     output.push((await installApk({ adbPort, env, execute, filePath: builtApks.test.filePath,
       paths, serial, testOnly: true })).output);
     testInstalled = true;
-    const scenario = await requireInstalledScenario({ adbPort, env, execute, paths, serial });
+    const scenario = await requireInstalledScenario({ adbPort, env, execute, packages, paths, serial });
     const instrumentation = await checked(execute, paths.adbPath, [
       '-P', adbPort, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'expectedValue', buildIdentity, '-e', 'timeoutMs', '30000',
-      '-e', 'class', CAPTURE_ANNOTATION_TEST_CLASS, CAPTURE_ANNOTATION_TEST_RUNNER
+      '-e', 'class', CAPTURE_ANNOTATION_TEST_CLASS, packages.runner
     ], commandOptions(env, 'capture_instrumentation_timeout', 3 * 60_000), 'instrumentation');
     output.push(instrumentation.output);
     const evidence = parseCaptureAnnotationInstrumentation(instrumentation.stdout, buildIdentity);
     writeJson(fsApi, artifacts['capture-annotation-receipt.json'], evidence.receipt);
     writeJson(fsApi, artifacts['capture-annotation-semantic-snapshot.json'], evidence.semanticSnapshot);
     await checked(execute, paths.adbPath,
-      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', CAPTURE_ANNOTATION_APP_ID],
+      ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', packages.appId],
       commandOptions(env, 'capture_quiesce_timeout', 30_000), 'capture-quiesce');
     output.push((await protectData('backup', snapshotManifest, snapshotRoot)).output);
     const audit = auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token: buildIdentity });
@@ -168,7 +168,7 @@ export async function runA5CaptureAnnotation({
   let cleanup = { appForceStopped: false, testPackageRemoved: false };
   if (testInstalled) {
     cleanup = {
-      ...(await cleanupInstalledTest({ adbPort, env, execute, paths, serial })),
+      ...(await cleanupInstalledTest({ adbPort, env, execute, packages, paths, serial })),
       auditSnapshotRemoved: true
     };
   }

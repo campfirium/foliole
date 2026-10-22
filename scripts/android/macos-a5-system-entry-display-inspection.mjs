@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 
-const APP_ID = 'com.campfirium.foliole.android';
-const RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
+import { macosA5AppId } from './macos-a5-app-identity.mjs';
+
 const TEST_CLASS = `com.foliole.android.FolioleCompanionSystemEntryDisplayNameTest#displaysHydratedInboxNameAfterRestart`;
 
 function receipt(output) {
@@ -32,6 +32,7 @@ export async function inspectA5SystemEntryDisplayName({
     paths.buildRoot, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'
   );
   const options = { env, timeoutCode: 'system_entry_display_timeout', timeoutMs: 3 * 60_000 };
+  const testAppId = `${macosA5AppId(env)}.test`;
   fs.mkdirSync(evidenceRoot, { recursive: true });
   let installed = false;
   try {
@@ -49,7 +50,7 @@ export async function inspectA5SystemEntryDisplayName({
       '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
       '-e', 'class', TEST_CLASS,
       ...textExtras,
-      RUNNER
+      `${testAppId}/androidx.test.runner.AndroidJUnitRunner`
     ], options, 'System entry display instrumentation');
     if (!/^INSTRUMENTATION_CODE: -1$/mu.test(result.stdout)) {
       throw Object.assign(new Error('System entry display instrumentation did not finish.'), { result });
@@ -62,7 +63,7 @@ export async function inspectA5SystemEntryDisplayName({
     return { actionReceipt, manifestPath };
   } finally {
     if (installed) await checked(execute, paths.adb, [
-      '-s', serial, 'uninstall', `${APP_ID}.test`
+      '-s', serial, 'uninstall', testAppId
     ], options, 'System entry test cleanup');
   }
 }

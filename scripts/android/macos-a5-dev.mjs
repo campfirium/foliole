@@ -16,6 +16,9 @@ import {
   dispatchMacosA5Action, macosA5ErrorEvidence
 } from './macos-a5-action-dispatch.mjs';
 import { macosA5ActionEnv } from './macos-a5-extended-actions.mjs';
+import {
+  macosA5AppId, macosA5IdentityEnv, resolveMacosA5Identity
+} from './macos-a5-app-identity.mjs';
 import { runMacosA5Cli } from './macos-a5-cli.mjs';
 import { recordA5PackageIdentity } from './macos-a5-package-identity.mjs';
 import {
@@ -42,7 +45,6 @@ import {
 export { macosA5GradleEnv, macosA5Paths } from './macos-a5-runtime-paths.mjs';
 
 export const A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.campfirium.foliole.android';
 
 export function assertFixedA5(paths) {
   checked(paths.adb, ['start-server']);
@@ -55,11 +57,11 @@ export function assertFixedA5(paths) {
 }
 
 function readiness(paths) {
-  runMacosA5CaptureReadiness(checked, paths, A5_SERIAL, APP_ID);
+  runMacosA5CaptureReadiness(checked, paths, A5_SERIAL, macosA5AppId());
 }
 
 function pairingReadiness(paths) {
-  runMacosA5PairingReadiness(checked, paths, A5_SERIAL, APP_ID);
+  runMacosA5PairingReadiness(checked, paths, A5_SERIAL, macosA5AppId());
 }
 
 export function build(paths, run = checked, onStage = () => {}, env = macosA5GradleEnv()) {
@@ -78,7 +80,7 @@ export function build(paths, run = checked, onStage = () => {}, env = macosA5Gra
   }
 }
 
-function launchAndVerify(paths, applicationId = APP_ID) {
+function launchAndVerify(paths, applicationId = macosA5AppId()) {
   const component = `${applicationId}/com.foliole.android.MainActivity`;
   checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', component]);
   checked(process.execPath, [
@@ -90,7 +92,7 @@ function launchAndVerify(paths, applicationId = APP_ID) {
 
 async function deploy(
   paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build,
-  applicationId = APP_ID
+  applicationId = macosA5AppId()
 ) {
   assertFixedA5(paths);
   buildAction(paths);
@@ -113,7 +115,7 @@ export async function protectData(paths, env, mode, manifest, backupRoot) {
   if (!backupRoot) throw new Error('Transient Android snapshot root is required.');
   const result = await execute(process.execPath, [
     path.join(paths.buildRoot, 'scripts/android/android-device-data-protection.mjs'),
-    '--mode', mode, '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID,
+    '--mode', mode, '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', macosA5AppId(env),
     '--backup-root', backupRoot, '--manifest', manifest
   ], { env, timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000 });
   if (result.code !== 0) throw Object.assign(new Error(`Data protection ${mode} failed`), { result });
@@ -133,7 +135,7 @@ export async function captureAnnotation(
   const { runA5CaptureAnnotation } = await import('./android-a5-capture-annotation-action.mjs');
   let failure;
   const result = await runA5CaptureAnnotation({
-    adbPort: '5037', buildIdentity: runId, env, evidenceRoot, execute, paths: {
+    adbPort: '5037', appId: macosA5AppId(), buildIdentity: runId, env, evidenceRoot, execute, paths: {
       adbPath: paths.adb, buildRoot: paths.buildRoot
     },
     protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
@@ -150,9 +152,13 @@ export async function captureAnnotation(
 }
 
 export async function runMacosA5Action(
-  action, repoRoot = process.cwd(), { formal = false, revision } = {}
+  action, repoRoot = process.cwd(), { formal = false, identity, revision } = {}
 ) {
   const actionContract = assertRegisteredMacosA5Action(action);
+  // One CLI run owns one application identity; child runners inherit it through the environment.
+  const identityEnv = macosA5IdentityEnv(process.env, resolveMacosA5Identity(action, identity));
+  for (const key of Object.keys(process.env)) if (!(key in identityEnv)) delete process.env[key];
+  Object.assign(process.env, identityEnv);
   if (formal) assertFormalMacosA5Action(actionContract);
   if (revision && (!formal || actionContract.formalSourceClass !== 'frozen-build')) {
     throw new Error('--revision is only supported for formal build actions.');
@@ -172,9 +178,6 @@ export async function runMacosA5Action(
     const paths = macosA5Paths(context);
     const actionEnv = macosA5GradleEnv({
       ...macosA5ActionEnv(process.env, formal, actionContract.requiresHiddenDesktopRuntime),
-      ...(action === 'deploy-acceptance' ? {
-        FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: 'com.campfirium.foliole.android.acceptance'
-      } : {}),
       FOLIOLE_SHARED_CACHE_ROOT: sharedCacheRoot
     });
     assertSafeMacosA5Environment(paths);
@@ -192,7 +195,7 @@ export async function runMacosA5Action(
     if (receipt && actionContract.mutatesFixedA5 && actionContract.requiresDataProtection !== false) {
       markFormalA5Stage(receipt, 'data-protection');
       assertFixedA5(paths);
-      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
+      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', macosA5AppId()]);
       await runProtection('backup', path.join(path.dirname(receipt.path), 'device-baseline.json'),
         path.join(context.deviceBackupRoot, context.runId));
     }

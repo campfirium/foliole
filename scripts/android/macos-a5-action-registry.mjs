@@ -4,7 +4,6 @@ const ACTION_OVERRIDES = Object.freeze({
   'bundle-release': { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'unsigned-release-bundle', mutatesFixedA5: false },
   deploy: { requiresDataProtection: false },
-  'deploy-acceptance': { requiresDataProtection: false },
   'database-performance': { requiresDataProtection: false },
   build: { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'accepted-source-archive', mutatesFixedA5: false },
@@ -51,6 +50,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'system-entry-sync': { requiresHiddenDesktopRuntime: true },
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-now': { formalSourceClass: 'ordinary-only' },
+  'reset-test-app': { formalSourceClass: 'ordinary-only' },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });
@@ -63,7 +63,6 @@ const FORMAL_EVIDENCE = Object.freeze({
   'clear-app-data': { kind: 'run-json', root: 'a5-clear-app-data' },
   'database-performance': { kind: 'run-directory', root: 'companion-database-performance' },
   deploy: { kind: 'run-directory', root: 'a5-deploy' },
-  'deploy-acceptance': { kind: 'run-directory', root: 'a5-deploy' },
   'device-profile': { kind: 'run-directory', root: 'a5-device-profile' },
   'hidden-desktop-status': { kind: 'run-json', root: 'a5-hidden-desktop-status' },
   'leave-sync-group': { kind: 'run-directory', root: 'a5-sync-group-maintenance' },

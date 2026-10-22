@@ -2,11 +2,11 @@
 
 import path from 'node:path';
 
+import { macosA5AppId } from './macos-a5-app-identity.mjs';
 import {
   runMacosA5InstrumentationMechanics
 } from './macos-a5-sync-group-maintenance-action.mjs';
 
-const APP_ID = 'com.campfirium.foliole.android';
 const TEST_CLASS = `com.foliole.android.FolioleCompanionJoinRequestProviderTest`;
 
 function validateProviderAcceptance({ evidencePath, stdout }) {
@@ -26,8 +26,9 @@ export async function runMacosA5SyncGroupJoinPrepareEntry(args, dependencies = {
     args.paths.artifactsRoot, 'a5-sync-group-join-prepare', buildIdentity
   );
   const backupRoot = path.join(args.paths.deviceBackupRoot, buildIdentity);
+  const appId = macosA5AppId(args.env);
   args.markMutationBoundary?.();
-  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
+  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', appId]);
   await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'), backupRoot);
   const result = await mechanics({
     buildIdentity, env: args.env, evidenceRoot, execute: args.execute,
@@ -35,10 +36,10 @@ export async function runMacosA5SyncGroupJoinPrepareEntry(args, dependencies = {
     validateInstrumentation: validateProviderAcceptance
   });
   process.stdout.write(result.output);
-  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
+  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', appId]);
   await args.protectData('check', path.join(evidenceRoot, 'baseline.json'), backupRoot);
   args.checked(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/com.foliole.android.MainActivity`
+    '-s', args.serial, 'shell', 'am', 'start', '-n', `${appId}/com.foliole.android.MainActivity`
   ]);
   console.log(`[macos-a5-dev] sync-group-join-prepare evidence=${result.evidencePath}`);
   return result;

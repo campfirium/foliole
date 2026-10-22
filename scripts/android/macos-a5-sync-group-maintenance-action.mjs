@@ -7,8 +7,8 @@ import {
 } from './macos-a5-acceptance-package-cleanup.mjs';
 
 import { saveA5InstrumentationFailure } from './macos-a5-instrumentation-failure.mjs';
+import { A5_DAILY_APP_ID, macosA5AppId } from './macos-a5-app-identity.mjs';
 
-const APP_ID = 'com.campfirium.foliole.android';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
 
 function executionFailure(message, details = {}) {
@@ -74,13 +74,14 @@ function instrumentationReportedFailure(stdout) {
 }
 
 export async function runMacosA5InstrumentationMechanics({
-  appId = APP_ID, buildIdentity, env, evidenceRoot, execute, installMain = true,
+  appId: requestedAppId, buildIdentity, env, evidenceRoot, execute, installMain = true,
   expectedGroupId, expectedGroupTag, instrumentationArgs = [],
   instrumentationOwnsActivity = false, needsTransport = false, observeConcurrently = false,
   observeWhileTransportOpen, paths,
   releaseAfterObservation = false, restartApp = false, serial, testClass,
   testClassPrefix = 'com.foliole.android', validateInstrumentation
 }) {
+  const appId = requestedAppId ?? macosA5AppId(env);
   if (typeof testClass !== 'string' || !testClass.startsWith(`${testClassPrefix}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
       missingFact: 'android_instrumentation_target'
@@ -105,9 +106,9 @@ export async function runMacosA5InstrumentationMechanics({
     if (needsTransport) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'am', 'force-stop', appId],
       options, 'transport app stop')).output);
-    if (installMain && appId !== APP_ID) output.push((await removeOwnedAcceptanceApplication(
-      execute, paths, serial, appId, options
-    )).output);
+    if (installMain && appId !== A5_DAILY_APP_ID && appId !== macosA5AppId(env)) {
+      output.push((await removeOwnedAcceptanceApplication(execute, paths, serial, appId, options)).output);
+    }
     if (installMain) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'install', '-r', paths.apk], options, 'main install')).output);
     output.push((await checked(execute, paths.adb,
@@ -157,7 +158,7 @@ export async function runMacosA5InstrumentationMechanics({
       }
       observation = first.result;
       output.push((await checked(execute, paths.adb,
-        ['-s', serial, 'shell', 'am', 'force-stop', APP_ID],
+        ['-s', serial, 'shell', 'am', 'force-stop', appId],
         options, 'instrumentation controlled stop')).output);
       instrumentation = await instrumentationTask;
     } else {

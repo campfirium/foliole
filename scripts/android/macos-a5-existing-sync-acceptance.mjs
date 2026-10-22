@@ -3,6 +3,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
+import { macosA5AppId } from './macos-a5-app-identity.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
@@ -11,8 +12,9 @@ import {
   assertBidirectionalConvergence, factObservation
 } from '../sync-group/sync-scenario-predicate.mjs';
 
-const APP_ID = 'com.campfirium.foliole.android';
-const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
+function component(context) {
+  return `${macosA5AppId(context.env)}/com.foliole.android.MainActivity`;
+}
 
 function activeMemberIds(overview) {
   return (overview.sync_group?.members ?? [])
@@ -81,15 +83,15 @@ async function checkedDeviceAction(context, args) {
 export async function collectStoppedAndroidSnapshot(
   context, collectSnapshot = collectAndroidDeviceSnapshot
 ) {
-  await checkedDeviceAction(context, ['shell', 'am', 'force-stop', APP_ID]);
+  await checkedDeviceAction(context, ['shell', 'am', 'force-stop', macosA5AppId(context.env)]);
   try {
     return await collectSnapshot({
-      adb: context.paths.adb, appId: APP_ID, includeAttachments: false,
+      adb: context.paths.adb, appId: macosA5AppId(context.env), includeAttachments: false,
       includeEvents: false, serial: context.serial, tables: ['nodes'],
       databaseInspector: inspectPairSyncRecoveryWorkspace
     });
   } finally {
-    await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', COMPONENT]);
+    await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', component(context)]);
   }
 }
 
@@ -170,8 +172,8 @@ export async function proveMacosA5ExistingSyncContinuation({
     inspectFinal: (...args) => inspectFinal(...args, context),
     openDesktopSession: () => openMacosPairSyncDesktopSession(sessionOptions),
     restartAndroid: async () => {
-      await checkedDeviceAction(context, ['shell', 'am', 'force-stop', APP_ID]);
-      await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', COMPONENT]);
+      await checkedDeviceAction(context, ['shell', 'am', 'force-stop', macosA5AppId(env)]);
+      await checkedDeviceAction(context, ['shell', 'am', 'start', '-W', '-n', component(context)]);
     },
     waitForAndroidFact: (factId) => waitUntil('Automatic Mac-to-Android sync',
       () => collectStoppedAndroidSnapshot(context), (snapshot) => hasDesktopFact(snapshot, factId)),

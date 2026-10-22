@@ -7,9 +7,9 @@ import {
   classifyDepartedCredentialState, DEPARTED_PRESERVED_HISTORY
 } from './macos-a5-departed-credential-state.mjs';
 import { hasProtectedPendingSyncState } from './macos-a5-pending-sync-state.mjs';
+import { macosA5AppId } from './macos-a5-app-identity.mjs';
 
 const A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.campfirium.foliole.android';
 
 function evidence(command, args, options = {}, run = spawnSync) {
   const result = run(command, args, { encoding: 'utf8', ...options });
@@ -51,7 +51,7 @@ export function assertMacosA5ProductBootstrap(before, after) {
 }
 
 function inspectMacosA5SyncState(paths, run) {
-  const common = ['--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', APP_ID];
+  const common = ['--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', macosA5AppId()];
   const pairing = evidence(process.execPath, [
     path.join(paths.buildRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs'),
     ...common
