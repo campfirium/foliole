@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const preloadPath = typeof __filename === 'string' ? __filename : null;
 
+const IPC_ATTACHMENT_RESOURCE_AVAILABLE_EVENT_CHANNEL = 'foliole:attachment-resource-available';
 const IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL = 'foliole:database-backups-changed';
 const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
@@ -31,7 +32,8 @@ const SUBSCRIBABLE_CHANNELS = new Set([
   IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, IPC_MENU_EVENT_CHANNEL, IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL, IPC_READWISE_READER_IMPORT_PROGRESS_EVENT_CHANNEL,
   IPC_SEARCH_INDEX_REBUILD_STATUS_EVENT_CHANNEL, IPC_SEARCH_ALIASES_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL, IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL, IPC_WINDOW_RESIZED_EVENT_CHANNEL, IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL,
   IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL, IPC_SYNC_GROUP_OVERVIEW_CHANGED_CHANNEL, IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL, IPC_EXTERNAL_DOCUMENT_FILE_OPENED_CHANNEL, IPC_ASSISTANT_TURN_EVENT_CHANNEL,
-  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL, IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL
+  IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL, IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL, IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL,
+  IPC_ATTACHMENT_RESOURCE_AVAILABLE_EVENT_CHANNEL
 ]);
 
 const desktopDebugProbeEnabled = process.env.FOLIOLE_ENABLE_DESKTOP_DEBUG_PROBE === '1'
@@ -201,12 +203,12 @@ function subscribe(channel, handler) {
       });
       return;
     }
-    if (channel === IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL) {
+    if (channel === IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL || channel === IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL) {
       handler(payload);
       return;
     }
-    if (channel === IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL) {
-      handler(payload);
+    if (channel === IPC_ATTACHMENT_RESOURCE_AVAILABLE_EVENT_CHANNEL) {
+      if (typeof payload === 'string') handler(payload);
       return;
     }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
@@ -235,6 +237,7 @@ function subscribe(channel, handler) {
 const electronApi = {
   invoke: (command, args) => ipcRenderer.invoke(IPC_INVOKE_CHANNEL, { command, args }),
   logDiagnosticEvent: (input) => ipcRenderer.invoke(IPC_DIAGNOSTIC_LOG_CHANNEL, input),
+  onAttachmentResourceAvailable: (handler) => subscribe(IPC_ATTACHMENT_RESOURCE_AVAILABLE_EVENT_CHANNEL, handler),
   onDatabaseBackupsChanged: (handler) => subscribe(IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL, () => handler()),
   onManagedInboxUpdated: (handler) => subscribe(IPC_MANAGED_INBOX_UPDATED_EVENT_CHANNEL, handler),
   onGlobalCaptureNavigate: (handler) => subscribe(IPC_GLOBAL_CAPTURE_NAVIGATE_CHANNEL, handler),

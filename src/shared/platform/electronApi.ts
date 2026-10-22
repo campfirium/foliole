@@ -85,6 +85,7 @@ export interface ElectronAPI {
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
   logDiagnosticEvent?: (input: DiagnosticLogPayload) => Promise<void>;
+  onAttachmentResourceAvailable?: (handler: (storageKey: string) => void) => () => void;
   onGlobalCaptureNavigate?: (handler: (payload: GlobalCaptureNavigatePayload) => void) => () => void;
   onManagedInboxUpdated: (handler: (payload: ManagedInboxUpdatedPayload | string) => void) => () => void;
   onNativeMenuCommand: (handler: (commandId: string) => void) => () => void;

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { withAttachmentFileLease } from './attachmentFileLease.js';
+import { setAttachmentPublishedListener } from './attachmentPublishedEvents.js';
 import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
 import { publishImmutableAttachment } from './publishImmutableAttachment.js';
 
@@ -78,4 +79,24 @@ it.each(['EEXIST', 'EPERM'])('checks a competing destination after rename return
     })).rejects.toThrow('canonical_attachment_hash_mismatch');
     expect(await readFile(destination, 'utf8')).toBe('corrupt competing content');
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+it('announces a storage key only when its verified bytes become newly visible', async () => {
+  await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-published-'));
+  const bytes = Buffer.from('announced attachment');
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  const published = vi.fn();
+  setAttachmentPublishedListener(published);
+  try {
+    await expect(publishImmutableAttachment(path.join(root, `${hash}.pdf`), hash, temporary => writeFile(temporary, 'wrong')))
+      .rejects.toThrow('canonical_attachment_hash_mismatch');
+    expect(published).not.toHaveBeenCalled();
+    await publishImmutableAttachment(path.join(root, `${hash}.pdf`), hash, temporary => writeFile(temporary, bytes));
+    await publishImmutableAttachment(path.join(root, `${hash}.pdf`), hash, temporary => writeFile(temporary, bytes));
+    expect(published.mock.calls).toEqual([[`${hash}.pdf`]]);
+  } finally {
+    setAttachmentPublishedListener(null);
+    await rm(root, { recursive: true, force: true });
+  }
 });

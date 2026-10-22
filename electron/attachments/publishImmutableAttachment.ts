@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { attachmentSourceVerification } from '../../lib/core/sync/attachmentSourceVerification.js';
 
+import { notifyAttachmentPublished } from './attachmentPublishedEvents.js';
+
 /** Only a fully written, verified inode becomes visible at a content-addressed path. */
 export async function publishImmutableAttachment(destination: string, expectedHash: string,
   write: (temporary: string) => Promise<void>) {
@@ -31,7 +33,11 @@ async function verify(file: string, expected: string) {
 /** The caller has verified the complete temporary file before publishing it. */
 export async function renameVerifiedAttachment(temporary: string, destination: string, expectedHash: string) {
   attachmentSourceVerification.invalidate(path.basename(destination));
-  try { await rename(temporary, destination); return true; }
+  try {
+    await rename(temporary, destination);
+    notifyAttachmentPublished(path.basename(destination));
+    return true;
+  }
   catch (error) {
     if (!(error instanceof Error) || !('code' in error) || !['EEXIST', 'EPERM'].includes(String(error.code))) throw error;
     await verify(destination, expectedHash);

@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import type { BrowserWindow } from 'electron';
 
+import { installAttachmentAvailableWindowEvents } from './attachments/attachmentAvailableWindowEvents.js';
 import { registerAttachmentProtocol } from './attachments/attachmentProtocol.js';
 import { registerExtDocImageProtocol } from './attachments/extDocImageProtocol.js';
 import { configureRemoteImagePipelineCacheRoot } from './attachments/remoteImagePipeline.js';
@@ -81,6 +82,7 @@ export async function startInitialMainWindow(
   try {
     configureRemoteImagePipelineCacheRoot(path.join(resolveAppPaths().app_cache_dir, 'remote-images'));
     registerAttachmentProtocol();
+    installAttachmentAvailableWindowEvents();
     registerExtDocImageProtocol();
     registerRemoteImageProtocol();
   } catch (error) {
