@@ -9,9 +9,9 @@ const version = suffix => `ver_00000000-0000-4000-8000-000000000${suffix}`;
 const acceptedDeviceId = JSON.stringify([1, 'group', 'phone-anchor', '/phone.db']);
 function evidence() {
   const snapshot = parseSyncPackSnapshot(JSON.stringify([{
-    capture_current: version('148'), capture_versions: 2, capture_body: 'Mac successor body', capture_parent: version('146'),
+    capture_current: version('148'), capture_versions: 1, capture_body: 'Mac successor body', capture_parent: version('146'),
     restore_current: version('147'), restore_body: 'Restore body', restore_parent: version('145'),
-    restore_deleted_at: null, restore_versions: 2, tombstone_count: 0
+    restore_deleted_at: null, restore_versions: 1, tombstone_count: 0
   }]));
   const gates = Object.fromEntries([
     'existing-highlight-edit', 'quick-capture', 'selection-annotation', 'topic-content-edit', 'trash-restore'
@@ -60,6 +60,6 @@ it.each(['capture_body', 'capture_parent', 'restore_body', 'restore_parent', 'ca
 it('rejects missing provider persistence and changed restart state', () => {
   const { first, second, snapshot, observations } = evidence();
   expect(() => verifySyncPackAcceptance(first, second, snapshot, snapshot, {})).toThrow('evidence is incomplete');
-  expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, capture_versions: 3 }, observations))
+  expect(() => verifySyncPackAcceptance(first, second, snapshot, { ...snapshot, capture_versions: 2 }, observations))
     .toThrow('evidence is incomplete');
 });

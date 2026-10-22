@@ -5,7 +5,6 @@ import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
-import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContract.js';
 import { flushRequestSyncInventoryDigests } from '../sync/framedSyncInventoryDigest.js';
 import { readFramedSyncInventoryEntry } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
@@ -14,11 +13,13 @@ import { createCompanionDatabase, migrateCompanionDatabase } from './companionDa
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from './migrations.js';
 
 const STALE = '00'.repeat(32);
+/** The migrations that dropped every cached digest once history left the comparison hash. */
+const DIGEST_RESET_VERSION = { companion: 95, desktop: 167 } as const;
 
 it.each(['desktop', 'companion'])('rebuilds %s node digests cached before history left the comparison hash', async host => {
   const sqlite = new Database(':memory:');
   const db = createBetterSqliteDbPort(sqlite);
-  const previous = host === 'desktop' ? DATABASE_SCHEMA_VERSION - 1 : COMPANION_DATABASE_VERSION - 1;
+  const previous = DIGEST_RESET_VERSION[host as keyof typeof DIGEST_RESET_VERSION] - 1;
   try {
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, previous);
@@ -39,6 +40,6 @@ it.each(['desktop', 'companion'])('rebuilds %s node digests cached before histor
     await db.transaction(tx => flushRequestSyncInventoryDigests(tx));
     const entry = await readFramedSyncInventoryEntry(db, { globalId: 'node-1', objectType: 'node' });
     expect(cached()).toBe(bytesToHex(entry!.sharedStateHash));
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(previous + 1);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(host === 'desktop' ? DATABASE_SCHEMA_VERSION : previous + 1);
   } finally { sqlite.close(); }
 });

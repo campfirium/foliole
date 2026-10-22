@@ -52,7 +52,8 @@ export function verifySyncPackAcceptance(
   const secondPassed = secondBridge.phase === 'reapplied' &&
     secondBridge.roundtrip?.push?.pushedObjectIds?.length === 0 && gatesOpen(secondBridge.roundtrip?.gates);
   const version = suffix => `ver_00000000-0000-4000-8000-000000000${suffix}`;
-  const snapshotPassed = firstSnapshot?.capture_versions === 2 && firstSnapshot?.restore_versions === 2 &&
+  // Each superseded parent has no body and every member has passed it, so the round reclaims it and keeps the edge.
+  const snapshotPassed = firstSnapshot?.capture_versions === 1 && firstSnapshot?.restore_versions === 1 &&
     firstSnapshot?.capture_current === version('148') && firstSnapshot?.capture_parent === version('146') &&
     firstSnapshot?.capture_body === 'Mac successor body' && firstSnapshot?.restore_body === 'Restore body' &&
     firstSnapshot?.restore_current === version('147') && firstSnapshot?.restore_parent === version('145') &&
