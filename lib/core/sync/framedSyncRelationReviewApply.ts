@@ -29,10 +29,12 @@ function decodeFact(fact: CanonicalFact): DecodedFact {
   throw new Error(`framed_sync_relation_review_fact_kind_invalid:${fact.kind}`);
 }
 
-async function assertVersionOwner(tx: DbPort, versionId: string, objectId: string) {
+async function assertVersionOwner(tx: DbPort, versionId: string, objectId: string, reclaimable = false) {
   const [version] = await tx.query<{ object_id: string }>(
     'SELECT object_id FROM node_sync_versions WHERE version_id = ? LIMIT 1', [versionId]
   );
+  // A parent the group already reclaimed is a valid gap; the edge still records the original identity.
+  if (!version && reclaimable) return;
   if (!version) throw new Error(`framed_sync_parent_relation_version_missing:${versionId}`);
   if (version.object_id !== objectId) {
     throw new Error(`framed_sync_parent_relation_node_mismatch:${versionId}`);
@@ -41,7 +43,7 @@ async function assertVersionOwner(tx: DbPort, versionId: string, objectId: strin
 
 async function applyParent(tx: DbPort, factId: string, row: FramedSyncParentRelationSource) {
   await assertVersionOwner(tx, row.version_id, row.object_id);
-  await assertVersionOwner(tx, row.parent_version_id, row.object_id);
+  await assertVersionOwner(tx, row.parent_version_id, row.object_id, true);
   const existing = await tx.query<ParentRow>(
     `SELECT version.object_id, parent.version_id, parent.parent_version_id, parent.ordinal
      FROM node_sync_version_parents parent

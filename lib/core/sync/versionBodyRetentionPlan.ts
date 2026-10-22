@@ -46,6 +46,8 @@ export function lineageAncestors(rows: ReadonlyMap<string, ManagedBodyVersion>) 
       if (!row) return null;
       visiting.add(frame.id);
       const parent = row.parentVersionIds[frame.index++];
+      // A reclaimed parent ends the lineage there; it is a gap, not a broken chain.
+      if (parent !== undefined && !rows.has(parent)) continue;
       if (parent !== undefined) {
         if (visiting.has(parent)) return null;
         if (!complete.has(parent)) stack.push({ id: parent, index: 0 });
@@ -70,7 +72,7 @@ class LazyAncestors extends Map<string, Set<string>> {
       const current = pending.pop()!;
       if (found.has(current)) continue;
       found.add(current);
-      pending.push(...this.rows.get(current)!.parentVersionIds);
+      pending.push(...this.rows.get(current)!.parentVersionIds.filter(parent => this.rows.has(parent)));
     }
     if (this.size >= MAX_CACHED_ANCESTOR_SETS) this.delete(this.keys().next().value!);
     this.set(id, found);

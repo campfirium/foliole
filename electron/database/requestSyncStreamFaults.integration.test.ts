@@ -16,7 +16,7 @@ import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js'
 
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
-type Fault = 'truncated' | 'missing-body' | 'corrupt-body' | 'duplicate-fact' | 'missing-parent' |
+type Fault = 'truncated' | 'missing-body' | 'corrupt-body' | 'duplicate-fact' | 'cyclic-parent' |
   'wrong-peer' | 'wrong-protocol' | 'corrupt-ciphertext' | 'missing-frame' |
   'utf8-truncated' | 'utf8-bad-continuation' | 'body-gap' | 'body-oversized' |
   'body-overlap' | 'empty-body-extra' | 'body-end-extra';
@@ -27,7 +27,7 @@ const groupKey = new Uint8Array(32).fill(9);
 const errors: Record<Fault, string | typeof TypeError> = {
   truncated: 'request_sync_object_incomplete', 'missing-body': 'request_sync_object_incomplete',
   'corrupt-body': 'request_sync_body_identity_mismatch', 'duplicate-fact': 'request_sync_body_incomplete',
-  'missing-parent': 'node_version_missing_parents:missing', 'wrong-peer': 'session_context_mismatch',
+  'cyclic-parent': 'node_version_graph_cycle', 'wrong-peer': 'session_context_mismatch',
   'wrong-protocol': 'framed_sync_protocol_version_unsupported',
   'corrupt-ciphertext': 'frame_authentication_failed', 'missing-frame': 'frame_sequence_not_contiguous',
   'utf8-truncated': TypeError, 'utf8-bad-continuation': TypeError,
@@ -36,7 +36,7 @@ const errors: Record<Fault, string | typeof TypeError> = {
   'body-end-extra': 'request_sync_body_chunk_invalid'
 };
 
-it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', 'missing-parent',
+it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', 'cyclic-parent',
   'wrong-peer', 'wrong-protocol', 'corrupt-ciphertext', 'missing-frame', 'utf8-truncated',
   'utf8-bad-continuation', 'body-gap', 'body-oversized', 'body-overlap', 'empty-body-extra', 'body-end-extra'])('rejects %s without applying an object and removes its request files', async fault => {
   await mkdir('.tmp/artifacts', { recursive: true });
@@ -74,7 +74,8 @@ it.each<Fault>(['truncated', 'missing-body', 'corrupt-body', 'duplicate-fact', '
 });
 
 async function seed(files: RequestSyncFiles, fault: Fault) {
-  const parent = fault === 'missing-parent' ? textBranch('missing', 'Parent') : undefined;
+  // A reclaimed parent is a valid gap; a version naming itself as parent is a broken graph.
+  const parent = fault === 'cyclic-parent' ? textBranch('head', 'Parent') : undefined;
   const text = fault.startsWith('utf8-') ? 'x'.repeat(16 * 1024 - 1) + '😀' :
     fault === 'empty-body-extra' ? '' : fault === 'body-overlap' ? 'x'.repeat(FRAMED_SYNC_LIMITS.blobChunkBytes + 4) : 'Body';
   const projection = projectFramedSyncNodeRecord(textBranch('head', text, parent));

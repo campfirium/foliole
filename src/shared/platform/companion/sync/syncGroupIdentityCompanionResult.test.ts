@@ -9,6 +9,7 @@ vi.mock('./framed/companionRequestSyncResources.js', () => ({ continueCompanionR
 vi.mock('./framed/companionRequestSyncPeerState.js', () => ({ requireCompanionRequestSyncPeerState:
   (_group: string, device: string, epoch: string) => ({ sender_device_identity_key: device, library_epoch: epoch }) }));
 vi.mock('./syncGroupMemberStateStore.js', () => ({ loadCompanionSyncGroupMemberState: async () => ({ library_epoch: 'local-epoch' }) }));
+vi.mock('./companionSyncHistoryCollection', () => ({ collectCompanionSyncHistory: vi.fn(), recordCompanionCompletedSyncRound: vi.fn() }));
 vi.mock('./syncGroupStore', () => ({ loadCompanionSyncGroup: async () => ({ group_id: 'group', local_device_identity_key: 'local' }) }));
 vi.mock('./framed/companionSyncPeerRounds.js', () => ({
   withCompanionSyncPeerRound: async (_peer: string, run: (round: RequestSyncPeerRound, signal: AbortSignal) => Promise<unknown>) => {

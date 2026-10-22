@@ -20,6 +20,7 @@ import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
+import { collectDesktopSyncHistory, recordDesktopCompletedSyncRound } from './desktopSyncHistoryCollection.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { selectDesktopSyncUpstream } from './desktopSyncUpstream.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -98,6 +99,8 @@ async function continuePeerSync(
   );
   const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
   if (pendingConflicts.length && !adoption) return skipPeerSync(target, activity, 'watched_conflict');
+  // The peer's member state may already move the group line; reclaim first so reclaimed history is not offered back.
+  if (!memberState.restoreFromPeer && !adoption) await collectDesktopSyncHistory(target.group_id);
   const input = {
     localLibraryEpoch: memberState.localLibraryEpoch,
     peer: target,
@@ -107,16 +110,18 @@ async function continuePeerSync(
     peerRound,
     ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {})
   };
+  const startedAt = new Date().toISOString();
   const result = await runPeerSyncStage('sync_pack', () => continueDatabaseAndResources(input), target, activity);
-  if (result.complete) {
-    await runPeerSyncStage(
-      'member_state',
-      () => exchangeDesktopSyncGroupMemberState(target),
-      target,
-      activity
-    );
-  }
+  if (result.complete) await closeCompletedPeerSync(target, activity, startedAt, !memberState.restoreFromPeer);
   return { complete: result.complete, ...(result.dynamicBacklog ? { dynamicBacklog: true } : {}), attachmentProgress: result.attachmentProgress ?? 0, attachmentYielded: result.attachmentYielded };
+}
+
+/** The closing member state tells the peer this ordinary round completed, which may move the group line. */
+async function closeCompletedPeerSync(target: DesktopSyncGroupPeer, activity: DesktopSyncActivityContext | undefined,
+  startedAt: string, ordinary: boolean) {
+  if (ordinary) await recordDesktopCompletedSyncRound(target, startedAt);
+  await runPeerSyncStage('member_state', () => exchangeDesktopSyncGroupMemberState(target), target, activity);
+  await collectDesktopSyncHistory(target.group_id);
 }
 
 async function continueDatabaseAndResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]):

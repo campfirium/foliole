@@ -82,7 +82,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     } catch (error) {
       signal?.throwIfAborted();
       const detail = (error instanceof Error ? error.message : String(error)).replace(/^framed_sync_http_400:/u, '');
-      const badGraph = ['request_sync_current_version_unavailable', 'node_version_missing_parents:', 'node_version_graph_cycle', 'framed_sync_node_parent_cycle',
+      const badGraph = ['request_sync_current_version_unavailable', 'node_version_cross_object_parent:', 'node_version_graph_cycle', 'framed_sync_node_parent_cycle',
         'node_version_parent_identity_mismatch:'].some(prefix => detail.startsWith(prefix));
       const changed = detail === 'framed_sync_source_changed' || detail === 'framed_sync_difference_request_source_changed';
       if (!badGraph && !changed) throw error;

@@ -33,6 +33,8 @@ export async function beginSyncGroupLocalAdoption(db: DbPort, value: SyncGroupLo
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
   [SYNC_GROUP_LOCAL_ADOPTION_KEY, JSON.stringify(adoption), new Date().toISOString()]);
   await db.run('DELETE FROM sync_group_restore_events WHERE group_id = ?', [adoption.groupId]);
+  // Coverage claims about this device describe the library it is about to replace.
+  await db.run('DELETE FROM sync_group_metadata WHERE key = ?', [`sync_group_coverage:${adoption.groupId}`]);
   await db.run('DELETE FROM node_version_local_source_revisions');
   await db.run(`UPDATE node_version_local_proof_state SET library_epoch = ?, proof_revision = 0
     WHERE singleton_id = 1`, [adoption.libraryEpoch]);

@@ -23,7 +23,7 @@ async function storedParents(db: DbPort, nodeId: string) {
 
 export async function readRequestSyncNodeGraph(db: DbPort, nodeId: string) {
   const graph = new NodeVersionGraph(await storedParents(db, nodeId));
-  graph.assertComplete();
+  graph.assertAcyclic();
   return graph;
 }
 
@@ -40,8 +40,20 @@ async function objectGraph(db: DbPort, nodeId: string, records: readonly SyncNod
     parents.set(record.version_id, incoming);
   }
   const graph = new NodeVersionGraph(parents);
-  graph.assertComplete();
+  graph.assertAcyclic();
+  await assertNoForeignParents(db, graph);
   return graph;
+}
+
+/** A reclaimed parent is simply absent; a parent stored under another object is a broken identity. */
+async function assertNoForeignParents(db: DbPort, graph: NodeVersionGraph) {
+  const absent = [...new Set([...graph.parents.values()].flat())].filter(id => !graph.parents.has(id));
+  for (let offset = 0; offset < absent.length; offset += 400) {
+    const ids = absent.slice(offset, offset + 400);
+    const [foreign] = await db.query<{ version_id: string }>(`SELECT version_id FROM node_sync_versions
+      WHERE version_id IN (${ids.map(() => '?').join(', ')}) LIMIT 1`, ids);
+    if (foreign) throw new Error(`node_version_cross_object_parent:${foreign.version_id}`);
+  }
 }
 
 /** Validate before any object writes and bind ancestry queries to this transaction's object graph. */

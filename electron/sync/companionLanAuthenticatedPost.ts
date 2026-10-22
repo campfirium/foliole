@@ -14,6 +14,7 @@ import {
   SYNC_GROUP_MEMBER_STATE_PATH
 } from './desktopSyncGroupMemberState.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { collectDesktopSyncHistory } from './desktopSyncHistoryCollection.js';
 import { handleReadwiseGroupSetup, READWISE_GROUP_SETUP_PATH } from './readwiseGroupSetup.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH } from './readwiseOwnerStop.js';
 import { decryptWorkgroupRequestBodyWithCredential } from './workgroupHttpCrypto.js';
@@ -86,6 +87,8 @@ async function writeRouteResponse(args: {
   }
   try {
     const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
+    // A closing member state can move the group line; reclaim before answering so the peer sees the result.
+    if (applied.normalSyncReady && !applied.localExited) await collectDesktopSyncHistory(applied.state.group_id);
     writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
     await publishMemberStateEffects();
     if (applied.localExited) {

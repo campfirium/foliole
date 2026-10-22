@@ -42,10 +42,10 @@ it('preserves a legacy parent pointer to a retained identity without its body', 
     .toEqual({ parent_version_id: 'parent' });
 }));
 
-it('rejects a missing historical parent without inventing its identity, body or a dangling edge', () => scenario(async (source, target) => {
-  const before = business(target);
-  await expect(receive(source, target, [child])).rejects.toThrow('node_version_missing_parents:parent');
-  target.reopen(); expect(business(target)).toEqual(before);
+it('accepts a child whose historical parent was reclaimed without inventing that parent', () => scenario(async (source, target) => {
+  await receive(source, target, [child]); target.reopen();
+  expect(target.sqlite.prepare('SELECT version_id FROM node_sync_versions').pluck().all()).toEqual(['child']);
+  expect(target.sqlite.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('child body');
 }));
 
 it('requires the current body before accepting an object containing only ancestry', () => scenario(async (source, target) => {

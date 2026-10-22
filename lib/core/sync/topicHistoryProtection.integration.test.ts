@@ -66,11 +66,18 @@ it('keeps inherited alternatives when complete editor input uses a retired basel
   expect((await host.current()).alternative_bodies).toEqual(expect.arrayContaining(base.alternative_bodies!));
 });
 
-it.each(['missing identity', 'missing edge', 'cycle', 'wrong owner'])('does not reclaim an unproven graph: %s', async fault => {
+it.each(['missing identity', 'wrong owner'])('keeps the current text when an ancestor is absent from this node: %s', async fault => {
   const { host } = await history();
   if (fault === 'missing identity') host.sqlite.prepare("DELETE FROM node_sync_versions WHERE version_id = 'base'").run();
-  if (fault === 'missing edge') host.sqlite.prepare("DELETE FROM node_sync_version_parents WHERE version_id = 'head'").run();
   if (fault === 'wrong owner') host.sqlite.prepare("UPDATE node_sync_versions SET object_id = 'other' WHERE version_id = 'base'").run();
+  // A reclaimed ancestor is a gap in the lineage, not a reason to stop managing the retained bodies.
+  expect(await collectNodeVersionPayloads(host.db, 'topic')).toEqual({ released: 0, skipped: null });
+  expect((await host.current()).body_text).toBe('Current');
+});
+
+it.each(['missing edge', 'cycle'])('does not reclaim an unproven graph: %s', async fault => {
+  const { host } = await history();
+  if (fault === 'missing edge') host.sqlite.prepare("DELETE FROM node_sync_version_parents WHERE version_id = 'head'").run();
   if (fault === 'cycle') host.sqlite.exec(`UPDATE node_sync_versions SET parent_version_id = 'head' WHERE version_id = 'base';
     INSERT INTO node_sync_version_parents VALUES ('base', 'head', 0)`);
   const before = host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();

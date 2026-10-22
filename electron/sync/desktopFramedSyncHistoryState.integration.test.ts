@@ -104,8 +104,10 @@ it('keeps an offline editor branch and converges three production request peers 
     await reconnectFixturePeer(fixture.right, third.snapshot);
     await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
     await reconnectFixturePeer(fixture.right, third.snapshot);
-    expect(history(fixture.rightSnapshot.databasePath)).toEqual(history(fixture.leftSnapshot.databasePath));
-    expect(history(third.snapshot.databasePath)).toEqual(history(fixture.rightSnapshot.databasePath));
+    // History is no longer compared; each device may already have reclaimed what the whole group passed.
+    const head = history(fixture.rightSnapshot.databasePath).node;
+    expect(history(fixture.leftSnapshot.databasePath).node).toEqual(head);
+    expect(history(third.snapshot.databasePath).node).toEqual(head);
     expect(await reconnectFixturePeer(fixture.right, third.snapshot)).toMatchObject({ complete: true });
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot, third.snapshot]) {
       const current = new Database(snapshot.databasePath, { readonly: true });

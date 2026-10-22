@@ -16,6 +16,7 @@ import { openDatabaseConnection } from './connection.js';
 import {
   loadDesktopLocalNodeProof
 } from './nodeVersionPeerProof.js';
+import { loadDesktopSyncGroupCoverage, mergeDesktopSyncGroupCoverage } from './syncGroupCoverageDesktop.js';
 import { applyDesktopSyncGroupAdoptionPeerProof, loadDesktopCompletedAdoptionSource, loadDesktopSyncGroupLocalAdoption, saveDesktopSyncGroupPeerAdoption } from './syncGroupLocalAdoptionStore.js';
 import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads.js';
 import {
@@ -49,6 +50,7 @@ export function loadDesktopSyncGroupMemberState(args?: {
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
     ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
+    ...(adoption ? {} : { coverage: loadDesktopSyncGroupCoverage(driver, String(context.group_id)) }),
     devices: loadDevices(String(context.group_id)),
     group_id: String(context.group_id),
     library_epoch: proof.library_epoch,
@@ -115,6 +117,7 @@ export function applyDesktopSyncGroupMemberState(
       return;
     }
     applyDesktopSyncGroupAdoptionPeerProof(incoming, local);
+    if (!local.adopting_from) mergeDesktopSyncGroupCoverage(driver, incoming.group_id, incoming.coverage);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key, incoming.removals);
     if (!local.adopting_from) applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);

@@ -208,7 +208,8 @@ async function isolateBrokenObject(host: RequestSyncDatabaseHost,
       await applyConvergentSyncNodesWithDbPort(db, [{ ...record, object_id: id,
         snapshot: { ...record.snapshot, id } }]);
     }
-    await db.run("UPDATE node_sync_versions SET parent_version_id = 'missing-parent' WHERE version_id = 'a-broken-v1'");
+    // A reclaimed parent is a valid gap; a version that is its own parent is a broken graph.
+    await db.run("UPDATE node_sync_versions SET parent_version_id = 'a-broken-v1' WHERE version_id = 'a-broken-v1'");
   });
   const failures: string[] = [];
   const result = await runRequestSyncDatabaseRound({
@@ -216,7 +217,7 @@ async function isolateBrokenObject(host: RequestSyncDatabaseHost,
     transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
       differences, { peerState }),
     reportObjectError: (difference, error) => {
-      expect(String(error)).toContain('missing-parent');
+      expect(String(error)).toContain('node_version_graph_cycle');
       failures.push(difference.globalId);
     }
   });

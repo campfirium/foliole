@@ -26,21 +26,18 @@ it.each([false, true])('replays an unchanged converged version without rewriting
   } finally { await fixture.close(); }
 });
 
-it.each(['changed-parents', 'missing-parent', 'wrong-object', 'changed-snapshot', 'cycle'] as const)(
+it.each(['changed-parents', 'wrong-object', 'changed-snapshot', 'cycle'] as const)(
   'rejects invalid request replay without changing retained history: %s', async mutation => {
     const fixture = await restoreFixture();
     const source = fixture.peer('source'); const target = fixture.peer('target');
     try {
       await receive(source, target, [base, left, right, final]);
       const before = business(target);
-      const missing = branch('missing', 'Missing');
       let record = final;
       let error = `sync_pack_node_version_immutable_mismatch:${final.version_id}`;
       if (mutation === 'changed-parents') {
         record = { ...final, parent_version_id: left.version_id, parent_version_ids: [left.version_id!] };
         error = `node_version_parent_identity_mismatch:${final.version_id}`;
-      } else if (mutation === 'missing-parent') {
-        record = branch('new-head', 'New', missing); error = 'node_version_missing_parents:missing';
       } else if (mutation === 'wrong-object') {
         record = { ...final, object_id: 'other', snapshot: { ...final.snapshot, id: 'other' } };
         error = 'request_sync_object_identity_mismatch';

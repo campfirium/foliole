@@ -19,6 +19,7 @@ vi.mock('./desktopSyncGroupMemberState.js', () => ({
   acceptDesktopSyncGroupMemberState: vi.fn(),
   SYNC_GROUP_MEMBER_STATE_PATH: '/sync-group/member-state'
 }));
+vi.mock('./desktopSyncHistoryCollection.js', () => ({ collectDesktopSyncHistory: vi.fn() }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({ notifyDesktopSyncGroupOverviewChanged: vi.fn() }));
 vi.mock('./readwiseGroupSetup.js', () => ({
   handleReadwiseGroupSetup: vi.fn(), READWISE_GROUP_SETUP_PATH: '/companion/readwise-group-setup'

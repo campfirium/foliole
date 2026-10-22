@@ -1,4 +1,5 @@
 import type { SyncGroupDevicePayload } from './syncGroupContract.js';
+import { isSyncGroupCoveragePayload, type SyncGroupCoveragePayload } from './syncGroupCoverageContract.js';
 import { parseSyncGroupRestoreEvent, type SyncGroupRestoreState } from './syncGroupRestoreContract.js';
 import { parseSyncProtocolDescriptor, type SyncProtocolDescriptor } from './syncProtocolContract.js';
 import type {
@@ -30,6 +31,7 @@ export interface SyncGroupMemberStatePayload {
   contract_version: typeof SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION;
   adopting_from?: string;
   adopted_from?: string;
+  coverage?: SyncGroupCoveragePayload;
   devices: SyncGroupDevicePayload[];
   group_id: string;
   library_epoch: string;
@@ -54,6 +56,7 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
       !text(raw.library_epoch) || !Number.isSafeInteger(raw.proof_revision) ||
       (raw.proof_revision ?? -1) < 0 ||
       !validSourceProofRevisions(raw.source_proof_revisions) ||
+      (raw.coverage !== undefined && !isSyncGroupCoveragePayload(raw.coverage)) ||
       !Array.isArray(raw.devices) || !Array.isArray(raw.removals) ||
       !validRestoreState(raw.restore, raw.group_id) ||
       (raw.watched_sources !== undefined && !Array.isArray(raw.watched_sources)) ||

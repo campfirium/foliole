@@ -64,6 +64,7 @@ vi.mock('./desktopSyncGroupMemberState.js', () => ({
   SYNC_GROUP_MEMBER_STATE_PATH: '/sync-group/member-state',
   acceptDesktopSyncGroupMemberState: memberStateMock.accept
 }));
+vi.mock('./desktopSyncHistoryCollection.js', () => ({ collectDesktopSyncHistory: vi.fn() }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: vi.fn()
 }));

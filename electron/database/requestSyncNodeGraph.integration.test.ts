@@ -34,7 +34,7 @@ it.each(['cycle', 'cross-object parent', 'changed immutable hash'] as const)(
       invalid.object_id = 'different'; invalid.snapshot = { ...invalid.snapshot, id: 'different' };
     }
     const expected = fault === 'cycle' ? 'node_version_graph_cycle' : fault === 'cross-object parent'
-      ? 'node_version_missing_parents:base' : 'sync_pack_node_version_immutable_mismatch';
+      ? 'node_version_cross_object_parent:base' : 'sync_pack_node_version_immutable_mismatch';
     await expect(host.db.transaction(async tx => {
       const source = await requestSyncNodeSource(tx, arraySyncNodeRecordSource([valid, invalid]));
       await applyConvergentSyncNodeSource(tx, source);
@@ -65,19 +65,17 @@ it('matches ordinary apply and conflict alternatives without per-record ancestor
   expect(wholeBodies(actual)).toEqual(wholeBodies(expected));
 });
 
-it('rejects missing parents before retaining any incoming object facts', async () => {
+it('accepts a version whose reclaimed parent is absent, without inventing that parent', async () => {
   const host = device();
   const base = textBranch('base', 'Original');
   const head = textBranch('head', 'Current', base);
-  await expect(host.db.transaction(async tx => {
+  await host.db.transaction(async tx => {
     const source = await requestSyncNodeSource(tx, arraySyncNodeRecordSource([head]));
     await applyConvergentSyncNodeSource(tx, source);
-  })).rejects.toThrow('node_version_missing_parents:base');
-  expect(await host.db.query('SELECT version_id FROM node_sync_versions')).toEqual([]);
-  expect(await host.db.query('SELECT id FROM nodes')).toEqual([]);
-  const complete = await requestSyncNodeSource(host.db, arraySyncNodeRecordSource([base, head]));
-  await applyConvergentSyncNodeSource(host.db, complete);
+  });
+  expect(await host.db.query('SELECT version_id FROM node_sync_versions')).toEqual([{ version_id: 'head' }]);
   expect((await host.current()).version_id).toBe('head');
+  expect((await host.current()).body_text).toBe('Current');
 });
 
 it('rejects changed parents for an existing immutable version', async () => {

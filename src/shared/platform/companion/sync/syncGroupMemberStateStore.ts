@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { loadSyncGroupCoverage, mergeIncomingSyncGroupCoverage } from '../../../../../lib/core/sync/syncGroupCoverageStore';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import {
   loadLatestSyncGroupRestoreEvent,
@@ -70,6 +71,7 @@ export async function applyCompanionSyncGroupMemberState(
           [incoming.group_id, authenticatedDeviceId]);
       }
       await mergeMemberMetadata(tx, incoming, context.localDeviceId);
+      if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);
       const now = new Date().toISOString();
       let localExited = false;
       for (const removal of await loadRemovals(tx, incoming.group_id)) {
@@ -120,6 +122,7 @@ async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberS
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
     ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
+    ...(adoption ? {} : { coverage: await loadSyncGroupCoverage(db, context.groupId) }),
     devices: await loadDevices(db, context.groupId),
     group_id: context.groupId,
     library_epoch: proof.library_epoch,

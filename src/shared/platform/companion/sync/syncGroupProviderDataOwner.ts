@@ -10,6 +10,7 @@ import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { collectCompanionSyncHistory } from './companionSyncHistoryCollection';
 import { rememberCompanionRequestSyncProviderState } from './framed/companionRequestSyncPeerState';
 import { respondCompanionRequestSync } from './framed/companionRequestSyncResponse';
 import { touchCompanionSyncPeerRound } from './framed/companionSyncPeerRounds';
@@ -57,8 +58,9 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   });
   if (operation === CONTRACT.operations.applyMemberState) {
     const state = parseSyncGroupMemberState(payload.state);
-    return applyCompanionSyncGroupMemberState(state, requiredText(payload.authenticated_device_id)).then(result => {
+    return applyCompanionSyncGroupMemberState(state, requiredText(payload.authenticated_device_id)).then(async result => {
       rememberCompanionRequestSyncProviderState(state, result);
+      if (result.normal_sync_ready && !result.local_exited) await collectCompanionSyncHistory(state.group_id);
       return result;
     });
   }

@@ -58,12 +58,12 @@ it('reconstructs a missing special parent before applying a child and keeps it o
   expect(host.sqlite.prepare('SELECT object_id FROM node_sync_versions').all()).toEqual([{ object_id: 'topic' }]);
 });
 
-it('rejects a missing original version parent without writing nodes, versions or special roots', async () => {
+it('rejects a cyclic original version graph without writing nodes, versions or special roots', async () => {
   const host = textDevice(); hosts.push(host);
   const record = textBranch('child-version', 'Child body');
-  record.parent_version_id = 'missing-original'; record.parent_version_ids = ['missing-original'];
+  record.parent_version_id = 'child-version'; record.parent_version_ids = ['child-version'];
   record.snapshot = { ...record.snapshot, parent_id: INBOX_NODE_ID };
-  await expect(receive(host, [record])).rejects.toThrow('node_version_missing_parents:missing-original');
+  await expect(receive(host, [record])).rejects.toThrow('node_version_graph_cycle');
   expect(host.sqlite.prepare('SELECT * FROM nodes').all()).toEqual([]);
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual([]);
 });

@@ -6,6 +6,7 @@ import type {
   CompanionDesktopSyncResult
 } from '../../companionDesktopSyncTypes';
 
+import { collectCompanionSyncHistory, recordCompanionCompletedSyncRound } from './companionSyncHistoryCollection';
 import { createEmptyResourceStages,
   createSkippedResourceSummary } from './companionSyncResourceSummary';
 import { runCompanionRequestSyncDatabaseRound } from './framed/companionRequestSyncDatabaseRound.js';
@@ -40,6 +41,8 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const startedAt = Date.now();
   const group = await loadCompanionSyncGroup();
   if (!group) throw new Error('sync_group_not_joined');
+  // The member state exchanged before this round may already move the group line.
+  if (!options.restoreId) await collectCompanionSyncHistory(group.group_id);
   const local = await loadCompanionSyncGroupMemberState();
   const peerState = requireCompanionRequestSyncPeerState(group.group_id, options.framedPeer.deviceId, options.framedPeer.libraryEpoch);
   const context = { groupId: group.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
@@ -57,6 +60,11 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     }) });
   const syncedStructureElapsedMs = Date.now() - startedAt;
   const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
+  if (databaseConfirmedAt && !options.restoreId) {
+    await recordCompanionCompletedSyncRound({ groupId: group.group_id, localDeviceId: group.local_device_identity_key,
+      peerDeviceId: framedPeer.deviceId, startedAt: new Date(startedAt).toISOString() });
+    await collectCompanionSyncHistory(group.group_id);
+  }
   const sessionConfirmationPending = await confirmDatabase(options, databaseConfirmedAt);
   const syncMetadataUnavailable = await persistConfirmedSyncTime(databaseConfirmedAt);
   await options.onStructureSynced?.({ receivedCount: round.received.length, workspaceChanged: round.workspaceChanged });

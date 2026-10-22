@@ -76,9 +76,10 @@ it('rejects framed 25 before applying any business facts', async () => {
 
 it('rolls back a bad graph object while committing the following valid object and its version', async () => {
   const fixture = await receiver();
-  const missing = batchRecord('parent', 'missing');
-  const result = await transfer(fixture, [batchRecord('bad', 'bad', missing), batchRecord('good', 'good')]);
-  expect(result.results).toMatchObject([{ globalId: 'bad', error: 'node_version_missing_parents:version-parent' },
+  // A reclaimed parent is a valid gap; a version that is its own ancestor is not.
+  const cyclic = { ...batchRecord('bad', 'bad'), parent_version_id: 'version-bad', parent_version_ids: ['version-bad'] };
+  const result = await transfer(fixture, [cyclic, batchRecord('good', 'good')]);
+  expect(result.results).toMatchObject([{ globalId: 'bad', error: 'node_version_graph_cycle' },
     { globalId: 'good', error: '' }]);
   expect(await fixture.device.db.query('SELECT id FROM nodes')).toEqual([{ id: 'good' }]);
   expect(await fixture.device.db.query('SELECT object_id, version_id FROM node_sync_versions'))

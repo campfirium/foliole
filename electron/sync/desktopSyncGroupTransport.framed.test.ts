@@ -22,6 +22,7 @@ vi.mock('./desktopRequestSyncResources.js', () => ({
   continueDesktopRequestSyncResources: vi.fn(async () => ({ pending: 0 }))
 }));
 vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncActivity: vi.fn() }));
+vi.mock('./desktopSyncHistoryCollection.js', () => ({ collectDesktopSyncHistory: vi.fn(), recordDesktopCompletedSyncRound: vi.fn() }));
 vi.mock('./desktopSyncGroupMemberState.js', () => ({
   exchangeDesktopSyncGroupMemberState: runtime.exchangeMemberState
 }));

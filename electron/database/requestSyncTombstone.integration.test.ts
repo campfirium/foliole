@@ -79,7 +79,7 @@ it.each([false, true])('applies a standalone deletion to an existing node withou
 });
 
 
-it.each([false, true])('retains standalone deletion metadata but rejects a complete version with missing parent: complete=%s', async complete => {
+it.each([false, true])('retains deletion metadata and accepts a complete version whose parent was reclaimed: complete=%s', async complete => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source'); const target = fixture.peer('target');
   try {
@@ -96,9 +96,12 @@ it.each([false, true])('retains standalone deletion metadata but rejects a compl
           library_epoch: source.epoch, proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
         objectType: 'node', globalId: 'topic', requestId: new Uint8Array(16),
         facts: async function* () { yield* projected.manifest.facts; }, loadBody: async () => projected.bodyBlob
-      })).rejects.toThrow('node_version_missing_parents:original');
+      })).resolves.toBeDefined();
       target.reopen();
-      expect(facts(target)).toEqual(before);
+      expect(facts(target)).not.toEqual(before);
+      expect(target.sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?').all(base.version_id))
+        .toEqual([]);
+      expect(target.sqlite.prepare('SELECT count(*) FROM nodes WHERE id = ?').pluck().get('topic')).toBe(0);
     } else {
       await applyRemoteNodeTombstone(source.db, deleted, false);
       const original = source.sqlite.prepare('SELECT * FROM node_sync_tombstones').all();

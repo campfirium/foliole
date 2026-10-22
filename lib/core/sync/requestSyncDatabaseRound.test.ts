@@ -8,7 +8,7 @@ const entry = (globalId: string): FramedSyncInventoryEntry => ({ globalId, objec
   frontierFactIds: [`${globalId}-v1`], requiredRelationIds: [], reviewFactIds: [], resourceHashes: [],
   sharedStateHash: new Uint8Array(32).fill(1) });
 
-it.each(['node_version_missing_parents:lost', 'node_version_graph_cycle',
+it.each(['node_version_cross_object_parent:lost', 'node_version_graph_cycle',
   'node_version_parent_identity_mismatch:v1'])('finishes healthy objects while isolating %s', async failure => {
   const local = [entry('bad'), entry('good')];
   const remote: FramedSyncInventoryEntry[] = [];

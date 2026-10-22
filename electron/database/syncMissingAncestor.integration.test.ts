@@ -62,17 +62,16 @@ function originals(peer: Peer) {
   } finally { db.close(); }
 }
 
-it.each([false, true])('rejects branches with a missing ancestor without losing either available body (equal=%s)', async equal => {
+it.each([false, true])('merges branches whose common ancestor was reclaimed without losing either body (equal=%s)', async equal => {
   const { left, right, fresh } = await fork(equal);
-  const before = [left, right, fresh].map(originals);
-  for (const [source, target] of [[left, right], [right, left], [left, fresh]] as const) {
-    await expect(sync(source, target)).rejects.toThrow(/missing_parent|version_missing/);
-    expect([left, right, fresh].map(originals)).toEqual(before);
-    await expect(sync(source, target)).rejects.toThrow(/missing_parent|version_missing/);
-    expect([left, right, fresh].map(originals)).toEqual(before);
+  for (const [source, target] of [[left, right], [right, left], [left, fresh]] as const) await sync(source, target);
+  const merged = await current(left);
+  for (const peer of [right, fresh]) expect((await current(peer)).version_id).toBe(merged.version_id);
+  const bodies = new Set([merged.body_text, ...await alternatives(left)]);
+  expect(bodies).toEqual(new Set(equal ? ['Shared body'] : ['Left final\nx=0\n', 'Original\nx=1\n']));
+  for (const peer of [left, right, fresh]) {
+    expect(peer.db.prepare("SELECT count(*) FROM nodes WHERE id = 'topic'").pluck().get()).toBe(1);
   }
-  expect((await current(left)).body_text).toBe(equal ? 'Shared body' : 'Left final\nx=0\n');
-  expect((await current(right)).body_text).toBe(equal ? 'Shared body' : 'Original\nx=1\n');
 });
 
 it('restores peer base identity and preserves each complete divergent body', async () => {

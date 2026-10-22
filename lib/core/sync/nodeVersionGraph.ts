@@ -13,20 +13,19 @@ export class NodeVersionGraph {
     this.parents = parents;
   }
 
-  assertComplete() {
-    const missing = new Set<string>();
+  /** Older history may have been reclaimed: an absent parent is a valid gap, a cycle is not. */
+  assertAcyclic() {
     const remaining = new Map<string, number>();
     const children = new Map<string, string[]>();
     for (const [id, parents] of this.parents) {
-      remaining.set(id, parents.length);
-      for (const parent of parents) {
-        if (!this.parents.has(parent)) missing.add(parent);
+      const present = parents.filter(parent => this.parents.has(parent));
+      remaining.set(id, present.length);
+      for (const parent of present) {
         const siblings = children.get(parent) ?? [];
         siblings.push(id);
         children.set(parent, siblings);
       }
     }
-    if (missing.size) throw new Error(`node_version_missing_parents:${[...missing].sort().join(',')}`);
     const ready = [...remaining].filter(([, count]) => count === 0).map(([id]) => id);
     for (const id of ready) {
       for (const child of children.get(id) ?? []) {

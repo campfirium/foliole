@@ -36,14 +36,16 @@ export function planTopicBodyRetention(versions: TopicBodyVersion[], edges: Chai
   if (versions.some(row => row.identity_valid !== 1) ||
     new Set(versions.map(row => row.object_id)).size !== 1 || !parents.has(currentId)) return invalid();
   for (const edge of edges) {
-    if (!parents.has(edge.version_id) || !parents.has(edge.parent_version_id)) return invalid();
+    if (!parents.has(edge.version_id)) return invalid();
     parents.get(edge.version_id)!.push(edge.parent_version_id);
   }
   for (const row of versions) {
     if (row.parent_version_id && parents.get(row.version_id)![0] !== row.parent_version_id) return invalid();
   }
+  // Reclaimed ancestors leave retained versions pointing at parents that are no longer stored.
   const graph = new Map(versions.map(row => [row.version_id, { versionId: row.version_id,
-    parentVersionIds: parents.get(row.version_id)!, bodyAvailable: row.body_available !== 0 }]));
+    parentVersionIds: parents.get(row.version_id)!.filter(parent => parents.has(parent)),
+    bodyAvailable: row.body_available !== 0 }]));
   if (!lineageAncestors(graph)) return invalid();
   const ancestors = new Set(edges.map(edge => edge.parent_version_id));
   const keep = new Set([currentId, ...versions.filter(row => !ancestors.has(row.version_id)).map(row => row.version_id)]);
