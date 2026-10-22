@@ -26,6 +26,8 @@ export const REQUEST_SYNC_YIELDING_PULL_OBJECTS = 8;
 export const REQUEST_SYNC_YIELDING_PULL_TARGET_MS = 1500;
 
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
+  // Watch from before each inventory read: an edit committed after the read is missing from it and must still yield.
+  let localChanged = port.watchLocalChanges?.();
   let inventories = await port.exchangeInventory();
   let transferred = 0;
   const initialPending = pendingObjects(inventories);
@@ -41,8 +43,9 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
       const pending = pendingObjects(inventories);
       return result(pending);
     }
-    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal);
+    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged);
     transferred += round.delivered.length;
+    localChanged = port.watchLocalChanges?.();
     const next = await port.exchangeInventory();
     sourceChanged ||= round.sourceChanged || Boolean(next.inventoryDeferred);
     committed ||= hasConfirmedRequestSyncCommit(inventories, next, round.delivered);
@@ -59,9 +62,9 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
-  inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal) {
+  inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal,
+  localChanged = port.watchLocalChanges?.()) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
-  const localChanged = port.watchLocalChanges?.();
   const attempted: FramedSyncInventoryDifference[] = [];
   const sizer = pullBatchSizer(Boolean(localChanged));
   for (const batch of directionBatches(differences, sizer.next)) {
