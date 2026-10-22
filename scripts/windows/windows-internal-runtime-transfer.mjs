@@ -3,11 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { verifyOfflineElectronArchive } from './windows-electron-offline-prepare.mjs';
+import { transferWindowsNpmBundle } from './windows-npm-offline-bundle.mjs';
 import { windowsDevTransportIdentity } from './windows-dev-remote-spec.mjs';
 
 export async function prepareWindowsInternalRuntime({ repoRoot, revision, executeGit,
-  executeScp, host, env, download, fsApi = fs }) {
-  const lock = JSON.parse(await executeGit(['show', `${revision ?? 'refs/heads/dev'}:package-lock.json`],
+  executeScp, host, env, download, fsApi = fs, transferNpm = transferWindowsNpmBundle }) {
+  const source = revision ?? 'refs/heads/dev';
+  const lock = JSON.parse(await executeGit(['show', `${source}:package-lock.json`],
     { cwd: repoRoot }));
   const require = createRequire(path.join(repoRoot, 'package.json'));
   const electronRoot = path.dirname(require.resolve('electron/package.json'));
@@ -31,5 +33,9 @@ export async function prepareWindowsInternalRuntime({ repoRoot, revision, execut
   const transport = windowsDevTransportIdentity({ env, home: os.homedir(), host, fsApi });
   await executeScp(['-q', ...transport.options, archive,
     `${host}:D:/C/foliole/.tmp/artifacts/${filename}`], { env });
+  // Windows installs dependencies with `npm ci --offline`, so every locked
+  // tarball of the same candidate travels with the Electron archive.
+  await transferNpm({ env, executeScp, fsApi, home: os.homedir(), host, repoRoot, revision: source,
+    transport: windowsDevTransportIdentity });
   return { archive, version };
 }

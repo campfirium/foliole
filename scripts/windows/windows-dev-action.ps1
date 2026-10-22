@@ -72,8 +72,13 @@ try {
     } elseif ($Action -eq "internal-install") {
       Push-Location $repoRoot
       try {
-        & $systemNode $systemNpmCli ci --offline --ignore-scripts
+        $npmImporter = Join-Path $PSScriptRoot "windows-npm-offline-import.mjs"
+        & $systemNode $npmImporter
         $runnerExit = $LASTEXITCODE
+        if ($runnerExit -eq 0) {
+          & $systemNode $systemNpmCli ci --offline --ignore-scripts
+          $runnerExit = $LASTEXITCODE
+        }
         if ($runnerExit -eq 0) {
           $electronInstaller = Join-Path $PSScriptRoot "windows-electron-offline-prepare.mjs"
           & $systemNode $electronInstaller ".tmp/artifacts/windows-internal-runtime"

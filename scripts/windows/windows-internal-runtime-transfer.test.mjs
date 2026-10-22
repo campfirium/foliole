@@ -28,7 +28,7 @@ function fixture() {
   const options = { repoRoot, host: 'zephu@192.168.0.11', env: transport.env, fsApi: transport.fsApi,
     executeGit: vi.fn().mockResolvedValue(JSON.stringify({ packages: {
       'node_modules/electron': { version: '44.9.0' }
-    } })), executeScp: vi.fn(), download: vi.fn().mockResolvedValue(cached) };
+    } })), executeScp: vi.fn(), download: vi.fn().mockResolvedValue(cached), transferNpm: vi.fn() };
   return { options, cached, filename, transport };
 }
 
@@ -44,6 +44,17 @@ it('downloads on Mac once and transfers only the verified candidate archive over
     .toBe(`zephu@192.168.0.11:D:/C/foliole/.tmp/artifacts/${filename}`);
 });
 
+it('ships the npm offline bundle of the same candidate so Windows can install without a registry', async () => {
+  const { options } = fixture();
+  const revision = 'a'.repeat(40);
+  await prepareWindowsInternalRuntime({ ...options, revision });
+  await prepareWindowsInternalRuntime(options);
+  expect(options.transferNpm.mock.calls.map(([call]) => call.revision)).toEqual([revision, 'refs/heads/dev']);
+  expect(options.transferNpm).toHaveBeenCalledWith(expect.objectContaining({
+    executeScp: options.executeScp, host: 'zephu@192.168.0.11', repoRoot: options.repoRoot
+  }));
+});
+
 it('rejects corrupt archives and candidate version mismatches before transferring anything', async () => {
   const { options, cached } = fixture();
   fs.appendFileSync(cached, 'corrupt');
@@ -53,6 +64,7 @@ it('rejects corrupt archives and candidate version mismatches before transferrin
   } }));
   await expect(prepareWindowsInternalRuntime(options)).rejects.toThrow('pinned Windows candidate');
   expect(options.executeScp).not.toHaveBeenCalled();
+  expect(options.transferNpm).not.toHaveBeenCalled();
 });
 
 it('does not start a remote installation when offline runtime preparation fails', async () => {

@@ -1,4 +1,11 @@
+/* global console, process */
+
+import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { executeBounded } from './windows-bounded-process.mjs';
+import { windowsDevPaths } from './windows-dev-paths.mjs';
 
 const IMPORT_CHUNK = 100;
 
@@ -59,4 +66,14 @@ export async function importWindowsNpmBundle({ execute, fsApi, paths }) {
   }
   fsApi.rmSync(root, { force: true, recursive: true });
   return { count: files.length, lockBlob, output };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  try {
+    const result = await importWindowsNpmBundle({ execute: executeBounded, fsApi: fs, paths: windowsDevPaths() });
+    console.log(`[windows-npm-offline-import] imported ${result.count} package(s) for lock ${result.lockBlob}`);
+  } catch (error) {
+    console.error(`[windows-npm-offline-import] stage=${error.stage ?? 'unknown'} ${error.message}`);
+    process.exitCode = 1;
+  }
 }
