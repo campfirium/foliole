@@ -24,6 +24,12 @@ export function attachmentDataYield() {
   return () => hasWaitingSyncData() || revision !== priorityRevision;
 }
 
+/** True once a local change or another data run has asked bulk sync work to make way since the call. */
+export function watchSyncPriorityRequests() {
+  const revision = priorityRevision;
+  return () => revision !== priorityRevision;
+}
+
 export function attachmentWorkBudget(milliseconds = 2000) {
   const revision = priorityRevision;
   const deadline = performance.now() + milliseconds;

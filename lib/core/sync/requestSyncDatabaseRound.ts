@@ -15,9 +15,13 @@ export interface RequestSyncDatabaseRoundPort {
   exchangeInventory(): Promise<RequestSyncInventories>;
   transferObjects(differences: readonly FramedSyncInventoryDifference[]): Promise<readonly RequestSyncObjectResult[]>;
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown): void;
+  /** Starts watching for local changes; when one arrives, the pass stops pulling so it can go out first. */
+  watchLocalChanges?(): () => boolean;
 }
 
 export const REQUEST_SYNC_MAX_PASSES = 4;
+/** Pull batch while local changes may be waiting: applying it is the longest wait a new edit can see. */
+export const REQUEST_SYNC_YIELDING_PULL_OBJECTS = 32;
 
 export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRoundPort, signal?: AbortSignal) {
   let inventories = await port.exchangeInventory();
@@ -55,16 +59,20 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
-  for (const batch of directionBatches(differences)) {
+  const localChanged = port.watchLocalChanges?.();
+  const attempted: FramedSyncInventoryDifference[] = [];
+  for (const batch of directionBatches(differences, localChanged ? REQUEST_SYNC_YIELDING_PULL_OBJECTS : REQUEST_SYNC_BATCH_OBJECTS)) {
     signal?.throwIfAborted();
+    if (localChanged?.() && batch[0]!.direction === 'remote_to_local') break;
     const results = await port.transferObjects(batch);
     if (results.length !== batch.length) throw new Error('request_sync_batch_results_missing');
     for (const [index, difference] of batch.entries()) outcomes.set(key(difference), results[index]!);
+    attempted.push(...batch);
   }
   const delivered: FramedSyncInventoryDifference[] = [];
   const completed = new Set<string>();
   let sourceChanged = false;
-  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async difference => {
+  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(attempted, async difference => {
     signal?.throwIfAborted();
     try {
       const cached = outcomes.get(key(difference));
@@ -94,12 +102,12 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   return { delivered, deferred, sourceChanged };
 }
 
-function* directionBatches(differences: readonly FramedSyncInventoryDifference[]) {
-  for (let offset = 0; offset < differences.length; offset += REQUEST_SYNC_BATCH_OBJECTS) {
-    const window = differences.slice(offset, offset + REQUEST_SYNC_BATCH_OBJECTS);
-    for (const direction of new Set(window.map(difference => difference.direction))) {
-      yield window.filter(difference => difference.direction === direction);
-    }
+/** Local changes go out first, so an edit never waits behind applying what the peer sent. */
+function* directionBatches(differences: readonly FramedSyncInventoryDifference[], pullObjects: number) {
+  for (const direction of ['local_to_remote', 'remote_to_local'] as const) {
+    const items = differences.filter(difference => difference.direction === direction);
+    const size = direction === 'remote_to_local' ? pullObjects : REQUEST_SYNC_BATCH_OBJECTS;
+    for (let offset = 0; offset < items.length; offset += size) yield items.slice(offset, offset + size);
   }
 }
 

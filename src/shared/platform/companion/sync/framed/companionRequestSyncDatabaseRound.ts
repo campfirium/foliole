@@ -1,3 +1,4 @@
+import { watchSyncPriorityRequests } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/requestSyncBatchExchange.js';
@@ -70,7 +71,8 @@ async function runRound(input: RoundInput) {
       }
       return results;
     },
-    reportObjectError: input.reportObjectError
+    reportObjectError: input.reportObjectError,
+    watchLocalChanges: watchSyncPriorityRequests
   };
   if (!overwriteId) return { ...await runRequestSyncDatabaseRound(port, input.signal), received: [...received], sent: [...sent], workspaceChanged };
   let result = await withCompanionForegroundTimeMaintenance(async () => {
