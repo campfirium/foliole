@@ -12,6 +12,7 @@ import { initializeDatabase } from './database/migrate.js';
 import { startSearchAliasMirror, stopSearchAliasMirror } from './database/searchAliasMirror.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
+import { upgradeLibraryBeforeStartup } from './database/startupLibraryUpgrade.js';
 import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
 import { desktopTaskScheduler } from './desktopTaskScheduler.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
@@ -119,6 +120,7 @@ function installBeforeQuitLifecycle() {
 async function initializeRuntimeServices() {
   try {
     await appendBootEvent('database_init_start');
+    await upgradeLibraryBeforeStartup((stage, payload = null) => { void appendBootEvent(stage, payload).catch(() => undefined); });
     await appendBootEvent('database_initialize_call_start');
     initializeDatabase((stage, payload = null) => {
       void appendBootEvent(stage, payload).catch((error) => appendMainProcessDiagnosticLog('boot_log_failed', {

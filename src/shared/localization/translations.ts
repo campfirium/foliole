@@ -24,7 +24,10 @@ const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalo
     'shared.startup.openLogs': 'Open logs',
     'shared.startup.problemEyebrow': 'Startup problem',
     'shared.startup.retry': 'Retry',
-    'shared.startup.unknownRendererException': 'Unknown renderer exception'
+    'shared.startup.unknownRendererException': 'Unknown renderer exception',
+    'shared.startup.upgradeHelp': 'Foliole opens when this finishes. Keep the app open until then.',
+    'shared.startup.upgradeProgress': 'Library update progress',
+    'shared.startup.upgradeTitle': 'Updating your library'
   },
   'zh-Hans': {
     'shared.startup.bootHelp': '正在准备工作区服务...',
@@ -39,7 +42,10 @@ const STARTUP_TRANSLATION_FALLBACKS: Partial<Record<AppLocale, TranslationCatalo
     'shared.startup.openLogs': '打开日志',
     'shared.startup.problemEyebrow': '启动问题',
     'shared.startup.retry': '重试',
-    'shared.startup.unknownRendererException': '未知渲染器异常'
+    'shared.startup.unknownRendererException': '未知渲染器异常',
+    'shared.startup.upgradeHelp': '完成后会自动打开，请不要关闭 Foliole。',
+    'shared.startup.upgradeProgress': '资料库更新进度',
+    'shared.startup.upgradeTitle': '正在更新资料库'
   }
 };
 

@@ -9,11 +9,13 @@ import {
   reportRuntimeBridgeReady,
   resolveRuntimeAppPaths
 } from './shared/platform/bridge';
+import { loadDatabaseUpgradeStatus } from './shared/platform/desktop/databaseUpgradeRuntime';
 import { installDesktopDebugProbe } from './shared/platform/desktopDebugProbe';
 import { installRendererErrorDiagnostics } from './shared/platform/rendererErrorDiagnostics';
 import { isRuntimeInvokeAvailable } from './shared/platform/runtimeInvoke';
 import { logRuntimeError } from './shared/platform/runtimeLogging';
 import { renderStartupErrorView } from './shared/ui/StartupSurface';
+import { watchStartupDatabaseUpgrade } from './shared/ui/StartupUpgradeSurface';
 import { bootstrapApp } from './startupBootstrap';
 import { createStartupErrorActions, resolveStartupView } from './startupViewMode';
 import { registerStartupWatchdog } from './startupWatchdog';
@@ -215,6 +217,7 @@ async function reportDesktopBridgeReady() {
 
 installDesktopDebugProbe();
 installRendererErrorDiagnostics();
+if (isRuntimeInvokeAvailable()) watchStartupDatabaseUpgrade(loadDatabaseUpgradeStatus);
 if (!renderStartupViewIfRequested()) {
   bootstrapApp({
     mountApp,

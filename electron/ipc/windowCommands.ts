@@ -3,6 +3,7 @@ import { app, shell } from 'electron';
 import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
+import { loadDatabaseUpgradeStatus } from '../database/databaseUpgradeStatus.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { runFolioleCliInstallAction } from '../folioleCliInstallation.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
@@ -148,6 +149,7 @@ export async function handleWindowAndUtilityCommand(request: InvokeRequest, cont
   if (splitTopicPreferencesResult !== undefined) return splitTopicPreferencesResult;
   const displayScaleResult = handleDisplayScaleCommand(request, context);
   if (displayScaleResult !== undefined) return displayScaleResult;
+  if (request.command === NATIVE_COMMANDS.loadDatabaseUpgradeStatus) return loadDatabaseUpgradeStatus();
   const setupResult = handleInitialLibrarySetupCommand(request, resolveTargetWindow(context));
   if (setupResult !== undefined) return setupResult;
   const cliInstallResult = handleCliInstallCommand(request, context);

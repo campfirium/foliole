@@ -66,3 +66,7 @@ export function resetDatabaseReadinessForTests() {
   resolvePendingReady = null;
   rejectPendingReady = null;
 }
+
+export function isDatabaseStartupPending() {
+  return readinessState === 'pending';
+}

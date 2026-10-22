@@ -1,9 +1,11 @@
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
+import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 
 export const NATIVE_COMMANDS = {
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
+  ...NATIVE_DATABASE_UPGRADE_COMMANDS,
   maintainAttachments: 'maintain_attachments',
   appGetVersion: 'app_get_version',
   folioleCliInstall: 'foliole_cli_install',

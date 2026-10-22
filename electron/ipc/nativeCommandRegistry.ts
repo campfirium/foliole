@@ -27,6 +27,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.listSystemFonts, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.loadDesktopHostCapabilities, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadInitialLibrarySetup, route: 'windowAndUtility', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadDatabaseUpgradeStatus, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadLoginItemSettings, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadSplitTopicPreferences, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },

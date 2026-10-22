@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { registerGeneratedBackup } from './backupManagement.js';
+import { ensureManagedBackupDirectory } from './backupSettings.js';
 import {
   compressSqliteFile,
   materializeCompressedSqliteBackup
@@ -63,6 +64,16 @@ export function createManagedSafetySnapshotForMigration(options: SafetySnapshotO
   }
 }
 
+/** Reserve a pre-migration snapshot that the upgrade worker writes and verifies off the main thread. */
+export function reserveManagedMigrationSnapshot(sourcePath: string) {
+  const options = { now: new Date(), reason: 'pre-migration' as const, sourcePath };
+  ensureManagedBackupDirectory();
+  const protection = protectSnapshotPaths(options);
+  const snapshot = { destinationPath: protection.currentPath, reason: options.reason, sourcePath: path.resolve(sourcePath) };
+  return { destinationPath: snapshot.destinationPath, protection,
+    settle: () => settleManagedMigrationSnapshot(snapshot, protection) };
+}
+
 export function settleManagedMigrationSnapshot(
   snapshot: InternalDatabaseSnapshotResult,
   protection: ManagedSafetySnapshot
@@ -120,7 +131,9 @@ async function settleSnapshotCompression(snapshot: InternalDatabaseSnapshotResul
   }
 }
 
-function protectSnapshotPaths(options: SafetySnapshotOptions): ManagedSafetySnapshot {
+function protectSnapshotPaths(
+  options: Pick<SafetySnapshotOptions, 'destinationDirectory' | 'now' | 'reason' | 'sourcePath'>
+): ManagedSafetySnapshot {
   const databasePath = buildInternalDatabaseSnapshotPath(options);
   const paths = [databasePath, `${databasePath}.gz`].map((filePath) => path.resolve(filePath));
   paths.forEach((filePath) => protectedPaths.add(filePath));

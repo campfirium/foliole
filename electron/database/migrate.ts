@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 
 import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
-import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import {
   DATABASE_SCHEMA_VERSION,
   initializeDatabaseConnection,
@@ -11,7 +10,6 @@ import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numbere
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
-import { attachmentTrashDirectory, inventoryAttachmentDirectory } from '../attachments/attachmentTrashFiles.js';
 import { loadDesktopLibraryWriterBinding } from '../deviceAnchorStore.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
@@ -23,6 +21,7 @@ import {
   resolveDatabasePath
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
+import { runDesktopLibraryDataUpgrade } from './desktopLibraryUpgradeHooks.js';
 import { clearOpenedExternalSearchCache } from './externalSearchCacheMaintenance.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
 import {
@@ -31,15 +30,14 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
-import { prepareLegacyAttachmentFiles } from './legacyAttachmentFiles.js';
-import { captureLegacyAttachmentTargets, migrateLegacyAttachmentReferences } from './legacyAttachmentReferenceMigration.js';
-import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
+import { captureLegacyAttachmentTargets } from './legacyAttachmentReferenceMigration.js';
+import { needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import { needsBodyReclamationSnapshot } from './legacyBodyMigrationState.js';
 import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
 } from './managedSafetySnapshots.js';
-import { migrateOrphanedInactiveReadingState, needsOrphanedReadingStateSnapshot } from './orphanedReadingStateMigration.js';
+import { needsOrphanedReadingStateSnapshot } from './orphanedReadingStateMigration.js';
 import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
 import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
 import { cleanAbandonedRequestSyncFiles } from './requestSyncTemporaryCleanup.js';
@@ -121,17 +119,8 @@ function initializeSchemaWorkspaceAndSearch(
       if (rebindMemberIdentity) rebindStartupMemberIdentity(connection.driver, connection.dbPath);
       bindParentOrderWriter(connection.driver, loadDesktopLibraryWriterBinding(connection.dbPath));
       migrateDesktopHostProfile(connection, currentHostName);
-      migrateLegacyBodyConsistency(connection, currentHostName, fresh);
-      migrateOrphanedInactiveReadingState(connection);
-      prepareLegacyAttachmentFiles(resolveRuntimeDataPaths().assetsDir, attachmentTargets);
-      migrateLegacyAttachmentReferences(connection, attachmentTargets, currentHostName);
-      if (version < 141) {
-        const assets = resolveRuntimeDataPaths().assetsDir;
-        const files = [...inventoryAttachmentDirectory(assets), ...inventoryAttachmentDirectory(attachmentTrashDirectory(assets))];
-        for (const hash of new Set(files.map((file) => file.storageKey.slice(0, 64)))) {
-          connection.driver.execute(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [hash, 1]);
-        }
-      }
+      runDesktopLibraryDataUpgrade(connection, { assetsDir: resolveRuntimeDataPaths().assetsDir,
+        attachmentTargets, fresh, hostName: currentHostName, version });
     }
   });
   // Renderer drafts and their retry queue do not survive a process restart.

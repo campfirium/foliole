@@ -16,9 +16,14 @@ function createFreshSchema(sqlite: DatabaseMigrationTarget) {
   setUserVersion(sqlite, DATABASE_SCHEMA_VERSION);
 }
 
+interface InitializeDatabaseSchemaOptions {
+  beforeVersionCommit?: () => void;
+  onMigrationApplied?: (progress: { from: number; to: number; version: number }) => void;
+}
+
 export function initializeDatabaseSchema(
   sqlite: DatabaseMigrationTarget,
-  options: { beforeVersionCommit?: () => void } = {}
+  options: InitializeDatabaseSchemaOptions = {}
 ) {
   const currentVersion = readUserVersion(sqlite);
   if (currentVersion === DATABASE_SCHEMA_VERSION && !options.beforeVersionCommit) {
@@ -40,7 +45,10 @@ export function initializeDatabaseSchema(
     applyNumberedSchemaMigrations({
       currentVersion,
       legacyMessage: LEGACY_REBUILD_REQUIRED_MESSAGE,
-      setUserVersion: (version) => setUserVersion(sqlite, version),
+      setUserVersion: (version) => {
+        setUserVersion(sqlite, version);
+        options.onMigrationApplied?.({ from: currentVersion, to: DATABASE_SCHEMA_VERSION, version });
+      },
       sqlite,
       targetVersion: DATABASE_SCHEMA_VERSION
     });
@@ -51,7 +59,7 @@ export function initializeDatabaseSchema(
 
 export function initializeDatabaseConnection<T extends DatabaseConnectionLike>(
   connection: T,
-  options: { beforeVersionCommit?: () => void } = {}
+  options: InitializeDatabaseSchemaOptions = {}
 ): T {
   initializeDatabaseSchema(connection.sqlite, options);
   return connection;
