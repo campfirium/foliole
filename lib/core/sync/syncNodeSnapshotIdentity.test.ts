@@ -13,3 +13,9 @@ it('ignores the text-derived title and excerpt only once either side no longer k
   expect(isSyncNodeSnapshotIdentical(JSON.stringify(stored), { ...stored, title: 'Changed' })).toBe(false);
   expect(isSyncNodeSnapshotIdentical(JSON.stringify(stored), { ...redacted, parent_id: 'elsewhere' })).toBe(false);
 });
+
+it('still compares the title of a version whose body was only retired from history', () => {
+  const retired = { ...stored, content: null, body_deleted: true };
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(retired), { ...retired, title: 'Contradictory title' })).toBe(false);
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(retired), retired)).toBe(true);
+});

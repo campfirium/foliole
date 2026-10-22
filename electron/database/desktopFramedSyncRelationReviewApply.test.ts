@@ -35,6 +35,7 @@ beforeEach(() => {
   sqlite = new Database(':memory:');
   sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY);
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL);
+    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL);
     CREATE TABLE node_sync_version_parents (
       version_id TEXT NOT NULL, parent_version_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
       local_note TEXT DEFAULT 'local-parent',

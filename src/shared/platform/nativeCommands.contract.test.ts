@@ -6,6 +6,7 @@ import ts from 'typescript';
 import contractFiles from '../../../lib/platform/nativeCommandContractFiles.json';
 import { canRecordNativeCommandArgs } from '../../../lib/platform/nativeCommandPrivacy';
 import { NATIVE_COMMANDS, isTypedNativeCommand } from '../../../lib/platform/nativeCommands';
+import { NATIVE_DATABASE_UPGRADE_COMMANDS } from '../../../lib/platform/nativeDatabaseUpgradeContract';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from '../../../lib/platform/nativeSourceConnectionCommands';
 
 function readPlatformSource(fileName: string) {
@@ -39,7 +40,7 @@ function collectContractCommandReferences() {
   return contractFiles.reduce<Set<string>>((references, fileName) => {
     collectNativeCommandReferences(fileName).forEach((commandKey) => references.add(commandKey));
     return references;
-  }, new Set(Object.keys(NATIVE_SOURCE_CONNECTION_COMMANDS)));
+  }, new Set([...Object.keys(NATIVE_SOURCE_CONNECTION_COMMANDS), ...Object.keys(NATIVE_DATABASE_UPGRADE_COMMANDS)]));
 }
 
 describe('native command contracts', () => {
