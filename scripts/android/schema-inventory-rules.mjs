@@ -44,6 +44,7 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'keep_import_item_cache',
   'keep_import_items',
   'mirror_articles',
+  'parent_child_order_members',
   'readwise_api_import_runs',
   'readwise_api_import_stage',
   'readwise_api_reconcile_runs',
@@ -84,6 +85,7 @@ const MISSING_ANDROID_INDEX_FIELDS = [
   'import_sources.indexes.idx_import_sources_location',
   'import_sources.indexes.idx_import_sources_watched_relative',
   'node_sync_versions.indexes.idx_node_sync_versions_object_created',
+  'nodes.indexes.idx_nodes_current_version_id',
   'sync_object_state.indexes.idx_sync_object_state_dirty',
   'sync_object_state.indexes.idx_sync_object_state_type_updated'
 ];

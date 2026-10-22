@@ -18,12 +18,18 @@ export const PARENT_CHILD_ORDER_MEMBER_SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_parent_child_order_members_child
     ON parent_child_order_members(child_id, parent_id)`,
   `CREATE TRIGGER IF NOT EXISTS trg_parent_child_order_members_insert AFTER INSERT ON parent_child_order BEGIN
-    ${insertMembers('NEW', '')};
+    INSERT OR IGNORE INTO parent_child_order_members (parent_id, child_id)
+    SELECT NEW.parent_id, member.value FROM json_each(COALESCE(CASE WHEN json_valid(NEW.child_ids_json)
+      THEN CASE WHEN json_type(NEW.child_ids_json) = 'array' THEN NEW.child_ids_json END END, '[]')) member
+    WHERE member.type = 'text';
   END`,
   `CREATE TRIGGER IF NOT EXISTS trg_parent_child_order_members_update
     AFTER UPDATE OF parent_id, child_ids_json ON parent_child_order BEGIN
     DELETE FROM parent_child_order_members WHERE parent_id = OLD.parent_id;
-    ${insertMembers('NEW', '')};
+    INSERT OR IGNORE INTO parent_child_order_members (parent_id, child_id)
+    SELECT NEW.parent_id, member.value FROM json_each(COALESCE(CASE WHEN json_valid(NEW.child_ids_json)
+      THEN CASE WHEN json_type(NEW.child_ids_json) = 'array' THEN NEW.child_ids_json END END, '[]')) member
+    WHERE member.type = 'text';
   END`,
   `CREATE TRIGGER IF NOT EXISTS trg_parent_child_order_members_delete AFTER DELETE ON parent_child_order BEGIN
     DELETE FROM parent_child_order_members WHERE parent_id = OLD.parent_id;

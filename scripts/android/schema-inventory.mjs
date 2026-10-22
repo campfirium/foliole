@@ -30,8 +30,11 @@ const DESKTOP_SCHEMA_FILES = {
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   FOREGROUND_TIME_SCHEMA: 'lib/core/database/foregroundTimeSchema.ts',
   FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',
+  TOPIC_DAILY_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
   NODE_CHILD_OWNER_SCHEMA: 'lib/core/database/nodeChildStateSql.ts',
+  PARENT_CHILD_ORDER_MEMBER_SCHEMA: 'lib/core/database/parentChildOrderMembers.ts',
   FRAMED_SYNC_INVENTORY_TABLES: 'lib/core/database/framedSyncInventorySchema.ts',
+  FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES: 'lib/core/database/framedSyncInventorySchema.ts',
   FRAMED_SYNC_INVENTORY_SCHEMA: 'lib/core/database/framedSyncInventorySchema.ts',
   REVIEW_DAILY_COUNT_SCHEMA: 'lib/core/database/reviewDailyCountSchema.ts',
   NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS: 'lib/core/database/nodeSyncTombstoneSchemaStatements.ts',
@@ -191,7 +194,10 @@ function classifyDifference(difference) {
 function buildInventory(statements) {
   const database = new Database(':memory:');
   try {
-    for (const [index, statement] of statements.entries()) {
+    // Triggers last: the source arrays are not ordered by the tables their triggers reference.
+    const isTrigger = (statement) => /^CREATE\s+TRIGGER/iu.test(statement.trim());
+    const ordered = [...statements.filter((statement) => !isTrigger(statement)), ...statements.filter(isTrigger)];
+    for (const [index, statement] of ordered.entries()) {
       try {
         database.exec(statement);
       } catch (error) {

@@ -106,7 +106,7 @@
     "CREATE TRIGGER IF NOT EXISTS attachment_demand_delete AFTER DELETE ON nodes\n    BEGIN INSERT INTO attachment_parse_queue(article_id, registered_at)\n  VALUES (OLD.id, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT(article_id) DO NOTHING; END",
     "CREATE TABLE IF NOT EXISTS sync_node_child_owners (\n    object_type TEXT NOT NULL, object_id TEXT NOT NULL, node_id TEXT NOT NULL,\n    PRIMARY KEY(object_type, object_id))",
     "CREATE INDEX IF NOT EXISTS idx_sync_node_child_owners_node ON sync_node_child_owners(node_id)",
-    "CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner ON sync_object_state(substr(object_id, 12))\n    WHERE object_type = 'topic_daily_count'",
+    "CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner_lookup\n  ON sync_object_state(object_type, substr(object_id, 12)) WHERE object_type = 'topic_daily_count'",
     "CREATE TABLE IF NOT EXISTS framed_sync_inventory (\n    object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL,\n    frontier_json TEXT NOT NULL, relations_json TEXT NOT NULL, reviews_json TEXT NOT NULL,\n    states_json TEXT NOT NULL, resources_json TEXT NOT NULL,\n    PRIMARY KEY (object_type, object_id)\n  )",
     "CREATE TABLE IF NOT EXISTS framed_sync_version_summary (\n    version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL, body_hash TEXT,\n    resource_hashes_json TEXT NOT NULL\n  )",
     "CREATE INDEX IF NOT EXISTS idx_framed_sync_version_summary_object\n    ON framed_sync_version_summary(object_id, version_id)",

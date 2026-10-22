@@ -1,7 +1,7 @@
 export const EXPECTED_SCHEMA_SOURCES = {
   androidAssetStatements: 120,
   androidJavaMigrationStatements: 0,
-  desktopStatements: 129
+  desktopStatements: 137
 };
 
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {
@@ -18,6 +18,7 @@ export const EXPECTED_SHARED_SCHEMA_DRIFT = {
     'indexes.idx_import_sources_watched_relative'
   ],
   node_view_state: ['createSql'],
+  nodes: ['indexes.idx_nodes_current_version_id'],
   setting_records: [
     'columns.form_factor',
     'columns.host_name',

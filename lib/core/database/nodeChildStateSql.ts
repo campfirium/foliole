@@ -48,13 +48,16 @@ export function nodeChildFactIdsSql(nodeId: string) {
  * Keyed by type and owner so the planner prefers it over the type prefix of the primary key; lookups compare
  * against `+owner` because a correlated TEXT column would otherwise disqualify the expression.
  */
-export const TOPIC_DAILY_OWNER_INDEX = `CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner_lookup
-  ON sync_object_state(object_type, substr(object_id, 12)) WHERE object_type = 'topic_daily_count'`;
+export const TOPIC_DAILY_OWNER_SCHEMA = [
+  `CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner_lookup
+  ON sync_object_state(object_type, substr(object_id, 12)) WHERE object_type = 'topic_daily_count'`
+] as const;
+export const TOPIC_DAILY_OWNER_INDEX = TOPIC_DAILY_OWNER_SCHEMA[0];
 
 export const NODE_CHILD_OWNER_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sync_node_child_owners (
     object_type TEXT NOT NULL, object_id TEXT NOT NULL, node_id TEXT NOT NULL,
     PRIMARY KEY(object_type, object_id))`,
   'CREATE INDEX IF NOT EXISTS idx_sync_node_child_owners_node ON sync_node_child_owners(node_id)',
-  TOPIC_DAILY_OWNER_INDEX
+  ...TOPIC_DAILY_OWNER_SCHEMA
 ];
