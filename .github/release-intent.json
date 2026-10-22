@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "version": "0.7.15",
+  "version": "0.7.16",
   "publicationMode": "scoped",
   "selectedPlatforms": ["macos", "windows", "linux"],
   "scopeBasis": {
-    "macos": "Foliole 0.7.15 changes the shared desktop sync protocol, editor focus and crash handling, and Readwise import ownership used by the macOS app, so the macOS package is required.",
-    "windows": "Foliole 0.7.15 changes the shared desktop sync protocol and Windows Sync Group behavior verified on the Windows development machine, so the Windows package and direct installer are required.",
-    "linux": "Foliole 0.7.15 changes the shared Electron sync protocol and editor behavior used by Linux Experimental, so the Linux Experimental package is required."
+    "macos": "Foliole 0.7.16 blocks the LAN sync compressed-response vulnerability in the bundled Node runtime and moves older library upgrades off the main thread in the macOS app, so the macOS package is required.",
+    "windows": "Foliole 0.7.16 blocks the LAN sync compressed-response vulnerability and fixes the long unresponsive library upgrade reported on Windows, verified on the Windows development machine, so the Windows package and direct installer are required.",
+    "linux": "Foliole 0.7.16 changes the shared Electron runtime security fix, library upgrade path and desktop sync protocol used by Linux Experimental, so the Linux Experimental package is required."
   }
 }
