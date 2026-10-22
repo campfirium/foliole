@@ -162,7 +162,8 @@ it.each([false, true])('keeps a complete permanent-delete chain with editor base
   expect(tombstone.version_id).not.toBe(activeVersionId);
   expect(tombstone.parent_version_id).toBe(activeVersionId);
   expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
-    .pluck().get(tombstone.version_id)).toBe('# node-root');
+    .pluck().get(tombstone.version_id)).toBeNull();
+  expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({ content: null, body_deleted: true });
   expect(tombstone.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   expect(tombstone.deleted_at).toBe(tombstone.created_at);
   expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({

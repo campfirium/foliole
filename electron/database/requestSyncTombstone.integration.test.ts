@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
+import { releaseDeletedNodeBodiesWithPort } from '../../lib/core/database/deletedNodeBodyRelease.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
@@ -45,6 +46,8 @@ it('does not resurrect a locally deleted node when a peer sends its old active v
     for (const peer of [source, target]) await applySyncNodesWithDbPort(peer.db, [base]);
     await remove(target);
     expect(await collectNodeVersionPayloads(target.db, 'topic')).toEqual({ released: 1, skipped: null });
+    // A deletion at rest keeps no text; receiving an old live version afterwards changes nothing.
+    await target.db.transaction(tx => releaseDeletedNodeBodiesWithPort(tx, 'topic'));
     const before = facts(target);
     await send(source, target);
     await send(source, target);
@@ -73,7 +76,8 @@ it.each([false, true])('applies a standalone deletion to an existing node withou
       .toEqual([{ node_id: 'topic', version_id: deleted.version_id, parent_version_id: base.version_id,
         content_hash: deleted.content_hash, deleted_at: deletedAt }]);
     expect(target.sqlite.prepare('SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions').all())
-      .toEqual([{ version_id: base.version_id, parent_version_id: null, content_hash: base.content_hash, body_text: base.body_text }]);
+      // The existing node's earlier text goes with the received permanent deletion.
+      .toEqual([{ version_id: base.version_id, parent_version_id: null, content_hash: base.content_hash, body_text: null }]);
     expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
   } finally { await fixture.close(); }
 });

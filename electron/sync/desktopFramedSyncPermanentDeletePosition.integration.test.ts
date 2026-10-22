@@ -39,11 +39,15 @@ it.each([false, true])('synchronizes production permanent deletion without posit
       expect(right.prepare(tombstone).get(nodeId)).toEqual(left.prepare(tombstone).get(nodeId));
       const body = `SELECT body_text FROM node_sync_versions WHERE version_id =
         (SELECT version_id FROM node_sync_tombstones WHERE node_id = ?)`;
-      expect(right.prepare(body).pluck().get(nodeId)).toBe('Original retained body');
+      expect(right.prepare(body).pluck().get(nodeId) ?? null).toBeNull();
       const parents = `SELECT edge.* FROM node_sync_version_parents edge
         JOIN node_sync_versions version ON version.version_id = edge.version_id
-        WHERE version.object_id = ? ORDER BY edge.version_id, edge.ordinal`;
+        WHERE version.object_id = ? AND edge.version_id NOT IN (SELECT version_id FROM node_sync_tombstones)
+        ORDER BY edge.version_id, edge.ordinal`;
+      // The deletion's own parent is kept on the tombstone; a receiver may hold the deletion only there.
       expect(right.prepare(parents).all(nodeId)).toEqual(left.prepare(parents).all(nodeId));
+      expect(right.prepare('SELECT parent_version_id FROM node_sync_tombstones WHERE node_id = ?').pluck().get(nodeId))
+        .toBe(left.prepare('SELECT parent_version_id FROM node_sync_tombstones WHERE node_id = ?').pluck().get(nodeId));
       expect(right.prepare('SELECT id FROM nodes WHERE id = ?').all(nodeId)).toEqual([]);
       expect(left.prepare("SELECT name FROM sqlite_master WHERE name = 'framed_sync_outbound_holds'").all()).toEqual([]);
     } finally { left.close(); right.close(); }

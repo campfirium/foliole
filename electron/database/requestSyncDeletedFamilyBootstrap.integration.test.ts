@@ -75,16 +75,22 @@ it('receives an already deleted family into an empty receiver and retains origin
     const receivedFacts = tombstones(target);
     expect(receivedFacts.map(fact => Object.fromEntries(Object.entries(fact).filter(([key]) => key !== 'snapshot_json'))))
       .toEqual(originalFacts.map(fact => Object.fromEntries(Object.entries(fact).filter(([key]) => key !== 'snapshot_json'))));
+    // The receiver keeps every deletion fact but none of the deleted text or what was taken from it.
+    const withoutText = (json: string) => Object.fromEntries(Object.entries(JSON.parse(json) as Record<string, unknown>)
+      .filter(([key]) => !['content', 'title', 'opening_text', 'body_deleted', 'body_blob_hash', 'text_alternative_bodies'].includes(key)));
     for (const [index, fact] of receivedFacts.entries()) {
-      expect(JSON.parse(fact.snapshot_json)).toMatchObject(JSON.parse(originalFacts[index]!.snapshot_json));
+      expect(withoutText(fact.snapshot_json)).toMatchObject(withoutText(originalFacts[index]!.snapshot_json));
+      expect(JSON.parse(fact.snapshot_json)).toMatchObject({ content: null, opening_text: null });
     }
-    expect(tombstones(source)).toEqual(originalFacts);
-    // History identities match; only the deletion (current) versions must carry the same body.
+    const factsWithoutText = (facts: typeof originalFacts) => facts.map(fact => ({ ...fact, snapshot_json: withoutText(fact.snapshot_json) }));
+    expect(factsWithoutText(tombstones(source))).toEqual(factsWithoutText(originalFacts));
+    // History identities match; the receiver keeps no text of any deleted version.
     const identities = 'SELECT version_id, parent_version_id, content_hash FROM node_sync_versions ORDER BY version_id';
     expect(target.sqlite.prepare(identities).all()).toEqual(source.sqlite.prepare(identities).all());
     const currentBodies = `SELECT version.version_id, version.body_text FROM node_sync_versions version
       JOIN node_sync_tombstones tomb ON tomb.version_id = version.version_id ORDER BY version.version_id`;
-    expect(target.sqlite.prepare(currentBodies).all()).toEqual(source.sqlite.prepare(currentBodies).all());
+    expect(target.sqlite.prepare(currentBodies).all()).toEqual(source.sqlite.prepare(currentBodies).all()
+      .map(row => ({ ...(row as Record<string, unknown>), body_text: null })));
     expect(target.sqlite.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(target.sqlite.pragma('foreign_key_check')).toEqual([]);
   } finally { await fixture.close(); }

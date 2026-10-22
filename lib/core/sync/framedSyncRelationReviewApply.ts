@@ -41,7 +41,15 @@ async function assertVersionOwner(tx: DbPort, versionId: string, objectId: strin
   }
 }
 
+/** A deletion received without its text is kept only as the tombstone, which already names its parent. */
+async function isTombstoneOnlyVersion(tx: DbPort, row: FramedSyncParentRelationSource) {
+  const [tomb] = await tx.query(`SELECT 1 AS present FROM node_sync_tombstones WHERE version_id = ? AND node_id = ?
+    AND NOT EXISTS (SELECT 1 FROM node_sync_versions WHERE version_id = ?)`, [row.version_id, row.object_id, row.version_id]);
+  return Boolean(tomb);
+}
+
 async function applyParent(tx: DbPort, factId: string, row: FramedSyncParentRelationSource) {
+  if (await isTombstoneOnlyVersion(tx, row)) return;
   await assertVersionOwner(tx, row.version_id, row.object_id);
   await assertVersionOwner(tx, row.parent_version_id, row.object_id, true);
   const existing = await tx.query<ParentRow>(

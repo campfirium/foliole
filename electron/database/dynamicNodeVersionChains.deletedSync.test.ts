@@ -29,15 +29,17 @@ function originalFacts(peer: Peer) {
   const tombstone = peer.db.prepare<[], Record<string, unknown> & { snapshot_json: string }>(
     "SELECT * FROM node_sync_tombstones WHERE node_id = 'topic'").get()!;
   return {
-    versions: peer.db.prepare<[], Record<string, unknown> & { metadata: string }>(`SELECT version_id, object_id, parent_version_id,
+    versions: peer.db.prepare<[string], Record<string, unknown> & { metadata: string }>(`SELECT version_id, object_id, parent_version_id,
       host_name, created_at, content_hash,
       json_remove(snapshot_json, '$.content', '$.body_blob_hash', '$.body_deleted') AS metadata
-      FROM node_sync_versions WHERE object_id = 'topic' ORDER BY version_id`).all()
+      FROM node_sync_versions WHERE object_id = 'topic' AND version_id <> ? ORDER BY version_id`).all(tombstone.version_id as string)
       .map(row => ({ ...row, metadata: snapshotFields(row.metadata) })),
+    // The deletion itself may be held only as the tombstone on a receiver, which already names its parent.
     parents: peer.db.prepare(`SELECT edge.* FROM node_sync_version_parents edge
       JOIN node_sync_versions version ON version.version_id = edge.version_id
-      WHERE version.object_id = 'topic' ORDER BY edge.version_id, edge.ordinal`).all(),
-    tombstone: { ...tombstone, snapshot_json: snapshotFields(tombstone.snapshot_json) }
+      WHERE version.object_id = 'topic' AND edge.version_id <> ? ORDER BY edge.version_id, edge.ordinal`).all(tombstone.version_id as string),
+    // A deletion received without text carries only the empty-body placeholder hash; nothing else may differ.
+    tombstone: { ...tombstone, snapshot_json: { ...snapshotFields(tombstone.snapshot_json), body_blob_hash: null } }
   };
 }
 
@@ -51,6 +53,15 @@ function expectBody(peer: Peer, versionId: string, body: string | null) {
   expect(row).toMatchObject({ body_text: body });
   if (body === null) expect(row).toMatchObject({ snapshot_body: null, snapshot_type: 'null', retired: 1,
     hash: createHash('sha256').update('body').digest('hex') });
+}
+
+/** A permanent deletion keeps its identity, as a version or only as the tombstone, but none of the text. */
+function expectDeletionWithoutText(peer: Peer, versionId: string) {
+  const row = peer.db.prepare('SELECT body_text, json_extract(snapshot_json, \'$.content\') AS content FROM node_sync_versions WHERE version_id = ?')
+    .get(versionId) as { body_text: string | null; content: string | null } | undefined;
+  expect(row ?? { body_text: null, content: null }).toEqual({ body_text: null, content: null });
+  expect(peer.db.prepare("SELECT json_extract(snapshot_json, '$.content') FROM node_sync_tombstones WHERE version_id = ?")
+    .pluck().get(versionId)).toBeNull();
 }
 
 it('keeps frozen sent text and original identities through deletion and database reopen', async () => {
@@ -77,7 +88,7 @@ it('keeps frozen sent text and original identities through deletion and database
       restartDeletedPeer(peer);
       expect(originalFacts(peer)).toEqual(original);
       expectBody(peer, old, null);
-      expectBody(peer, tomb.version_id, 'body');
+      expectDeletionWithoutText(peer, tomb.version_id);
       expect(peer.db.pragma('foreign_key_check')).toEqual([]);
       expect(peer.db.prepare("SELECT parent_version_id FROM node_sync_tombstones WHERE node_id = 'topic'").pluck().get()).toBe(old);
     }
@@ -100,7 +111,7 @@ it('releases a persisted editor identity after its unused body and node entity a
   await releaseLocalEditBase(peer.port, 'draft', 'topic');
   expect(originalFacts(peer)).toEqual(original);
   expectBody(peer, base, null);
-  expectBody(peer, tomb.version_id, 'body');
+  expectDeletionWithoutText(peer, tomb.version_id);
 });
 
 it('preserves the surviving anchor identity independently of retired main text', async () => {
@@ -121,7 +132,7 @@ it('preserves the surviving anchor identity independently of retired main text',
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(originalFacts(peer)).toEqual(original);
   expectBody(peer, base, null);
-  expectBody(peer, tomb.version_id, 'body');
+  expectDeletionWithoutText(peer, tomb.version_id);
 });
 
 it('keeps an unresolved conflict through physical deletion and database reopen until explicitly resolved', async () => {
@@ -142,7 +153,7 @@ it('keeps an unresolved conflict through physical deletion and database reopen u
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(originalFacts(peer)).toEqual(original);
   expectBody(peer, base, null);
-  expectBody(peer, tomb.version_id, 'body');
+  expectDeletionWithoutText(peer, tomb.version_id);
 });
 
 it.each(['driver', 'port'])('preserves deleted-object identities and tombstone text when its unknown peer leaves (%s)', async host => {
@@ -161,5 +172,5 @@ it.each(['driver', 'port'])('preserves deleted-object identities and tombstone t
   else await collectAllNodeVersionChains(peer.port);
   expect(originalFacts(peer)).toEqual(original);
   expectBody(peer, base, null);
-  expectBody(peer, tomb.version_id, 'body');
+  expectDeletionWithoutText(peer, tomb.version_id);
 });

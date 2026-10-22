@@ -47,8 +47,9 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
       expect(right.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node' AND object_id = ?")
         .get(nodeId)).toEqual({ deleted_at: deletedAt });
       expect(right.prepare('SELECT id FROM nodes WHERE id = ?').get(nodeId)).toBeUndefined();
-      expect(left.prepare('SELECT body_text FROM node_sync_versions WHERE object_id = ?').pluck().all(nodeId))
-        .toContain('Protected original body');
+      // A permanent deletion keeps no copy of the deleted text on either side.
+      for (const side of [left, right]) expect(side.prepare('SELECT body_text FROM node_sync_versions WHERE object_id = ?')
+        .pluck().all(nodeId)).not.toContain('Protected original body');
       expect(left.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_outbound_holds'").get()).toBeUndefined();
       expect(right.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").get()).toBeUndefined();
     } finally { left.close(); right.close(); }

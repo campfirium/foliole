@@ -9,6 +9,7 @@ import { afterEach, expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort.js';
 import { textBranch } from '../../../../../electron/database/topicTextState.testSupport.js';
 import { bootstrapCompanionDatabase } from '../../../../../lib/core/database/companionDatabaseLifecycle.js';
+import { releaseDeletedNodeBodiesWithPort } from '../../../../../lib/core/database/deletedNodeBodyRelease.js';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort.js';
 import { recordCompletedSyncGroupRound } from '../../../../../lib/core/sync/syncGroupCoverageStore.js';
 import { collectSyncGroupHistory } from '../../../../../lib/core/sync/syncHistoryCollection.js';
@@ -60,4 +61,22 @@ it('reclaims old history and expired deletions in the companion schema only afte
   expect(sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe('Final text');
   expect(sqlite.prepare('SELECT count(*) FROM node_sync_tombstones').pluck().get()).toBe(0);
   expect(sqlite.prepare("SELECT count(*) FROM node_sync_version_parents WHERE version_id = 'middle'").pluck().get()).toBe(0);
+});
+
+it('clears a permanently deleted note’s text in the companion schema while keeping its identities', async () => {
+  const { sqlite, port } = await companion();
+  const base = textBranch('base', 'Private first draft', undefined, '2026-09-01T00:00:00.000Z');
+  const head = textBranch('head', 'Private final text', base, '2026-09-02T00:00:00.000Z');
+  for (const record of [base, head]) await applyConvergentSyncNodesWithDbPort(port, [record]);
+  sqlite.exec(`INSERT INTO node_sync_tombstones SELECT 'topic', 'head', 'base', 'phone', content_hash,
+      json_set(snapshot_json, '$.content', 'Private final text'), '2026-09-03T00:00:00.000Z', '2026-09-03T00:00:00.000Z'
+    FROM node_sync_versions WHERE version_id = 'head';
+    DELETE FROM nodes WHERE id = 'topic'`);
+  await releaseDeletedNodeBodiesWithPort(port, 'topic');
+  const rows = sqlite.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content,
+    json_extract(snapshot_json, '$.opening_text') AS opening FROM node_sync_versions ORDER BY version_id`).all();
+  expect(rows).toEqual([{ version_id: 'base', body_text: null, content: null, opening: null },
+    { version_id: 'head', body_text: null, content: null, opening: null }]);
+  expect(sqlite.prepare(`SELECT version_id, json_extract(snapshot_json, '$.content') AS content
+    FROM node_sync_tombstones`).all()).toEqual([{ version_id: 'head', content: null }]);
 });

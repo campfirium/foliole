@@ -88,7 +88,8 @@ async function expectDeletedState(databasePath: string, nodeId: string, historic
     await expect(readFramedSyncInventoryEntry(createBetterSqliteDbPort(deleted), {
       globalId: nodeId, objectType: 'node_open_state'
     })).resolves.toBeNull();
+    // The deletion keeps its versions' identities but none of the deleted text.
     expect(deleted.prepare('SELECT body_text FROM node_sync_versions WHERE object_id = ?').pluck().all(nodeId))
-      .toContain('Protected complete original body');
+      .not.toContain('Protected complete original body');
   } finally { deleted.close(); }
 }

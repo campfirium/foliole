@@ -18,7 +18,9 @@ function expectDeletion(peer: Peer, previous: string) {
   expect(tombstone.version_id).not.toBe(previous);
   expect(tombstone.parent_version_id).toBe(previous);
   expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({ id: 'topic', deleted_at: '2026-10-01T00:00:00.000Z' });
-  expect(versions.find(row => row.version_id === tombstone.version_id)?.body_text).toBe('body');
+  // Permanent deletion keeps the deletion's identity and hash but none of the note's text.
+  expect(versions.find(row => row.version_id === tombstone.version_id)?.body_text).toBeNull();
+  expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({ content: null, body_deleted: true });
   expect(versions.find(row => row.version_id === previous)?.body_text).toBeNull();
   expect(JSON.parse(versions.find(row => row.version_id === previous)!.snapshot_json))
     .toMatchObject({ id: 'topic', content: null, body_deleted: true,

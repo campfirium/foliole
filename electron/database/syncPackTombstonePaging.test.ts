@@ -47,7 +47,7 @@ it('preserves six original deletion facts through current requests, replay and r
     expect(target.sqlite.prepare(`SELECT version_id, object_id, parent_version_id, host_name, content_hash, body_text
       FROM node_sync_versions ORDER BY object_id`).all()).toEqual(expected.map(value => ({
       version_id: value.version_id, object_id: value.node_id, parent_version_id: null,
-      host_name: value.host_name, content_hash: value.content_hash, body_text: ''
+      host_name: value.host_name, content_hash: value.content_hash, body_text: null
     })));
     expect(target.sqlite.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
     expect(source.prepare('SELECT * FROM node_sync_tombstones ORDER BY node_id').all()).toEqual(original);

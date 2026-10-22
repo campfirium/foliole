@@ -25,12 +25,15 @@ export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNode
   const [stored] = await db.query<{ object_id: string; available: number; current_version_id: string | null; sync_dirty: number }>(
     `SELECT version.object_id, (version.body_text IS NOT NULL OR
       json_type(version.snapshot_json, '$.content') = 'text' OR tomb.version_id IS NOT NULL) AS available,
-      node.current_version_id, node.sync_dirty FROM node_sync_versions version
+      COALESCE(node.current_version_id, (SELECT deletion.version_id FROM node_sync_tombstones deletion
+        WHERE deletion.node_id = version.object_id)) AS current_version_id,
+      COALESCE(node.sync_dirty, 0) AS sync_dirty FROM node_sync_versions version
       LEFT JOIN nodes node ON node.id = version.object_id
       LEFT JOIN node_sync_tombstones tomb ON tomb.node_id = version.object_id AND tomb.version_id = version.version_id
       WHERE version.version_id = ?
       UNION ALL SELECT node_id AS object_id, 1 AS available, version_id AS current_version_id, 0 AS sync_dirty
       FROM node_sync_tombstones WHERE version_id = ? LIMIT 1`, [reference.versionId, reference.versionId]);
+  // An older version of a permanently deleted node is an ancestor of its deletion: nothing to apply.
   if (stored?.object_id === reference.globalId && stored.current_version_id && stored.sync_dirty === 0 &&
       stored.current_version_id !== reference.versionId &&
       await isStoredAncestorVersion(db, reference.versionId, stored.current_version_id)) return { ...source, records: [] };

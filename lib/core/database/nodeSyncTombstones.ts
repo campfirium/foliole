@@ -1,5 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
+import { releaseDeletedNodeBodiesWithDriver } from './deletedNodeBodyRelease.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { computeNodeSyncHash } from './nodeSyncHash.js';
 import { upsertSyncObjectState } from './syncState.js';
@@ -131,12 +132,14 @@ function writeNodeSyncTombstoneRow(
   });
 }
 
+/** Returns the text body hashes the deletion released, for collection once the deletion commits. */
 export function writeNodeSyncTombstonesForPermanentDelete(
   driver: DatabaseDriver,
   nodeIds: string[],
   deletedAt: string | null | undefined
 ) {
-  if (!deletedAt || nodeIds.length === 0) return;
+  const released: string[] = [];
+  if (!deletedAt || nodeIds.length === 0) return released;
   const source = prepareTombstoneSource(driver);
   const upsert = prepareTombstoneUpsert(driver);
 
@@ -144,6 +147,8 @@ export function writeNodeSyncTombstonesForPermanentDelete(
     const row = source.get<TombstoneSourceRow>([nodeId]);
     if (row) {
       writeNodeSyncTombstoneRow(driver, upsert, nodeId, row, deletedAt);
+      released.push(...releaseDeletedNodeBodiesWithDriver(driver, nodeId));
     }
   }
+  return released;
 }

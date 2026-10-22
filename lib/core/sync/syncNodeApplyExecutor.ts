@@ -22,7 +22,7 @@ import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalenc
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
-import { applyRemoteNodeTombstone, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
+import { applyRemoteNodeTombstone, assertKnownDeletionIdentity, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
 import { prepareIncomingNodeVersionSource, retainIncomingNodeVersionSource } from './syncNodeVersionHistory.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
@@ -99,10 +99,12 @@ async function handleTombstoneGuard(input: {
 }) {
   const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
   if (input.record.is_tombstone) {
-    if (localTombstone && input.record.version_id &&
-        (input.record.version_id === localTombstone.version_id ||
-         (localTombstone.parent_version_id &&
-          await isStoredAncestorVersion(input.tx, input.record.version_id, localTombstone.parent_version_id)))) {
+    if (localTombstone && input.record.version_id === localTombstone.version_id) {
+      await assertKnownDeletionIdentity(input.tx, input.record);
+      return true;
+    }
+    if (localTombstone?.parent_version_id && input.record.version_id &&
+        await isStoredAncestorVersion(input.tx, input.record.version_id, localTombstone.parent_version_id)) {
       return true;
     }
     if (await applyRemoteNodeTombstone(

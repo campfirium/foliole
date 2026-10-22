@@ -3,6 +3,7 @@ import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL } from './searchPendingState.js';
+import { collectTextBodyBlobCandidates } from './textBodyBlobCollection.js';
 import {
   advanceWorkspaceSearchSourceRevision,
   markWorkspaceSearchSourceIndexedIfSettled,
@@ -26,10 +27,10 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     "DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?"
   );
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
-  driver.transaction(() => {
+  const released = driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
     advanceWorkspaceSearchSourceRevision(driver);
-    writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
+    const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
     deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
     for (const nodeId of input.nodeIds) {
       recordNodeRelatedStateDeletion(driver, nodeId, now);
@@ -48,7 +49,10 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     rewriteExistingNodeOrder(driver, input.nodeOrder);
     markWorkspaceSearchSourceRevisionQueued(driver);
     markWorkspaceSearchSourceIndexedIfSettled(driver);
+    return hashes;
   });
+  // Stored text bodies no longer referenced by anything are removed with the deletion.
+  if (released.length) collectTextBodyBlobCandidates(driver, released);
 
   return [];
 }

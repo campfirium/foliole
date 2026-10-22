@@ -40,6 +40,7 @@ export async function applyRemoteNodeTombstone(
     return false;
   }
   const createdAt = record.version_created_at ?? record.snapshot.deleted_at;
+  await assertKnownDeletionIdentity(port, record);
   await port.run(
     `INSERT INTO node_sync_tombstones (
        node_id,
@@ -76,4 +77,20 @@ export async function applyRemoteNodeTombstone(
     await enqueueAppliedNodeDeleteSearchInvalidation(port, record.object_id, createdAt);
   }
   return true;
+}
+
+/**
+ * A deletion arriving without its text cannot be checked against its hash, so it must at least agree with
+ * the same deletion this device already holds. Its hash may legitimately differ from its version's.
+ */
+export async function assertKnownDeletionIdentity(port: DbPort, record: NativeSyncNodeRecord) {
+  const known = await port.query<{ object_id: string; content_hash: string; host_name: string;
+    parent_version_id: string | null }>(`SELECT node_id AS object_id, content_hash, host_name, parent_version_id
+    FROM node_sync_tombstones WHERE version_id = ?`, [record.version_id]);
+  for (const row of known) {
+    if (row.object_id !== record.object_id || row.content_hash !== record.content_hash ||
+        row.host_name !== record.host_name || (row.parent_version_id ?? null) !== (record.parent_version_id ?? null)) {
+      throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
+    }
+  }
 }

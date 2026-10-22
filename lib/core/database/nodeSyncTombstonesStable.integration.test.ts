@@ -35,20 +35,22 @@ function fixture(body: string, compact: boolean, alreadyDeleted = false) {
 }
 
 it.each(['', '\ufeff"\\\t\0中文😀\r\n'.repeat(30000)])(
-  'preserves original deletion text, identity and hash from complete version owners with compact snapshots', (body) => {
+  'preserves deletion identity and hash from complete version owners with compact snapshots, without their text', (body) => {
     const full = fixture(body, false), compact = fixture(body, true);
     full.write(); compact.write();
     expect(compact.read()).toEqual(full.read());
-    expect(JSON.parse(compact.read()!.snapshot_json).content).toBe(body);
+    expect(JSON.parse(compact.read()!.snapshot_json).content).toBeNull();
+    expect(compact.driver.queryOne("SELECT body_text FROM node_sync_versions WHERE version_id = 'version'"))
+      .toEqual({ body_text: null });
     expect(compact.driver.queryAll('SELECT * FROM sync_object_state')).toEqual(full.driver.queryAll('SELECT * FROM sync_object_state'));
   });
 
-it('preserves the same existing deletion proof and is idempotent after cache retirement', () => {
+it('preserves the same existing deletion proof without its text and is idempotent after cache retirement', () => {
   const host = fixture('Original', true, true);
   host.write();
   const proof = host.read();
   expect(proof?.content_hash).toBe('original-hash');
-  expect(JSON.parse(proof!.snapshot_json).content).toBe('Original');
+  expect(JSON.parse(proof!.snapshot_json).content).toBeNull();
   host.write();
   expect(host.read()).toEqual(proof);
 });

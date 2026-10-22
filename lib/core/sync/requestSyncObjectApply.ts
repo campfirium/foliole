@@ -1,8 +1,10 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
+import { DELETED_NODE_SQL, releaseDeletedNodeBodiesWithPort } from '../database/deletedNodeBodyRelease.js';
 import { NODE_CHILD_STATE_TYPES } from '../database/nodeChildStateSql.js';
 import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
+import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobCollection.js';
 
 import { reconcileCurrentNodeBody } from './currentNodeBodyProjection.js';
 import type { DbPort } from './dbPort.js';
@@ -83,6 +85,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
     if (input.objectType === 'node') {
       await assertCurrentNodeParentChain(tx, input.globalId);
       await reconcileCurrentNodeBody(tx, input.globalId, input.enqueueSearchInvalidations ?? true);
+      await releaseReceivedDeletionBodies(tx, input.globalId);
     }
     await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
     await recordFramedSyncPeerEpoch(tx, { groupId: input.context.groupId, libraryEpoch: input.context.senderLibraryEpoch,
@@ -116,4 +119,11 @@ async function changesCurrentVersion(db: DbPort, input: RequestSyncObjectInput) 
   if (input.objectType !== 'node' || !input.currentVersionId) return false;
   const [node] = await db.query<{ current_version_id: string | null }>(REQUEST_CHAIN_HEAD_SQL, [input.globalId]);
   return node?.current_version_id !== input.currentVersionId;
+}
+
+/** A received permanent deletion leaves no copy of the note's text on this device either. */
+async function releaseReceivedDeletionBodies(tx: DbPort, nodeId: string) {
+  if (!(await tx.query(DELETED_NODE_SQL, [nodeId])).length) return;
+  const hashes = await releaseDeletedNodeBodiesWithPort(tx, nodeId);
+  if (hashes.length) await collectTextBodyBlobCandidatesWithPort(tx, hashes);
 }
