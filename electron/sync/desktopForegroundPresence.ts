@@ -4,6 +4,7 @@ type Listener = (foreground: boolean) => void;
 
 let foreground = false;
 let focused = false;
+let idleSeconds: () => number = () => 0;
 let debounceMs = DESKTOP_FOREGROUND_DEBOUNCE_MS;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<Listener>();
@@ -37,13 +38,19 @@ export function updateDesktopFocus(state: Readonly<{ focused: boolean; available
 }
 
 /**
- * Another desktop just became foreground, so the user settled there after leaving this one; an
- * unfocused foreground here is the older one and steps down so the most recent desktop leads.
+ * Another desktop just became foreground, so the user settled there after leaving this one. Unless
+ * someone is still working here (window focused and input within the debounce), this is the older
+ * foreground and steps down so the most recent desktop leads; an idle focused window does not count.
  */
 export function yieldDesktopForeground() {
-  if (focused) return;
+  if (focused && idleSeconds() * 1000 < DESKTOP_FOREGROUND_DEBOUNCE_MS) return;
   clearPending();
   setForeground(false);
+}
+
+/** Seconds since the last keyboard or mouse input on this machine, whichever window it went to. */
+export function setDesktopIdleSecondsSource(source: () => number) {
+  idleSeconds = source;
 }
 
 /** Integration fixtures settle focus without waiting through the user-facing debounce. */

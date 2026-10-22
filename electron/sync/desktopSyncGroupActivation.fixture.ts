@@ -4,7 +4,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { setDesktopCompanionSyncEnabled } from './desktopCompanionSyncPreference.js';
-import { setDesktopForegroundDebounceMs, updateDesktopFocus } from './desktopForegroundPresence.js';
+import { setDesktopForegroundDebounceMs, setDesktopIdleSecondsSource, updateDesktopFocus } from './desktopForegroundPresence.js';
 import { desktopPeerSessionRegistry } from './desktopPeerSessionRegistry.js';
 import { subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
 import { emitActivationService } from './desktopSyncGroupActivationDns.fixture.js';
@@ -28,6 +28,8 @@ export async function runActivationFixtureCommand(action: string, args: Readonly
   if (action === 'activation_release_round') { releaseBusyRound?.(); return null; }
   if (action === 'activation_foreground') {
     setDesktopForegroundDebounceMs(0);
+    const idleSeconds = z.number().optional().parse(args.idleSeconds) ?? 0;
+    setDesktopIdleSecondsSource(() => idleSeconds);
     updateDesktopFocus({ focused: z.boolean().optional().parse(args.focused) ?? true,
       available: z.boolean().parse(args.foreground) });
     return null;

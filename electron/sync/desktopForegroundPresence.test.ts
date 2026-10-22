@@ -53,3 +53,17 @@ it('steps down for a newer foreground desktop only while its own window is unfoc
   await vi.advanceTimersByTimeAsync(DESKTOP_FOREGROUND_DEBOUNCE_MS);
   expect(changes).toEqual([true, false, true]);
 });
+
+it('steps down while its window stays focused once nobody has touched this machine for the debounce', async () => {
+  const presence = await load();
+  let idle = 0;
+  presence.setDesktopIdleSecondsSource(() => idle);
+  presence.updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(presence.DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  idle = presence.DESKTOP_FOREGROUND_DEBOUNCE_MS / 1000 - 1;
+  presence.yieldDesktopForeground();
+  expect(presence.isDesktopForeground()).toBe(true);
+  idle = presence.DESKTOP_FOREGROUND_DEBOUNCE_MS / 1000;
+  presence.yieldDesktopForeground();
+  expect(presence.isDesktopForeground()).toBe(false);
+});

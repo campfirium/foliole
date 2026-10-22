@@ -1,6 +1,6 @@
 import { app, BrowserWindow, powerMonitor } from 'electron';
 
-import { updateDesktopFocus } from './desktopForegroundPresence.js';
+import { setDesktopIdleSecondsSource, updateDesktopFocus } from './desktopForegroundPresence.js';
 
 let installed = false;
 let locked = false;
@@ -9,6 +9,7 @@ let suspended = false;
 export function installDesktopForegroundPresence() {
   if (installed || typeof app?.on !== 'function' || typeof powerMonitor?.on !== 'function') return;
   installed = true;
+  setDesktopIdleSecondsSource(() => powerMonitor.getSystemIdleTime());
   const update = () => updateDesktopFocus({
     focused: Boolean(BrowserWindow.getFocusedWindow()), available: !locked && !suspended
   });

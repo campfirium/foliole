@@ -125,11 +125,11 @@ it('moves the root to the desktop the user settles on and back when it locks', {
   });
 });
 
-it('hands the root to the desktop the user settled on last while the earlier one still shows foreground', { meta: { calibratedMs: 120_000 } }, async () => {
+it('hands the root to the desktop the user settled on last while the idle earlier one keeps its window focused', { meta: { calibratedMs: 120_000 } }, async () => {
   await withDesktops(2, async ([earlier, later]) => {
     await earlier.process.invoke('activation_foreground', { foreground: true });
     await expect.poll(() => showsForeground(earlier), { timeout: 10_000 }).toBe(true);
-    await earlier.process.invoke('activation_foreground', { foreground: true, focused: false });
+    await earlier.process.invoke('activation_foreground', { foreground: true, idleSeconds: 60 });
     await expect.poll(async () => [await sessions(earlier), await sessions(later)], { timeout: 10_000 }).toEqual([[], [earlier.deviceId]]);
     await later.process.invoke('activation_foreground', { foreground: true });
     await expect.poll(async () => [await sessions(earlier), await sessions(later)], { timeout: 30_000 }).toEqual([[later.deviceId], []]);
