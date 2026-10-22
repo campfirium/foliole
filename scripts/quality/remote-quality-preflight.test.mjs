@@ -121,7 +121,7 @@ describe('remote quality dispatch preflight', () => {
   it('blocks dispatch when the preflight fails', async () => {
     const { runner } = createRunner();
     const preflight = vi.fn(async () => { throw new Error('remote preflight failed'); });
-    await expect(runRemoteQuality({ args: ['--scope', 'shared'], preflight, runner }))
+    await expect(runRemoteQuality({ args: ['--scope', 'shared', '--preflight-host', 'mac'], preflight, runner }))
       .rejects.toThrow('remote preflight failed');
     expect(preflight).toHaveBeenCalledWith(expect.objectContaining({ head: SHA, scope: 'shared' }));
     expect(dispatched(runner)).toBe(false);

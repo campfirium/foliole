@@ -116,8 +116,10 @@ export async function runRemoteQuality(options = {}) {
     return { jobs: active.jobs, reused: true, runId: active.runId, scope: args.scope,
       sourceRef: args.sourceRef, targetSha, url: active.url };
   }
-  // The chosen preflight host is explicit; a Windows failure never falls back to the Mac.
-  const preflight = args.preflightHost === 'windows' ? options.windowsPreflight : options.preflight;
+  // Windows runs the preflight by default so a failure surfaces before the hosted hour without loading
+  // the developer Mac; a Windows failure never falls back, and --preflight-host mac is the explicit fallback.
+  const host = args.preflightHost ?? 'windows';
+  const preflight = host === 'windows' ? options.windowsPreflight : options.preflight;
   if (args.preflightHost === 'windows' && !preflight) throw new Error('Windows preflight is not available');
   if (preflight && !args.replay && !args.skipPreflight) {
     await preflight({ cwd, head: targetSha, repo: repoInfo.nameWithOwner, runner, scope: args.scope });

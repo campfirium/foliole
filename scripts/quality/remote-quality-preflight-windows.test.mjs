@@ -98,6 +98,17 @@ describe('preflight host selection', () => {
       .toBe(false);
   });
 
+  it('runs the Windows preflight by default and the Mac preflight only when asked', async () => {
+    for (const [args, expected] of [[[], 'windows'], [['--preflight-host', 'mac'], 'mac']]) {
+      const { runner } = createRunner();
+      const preflight = vi.fn(async () => { throw new Error('mac preflight'); });
+      const windowsPreflight = vi.fn(async () => { throw new Error('windows preflight'); });
+      await expect(runRemoteQuality({ args: ['--scope', 'desktop', ...args], preflight, runner, windowsPreflight }))
+        .rejects.toThrow(`${expected} preflight`);
+      expect((expected === 'windows' ? preflight : windowsPreflight)).not.toHaveBeenCalled();
+    }
+  });
+
   it('fails when the Windows preflight is requested but unavailable', async () => {
     const { runner } = createRunner();
     await expect(runRemoteQuality({ args: ['--scope', 'desktop', '--preflight-host', 'windows'],
