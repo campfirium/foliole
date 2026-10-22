@@ -139,6 +139,18 @@ it('hands the root to the desktop the user settled on last while the idle earlie
   });
 });
 
+it('keeps the lead on the desktop in use while its user works in another app and an unattended desktop regains focus', { meta: { calibratedMs: 120_000 } }, async () => {
+  await withDesktops(2, async ([unattended, inUse]) => {
+    await inUse.process.invoke('activation_foreground', { foreground: true });
+    await expect.poll(async () => [await sessions(unattended), await sessions(inUse)], { timeout: 30_000 }).toEqual([[inUse.deviceId], []]);
+    await inUse.process.invoke('activation_foreground', { foreground: true, focused: false, idleSeconds: 0 });
+    await unattended.process.invoke('activation_foreground', { foreground: true, idleSeconds: 600 });
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    expect(await showsForeground(unattended)).toBe(false);
+    expect([await sessions(unattended), await sessions(inUse)]).toEqual([[inUse.deviceId], []]);
+  });
+});
+
 it('gathers every desktop under the lowest-ranked desktop once it takes the foreground', { meta: { calibratedMs: 120_000 } }, async () => {
   await withDesktops(3, async ([root, middle, lowest]) => {
     await lowest.process.invoke('activation_foreground', { foreground: true });

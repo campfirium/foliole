@@ -1,9 +1,10 @@
 export const DESKTOP_FOREGROUND_DEBOUNCE_MS = 10_000;
+/** Input this recent still counts as someone settling on the window that just took focus. */
+const DESKTOP_FOREGROUND_INPUT_SLACK_MS = 2_000;
 
 type Listener = (foreground: boolean) => void;
 
 let foreground = false;
-let focused = false;
 let idleSeconds: () => number = () => 0;
 let debounceMs = DESKTOP_FOREGROUND_DEBOUNCE_MS;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -20,7 +21,6 @@ export function subscribeDesktopForeground(listener: Listener) {
 }
 
 export function updateDesktopFocus(state: Readonly<{ focused: boolean; available: boolean }>) {
-  focused = state.available && state.focused;
   if (!state.available) {
     clearPending();
     setForeground(false);
@@ -33,17 +33,17 @@ export function updateDesktopFocus(state: Readonly<{ focused: boolean; available
   if (foreground || timer) return;
   timer = setTimeout(() => {
     timer = null;
-    setForeground(true);
+    // A window left in front of an unattended machine can regain focus without anyone there.
+    if (idleSeconds() * 1000 <= debounceMs + DESKTOP_FOREGROUND_INPUT_SLACK_MS) setForeground(true);
   }, debounceMs);
 }
 
 /**
- * Another desktop just became foreground, so the user settled there after leaving this one. Unless
- * someone is still working here (window focused and input within the debounce), this is the older
- * foreground and steps down so the most recent desktop leads; an idle focused window does not count.
+ * Another desktop just became foreground. Unless someone is still using this machine, in Foliole or
+ * any other app, the user has moved there and this older foreground steps down so that desktop leads.
  */
 export function yieldDesktopForeground() {
-  if (focused && idleSeconds() * 1000 < DESKTOP_FOREGROUND_DEBOUNCE_MS) return;
+  if (idleSeconds() * 1000 < DESKTOP_FOREGROUND_DEBOUNCE_MS) return;
   clearPending();
   setForeground(false);
 }

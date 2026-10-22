@@ -39,19 +39,32 @@ it('keeps foreground after the window loses focus until the screen locks or the 
   expect(changes).toEqual([true, false]);
 });
 
-it('steps down for a newer foreground desktop only while its own window is unfocused', async () => {
-  const { updateDesktopFocus, isDesktopForeground, yieldDesktopForeground, changes, DESKTOP_FOREGROUND_DEBOUNCE_MS } = await load();
-  updateDesktopFocus({ focused: true, available: true });
-  await vi.advanceTimersByTimeAsync(DESKTOP_FOREGROUND_DEBOUNCE_MS);
-  yieldDesktopForeground();
-  expect(isDesktopForeground()).toBe(true);
+it('keeps the lead while someone uses this machine in another app and steps down once it is idle', async () => {
+  const presence = await load();
+  let idle = 0;
+  presence.setDesktopIdleSecondsSource(() => idle);
+  presence.updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(presence.DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  presence.updateDesktopFocus({ focused: false, available: true });
+  presence.yieldDesktopForeground();
+  expect(presence.isDesktopForeground()).toBe(true);
+  idle = presence.DESKTOP_FOREGROUND_DEBOUNCE_MS / 1000;
+  presence.yieldDesktopForeground();
+  expect(presence.isDesktopForeground()).toBe(false);
+  expect(presence.changes).toEqual([true, false]);
+});
 
-  updateDesktopFocus({ focused: false, available: true });
-  yieldDesktopForeground();
-  expect(isDesktopForeground()).toBe(false);
-  updateDesktopFocus({ focused: true, available: true });
-  await vi.advanceTimersByTimeAsync(DESKTOP_FOREGROUND_DEBOUNCE_MS);
-  expect(changes).toEqual([true, false, true]);
+it('does not take the lead when its window regains focus on a machine nobody is using', async () => {
+  const presence = await load();
+  let idle = 600;
+  presence.setDesktopIdleSecondsSource(() => idle);
+  presence.updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(presence.DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  expect(presence.isDesktopForeground()).toBe(false);
+  idle = 0;
+  presence.updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(presence.DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  expect(presence.isDesktopForeground()).toBe(true);
 });
 
 it('steps down while its window stays focused once nobody has touched this machine for the debounce', async () => {
