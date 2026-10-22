@@ -169,3 +169,44 @@ it('keeps committing independent objects through four HTTP rounds of unavailable
     await fixture.close();
   }
 });
+
+it('delivers an object the responder created after returning its inventory in the next round', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source'); const target = fixture.peer('target');
+  const server = syncServer(source, target);
+  try {
+    for (const peer of [source, target]) await applyConvergentSyncNodesWithDbPort(peer.db, [record('equal', 'equal-v1')]);
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('missing_address');
+    const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+      initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
+      responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
+    const transport = createDesktopRequestSyncExchange({ context, groupKey,
+      groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
+    let created = false;
+    const exchange = { ...transport, request: (async (route, body, consume) => {
+      const response = await transport.request(route, body, consume);
+      if (!created && route.includes('request=inventory')) {
+        created = true;
+        await applyConvergentSyncNodesWithDbPort(target.db, [record('fresh', 'fresh-v1')]);
+      }
+      return response;
+    }) satisfies typeof transport.request };
+    const port = { exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
+      transferObjects: (differences: Parameters<typeof transferRequestSyncBatch>[2]) =>
+        transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
+      reportObjectError: (_difference: unknown, error: unknown) => { throw error; } };
+    await runRequestSyncDatabaseRound(port);
+    expect(created).toBe(true);
+    expect(await runRequestSyncDatabaseRound(port)).toMatchObject({ complete: true });
+    for (const peer of [source, target]) {
+      peer.reopen();
+      expect(await peer.db.query('SELECT id, current_version_id FROM nodes ORDER BY id'))
+        .toEqual([{ id: 'equal', current_version_id: 'equal-v1' }, { id: 'fresh', current_version_id: 'fresh-v1' }]);
+    }
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await fixture.close();
+  }
+});
