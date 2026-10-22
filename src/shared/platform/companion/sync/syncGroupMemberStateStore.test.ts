@@ -121,17 +121,26 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before any companio
   writer.mockRestore();
 });
 
-it('rejects an older proof revision from a restored provider database', async () => {
+it('rejects a restored provider copy but keeps syncing when it only lost its last commits', async () => {
   sqlite.prepare(`INSERT INTO node_version_device_revisions
     (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
     VALUES ('group-1', ?, 'peer-epoch', 7, 'pack-7', 'now')`)
     .run(provider.identity_key);
+  // This device already counts on the provider owning its changes; the restored copy cannot show it does.
+  sqlite.prepare("INSERT INTO sync_group_metadata (key, value, updated_at) VALUES ('sync_group_coverage:group-1', ?, 'now')")
+    .run(JSON.stringify({ basis: '', cells: { [provider.identity_key]: { [local.identity_key]: '2026-10-21T05:37:00.000Z' } } }));
   const stale = { ...await loadCompanionSyncGroupMemberState(),
     library_epoch: 'peer-epoch', proof_revision: 100,
     source_proof_revisions: { [local.identity_key]: 6 },
     sender_device_identity_key: provider.identity_key };
+  delete stale.coverage;
   await expect(applyCompanionSyncGroupMemberState(stale, provider.identity_key))
     .rejects.toThrow('node_version_peer_restore_requires_rejoin');
+  const crashed = { ...stale, coverage: { basis: '', cells: {
+    [provider.identity_key]: { [local.identity_key]: '2026-10-21T05:20:00.000Z' } } } };
+  await expect(applyCompanionSyncGroupMemberState(crashed, provider.identity_key)).resolves.toBeDefined();
+  expect(sqlite.prepare('SELECT proof_revision FROM node_version_device_revisions WHERE device_identity_key = ?')
+    .pluck().get(provider.identity_key)).toBe(6);
 });
 
 it('merges a Windows display platform using its canonical path flavor', async () => {

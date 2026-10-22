@@ -142,6 +142,8 @@ it.each(['android', 'ios'] as const)('accepts an explicit adopted %s epoch once 
   main.prepare(`INSERT INTO node_version_device_revisions
     (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
     VALUES ('group-1', 'sender', 'old-epoch', 2, 'prior', '2026-10-06')`).run();
+  main.prepare("INSERT INTO sync_group_metadata (key, value, updated_at) VALUES ('sync_group_coverage:group-1', ?, 'now')")
+    .run(JSON.stringify({ basis: '', cells: { sender: { receiver: '2026-10-06T00:00:00.000Z' } } }));
   const ordinaryState = { ...state };
   delete ordinaryState.adopted_from;
   await expect(port.transaction((tx) => assertCompanionPeerProofFresh(tx, ordinaryState, 'receiver')))

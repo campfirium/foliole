@@ -2,6 +2,7 @@ import { assertNodeVersionPeerProofFresh } from '../../lib/core/sync/nodeVersion
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { loadDesktopSyncGroupCoverage } from './syncGroupCoverageDesktop.js';
 
 export function loadDesktopLocalNodeProof() {
   const proof = openDatabaseConnection().driver.queryOne<{
@@ -25,7 +26,18 @@ export function assertDesktopPeerProofFresh(incoming: SyncGroupMemberStatePayloa
     `SELECT local_device_identity_key FROM sync_group_local_state WHERE singleton_id = 1`
   );
   if (!local) throw new Error('node_version_local_device_missing');
-  assertNodeVersionPeerProofFresh(known, incoming, local.local_device_identity_key);
+  const coverage = loadDesktopSyncGroupCoverage(openDatabaseConnection().driver, incoming.group_id);
+  const recovered = assertNodeVersionPeerProofFresh(known, incoming, local.local_device_identity_key, coverage);
+  if (recovered === null) return;
+  console.warn('[sync-group] peer lost acknowledged commits; continuing from its durable revision', {
+    peerDeviceId: incoming.sender_device_identity_key, known: known?.proof_revision, recovered
+  });
+  openDatabaseConnection().driver.execute(
+    `UPDATE node_version_device_revisions SET proof_revision = ?, pack_id = ?, updated_at = ?
+     WHERE group_id = ? AND device_identity_key = ?`,
+    [recovered, `peer-rollback:${incoming.library_epoch}:${recovered}`, new Date().toISOString(),
+      incoming.group_id, incoming.sender_device_identity_key]
+  );
 }
 
 export function recordDesktopAcknowledgedPeerProof(

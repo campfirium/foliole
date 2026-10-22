@@ -1,5 +1,7 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { assertNodeVersionPeerProofFresh } from '../../../../../lib/core/sync/nodeVersionPeerProof';
 import { reconcileAdoptedPeerEpoch } from '../../../../../lib/core/sync/syncGroupAdoptedPeerEpoch';
+import { loadSyncGroupCoverage } from '../../../../../lib/core/sync/syncGroupCoverageStore';
 import type { SyncGroupMemberStatePayload } from '../../../../../lib/platform/syncGroupMemberStateContract';
 
 export async function loadCompanionLocalNodeProof(db: DbPort) {
@@ -23,8 +25,13 @@ export async function assertCompanionPeerProofFresh(
      WHERE group_id = ? AND device_identity_key = ?`,
     [incoming.group_id, incoming.sender_device_identity_key]
   );
-  if (known && (known.library_epoch !== incoming.library_epoch ||
-      known.proof_revision > (incoming.source_proof_revisions[localDeviceId] ?? 0))) {
-    throw new Error('node_version_peer_restore_requires_rejoin');
-  }
+  const coverage = await loadSyncGroupCoverage(db, incoming.group_id);
+  const recovered = assertNodeVersionPeerProofFresh(known, incoming, localDeviceId, coverage);
+  if (recovered === null) return;
+  await db.run(
+    `UPDATE node_version_device_revisions SET proof_revision = ?, pack_id = ?, updated_at = ?
+     WHERE group_id = ? AND device_identity_key = ?`,
+    [recovered, `peer-rollback:${incoming.library_epoch}:${recovered}`, new Date().toISOString(),
+      incoming.group_id, incoming.sender_device_identity_key]
+  );
 }

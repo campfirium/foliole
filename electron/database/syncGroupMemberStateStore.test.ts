@@ -86,24 +86,6 @@ it('completes an offline target removal after every Device in the initiator list
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('active');
 });
 
-it('rejects a restored peer database before merging its member state', () => {
-  const source = deviceDatabase(0, [1]);
-  const target = deviceDatabase(1, [0]);
-  use(source);
-  source.prepare(`INSERT INTO node_version_device_revisions
-    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
-    VALUES ('group-1', ?, 'peer-epoch', 7, 'pack-7', 'now')`)
-    .run(identities[1]!.identity_key);
-  use(target);
-  const stale = loadDesktopSyncGroupMemberState();
-  stale.library_epoch = 'peer-epoch';
-  stale.proof_revision = 100;
-  stale.source_proof_revisions[identities[0]!.identity_key] = 6;
-  use(source);
-  expect(() => applyDesktopSyncGroupMemberState(stale, identities[1]!.identity_key))
-    .toThrow('node_version_peer_restore_requires_rejoin');
-});
-
 it('keeps the later of two offline backup restores before ordinary member sync', () => {
   const a = deviceDatabase(0, [1]);
   const b = deviceDatabase(1, [0]);
