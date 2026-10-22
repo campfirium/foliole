@@ -28,6 +28,7 @@ export const controlledSyncSqliteTests = [
   'src/test/companionAttachmentFairness.integration.test.ts',
   'src/test/companionExactVersionFacts.integration.test.ts',
   'src/test/companionExactVersionScale.integration.test.ts',
+  'src/test/companionLongHistoryApplyWork.integration.test.ts',
 
   'src/test/companionSyncStageFailure.integration.test.ts',
   'src/companion/companionSyncActivityFailure.integration.test.ts',
