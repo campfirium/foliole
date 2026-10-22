@@ -99,6 +99,14 @@ function nextNonEmptyLine(lines, index) {
   return null;
 }
 
+// A conditional skip such as test.skip(process.platform !== 'darwin', reason) is a platform or
+// environment guard that runs wherever its condition holds, so only fault skips can go stale.
+function isConditionalGuard(lines, skipIndex) {
+  let rest = lines[skipIndex].replace(TEST_SKIP_PATTERN, '').trim();
+  for (let cursor = skipIndex + 1; !rest && cursor < lines.length; cursor += 1) rest = lines[cursor].trim();
+  return Boolean(rest) && !/^['"`)]/.test(rest);
+}
+
 function location(filePath, lineIndex) {
   return `${filePath}:${lineIndex + 1}`;
 }
@@ -141,7 +149,7 @@ function lintFile(filePath, source, today) {
     const age = dayAge(dateText, today);
     if (age === null) {
       errors.push(`${location(filePath, index)} invalid SKIP date`);
-    } else if (age > STALE_DAYS) {
+    } else if (age > STALE_DAYS && !isConditionalGuard(lines, next.index)) {
       warnings.push(`${location(filePath, index)} stale SKIP is ${age} days old`);
     }
   });

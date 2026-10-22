@@ -156,4 +156,44 @@ describe('quality-skip-lint.mjs', () => {
       await rm(tempRoot, { recursive: true, force: true });
     }
   });
+  it('counts only fault skips as stale, not platform or environment guards', async () => {
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'quality-skip-lint-'));
+    try {
+      await writeTestFile(tempRoot, [
+        "import { test } from '@playwright/test';",
+        '',
+        "test('macOS journey', async () => {",
+        '  // SKIP: macOS-only journey | 2026-01-01 | revive: run on a darwin host',
+        "  test.skip(process.platform !== 'darwin', 'macOS-only journey');",
+        '});',
+        '',
+        "test('demo reset', async () => {",
+        '  // SKIP: requires the Demo environment | 2026-01-01 | revive: run with FOLIOLE_DEMO_E2E=1',
+        '  test.skip(',
+        '    !DEMO_E2E_ENABLED,',
+        "    'Demo e2e requires its environment.'",
+        '  );',
+        '});',
+        '',
+        '// SKIP: fixture is broken | 2026-01-01 | revive: when fixture is rebuilt',
+        "test.skip('broken fixture', async () => {});",
+        '',
+        "test('runtime fault', async () => {",
+        '  // SKIP: crashes on startup | 2026-01-01 | revive: after the crash fix',
+        '  test.skip();',
+        '});',
+        ''
+      ].join('\n'), 'journey.spec.ts');
+
+      const result = await runSkipLint(tempRoot);
+
+      expect(result.code).toBe(0);
+      expect(result.stderr).not.toContain('journey.spec.ts:4 ');
+      expect(result.stderr).not.toContain('journey.spec.ts:9 ');
+      expect(result.stderr).toContain('journey.spec.ts:16 stale SKIP is 125 days old');
+      expect(result.stderr).toContain('journey.spec.ts:20 stale SKIP is 125 days old');
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
