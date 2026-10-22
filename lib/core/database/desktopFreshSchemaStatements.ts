@@ -18,6 +18,7 @@ import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
+import { PARENT_CHILD_ORDER_MEMBER_SCHEMA } from './parentChildOrderMembers.js';
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
@@ -49,6 +50,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...CURRENT_PARENT_ORDER_SCHEMA,
+  ...PARENT_CHILD_ORDER_MEMBER_SCHEMA,
   ...ATTACHMENT_DEMAND_SCHEMA,
 
   ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS,

@@ -32,6 +32,7 @@ import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigrati
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
+import { migrateCompanionFramedSyncInventoryLookups } from './framedSyncInventoryLookupMigration.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
@@ -130,6 +131,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 93 && targetVersion >= 93) await migrateCompanionAttachmentDemands(db);
   if (currentVersion < 94 && targetVersion >= 94) await migrateCompanionMissingCurrentVersionInventory(db);
   if (currentVersion < 95 && targetVersion >= 95) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
+  if (currentVersion < 96 && targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -156,6 +158,7 @@ export async function createCompanionDatabase(
   if (targetVersion >= 86) await migrateCompanionFramedSyncDigests(db);
   if (targetVersion >= 87) await migrateCompanionForegroundSources(db);
   if (targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
+  if (targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

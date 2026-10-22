@@ -1,0 +1,23 @@
+{
+  "release": "v0.7.14",
+  "sourceCommit": "35ae489f4e41fe3b13aa6821e6337f5c4b9fa638",
+  "shape": {
+    "books": 2,
+    "bodyKb": 4,
+    "versions": 3,
+    "imageKb": 2
+  },
+  "scales": [
+    {
+      "name": "1x",
+      "chapters": 20,
+      "images": 8
+    },
+    {
+      "name": "4x",
+      "chapters": 80,
+      "images": 32
+    }
+  ],
+  "dataOrigin": "deterministic synthetic book library; no user data"
+}

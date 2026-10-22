@@ -1,0 +1,20 @@
+{
+  "createdTargets": [],
+  "plan": {
+    "assetsRoot": "/Volumes/UD/Foliole/.tmp/upgrade-scale-fixture-generation/4x/Documents/Foliole/Assets",
+    "files": [],
+    "items": [],
+    "journalPlan": {
+      "items": [],
+      "stage": "planned",
+      "version": 1
+    },
+    "residualBlockers": [],
+    "unsupportedEntries": [],
+    "version": 2
+  },
+  "runId": "d272612d-7240-4068-83b5-c8149ec530db",
+  "stagedAliases": [],
+  "stage": "verified",
+  "version": 2
+}

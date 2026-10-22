@@ -2,7 +2,7 @@ import { saveLocalCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
-  parentOrderId, readOrderMembers, readParentChildOrders
+  parentOrderId, readOrderMembers, readOrdersAroundNode, readParentChildOrders
 } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 
@@ -10,7 +10,7 @@ export function ensureNodeParentMembership(driver: DatabaseDriver, nodeId: strin
   const node = driver.queryOne<{ parent_id: string | null }>('SELECT parent_id FROM nodes WHERE id = ?', [nodeId]);
   if (!node) return;
   const targetParent = parentOrderId(node.parent_id);
-  const orders = readParentChildOrders(driver);
+  const orders = readOrdersAroundNode(driver, targetParent, nodeId);
   const changes = new Map<string, string[]>();
   for (const [parentId, childIds] of orders) {
     if (parentId !== targetParent && childIds.includes(nodeId)) {

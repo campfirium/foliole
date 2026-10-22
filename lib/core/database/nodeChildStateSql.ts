@@ -36,7 +36,7 @@ export function nodeChildFactIdsSql(nodeId: string) {
       SELECT * FROM sync_object_state WHERE object_type IN
         ('node_reading', 'node_review', 'node_open_state', 'parent_child_order') AND object_id = ${nodeId}
       UNION ALL SELECT * FROM sync_object_state WHERE object_type = 'topic_daily_count'
-        AND substr(object_id, 12) = ${nodeId}
+        AND substr(object_id, 12) = +${nodeId}
       UNION ALL SELECT indirect.* FROM sync_node_child_owners owner JOIN sync_object_state indirect
         ON indirect.object_type = owner.object_type AND indirect.object_id = owner.object_id
         WHERE owner.node_id = ${nodeId}
@@ -44,11 +44,17 @@ export function nodeChildFactIdsSql(nodeId: string) {
     ORDER BY child.object_type, child.object_id)), '[]')`;
 }
 
+/**
+ * Keyed by type and owner so the planner prefers it over the type prefix of the primary key; lookups compare
+ * against `+owner` because a correlated TEXT column would otherwise disqualify the expression.
+ */
+export const TOPIC_DAILY_OWNER_INDEX = `CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner_lookup
+  ON sync_object_state(object_type, substr(object_id, 12)) WHERE object_type = 'topic_daily_count'`;
+
 export const NODE_CHILD_OWNER_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sync_node_child_owners (
     object_type TEXT NOT NULL, object_id TEXT NOT NULL, node_id TEXT NOT NULL,
     PRIMARY KEY(object_type, object_id))`,
   'CREATE INDEX IF NOT EXISTS idx_sync_node_child_owners_node ON sync_node_child_owners(node_id)',
-  `CREATE INDEX IF NOT EXISTS idx_sync_topic_daily_owner ON sync_object_state(substr(object_id, 12))
-    WHERE object_type = 'topic_daily_count'`
+  TOPIC_DAILY_OWNER_INDEX
 ];

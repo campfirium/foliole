@@ -36,7 +36,7 @@ it.each([false, true])('upgrades child inventory atomically, preserving business
     const names = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trg_framed_inventory_%'")
       .pluck().all();
     for (const name of names) sqlite.exec(`DROP TRIGGER ${name}`);
-    sqlite.exec('DROP TABLE sync_node_child_owners; DROP INDEX idx_sync_topic_daily_owner');
+    sqlite.exec('DROP TABLE sync_node_child_owners; DROP INDEX idx_sync_topic_daily_owner_lookup');
     for (const sql of legacyTriggers) sqlite.exec(sql);
     sqlite.pragma(`user_version = ${companion ? 84 : 155}`);
     await expect(upgrade(true)).rejects.toThrow('interrupted');

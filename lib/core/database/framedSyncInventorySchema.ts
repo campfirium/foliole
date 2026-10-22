@@ -42,6 +42,14 @@ export const FRAMED_SYNC_INVENTORY_TABLES = [
   )`
 ] as const;
 
+/** Lookups the version triggers run for each written version; without them each one reads a whole table. */
+export const FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES = [
+  `CREATE INDEX IF NOT EXISTS idx_framed_sync_fact_summary_parent_version
+    ON framed_sync_fact_summary(kind, json_extract(fact_id, '$[0]'), fact_id) WHERE kind = 3`,
+  'CREATE INDEX IF NOT EXISTS idx_nodes_current_version_id ON nodes(current_version_id)',
+  'CREATE INDEX IF NOT EXISTS idx_node_sync_tombstones_version_id ON node_sync_tombstones(version_id)'
+] as const;
+
 function nodeVersionTriggers() {
   return [
     ...triggers('sync_object_state', (ref) =>
@@ -112,7 +120,7 @@ export function createFramedSyncInventoryTriggers() {
 export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers();
 
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [
-  ...FRAMED_SYNC_INVENTORY_TABLES, ...FRAMED_SYNC_INVENTORY_TRIGGERS
+  ...FRAMED_SYNC_INVENTORY_TABLES, ...FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, ...FRAMED_SYNC_INVENTORY_TRIGGERS
 ];
 
 function childOwnerTriggers() {
