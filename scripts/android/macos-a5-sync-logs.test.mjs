@@ -66,3 +66,18 @@ it('retains snapshot phase timing without exposing private source paths', () => 
   expect(rows).toEqual([{ at: '2025-10-03T08:26:41.003Z', runId: 'snapshot-1',
     stage: 'identity_facts', status: 'completed', elapsedMs: 1234 }]);
 });
+
+it('keeps scheduling events for local edits, triggers and run boundaries with their reasons', () => {
+  const line = (json) => `1759480000.010 12 13 I Capacitor/Console: File: index.js - Line 2 - Msg: [FolioleSync] ${json}`;
+  expect(parseA5SyncLogcat([
+    line('{"runId":"scheduler","stage":"local_edit","status":"completed","queuedMs":2410,"writeMs":35}'),
+    line('{"runId":"scheduler","stage":"round_request","status":"started","reason":"mutation","decision":"in_flight","note":"Private Title"}'),
+    line('{"runId":"scheduler","stage":"foreground_run","status":"completed","reason":"retry","outcome":"backlog","token":"x"}')
+  ].join('\n'))).toEqual([
+    { at: '2025-10-03T08:26:40.010Z', runId: 'scheduler', stage: 'local_edit', status: 'completed', queuedMs: 2410, writeMs: 35 },
+    { at: '2025-10-03T08:26:40.010Z', runId: 'scheduler', stage: 'round_request', status: 'started',
+      reason: 'mutation', decision: 'in_flight' },
+    { at: '2025-10-03T08:26:40.010Z', runId: 'scheduler', stage: 'foreground_run', status: 'completed',
+      reason: 'retry', outcome: 'backlog' }
+  ]);
+});

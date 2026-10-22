@@ -3,6 +3,7 @@ import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/atta
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
 import { registerCompanionWorkspaceRefresh } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
+import { traceCompanionSyncEvent } from '../diagnostics/companionDesktopSyncTrace.js';
 
 type MutationListener = () => void;
 
@@ -64,7 +65,12 @@ export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promis
 
 export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope) {
   const session = getCompanionReadingScope();
-  const result = await runCompanionSyncWriterTask(task);
+  const queuedAt = performance.now();
+  let startedAt = queuedAt;
+  const result = await runCompanionSyncWriterTask(() => { startedAt = performance.now(); return task(); });
+  // Committed: the next line asks attachment work to yield, so this also marks the yield request.
+  traceCompanionSyncEvent('local_edit', 'completed', { queuedMs: Math.round(startedAt - queuedAt),
+    writeMs: Math.round(performance.now() - startedAt) });
   if (session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
   return result;
 }

@@ -12,6 +12,12 @@ function writeSyncTrace(runId: string | undefined, stage: string,
   }
 }
 
+/** Scheduling moments that sit outside any one run: local edits, triggers and run boundaries. */
+export function traceCompanionSyncEvent(stage: string, status: 'started' | 'completed' | 'failed',
+  fields: SyncTraceFields = {}) {
+  writeSyncTrace('scheduler', stage, status, fields);
+}
+
 export async function traceCompanionSyncStep<T>(args: {
   runId: string | undefined;
   stage: string;

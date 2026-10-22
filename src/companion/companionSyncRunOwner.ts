@@ -1,4 +1,5 @@
 import { requestAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
+import { traceCompanionSyncEvent } from '../shared/platform/companion/sync/diagnostics/companionDesktopSyncTrace.js';
 
 type SyncRunIntent = { manualRequested: boolean };
 
@@ -48,7 +49,9 @@ export function runCompanionSyncAsOwner<T>(
   const release = () => {
     if (activeSyncRun === active) activeSyncRun = null;
   };
-  void Promise.resolve().then(() => work(active.intent)).then(resolveRun, rejectRun);
+  traceCompanionSyncEvent('sync_run', 'started');
+  void Promise.resolve().then(() => work(active.intent)).then(resolveRun, rejectRun)
+    .finally(() => traceCompanionSyncEvent('sync_run', 'completed'));
   void completion.then(release, release);
   return { completion, mode: 'owned', runId };
 }

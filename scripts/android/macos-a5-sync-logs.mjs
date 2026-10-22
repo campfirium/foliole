@@ -4,9 +4,11 @@ import { URL } from 'node:url';
 
 const SYNC_PREFIX = '[FolioleSync] ';
 const STAGES = new Set(['push', 'structure_page', 'resources',
-  'identity_source', 'identity_tombstones', 'identity_index', 'identity_snapshot_copy', 'identity_facts', 'identity_seal']);
+  'identity_source', 'identity_tombstones', 'identity_index', 'identity_snapshot_copy', 'identity_facts', 'identity_seal',
+  'local_edit', 'round_request', 'foreground_run', 'sync_run']);
 const STATUSES = new Set(['started', 'completed', 'failed']);
-const NUMBER_FIELDS = ['page', 'fromCursor', 'toCursor', 'appliedObjects', 'appliedBlobs', 'elapsedMs'];
+const NUMBER_FIELDS = ['page', 'fromCursor', 'toCursor', 'appliedObjects', 'appliedBlobs', 'elapsedMs', 'queuedMs', 'writeMs'];
+const TEXT_FIELDS = ['reason', 'outcome', 'decision'];
 const HTTP_OPERATIONS = new Set(['inventory', 'pull', 'object', 'pulls', 'objects', 'attachments', 'round_finish']);
 const HTTP_PHASES = new Set(['open_output', 'write', 'touch_round', 'flush', 'close_output', 'response_code']);
 
@@ -48,6 +50,9 @@ function parseSyncLine(line) {
       if (typeof parsed[field] === 'number' && Number.isFinite(parsed[field]) && parsed[field] >= 0) {
         row[field] = parsed[field];
       }
+    }
+    for (const field of TEXT_FIELDS) {
+      if (typeof parsed[field] === 'string' && /^[a-z_-]{1,40}$/u.test(parsed[field])) row[field] = parsed[field];
     }
     return row;
   } catch {

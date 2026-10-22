@@ -3,6 +3,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
+import { traceCompanionSyncEvent } from '../shared/platform/companion/sync/diagnostics/companionDesktopSyncTrace';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -128,6 +129,7 @@ function startForegroundSync(
 ) {
   let retryOutcome: Exclude<ForegroundAutoSyncOutcome, 'completed' | 'skipped'> | null = null;
   args.inFlightRef.current = true;
+  traceCompanionSyncEvent('foreground_run', 'started', { reason });
   const work = args.tryForegroundAutoSync({
     discoverMobilePeers: reason === 'foreground' || reason === 'freshness' || reason === 'endpoint-ready',
     cancelled: () => args.cancelled() || !args.isAppActiveRef.current,
@@ -143,6 +145,7 @@ function startForegroundSync(
     triggerReason: state.last_synced_at ? 'automatic' : 'initial'
   })
     .then((outcome) => {
+      traceCompanionSyncEvent('foreground_run', 'completed', { reason, outcome });
       if (outcome === 'completed') {
         args.retryAttemptRef.current = 0;
         args.resourceContinuationModeRef.current = 'full';
@@ -187,6 +190,7 @@ export function createForegroundSyncRunner(args: ForegroundSyncRunnerArgs) {
   const runForegroundSyncCheck = (reason: ForegroundSyncReason): Promise<void> | null => {
     const endpoint = resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current);
     if (reason === 'endpoint-ready' && endpoint && !attemptedEndpoints.has(endpoint)) pendingEndpoint = endpoint;
+    traceCompanionSyncEvent('round_request', 'started', { reason, decision: args.inFlightRef.current ? 'in_flight' : 'check' });
     if (args.inFlightRef.current) {
       if (reason === 'mutation') releasePendingMutation ??= waitForAttachmentWorkYield();
       if (reason === 'retry') scheduleRetry(args, runForegroundSyncCheck, 'pending');
