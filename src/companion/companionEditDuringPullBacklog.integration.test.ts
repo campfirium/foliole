@@ -34,6 +34,8 @@ vi.mock('./companionSystemEntryDisplayNamesHydration', () => ({ hydrateCompanion
 // Backlog IDs sort before the edited note, so inventory order alone would put the edit last.
 const NODE = 't326-phone-edit';
 const BACKLOG = 200;
+// About 150 ms for each pulled note of this size, as measured on the Android test phone.
+const APPLY_MS_PER_BYTE = 0.03;
 const desktopBody = (databasePath: string) => (readDesktopFramedSyncLibraryEvidence(databasePath).nodes as
   Array<{ id: string; content: string }>).find(node => node.id === NODE)?.content;
 
@@ -62,33 +64,23 @@ it('pushes a phone edit made while it applies a large desktop backlog before tha
       await fixture.right.seed({ nodeId: `t326-a-backlog-${String(index).padStart(3, '0')}`, title: `Backlog ${index}`,
         content: `Desktop backlog ${index} `.repeat(200) });
     }
-    // Applying pulled notes is what takes time on the phone; each pull exchange stands in for it.
+    // Applying pulled notes is what takes time on the phone, in proportion to what a pull brings back.
     native.post.mockImplementation(async input => {
-      if (new URL(input.url).searchParams.get('request') === 'pulls') {
-        pullStarted = true;
-        await new Promise(resolve => setTimeout(resolve, 600));
-      }
-      return host.post(input);
+      const pull = new URL(input.url).searchParams.get('request') === 'pulls';
+      pullStarted ||= pull;
+      const reply = await host.post(input);
+      if (pull) await new Promise(resolve => setTimeout(resolve, reply.response_byte_length * APPLY_MS_PER_BYTE));
+      return reply;
     });
-    const runner = createForegroundSyncRunner({ cancelled: () => cancelled, setError: vi.fn(), setState: vi.fn(),
-      setSyncProgress: vi.fn(), setStatus: vi.fn(), inFlightRef: { current: false },
-      isAppActiveRef: { current: true }, isSyncGroupReadyRef: { current: true },
-      lastCheckedAtRef: { current: 0 }, lastForegroundAtRef: { current: 0 },
-      readAppActiveState: async () => true, resourceContinuationModeRef: { current: 'full' },
-      retryAttemptRef: { current: 0 }, retryTimerRef: retryTimer, stateRef: { current: view.state },
-      tryForegroundAutoSync: args => tryForegroundAutoSyncTarget(args, target, runCompanionStreamSync) });
-    const cadence = createMemberSyncCadence<ForegroundSyncReason>({ didSync: result => result === undefined,
-      getActiveRun: () => loadActiveCompanionSyncRun()?.completion ?? null,
-      holdPendingMutation: waitForAttachmentWorkYield, run: reason => runner(reason) });
-    unsubscribe.push(() => cadence.stop(), subscribeCompanionHighValueMutation(() => { void cadence.requestMutation('mutation'); }));
-    cadence.updateFreshness({ eligible: true, input: 'freshness' });
-    void cadence.requestImmediate('foreground');
+    unsubscribe.push(startPhoneScheduling(target, retryTimer, () => cancelled));
     await vi.waitFor(() => expect(pullStarted).toBe(true), { timeout: 20_000 });
 
     await runCompanionHighValueMutationTask(() => fixture.left.seed({ nodeId: NODE, title: 'Phone note',
       content: 'Edited while the backlog applies' }), { kind: 'nodes', nodeIds: [NODE] });
+    const editedAt = Date.now();
     await vi.waitFor(() => expect(desktopBody(fixture.rightSnapshot.databasePath)).toBe('Edited while the backlog applies'),
       { timeout: 60_000, interval: 25 });
+    expect(Date.now() - editedAt).toBeLessThan(4000);
     expect(received()).toBeLessThan(BACKLOG);
     await vi.waitFor(() => expect(received()).toBe(BACKLOG), { timeout: 60_000 });
   } finally {
@@ -99,3 +91,22 @@ it('pushes a phone edit made while it applies a large desktop backlog before tha
     await host.close();
   }
 });
+
+/** The phone app's own wiring: foreground runner, member cadence and high-value edit notifications. */
+function startPhoneScheduling(target: Parameters<typeof tryForegroundAutoSyncTarget>[1],
+  retryTimer: { current: ReturnType<typeof setTimeout> | null }, cancelled: () => boolean) {
+  const runner = createForegroundSyncRunner({ cancelled, setError: vi.fn(), setState: vi.fn(),
+    setSyncProgress: vi.fn(), setStatus: vi.fn(), inFlightRef: { current: false },
+    isAppActiveRef: { current: true }, isSyncGroupReadyRef: { current: true },
+    lastCheckedAtRef: { current: 0 }, lastForegroundAtRef: { current: 0 },
+    readAppActiveState: async () => true, resourceContinuationModeRef: { current: 'full' },
+    retryAttemptRef: { current: 0 }, retryTimerRef: retryTimer, stateRef: { current: view.state },
+    tryForegroundAutoSync: args => tryForegroundAutoSyncTarget(args, target, runCompanionStreamSync) });
+  const cadence = createMemberSyncCadence<ForegroundSyncReason>({ didSync: result => result === undefined,
+    getActiveRun: () => loadActiveCompanionSyncRun()?.completion ?? null,
+    holdPendingMutation: waitForAttachmentWorkYield, run: reason => runner(reason) });
+  const stopEdits = subscribeCompanionHighValueMutation(() => { void cadence.requestMutation('mutation'); });
+  cadence.updateFreshness({ eligible: true, input: 'freshness' });
+  void cadence.requestImmediate('foreground');
+  return () => { cadence.stop(); stopEdits(); };
+}
