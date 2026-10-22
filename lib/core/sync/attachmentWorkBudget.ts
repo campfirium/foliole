@@ -18,6 +18,12 @@ export function waitForAttachmentWorkYield() {
 
 export function hasWaitingSyncData() { return waiters > 0; }
 
+/** Without a deadline: attachment streams continue until data work is queued or requested. */
+export function attachmentDataYield() {
+  const revision = priorityRevision;
+  return () => hasWaitingSyncData() || revision !== priorityRevision;
+}
+
 export function attachmentWorkBudget(milliseconds = 2000) {
   const revision = priorityRevision;
   const deadline = performance.now() + milliseconds;

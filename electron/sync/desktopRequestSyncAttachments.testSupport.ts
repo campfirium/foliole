@@ -79,7 +79,8 @@ export async function seedAttachmentTarget(keys: string[]) {
     source_proof_revisions: {}, devices: [], removals: [], restore: null });
 }
 
-export async function attachmentHttpServer(dropResponseAt: number) {
+/** `delayMs` models the fixed per-request cost of a mobile HTTP bridge. */
+export async function attachmentHttpServer(dropResponseAt: number, delayMs = 0) {
   const production = http.createServer((request, response) => {
     void handleProductionCompanionFramedSyncPost({ deviceId: 'local', request, response }).catch(error => response.destroy(error));
   });
@@ -87,11 +88,14 @@ export async function attachmentHttpServer(dropResponseAt: number) {
   let count = 0;
   const relay = http.createServer((request, response) => {
     const drop = ++count === dropResponseAt;
-    const outgoing = http.request(new URL(request.url ?? '/', origin), { method: request.method, headers: request.headers }, incoming => {
-      if (drop) { incoming.resume(); response.destroy(); return; }
-      response.writeHead(incoming.statusCode ?? 500, incoming.headers); incoming.pipe(response);
-    });
-    outgoing.on('error', error => response.destroy(error)); request.pipe(outgoing);
+    const forward = () => {
+      const outgoing = http.request(new URL(request.url ?? '/', origin), { method: request.method, headers: request.headers }, incoming => {
+        if (drop) { incoming.resume(); response.destroy(); return; }
+        response.writeHead(incoming.statusCode ?? 500, incoming.headers); incoming.pipe(response);
+      });
+      outgoing.on('error', error => response.destroy(error)); request.pipe(outgoing);
+    };
+    if (delayMs) setTimeout(forward, delayMs); else forward();
   });
   return { url: await listen(relay), async close() {
     await new Promise<void>(resolve => relay.close(() => resolve()));

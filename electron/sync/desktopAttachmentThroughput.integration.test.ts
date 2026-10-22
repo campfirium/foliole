@@ -47,11 +47,13 @@ function seedScale(sqlite: Database.Database) {
   })();
 }
 
-it('streams 256 MiB with 30000-node demand and inventory fixtures while admitting a data edit', { meta: { calibratedMs: 240000 } }, async () => {
+const REQUEST_DELAY_MS = 50;
+
+it('drains 256 MiB in windowed pulls under mobile request cost while admitting a data edit', { meta: { calibratedMs: 240000 } }, async () => {
   const directory = await attachmentHttpDirectory(); sandbox.root = directory.root;
   vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(directory.root, 'target'));
   const { local, target, keys } = await prepareScale(directory.root);
-  const server = await attachmentHttpServer(0);
+  const server = await attachmentHttpServer(0, REQUEST_DELAY_MS);
   const owner = createSyncPeerRoundOwnership(60000);
   const measurement = measureSourceWork();
   const started = performance.now();
@@ -89,9 +91,13 @@ it('streams 256 MiB with 30000-node demand and inventory fixtures while admittin
     }
     expect(streamingProved).toBe(true);
     expect(totalBlocks).toBe(512);
-    expect(rounds).toBeLessThan(128);
+    // One round yields to the edit; the next drains the rest without returning to inventory comparison.
+    expect(rounds).toBeLessThanOrEqual(3);
     expect(editLatencyMs).toBeGreaterThan(0);
-    const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, rounds, totalBlocks,
+    expect(editLatencyMs).toBeLessThan(5000);
+    // Each pulled 512 KiB block no longer costs its own describe and pull request.
+    expect(measurement.metrics().sourceOpens).toBeLessThanOrEqual(256 / 8 + keys.length * 4);
+    const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS, rounds, totalBlocks,
       ...measurement.metrics(),
       elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };
     await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });

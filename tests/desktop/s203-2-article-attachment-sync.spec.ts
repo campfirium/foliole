@@ -37,8 +37,9 @@ async function runBatch(app: ElectronApplication) {
       peer_device_id: globalThis.__s203Batch.peerDeviceId },
       remoteLibraryEpoch: globalThis.__s203Batch.remoteLibraryEpoch });
     const resolver = require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js'));
-    return connection.runWithDatabaseConnectionOwner(() => ({ ...result, requests: [...globalThis.__s203Batch.requests],
-      files: globalThis.__s203Batch.keys.map((key) => resolver.resolveAttachmentFile(key).status) }));
+    return connection.runWithDatabaseConnectionOwner(async () => ({ ...result, requests: [...globalThis.__s203Batch.requests],
+      files: (await Promise.all(globalThis.__s203Batch.keys.map((key) => resolver.resolveAttachmentFile(key))))
+        .map((file: { status: string }) => file.status) }));
   });
 }
 

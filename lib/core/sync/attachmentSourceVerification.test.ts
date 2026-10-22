@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES as BLOCK } from './attachmentBlockReceiver.js';
 import { AttachmentSourceVerification, AttachmentVerificationPending } from './attachmentSourceVerification.js';
@@ -74,4 +74,47 @@ it('cannot publish a partial proof invalidated while its read is in flight', asy
   expect(source.reads()).toBe(BLOCK);
   await cache.verify('library-a', source.file);
   expect(source.reads()).toBe(BLOCK + source.bytes.length);
+});
+
+it('finishes yielded scans when pending files exceed the proof cache capacity', async () => {
+  const cache = new AttachmentSourceVerification(2);
+  const sources = [1, 2, 3].map(value => {
+    const source = fixture(BLOCK * 3);
+    source.bytes.fill(value);
+    source.file.resource.storageKey = `${bytesToHex(sha256(source.bytes))}.pdf`;
+    return source;
+  });
+  const completed = new Set<number>();
+  for (let round = 0; round < 9 && completed.size < sources.length; round++) {
+    for (const [index, source] of sources.entries()) {
+      if (completed.has(index)) continue;
+      try {
+        const verified = await cache.verify('library-a', source.file, () => true);
+        expect(await verified.read(0, BLOCK)).toEqual(source.bytes.slice(0, BLOCK));
+        completed.add(index);
+      } catch (error) {
+        if (!(error instanceof AttachmentVerificationPending)) throw error;
+      }
+    }
+  }
+  expect(completed.size).toBe(sources.length);
+});
+
+it('reclaims an unfinished scan nobody resumed within the idle window', async () => {
+  const cache = new AttachmentSourceVerification(1);
+  const [abandoned, next] = [1, 2].map(value => {
+    const source = fixture(BLOCK * 2);
+    source.bytes.fill(value);
+    source.file.resource.storageKey = `${bytesToHex(sha256(source.bytes))}.pdf`;
+    return source;
+  });
+  const now = vi.spyOn(performance, 'now').mockReturnValue(1_000);
+  try {
+    await expect(cache.verify('library-a', abandoned!.file, () => true)).rejects.toBeInstanceOf(AttachmentVerificationPending);
+    await expect(cache.verify('library-a', next!.file)).rejects.toBeInstanceOf(AttachmentVerificationPending);
+    expect(next!.reads()).toBe(0);
+    now.mockReturnValue(62_000);
+    await cache.verify('library-a', next!.file);
+    expect(next!.reads()).toBe(BLOCK * 2);
+  } finally { now.mockRestore(); }
 });

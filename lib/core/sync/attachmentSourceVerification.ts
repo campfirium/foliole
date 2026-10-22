@@ -9,7 +9,9 @@ import type { AttachmentBlockSource } from './attachmentBlockTransfer.js';
 type File = Parameters<Parameters<AttachmentBlockSource['withFile']>[1]>[0];
 export interface AttachmentDigest { update(bytes: Uint8Array): unknown; digest(): Uint8Array }
 type Proof = { storageKey: string; length: number; offset: number; blocks: Uint8Array[];
-  digest: AttachmentDigest; complete: boolean; busy: boolean };
+  digest: AttachmentDigest; complete: boolean; busy: boolean; usedAt: number };
+// Matches the peer-round idle timeout: an unfinished scan nobody resumed within it is abandoned.
+const ABANDONED_SCAN_MS = 60_000;
 
 export class AttachmentVerificationPending extends Error {
   constructor() { super('attachment_verification_pending'); }
@@ -22,6 +24,17 @@ export class AttachmentSourceVerification {
 
   constructor(capacity = 128) {
     this.capacity = capacity;
+  }
+
+  /** Unfinished scans keep their slots; a new scan waits rather than evicting resumable progress. */
+  private admit() {
+    if (this.proofs.size < this.capacity) return;
+    for (const [key, proof] of this.proofs) {
+      if (proof.complete) { this.proofs.delete(key); return; }
+    }
+    const [oldest, proof] = this.proofs.entries().next().value!;
+    if (proof.busy || performance.now() - proof.usedAt < ABANDONED_SCAN_MS) throw new AttachmentVerificationPending();
+    this.proofs.delete(oldest);
   }
 
   invalidate(storageKey?: string) {
@@ -39,11 +52,13 @@ export class AttachmentSourceVerification {
     let proof = this.proofs.get(key);
     if (proof?.busy) throw new AttachmentVerificationPending();
     if (!proof || proof.length !== byteLength) {
-      proof = { storageKey, length: byteLength, offset: 0, blocks: [], digest: createDigest(), complete: false, busy: false };
+      this.proofs.delete(key);
+      this.admit();
+      proof = { storageKey, length: byteLength, offset: 0, blocks: [], digest: createDigest(), complete: false, busy: false, usedAt: 0 };
     }
     this.proofs.delete(key);
     this.proofs.set(key, proof);
-    while (this.proofs.size > this.capacity) this.proofs.delete(this.proofs.keys().next().value!);
+    proof.usedAt = performance.now();
     const current = proof;
     const assertCurrent = () => {
       if (this.proofs.get(key) !== current) throw new AttachmentVerificationPending();

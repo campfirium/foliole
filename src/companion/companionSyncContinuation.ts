@@ -42,7 +42,8 @@ export function hasRetryWork(result: CompanionDesktopSyncResult) {
   if (result.attachmentResourceError) {
     return false;
   }
-  return madeResourceProgress(result) || hasResourceBacklog(result) || (result.remainingStructureChangeCount ?? 0) > 0 || hasWaitingLocalChanges(result);
+  // Attachment streams drain within a round, so progress alone no longer implies leftover work.
+  return result.attachmentWorkYielded === true || hasResourceBacklog(result) || (result.remainingStructureChangeCount ?? 0) > 0 || hasWaitingLocalChanges(result);
 }
 
 export function hasFastRetryWork(result: CompanionDesktopSyncResult) {
