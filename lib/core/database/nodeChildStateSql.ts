@@ -14,13 +14,16 @@ export function nodeChildOwnerSql(state: string) {
       WHERE owner.object_type = ${state}.object_type AND owner.object_id = ${state}.object_id) END`;
 }
 
+/** Which business row backs each node child state (and import sources), by its object id. */
+export const NODE_CHILD_PAYLOAD_SOURCES = [
+  ['node_reading', 'node_reading', 'node_id'], ['node_review', 'node_review', 'node_id'],
+  ['node_open_state', 'node_open_state', 'node_id'], ['parent_child_order', 'parent_order_sources', 'parent_id'],
+  ['node_text_alternative', 'node_text_alternatives', 'alternative_id'],
+  ['topic_daily_count', 'topic_daily_count_entries', 'id'], ['import_source', 'import_sources', 'source_fingerprint']
+] as const;
+
 export function nodeChildPayloadExistsSql(state: string) {
-  const sources = [
-    ['node_reading', 'node_reading', 'node_id'], ['node_review', 'node_review', 'node_id'],
-    ['node_open_state', 'node_open_state', 'node_id'], ['parent_child_order', 'parent_order_sources', 'parent_id'],
-    ['node_text_alternative', 'node_text_alternatives', 'alternative_id'],
-    ['topic_daily_count', 'topic_daily_count_entries', 'id'], ['import_source', 'import_sources', 'source_fingerprint']
-  ];
+  const sources = NODE_CHILD_PAYLOAD_SOURCES;
   return `(${state}.deleted_at IS NOT NULL OR CASE ${state}.object_type ${sources.map(([type, table, key]) =>
     `WHEN '${type}' THEN EXISTS (SELECT 1 FROM ${table} child WHERE child.${key} = ${state}.object_id)`
   ).join(' ')} ELSE 0 END)`;

@@ -80,3 +80,23 @@ it('clears a permanently deleted note’s text in the companion schema while kee
   expect(sqlite.prepare(`SELECT version_id, json_extract(snapshot_json, '$.content') AS content
     FROM node_sync_tombstones`).all()).toEqual([{ version_id: 'head', content: null }]);
 });
+
+it('reclaims a deletion mark only after the group line and only once its object is gone', async () => {
+  const { sqlite, port } = await companion();
+  sqlite.exec(`INSERT INTO sync_object_state (object_type, object_id, content_hash, deleted_at, updated_at,
+      last_modified_by_host_name, sync_dirty, state_seq)
+    VALUES ('import_source', 'source-gone', 'h1', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z', 'phone', 0, 901),
+      ('import_source', 'source-present', 'h2', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z', 'phone', 0, 902),
+      ('external_document', 'document-gone', 'h3', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z', 'phone', 0, 903);
+    INSERT INTO import_sources (source_fingerprint, provider, source_kind, source_name, source_locator,
+      first_imported_at, last_imported_at, last_content_fingerprint)
+    VALUES ('source-present', 'readwise', 'article', 'Kept', 'locator', '2026-09-01', '2026-09-01', 'f')`);
+  const marks = () => sqlite.prepare('SELECT object_id FROM sync_object_state WHERE deleted_at IS NOT NULL ORDER BY 1')
+    .pluck().all();
+  await collect(port);
+  expect(marks()).toEqual(['document-gone', 'source-gone', 'source-present']);
+  await recordCompletedSyncGroupRound(port, { groupId: 'group-1', localDeviceId: 'phone', peerDeviceId: 'desktop',
+    startedAt: '2026-10-20T00:00:00.000Z' });
+  await collect(port);
+  expect(marks()).toEqual(['source-present']);
+});

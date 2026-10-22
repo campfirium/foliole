@@ -42,6 +42,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/syncHistoryHorizon.integration.test.ts',
   'electron/sync/syncMemberExpiry.integration.test.ts',
   'electron/sync/syncTombstoneBodyRelease.integration.test.ts',
+  'electron/sync/syncStateTombstoneReclaim.integration.test.ts',
   'src/shared/platform/companion/sync/companionSyncHistoryCollection.sqlite.test.ts',
   'lib/core/database/historyComparisonDigestMigration.integration.test.ts',
   'src/test/externalDocumentLifecycle.integration.test.ts',

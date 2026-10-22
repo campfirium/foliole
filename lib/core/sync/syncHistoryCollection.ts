@@ -7,6 +7,8 @@ import {
   RECLAIMABLE_TOMBSTONES_SQL,
   reclaimHistoryStatements
 } from './syncHistoryCollectionSql.js';
+import { RECLAIM_STATE_TOMBSTONE_STATEMENTS, reclaimableStateTombstonesSql,
+  WATCHED_FOLDER_TABLE_SQL } from './syncStateTombstoneCollectionSql.js';
 
 /** Each batch is its own short write so sync and edits are never held behind a large first cleanup. */
 const BATCH = 200;
@@ -23,7 +25,18 @@ async function reclaimBatch(db: DbPort, groupId: string) {
   const tombstones = (await db.query<{ node_id: string }>(RECLAIMABLE_TOMBSTONES_SQL, [horizon, BATCH]))
     .map(row => row.node_id);
   for (const nodeId of tombstones) for (const sql of RECLAIM_TOMBSTONE_STATEMENTS) await db.run(sql, [nodeId]);
-  return { versions: versions.length, tombstones: tombstones.length };
+  const marks = await reclaimStateTombstones(db, horizon);
+  return { versions: versions.length, tombstones: tombstones.length + marks };
+}
+
+async function reclaimStateTombstones(db: DbPort, horizon: string) {
+  const hasWatchedFolders = (await db.query(WATCHED_FOLDER_TABLE_SQL)).length > 0;
+  const marks = await db.query<{ object_type: string; object_id: string }>(
+    reclaimableStateTombstonesSql(hasWatchedFolders), [horizon, BATCH]);
+  for (const mark of marks) for (const sql of RECLAIM_STATE_TOMBSTONE_STATEMENTS) {
+    await db.run(sql, [mark.object_type, mark.object_id]);
+  }
+  return marks.length;
 }
 
 /**
