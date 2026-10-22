@@ -43,6 +43,11 @@ export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorO
       if (!userData || !path.posix.isAbsolute(userData)) throw new Error('device_anchor_source_path_unavailable');
       return path.posix.join(userData, 'device-identity', ANCHOR_FILE);
     }
+    // Unsigned automated processes must not open the installed app's group container:
+    // macOS asks the user for consent there and blocks the synchronous read until answered.
+    if (!dailyMacosDev && (env.VITEST || env.FOLIOLE_ELECTRON_NATIVE_HIDDEN === '1')) {
+      throw new Error('device_anchor_test_state_root_required');
+    }
     const loaded = (options.loadAdapter ?? loadMacosSecurityScopedBookmarkAdapter)(platform);
     if (loaded.status !== 'ready') throw new Error(`device_anchor_store_unavailable:${loaded.status}`);
     const container = loaded.adapter.appGroupContainerPath(AGENT_CONTROL_APP_GROUP);

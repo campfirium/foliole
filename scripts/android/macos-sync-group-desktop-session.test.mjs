@@ -1,9 +1,13 @@
+/* global process */
+
 import fs from 'node:fs';
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
 import {
   ensureMacosDeviceSyncGroup,
+  openMacosSyncGroupDesktopSession,
   readMacosSyncTriggerResult,
   sanitizeMacosSyncGroupOverview,
   waitForMacosAutomaticRun,
@@ -80,4 +84,22 @@ it('observes automatic sync from the source-bound hidden Electron main path', ()
   const source = fs.readFileSync('scripts/android/macos-sync-group-desktop-session.mjs', 'utf8');
   expect(source).toContain('FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH');
   expect(source).not.toContain("electronApp.getAppPath(), 'sync'");
+});
+
+it('keeps the hidden runtime device identity inside the session state root', async () => {
+  const root = path.parse(process.cwd()).root;
+  const repoRoot = path.join(root, 'repo', 'foliole');
+  const runtimeRoot = path.join(root, 'controller', 'runtime');
+  const page = { waitForFunction: vi.fn(), waitForURL: vi.fn() };
+  const launch = vi.fn().mockResolvedValue({ firstWindow: vi.fn().mockResolvedValue(page),
+    process: () => ({ exitCode: null, pid: 42 }) });
+  await openMacosSyncGroupDesktopSession({
+    acquireCredentialSession: () => vi.fn(), electronLauncher: { launch }, env: {},
+    libraryHome: path.join(root, 'tmp', 'library'),
+    prepareHiddenRuntime: () => ({ cleanup: vi.fn(), executablePath: '/tmp/Electron',
+      runtimeFingerprint: 'a'.repeat(64), runtimeIdentity: 'stable-source-bound' }),
+    rendererExists: () => true, repoRoot, runtimeRoot
+  });
+  expect(launch.mock.calls[0][0].env.FOLIOLE_ELECTRON_TEST_STATE_ROOT)
+    .toBe(path.join(runtimeRoot, 'credential-sessions', 'device-state'));
 });

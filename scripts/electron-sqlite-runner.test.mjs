@@ -86,6 +86,16 @@ describe('electron sqlite runner', () => {
     ).env).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
   });
 
+  it('isolates sqlite vitest runs that name the runner script by absolute path', () => {
+    const repoRoot = path.resolve('/repo/foliole');
+    const tempRoot = path.join(repoRoot, '.tmp', 'electron-sqlite-tmp');
+    expect(buildRunnerInvocation(
+      path.join(repoRoot, 'scripts', 'run-vitest-with-summary.mjs'),
+      ['.tmp/vitest/related-electron.json', '--', '--pool=forks', 'electron/deviceAnchorStore.test.ts'],
+      repoRoot
+    ).env).toEqual({ ELECTRON_RUN_AS_NODE: '1', TEMP: tempRoot, TMP: tempRoot, TMPDIR: tempRoot });
+  });
+
   it('inherits child output for normal script runs so large test logs do not fill a sync buffer', () => {
     expect(buildElectronNodeSpawnOptions('D:/C/foliole')).toEqual({
       cwd: 'D:/C/foliole',

@@ -74,6 +74,7 @@ function launchOptions(repoRoot, env, session, libraryHome, runtime, rendererUrl
     args: [session.bootstrapPath], cwd: repoRoot,
     env: { ...env, FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1',
       FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1', FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1',
+      FOLIOLE_ELECTRON_TEST_STATE_ROOT: session.deviceStateRoot,
       FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: session.appName,
       FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.join(repoRoot, 'dist/electron/main.js'),
       FOLIOLE_LIBRARY_HOME: libraryHome, FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1',

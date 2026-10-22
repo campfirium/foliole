@@ -36,6 +36,8 @@ export function resolveMacosHiddenCredentialSession(repoRoot, runtimeFingerprint
     appName: `Foliole Hidden Native ${identity}`,
     bootstrapPath: path.join(path.resolve(repoRoot),
       'scripts/desktop/macos-hidden-electron-credential-bootstrap.mjs'),
+    // Device identity stays with the session owner across runtime rebuilds, never the installed app group.
+    deviceStateRoot: path.join(path.dirname(root), 'device-state'),
     lockPath: path.join(root, 'active.lock'),
     pairingStorePath: path.join(root, 'user-data', 'companion-paired-devices.bin'),
     root,

@@ -66,6 +66,23 @@ it('keeps desktop test device identity inside the isolated runtime root', () => 
   })).toBe('D:\\Temp\\foliole-playwright-a\\device-identity\\anchor-v1');
 });
 
+it.each([
+  { VITEST: 'true' },
+  { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' }
+])('refuses the installed app group for automated macOS processes without isolated state (%o)', (env) => {
+  const loadAdapter = vi.fn();
+  expect(() => resolveDesktopDeviceAnchorFilePath({ env, loadAdapter, platform: 'darwin' }))
+    .toThrow('device_anchor_test_state_root_required');
+  expect(loadAdapter).not.toHaveBeenCalled();
+});
+
+it('gives every test worker an isolated device identity root', () => {
+  const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+  expect(stateRoot && path.isAbsolute(stateRoot)).toBe(true);
+  expect(resolveDesktopDeviceAnchorFilePath({ platform: 'darwin' }))
+    .toBe(path.posix.join(stateRoot!, 'device-identity', 'anchor-v1'));
+});
+
 it('keeps daily macOS DEV on the shared device identity despite its isolated runtime state', () => {
   const appGroupContainerPath = vi.fn(() => ({ ok: true as const, path: '/Users/me/Library/Group Containers/foliole' }));
   expect(resolveDesktopDeviceAnchorFilePath({
@@ -108,7 +125,9 @@ it('uses the real database path before applying the shared composite identity', 
   await fs.writeFile(libraryPath, 'fixture');
   const anchorFile = path.join(root, 'shared', 'anchor-v1');
   const result = await loadDesktopDeviceIdentity({
-    anchorOptions: { loadAdapter: () => ({ adapter: { appGroupContainerPath: () => ({ ok: true, path: path.dirname(anchorFile) }) }, status: 'ready' }), platform: process.platform === 'win32' ? 'win32' : 'darwin' },
+    anchorOptions: { env: { LOCALAPPDATA: path.join(root, 'local') },
+      loadAdapter: () => ({ adapter: { appGroupContainerPath: () => ({ ok: true, path: path.dirname(anchorFile) }) }, status: 'ready' }),
+      platform: process.platform === 'win32' ? 'win32' : 'darwin' },
     groupId: 'group-a',
     libraryPath,
     realpath: fs.realpath

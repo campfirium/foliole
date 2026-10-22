@@ -1,12 +1,30 @@
 import '@testing-library/jest-dom/vitest';
 
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { createElement, type ComponentType, type ReactNode } from 'react';
-import { beforeAll, vi } from 'vitest';
+import { afterAll, beforeAll, vi } from 'vitest';
 
 import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
 import { DocumentHeaderMenuSettingsProvider } from '../features/settings/context/DocumentHeaderMenuSettingsProvider';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
+
+// Desktop code resolves device identity from this root; without one, macOS code under
+// test would open the installed app's group container and wait on a consent prompt.
+const ownedTestStateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT?.trim()
+  ? null : mkdtempSync(path.join(os.tmpdir(), 'foliole-vitest-state-'));
+if (ownedTestStateRoot) process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT = ownedTestStateRoot;
+
+afterAll(() => {
+  if (!ownedTestStateRoot) return;
+  if (process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT === ownedTestStateRoot) {
+    delete process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
+  }
+  rmSync(ownedTestStateRoot, { force: true, recursive: true });
+});
 
 beforeAll(async () => {
   await Promise.all([

@@ -19,8 +19,10 @@ export function resolveElectronSqliteTempRoot(repoRoot = process.cwd()) {
   return path.join(repoRoot, '.tmp', 'electron-sqlite-tmp');
 }
 
-function shouldUseRepoLocalTemp(args = []) {
-  const scriptPath = args[0] ?? '';
+function shouldUseRepoLocalTemp(args = [], repoRoot = process.cwd()) {
+  // Callers may name the test runner by absolute path; isolation must not depend on spelling.
+  const scriptPath = path.isAbsolute(args[0] ?? '')
+    ? path.relative(repoRoot, args[0]).replaceAll('\\', '/') : args[0] ?? '';
   if (scriptPath === 'scripts/test-files.mjs') {
     return true;
   }
@@ -61,12 +63,12 @@ export function buildRunnerInvocation(scriptPath, scriptArgs = [], repoRoot = pr
     args,
     cwd: repoRoot,
     electronPath: resolveElectronBinary(repoRoot),
-    env: buildElectronNodeEnv({}, repoRoot, { useRepoLocalTemp: shouldUseRepoLocalTemp(args) })
+    env: buildElectronNodeEnv({}, repoRoot, { useRepoLocalTemp: shouldUseRepoLocalTemp(args, repoRoot) })
   };
 }
 
 export function buildElectronNodeSpawnOptions(repoRoot = process.cwd(), stdio = 'inherit', args = []) {
-  const useRepoLocalTemp = shouldUseRepoLocalTemp(args);
+  const useRepoLocalTemp = shouldUseRepoLocalTemp(args, repoRoot);
   if (useRepoLocalTemp) {
     mkdirSync(resolveElectronSqliteTempRoot(repoRoot), { recursive: true });
   }
@@ -152,7 +154,7 @@ function main() {
   const electronPath = ensureElectronBinary(repoRoot);
   assertElectronAbi(electronPath, repoRoot);
   const inheritedStateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
-  const stateRoot = !inheritedStateRoot && shouldUseRepoLocalTemp(invocation.args)
+  const stateRoot = !inheritedStateRoot && shouldUseRepoLocalTemp(invocation.args, repoRoot)
     ? mkdtempSync(path.join(repoRoot, '.tmp', 'sqlite-test-state-')) : null;
   if (stateRoot) process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT = stateRoot;
   try {
