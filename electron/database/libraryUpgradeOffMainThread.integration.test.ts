@@ -14,14 +14,15 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 vi.mock('node:worker_threads', async (original) => {
   const native = await original<typeof import('node:worker_threads')>();
   return { ...native, Worker: class extends native.Worker {
-    constructor(_url: URL, options: import('node:worker_threads').WorkerOptions) {
-      super(new URL('./databaseUpgradeWorker.ts', import.meta.url), { ...options,
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      super(new URL(url.href.replace(/\.js$/u, '.ts')), { ...options,
         execArgv: ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-transform-types'] });
     }
   } };
 });
 
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
+import { readWorkspaceSearchSidecarRebuildStatus } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { NativeDatabaseUpgradeStatus } from '../../lib/platform/nativeDatabaseUpgradeContract.js';
 
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
@@ -103,5 +104,8 @@ it('restores a backup from an older version without stalling the main thread', a
   expect(restored.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(restored.prepare('SELECT count(*) AS n FROM node_sync_versions WHERE body_text IS NULL').get()).toEqual({ n: 960 });
   expect(statuses.some((status) => status.state === 'upgrading')).toBe(true);
+  // The restored library is searchable as soon as the restore completes.
+  expect(readWorkspaceSearchSidecarRebuildStatus(restored)?.status).toBe('ready');
+  expect(restored.prepare("SELECT count(*) AS n FROM search.node_search WHERE node_id = 'topic-479'").get()).toEqual({ n: 1 });
   expect(longestStallMs).toBeLessThan(250);
 }, 120_000);

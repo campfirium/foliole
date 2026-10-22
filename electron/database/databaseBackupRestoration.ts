@@ -2,7 +2,6 @@ import path from 'node:path';
 
 import { SEED_ATTACHMENT_PARSE_QUEUE } from '../../lib/core/database/attachmentDemandSchema.js';
 import { readForegroundTimePreservation } from '../../lib/core/database/foregroundTimeRestore.js';
-import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 
 import { retainReadwiseOwnerAfterBackupRestore } from './backupRestoreReadwiseOwner.js';
@@ -30,6 +29,7 @@ import {
 } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import { loadReadwiseHostAssignment } from './readwiseHostAssignment.js';
+import { rebuildRestoredLibrarySearchIndex } from './restoredLibrarySearchIndex.js';
 import { startSearchAliasMirror } from './searchAliasMirror.js';
 import {
   restoreSqliteDatabase,
@@ -79,7 +79,7 @@ async function restoreBackup(sourcePath: string, restoredAt: string, choice?: Ba
     if (selection.snapshot) finishSyncGroupBackupRestore(restored.driver, selection.snapshot, restoredAt,
       selection.mode === 'pause' ? 'pause' : 'overwrite');
     else finishLocalOnlyBackupRestore(restored.driver, selection.host);
-    initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
+    await rebuildRestoredLibrarySearchIndex(restored);
     reapplyBackupSettingsAfterRestore(backupSettings);
     await startSearchAliasMirror('restore');
     retainReadwiseOwnerAfterBackupRestore(wasLocalReadwiseOwner);
@@ -129,7 +129,7 @@ async function finishRestoreArtifacts(artifacts: DatabaseRestoreArtifacts,
 }
 
 function initializeRestoredLibrary() {
-  const restored = initializeDatabase(undefined, { recovery: 'fail' });
+  const restored = initializeDatabase(undefined, { deferSearchIndex: true, recovery: 'fail' });
   restored.sqlite.exec(SEED_ATTACHMENT_PARSE_QUEUE);
   return restored;
 }

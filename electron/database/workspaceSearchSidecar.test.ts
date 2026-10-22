@@ -13,6 +13,17 @@ import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/worksp
 
 let mockedAppDataDir = '/tmp/foliole-workspace-search-sidecar-tests';
 
+vi.mock('node:worker_threads', async (importOriginal) => {
+  const native = await importOriginal<typeof import('node:worker_threads')>();
+  return { ...native, Worker: class extends native.Worker {
+    constructor(url: URL, options?: import('node:worker_threads').WorkerOptions) {
+      // Run the production restore workers from source under the controlled Electron ABI.
+      super(new URL(url.href.replace(/\.js$/u, '.ts')), { ...options,
+        execArgv: ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-transform-types'] });
+    }
+  } };
+});
+
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: mockedAppDataDir,
