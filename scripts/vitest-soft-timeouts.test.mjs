@@ -20,6 +20,8 @@ function runFixture(source) {
   mkdirSync(path.join(REPO_ROOT, '.tmp'), { recursive: true });
   root = mkdtempSync(path.join(REPO_ROOT, '.tmp', 'vitest-soft-timeouts-'));
   writeFileSync(path.join(root, 'fixture.test.mjs'), source);
+  // Pin the fixture's own config so Vitest never adopts the repository config above it.
+  writeFileSync(path.join(root, 'vitest.config.mjs'), "export default { test: { include: ['*.test.mjs'] } };\n");
   const report = path.join(root, 'report.json');
   const result = spawnSync(process.execPath, [RUNNER, report, '--', '--testTimeout=30000', 'fixture.test.mjs'], {
     cwd: root, encoding: 'utf8',
