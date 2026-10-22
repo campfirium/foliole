@@ -8,6 +8,7 @@ import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberSta
 import { loadDesktopSyncGroupMemberEndpoints } from './desktopSyncGroupMemberStateSession.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export type DesktopResourceProvider = DesktopSyncGroupPeer & { deviceId: string; endpointUrl: string };
@@ -41,7 +42,7 @@ export async function queryDesktopResourceAvailability(peer: DesktopResourceProv
     body: JSON.stringify({ resources: needs }), groupId: peer.group_id, localDeviceId: peer.local_device_id,
     pathWithQuery: RESOURCE_AVAILABILITY_PATH, secret: requireResourceGroupKey(peer.group_id)
   }));
-  const response = await fetch(`${peer.endpoint_url}${RESOURCE_AVAILABILITY_PATH}`, {
+  const response = await lanPeerHttp.fetch(`${peer.endpoint_url}${RESOURCE_AVAILABILITY_PATH}`, {
     body: encrypted.body, headers: encrypted.headers, method: 'POST', signal: AbortSignal.timeout(30_000)
   });
   const body = await readDesktopWorkgroupResponse({ contentType: 'application/json; charset=utf-8',

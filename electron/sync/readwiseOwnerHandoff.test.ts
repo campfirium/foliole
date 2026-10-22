@@ -78,6 +78,7 @@ vi.mock('./readwiseHandoffIntent.js', () => ({
   saveReadwiseHandoffIntent: (value: Record<string, unknown> | null) => { intent.current = value; }
 }));
 
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { activateReadwiseWithHandoff, continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 beforeEach(() => {
@@ -90,10 +91,10 @@ beforeEach(() => {
   intent.current = null;
   stopOrder.length = 0;
   Object.values(writes).forEach((mock) => mock.mockReset());
-  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+  vi.spyOn(lanPeerHttp, 'fetch').mockClear().mockImplementation(vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
     stopOrder.push('remote');
     if (!state.remoteReachable) throw new Error('offline');
-    const request = JSON.parse(String(init.body)) as Record<string, unknown>;
+    const request = JSON.parse(String(init?.body)) as Record<string, unknown>;
     return new Response(JSON.stringify({ ...request, status: state.stopStatus,
       oldDeviceId: 'old-device' }), { status: 200 });
   }));
@@ -163,5 +164,5 @@ it('finishes a prepared activation after a crash without asking the old owner to
     state: 'active', targetId: null };
   await expect(activateReadwiseWithHandoff()).resolves.toMatchObject({ is_active: true });
   expect(writes.owner).toHaveBeenCalledTimes(1);
-  expect(fetch).not.toHaveBeenCalled();
+  expect(lanPeerHttp.fetch).not.toHaveBeenCalled();
 });

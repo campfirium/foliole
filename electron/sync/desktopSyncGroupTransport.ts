@@ -23,6 +23,7 @@ import {
 import { collectDesktopSyncHistory, recordDesktopCompletedSyncRound } from './desktopSyncHistoryCollection.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { selectDesktopSyncUpstream } from './desktopSyncUpstream.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
@@ -67,7 +68,7 @@ async function continuePeerSync(
 ) {
   await runPeerSyncStage(
     'compatibility',
-    () => assertDesktopSyncGroupPeerCompatible(target, fetch, peerRound.lease.signal),
+    () => assertDesktopSyncGroupPeerCompatible(target, lanPeerHttp.fetch, peerRound.lease.signal),
     target,
     activity
   );

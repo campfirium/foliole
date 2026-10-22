@@ -17,6 +17,7 @@ import {
 import { isCurrentGroupPeerService, readSyncGroupServiceDeviceId } from './desktopSyncGroupPeerService.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 const endpoints = new Map<string, DesktopSyncGroupPeer>();
 
@@ -138,7 +139,7 @@ async function probeAndExchange(
 }
 
 async function probe(group: SyncGroupPayload, deviceId: string, endpointUrl: string) {
-  const response = await fetch(`${endpointUrl}/companion/discovery`, {
+  const response = await lanPeerHttp.fetch(`${endpointUrl}/companion/discovery`, {
     signal: AbortSignal.timeout(2_000)
   });
   if (!response.ok) return null;

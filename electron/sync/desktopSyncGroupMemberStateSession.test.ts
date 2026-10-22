@@ -47,6 +47,7 @@ import {
   clearDesktopSyncGroupRoutes, loadDesktopSyncGroupRoutes,
   removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute
 } from './desktopSyncGroupRoutes.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 const group = { group_id: 'test-group', local_device_identity_key: 'mac',
   created_at: '2026-09-27', devices: [], display_name: 'Test' };
@@ -78,13 +79,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   role = 'member';
   state.exchange.mockResolvedValue(undefined);
-  vi.stubGlobal('fetch', vi.fn(async () => ({
+  vi.spyOn(lanPeerHttp, 'fetch').mockImplementation(vi.fn(async () => ({
     ok: true, json: async () => ({
       group_id: group.group_id, provider_device_id: 'windows',
       provider_device_name: 'Windows', provider_platform: 'Windows 11',
       protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR, topology_role: role
     })
-  })));
+  })) as unknown as typeof fetch);
   session = startDesktopSyncGroupMemberStateSession(
     group, vi.fn(), activate, removeDesktopSyncGroupRoute
   );
@@ -93,7 +94,7 @@ beforeEach(() => {
 afterEach(() => {
   session.stop();
   clearDesktopSyncGroupRoutes();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 it('normal departure before replacement preserves the new member route', async () => {
@@ -200,7 +201,7 @@ it('does not activate pending announcements after stop', async () => {
 
 it('does not publish an endpoint when discovery finishes after departure', async () => {
   let finish!: (response: Response) => void;
-  vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
+  vi.mocked(lanPeerHttp.fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
   await emit('found', service('gone'));
   await emit('lost', service('gone'));
   finish(new Response(JSON.stringify({ group_id: group.group_id, provider_device_id: 'windows',

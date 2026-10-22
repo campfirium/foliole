@@ -15,6 +15,7 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({ createDesktopWorkgroupPost: mocks.
 vi.mock('./workgroupKeyStore.js', () => ({ loadDesktopWorkgroupKey: () => ({ group_key: 'fixture-key' }) }));
 
 import { loadDesktopResourceProviders, queryDesktopResourceAvailability } from './desktopResourceProviders.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 const target = { group_id: 'group', local_device_id: 'local', endpoint_url: 'http://anchor',
   peer_device_id: 'anchor', peer_device_name: 'Anchor', peer_platform: 'darwin' };
@@ -37,7 +38,7 @@ it('uses all discovered active members, retains unknown offline members, and exc
 
 it('requires protocol and membership before the encrypted batched request', async () => {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify({ provider_device_id: 'anchor', resources: [] })));
-  vi.stubGlobal('fetch', fetchMock);
+  vi.spyOn(lanPeerHttp, 'fetch').mockImplementation(fetchMock);
   const peer = loadDesktopResourceProviders(target).providers[0]!;
   await queryDesktopResourceAvailability(peer, []);
   expect(mocks.compatible).toHaveBeenCalledWith(peer);

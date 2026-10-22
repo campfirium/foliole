@@ -24,6 +24,7 @@ import { clearDesktopSyncGroupRoutes, loadDesktopSyncGroupRoutes, removeDesktopS
 import { closeDesktopSyncPeerRounds } from './desktopSyncPeerRoundOwner.js';
 import { markDesktopSyncPeerReachable, resetDesktopSyncUpstreamReachability, subscribeDesktopPeerTiers } from './desktopSyncUpstream.js';
 import { closeDesktopUpstreamSession, refreshDesktopUpstreamSession } from './desktopUpstreamSession.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 let runtime: RecoverableDesktopDnsSdSession | null = null;
@@ -173,7 +174,7 @@ async function runDesktopManualSync() {
     if (!isMobileSyncPlatform(peer.peer_platform)) saveDesktopSyncGroupRoute(peer);
   }
   if (!loadDesktopSyncGroupRoutes(group.group_id).length) {
-    const candidates = await discoverDesktopSyncGroups(fetch, true, true);
+    const candidates = await discoverDesktopSyncGroups(lanPeerHttp.fetch, true, true);
     for (const candidate of candidates) {
       if (candidate.provider_device_id === group.local_device_identity_key) continue;
       const route = await runWithDatabaseConnectionOwner(() => routeFromCandidate(group, candidate));

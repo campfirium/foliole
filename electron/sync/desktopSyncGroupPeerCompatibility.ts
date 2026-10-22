@@ -3,12 +3,13 @@ import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtoc
 
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { rememberDesktopPeerTier } from './desktopSyncUpstream.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 const DESCRIPTOR_TIMEOUT_MS = 2_000;
 
 export async function assertDesktopSyncGroupPeerCompatible(
   peer: DesktopSyncGroupPeer,
-  fetchDiscovery: typeof fetch = fetch,
+  fetchDiscovery: typeof fetch = lanPeerHttp.fetch,
   parent?: AbortSignal
 ) {
   const response = await fetchDiscovery(`${peer.endpoint_url}/companion/discovery`, {

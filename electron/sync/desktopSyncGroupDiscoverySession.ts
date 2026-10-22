@@ -12,6 +12,7 @@ import {
   DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
   DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
 } from './desktopSyncGroupDiscoveryTiming.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 export class DesktopSyncGroupDiscoverySession {
@@ -27,7 +28,7 @@ export class DesktopSyncGroupDiscoverySession {
 
   constructor(
     private readonly emit: (snapshot: SyncGroupDiscoverySnapshot) => void,
-    private readonly fetchDiscovery: typeof fetch = fetch,
+    private readonly fetchDiscovery: typeof fetch = lanPeerHttp.fetch,
     private readonly platform: NodeJS.Platform = process.platform
   ) {}
 

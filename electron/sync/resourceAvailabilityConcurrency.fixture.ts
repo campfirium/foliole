@@ -2,6 +2,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { queryDesktopResourceAvailability } from './desktopResourceProviders.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 let release: (() => void) | null = null;
 let waiting = false;
@@ -17,8 +18,8 @@ export async function runResourceConcurrencyFixture(action: string, args: Record
     group_id: group.group_id, local_device_id: group.local_device_identity_key,
     peer_device_id: String(args.identity), deviceId: String(args.identity),
     peer_device_name: 'Peer', peer_platform: 'darwin' };
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (input, init) => {
+  const originalFetch = lanPeerHttp.fetch;
+  lanPeerHttp.fetch = async (input, init) => {
     if (args.hold && String(input).endsWith('/sync-group/member-state')) {
       await new Promise<void>((resolve) => { release = resolve; waiting = true; });
       waiting = false;
@@ -26,5 +27,5 @@ export async function runResourceConcurrencyFixture(action: string, args: Record
     return originalFetch(input, init);
   };
   try { return await queryDesktopResourceAvailability(peer, []); }
-  finally { globalThis.fetch = originalFetch; release = null; waiting = false; }
+  finally { lanPeerHttp.fetch = originalFetch; release = null; waiting = false; }
 }

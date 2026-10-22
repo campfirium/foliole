@@ -1,6 +1,7 @@
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { isWorkgroupConnectionReset } from './workgroupConnectionReset.js';
 import {
   decryptDesktopWorkgroupResponse,
@@ -31,7 +32,7 @@ async function fetchDesktopWorkgroupJsonOnce<T>(args: {
   pathWithQuery: string;
   secret: string;
 }): Promise<T> {
-  const response = await fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
+  const response = await lanPeerHttp.fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
     headers: createDesktopSyncGroupSignedHeaders({
       ...args, method: 'GET'
     })
@@ -45,7 +46,7 @@ async function fetchDesktopWorkgroupJsonOnce<T>(args: {
 }
 
 export async function requestJson(url: string, init: RequestInit) {
-  const response = await fetch(url, init);
+  const response = await lanPeerHttp.fetch(url, init);
   const payload = await response.json() as Record<string, unknown>;
   if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : `http_${response.status}`);
   return payload;
@@ -137,7 +138,7 @@ export async function postDesktopWorkgroupJson(args: {
   secret: string;
 }) {
   const encrypted = await runWithDatabaseConnectionOwner(() => createDesktopWorkgroupPost(args));
-  const response = await fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
+  const response = await lanPeerHttp.fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
     body: encrypted.body, headers: encrypted.headers, method: 'POST'
   });
   const body = await readDesktopWorkgroupResponse({

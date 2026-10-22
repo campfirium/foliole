@@ -13,11 +13,12 @@ import {
   DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
   DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
 } from './desktopSyncGroupDiscoveryTiming.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadSyncGroupRuntimeInstanceId } from './syncGroupRuntimeInstance.js';
 
 type ProbedCandidate = DesktopSyncGroupJoinCandidatePayload;
 
-export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = fetch, allPeers = false, desktopOnly = false) {
+export async function discoverDesktopSyncGroups(fetchDiscovery: typeof fetch = lanPeerHttp.fetch, allPeers = false, desktopOnly = false) {
   const localRuntimeInstanceId = loadSyncGroupRuntimeInstanceId();
   const services = new Map<string, { endpointUrl: string; name: string; txt: Record<string, unknown> }>();
   let failure: Error | null = null;

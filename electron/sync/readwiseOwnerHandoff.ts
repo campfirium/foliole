@@ -13,6 +13,7 @@ import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberSta
 import { loadDesktopSyncGroupMemberEndpoints } from './desktopSyncGroupMemberStateSession.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 import { loadReadwiseHandoffIntent, saveReadwiseHandoffIntent,
   type ReadwiseHandoffIntent } from './readwiseHandoffIntent.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH,
@@ -75,7 +76,7 @@ async function requestRemoteStop(peer: DesktopSyncGroupPeer, request: ReadwiseSt
   });
   let response: Response;
   try {
-    response = await fetch(`${peer.endpoint_url}${READWISE_OWNER_STOP_PATH}`, {
+    response = await lanPeerHttp.fetch(`${peer.endpoint_url}${READWISE_OWNER_STOP_PATH}`, {
       body: encrypted.body, headers: encrypted.headers, method: 'POST',
       signal: AbortSignal.timeout(5_000)
     });

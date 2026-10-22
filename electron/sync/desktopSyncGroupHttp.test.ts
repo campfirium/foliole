@@ -30,6 +30,7 @@ vi.mock('./workgroupHttpCrypto.js', () => ({
 import { fetchDesktopWorkgroupJson,
   readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
+import { lanPeerHttp } from './lanPeerHttp.js';
 
 it('decrypts a downloaded workgroup response inside the database owner queue', async () => {
   const response = new Response('encrypted', {
@@ -69,7 +70,7 @@ it('retries a reset authenticated GET with fresh signed headers', async () => {
   const fetchMock = vi.fn().mockRejectedValueOnce(reset).mockResolvedValueOnce(new Response(
     'encrypted', { headers: { 'content-type': 'application/vnd.foliole.workgroup-aead+json' } }
   ));
-  vi.stubGlobal('fetch', fetchMock);
+  const fetchSpy = vi.spyOn(lanPeerHttp, 'fetch').mockImplementation(fetchMock);
   runtime.decrypt.mockReturnValueOnce(Buffer.from('{"ok":true}'));
   vi.mocked(createDesktopSyncGroupSignedHeaders).mockClear();
   try {
@@ -79,5 +80,5 @@ it('retries a reset authenticated GET with fresh signed headers', async () => {
     })).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(createDesktopSyncGroupSignedHeaders).toHaveBeenCalledTimes(2);
-  } finally { vi.unstubAllGlobals(); }
+  } finally { fetchSpy.mockRestore(); }
 });
