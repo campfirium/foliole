@@ -1,6 +1,6 @@
 import { compareSyncPriority, SYNC_PRIORITY_TIER, selectSyncUpstream, type SyncPriority } from '../../lib/core/sync/syncPriority.js';
 
-import { isDesktopForeground } from './desktopForegroundPresence.js';
+import { isDesktopForeground, yieldDesktopForeground } from './desktopForegroundPresence.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
 export const DESKTOP_UPSTREAM_RETRY_MS = 60_000;
@@ -38,6 +38,7 @@ export function bestKnownDesktopSyncPriority(localDeviceId: string): SyncPriorit
 export function rememberDesktopPeerTier(deviceId: string, tier: number | undefined) {
   if (tier === undefined || tier < SYNC_PRIORITY_TIER.desktop || knownTiers.get(deviceId) === tier) return;
   knownTiers.set(deviceId, tier);
+  if (tier === SYNC_PRIORITY_TIER.foregroundDesktop) yieldDesktopForeground();
   for (const listener of tierListeners) listener();
 }
 

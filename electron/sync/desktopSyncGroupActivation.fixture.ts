@@ -28,7 +28,8 @@ export async function runActivationFixtureCommand(action: string, args: Readonly
   if (action === 'activation_release_round') { releaseBusyRound?.(); return null; }
   if (action === 'activation_foreground') {
     setDesktopForegroundDebounceMs(0);
-    updateDesktopFocus({ focused: true, available: z.boolean().parse(args.foreground) });
+    updateDesktopFocus({ focused: z.boolean().optional().parse(args.focused) ?? true,
+      available: z.boolean().parse(args.foreground) });
     return null;
   }
   if (action === 'activation_peer_sessions') return [...desktopPeerSessionRegistry.keys()];

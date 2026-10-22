@@ -38,3 +38,18 @@ it('keeps foreground after the window loses focus until the screen locks or the 
   expect(isDesktopForeground()).toBe(false);
   expect(changes).toEqual([true, false]);
 });
+
+it('steps down for a newer foreground desktop only while its own window is unfocused', async () => {
+  const { updateDesktopFocus, isDesktopForeground, yieldDesktopForeground, changes, DESKTOP_FOREGROUND_DEBOUNCE_MS } = await load();
+  updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  yieldDesktopForeground();
+  expect(isDesktopForeground()).toBe(true);
+
+  updateDesktopFocus({ focused: false, available: true });
+  yieldDesktopForeground();
+  expect(isDesktopForeground()).toBe(false);
+  updateDesktopFocus({ focused: true, available: true });
+  await vi.advanceTimersByTimeAsync(DESKTOP_FOREGROUND_DEBOUNCE_MS);
+  expect(changes).toEqual([true, false, true]);
+});

@@ -3,6 +3,7 @@ export const DESKTOP_FOREGROUND_DEBOUNCE_MS = 10_000;
 type Listener = (foreground: boolean) => void;
 
 let foreground = false;
+let focused = false;
 let debounceMs = DESKTOP_FOREGROUND_DEBOUNCE_MS;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<Listener>();
@@ -18,6 +19,7 @@ export function subscribeDesktopForeground(listener: Listener) {
 }
 
 export function updateDesktopFocus(state: Readonly<{ focused: boolean; available: boolean }>) {
+  focused = state.available && state.focused;
   if (!state.available) {
     clearPending();
     setForeground(false);
@@ -32,6 +34,16 @@ export function updateDesktopFocus(state: Readonly<{ focused: boolean; available
     timer = null;
     setForeground(true);
   }, debounceMs);
+}
+
+/**
+ * Another desktop just became foreground, so the user settled there after leaving this one; an
+ * unfocused foreground here is the older one and steps down so the most recent desktop leads.
+ */
+export function yieldDesktopForeground() {
+  if (focused) return;
+  clearPending();
+  setForeground(false);
 }
 
 /** Integration fixtures settle focus without waiting through the user-facing debounce. */

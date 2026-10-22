@@ -106,6 +106,8 @@ it('moves to the next desktop when the root goes away', { meta: { calibratedMs: 
 });
 
 const sessions = (desktop: Desktop) => desktop.process.invoke('activation_peer_sessions');
+const showsForeground = async (desktop: Desktop) =>
+  ((await (await fetch(`${desktop.origin}/companion/discovery`)).json()) as { foreground?: boolean }).foreground === true;
 
 it('moves the root to the desktop the user settles on and back when it locks', { meta: { calibratedMs: 120_000 } }, async () => {
   await withDesktops(2, async ([byId, other]) => {
@@ -120,6 +122,20 @@ it('moves the root to the desktop the user settles on and back when it locks', {
 
     await other.process.invoke('activation_foreground', { foreground: false });
     await expect.poll(async () => [await sessions(byId), await sessions(other)], { timeout: 30_000 }).toEqual([[], [byId.deviceId]]);
+  });
+});
+
+it('hands the root to the desktop the user settled on last while the earlier one still shows foreground', { meta: { calibratedMs: 120_000 } }, async () => {
+  await withDesktops(2, async ([earlier, later]) => {
+    await earlier.process.invoke('activation_foreground', { foreground: true });
+    await expect.poll(() => showsForeground(earlier), { timeout: 10_000 }).toBe(true);
+    await earlier.process.invoke('activation_foreground', { foreground: true, focused: false });
+    await expect.poll(async () => [await sessions(earlier), await sessions(later)], { timeout: 10_000 }).toEqual([[], [earlier.deviceId]]);
+    await later.process.invoke('activation_foreground', { foreground: true });
+    await expect.poll(async () => [await sessions(earlier), await sessions(later)], { timeout: 30_000 }).toEqual([[later.deviceId], []]);
+    expect(await showsForeground(earlier)).toBe(false);
+    await edit(earlier, 'node-0', 'Through the later root');
+    await converge(later, 'node-0', 'Through the later root');
   });
 });
 
