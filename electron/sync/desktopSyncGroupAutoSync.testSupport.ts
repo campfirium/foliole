@@ -18,6 +18,7 @@ const runtime = vi.hoisted(() => ({
   recoverAdvertisement: vi.fn(),
   readwiseContinue: vi.fn(async () => null),
   syncCompleted: null as null | (() => void),
+  refreshUpstream: vi.fn(async () => undefined),
   assertOwner: () => {},
   requireOwner: false,
   group: {
@@ -71,12 +72,18 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
 vi.mock('./companionMdnsAdvertisement.js', () => ({
   recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement
 }));
+const completedListeners = vi.hoisted(() => new Set<() => void>());
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
 vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator,
   subscribeDesktopSyncCompleted: (callback: () => void) => {
-    runtime.syncCompleted = callback;
-    return () => { runtime.syncCompleted = null; };
+    completedListeners.add(callback);
+    runtime.syncCompleted = () => { for (const listener of completedListeners) listener(); };
+    return () => { completedListeners.delete(callback); };
   } }));
+vi.mock('./desktopUpstreamSession.js', () => ({
+  closeDesktopUpstreamSession: vi.fn(), refreshDesktopUpstreamSession: runtime.refreshUpstream
+}));
+vi.mock('./desktopForegroundPresenceRuntime.js', () => ({ installDesktopForegroundPresence: vi.fn() }));
 vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged

@@ -11,6 +11,8 @@ let current: Session | null = null;
 let opening: Promise<Session> | null = null;
 let generation = 0;
 let wake: (() => Promise<unknown>) | null = null;
+// A higher-priority device this phone already tried to move to; repeated hints for it are ignored.
+let followedHint: string | null = null;
 
 export function companionDesktopSessionTarget(groupId: string) {
   return current?.active && current.binding?.target.groupId === groupId
@@ -20,8 +22,6 @@ export function companionDesktopSessionTarget(groupId: string) {
 export function invalidateCompanionDesktopSession(endpoint: string) {
   if (current?.endpoint === endpoint) void closeCompanionDesktopSession();
 }
-
-export function companionDesktopSessionPeer() { return current?.peer; }
 
 export function companionDesktopSessionId(peer: string) { return current?.peer === peer ? current.reply.session : undefined; }
 
@@ -87,6 +87,13 @@ async function wait(session: Session) {
       }, session.controller.signal));
       if (!session.active || current !== session) return;
       session.reply = reply;
+      const better = reply.best?.device_id;
+      if (better && better !== session.peer && better !== followedHint) {
+        followedHint = better;
+        await closeCompanionDesktopSession();
+        await wake?.();
+        return;
+      }
       if (reply.changed) await wake?.();
     }
   } catch {

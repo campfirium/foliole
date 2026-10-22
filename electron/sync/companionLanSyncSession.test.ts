@@ -15,6 +15,7 @@ vi.mock('./companionRequestAuth.js', () => ({
   revalidateCompanionRequestAuthorization: () => runtime.allowed ? { ok: true }
     : { ok: false, status_code: 401, error: 'sync_group_device_not_active' }
 }));
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => ({ local_device_identity_key: 'desktop' }) }));
 vi.mock('./companionLanResponses.js', () => ({ writeJson: (_request: unknown,
   response: import('node:http').ServerResponse, status: number, body: unknown) => {
   response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -96,4 +97,9 @@ it('logs notification wake times through the actual HTTP session route', async (
     payload: expect.objectContaining({ method: 'GET', changed: true, completion: 'finish',
       responseFinished: true, waitStartedAt: expect.any(Number), waitEndedAt: expect.any(Number) })
   }));
+});
+
+it('learns the waiting device tier and replies with this desktop priority', async () => {
+  const opened = await (await request({ operation: 'open', tier: 2 })).json();
+  expect(opened).toMatchObject({ tier: 1, best: { device_id: 'phone', tier: 2 } });
 });

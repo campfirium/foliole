@@ -4,10 +4,12 @@ const participation = vi.hoisted(() => ({ active: true }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncParticipating: () => participation.active }));
 
 const settings = vi.hoisted(() => ({ loadJsonSetting: vi.fn(), saveJsonSetting: vi.fn() }));
-const transport = vi.hoisted(() => ({
-  continueDesktopSyncGroupSync: vi.fn(),
-  loadDesktopSyncGroupPeers: vi.fn()
-}));
+const transport = vi.hoisted(() => {
+  const loadDesktopSyncGroupPeers = vi.fn();
+  // Upstream selection is covered separately; here every listed peer stands in for the chosen upstream.
+  return { continueDesktopSyncGroupSync: vi.fn(), loadDesktopSyncGroupPeers,
+    loadDesktopSyncUpstreamPeers: vi.fn(() => loadDesktopSyncGroupPeers()) };
+});
 
 vi.mock('../database/settingsStore.js', () => settings);
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => null }));

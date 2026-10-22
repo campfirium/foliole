@@ -37,22 +37,23 @@ it('activates desktops without opening reverse rounds to phones', async () => {
   await expect(runtime.memberSessionArgs?.onMember(desktop)).resolves.toBe(true);
   await expect(runtime.memberSessionArgs?.onMember(phone)).resolves.toBe(false);
   expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([desktop]);
-  expect(runtime.coordinator).not.toHaveBeenCalledWith('automatic', phone);
+  expect(runtime.refreshUpstream).toHaveBeenCalledOnce();
   expect(runtime.freshness).toHaveBeenCalledWith(true);
   expect(runtime.updateRole).not.toHaveBeenCalled();
 });
 
 it('coalesces duplicate discovery activation for a peer', async () => {
-  let finish: (value: { status: string }) => void = () => {};
-  runtime.coordinator.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  let finish: () => void = () => {};
+  runtime.refreshUpstream.mockImplementationOnce(() => new Promise<undefined>(resolve => { finish = () => resolve(undefined); }));
   await startDesktopSyncGroupAutoSync();
   const first = runtime.memberSessionArgs?.onMember(desktop);
   const second = runtime.memberSessionArgs?.onMember(desktop);
   expect(first).toBe(second);
-  await vi.waitFor(() => expect(runtime.coordinator).toHaveBeenCalledOnce());
-  finish({ status: 'completed' });
+  await vi.waitFor(() => expect(runtime.refreshUpstream).toHaveBeenCalledOnce());
+  finish();
   await first;
-  expect(runtime.coordinator).toHaveBeenCalledOnce();
+  expect(runtime.refreshUpstream).toHaveBeenCalledOnce();
+  expect(runtime.coordinator).not.toHaveBeenCalled();
 });
 
 it('removes an unavailable peer while leaving other reachable routes eligible', async () => {
@@ -104,7 +105,7 @@ it('activates after discovery notification while the real database owner is rele
   runtime.memberSessionArgs?.onChanged();
   await expect(runtime.memberSessionArgs?.onMember(desktop)).resolves.toBe(true);
   expect(runtime.freshness).toHaveBeenCalledWith(true);
-  expect(runtime.coordinator).toHaveBeenCalledWith('automatic', desktop);
+  expect(runtime.refreshUpstream).toHaveBeenCalledOnce();
 });
 
 
@@ -135,11 +136,11 @@ it.each(['stop', 'pause', 'leave', 'lost'] as const)(
 
 it('reports failed activation and permits a later member event without restarting', async () => {
   await startDesktopSyncGroupAutoSync();
-  runtime.coordinator.mockRejectedValueOnce(new Error('sync failed'));
+  runtime.refreshUpstream.mockRejectedValueOnce(new Error('sync failed'));
   expect(await runtime.memberSessionArgs?.onMember(desktop)).toBe(false);
   expect(loadDesktopSyncGroupDiscoveryError()).toBe('unavailable');
   expect(await runtime.memberSessionArgs?.onMember(desktop)).toBe(true);
-  expect(runtime.coordinator).toHaveBeenCalledTimes(2);
+  expect(runtime.refreshUpstream).toHaveBeenCalledTimes(2);
 });
 
 it('does not start a discovery session after a queued startup was stopped', async () => {

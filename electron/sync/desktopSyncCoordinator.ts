@@ -15,7 +15,7 @@ import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
   continueDesktopSyncGroupSync,
   type DesktopSyncGroupPeer,
-  loadDesktopSyncGroupPeers
+  loadDesktopSyncUpstreamPeers
 } from './desktopSyncGroupTransport.js';
 
 const RESULT_SETTING_KEY = 'sync_group_last_trigger_result';
@@ -27,6 +27,7 @@ interface SyncRequest {
   releaseWaiter?: () => void;
   reason: SyncTriggerReason;
   peer: DesktopSyncGroupPeer | undefined;
+  skippedPeerId: string | undefined;
   promise: Promise<SyncTriggerResult>;
   resolve: (result: SyncTriggerResult) => void;
   reject: (error: unknown) => void;
@@ -50,12 +51,14 @@ export function loadDesktopSyncTriggerResult() {
 export function runDesktopSyncCoordinator(
   reason: SyncTriggerReason,
   preferredPeer?: DesktopSyncGroupPeer,
-  continuation = false
+  continuation = false,
+  skippedPeerId?: string
 ): Promise<SyncTriggerResult> {
   if (activeRun && !continuation) requestAttachmentWorkYield();
   if (activeRun && activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
   const queued = preferredPeer ? queuedRuns.get(preferredPeer.peer_device_id)
-    : pendingRuns.find(request => !request.peer)?.promise;
+    : pendingRuns.find(request => !request.peer
+      && (request.skippedPeerId === undefined || request.skippedPeerId === skippedPeerId))?.promise;
   if (queued) return queued;
   let resolve!: SyncRequest['resolve'];
   let reject!: SyncRequest['reject'];
@@ -63,7 +66,7 @@ export function runDesktopSyncCoordinator(
     resolve = accept;
     reject = decline;
   });
-  pendingRuns.push({ continuation, reason, peer: preferredPeer, promise, resolve, reject,
+  pendingRuns.push({ continuation, reason, peer: preferredPeer, skippedPeerId, promise, resolve, reject,
     ...(activeRun && !continuation ? { releaseWaiter: waitForAttachmentWorkYield() } : {}) });
   if (preferredPeer) queuedRuns.set(preferredPeer.peer_device_id, promise);
   startNextRun();
@@ -85,7 +88,7 @@ function startNextRun() {
     startNextRun();
     for (const peer of continuations) void runDesktopSyncCoordinator('automatic', peer, true).catch(() => undefined);
   };
-  void runOwnedSync(request.reason, request.peer, continuations, request.continuation).then((result) => {
+  void runOwnedSync(request, continuations).then((result) => {
     finish();
     request.resolve(result);
   }, (error: unknown) => {
@@ -94,9 +97,17 @@ function startNextRun() {
   });
 }
 
-async function runOwnedSync(reason: SyncTriggerReason, preferredPeer: DesktopSyncGroupPeer | undefined, continuations: DesktopSyncGroupPeer[], continuation: boolean) {
+async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGroupPeer[]) {
+  const { reason, peer: preferredPeer, continuation, skippedPeerId } = request;
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
+  const peers = (preferredPeer ? [preferredPeer] : await runWithDatabaseConnectionOwner(() => loadDesktopSyncUpstreamPeers()))
+    .filter(peer => peer.peer_device_id !== skippedPeerId);
+  // A root serves its downstream sessions; only a manual request waits for them.
+  const serving = reason !== 'manual' && peers.length === 0 && desktopSyncChangeSessions().hasSessions();
+  if (serving || (skippedPeerId && peers.length === 0)) {
+    return { error: null, finished_at: startedAt, reason, run_id: runId, started_at: startedAt, status: 'skipped' } as const;
+  }
   const activity = { runId, reason, startedAt };
   await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
     message: 'Sync started', stage: 'run', status: 'started' });
@@ -105,8 +116,6 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer: DesktopSyn
       return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
         run_id: runId, started_at: startedAt, status: 'skipped' });
     }
-    const peers = preferredPeer ? [preferredPeer]
-      : await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupPeers());
     if (peers.length === 0) {
       if (reason === 'manual' && desktopSyncChangeSessions().hasSessions()) {
         const complete = await desktopSyncChangeSessions().requestSync();

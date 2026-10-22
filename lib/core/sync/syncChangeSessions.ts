@@ -59,6 +59,8 @@ export function createSyncChangeSessions(instance: string, newId: () => string) 
   return {
     open, close, changed, wait,
     hasSessions: () => sessions.size > 0,
+    /** Returns pending waits unchanged so their devices re-read the server's current priority. */
+    nudge() { for (const session of sessions.values()) session.wake?.(); },
     complete(peer: string, id: string, observed: SyncChangeMarker) {
       for (const listener of requireSession(peer, id).completed) listener(observed);
     },

@@ -1,3 +1,4 @@
+import { SYNC_PRIORITY_TIER, selectSyncUpstream } from '../../../../../lib/core/sync/syncPriority.js';
 import type { CompanionWorkspaceVersionPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import { isMobileSyncPlatform } from '../../../../../lib/platform/syncSchedulingPlatform.js';
 import { discoverCompanionDesktops, type CompanionDiscoveryOptions } from '../../companionWorkspaceDiscovery';
@@ -9,7 +10,7 @@ import {
 } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
-import { companionDesktopSessionPeer, companionDesktopSessionTarget } from './companionDesktopSession.js';
+import { companionDesktopSessionTarget } from './companionDesktopSession.js';
 import { createSignedRequestHeaders } from './signedRequest';
 
 export interface CompanionWorkspaceSyncTarget {
@@ -57,10 +58,14 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
   const incompatiblePeers = discovered.filter(candidate => candidate.compatibility.status === 'incompatible'
     && candidate.discovery.group_id === group.group_id
     && candidate.discovery.provider_device_id !== group.local_device_identity_key);
-  const desktops = matches.filter(match => !isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
-  const selected = desktops.find(match => match.discovery.provider_device_id === companionDesktopSessionPeer()) ?? desktops[0];
-  const mobiles = matches.filter(match => isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
-  const targets = selected && !options.mobilePeersOnly ? [selected, ...mobiles] : mobiles;
+  // A phone syncs only with its upstream: the highest-priority reachable device above it, the rule every device follows.
+  // Desktops outrank phones, so another phone is the upstream only while no desktop is reachable.
+  const upstream = selectSyncUpstream({ tier: SYNC_PRIORITY_TIER.mobile, deviceId: group.local_device_identity_key }, matches,
+    match => ({ tier: isMobileSyncPlatform(match.discovery.provider_platform ?? '') ? SYNC_PRIORITY_TIER.mobile
+      : match.discovery.foreground ? SYNC_PRIORITY_TIER.foregroundDesktop : SYNC_PRIORITY_TIER.desktop,
+    deviceId: match.discovery.provider_device_id }));
+  const selected = upstream && !isMobileSyncPlatform(upstream.discovery.provider_platform ?? '') ? upstream : null;
+  const targets = upstream && (!options.mobilePeersOnly || !selected) ? [upstream] : [];
   const incompatibleTargets = incompatiblePeers.filter(match => (!selected && !options.mobilePeersOnly)
     || isMobileSyncPlatform(match.discovery.provider_platform ?? ''));
   return [...targets, ...incompatibleTargets].map((match) => {

@@ -8,8 +8,8 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
 }));
 vi.mock('../sync/syncGroupStore', () => ({ loadCompanionSyncGroup: runtime.group }));
 
-import { closeCompanionDesktopSession, ensureCompanionDesktopSession,
-  invalidateCompanionDesktopSession } from './companionDesktopSession';
+import { closeCompanionDesktopSession, companionDesktopSessionTarget, ensureCompanionDesktopSession,
+  invalidateCompanionDesktopSession, subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession';
 import { resolveReachableCompanionWorkspaceSyncEndpoints } from './companionWorkspaceEndpoint';
 
 const target = { endpointUrl: 'http://mac:38641', deviceId: 'mac', groupId: 'group',
@@ -56,9 +56,41 @@ it('reopens the desktop session when the authenticated library epoch changes', a
 it('keeps independently triggered mobile discovery available with a healthy desktop session', async () => {
   await connect();
   runtime.discover.mockResolvedValue([{ compatibility: { status: 'compatible', negotiated_version: 26 },
-    endpointUrl: 'http://phone:38641', discovery: { group_id: 'group', provider_device_id: 'other-phone',
+    endpointUrl: 'http://phone:38641', discovery: { group_id: 'group', provider_device_id: 'remote-phone',
       provider_platform: 'ios-capacitor' } }]);
   const peers = await resolveReachableCompanionWorkspaceSyncEndpoints(target.endpointUrl, { mobilePeersOnly: true });
-  expect(peers.map(peer => peer.deviceId)).toEqual(['other-phone']);
+  expect(peers.map(peer => peer.deviceId)).toEqual(['remote-phone']);
   expect(runtime.discover).toHaveBeenCalledOnce();
+});
+
+it('moves toward a higher-priority desktop named by the upstream, once per named desktop', async () => {
+  await connect();
+  const marker = { instance: '00000000-0000-4000-8000-000000000002', sequence: 0 };
+  runtime.request.mockImplementation(async (_endpoint: string, input: { operation: string }) => {
+    if (input.operation === 'wait') return runtime.request.mock.calls.filter(([, call]) => call.operation === 'wait').length === 1
+      ? { session: '00000000-0000-4000-8000-000000000001', marker, changed: false, tier: 1, best: { device_id: 'windows', tier: 2 } }
+      : new Promise(() => undefined);
+    if (input.operation === 'close') return { closed: true };
+    return { session: '00000000-0000-4000-8000-000000000003', marker, changed: false };
+  });
+  const woke = vi.fn(async () => undefined);
+  const unsubscribe = subscribeCompanionDesktopChanges(woke);
+  waitForCompanionDesktopChanges();
+  await vi.waitFor(() => expect(woke).toHaveBeenCalledOnce());
+  expect(companionDesktopSessionTarget('group')).toBeNull();
+
+  await ensureCompanionDesktopSession(target.endpointUrl, target.deviceId, { target, libraryEpoch: 'epoch-a' });
+  let hinted = 0;
+  runtime.request.mockImplementation(async (_endpoint: string, input: { operation: string }) => {
+    if (input.operation !== 'wait') return { closed: true };
+    hinted += 1;
+    return hinted === 1
+      ? { session: '00000000-0000-4000-8000-000000000003', marker, changed: false, best: { device_id: 'windows', tier: 2 } }
+      : new Promise(() => undefined);
+  });
+  waitForCompanionDesktopChanges();
+  await vi.waitFor(() => expect(hinted).toBe(2));
+  expect(woke).toHaveBeenCalledOnce();
+  expect(companionDesktopSessionTarget('group')).toEqual(target);
+  unsubscribe();
 });

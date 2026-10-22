@@ -8,6 +8,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
+import { desktopPeerSessionId } from './desktopPeerSessionRegistry.js';
 import { runDesktopRequestSyncDatabaseRound } from './desktopRequestSyncDatabaseRound.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { continueDesktopRequestSyncResources } from './desktopRequestSyncResources.js';
@@ -20,6 +21,7 @@ import {
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
+import { selectDesktopSyncUpstream } from './desktopSyncUpstream.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
@@ -27,6 +29,12 @@ export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 export function loadDesktopSyncGroupPeers() {
   const group = loadDesktopSyncGroup();
   return group ? loadDesktopSyncGroupRoutes(group.group_id).filter(peer => !isMobileSyncPlatform(peer.peer_platform)) : [];
+}
+
+/** Automatic and manual rounds only ever target this desktop's single upstream. */
+export function loadDesktopSyncUpstreamPeers() {
+  const upstream = selectDesktopSyncUpstream(loadDesktopSyncGroupPeers());
+  return upstream ? [upstream] : [];
 }
 
 export async function continueDesktopSyncGroupSync(
@@ -40,8 +48,9 @@ export async function continueDesktopSyncGroupSync(
     target.peer_device_id,
     async () => {
       try {
+        const sessionId = desktopPeerSessionId(target.peer_device_id);
         return await runSyncPeerRound({ owner: desktopSyncPeerRoundOwner(), peerId: target.peer_device_id,
-          execute: (id, lease) => continuePeerSync(target, activity, { id, lease, admitted: false }) });
+          execute: (id, lease) => continuePeerSync(target, activity, { id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }) });
       } catch (error) {
         if (isSyncPeerRoundRetryableError(error)) return { complete: false };
         throw error;

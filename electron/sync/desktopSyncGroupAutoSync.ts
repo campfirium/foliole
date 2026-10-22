@@ -6,6 +6,8 @@ import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watc
 import { recoverCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
+import { subscribeDesktopForeground } from './desktopForegroundPresence.js';
+import { installDesktopForegroundPresence } from './desktopForegroundPresenceRuntime.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
 import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -20,10 +22,13 @@ import { routeFromCandidate } from './desktopSyncGroupRouteCandidate.js';
 import { clearDesktopSyncGroupRoutes, loadDesktopSyncGroupRoutes, removeDesktopSyncGroupRoute,
   saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { closeDesktopSyncPeerRounds } from './desktopSyncPeerRoundOwner.js';
+import { markDesktopSyncPeerReachable, resetDesktopSyncUpstreamReachability, subscribeDesktopPeerTiers } from './desktopSyncUpstream.js';
+import { closeDesktopUpstreamSession, refreshDesktopUpstreamSession } from './desktopUpstreamSession.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 let runtime: RecoverableDesktopDnsSdSession | null = null;
 let stopReadwiseContinuation: (() => void) | null = null;
+let stopPeerScheduling: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
 let startRun: Promise<void> | null = null;
 let generation = 0;
@@ -39,12 +44,14 @@ export function startDesktopSyncGroupAutoSync() {
     resetDesktopSyncGroupRecovery();
     clearDesktopSyncGroupDiscoveryErrors();
     stopReadwiseContinuation = subscribeDesktopSyncCompleted(resumeReadwiseHandoff);
+    stopPeerScheduling = startPeerScheduling();
     runtime = startDesktopSyncGroupMemberStateSession(group, () => {
       notifyDesktopSyncGroupOverviewChanged();
       resumeReadwiseHandoff();
     }, (peer, isCurrent) => activatePeer(peer, () => current === generation && isCurrent()), deviceId => {
       removeDesktopSyncGroupRoute(deviceId);
       inFlight.delete(deviceId);
+      refreshUpstream();
       void refreshEligibility(group.group_id, () => current === generation).catch(reportActivationError);
     }, error => setDesktopSyncGroupDiscoveryError('member', error));
   }).finally(() => { if (startRun === work) startRun = null; });
@@ -60,6 +67,10 @@ export function stopDesktopSyncGroupAutoSync() {
   resetDesktopSyncGroupRecovery();
   stopReadwiseContinuation?.();
   stopReadwiseContinuation = null;
+  stopPeerScheduling?.();
+  stopPeerScheduling = null;
+  closeDesktopUpstreamSession();
+  resetDesktopSyncUpstreamReachability();
   runtime?.stop();
   runtime = null;
   closeDesktopSyncPeerRounds();
@@ -77,6 +88,18 @@ export function recoverDesktopSyncGroupDiscovery() {
       recoverCompanionMdnsAdvertisement();
     }).catch(reportActivationError);
   });
+}
+
+function startPeerScheduling() {
+  installDesktopForegroundPresence();
+  // A priority change may move this desktop's upstream, and its downstream devices must hear it now.
+  const replan = () => { refreshUpstream(); desktopSyncChangeSessions().nudge(); };
+  const stops = [subscribeDesktopSyncCompleted(refreshUpstream), subscribeDesktopForeground(replan), subscribeDesktopPeerTiers(replan)];
+  return () => { for (const stop of stops) stop(); };
+}
+
+function refreshUpstream() {
+  void refreshDesktopUpstreamSession().catch(reportActivationError);
 }
 
 function resumeReadwiseHandoff() {
@@ -114,11 +137,13 @@ function activatePeer(peer: DesktopSyncGroupPeer, isCurrent: () => boolean) {
     if (!isCurrent() || loadDesktopSyncGroup()?.group_id !== peer.group_id ||
         !isDesktopCompanionSyncParticipating()) return false;
     saveDesktopSyncGroupRoute(peer);
+    markDesktopSyncPeerReachable(peer.peer_device_id);
     return updateEligibility(peer.group_id);
   }).then(async eligible => {
     if (!eligible || !isCurrent()) return false;
-    const result = await runDesktopSyncCoordinator('automatic', peer);
-    return result.status === 'completed';
+    // Discovery only refreshes the upstream choice; the upstream session runs the first round.
+    await refreshDesktopUpstreamSession();
+    return true;
   }).catch(error => {
     if (isCurrent()) reportActivationError(error);
     return false;

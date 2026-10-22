@@ -2,11 +2,13 @@ import type http from 'node:http';
 
 import { SYNC_SESSION_PATH, syncSessionRequestSchema } from '../../lib/platform/syncSessionContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { recordSyncSessionWaitTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization } from './companionRequestAuth.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
+import { bestKnownDesktopSyncPriority, localDesktopSyncTier, rememberDesktopPeerTier } from './desktopSyncUpstream.js';
 
 export async function handleCompanionSyncSession(request: http.IncomingMessage, response: http.ServerResponse) {
   const url = new URL(request.url ?? '/', 'http://localhost');
@@ -29,6 +31,7 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
     }
     const sessions = desktopSyncChangeSessions();
     const peer = context.auth.device_id;
+    rememberDesktopPeerTier(peer, input.tier);
     const waitStartedAt = Date.now();
     const waitStarted = performance.now();
     const reply = input.operation === 'open' ? sessions.open(peer)
@@ -47,7 +50,7 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
         writeJson(request, response, auth.status_code, { error: auth.error });
       } else {
         if (input.operation === 'complete') sessions.complete(peer, input.session, input.marker);
-        writeJson(request, response, 200, reply);
+        writeJson(request, response, 200, 'session' in reply ? withLocalPriority(reply) : reply);
       }
     });
   } catch (error) {
@@ -56,4 +59,12 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
     });
   } finally { response.off('close', disconnected); }
   return true;
+}
+
+/** Requires the DB owner; tells the waiting device this desktop's tier and the best device it knows. */
+function withLocalPriority<T extends object>(reply: T) {
+  const local = loadDesktopSyncGroup()?.local_device_identity_key;
+  if (!local) return reply;
+  const best = bestKnownDesktopSyncPriority(local);
+  return { ...reply, tier: localDesktopSyncTier(), best: { device_id: best.deviceId, tier: best.tier } };
 }

@@ -60,7 +60,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
-        const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, relayInboundCommit, timing);
+        const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, () => relayInboundCommit(runtime.auth), timing);
         const reply = await respondDesktopRequestSyncHttp(host, {
           context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
@@ -83,8 +83,9 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   return true;
 }
 
-function relayInboundCommit() {
-  void requestDesktopRelaySync()?.catch(error => console.warn('[sync] received change propagation failed', error));
+function relayInboundCommit(auth: { ok: true; device_id: string } | { ok: false }) {
+  if (!auth.ok) return;
+  void requestDesktopRelaySync(auth.device_id)?.catch(error => console.warn('[sync] received change propagation failed', error));
 }
 
 function bindSessionRound(lease: SyncPeerRoundLease | undefined, signal: AbortSignal | undefined) {

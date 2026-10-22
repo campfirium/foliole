@@ -88,7 +88,7 @@ it('routes a Windows 11 desktop using its product-facing discovery label', async
   }]);
 });
 
-it('selects one desktop while retaining mobile peer discovery', async () => {
+it('selects the highest-ranked desktop when none is in the foreground', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac',
@@ -100,7 +100,7 @@ it('selects one desktop while retaining mobile peer discovery', async () => {
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
-    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1', platform: 'darwin'
+    deviceId: 'device-windows', deviceName: 'Windows PC', endpointUrl: 'http://windows:38641', groupId: 'group-1', platform: 'win32'
   }]);
 });
 
@@ -172,7 +172,7 @@ it('does not schedule an incompatible second desktop after selecting a compatibl
 });
 
 
-it('schedules the selected desktop before a phone discovered first', async () => {
+it('syncs only with the desktop upstream even when a phone was discovered first', async () => {
   runtime.discover.mockResolvedValue([
     { compatibility: { status: 'compatible' }, endpointUrl: 'http://phone:38641',
       discovery: { group_id: 'group-1', provider_device_id: 'device-mobile', provider_platform: 'android-capacitor' } },
@@ -180,5 +180,30 @@ it('schedules the selected desktop before a phone discovered first', async () =>
       discovery: { group_id: 'group-1', provider_device_id: 'device-mac', provider_platform: 'darwin' } }
   ]);
   const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://mac:38641');
-  expect(targets.map(target => target.deviceId)).toEqual(['device-mac', 'device-mobile']);
+  expect(targets.map(target => target.deviceId)).toEqual(['device-mac']);
+});
+
+it('prefers the desktop in the foreground over one discovered earlier', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://mac:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mac', provider_device_name: 'Mac',
+      provider_platform: 'darwin', foreground: false }
+  }, {
+    compatibility: { status: 'compatible' }, endpointUrl: 'http://windows:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-windows', provider_device_name: 'Windows PC',
+      provider_platform: 'win32', foreground: true }
+  }]);
+
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641');
+  expect(targets.map(item => item.deviceId)).toEqual(['device-windows']);
+});
+
+it('uses a higher-ranked phone as upstream only while no desktop is reachable', async () => {
+  const phone = (id: string) => ({ compatibility: { status: 'compatible' }, endpointUrl: `http://${id}:38641`,
+    discovery: { group_id: 'group-1', provider_device_id: id, provider_platform: 'android-capacitor' } });
+  runtime.discover.mockResolvedValue([phone('device-aaa'), phone('device-mobile')]);
+  const targets = await resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641', { mobilePeersOnly: true });
+  expect(targets.map(target => target.deviceId)).toEqual(['device-mobile']);
+  runtime.discover.mockResolvedValue([phone('device-aaa')]);
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641', { mobilePeersOnly: true })).resolves.toEqual([]);
 });

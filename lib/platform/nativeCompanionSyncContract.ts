@@ -190,6 +190,7 @@ export interface CompanionWorkspaceDiscoveryPayload {
   provider_platform: string;
   runtime_instance_id: string;
   topology_role: null;
+  foreground?: boolean; // Absent from older desktops: not in the foreground.
 }
 
 export interface SyncGroupJoinEncryptedInfoPayload {

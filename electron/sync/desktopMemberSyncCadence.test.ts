@@ -14,6 +14,7 @@ vi.mock('./desktopSyncCoordinator.js', () => ({
 
 import {
   requestDesktopHighValueSync,
+  requestDesktopRelaySync,
   updateDesktopSyncFreshness
 } from './desktopMemberSyncCadence.js';
 
@@ -51,4 +52,31 @@ it('restarts the freshness minute after a manual coordinator completion', async 
   expect(runtime.run).not.toHaveBeenCalled();
   await vi.advanceTimersByTimeAsync(30_000);
   expect(runtime.run).toHaveBeenCalledOnce();
+});
+
+it('skips the pushing peer only while every queued change came from that peer', async () => {
+  vi.useFakeTimers();
+  updateDesktopSyncFreshness(true, Date.now());
+  let finish!: () => void;
+  runtime.active = new Promise(resolve => { finish = () => resolve({ status: 'completed' }); });
+
+  const relay = (sources: (string | null)[]) => {
+    for (const source of sources) {
+      if (source) requestDesktopRelaySync(source); else requestDesktopHighValueSync();
+    }
+  };
+  relay(['peer-a', 'peer-a']);
+  runtime.active = null;
+  finish();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(runtime.run).toHaveBeenLastCalledWith('automatic', undefined, false, 'peer-a');
+
+  for (const sources of [['peer-a', 'peer-b'], ['peer-a', null]]) {
+    runtime.active = new Promise(resolve => { finish = () => resolve({ status: 'completed' }); });
+    relay(sources);
+    runtime.active = null;
+    finish();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.run).toHaveBeenLastCalledWith('automatic', undefined, false, undefined);
+  }
 });

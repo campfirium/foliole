@@ -1,6 +1,8 @@
+import { SYNC_PRIORITY_TIER } from '../../lib/core/sync/syncPriority.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { rememberDesktopPeerTier } from './desktopSyncUpstream.js';
 
 const DESCRIPTOR_TIMEOUT_MS = 2_000;
 
@@ -17,6 +19,8 @@ export async function assertDesktopSyncGroupPeerCompatible(
   if (discovery.group_id !== peer.group_id || discovery.provider_device_id !== peer.peer_device_id) {
     throw new Error('sync_group_peer_identity_mismatch');
   }
+  rememberDesktopPeerTier(peer.peer_device_id, discovery.foreground === true
+    ? SYNC_PRIORITY_TIER.foregroundDesktop : SYNC_PRIORITY_TIER.desktop);
   const compatibility = evaluateSyncProtocolCompatibility(discovery.protocol);
   if (compatibility.status !== 'compatible') {
     throw new Error(`sync_group_peer_incompatible:${compatibility.reason ?? 'unknown'}`);
