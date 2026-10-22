@@ -1,19 +1,22 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResource } from './attachmentBlockReceiver.js';
-import { attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
+import { ATTACHMENT_WINDOW_BLOCKS, attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
 
-/** The protocol's largest pull window: one request carries up to 4 MiB. */
-export const ATTACHMENT_PULL_WINDOW_BLOCKS = 8;
 // Each describe advances the source scan by one bounded slice; a scan this long is left for a later pass.
 const DESCRIBE_ATTEMPTS = 64;
 
-export async function attachmentRequest(exchange: RequestSyncExchange, input: Partial<AttachmentRequest> &
-  Pick<AttachmentRequest, 'operation'>, consume: (message: AttachmentRequest) => Promise<void>) {
-  const query = attachmentRequestSchema.parse({ requestId: crypto.getRandomValues(new Uint8Array(16)), ...input });
-  return withControlRequest(exchange, '/companion/framed-sync?request=attachments', [attachmentMessage(query)], async response => {
+type AttachmentQuery = Partial<AttachmentRequest> & Pick<AttachmentRequest, 'operation'>;
+
+/** Several inputs form one push window under a shared request ID; the reply answers the first. */
+export async function attachmentRequest(exchange: RequestSyncExchange, input: AttachmentQuery | AttachmentQuery[],
+  consume: (message: AttachmentRequest) => Promise<void>) {
+  const requestId = crypto.getRandomValues(new Uint8Array(16));
+  const queries = (Array.isArray(input) ? input : [input]).map(item => attachmentRequestSchema.parse({ requestId, ...item }));
+  const query = queries[0]!;
+  return withControlRequest(exchange, '/companion/framed-sync?request=attachments', queries.map(item => attachmentMessage(item)), async response => {
     let count = 0;
     let ended = false;
     for await (const decoded of readRequestSyncWire({ ...exchange, ...response })) {
@@ -53,12 +56,12 @@ async function pullWindow(host: RequestSyncAttachmentHost, exchange: RequestSync
   let offset = start;
   let receivedOffset = start;
   let paused = false;
-  await attachmentRequest(exchange, { ...resource, operation: 'pull', offset, maxBlocks: ATTACHMENT_PULL_WINDOW_BLOCKS }, async message => {
+  await attachmentRequest(exchange, { ...resource, operation: 'pull', offset, maxBlocks: ATTACHMENT_WINDOW_BLOCKS }, async message => {
     if (message.byteLength !== resource.byteLength || message.offset !== offset) throw new Error('attachment_pull_offset_invalid');
     if (message.state === 'end') {
       if (!wireBlocks && !message.pending && offset !== resource.byteLength) throw new Error('attachment_pull_incomplete');
     } else if (message.state === 'block') {
-      if (wireBlocks >= ATTACHMENT_PULL_WINDOW_BLOCKS || message.data.length !== Math.min(ATTACHMENT_BLOCK_BYTES, resource.byteLength - offset)) {
+      if (wireBlocks >= ATTACHMENT_WINDOW_BLOCKS || message.data.length !== Math.min(ATTACHMENT_BLOCK_BYTES, resource.byteLength - offset)) {
         throw new Error('attachment_pull_block_limit_invalid');
       }
       if (!paused) {

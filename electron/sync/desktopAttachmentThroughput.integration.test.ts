@@ -97,7 +97,9 @@ it('drains 256 MiB in windowed pulls under mobile request cost while admitting a
     expect(editLatencyMs).toBeLessThan(5000);
     // Each pulled 512 KiB block no longer costs its own describe and pull request.
     expect(measurement.metrics().sourceOpens).toBeLessThanOrEqual(256 / 8 + keys.length * 4);
-    const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS, rounds, totalBlocks,
+    // Pushed blocks travel in the same windows, so neither direction costs a request per block.
+    expect(server.attachmentRequests()).toBeLessThanOrEqual(512 / 8 + 24);
+    const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS, attachmentRequests: server.attachmentRequests(), rounds, totalBlocks,
       ...measurement.metrics(),
       elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };
     await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });

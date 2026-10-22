@@ -5,11 +5,13 @@ import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { bytes } from './framedSyncDecodedValues.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 
+/** Pull responses and push requests each carry at most this many consecutive blocks (4 MiB). */
+export const ATTACHMENT_WINDOW_BLOCKS = 8;
 const integer = z.union([z.number(), z.string().regex(/^\d+$/u).transform(Number)])
   .pipe(z.number().int().nonnegative().max(FRAMED_SYNC_LIMITS.maxBlobBytes));
 const key = attachmentBlockResourceSchema.shape.storageKey;
 const binary = z.unknown().transform(value => bytes(value, 'attachment'));
-/** Dev v27 pull windows retain individually authenticated blocks and a resumable end offset. */
+/** Pull and push windows retain individually authenticated blocks and a resumable end offset. */
 export const attachmentRequestSchema = z.object({
   requestId: binary.refine(bytes => bytes.length === 16),
   derive: z.enum(['', 'pdf_text']).default(''),
@@ -23,7 +25,7 @@ export const attachmentRequestSchema = z.object({
   storageKeys: z.array(key).max(256).default([]),
   pending: z.boolean().default(false),
   parsingPending: z.boolean().default(false),
-  maxBlocks: z.number().int().min(0).max(8).transform(value => value || 1).default(1),
+  maxBlocks: z.number().int().min(0).max(ATTACHMENT_WINDOW_BLOCKS).transform(value => value || 1).default(1),
   state: z.enum(['', 'partial', 'complete', 'offset', 'block', 'end']).default('')
 });
 export type AttachmentRequest = z.infer<typeof attachmentRequestSchema>;
@@ -36,5 +38,19 @@ export function assertAttachmentResponse(message: AttachmentRequest, request: At
   if (message.operation !== request.operation || message.storageKey !== request.storageKey ||
       !message.requestId.every((byte, index) => request.requestId[index] === byte)) {
     throw new Error('attachment_response_identity_mismatch');
+  }
+}
+
+/** A push window is consecutive blocks of one file under one request ID; any other multi-message request is invalid. */
+export function assertAttachmentPushWindow(messages: readonly AttachmentRequest[]) {
+  const [first] = messages;
+  if (!first || messages.length > ATTACHMENT_WINDOW_BLOCKS) throw new Error('attachment_push_window_invalid');
+  if (messages.length === 1) return;
+  let next = first.offset;
+  for (const message of messages) {
+    if (message.operation !== 'push' || message.derive || message.state || message.offset !== next ||
+        message.storageKey !== first.storageKey || message.byteLength !== first.byteLength ||
+        !message.requestId.every((byte, index) => first.requestId[index] === byte)) throw new Error('attachment_push_window_invalid');
+    next += message.data.length;
   }
 }

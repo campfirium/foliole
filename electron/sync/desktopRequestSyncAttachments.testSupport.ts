@@ -86,8 +86,10 @@ export async function attachmentHttpServer(dropResponseAt: number, delayMs = 0) 
   });
   const origin = await listen(production);
   let count = 0;
+  let attachmentRequests = 0;
   const relay = http.createServer((request, response) => {
     const drop = ++count === dropResponseAt;
+    if (request.url?.includes('request=attachments')) attachmentRequests++;
     const forward = () => {
       const outgoing = http.request(new URL(request.url ?? '/', origin), { method: request.method, headers: request.headers }, incoming => {
         if (drop) { incoming.resume(); response.destroy(); return; }
@@ -97,7 +99,7 @@ export async function attachmentHttpServer(dropResponseAt: number, delayMs = 0) 
     };
     if (delayMs) setTimeout(forward, delayMs); else forward();
   });
-  return { url: await listen(relay), async close() {
+  return { url: await listen(relay), attachmentRequests: () => attachmentRequests, async close() {
     await new Promise<void>(resolve => relay.close(() => resolve()));
     await new Promise<void>(resolve => production.close(() => resolve()));
   } };

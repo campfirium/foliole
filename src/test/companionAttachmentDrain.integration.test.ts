@@ -13,13 +13,19 @@ import { createCompanionRequestFixture, native } from './companionRequestSync.te
 const BLOCKS = 48;
 const REQUEST_DELAY_MS = 50;
 
-it('drains a pending attachment in one phone round under mobile request cost', { meta: { calibratedMs: 60_000 } }, async () => {
+it.each([
+  { direction: 'pull', source: 'right', target: 'left' },
+  { direction: 'push', source: 'left', target: 'right' }
+] as const)('drains a pending $direction attachment in one phone round under mobile request cost', { meta: { calibratedMs: 60_000 } }, async ({ source, target: receiver }) => {
   const host = await createCompanionRequestFixture();
   const bytes = Buffer.alloc(BLOCKS * ATTACHMENT_BLOCK_BYTES, 0x64);
   const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
+  const assetsOf = (side: 'left' | 'right') =>
+    path.join(host.fixture[`${side}Snapshot`].stateRoot, 'documents', 'Foliole', 'Assets');
   try {
-    await host.fixture.right.seed({ nodeId: 'drain-attachment', title: 'Image', content: `![image](asset://${key})` });
-    const assets = path.join(host.fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets');
+    await host.fixture[source].seed({ nodeId: 'drain-attachment', title: 'Image', content: `![image](asset://${key})` });
+    if (source === 'left') await host.sync();
+    const assets = assetsOf(source);
     await mkdir(assets, { recursive: true });
     await writeFile(path.join(assets, key), bytes);
     let attachmentRequests = 0;
@@ -34,7 +40,6 @@ it('drains a pending attachment in one phone round under mobile request cost', {
     expect(result.transferredAttachmentBlockCount).toBe(BLOCKS);
     expect(hasRetryWork(result)).toBe(false);
     expect(attachmentRequests).toBeLessThanOrEqual(BLOCKS / 8 + 6);
-    const target = path.join(host.fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', key);
-    expect((await readFile(target)).equals(bytes)).toBe(true);
+    expect((await readFile(path.join(assetsOf(receiver), key))).equals(bytes)).toBe(true);
   } finally { await host.close(); }
 });

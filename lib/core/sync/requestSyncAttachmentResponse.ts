@@ -1,9 +1,10 @@
-import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema } from './attachmentBlockReceiver.js';
+import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
-import { attachmentMessage, attachmentRequestSchema, type AttachmentRequest } from './requestSyncAttachmentContract.js';
+import { ATTACHMENT_WINDOW_BLOCKS, assertAttachmentPushWindow, attachmentMessage, attachmentRequestSchema,
+  type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 
@@ -19,12 +20,14 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
   onProgress?: () => void;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
-  let request: AttachmentRequest | undefined;
+  const window: AttachmentRequest[] = [];
   for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) {
-    if (request || decoded.message.payloadCase !== 'request_attachment') throw new Error('attachment_request_invalid');
-    request = attachmentRequestSchema.parse(decoded.message.payload);
+    if (window.length > ATTACHMENT_WINDOW_BLOCKS || decoded.message.payloadCase !== 'request_attachment') throw new Error('attachment_request_invalid');
+    window.push(attachmentRequestSchema.parse(decoded.message.payload));
   }
+  const [request] = window;
   if (!request || request.state !== '') throw new Error('attachment_request_missing');
+  assertAttachmentPushWindow(window);
   const reply = async (messages: AsyncIterable<RequestSyncMessage>) => {
     const stream = await prepareRequestSyncWire({ ...input, messages: () => messages });
     try { return await consume(stream); }
@@ -48,7 +51,7 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
     return withPendingReply(() => withSource(selected.storageKey,
       file => reply(sourceMessages(selected, file, input.signal, input.onProgress))), selected, reply);
   }
-  return reply(responseMessages(host, request));
+  return reply(responseMessages(host, window));
 }
 
 async function withPendingReply<T>(execute: () => Promise<T>, request: AttachmentRequest,
@@ -60,7 +63,8 @@ async function withPendingReply<T>(execute: () => Promise<T>, request: Attachmen
   }
 }
 
-async function* responseMessages(host: RequestSyncAttachmentHost, request: AttachmentRequest) {
+async function* responseMessages(host: RequestSyncAttachmentHost, window: AttachmentRequest[]) {
+  const request = window[0]!;
   if (request.operation === 'needs') {
     const demand = await host.needsSlice(attachmentWorkBudget());
     const needs = demand.keys;
@@ -73,8 +77,14 @@ async function* responseMessages(host: RequestSyncAttachmentHost, request: Attac
   }
   const resource = attachmentBlockResourceSchema.parse(request);
   await host.attempted?.(resource.storageKey);
-  const result = request.operation === 'status' ? await host.status(resource)
-    : await host.receive(resource, request.offset, request.data);
+  let result: AttachmentBlockResult | undefined = request.operation === 'status' ? await host.status(resource) : undefined;
+  for (const block of request.operation === 'push' ? window : []) {
+    const received: AttachmentBlockResult = await host.receive(resource, block.offset, block.data);
+    result = received;
+    // Stop at completion or any receiver disagreement; the reply carries the offset to resume from.
+    if (received.kind !== 'partial' || received.offset !== block.offset + block.data.length) break;
+  }
+  if (!result) throw new Error('attachment_request_invalid');
   yield attachmentMessage({ ...request, data: new Uint8Array(), state: result.kind, offset: result.offset });
 }
 

@@ -1,10 +1,8 @@
-import type { AttachmentBlockResult } from './attachmentBlockReceiver.js';
-import { transferAttachmentSlice } from './attachmentBlockTransfer.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
-import type { AttachmentRequest } from './requestSyncAttachmentContract.js';
 import { attachmentRequest, pullRequestSyncAttachmentWindows, singleAttachmentRequest as single } from './requestSyncAttachmentPull.js';
+import { pushRequestSyncAttachmentWindows } from './requestSyncAttachmentPush.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import { runRequestSyncAttachmentStages } from './requestSyncAttachmentStages.js';
 import type { RequestSyncExchange } from './requestSyncDatabaseExchange.js';
@@ -82,7 +80,7 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
       for (const key of remoteNeeds) {
         if (failed.has(key) || (attempted && shouldYield())) { pendingKeys.add(key); continue; }
         attempted = true;
-        await attempt(key, () => pushBudgeted(host, exchange, key, shouldYield));
+        await attempt(key, () => pushRequestSyncAttachmentWindows(host, exchange, key, shouldYield));
       }
     } }
   ];
@@ -92,28 +90,6 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
   if (!pendingScan && !pendingKeys.size && !textPending) retryFirstRounds.delete(roundKey);
   return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending, verifying: verificationPending(),
     yielded: parsingPending || verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
-}
-
-function receiveResult(message: AttachmentRequest): AttachmentBlockResult {
-  if (message.state !== 'partial' && message.state !== 'complete' && message.state !== 'offset') {
-    throw new Error('attachment_receiver_state_invalid');
-  }
-  return { kind: message.state, offset: message.offset };
-}
-
-async function pushBudgeted(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
-  storageKey: string, shouldYield: () => boolean) {
-  return transferAttachmentSlice({ storageKey, source: host, maxBlocks: Infinity, shouldYield,
-    ...(exchange.signal ? { signal: exchange.signal } : {}), destination: {
-      async status(resource) {
-        const result = receiveResult(await single(exchange, { ...resource, operation: 'status' }));
-        if (result.kind === 'offset') throw new Error('attachment_status_invalid');
-        return result;
-      },
-      async receive(resource, offset, data) {
-        return receiveResult(await single(exchange, { ...resource, operation: 'push', offset, data }));
-      }
-    } });
 }
 
 function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
