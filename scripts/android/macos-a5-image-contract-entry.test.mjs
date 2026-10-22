@@ -15,9 +15,8 @@ function fixture() {
   const events = [];
   return { events, args: { assertFixed: vi.fn(), pairingReadiness: vi.fn(), readiness: vi.fn(),
     build: vi.fn(), buildIdentity: () => 'run', markMutationBoundary: vi.fn(), serial: '87a33a4b', env: { FOLIOLE_S203_IMAGE_PROJECTION: 'inspect' },
-    paths: { artifactsRoot: root, deviceBackupRoot: root, buildRoot: root, adb: 'adb', apk: 'main.apk', androidTestApk: 'test.apk' },
+    paths: { artifactsRoot: root, buildRoot: root, adb: 'adb', apk: 'main.apk', androidTestApk: 'test.apk' },
     checked: vi.fn((_command, args) => events.push(args.join(' '))),
-    protectData: vi.fn(async (mode) => events.push(mode)),
     execute: vi.fn(async (_command, args) => { events.push(args.join(' ')); return { code: 0, output: args.includes(IMAGE_TEST_CLASS) ? 'OK (6 tests)' : 'OK (1 test)' }; }) } };
 }
 it('registers the native test behind the existing mutation lease and frozen build contract', () => {
@@ -32,21 +31,19 @@ it.each(['pairingReadiness', 'readiness'])('does not build or mutate after rejec
   expect(args.checked).not.toHaveBeenCalled();
   expect(args.execute).not.toHaveBeenCalled();
 });
-it('runs only the fixed class after backup and restores the main Activity', async () => {
+it('runs only the fixed class and restores the main Activity', async () => {
   const { args, events } = fixture();
   await dispatchMacosA5Action({ ...args, action: 'image-contract' });
   expect(args.execute.mock.calls[0][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
     '-e', 'class', IMAGE_TEST_CLASS, 'com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
-  expect(events.indexOf('backup')).toBeLessThan(events.findIndex((event) => event.includes('install -r main.apk')));
-  expect(events).toContain('check');
+  expect(events.some((event) => event.includes('install -r main.apk'))).toBe(true);
   expect(events.some((event) => event.includes('am start -n com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
   expect(events.some((event) => /pm clear|uninstall com\.foliole\.android$/u.test(event))).toBe(false);
 });
-it('retains a test failure while checking protected data and restoring the Activity', async () => {
+it('retains a test failure while restoring the Activity', async () => {
   const { args, events } = fixture();
   args.execute.mockResolvedValue({ code: 0, output: 'FAILURES!!!' });
   await expect(runMacosA5ImageContractEntry(args)).rejects.toThrow('six tests');
-  expect(events).toContain('check');
   expect(events.some((event) => event.includes('am start -n'))).toBe(true);
 });
 it('rejects partial or failed instrumentation output', () => {
@@ -63,7 +60,6 @@ it('honors explicit disposable test data without requiring sync credentials or p
   expect(args.assertFixed).toHaveBeenCalled();
   expect(args.pairingReadiness).not.toHaveBeenCalled();
   expect(args.readiness).not.toHaveBeenCalled();
-  expect(args.protectData).not.toHaveBeenCalled();
   expect(args.execute).toHaveBeenCalledTimes(2);
 });
 

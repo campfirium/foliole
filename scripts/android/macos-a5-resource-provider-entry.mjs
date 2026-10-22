@@ -17,18 +17,13 @@ export async function runMacosA5ResourceProviderEntry(args) {
   args.build();
   const runId = args.buildIdentity();
   const root = path.join(args.paths.artifactsRoot, 'a5-resource-provider', runId);
-  const manifest = path.join(root, 'baseline.json');
-  const backup = path.join(args.paths.deviceBackupRoot, runId);
   fs.mkdirSync(root, { recursive: true });
   args.markMutationBoundary?.();
   const command = (argv) => args.checked(args.paths.adb, ['-s', args.serial, ...argv]);
   let installed = false;
-  let protectedData = false;
   let failure;
   try {
     command(['shell', 'am', 'force-stop', APP_ID]);
-    await args.protectData('backup', manifest, backup);
-    protectedData = true;
     command(['install', '-r', args.paths.apk]);
     command(['install', '-r', '-t', args.paths.androidTestApk]);
     installed = true;
@@ -41,8 +36,7 @@ export async function runMacosA5ResourceProviderEntry(args) {
   } catch (error) { failure = error; }
   for (const cleanup of [
     () => installed && command(['uninstall', TEST_ID]),
-    () => command(['shell', 'am', 'force-stop', APP_ID]),
-    () => protectedData && args.protectData('check', manifest, backup)
+    () => command(['shell', 'am', 'force-stop', APP_ID])
   ]) {
     try { await cleanup(); } catch (error) { failure ??= error; }
   }

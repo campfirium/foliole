@@ -128,8 +128,6 @@ export async function runMacosA5SystemEntrySyncEntry(args) {
   const buildIdentity = args.buildIdentity();
   args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-system-entry-sync', buildIdentity);
-  await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
-    path.join(args.paths.deviceBackupRoot, buildIdentity));
   args.checked(args.paths.adb, ['-s', args.serial, 'install', '-r', args.paths.apk]);
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const proof = await proveA5SystemEntryDisplayNameConvergence({

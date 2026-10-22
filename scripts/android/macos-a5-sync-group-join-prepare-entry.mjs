@@ -25,19 +25,15 @@ export async function runMacosA5SyncGroupJoinPrepareEntry(args, dependencies = {
   const evidenceRoot = path.join(
     args.paths.artifactsRoot, 'a5-sync-group-join-prepare', buildIdentity
   );
-  const backupRoot = path.join(args.paths.deviceBackupRoot, buildIdentity);
-  const appId = macosA5AppId(args.env);
   args.markMutationBoundary?.();
-  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', appId]);
-  await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'), backupRoot);
   const result = await mechanics({
     buildIdentity, env: args.env, evidenceRoot, execute: args.execute,
     paths: args.paths, serial: args.serial, testClass: TEST_CLASS,
     validateInstrumentation: validateProviderAcceptance
   });
   process.stdout.write(result.output);
+  const appId = macosA5AppId(args.env);
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', appId]);
-  await args.protectData('check', path.join(evidenceRoot, 'baseline.json'), backupRoot);
   args.checked(args.paths.adb, [
     '-s', args.serial, 'shell', 'am', 'start', '-n', `${appId}/com.foliole.android.MainActivity`
   ]);

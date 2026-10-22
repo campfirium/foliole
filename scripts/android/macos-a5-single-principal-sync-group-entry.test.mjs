@@ -117,8 +117,6 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(cleanup).toContain('`${ACCEPTANCE_APP_ID}.test`');
   expect(cleanup).toContain("'uninstall', packageId");
   expect(source.match(/await removeA5AcceptanceApplication\(args\)/gu)).toHaveLength(2);
-  expect(source).not.toContain("protectData('backup'");
-  expect(source).not.toContain('deviceBackupRoot');
 });
 
 it('creates the fixed A5 nonempty fact before requesting either desktop-created group', () => {
@@ -135,7 +133,6 @@ it('creates the fixed A5 nonempty fact before requesting either desktop-created 
   expect(reverse).toContain("action: 'sync-now'");
   expect(reverse).not.toMatch(/collectAndroidDeviceSnapshot|waitForCounts|database/u);
   expect(reverse).not.toMatch(/pm.*clear|DELETE FROM|UPDATE sync_/u);
-  expect(reverse).not.toContain("protectData('backup'");
 });
 
 it('can join an already-running external group without coupling join to a journey fact', () => {

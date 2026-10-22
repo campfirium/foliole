@@ -18,13 +18,10 @@ export async function runMacosA5DeviceProfileEntry(args) {
   args.assertFixed();
   const runId = args.buildIdentity();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-device-profile', runId);
-  const snapshotRoot = path.join(args.paths.deviceBackupRoot, runId);
-  const baselineManifest = path.join(evidenceRoot, 'baseline.json');
   const profileBaselineManifest = path.join(evidenceRoot, 'device-profile-baseline.json');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   args.markMutationBoundary?.();
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
-  await args.protectData('backup', baselineManifest, snapshotRoot);
   const baseline = await collectProfileSnapshot(args);
   fs.writeFileSync(profileBaselineManifest, `${JSON.stringify({
     capturedAt: new Date().toISOString(), runId, schemaVersion: 1, serial: args.serial,
@@ -39,7 +36,7 @@ export async function runMacosA5DeviceProfileEntry(args) {
   const result = assertA5DeviceProfileAcceptance({ baseline, expectedProfile, first, pairing, second });
   const manifestPath = path.join(evidenceRoot, 'device-profile-manifest.json');
   fs.writeFileSync(manifestPath, `${JSON.stringify({
-    ...result, baselineBackupRoot: snapshotRoot, completedAt: new Date().toISOString(),
+    ...result, completedAt: new Date().toISOString(),
     profileBaselineManifest, resultStatus: 'success', runId, schemaVersion: 1,
     serial: args.serial
   }, null, 2)}\n`);

@@ -28,5 +28,4 @@ it('keeps Android approval active while the fixed Windows recovery runs', async 
   );
   expect(approvalSource).toContain('const reuseInstalledMain = await mainMatches');
   expect(approvalSource).toContain('if (!reuseInstalledMain)');
-  expect(approvalSource).not.toContain('protectData(');
 });

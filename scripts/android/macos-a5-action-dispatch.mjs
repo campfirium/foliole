@@ -26,7 +26,7 @@ export { macosA5ErrorEvidence };
 
 export async function dispatchMacosA5Action({
   action, assertFixed, build, buildIdentity, captureAnnotation, captured, checked, deploy,
-  env, execute, markMutationBoundary, pairingReadiness, paths, protectData, readiness, serial
+  env, execute, markMutationBoundary, pairingReadiness, paths, readiness, serial
 }) {
   if (action === 'bundle-release') {
     const { buildReleaseBundle } = await import('./macos-a5-release-bundle.mjs');
@@ -151,7 +151,7 @@ export async function dispatchMacosA5Action({
     const { runMacosA5ImageContractEntry } = await import('./macos-a5-image-contract-entry.mjs');
     await runMacosA5ImageContractEntry({ assertFixed: () => assertFixed(paths),
       build: () => build(paths), buildIdentity, checked, captured, env, execute, markMutationBoundary,
-      pairingReadiness, paths, protectData, readiness, serial });
+      pairingReadiness, paths, readiness, serial });
   }
   if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
     assertFixed: () => assertFixed(paths), buildIdentity, checked, captured,
@@ -175,7 +175,7 @@ export async function dispatchMacosA5Action({
     const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');
     await runMacosA5DeviceProfileEntry({
       assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
-      captured, checked, markMutationBoundary, paths, protectData, serial
+      captured, checked, markMutationBoundary, paths, serial
     });
   }
   if (action === 'hidden-desktop-status') await runMacosA5HiddenDesktopStatusEntry({
@@ -183,7 +183,7 @@ export async function dispatchMacosA5Action({
   });
   const productArgs = {
     assertFixed: () => assertFixed(paths), build: () => build(paths), buildIdentity,
-    checked, env, execute, markMutationBoundary, paths, protectData, serial
+    checked, env, execute, markMutationBoundary, paths, serial
   };
   if (action === 'mobile-link') {
     await (await import('./macos-a5-mobile-link-entry.mjs')).runMacosA5MobileLinkEntry(productArgs);

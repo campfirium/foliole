@@ -47,7 +47,6 @@ export function createMacosA5ExecutionContext({
     controllerStateRoot,
     desktopDevLibrary: path.join(controllerStateRoot, 'desktop-library'),
     desktopRuntimeRoot: path.join(sourceRepoRoot, MACOS_DAILY_DEBUG_ROOT),
-    deviceBackupRoot: path.join(sourceRepoRoot, '.lab/internal/android-device-backups'),
     leaseRoot: path.join(controllerStateRoot, 'leases'),
     runId,
     runRoot: path.join(controllerStateRoot, 'runs', runId),

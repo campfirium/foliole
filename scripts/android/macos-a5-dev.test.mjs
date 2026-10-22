@@ -46,7 +46,6 @@ describe('macOS fixed A5 development entry', () => {
     );
     expect(extended).toContain('readiness.syncGroupCredentialsPresent === true');
     expect(extended).toContain('readiness.syncGroupRemotePeerFingerprint');
-    expect(extended).toContain("args.protectData('backup'");
     expect(extended).toContain('runMacosA5ExistingSyncPreflight');
     expect(extended).toContain('proveMacosA5ExistingSyncContinuation');
     expect(block).not.toContain('runMacosA5PairSync');
@@ -122,7 +121,6 @@ describe('macOS fixed A5 development entry', () => {
     expect(extended).toContain('runMacosA5SyncGroupMaintenance({');
     expect(extended).toContain('assertT132CredentialRecoveryBaseline');
     expect(extended).toContain("'force-stop', 'com.campfirium.foliole.android'");
-    expect(extended).toContain("args.protectData('backup'");
     expect(extended).toContain('runMacosA5SyncGroupRejoinJourney');
   });
 
@@ -159,7 +157,7 @@ describe('macOS fixed A5 development entry', () => {
     const assertFixed = vi.fn();
     const forbidden = vi.fn(() => { throw new Error('Data acceptance must be explicit'); });
     await dispatchMacosA5Action({ action: 'status', paths, assertFixed,
-      pairingReadiness: forbidden, readiness: forbidden, protectData: forbidden,
+      pairingReadiness: forbidden, readiness: forbidden, pullDatabase: forbidden,
       build: forbidden, deploy: forbidden, execute: forbidden, checked: forbidden });
     expect(assertFixed).toHaveBeenCalledExactlyOnceWith(paths);
     expect(forbidden).not.toHaveBeenCalled();
@@ -189,11 +187,11 @@ describe('macOS fixed A5 development entry', () => {
   it('deploys without reading or backing up the device database', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const deployBlock = source.slice(
-      source.indexOf('async function deploy('), source.indexOf('export async function protectData')
+      source.indexOf('async function deploy('), source.indexOf('export async function pullDatabase')
     );
 
     expect(deployBlock).toContain("'install', '-r'");
-    expect(deployBlock).not.toContain('protectData');
+    expect(deployBlock).not.toContain('pullDatabase');
     expect(deployBlock).not.toContain('readiness(paths)');
   });
 });

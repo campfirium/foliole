@@ -49,7 +49,6 @@ describe('macOS fixed A5 build stage', () => {
     expect(paths).toMatchObject({
       buildRoot: repoRoot, sourceRepoRoot: repoRoot,
       controllerStateRoot: path.join(repoRoot, '.lab/internal/macos-a5-controller'),
-      deviceBackupRoot: path.join(repoRoot, '.lab/internal/android-device-backups'),
       desktopDevLibrary: path.join(
         repoRoot, '.lab/internal/macos-a5-controller/desktop-library'
       )

@@ -3,8 +3,6 @@ const ACTION_OVERRIDES = Object.freeze({
     formalSourceClass: 'source-free-readonly', mutatesFixedA5: false },
   'bundle-release': { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'unsigned-release-bundle', mutatesFixedA5: false },
-  deploy: { requiresDataProtection: false },
-  'database-performance': { requiresDataProtection: false },
   build: { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'accepted-source-archive', mutatesFixedA5: false },
   'hidden-desktop-status': { deviceLeaseMode: null, mutatesFixedA5: false,

@@ -127,8 +127,6 @@ export async function runMacosA5ExistingSyncEntry(args) {
   const buildIdentity = args.buildIdentity();
   args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-existing-sync', buildIdentity);
-  await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
-    path.join(args.paths.deviceBackupRoot, buildIdentity));
   const { proveMacosA5ExistingSyncContinuation } = await import(
     './macos-a5-existing-sync-acceptance.mjs'
   );
@@ -150,14 +148,6 @@ export async function runMacosA5SyncGroupRejoinEntry(args) {
   const buildIdentity = args.buildIdentity();
   args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-sync-group-rejoin', buildIdentity);
-  const stopped = await args.execute(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
-  ], { env: args.env, timeoutMs: 30_000 });
-  if (stopped.code !== 0) throw Object.assign(new Error('Failed to stop A5 before baseline backup'), {
-    result: stopped
-  });
-  await args.protectData('backup', path.join(evidenceRoot, 'baseline.json'),
-    path.join(args.paths.deviceBackupRoot, buildIdentity));
   const { runMacosA5SyncGroupRejoinJourney } = await import(
     './macos-a5-sync-group-rejoin-action.mjs'
   );

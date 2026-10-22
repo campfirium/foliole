@@ -61,11 +61,10 @@ it('renames, restores, and reopens the desktop product session in one bounded jo
     .toBeLessThan(instrumentation.indexOf('"companion-tab-shortcut"'));
 });
 
-it('keeps the formal entry on the isolated controller library and protected backup path', async () => {
+it('keeps the formal entry on the isolated controller library', async () => {
   const source = await import('node:fs').then(({ readFileSync }) =>
     readFileSync('scripts/android/macos-a5-system-entry-sync-action.mjs', 'utf8'));
   expect(source).toContain('libraryHome: context.paths.desktopDevLibrary');
-  expect(source).toContain("args.protectData('backup'");
   expect(source).toContain("['-s', args.serial, 'install', '-r', args.paths.apk]");
   expect(source).not.toContain('/Users/roamer/Documents/Foliole');
   expect(typeof proveA5SystemEntryDisplayNameConvergence).toBe('function');

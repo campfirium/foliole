@@ -25,7 +25,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { force: true, recursive: true });
 });
 
-it('separates source, build, evidence, backup, controller, and library ownership', () => {
+it('separates source, build, evidence, controller, and library ownership', () => {
   const repoRoot = temporaryRepo();
   fs.mkdirSync(path.join(repoRoot, '.tmp'));
   const context = createMacosA5ExecutionContext({
@@ -38,9 +38,7 @@ it('separates source, build, evidence, backup, controller, and library ownership
   expect(context.artifactsRoot).toBe(path.join(
     fs.realpathSync(path.join(repoRoot, '.tmp')), 'artifacts'
   ));
-  expect(context.deviceBackupRoot).toBe(
-    path.join(canonicalRepoRoot, '.lab/internal/android-device-backups')
-  );
+  expect(context).not.toHaveProperty('deviceBackupRoot');
   expect(context.controllerStateRoot).toBe(
     path.join(canonicalRepoRoot, '.lab/internal/macos-a5-controller')
   );

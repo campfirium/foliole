@@ -11,12 +11,12 @@ function args() {
     assertFixed: vi.fn(), build: vi.fn(), buildIdentity: () => 'build-1',
     checked: vi.fn(), env: {}, execute: vi.fn(), markMutationBoundary: vi.fn(),
     paths: { adb: '/adb', apk: '/app.apk', artifactsRoot: '/artifacts',
-      buildRoot: '/repo', deviceBackupRoot: '/backups' },
-    protectData: vi.fn(async () => {}), serial: '87a33a4b'
+      buildRoot: '/repo' },
+    serial: '87a33a4b'
   };
 }
 
-it('binds the fixed A5 action to the inactive native provider and preserves product data', async () => {
+it('binds the fixed A5 action to the inactive native provider and restores the main Activity', async () => {
   const context = args();
   const mechanics = vi.fn(async (input) => {
     input.validateInstrumentation({
@@ -31,7 +31,6 @@ it('binds the fixed A5 action to the inactive native provider and preserves prod
   expect(mechanics).toHaveBeenCalledWith(expect.objectContaining({
     testClass: 'com.foliole.android.FolioleCompanionJoinRequestProviderTest'
   }));
-  expect(context.protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup', 'check']);
   expect(context.checked).toHaveBeenCalledWith('/adb', [
     '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.campfirium.foliole.android/com.foliole.android.MainActivity'
   ]);

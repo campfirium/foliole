@@ -184,7 +184,6 @@ it('keeps the formal path free of external discovery and product containers', ()
   ].map((file) => fs.readFileSync(file, 'utf8')).join('\n');
   const androidBuild = fs.readFileSync('scripts/android/a5-two-device-build.mjs', 'utf8');
   expect(files).not.toMatch(/bonjour-service|new Bonjour|\bdns-sd\b|com\.foliole\.ios['"]/u);
-  expect(files).not.toMatch(/protectData\('backup'|deviceBackupRoot/u);
   expect(files).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
   expect(files).toContain('friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID)');
   expect(files).toContain("FOLIOLE_ACCEPTANCE_TASK_ID: 't152'");

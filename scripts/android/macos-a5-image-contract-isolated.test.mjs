@@ -13,7 +13,7 @@ function fixture() {
   const args = { env: {}, assertFixed: vi.fn(), buildIdentity: () => 'run', serial: '87a33a4b',
     markMutationBoundary: vi.fn(), build: vi.fn(),
     pairingReadiness: () => { throw new Error('daily data must not be inspected'); },
-    readiness: vi.fn(), protectData: vi.fn(),
+    readiness: vi.fn(),
     paths: { artifactsRoot: root, adb: '/adb', apk: '/main.apk', androidTestApk: '/test.apk' },
     checked: vi.fn((command, argv) => events.push(argv.join(' '))),
     execute: vi.fn(async () => ({ code: 0, output: 'OK (6 tests)' })) };
@@ -26,7 +26,6 @@ it('runs six isolated contracts without accessing the daily application', async 
   expect(args.execute.mock.calls[0][1]).toContain(
     'com.campfirium.foliole.android.acceptance.test/androidx.test.runner.AndroidJUnitRunner');
   expect(args.build).not.toHaveBeenCalled();
-  expect(args.protectData).not.toHaveBeenCalled();
   expect(events.some(event => /pm clear|am start|am force-stop/u.test(event))).toBe(false);
   expect(dependencies.cleanupTest).toHaveBeenCalledOnce();
 });

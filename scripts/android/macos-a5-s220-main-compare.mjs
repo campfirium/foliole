@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
-import { inspectProtectionIdentity } from './android-device-data-protection.mjs';
+import { inspectProtectionIdentity } from './android-device-identity-inspection.mjs';
 import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
 import { assessS220MainChanges, hashS220Fact } from './macos-a5-s220-main-facts.mjs';
 

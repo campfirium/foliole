@@ -9,11 +9,9 @@ import { assertA5DeviceProfileAcceptance } from './macos-a5-device-profile-actio
 
 it('captures the formal comparison baseline with the same profile snapshot as post-install', () => {
   const source = fs.readFileSync(new URL('./macos-a5-device-profile-action.mjs', import.meta.url), 'utf8');
-  const protectedBackup = source.indexOf("await args.protectData('backup'");
   const profileBaseline = source.indexOf('const baseline = await collectProfileSnapshot(args)');
   const build = source.indexOf('args.build()');
-  expect(protectedBackup).toBeGreaterThan(-1);
-  expect(profileBaseline).toBeGreaterThan(protectedBackup);
+  expect(profileBaseline).toBeGreaterThan(-1);
   expect(build).toBeGreaterThan(profileBaseline);
   expect(source).toContain("'device-profile-baseline.json'");
 });

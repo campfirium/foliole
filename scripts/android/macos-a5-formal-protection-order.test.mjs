@@ -2,25 +2,18 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ events: [], failStop: false, backupCode: 0 }));
+const state = vi.hoisted(() => ({ events: [] }));
 vi.mock('./macos-a5-process.mjs', () => ({
   checked: vi.fn((_command, args) => {
     if (!args.includes('force-stop')) return;
     state.events.push('stop');
-    expect(args).toEqual(['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android']);
-    if (state.failStop) throw new Error('stop failed');
   }),
   captured: vi.fn((_command, args) => args.includes('devices') ? '87a33a4b\tdevice' : 'device'),
-  execute: vi.fn(async (_command, args) => {
-    expect(args).toContain('--mode');
-    expect(args).toContain('backup');
-    state.events.push('backup');
-    return { code: state.backupCode };
-  })
+  execute: vi.fn(async () => { state.events.push('execute'); return { code: 0 }; })
 }));
 vi.mock('./macos-a5-formal-lifecycle.mjs', () => ({
   openMacosA5Lifecycle: ({ formal }) => ({
-    context: { runId: 'test-run', deviceBackupRoot: '/backup' },
+    context: { runId: 'test-run' },
     receipt: formal ? { path: '/evidence/receipt.json', receipt: {} } : null,
     sharedCacheRoot: '/cache'
   }),
@@ -45,7 +38,6 @@ vi.mock('./macos-a5-formal-receipt.mjs', () => ({
   markFormalA5ActionRunning: vi.fn(),
   markFormalA5MutationBoundary: vi.fn(),
   prepareFormalA5ReceiptCompletion: vi.fn(),
-  recordFormalA5DataProtection: () => state.events.push('backup-validated'),
   recordFormalA5Lease: vi.fn()
 }));
 vi.mock('./macos-a5-action-dispatch.mjs', () => ({
@@ -57,8 +49,6 @@ import { runMacosA5Action } from './macos-a5-dev.mjs';
 
 beforeEach(() => {
   state.events = [];
-  state.failStop = false;
-  state.backupCode = 0;
 });
 
 it('dispatches formal deploy without a pre-install backup', async () => {
@@ -71,22 +61,9 @@ it('runs isolated database performance acceptance without stopping or backing up
   expect(state.events).toEqual(['lease', 'dispatch', 'cleanup']);
 });
 
-it('still protects other fixed-device mutations before dispatch', async () => {
-  await runMacosA5Action('device-profile', '/repo', { formal: true });
-  expect(state.events).toEqual(['lease', 'stop', 'backup', 'backup-validated', 'dispatch', 'cleanup']);
-});
-
-it('does not back up or dispatch device changes when stopping the writer fails', async () => {
-  state.failStop = true;
-  await expect(runMacosA5Action('device-profile', '/repo', { formal: true })).rejects.toThrow('stop failed');
-  expect(state.events).toEqual(['lease', 'stop', 'cleanup']);
-});
-
-it('does not install or dispatch device changes when the protected backup fails', async () => {
-  state.backupCode = 1;
-  await expect(runMacosA5Action('device-profile', '/repo', { formal: true }))
-    .rejects.toThrow('Data protection backup failed');
-  expect(state.events).toEqual(['lease', 'stop', 'backup', 'cleanup']);
+it.each(['device-profile', 'sync-existing'])('dispatches formal %s without stopping or backing up the main app', async action => {
+  await runMacosA5Action(action, '/repo', { formal: true });
+  expect(state.events).toEqual(['lease', 'dispatch', 'cleanup']);
 });
 
 it('does not stop the app for a formal build that never touches the device', async () => {

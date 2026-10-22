@@ -36,8 +36,9 @@ it('keeps build and status outside the fixed A5 mutation lease', () => {
 
 it('uses direct replacement for deploy without a data backup gate', () => {
   expect(assertRegisteredMacosA5Action('deploy')).toMatchObject({
-    deviceLeaseMode: 'mutation', mutatesFixedA5: true, requiresDataProtection: false
+    deviceLeaseMode: 'mutation', mutatesFixedA5: true
   });
+  expect(assertRegisteredMacosA5Action('deploy')).not.toHaveProperty('requiresDataProtection');
 });
 
 it('keeps action evidence layout out of the generic formal receipt', () => {

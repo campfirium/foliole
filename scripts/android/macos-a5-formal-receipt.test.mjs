@@ -15,7 +15,7 @@ import {
   markFormalA5ActionRunning,
   markFormalA5MutationBoundary, markFormalA5Stage,
   openFormalA5Receipt, prepareFormalA5ReceiptCompletion, recordFormalA5Cleanup,
-  recordFormalA5DataProtection, recordFormalA5Lease, recordFormalA5LeaseReleased
+  recordFormalA5Lease, recordFormalA5LeaseReleased
 } from './macos-a5-formal-receipt.mjs';
 
 const roots = [];
@@ -199,8 +199,7 @@ it('requires the deploy mutation boundary but not a database backup', () => {
   recordFormalA5Cleanup(manager, 'complete');
   expect(() => completeFormalA5Receipt(manager)).toThrow('mutation boundary is incomplete');
   markFormalA5MutationBoundary(manager);
-  expect(completeFormalA5Receipt(manager).dataProtection)
-    .toMatchObject({ required: false, resultStatus: 'not-required' });
+  expect(completeFormalA5Receipt(manager)).not.toHaveProperty('dataProtection');
 });
 
 it('accepts trust facts without turning formal completion into sync success', () => {
@@ -208,10 +207,6 @@ it('accepts trust facts without turning formal completion into sync success', ()
   const manager = openFormalA5Receipt(context, contract('device-profile'));
   const lease = { owner: { acquiredAt: 'lease-start', mode: 'mutation', runId: context.runId } };
   recordFormalA5Lease(manager, lease);
-  const manifest = path.join(root, 'baseline.json');
-  fs.writeFileSync(manifest, JSON.stringify({ backup: { created: true, validated: true },
-    snapshot: { database: { integrity: 'ok' }, serial: '87a33a4b' } }));
-  recordFormalA5DataProtection(manager, manifest);
   markFormalA5MutationBoundary(manager);
   const buildRoot = path.join(root, 'capsule');
   const paths = { apk: path.join(buildRoot, 'android/app-debug.apk') };
@@ -220,8 +215,7 @@ it('accepts trust facts without turning formal completion into sync success', ()
   prepareFormalA5ReceiptCompletion(manager, context, paths);
   recordFormalA5LeaseReleased(manager, lease); recordFormalA5Cleanup(manager, 'complete');
   const receipt = completeFormalA5Receipt(manager);
-  expect(receipt).toMatchObject({ dataProtection: { resultStatus: 'complete' },
-    integrity: { database: 'ok' }, resultStatus: 'complete' });
+  expect(receipt).toMatchObject({ resultStatus: 'complete' });
   expect(receipt).not.toHaveProperty('syncSuccess');
 });
 

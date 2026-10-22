@@ -24,8 +24,6 @@ export async function runMacosA5MobileLinkEntry(args) {
   args.build();
   const runId = args.buildIdentity();
   const root = path.join(args.paths.artifactsRoot, 'a5-mobile-link', runId);
-  const manifest = path.join(root, 'baseline.json');
-  const backup = path.join(args.paths.deviceBackupRoot, runId);
   fs.mkdirSync(root, { recursive: true });
   args.markMutationBoundary?.();
   const command = (argv) => args.checked(args.paths.adb, ['-s', args.serial, ...argv]);
@@ -35,9 +33,7 @@ export async function runMacosA5MobileLinkEntry(args) {
   let facts;
   try {
     command(['shell', 'am', 'force-stop', APP_ID]);
-    await args.protectData('backup', manifest, backup);
     command(['install', '-r', args.paths.apk]);
-    await args.protectData('check', manifest, backup);
     command(['install', '-r', '-t', args.paths.androidTestApk]);
     installed = true;
     const result = await args.execute(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'instrument', '-w', '-r',

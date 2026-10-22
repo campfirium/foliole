@@ -152,7 +152,7 @@ export async function runMacosA5SyncGroupRejoinJourney({
     desktopControl: async () => ({ code: 0, output: '' }),
     desktopAuthorizationFingerprint: T132_MAC_AUTHORIZATION,
     existingPairing: false, env, hostName: T132_A5_HOST,
-    evidenceRoot: path.join(evidenceRoot, 'rejoin'), execute, paths, protectData: undefined,
+    evidenceRoot: path.join(evidenceRoot, 'rejoin'), execute, paths,
     instrumentationModeArgs: CREDENTIALS_ONLY_DISCOVERY_TARGET,
     recoveryEvidenceGoal: 'credentials-signable',
     serial,

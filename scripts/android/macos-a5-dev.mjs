@@ -30,11 +30,12 @@ import {
   captureFormalA5Toolchain, formalA5FailureStage, markFormalA5ActionRunning,
   markFormalA5MutationBoundary,
   markFormalA5Stage,
-  prepareFormalA5ReceiptCompletion, recordFormalA5DataProtection, recordFormalA5Lease
+  prepareFormalA5ReceiptCompletion, recordFormalA5Lease
 } from './macos-a5-formal-receipt.mjs';
 import {
   finishMacosA5Lifecycle, openMacosA5Lifecycle
 } from './macos-a5-formal-lifecycle.mjs';
+import { parseAndroidDatabasePull } from './android-device-database-pull.mjs';
 import { checked, captured, execute } from './macos-a5-process.mjs';
 import { cleanupMacosA5Run } from './macos-a5-run-cleanup.mjs';
 import { acquireMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
@@ -111,15 +112,13 @@ async function deploy(
   console.log(`[macos-a5-dev] deploy evidence=${evidenceRoot}`);
 }
 
-export async function protectData(paths, env, mode, manifest, backupRoot) {
-  if (!backupRoot) throw new Error('Transient Android snapshot root is required.');
+export async function pullDatabase(paths, env) {
   const result = await execute(process.execPath, [
-    path.join(paths.buildRoot, 'scripts/android/android-device-data-protection.mjs'),
-    '--mode', mode, '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', macosA5AppId(env),
-    '--backup-root', backupRoot, '--manifest', manifest
-  ], { env, timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000 });
-  if (result.code !== 0) throw Object.assign(new Error(`Data protection ${mode} failed`), { result });
-  return result;
+    path.join(paths.buildRoot, 'scripts/android/android-device-database-pull.mjs'),
+    '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', macosA5AppId(env)
+  ], { env, timeoutCode: 'database_pull_timeout', timeoutMs: 5 * 60_000 });
+  if (result.code !== 0) throw Object.assign(new Error('Android database pull failed'), { result });
+  return { databasePath: parseAndroidDatabasePull(result.stdout), output: result.stderr };
 }
 
 export async function captureAnnotation(
@@ -138,7 +137,7 @@ export async function captureAnnotation(
     adbPort: '5037', appId: macosA5AppId(), buildIdentity: runId, env, evidenceRoot, execute, paths: {
       adbPath: paths.adb, buildRoot: paths.buildRoot
     },
-    protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
+    pullDatabase: () => pullDatabase(paths, env),
     serial: A5_SERIAL
   }).catch((error) => { failure = error; });
   try { launchAndVerify(paths); }
@@ -187,18 +186,6 @@ export async function runMacosA5Action(
       lease = acquireMacosA5DeviceLease(context, actionContract.deviceLeaseMode);
       if (receipt) recordFormalA5Lease(receipt, lease);
     }
-    const runProtection = async (mode, manifest, backupRoot) => {
-      const result = await protectData(paths, actionEnv, mode, manifest, backupRoot);
-      if (receipt && mode === 'backup') recordFormalA5DataProtection(receipt, manifest);
-      return result;
-    };
-    if (receipt && actionContract.mutatesFixedA5 && actionContract.requiresDataProtection !== false) {
-      markFormalA5Stage(receipt, 'data-protection');
-      assertFixedA5(paths);
-      checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', macosA5AppId()]);
-      await runProtection('backup', path.join(path.dirname(receipt.path), 'device-baseline.json'),
-        path.join(context.deviceBackupRoot, context.runId));
-    }
     if (receipt) (actionContract.mutatesFixedA5
       ? markFormalA5Stage(receipt, 'action-preflight') : markFormalA5ActionRunning(receipt));
     const buildIdentity = formal ? () => context.runId : captureIdentity;
@@ -208,7 +195,7 @@ export async function runMacosA5Action(
       captureAnnotation, captured, checked, deploy, env: actionEnv, execute,
       markMutationBoundary: () => receipt && markFormalA5MutationBoundary(receipt),
       pairingReadiness, paths,
-      protectData: runProtection, readiness, serial: A5_SERIAL });
+      readiness, serial: A5_SERIAL });
     const packageIdentity = actionContract.formalSourceClass === 'frozen-build'
       && action !== 'bundle-release' && existsSync(paths.apk)
       ? recordA5PackageIdentity({ captured, context, env: actionEnv, paths }) : null;

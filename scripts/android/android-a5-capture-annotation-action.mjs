@@ -89,16 +89,13 @@ async function requireInstalledScenario(options) {
   return { installedPackages: { main, test }, installedTestMethods: methods };
 }
 
-function auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token }) {
-  let snapshot;
-  try { snapshot = JSON.parse(fsApi.readFileSync(snapshotManifest, 'utf8')); }
-  catch { throw captureAnnotationFailure('Android database snapshot manifest is unreadable', 'capture-database-snapshot'); }
-  if (!snapshot.backup?.created || !snapshot.backup.databasePath) {
+function auditPulledDatabase({ auditDatabase, databasePath, openDatabase, token }) {
+  if (!databasePath) {
     throw captureAnnotationFailure('Android database snapshot path is missing', 'capture-database-snapshot');
   }
   let database;
   try {
-    database = openDatabase(snapshot.backup.databasePath);
+    database = openDatabase(databasePath);
     return auditDatabase(database, token);
   } catch (error) {
     throw captureAnnotationFailure(error.message, 'capture-database-audit', error);
@@ -121,13 +118,11 @@ async function cleanupInstalledTest({ adbPort, env, execute, packages, paths, se
 export async function runA5CaptureAnnotation({
   adbPort, appId, auditDatabase = auditCaptureAnnotationDatabase, buildIdentity, env,
   evidenceRoot, execute, fsApi = fs, openDatabase = openReadonlySqliteDatabaseSync,
-  paths, protectData, serial
+  paths, pullDatabase, serial
 }) {
   fsApi.mkdirSync(evidenceRoot, { recursive: true });
   const packages = captureAnnotationPackages(appId);
   const artifacts = captureAnnotationArtifactPaths(evidenceRoot);
-  const snapshotManifest = path.join(evidenceRoot, 'capture-annotation-database-snapshot.json');
-  const snapshotRoot = path.join(evidenceRoot, 'capture-annotation-database');
   const builtApks = {
     main: builtApkIdentity(fsApi, paths.buildRoot, MAIN_APK),
     test: builtApkIdentity(fsApi, paths.buildRoot, TEST_APK)
@@ -158,11 +153,12 @@ export async function runA5CaptureAnnotation({
     await checked(execute, paths.adbPath,
       ['-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', packages.appId],
       commandOptions(env, 'capture_quiesce_timeout', 30_000), 'capture-quiesce');
-    output.push((await protectData('backup', snapshotManifest, snapshotRoot)).output);
-    const audit = auditSnapshot({ auditDatabase, fsApi, openDatabase, snapshotManifest, token: buildIdentity });
+    const pulled = await pullDatabase();
+    if (pulled.output) output.push(pulled.output);
+    let audit;
+    try { audit = auditPulledDatabase({ auditDatabase, databasePath: pulled.databasePath, openDatabase, token: buildIdentity }); }
+    finally { if (pulled.databasePath) fsApi.rmSync(path.dirname(pulled.databasePath), { force: true, recursive: true }); }
     writeJson(fsApi, artifacts['capture-annotation-db-summary.json'], audit);
-    fsApi.rmSync(snapshotRoot, { force: true, recursive: true });
-    fsApi.rmSync(snapshotManifest, { force: true });
     proof = { audit, evidence, scenario };
   } catch (error) { primaryError = error; }
   let cleanup = { appForceStopped: false, testPackageRemoved: false };

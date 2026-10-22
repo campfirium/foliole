@@ -89,7 +89,7 @@ async function macosDesktopControl(execute, _paths, _env, action) {
 export async function runMacosA5PairSync({
   approvalRequired, buildIdentity, credentialRepairRequired, desktopControl = macosDesktopControl,
   existingPairing, env, evidenceRoot, execute, hostName,
-  libraryHome, paths, protectData, desktopAuthorizationFingerprint,
+  libraryHome, paths, desktopAuthorizationFingerprint,
   openDesktopSession = openMacosPairSyncDesktopSession, openTransport, closeTransport,
   instrumentationModeArgs, pairedAuthorizationFingerprint, pairRequestIdentity,
   protectedSyncGroup, recoveryEvidenceGoal,
@@ -121,7 +121,6 @@ export async function runMacosA5PairSync({
       repoRoot: paths.buildRoot,
       systemNode: process.execPath
     },
-    protectData,
     credentialRepairRequired,
     desktopAuthorizationFingerprint,
     serial,
