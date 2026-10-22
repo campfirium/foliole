@@ -62,6 +62,22 @@ it('repairs verified images and references, preserves originals and text example
   expect(driver.queryAll('SELECT * FROM node_sync_versions')).toEqual(versions);
 });
 
+it('repairs every live owner of a wrong alias and leaves deleted and unrelated nodes untouched', async () => {
+  for (const id of ['article', 'second', 'deleted']) seedMigrationNode(id, `![image](asset://${oldKey})`);
+  seedMigrationNode('plain', 'No images.');
+  openDatabaseConnection().driver.execute("UPDATE nodes SET resource_references = '[]' WHERE id = 'plain'");
+  openDatabaseConnection().driver.execute("UPDATE nodes SET deleted_at = '2026-10-02' WHERE id = 'deleted'");
+  await fs.writeFile(path.join(migrationFixture.assetsDir, oldKey), imageBytes);
+  const deletedVersion = migrationNode('deleted').current_version_id;
+  expect(await runImageAddressMigration(migrationContext())).toEqual({ changed: 2, completed: true });
+  for (const id of ['article', 'second']) {
+    expect(migrationNode(id).content).toBe(`![image](asset://${newKey})`);
+    expect(JSON.parse(migrationNode(id).resource_references)).toEqual([{ storage_key: newKey, role: 'image', original_name: 'Original.jpg' }]);
+  }
+  expect(migrationNode('deleted').content).toBe(`![image](asset://${oldKey})`);
+  expect(migrationNode('deleted').current_version_id).toBe(deletedVersion);
+});
+
 it('repairs a missing wrong alias using the correct file and handles reference-style images and source maps', async () => {
   seedMigrationNode('article', `![image][img]\n\n[img]: <asset://${oldKey}> "Original title"`);
   openDatabaseConnection().driver.execute('UPDATE nodes SET image_sources = ? WHERE id = ?',

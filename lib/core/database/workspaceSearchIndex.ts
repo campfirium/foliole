@@ -139,16 +139,12 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
+/** One projection pass for the whole batch instead of one Node scan per attachment. */
 export function syncPdfSearchIndexForAttachmentIds(driver: DatabaseDriver, attachmentIds: string[]) {
-  const nodeIds = new Set<string>();
-  toUniqueIds(attachmentIds).forEach((attachmentId) => {
-    const rows = driver.queryAll<{ node_id: string }>(
-      `SELECT DISTINCT a.node_id FROM (${NODE_PDF_RESOURCES_SQL}) a WHERE a.id = ?`,
-      [attachmentId]
-    );
-    rows.forEach((row) => {
-      nodeIds.add(row.node_id);
-    });
-  });
-  syncPdfSearchIndexForNodeIds(driver, [...nodeIds]);
+  const ids = toUniqueIds(attachmentIds);
+  const rows = driver.queryAll<{ node_id: string }>(
+    `SELECT DISTINCT a.node_id FROM (${NODE_PDF_RESOURCES_SQL}) a WHERE a.id IN (SELECT value FROM json_each(?))`,
+    [JSON.stringify(ids)]
+  );
+  syncPdfSearchIndexForNodeIds(driver, rows.map((row) => row.node_id));
 }

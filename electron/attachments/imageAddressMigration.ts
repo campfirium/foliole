@@ -20,36 +20,52 @@ function withLibrary<T>(databasePath: string, context: DesktopTaskContext, actio
   });
 }
 
-async function migrateImageNodes(image: VerifiedMigrationImage, databasePath: string, context: DesktopTaskContext) {
+type ImageOwners = Map<string, Array<{ id: string; storageKey: string }>>;
+
+/** One pass over live Nodes replaces a full-table search per image file. */
+async function collectImageOwners(databasePath: string, context: DesktopTaskContext) {
+  const owners: ImageOwners = new Map();
   let cursor = '';
+  while (true) {
+    const rows = await withLibrary(databasePath, context, () => openDatabaseConnection().driver.queryAll<{
+      id: string; role: string | null; storage_key: string | null }>(
+      `SELECT batch.id, json_extract(reference.value, '$.role') AS role,
+         json_extract(reference.value, '$.storage_key') AS storage_key
+       FROM (SELECT id, resource_references FROM nodes WHERE id > ? AND deleted_at IS NULL
+         AND resource_references <> '[]' ORDER BY id LIMIT 256) batch
+       LEFT JOIN json_each(batch.resource_references) reference ORDER BY batch.id`, [cursor]));
+    if (!rows.length) return owners;
+    for (const row of rows) {
+      cursor = row.id;
+      if (row.role !== 'image' || typeof row.storage_key !== 'string' || row.storage_key[64] !== '.') continue;
+      const hash = row.storage_key.slice(0, 64);
+      owners.set(hash, [...owners.get(hash) ?? [], { id: row.id, storageKey: row.storage_key }]);
+    }
+    await context.yieldIfNeeded();
+  }
+}
+
+async function migrateImageNodes(image: VerifiedMigrationImage, owners: ImageOwners,
+  databasePath: string, context: DesktopTaskContext) {
   let changed = 0;
   let deferred = 0;
-  while (true) {
-    const rows = await withLibrary(databasePath, context, () => openDatabaseConnection().driver.queryAll<{ id: string }>(
-      `SELECT id FROM nodes WHERE id > ? AND deleted_at IS NULL
-       AND resource_references LIKE ? AND EXISTS (
-         SELECT 1 FROM json_each(nodes.resource_references) reference
-         WHERE json_extract(reference.value, '$.role') = 'image'
-           AND json_extract(reference.value, '$.storage_key') LIKE ?
-           AND json_extract(reference.value, '$.storage_key') <> ?
-       ) ORDER BY id LIMIT 32`, [cursor, `%${image.contentHash}.%`, `${image.contentHash}.%`, image.storageKey]));
-    if (!rows.length) return { changed, deferred };
-    for (const row of rows) {
-      await context.yieldIfNeeded();
-      await withLibrary(databasePath, context, () => {
-        try {
-          if (migrateImageAddressInNode(openDatabaseConnection().driver, row.id, image, loadOrCreateDesktopHostName())) {
-            changed++;
-            notifyWorkspaceContentChanged();
-          }
-        } catch (error) {
-          deferred++;
-          context.logger.error(`image_migration_node_deferred:${row.id}`, error);
+  const ids = new Set((owners.get(image.contentHash) ?? [])
+    .filter((owner) => owner.storageKey !== image.storageKey).map((owner) => owner.id));
+  for (const id of [...ids].sort()) {
+    await context.yieldIfNeeded();
+    await withLibrary(databasePath, context, () => {
+      try {
+        if (migrateImageAddressInNode(openDatabaseConnection().driver, id, image, loadOrCreateDesktopHostName())) {
+          changed++;
+          notifyWorkspaceContentChanged();
         }
-      });
-      cursor = row.id;
-    }
+      } catch (error) {
+        deferred++;
+        context.logger.error(`image_migration_node_deferred:${id}`, error);
+      }
+    });
   }
+  return { changed, deferred };
 }
 
 export async function runImageAddressMigration(context: DesktopTaskContext) {
@@ -68,8 +84,11 @@ export async function runImageAddressMigration(context: DesktopTaskContext) {
   if (!paths) return { changed: 0, completed: true };
   let changed = 0;
   let deferred = 0;
-  for await (const image of verifiedMigrationImages(paths.assetsDir, context)) {
-    const result = await migrateImageNodes(image, paths.databasePath, context);
+  const images: VerifiedMigrationImage[] = [];
+  for await (const image of verifiedMigrationImages(paths.assetsDir, context)) images.push(image);
+  const owners = await collectImageOwners(paths.databasePath, context);
+  for (const image of images) {
+    const result = await migrateImageNodes(image, owners, paths.databasePath, context);
     changed += result.changed;
     deferred += result.deferred;
   }
