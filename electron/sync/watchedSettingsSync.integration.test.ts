@@ -29,15 +29,19 @@ it('publishes a saved watched path through canonical sync without manual synchro
   for (const worker of workers) await worker.send('register', {
     members: peers.map((peer, index) => ({ device: peer.device, name: ['Owner', 'Receiver'][index] }))
   });
-  const [owner, receiver] = workers;
+  // A device syncs only with a higher-ranked upstream, so the owner must rank below the receiver for the push to run
+  // without a downstream change session; root-to-downstream delivery is covered by desktopUpstream.integration.test.ts.
+  const own = peers[0]!.identity < peers[1]!.identity ? 0 : 1;
+  const [owner, receiver] = own === 0 ? workers : [workers[1], workers[0]];
+  const [op, rp] = own === 0 ? [peers[0]!, peers[1]!] : [peers[1]!, peers[0]!];
   const initial = path.join(root, 'initial'), changed = path.join(root, 'changed');
   await fs.mkdir(initial); await fs.mkdir(changed);
   await owner!.send('watchedSeed', { folder: initial });
-  await owner!.send('sync', { ...peers[1]! });
+  await owner!.send('sync', { ...rp! });
   const read = () => receiver!.send('watchedRead') as unknown as Promise<{ bindings: Array<{ primary_path: string }> }>;
   expect((await read()).bindings.map(binding => binding.primary_path)).toEqual([initial]);
-  await owner!.send('watchedRoute', { endpoint_url: peers[1]!.origin, group_id: groupId,
-    local_device_id: peers[0]!.identity, peer_device_id: peers[1]!.identity,
+  await owner!.send('watchedRoute', { endpoint_url: rp!.origin, group_id: groupId,
+    local_device_id: op!.identity, peer_device_id: rp!.identity,
     peer_device_name: 'Receiver', peer_platform: 'darwin' });
   await owner!.send('watchedSave', { folder: changed });
   await expect.poll(async () => (await read()).bindings.map(binding => binding.primary_path),

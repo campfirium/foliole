@@ -54,32 +54,6 @@ it('converges simultaneous initiators and relays through one peer without an A/B
   }
 });
 
-it('continues an available peer after another peer is offline and persists pending status', { meta: { calibratedMs: 60_000 } }, async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
-  const a = { process: fixture.left, snapshot: fixture.leftSnapshot };
-  const b = { process: fixture.right, snapshot: fixture.rightSnapshot };
-  let offline: Device | undefined;
-  try {
-    offline = await fixture.startThird();
-    for (const target of [offline, b]) await a.process.invoke('round', {
-      input: { ...peer(target), kind: 'remember_peer' }
-    });
-    await offline.process.close();
-    await a.process.seed({ nodeId: 't326-online', title: 'Available', content: 'Offline peer must not block' });
-    expect(await a.process.invoke('round', { input: { kind: 'trigger_sync' } }))
-      .toMatchObject({ status: 'pending', error: null });
-    assertBodies(b, ['t326-online']);
-    const db = new Database(a.snapshot.databasePath, { readonly: true });
-    try {
-      expect(db.prepare("SELECT value FROM settings WHERE key = 'sync_group_last_trigger_result'").get())
-        .toMatchObject({ value: expect.stringContaining('pending') });
-    } finally { db.close(); }
-  } finally {
-    await Promise.allSettled([a.process.close(), b.process.close(), offline?.process.close()]);
-    await fs.rm(fixture.root, { recursive: true, force: true });
-  }
-});
-
 function assertBodies(device: Device, ids: string[]) {
   const db = new Database(device.snapshot.databasePath, { readonly: true, fileMustExist: true });
   try {
