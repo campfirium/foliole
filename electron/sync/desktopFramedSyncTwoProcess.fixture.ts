@@ -20,6 +20,7 @@ import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSync
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
 import { runActivationFixtureCommand } from './desktopSyncGroupActivation.fixture.js';
+import { beginDesktopExpiredMemberOverwrite } from './desktopSyncGroupExpiredOverwrite.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -154,6 +155,7 @@ async function run(command: Command) {
   if (command.action.startsWith('activation_')) return runActivationFixtureCommand(command.action, command.args);
   if (command.action === 'seed_request_scale') return seedRequestSyncScaleFixture();
   if (command.action === 'request_counts') return { ...requestCounts };
+  if (command.action === 'expired_overwrite') return beginDesktopExpiredMemberOverwrite();
   if (command.action === 'cost_start') return cost.start();
   if (command.action === 'cost_stop') return cost.stop();
   if (command.action === 'seed') return seed(command.args);

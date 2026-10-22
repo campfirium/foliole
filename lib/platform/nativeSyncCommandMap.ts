@@ -77,6 +77,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopSyncGroupOverviewPayload;
   };
+  [NATIVE_COMMANDS.overwriteExpiredSyncGroupMember]: {
+    args: undefined;
+    result: DesktopSyncGroupOverviewPayload;
+  };
   [NATIVE_COMMANDS.removeSyncGroupDevice]: {
     args: { device_identity_key: string };
     result: DesktopSyncGroupOverviewPayload;

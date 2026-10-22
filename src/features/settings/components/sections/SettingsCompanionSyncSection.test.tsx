@@ -9,6 +9,7 @@ import {
 } from '../../../../../lib/platform/syncGroupDiscoveryContract';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
 import { EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW } from '../../../../shared/platform/desktopSyncGroupOverviewHooks';
+import { registerAppConfirmationHandler } from '../../../../shared/ui/appConfirmation';
 
 import { SettingsCompanionSyncSection } from './SettingsCompanionSyncSection';
 
@@ -34,6 +35,7 @@ function renderSyncSection(
   const enableSync = vi.fn();
   const recoverDiscovery = vi.fn();
   const openNetworkSettings = vi.fn();
+  const overwriteExpiredMember = vi.fn();
   useDesktopSyncGroupMock.mockReturnValue({
     acceptRequest: vi.fn(),
     createSyncGroup,
@@ -45,6 +47,7 @@ function renderSyncSection(
     isDesktopRuntime: true,
     isLoading: false,
     leaveSyncGroup: vi.fn(),
+    overwriteExpiredMember,
     removeSyncGroupDevice: vi.fn(),
     overview: { ...EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW, sync_enabled: syncEnabled,
       sync_group: group, ...overviewChanges },
@@ -59,7 +62,7 @@ function renderSyncSection(
   });
   renderWithLocalization(<SettingsCompanionSyncSection />);
   return { createSyncGroup, disableSync, discoverSyncGroups, enableSync,
-    openNetworkSettings, recoverDiscovery };
+    openNetworkSettings, overwriteExpiredMember, recoverDiscovery };
 }
 
 it('shows the macOS permission location and offers recovery after discovery denial', () => {
@@ -184,4 +187,23 @@ it('keeps removing targets out of normal devices and displays all remaining conf
   expect(screen.getAllByText('Phone')).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'Remove from Sync Group' })).not.toBeInTheDocument();
   expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Mac');
+});
+
+it.each([true, false])('overwrites an expired device only after the user confirms (confirmed=%s)', async confirmed => {
+  const confirmation = vi.fn(async () => confirmed);
+  const unregister = registerAppConfirmationHandler(confirmation);
+  try {
+    const { overwriteExpiredMember } = renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, null, { expired_member: true });
+    expect(screen.getByText('This device hasn’t synced for over 90 days')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Overwrite this device' }));
+    await vi.waitFor(() => expect(confirmation).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Overwrite this device with the sync group’s data?' })));
+    await Promise.resolve();
+    expect(overwriteExpiredMember).toHaveBeenCalledTimes(confirmed ? 1 : 0);
+  } finally { unregister(); }
+});
+
+it('shows no overwrite notice for a current device', () => {
+  renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, null, { expired_member: false });
+  expect(screen.queryByRole('button', { name: 'Overwrite this device' })).toBeNull();
 });

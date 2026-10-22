@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
-import { leaveDesktopSyncGroup, removeDesktopSyncGroupDevice } from '../desktopSyncGroupRuntimeRepository';
+import { leaveDesktopSyncGroup, overwriteExpiredDesktopSyncGroupMember,
+  removeDesktopSyncGroupDevice } from '../desktopSyncGroupRuntimeRepository';
 
 interface DeviceActionState {
   setError(value: string | null): void;
@@ -11,11 +12,11 @@ interface DeviceActionState {
 }
 
 export function useSyncGroupDeviceActions(state: DeviceActionState) {
-  const run = useCallback(async (deviceId?: string) => {
-    state.setPendingActionId(deviceId ?? 'leave-sync-group');
+  const run = useCallback(async (deviceId?: string, overwriteExpired = false) => {
+    state.setPendingActionId(overwriteExpired ? 'overwrite-expired-member' : deviceId ?? 'leave-sync-group');
     try {
-      const overview = deviceId
-        ? await removeDesktopSyncGroupDevice(deviceId) : await leaveDesktopSyncGroup();
+      const overview = overwriteExpired ? await overwriteExpiredDesktopSyncGroupMember()
+        : deviceId ? await removeDesktopSyncGroupDevice(deviceId) : await leaveDesktopSyncGroup();
       state.setOverview(overview);
       state.setError(null);
       return overview;
@@ -29,6 +30,7 @@ export function useSyncGroupDeviceActions(state: DeviceActionState) {
   }, [state]);
   return {
     leave: () => run(),
+    overwriteExpired: () => run(undefined, true),
     remove: (deviceId: string) => run(deviceId)
   };
 }

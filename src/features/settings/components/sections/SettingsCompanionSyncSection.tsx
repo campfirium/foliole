@@ -105,6 +105,8 @@ export function SettingsCompanionSyncSection() {
         onToggle={() => void (state.overview.sync_enabled ? state.disableSync() : state.enableSync())}
       />
       <PendingBackupRestoreNotice pending={Boolean(state.overview.pending_backup_restore)} />
+      <ExpiredMemberNotice busy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
+        expired={Boolean(state.overview.expired_member)} onOverwrite={() => void state.overwriteExpiredMember()} />
       <SyncNowRow
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
@@ -146,6 +148,27 @@ function PendingBackupRestoreNotice({ pending }: { pending: boolean }) {
   const t = useTranslation();
   return pending ? <SettingsRow title={t('settings.backups.restore.sync.pendingTitle')}
     description={t('settings.backups.restore.sync.pendingDescription')} /> : null;
+}
+
+/** A device silent past the group's history window can only resume by taking the group's data. */
+function ExpiredMemberNotice(props: { busy: boolean; expired: boolean; onOverwrite(): Promise<unknown> | void }) {
+  const t = useTranslation();
+  if (!props.expired) return null;
+  const confirm = async () => {
+    if (!await requestAppConfirmation({ confirmLabel: t('settings.companionSync.expired.action'),
+      description: t('settings.companionSync.expired.confirmDescription'),
+      title: t('settings.companionSync.expired.confirmTitle') })) return;
+    await props.onOverwrite();
+  };
+  return (
+    <SettingsRow description={t('settings.companionSync.expired.description')} title={t('settings.companionSync.expired.title')}>
+      <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+        <SettingsButton disabled={props.busy} onClick={() => void confirm()}>
+          {t('settings.companionSync.expired.action')}
+        </SettingsButton>
+      </SettingsControlSlot>
+    </SettingsRow>
+  );
 }
 
 function localizeSyncError(error: string | null | undefined, t: Translate) {

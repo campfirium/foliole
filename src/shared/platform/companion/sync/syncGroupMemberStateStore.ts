@@ -1,5 +1,6 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { loadSyncGroupCoverage, mergeIncomingSyncGroupCoverage } from '../../../../../lib/core/sync/syncGroupCoverageStore';
+import { loadSyncGroupCoverage, loadSyncGroupLocalExpiry, mergeIncomingSyncGroupCoverage,
+  syncGroupMembersCurrent } from '../../../../../lib/core/sync/syncGroupCoverageStore';
 import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import {
   loadLatestSyncGroupRestoreEvent,
@@ -56,7 +57,10 @@ export async function applyCompanionSyncGroupMemberState(
         localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
       }
       const adoption = await loadSyncGroupLocalAdoption(tx);
-      const normalSyncReady = companionMemberStateReady(incoming, adoption, localRestore, context.localDeviceId);
+      if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);
+      const normalSyncReady = companionMemberStateReady(incoming, adoption, localRestore, context.localDeviceId) &&
+        (adoption ? true : incoming.adopting_from === context.localDeviceId ? !await loadSyncGroupLocalExpiry(tx, context.groupId)
+          : await syncGroupMembersCurrent(tx, context.groupId, authenticatedDeviceId, incoming.coverage));
       if (!normalSyncReady) {
         if (!adoption && await canMergeRestoreSourceMembers(tx, incoming, localRestore, context.localDeviceId)) {
           await mergeMemberMetadata(tx, incoming, context.localDeviceId);
@@ -71,7 +75,6 @@ export async function applyCompanionSyncGroupMemberState(
           [incoming.group_id, authenticatedDeviceId]);
       }
       await mergeMemberMetadata(tx, incoming, context.localDeviceId);
-      if (!adoption) await mergeIncomingSyncGroupCoverage(tx, context.groupId, incoming.coverage);
       const now = new Date().toISOString();
       let localExited = false;
       for (const removal of await loadRemovals(tx, incoming.group_id)) {

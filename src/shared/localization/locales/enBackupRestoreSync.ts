@@ -15,4 +15,9 @@ export const EN_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'syncGroup.join.mode.description': 'Choose which data to use: the group’s data replaces only this device, or this device’s data replaces the entire group.',
   'syncGroup.join.mode.overwrite': 'Use this device’s data to overwrite the entire group',
   'syncGroup.join.mode.useGroup': 'Use the sync group’s data to overwrite this device',
+  'settings.companionSync.expired.title': 'This device hasn’t synced for over 90 days',
+  'settings.companionSync.expired.description': 'The sync group no longer keeps the older records this device would need. To sync again, overwrite this device with the sync group’s data; changes made here that never synced will not be kept.',
+  'settings.companionSync.expired.action': 'Overwrite this device',
+  'settings.companionSync.expired.confirmTitle': 'Overwrite this device with the sync group’s data?',
+  'settings.companionSync.expired.confirmDescription': 'This device’s library will be replaced with the sync group’s data. Changes on this device that never synced will be lost.',
 };

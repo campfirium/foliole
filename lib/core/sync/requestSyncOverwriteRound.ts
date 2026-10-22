@@ -4,7 +4,8 @@ import { readFramedSyncOverwriteInventory } from './framedSyncInventoryRead.js';
 import { pendingFramedSyncOverwriteDifferences } from './framedSyncOverwriteCompletion.js';
 import { deliverRequestSyncDatabaseDifferences, type RequestSyncDatabaseRoundPort } from './requestSyncDatabaseRound.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
-import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
+import { coverAdoptedSyncGroupLibrary } from './syncGroupCoverageStore.js';
+import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption, SYNC_GROUP_LOCAL_ADOPTION_KEY } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound, finishSyncGroupOverwriteProgress,
   type SyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from './syncGroupRestoreEvents.js';
@@ -37,9 +38,14 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
       pendingFramedSyncOverwriteDifferences({ local, remote: confirmed.remote,
       deliveredDifferences: round.delivered }).length) return false;
     const adoption = await loadSyncGroupLocalAdoption(tx);
+    const [begun] = await tx.query<{ updated_at: string }>('SELECT updated_at FROM sync_group_metadata WHERE key = ?',
+      [SYNC_GROUP_LOCAL_ADOPTION_KEY]);
     await finishSyncGroupOverwriteProgress(tx, progress);
-    if (adoption) await finishSyncGroupLocalAdoption(tx, adoption);
-    else {
+    if (adoption) {
+      await finishSyncGroupLocalAdoption(tx, adoption);
+      if (begun) await coverAdoptedSyncGroupLibrary(tx, { groupId: adoption.groupId,
+        providerDeviceId: adoption.providerDeviceId, startedAt: begun.updated_at });
+    } else {
       const restore = await loadLatestSyncGroupRestoreEvent(tx, progress.groupId);
       if (!restore || restore.event.restore_id !== progress.overwriteId) throw new Error('framed_sync_restore_state_invalid');
       await markSyncGroupRestoreApplied(tx, restore.event);

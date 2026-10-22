@@ -50,6 +50,7 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     sync_enabled: raw.sync_enabled === true,
     sync_paused: raw.sync_paused === true,
     pending_backup_restore: typeof raw.pending_backup_restore === 'string' ? raw.pending_backup_restore : null,
+    expired_member: raw.expired_member === true,
     participating: raw.participating === true,
     removing_devices: parseSyncGroupRemovingEntries(raw.removing_devices)
   };
@@ -60,6 +61,7 @@ type SyncGroupCommand =
   | typeof NATIVE_COMMANDS.saveWatchedFolderConflict
   | typeof NATIVE_COMMANDS.createSyncGroup
   | typeof NATIVE_COMMANDS.leaveSyncGroup
+  | typeof NATIVE_COMMANDS.overwriteExpiredSyncGroupMember
   | typeof NATIVE_COMMANDS.removeSyncGroupDevice
   | typeof NATIVE_COMMANDS.requestSyncGroupJoin
   | typeof NATIVE_COMMANDS.completeSyncGroupJoin
@@ -95,6 +97,10 @@ export function createDesktopSyncGroup() {
 
 export function leaveDesktopSyncGroup() {
   return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.leaveSyncGroup);
+}
+
+export function overwriteExpiredDesktopSyncGroupMember() {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.overwriteExpiredSyncGroupMember);
 }
 
 export function removeDesktopSyncGroupDevice(deviceIdentityKey: string) {

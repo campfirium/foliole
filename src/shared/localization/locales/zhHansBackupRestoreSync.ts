@@ -15,4 +15,9 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'syncGroup.join.mode.description': '选择用哪一边的资料覆盖：同步组资料只替换本机，本机资料则替换整个同步组。',
   'syncGroup.join.mode.overwrite': '用本机资料覆盖整个组',
   'syncGroup.join.mode.useGroup': '用同步组资料覆盖本机',
+  'settings.companionSync.expired.title': '本机已超过 90 天未同步',
+  'settings.companionSync.expired.description': '同步组已不再保留本机需要的旧记录。要继续同步，需用同步组资料覆盖本机；本机从未同步出去的改动不会保留。',
+  'settings.companionSync.expired.action': '覆盖本机',
+  'settings.companionSync.expired.confirmTitle': '用同步组资料覆盖本机？',
+  'settings.companionSync.expired.confirmDescription': '本机资料将替换为同步组资料，本机从未同步出去的改动会丢失。',
 };

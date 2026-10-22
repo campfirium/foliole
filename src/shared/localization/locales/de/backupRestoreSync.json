@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "Synchronisierungsgruppe beitreten",
   "syncGroup.join.mode.description": "Wählen Sie, welche Daten verwendet werden: Die Daten der Gruppe ersetzen nur dieses Gerät, oder die Daten dieses Geräts ersetzen die gesamte Gruppe.",
   "syncGroup.join.mode.overwrite": "Mit den Daten dieses Geräts die gesamte Gruppe überschreiben",
-  "syncGroup.join.mode.useGroup": "Mit den Daten der Synchronisierungsgruppe dieses Gerät überschreiben"
+  "syncGroup.join.mode.useGroup": "Mit den Daten der Synchronisierungsgruppe dieses Gerät überschreiben",
+  "settings.companionSync.expired.title": "Dieses Gerät wurde seit über 90 Tagen nicht synchronisiert",
+  "settings.companionSync.expired.description": "Die Synchronisierungsgruppe bewahrt die älteren Einträge, die dieses Gerät bräuchte, nicht mehr auf. Um wieder zu synchronisieren, überschreiben Sie dieses Gerät mit den Daten der Gruppe; nie synchronisierte Änderungen auf diesem Gerät bleiben nicht erhalten.",
+  "settings.companionSync.expired.action": "Dieses Gerät überschreiben",
+  "settings.companionSync.expired.confirmTitle": "Dieses Gerät mit den Daten der Synchronisierungsgruppe überschreiben?",
+  "settings.companionSync.expired.confirmDescription": "Die Bibliothek dieses Geräts wird durch die Daten der Synchronisierungsgruppe ersetzt. Nie synchronisierte Änderungen auf diesem Gerät gehen verloren."
 }

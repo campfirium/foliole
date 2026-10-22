@@ -16,7 +16,8 @@ import { openDatabaseConnection } from './connection.js';
 import {
   loadDesktopLocalNodeProof
 } from './nodeVersionPeerProof.js';
-import { loadDesktopSyncGroupCoverage, mergeDesktopSyncGroupCoverage } from './syncGroupCoverageDesktop.js';
+import { bothMembersCurrent, isDesktopLocalSyncGroupMemberExpired, loadDesktopSyncGroupCoverage,
+  mergeDesktopSyncGroupCoverage } from './syncGroupCoverageDesktop.js';
 import { applyDesktopSyncGroupAdoptionPeerProof, loadDesktopCompletedAdoptionSource, loadDesktopSyncGroupLocalAdoption, saveDesktopSyncGroupPeerAdoption } from './syncGroupLocalAdoptionStore.js';
 import { loadDevices, loadRemovals, completeEligibleRemovals } from './syncGroupMemberStateReads.js';
 import {
@@ -104,9 +105,12 @@ export function applyDesktopSyncGroupMemberState(
   driver.transaction(() => {
     saveDesktopSyncGroupPeerAdoption(driver, local, incoming, now);
     const localRestore = receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore);
+    // Coverage is plain fact; even a peer that may not sync yet tells this device how far the group moved.
+    if (!local.adopting_from) mergeDesktopSyncGroupCoverage(driver, incoming.group_id, incoming.coverage);
     normalSyncReady = local.adopting_from
       ? local.adopting_from === authenticatedDeviceId && !incoming.adopting_from && incoming.restore?.applied !== false
-      : incoming.adopting_from === local.sender_device_identity_key || syncGroupRestorePeersReady(localRestore, incoming.restore);
+      : incoming.adopting_from === local.sender_device_identity_key ? !isDesktopLocalSyncGroupMemberExpired(driver, incoming.group_id)
+        : syncGroupRestorePeersReady(localRestore, incoming.restore) && bothMembersCurrent(driver, incoming, authenticatedDeviceId);
     if (!normalSyncReady) {
       if (localRestore?.applied && localRestore.event.source_device_identity_key === local.sender_device_identity_key &&
           incoming.restore?.event.restore_id === localRestore.event.restore_id) {
@@ -117,7 +121,6 @@ export function applyDesktopSyncGroupMemberState(
       return;
     }
     applyDesktopSyncGroupAdoptionPeerProof(incoming, local);
-    if (!local.adopting_from) mergeDesktopSyncGroupCoverage(driver, incoming.group_id, incoming.coverage);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key, incoming.removals);
     if (!local.adopting_from) applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);

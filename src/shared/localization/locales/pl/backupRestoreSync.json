@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "Dołącz do grupy synchronizacji",
   "syncGroup.join.mode.description": "Wybierz, których danych użyć: dane grupy zastępują tylko to urządzenie, a dane tego urządzenia zastępują całą grupę.",
   "syncGroup.join.mode.overwrite": "Nadpisz całą grupę danymi z tego urządzenia",
-  "syncGroup.join.mode.useGroup": "Nadpisz to urządzenie danymi grupy synchronizacji"
+  "syncGroup.join.mode.useGroup": "Nadpisz to urządzenie danymi grupy synchronizacji",
+  "settings.companionSync.expired.title": "To urządzenie nie było synchronizowane od ponad 90 dni",
+  "settings.companionSync.expired.description": "Grupa synchronizacji nie przechowuje już starszych zapisów, których to urządzenie by potrzebowało. Aby znów synchronizować, nadpisz to urządzenie danymi grupy; zmiany wprowadzone tutaj i nigdy niezsynchronizowane nie zostaną zachowane.",
+  "settings.companionSync.expired.action": "Nadpisz to urządzenie",
+  "settings.companionSync.expired.confirmTitle": "Nadpisać to urządzenie danymi grupy synchronizacji?",
+  "settings.companionSync.expired.confirmDescription": "Biblioteka tego urządzenia zostanie zastąpiona danymi grupy synchronizacji. Niezsynchronizowane zmiany z tego urządzenia zostaną utracone."
 }

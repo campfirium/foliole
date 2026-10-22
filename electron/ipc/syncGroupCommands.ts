@@ -5,6 +5,7 @@ import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContrac
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadDesktopLocalSyncGroupMemberExpired } from '../database/syncGroupCoverageDesktop.js';
 import {
   initiateDesktopSyncGroupDeviceRemoval
 } from '../database/syncGroupMemberStateStore.js';
@@ -39,6 +40,7 @@ import {
 } from '../sync/desktopSyncGroupAutoSync.js';
 import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
 import { loadDesktopSyncGroupDiscoveryError } from '../sync/desktopSyncGroupDiscoveryStatus.js';
+import { beginDesktopExpiredMemberOverwrite } from '../sync/desktopSyncGroupExpiredOverwrite.js';
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
@@ -66,7 +68,7 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 const COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.loadDesktopSyncDiagnostics, NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.saveWatchedFolderConflict,
-  NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice,
+  NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice, NATIVE_COMMANDS.overwriteExpiredSyncGroupMember,
   NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.stopDiscoverSyncGroups, NATIVE_COMMANDS.requestSyncGroupJoin,
   NATIVE_COMMANDS.recoverSyncGroupDiscovery,
@@ -99,9 +101,17 @@ function overview() {
     server_status: getLanWorkspaceSyncServerStatus(),
     sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
+    expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()
   };
+}
+
+/** An expired member first switches to overwriting itself from a current peer, then syncs as usual. */
+async function syncNow(overwriteExpired: boolean) {
+  if (overwriteExpired) await beginDesktopExpiredMemberOverwrite();
+  await runDesktopManualSyncWithDiscovery();
+  return runWithDatabaseConnectionOwner(() => overview());
 }
 
 async function createGroup() {
@@ -210,9 +220,8 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   else if (command === NATIVE_COMMANDS.pauseCompanionSync) await pauseDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(await runWithDatabaseConnectionOwner(runtimeIdentity),
       typeof args.confirmed_restore_id === 'string' ? args.confirmed_restore_id : undefined);
-  else if (command === NATIVE_COMMANDS.syncCompanionNow) {
-    await runDesktopManualSyncWithDiscovery();
-    return runWithDatabaseConnectionOwner(() => overview());
+  else if (command === NATIVE_COMMANDS.syncCompanionNow || command === NATIVE_COMMANDS.overwriteExpiredSyncGroupMember) {
+    return syncNow(command === NATIVE_COMMANDS.overwriteExpiredSyncGroupMember);
   }
   else return mutateJoinRequest(command, args);
   return runWithDatabaseConnectionOwner(overview);
@@ -230,6 +239,7 @@ export function handleSyncGroupCommand(command: string, args: Record<string, unk
     });
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow ||
+      command === NATIVE_COMMANDS.overwriteExpiredSyncGroupMember ||
       command === NATIVE_COMMANDS.disableCompanionSync || command === NATIVE_COMMANDS.pauseCompanionSync ||
       command === NATIVE_COMMANDS.removeSyncGroupDevice ||
       command === NATIVE_COMMANDS.saveWatchedFolderConflict) {

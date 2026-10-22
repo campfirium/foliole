@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "Rejoindre le groupe de synchronisation",
   "syncGroup.join.mode.description": "Choisissez les données à utiliser : celles du groupe remplacent uniquement cet appareil, ou celles de cet appareil remplacent tout le groupe.",
   "syncGroup.join.mode.overwrite": "Utiliser les données de cet appareil pour écraser tout le groupe",
-  "syncGroup.join.mode.useGroup": "Utiliser les données du groupe de synchronisation pour écraser cet appareil"
+  "syncGroup.join.mode.useGroup": "Utiliser les données du groupe de synchronisation pour écraser cet appareil",
+  "settings.companionSync.expired.title": "Cet appareil n’a pas été synchronisé depuis plus de 90 jours",
+  "settings.companionSync.expired.description": "Le groupe de synchronisation ne conserve plus les anciens enregistrements dont cet appareil aurait besoin. Pour synchroniser à nouveau, écrasez cet appareil avec les données du groupe ; les modifications faites ici et jamais synchronisées ne seront pas conservées.",
+  "settings.companionSync.expired.action": "Écraser cet appareil",
+  "settings.companionSync.expired.confirmTitle": "Écraser cet appareil avec les données du groupe de synchronisation ?",
+  "settings.companionSync.expired.confirmDescription": "La bibliothèque de cet appareil sera remplacée par les données du groupe de synchronisation. Les modifications de cet appareil jamais synchronisées seront perdues."
 }

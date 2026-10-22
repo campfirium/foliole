@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "加入同步群組",
   "syncGroup.join.mode.description": "選擇使用哪一方的資料：同步群組資料只取代本機，本機資料則取代整個群組。",
   "syncGroup.join.mode.overwrite": "用本機資料覆寫整個群組",
-  "syncGroup.join.mode.useGroup": "用同步群組資料覆寫本機"
+  "syncGroup.join.mode.useGroup": "用同步群組資料覆寫本機",
+  "settings.companionSync.expired.title": "本機已超過 90 天未同步",
+  "settings.companionSync.expired.description": "同步組已不再保留本機需要的舊記錄。要繼續同步，需用同步組資料覆蓋本機；本機從未同步出去的變更不會保留。",
+  "settings.companionSync.expired.action": "覆蓋本機",
+  "settings.companionSync.expired.confirmTitle": "用同步組資料覆蓋本機？",
+  "settings.companionSync.expired.confirmDescription": "本機資料將替換為同步組資料，本機從未同步出去的變更會遺失。"
 }

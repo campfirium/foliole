@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "Unirse al grupo de sincronización",
   "syncGroup.join.mode.description": "Elige qué datos usar: los datos del grupo reemplazan solo este dispositivo, o los datos de este dispositivo reemplazan todo el grupo.",
   "syncGroup.join.mode.overwrite": "Usar los datos de este dispositivo para sobrescribir todo el grupo",
-  "syncGroup.join.mode.useGroup": "Usar los datos del grupo de sincronización para sobrescribir este dispositivo"
+  "syncGroup.join.mode.useGroup": "Usar los datos del grupo de sincronización para sobrescribir este dispositivo",
+  "settings.companionSync.expired.title": "Este dispositivo lleva más de 90 días sin sincronizar",
+  "settings.companionSync.expired.description": "El grupo de sincronización ya no conserva los registros antiguos que este dispositivo necesitaría. Para volver a sincronizar, sobrescribe este dispositivo con los datos del grupo; los cambios hechos aquí que nunca se sincronizaron no se conservarán.",
+  "settings.companionSync.expired.action": "Sobrescribir este dispositivo",
+  "settings.companionSync.expired.confirmTitle": "¿Sobrescribir este dispositivo con los datos del grupo de sincronización?",
+  "settings.companionSync.expired.confirmDescription": "La biblioteca de este dispositivo se reemplazará con los datos del grupo de sincronización. Se perderán los cambios de este dispositivo que nunca se sincronizaron."
 }

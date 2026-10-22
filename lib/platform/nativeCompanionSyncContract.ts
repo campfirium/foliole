@@ -241,6 +241,8 @@ export interface DesktopSyncGroupJoinRequestPayload {
 
 export interface DesktopSyncGroupOverviewPayload {
   pending_backup_restore?: string | null;
+  /** This device has not completed a sync for longer than the group keeps history for it. */
+  expired_member?: boolean;
   discovery_error: 'permission_required' | 'unavailable' | null;
   host_platform: string | null;
   watched_folder_conflicts?: import('./watchedFolderConflictContract.js').WatchedFolderConflict[];

@@ -168,6 +168,7 @@ export const NATIVE_COMMANDS = {
   saveWatchedFolderConflict: 'save_watched_folder_conflict',
   createSyncGroup: 'create_sync_group',
   leaveSyncGroup: 'leave_sync_group',
+  overwriteExpiredSyncGroupMember: 'overwrite_expired_sync_group_member',
   removeSyncGroupDevice: 'remove_sync_group_device',
   discoverSyncGroups: 'discover_sync_groups',
   stopDiscoverSyncGroups: 'stop_discover_sync_groups',

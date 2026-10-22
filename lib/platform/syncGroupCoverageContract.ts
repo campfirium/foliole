@@ -70,3 +70,27 @@ export function syncGroupCoverageLine(coverage: SyncGroupCoveragePayload, active
   }
   return line;
 }
+
+/** How far a member may fall behind the rest of the group before it no longer holds the group line back. */
+export const SYNC_GROUP_MEMBER_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function syncGroupMemberLastSync(coverage: SyncGroupCoveragePayload, member: string, joinedAt: string) {
+  let latest = joinedAt;
+  for (const [holder, row] of Object.entries(coverage.cells)) for (const [origin, at] of Object.entries(row)) {
+    if ((holder === member || origin === member) && at > latest) latest = at;
+  }
+  return latest;
+}
+
+/**
+ * Expired: the rest of the group kept completing rounds for 90 days after this member last did. A group
+ * where nobody synced has no member to blame, so nobody expires and the line simply waits.
+ */
+export function isSyncGroupMemberExpired(coverage: SyncGroupCoveragePayload, member: string, joinedAt: string) {
+  let others: string | null = null;
+  for (const [holder, row] of Object.entries(coverage.cells)) for (const [origin, at] of Object.entries(row)) {
+    if (holder !== member && origin !== member && (!others || at > others)) others = at;
+  }
+  if (!others) return false;
+  return Date.parse(syncGroupMemberLastSync(coverage, member, joinedAt)) < Date.parse(others) - SYNC_GROUP_MEMBER_EXPIRY_MS;
+}

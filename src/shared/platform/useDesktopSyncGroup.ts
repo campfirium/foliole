@@ -203,6 +203,7 @@ export function useDesktopSyncGroup() {
       isDesktopRuntime: isDesktopRuntime(),
       isLoading: state.isLoading,
       leaveSyncGroup: actions.device.leave,
+      overwriteExpiredMember: actions.device.overwriteExpired,
       removeSyncGroupDevice: actions.device.remove,
       overview: state.overview,
       openNetworkSettings,

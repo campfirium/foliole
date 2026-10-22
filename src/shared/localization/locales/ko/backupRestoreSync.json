@@ -14,5 +14,10 @@
   "syncGroup.join.mode.title": "동기화 그룹 참여",
   "syncGroup.join.mode.description": "사용할 데이터를 선택하세요. 그룹 데이터는 이 기기만 교체하고, 이 기기의 데이터는 그룹 전체를 교체합니다.",
   "syncGroup.join.mode.overwrite": "이 기기의 데이터로 그룹 전체 덮어쓰기",
-  "syncGroup.join.mode.useGroup": "동기화 그룹의 데이터로 이 기기 덮어쓰기"
+  "syncGroup.join.mode.useGroup": "동기화 그룹의 데이터로 이 기기 덮어쓰기",
+  "settings.companionSync.expired.title": "이 기기는 90일 넘게 동기화되지 않았습니다",
+  "settings.companionSync.expired.description": "동기화 그룹에 이 기기에 필요한 이전 기록이 더 이상 남아 있지 않습니다. 다시 동기화하려면 동기화 그룹의 데이터로 이 기기를 덮어쓰세요. 한 번도 동기화되지 않은 이 기기의 변경 사항은 유지되지 않습니다.",
+  "settings.companionSync.expired.action": "이 기기 덮어쓰기",
+  "settings.companionSync.expired.confirmTitle": "동기화 그룹의 데이터로 이 기기를 덮어쓸까요?",
+  "settings.companionSync.expired.confirmDescription": "이 기기의 라이브러리가 동기화 그룹의 데이터로 바뀝니다. 한 번도 동기화되지 않은 이 기기의 변경 사항은 사라집니다."
 }

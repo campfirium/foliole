@@ -4,6 +4,7 @@ import {
   coverCompletedSyncGroupRound,
   emptySyncGroupCoverage,
   isSyncGroupCoveragePayload,
+  isSyncGroupMemberExpired,
   mergeSyncGroupCoverage,
   syncGroupCoverageLine
 } from './syncGroupCoverageContract.js';
@@ -41,4 +42,20 @@ it('validates coverage carried in member state', () => {
   expect(isSyncGroupCoveragePayload({ basis: '', cells: { a: { a: T1 } } })).toBe(false);
   expect(isSyncGroupCoveragePayload({ basis: '', cells: { a: { b: 'yesterday' } } })).toBe(false);
   expect(isSyncGroupCoveragePayload({ cells: {} })).toBe(false);
+});
+
+it('expires only a member the rest of the group left behind by more than 90 days', () => {
+  const day = (offset: number) => new Date(Date.parse('2026-10-01T00:00:00.000Z') + offset * 86_400_000).toISOString();
+  let coverage = coverCompletedSyncGroupRound(emptySyncGroupCoverage(''), 'desktop', 'phone', day(0));
+  // Two devices that both went quiet: neither can be told apart, so neither expires.
+  expect(isSyncGroupMemberExpired(coverage, 'phone', day(0))).toBe(false);
+  expect(isSyncGroupMemberExpired(coverage, 'desktop', day(0))).toBe(false);
+  coverage = coverCompletedSyncGroupRound(coverage, 'desktop', 'laptop', day(89));
+  expect(isSyncGroupMemberExpired(coverage, 'phone', day(0))).toBe(false);
+  coverage = coverCompletedSyncGroupRound(coverage, 'desktop', 'laptop', day(91));
+  expect(isSyncGroupMemberExpired(coverage, 'phone', day(0))).toBe(true);
+  expect(isSyncGroupMemberExpired(coverage, 'desktop', day(0))).toBe(false);
+  // A member that never completed a round counts from when it joined.
+  expect(isSyncGroupMemberExpired(coverage, 'tablet', day(80))).toBe(false);
+  expect(isSyncGroupMemberExpired(coverage, 'tablet', day(0))).toBe(true);
 });
