@@ -19,7 +19,7 @@ function fixture() {
     evidenceRoot: path.join(root, 'evidence'),
     paths: {
       adbPath: path.join(root, 'adb.exe'), androidSdk: path.join(root, 'sdk'),
-      javaHome: path.join(root, 'java'), protectionBackups: path.join(root, 'protection'),
+      javaHome: path.join(root, 'java'),
       repoRoot: path.join(root, 'repo'), signingHome: path.join(root, 'signing'),
       systemNode: path.join(root, 'node.exe')
     }
@@ -37,6 +37,9 @@ function successfulExecutor(paths, overrides = {}) {
     if (args.includes('devices')) return result(overrides.devices
       ?? `${WINDOWS_DEV_A5_SERIAL}\tdevice product:A5\n`);
     if (args.includes('get-state')) return result('device\n');
+    if (args.some((arg) => String(arg).includes('android-device-database-pull.mjs'))) {
+      return result(`${JSON.stringify({ databasePath: '/pulled/companion.db' })}\n`);
+    }
     return result('ok\n');
   });
   return { calls, execute };
@@ -50,7 +53,7 @@ function successfulLiveReload() {
 }
 
 describe('Windows DEV fixed device action', () => {
-  it('deploys only to the fixed port and serial without retaining a device backup', async () => {
+  it('deploys only to the fixed port and serial without reading the device database', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
     await expect(runWindowsDevDeviceAction({
@@ -66,8 +69,8 @@ describe('Windows DEV fixed device action', () => {
       '-P', WINDOWS_DEV_ADB_PORT, '-s', WINDOWS_DEV_A5_SERIAL, 'get-state'
     ]);
     expect(adbCalls.at(-1)).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
-    const protection = calls.filter(({ args }) => args.some((arg) => String(arg).includes('android-device-data-protection.mjs')));
-    expect(protection).toHaveLength(0);
+    const pulls = calls.filter(({ args }) => args.some((arg) => String(arg).includes('android-device-database-pull.mjs')));
+    expect(pulls).toHaveLength(0);
     const deploy = calls.find(({ command }) => command === 'powershell.exe');
     expect(deploy.args).toContain(WINDOWS_DEV_A5_SERIAL);
     expect(deploy.args).toContain(paths.systemNode);
@@ -97,11 +100,12 @@ describe('Windows DEV fixed device action', () => {
     expect(verify.args).toContain(WINDOWS_DEV_ADB_PORT);
   });
 
-  it('routes capture annotation through the fixed serial, protection helper, and bounded action', async () => {
+  it('routes capture annotation through the fixed serial, database pull, and bounded action', async () => {
     const { evidenceRoot, paths } = fixture();
     const { calls, execute } = successfulExecutor(paths);
-    const runCaptureAnnotation = vi.fn(async ({ protectData }) => {
-      await protectData('backup', path.join(evidenceRoot, 'protection.json'), path.join(evidenceRoot, 'backup'));
+    let pulled;
+    const runCaptureAnnotation = vi.fn(async ({ pullDatabase }) => {
+      pulled = await pullDatabase();
       return {
         captureAnnotation: { buildIdentity: 'capture-1', manifestPath: 'manifest.json' },
         output: 'accepted\n'
@@ -115,13 +119,15 @@ describe('Windows DEV fixed device action', () => {
     expect(runCaptureAnnotation).toHaveBeenCalledWith(expect.objectContaining({
       adbPort: WINDOWS_DEV_ADB_PORT, serial: WINDOWS_DEV_A5_SERIAL
     }));
-    const protection = calls.find(({ args }) =>
-      args.some((arg) => String(arg).includes('android-device-data-protection.mjs')));
-    expect(protection.args).toContain(path.join(evidenceRoot, 'backup'));
+    const pull = calls.find(({ args }) =>
+      args.some((arg) => String(arg).includes('android-device-database-pull.mjs')));
+    expect(pull.command).toBe(paths.systemNode);
+    expect(pull.args).toEqual(expect.arrayContaining(['--serial', WINDOWS_DEV_A5_SERIAL]));
+    expect(pulled.databasePath).toBe('/pulled/companion.db');
     expect(calls.at(-1).args).toEqual(['-P', WINDOWS_DEV_ADB_PORT, 'kill-server']);
   });
 
-  it('returns approval_required from the read-only gate without force-stop, backup, or install', async () => {
+  it('returns approval_required from the read-only gate without force-stop, pull, or install', async () => {
     const { evidenceRoot, paths } = fixture();
     const readiness = {
       canonicalInbox: { active: false, kind: null },

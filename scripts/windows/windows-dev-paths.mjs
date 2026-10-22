@@ -36,7 +36,6 @@ export function windowsDevPaths({
     oldBareRepository: path.win32.join(oldLabRoot, 'repository.git'),
     oldConfig: path.win32.join(oldLabRoot, 'config.json'),
     oldLabRoot,
-    protectionBackups: path.win32.join(oldLabRoot, 'protection', 'backups'),
     receiver: path.win32.join(gitRoot, 'receive.mjs'),
     repoRoot,
     signingHome: path.win32.join(oldLabRoot, 'signing', 'android-user-home'),

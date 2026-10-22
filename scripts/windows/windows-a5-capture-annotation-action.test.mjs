@@ -34,7 +34,7 @@ function fixture() {
   return {
     evidenceRoot: path.join(repoRoot, '.tmp/artifacts/windows-dev-action/capture-run-1'),
     paths: { adbPath: path.join(repoRoot, 'adb.exe'),
-      buildRoot: repoRoot, protectionBackups: path.join(repoRoot, 'protection'), repoRoot }
+      buildRoot: repoRoot, repoRoot }
   };
 }
 
@@ -76,28 +76,25 @@ function auditSummary(token) {
   };
 }
 
-function protection() {
-  return vi.fn(async (mode, manifest, backupRoot) => {
-    if (mode === 'backup') {
-      const targetRoot = backupRoot || path.join(path.dirname(manifest), 'protected');
-      fs.mkdirSync(targetRoot, { recursive: true });
-      const databasePath = path.join(targetRoot, 'snapshot.db');
-      fs.writeFileSync(databasePath, 'sqlite');
-      fs.writeFileSync(manifest, JSON.stringify({ backup: { created: true, databasePath } }));
-    }
-    return { output: `${mode}\n` };
+function puller() {
+  return vi.fn(async () => {
+    const pullRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-a5-pull-'));
+    roots.push(pullRoot);
+    const databasePath = path.join(pullRoot, 'companion.db');
+    fs.writeFileSync(databasePath, 'sqlite');
+    return { databasePath, output: 'pulled\n' };
   });
 }
 
 it('installs only same-run APKs, executes one fixed restart method, audits, and cleans up', async () => {
   const { evidenceRoot, paths } = fixture();
   const { calls, execute } = executor();
-  const protectData = protection();
+  const pullDatabase = puller();
   const database = { close: vi.fn() };
   const result = await runWindowsA5CaptureAnnotation({
     adbPort: '5037', auditDatabase: vi.fn(() => auditSummary('capture-run-1')),
     buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
-    openDatabase: vi.fn(() => database), paths, protectData, serial: '87a33a4b'
+    openDatabase: vi.fn(() => database), paths, pullDatabase, serial: '87a33a4b'
   });
   const adbArgs = calls.map(({ args }) => args);
   expect(adbArgs[0]).toEqual([
@@ -110,7 +107,8 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
   expect(adbArgs.find((args) => args.includes('instrument') && !args.includes('log'))).toContain(
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart'
   );
-  expect(protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup']);
+  expect(pullDatabase).toHaveBeenCalledOnce();
+  expect(fs.existsSync(path.dirname((await pullDatabase.mock.results[0].value).databasePath))).toBe(false);
   expect(adbArgs.at(-1)).toEqual(['-P', '5037', '-s', '87a33a4b', 'uninstall', 'com.campfirium.foliole.android.test']);
   expect(database.close).toHaveBeenCalledOnce();
   const manifest = JSON.parse(fs.readFileSync(result.captureAnnotation.manifestPath, 'utf8'));
@@ -137,7 +135,7 @@ it('rejects another run receipt, removes the installed test APK, and writes no s
   try {
     await runWindowsA5CaptureAnnotation({
       adbPort: '5037', buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
-      paths, protectData: protection(), serial: '87a33a4b'
+      paths, pullDatabase: puller(), serial: '87a33a4b'
     });
   } catch (error) { failure = error; }
   expect(failure).toMatchObject({ stage: 'instrumentation-evidence' });
@@ -155,7 +153,7 @@ it('retains fixed instrumentation output when the read-only audit fails', async 
       adbPort: '5037', auditDatabase: vi.fn(() => { throw new Error('Cloze Item was not found'); }),
       buildIdentity: 'capture-run-1', env: {}, evidenceRoot, execute,
       openDatabase: vi.fn(() => ({ close: vi.fn() })), paths,
-      protectData: protection(), serial: '87a33a4b'
+      pullDatabase: puller(), serial: '87a33a4b'
     });
   } catch (error) { failure = error; }
   expect(failure).toMatchObject({ stage: 'capture-database-audit' });

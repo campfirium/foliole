@@ -2,6 +2,7 @@
 
 import path from 'node:path';
 
+import { parseAndroidDatabasePull } from '../android/android-device-database-pull.mjs';
 import {
   captureAnnotationFailure, parseCaptureAnnotationReadiness
 } from './windows-a5-capture-annotation-contract.mjs';
@@ -87,14 +88,13 @@ function helperEnv(env) {
     FOLIOLE_ANDROID_ADB_SERVER_PORT: WINDOWS_DEV_ADB_PORT };
 }
 
-async function runDataProtection(execute, paths, mode, manifest, env, backupRoot) {
-  if (!backupRoot) throw new Error('Transient Android snapshot root is required.');
-  const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-device-data-protection.mjs');
-  return checked(execute, paths.systemNode, [script, '--mode', mode, '--adb', paths.adbPath,
-    '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID,
-    '--backup-root', backupRoot, '--manifest', manifest],
-  { env: helperEnv(env), timeoutCode: `data_${mode}_timeout`, timeoutMs: 5 * 60_000,
-    windowsHide: true }, `data-${mode}`);
+async function pullAndroidDatabase(execute, paths, env) {
+  const script = path.join(paths.repoRoot, 'scripts', 'android', 'android-device-database-pull.mjs');
+  const result = await checked(execute, paths.systemNode, [script, '--adb', paths.adbPath,
+    '--serial', WINDOWS_DEV_A5_SERIAL, '--app-id', APP_ID],
+  { env: helperEnv(env), timeoutCode: 'database_pull_timeout', timeoutMs: 5 * 60_000,
+    windowsHide: true }, 'database-pull');
+  return { databasePath: parseAndroidDatabasePull(result.stdout), output: result.stderr ?? '' };
 }
 
 async function deploy(execute, paths, env) {
@@ -159,9 +159,7 @@ export async function runWindowsDevDeviceAction({
     } else if (action === 'capture-annotation') {
       actionResult = await runCaptureAnnotation({
         adbPort: WINDOWS_DEV_ADB_PORT, buildIdentity, env, evidenceRoot, execute, paths,
-        protectData: (mode, manifest, backupRoot) => runDataProtection(
-          execute, paths, mode, manifest, env, backupRoot
-        ), serial: WINDOWS_DEV_A5_SERIAL
+        pullDatabase: () => pullAndroidDatabase(execute, paths, env), serial: WINDOWS_DEV_A5_SERIAL
       });
     } else if (action === 'verify') {
       actionResult = { output: await verify(execute, paths, env) };

@@ -91,7 +91,7 @@ afterEach(async () => {
 });
 
 describe('git hooks', () => {
-  it('blocks forced .lab files from entering commits', async () => {
+  it('blocks forced .lab files from entering commits', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await writeFile(path.join(repoDir, '.gitignore'), '.lab/\n');
     await writeFile(path.join(repoDir, 'tracked.txt'), 'seed\n');
@@ -107,18 +107,18 @@ describe('git hooks', () => {
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('refusing to commit .lab files');
     expect(result.stderr).toContain('.lab/memo.md');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('keeps pre-commit limited to the local lab guard', async () => {
+  it('keeps pre-commit limited to the local lab guard', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
 
     const result = await commitFile(repoDir, 'tracked.txt', 'content\n', '000001 seed');
 
     expect(result.code, result.stderr).toBe(0);
     expect(result.stderr).not.toContain('pre-commit-validation');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('blocks commit messages that skip the next sequence', async () => {
+  it('blocks commit messages that skip the next sequence', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
 
@@ -126,9 +126,9 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('commit subject must start with next sequence 000002');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('keeps the existing sequence across amend message modes', async () => {
+  it('keeps the existing sequence across amend message modes', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'a.txt'), 'amended\n');
@@ -137,9 +137,9 @@ describe('git hooks', () => {
     const explicit = await runCommand('git', ['commit', '--amend', '-m', '000001 revised'], repoDir);
     expect(explicit.code, explicit.stderr).toBe(0);
     expect((await runCommand('git', ['log', '-1', '--pretty=%s'], repoDir)).stdout.trim()).toBe('000001 revised');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('blocks amend and new commits from consuming or reusing the wrong sequence', async () => {
+  it('blocks amend and new commits from consuming or reusing the wrong sequence', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     const amend = await runCommand('git', ['commit', '--amend', '-m', '000002 wrong amend'], repoDir);
@@ -148,7 +148,7 @@ describe('git hooks', () => {
     const duplicate = await commitFile(repoDir, 'b.txt', 'b\n', '000001 duplicate');
     expect(duplicate.code).not.toBe(0);
     expect(duplicate.stderr).toContain('new commit sequence must be 000002');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
   it('continues the global sequence across parallel branches', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
@@ -165,7 +165,7 @@ describe('git hooks', () => {
     expect(next.code, next.stderr).toBe(0);
   });
 
-  it('blocks branch pushes with non-continuous numbered history', async () => {
+  it('blocks branch pushes with non-continuous numbered history', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
@@ -180,9 +180,9 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('sequence must be 000002');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('blocks branch pushes with unnumbered new commit subjects', async () => {
+  it('blocks branch pushes with unnumbered new commit subjects', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'b.txt'), 'b\n');
@@ -197,9 +197,9 @@ describe('git hooks', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('contains an unnumbered commit subject');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
-  it('checks only new commit subjects for existing branch pushes', async () => {
+  it('checks only new commit subjects for existing branch pushes', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     await writeFile(path.join(repoDir, 'remote.txt'), 'remote\n');
@@ -215,8 +215,8 @@ describe('git hooks', () => {
     });
 
     expect(result.code, result.stderr).toBe(0);
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
-  it('does not depend on an external cat binary in pre-push', async () => {
+  });
+  it('does not depend on an external cat binary in pre-push', { meta: { calibratedMs: HOOK_INTEGRATION_TIMEOUT_MS } }, async () => {
     const repoDir = await createRepo();
     await expect(commitFile(repoDir, 'a.txt', 'a\n', '000001 seed')).resolves.toMatchObject({ code: 0 });
     const fakeBin = path.join(repoDir, 'fake-bin');
@@ -232,7 +232,7 @@ describe('git hooks', () => {
 
     expect(result.code, result.stderr).toBe(0);
     expect(result.stderr).not.toContain('BAD_CAT_USED');
-  }, HOOK_INTEGRATION_TIMEOUT_MS);
+  });
 
 
 });
