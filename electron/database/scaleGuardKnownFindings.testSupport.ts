@@ -1,3 +1,4 @@
+import type { SqlScaleProbe } from './sqlScaleProbe.testSupport.js';
 import { formatFullScanFindings, fullScanFindingId, type FullScanFinding } from './sqlScanPlan.testSupport.js';
 
 /**
@@ -14,6 +15,9 @@ const BODY_HOLDER_SCAN: KnownScan = {
   id: /\| lib\/core\/database\/textBodyBlobCollection\.ts \| statement \|/u,
   reason: 'each released body hash searches every text and JSON column for holders (issue #165 shape)'
 };
+
+/** The holder lookups behind BODY_HOLDER_SCAN, as the probe records them. */
+const BODY_HOLDER_STATEMENT = { caller: /^lib\/core\/database\/textBodyBlobCollection\.ts:/u, sql: /^SELECT 1 AS held /u };
 
 export const KNOWN_UPGRADE_SCANS: KnownScan[] = [];
 
@@ -35,4 +39,19 @@ export function compareWithKnownScans(findings: FullScanFinding[], known: KnownS
 
 export function withoutKnownGrowth(lines: string, known: RegExp[]) {
   return lines.split('\n').filter((line) => line && !known.some((pattern) => pattern.test(line))).join('\n');
+}
+
+/**
+ * A run's step times without the known holder lookups, so a step budget measures everything else in the step.
+ * Apply per run before `fastestRun`, so each step only loses time it actually spent.
+ */
+export function withoutKnownScanTime(profile: Pick<SqlScaleProbe, 'records' | 'stepMs'>) {
+  const stepMs = new Map(profile.stepMs);
+  for (const [step, records] of profile.records) {
+    for (const record of records.values()) {
+      if (!BODY_HOLDER_STATEMENT.caller.test(record.caller) || !BODY_HOLDER_STATEMENT.sql.test(record.sql)) continue;
+      stepMs.set(step, (stepMs.get(step) ?? 0) - record.totalMs);
+    }
+  }
+  return { records: profile.records, stepMs };
 }

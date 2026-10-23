@@ -28,7 +28,8 @@ import {
   compareWithKnownScans,
   KNOWN_RUNTIME_GROWTH,
   KNOWN_RUNTIME_SCANS,
-  withoutKnownGrowth
+  withoutKnownGrowth,
+  withoutKnownScanTime
 } from './scaleGuardKnownFindings.testSupport.js';
 import {
   defaultScaleGrowthLimits,
@@ -99,9 +100,10 @@ describe('everyday writes at library scale', () => {
     expect(compareWithKnownScans(findings, KNOWN_RUNTIME_SCANS)).toEqual({ unexpected: '', fixed: [] });
   });
 
+  // The registered holder lookups are excluded here; the scan test above still lists them.
   it('keeps a fixed batch of edits as cheap on a large library as on a small one', () => {
     const [small, large] = readUpgradeScaleManifest().scales
-      .map(({ name }) => fastestRun(runs.get(name)!.map((run) => run.probe)));
+      .map(({ name }) => fastestRun(runs.get(name)!.map((run) => withoutKnownScanTime(run.probe))));
     const limits = { ...defaultScaleGrowthLimits(4), maxRatio: 2 };
     const findings = findSuperlinearGrowth(small!, large!, limits)
       .filter((finding) => EDIT_STEPS.includes(finding.step));
