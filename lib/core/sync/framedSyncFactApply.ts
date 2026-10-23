@@ -18,6 +18,7 @@ import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
+import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export type FramedFactSource = (db: DbPort, kinds?: readonly number[]) => AsyncIterable<CanonicalFact>;
@@ -28,6 +29,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   enqueueSearchInvalidations?: boolean;
   requireCompleteVersionGraph?: boolean;
   currentVersion?: RequestSyncCurrentVersion;
+  visibilityPruning?: DeferredVisibilityPruning;
 }) {
   return db.transaction(async (tx) => {
     const nodes: CanonicalFact[] = [];
@@ -57,7 +59,8 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         workspaceScope = { kind: 'full' };
       }
       else {
-        const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false });
+        const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false,
+          ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) });
         generatedChanges = result.handledConflictCount > 0;
         workspaceScope = result.workspaceScopeExpanded ? { kind: 'full' }
           : { kind: 'nodes', nodeIds: result.workspaceNodeIds };

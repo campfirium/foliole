@@ -3,6 +3,15 @@ import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../data
 
 import type { DbPort } from './dbPort.js';
 
+/** A caller applying many objects in one transaction collects requests and prunes once at its end. */
+export interface DeferredVisibilityPruning { requested: boolean }
+
+export async function pruneLearningRowsOrDefer(port: DbPort, deferred?: DeferredVisibilityPruning) {
+  if (!deferred) return pruneLearningRowsWithoutVisibleNodes(port);
+  deferred.requested = true;
+  return false;
+}
+
 export async function pruneLearningRowsWithoutVisibleNodes(port: DbPort) {
   const removedHostState = await port.run(
     `DELETE FROM node_reading_host_state

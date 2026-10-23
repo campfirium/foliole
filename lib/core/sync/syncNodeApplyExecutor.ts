@@ -24,7 +24,7 @@ import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRe
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { applyRemoteNodeTombstone, assertKnownDeletionIdentity, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
 import { prepareIncomingNodeVersionSource, retainIncomingNodeVersionSource } from './syncNodeVersionHistory.js';
-import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
+import { pruneLearningRowsOrDefer, type DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
   parent_id: string | null;
@@ -49,6 +49,7 @@ export interface ApplySyncNodesWithDbPortOptions {
   hashTextBody?: (content: string) => Promise<string> | string;
   includeAlreadyApplied?: boolean;
   operation?: SyncNodeApplyOperation;
+  visibilityPruning?: DeferredVisibilityPruning;
 }
 
 function assertLocalRestoreApplied(
@@ -187,7 +188,9 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
       }
     }
     assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
-    if (result.appliedIds.length > 0) result.workspaceScopeExpanded = await pruneLearningRowsWithoutVisibleNodes(tx);
+    if (result.appliedIds.length > 0) {
+      result.workspaceScopeExpanded = await pruneLearningRowsOrDefer(tx, options.visibilityPruning);
+    }
   });
   return result;
 }

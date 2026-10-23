@@ -7,25 +7,29 @@ import { resolveFolderSourceConflict } from './syncFolderResolution.js';
 import { resolveItemSourceConflict } from './syncItemResolution.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
+import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import { resolveTopicSourceConflict } from './syncTopicConflict.js';
 import { expireTopicText } from './topicTextExpiry.js';
 
+type ConvergeOptions = { collectVersionPayloads?: boolean; visibilityPruning?: DeferredVisibilityPruning };
+
 export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: NativeSyncNodeRecord[],
-  options: { collectVersionPayloads?: boolean } = {}) {
+  options: ConvergeOptions = {}) {
   return applyConvergentSyncNodeSource(port, arraySyncNodeRecordSource(records), options);
 }
 
 export function applyConvergentSyncNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, options: { collectVersionPayloads?: boolean } = {}) {
+  source: SyncNodeRecordSource<M>, options: ConvergeOptions = {}) {
   return port.transaction(tx => convergeNodeSource(tx, source, options));
 }
 
 async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, options: { collectVersionPayloads?: boolean }) {
+  source: SyncNodeRecordSource<M>, options: ConvergeOptions) {
   const records = source.records;
   const knownNodeIds = await loadKnownNodeStateIds(port, records);
   const result = await applySyncNodeSourceWithDbPort(port, source, {
-    enqueueSearchInvalidations: false, deferBodyRetirement: options.collectVersionPayloads === false
+    enqueueSearchInvalidations: false, deferBodyRetirement: options.collectVersionPayloads === false,
+    ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {})
   });
   const conflicts = groupByObjectId(result.conflictNodes);
   const resolvedNodeIds: string[] = [];

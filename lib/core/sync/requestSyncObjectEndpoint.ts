@@ -6,13 +6,14 @@ import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSy
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryNeed } from './framedSyncInventory.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from './requestSyncFiles.js';
-import { applyRequestSyncObject } from './requestSyncObjectApply.js';
+import { applyRequestSyncObject, type RequestSyncObjectInput } from './requestSyncObjectApply.js';
 import { assertRequestSyncObjectSource, requestSyncObjectMessages, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages } from './requestSyncObjectReceiver.js';
 import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
 import { writeRequestSyncSnapshot } from './requestSyncSnapshot.js';
 import { prepareRequestSyncWire, readRequestSyncWire,
   type RequestSyncAuthenticatedContext, type RequestSyncWireFrame } from './requestSyncWire.js';
+import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export interface RequestSyncDatabaseHost {
@@ -71,17 +72,26 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
   input: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'context' | 'author' | 'peerState' | 'signal' | 'objectOptions'>,
   header: RequestSyncObjectHeader, files: import('./requestSyncFiles.js').RequestSyncFiles) {
   input.signal?.throwIfAborted();
-  const result = await host.write(async db => applyRequestSyncObject(db, {
+  const result = await host.write(async db => applyRequestSyncObject(db, receivedObjectInput(host, input, header, files,
+    { ...await host.objectOptions?.(db), ...input.objectOptions })));
+  await host.objectApplied?.({ ...header, workspaceScope: result.workspaceScope });
+  return { ...result, requestId: header.requestId };
+}
+
+export function receivedObjectInput(host: RequestSyncDatabaseHost,
+  input: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'context' | 'author' | 'peerState' | 'signal'>,
+  header: RequestSyncObjectHeader, files: import('./requestSyncFiles.js').RequestSyncFiles,
+  objectOptions: ApplySyncObjectsWithDbPortOptions, visibilityPruning?: DeferredVisibilityPruning): RequestSyncObjectInput {
+  return {
     context: objectContext(input.context, input.author), globalId: header.globalId, objectType: header.objectType,
     ...(header.currentVersionId ? { currentVersionId: header.currentVersionId } : {}),
     requestId: header.requestId, peerState: input.peerState,
     facts: async function* (_db, kinds) { yield* files.readFacts(kinds); }, loadBody: (_db, blob) => files.loadBody(blob),
     enqueueSearchInvalidations: host.enqueueSearchInvalidations ?? true,
     ...(input.signal ? { signal: input.signal } : {}),
-    objectOptions: { ...await host.objectOptions?.(db), ...input.objectOptions }
-  }));
-  await host.objectApplied?.({ ...header, workspaceScope: result.workspaceScope });
-  return { ...result, requestId: header.requestId };
+    ...(visibilityPruning ? { visibilityPruning } : {}),
+    objectOptions
+  };
 }
 
 function objectContext(context: RequestSyncAuthenticatedContext, author: 'initiator' | 'responder'): FramedSyncContext {

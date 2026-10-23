@@ -22,6 +22,7 @@ import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
 import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
 import { assertCurrentNodeParentChain } from './syncNodeParentChain.js';
+import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export interface RequestSyncObjectInput {
@@ -36,6 +37,7 @@ export interface RequestSyncObjectInput {
   objectOptions?: ApplySyncObjectsWithDbPortOptions;
   enqueueSearchInvalidations?: boolean;
   signal?: AbortSignal;
+  visibilityPruning?: DeferredVisibilityPruning;
 }
 
 async function assertPeer(tx: DbPort, input: RequestSyncObjectInput, overwriting: boolean) {
@@ -81,6 +83,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
       ...(input.objectOptions ? { objectOptions: input.objectOptions } : {}),
       ...(input.objectType === 'node' && input.currentVersionId
         ? { currentVersion: { globalId: input.globalId, versionId: input.currentVersionId } } : {}),
+      ...(input.visibilityPruning ? { visibilityPruning: input.visibilityPruning } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (input.objectType === 'node') {
       await assertCurrentNodeParentChain(tx, input.globalId);

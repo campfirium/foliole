@@ -1,11 +1,12 @@
 import { bytes, unsigned } from './framedSyncDecodedValues.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
 import type { FramedSyncInventoryEntry, FramedSyncInventoryNeed } from './framedSyncInventory.js';
+import { applyReceivedRequestSyncBatch, type StagedRequestSyncObject } from './requestSyncBatchApply.js';
 import { assertRequestSyncBatchEnd, assertRequestSyncObjectIdentity, readRequestSyncObjectIdentity,
   readRequestSyncObjectResult, REQUEST_SYNC_BATCH_OBJECTS,
   type RequestSyncObjectIdentity, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { withRequestSyncFiles } from './requestSyncFiles.js';
-import { applyReceivedRequestSyncObject, type RequestSyncDatabaseHost, type receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
+import type { RequestSyncDatabaseHost, receiveRequestSyncObject } from './requestSyncObjectEndpoint.js';
 import { assertRequestSyncObjectSource } from './requestSyncObjectMessages.js';
 import { receiveRequestSyncObjectMessages, type RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
 import { assertReceivedRequestFacts } from './requestSyncReceivedSelection.js';
@@ -18,53 +19,73 @@ type ReceiveInput = Omit<Parameters<typeof receiveRequestSyncObject>[1], 'expect
 
 export async function receiveRequestSyncBatch(host: RequestSyncDatabaseHost, input: ReceiveInput) {
   const messages = readRequestSyncWire(input);
-  const results: RequestSyncObjectResult[] = [];
-  const identities = new Set<string>();
-  try {
-    for (;;) {
-      const next = await messages.next();
-      if (next.done) throw new Error('request_sync_batch_end_missing');
-      const { message } = next.value;
-      if (message.payloadCase === 'request_batch_end') {
-        const requestId = input.requestId ?? bytes(message.payload.requestId, 'request_id');
-        assertRequestSyncBatchEnd(message, requestId, results.length);
-        if (!(await messages.next()).done) throw new Error('request_sync_batch_trailing_data');
-        return { requestId, results };
-      }
-      const identity = readRequestSyncObjectIdentity(message);
-      const key = `${identity.objectType}\0${identity.globalId}`;
-      if (identities.has(key) || results.length >= REQUEST_SYNC_BATCH_OBJECTS) throw new Error('request_sync_batch_identity_duplicate');
-      identities.add(key);
-      if (input.expected) {
-        const expected = input.expected[results.length];
-        if (!expected) throw new Error('request_sync_batch_unexpected_object');
-        assertRequestSyncObjectIdentity(identity, expected);
-      }
-      if (message.payloadCase === 'request_object_result') {
-        const result = readRequestSyncObjectResult(message);
-        if (!result.error) throw new Error('request_sync_batch_object_missing');
-        results.push(result);
-      } else results.push(await receiveObject(host, input, next.value, messages, input.expected?.[results.length]));
-    }
-  } finally { await messages.return(undefined); }
+  const batch: ReceivingBatch = { host, input, messages, results: [], staged: [], identities: new Set() };
+  try { return await receiveNext(batch); }
+  finally { await messages.return(undefined); }
 }
 
-async function receiveObject(host: RequestSyncDatabaseHost, input: ReceiveInput,
-  first: RequestSyncDecodedMessage, messages: AsyncIterator<RequestSyncDecodedMessage>,
-  expected?: { sourceSnapshot?: FramedSyncInventoryEntry; need?: FramedSyncInventoryNeed }) {
-  return withRequestSyncFiles(host.files, async files => {
-    const header = await receiveRequestSyncObjectMessages(objectMessages(first, messages),
-      decodeFramedSyncPreamble(input.preamble).contextId, files);
-    assertRequestSyncObjectSource(header, expected?.sourceSnapshot);
-    if (expected?.need) await assertReceivedRequestFacts(files, expected.need);
-    try {
-      await applyReceivedRequestSyncObject(host, input, header, files);
-      return { ...header, error: '' };
-    } catch (error) {
-      input.signal?.throwIfAborted();
-      return { ...header, error: error instanceof Error ? error.message : String(error) };
+/** A broken stream still commits the objects that arrived complete before it, as a retry would. */
+async function keepCompletedObjects(batch: ReceivingBatch, error: unknown): Promise<never> {
+  const staged = batch.staged.splice(0);
+  if (staged.length && !batch.input.signal?.aborted) await applyReceivedRequestSyncBatch(batch.host, batch.input, staged);
+  throw error;
+}
+
+type ReceivingBatch = {
+  host: RequestSyncDatabaseHost;
+  input: ReceiveInput;
+  messages: AsyncIterator<RequestSyncDecodedMessage>;
+  results: (RequestSyncObjectResult | null)[];
+  staged: (StagedRequestSyncObject & { index: number })[];
+  identities: Set<string>;
+};
+
+/** Each staged object keeps its files open until the whole batch has been applied. */
+async function receiveNext(batch: ReceivingBatch): Promise<{ requestId: Uint8Array; results: RequestSyncObjectResult[] }> {
+  try { return await receiveRest(batch); }
+  catch (error) { return keepCompletedObjects(batch, error); }
+}
+
+async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Array; results: RequestSyncObjectResult[] }> {
+  const { input, messages, results } = batch;
+  for (;;) {
+    const next = await messages.next();
+    if (next.done) throw new Error('request_sync_batch_end_missing');
+    const { message } = next.value;
+    if (message.payloadCase === 'request_batch_end') {
+      const requestId = input.requestId ?? bytes(message.payload.requestId, 'request_id');
+      assertRequestSyncBatchEnd(message, requestId, results.length);
+      if (!(await messages.next()).done) throw new Error('request_sync_batch_trailing_data');
+      const staged = batch.staged.splice(0);
+      const applied = await applyReceivedRequestSyncBatch(batch.host, input, staged);
+      staged.forEach((object, position) => { results[object.index] = applied[position]!; });
+      return { requestId, results: results as RequestSyncObjectResult[] };
     }
-  }, input.signal);
+    const identity = readRequestSyncObjectIdentity(message);
+    const key = `${identity.objectType}\0${identity.globalId}`;
+    if (batch.identities.has(key) || results.length >= REQUEST_SYNC_BATCH_OBJECTS) throw new Error('request_sync_batch_identity_duplicate');
+    batch.identities.add(key);
+    const expected = input.expected?.[results.length];
+    if (input.expected) {
+      if (!expected) throw new Error('request_sync_batch_unexpected_object');
+      assertRequestSyncObjectIdentity(identity, expected);
+    }
+    if (message.payloadCase === 'request_object_result') {
+      const result = readRequestSyncObjectResult(message);
+      if (!result.error) throw new Error('request_sync_batch_object_missing');
+      results.push(result);
+      continue;
+    }
+    return withRequestSyncFiles(batch.host.files, async files => {
+      const header = await receiveRequestSyncObjectMessages(objectMessages(next.value, messages),
+        decodeFramedSyncPreamble(input.preamble).contextId, files);
+      assertRequestSyncObjectSource(header, expected?.sourceSnapshot);
+      if (expected?.need) await assertReceivedRequestFacts(files, expected.need);
+      batch.staged.push({ header, files, index: results.length });
+      results.push(null);
+      return receiveNext(batch);
+    }, input.signal);
+  }
 }
 
 async function* objectMessages(first: RequestSyncDecodedMessage, messages: AsyncIterator<RequestSyncDecodedMessage>) {
