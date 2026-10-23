@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { verifyDatabaseIntegrity } from './integrity.js';
+import { backupSqliteFileOffMainThread, verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -68,28 +69,21 @@ export async function backupSqliteDatabase({
 
   await ensureDirectory(path.dirname(resolvedDestinationPath));
 
-  if (sourceDatabase) {
-    const metadata = await sourceDatabase.backup(resolvedDestinationPath);
-    return {
-      sourcePath: resolvedSourcePath,
-      destinationPath: resolvedDestinationPath,
-      totalPages: metadata.totalPages,
-      remainingPages: metadata.remainingPages
-    };
-  }
+  // WAL lets the worker read the committed state an open connection would copy.
+  const metadata = await backupSqliteFileOffMainThread(resolvedSourcePath, resolvedDestinationPath,
+    () => sourceDatabase ? sourceDatabase.backup(resolvedDestinationPath)
+      : backupOnMainThread(resolvedSourcePath, resolvedDestinationPath), Boolean(sourceDatabase));
+  return {
+    sourcePath: resolvedSourcePath,
+    destinationPath: resolvedDestinationPath,
+    totalPages: metadata.totalPages,
+    remainingPages: metadata.remainingPages
+  };
+}
 
-  const sqlite = new BetterSqlite3(resolvedSourcePath, { fileMustExist: true, readonly: true });
-  try {
-    const metadata = await sqlite.backup(resolvedDestinationPath);
-    return {
-      sourcePath: resolvedSourcePath,
-      destinationPath: resolvedDestinationPath,
-      totalPages: metadata.totalPages,
-      remainingPages: metadata.remainingPages
-    };
-  } finally {
-    sqlite.close();
-  }
+async function backupOnMainThread(sourcePath: string, destinationPath: string) {
+  const sqlite = new BetterSqlite3(sourcePath, { fileMustExist: true, readonly: true });
+  try { return await sqlite.backup(destinationPath); } finally { sqlite.close(); }
 }
 
 export async function restoreSqliteDatabase({
@@ -114,14 +108,9 @@ export async function restoreSqliteDatabase({
   );
   onTemporaryDatabase?.(tempTargetPath);
 
-  const sqlite = new BetterSqlite3(resolvedSourcePath, { fileMustExist: true, readonly: true });
-  let metadata: Awaited<ReturnType<import('better-sqlite3').Database['backup']>>;
-  try {
-    if (!sourceVerified) verifyDatabaseIntegrity(sqlite);
-    metadata = await sqlite.backup(tempTargetPath);
-  } finally {
-    sqlite.close();
-  }
+  if (!sourceVerified) await verifySqliteDatabaseFileOffMainThread(resolvedSourcePath);
+  const metadata = await backupSqliteFileOffMainThread(resolvedSourcePath, tempTargetPath,
+    () => backupOnMainThread(resolvedSourcePath, tempTargetPath));
 
   try {
     await removeSqliteSidecars(resolvedTargetPath);

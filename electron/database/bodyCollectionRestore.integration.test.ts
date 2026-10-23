@@ -13,8 +13,8 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: appD
 vi.mock('node:worker_threads', async (original) => {
   const native = await original<typeof import('node:worker_threads')>();
   return { ...native, Worker: class extends native.Worker {
-    constructor(_url: URL, options: import('node:worker_threads').WorkerOptions) {
-      super(new URL('./legacyBodyCollectionWorker.ts', import.meta.url), { ...options,
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      super(new URL(url.href.replace(/\.js$/u, '.ts')), { ...options,
         execArgv: ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-strip-types'] });
     }
   } };

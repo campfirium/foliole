@@ -31,11 +31,8 @@ import { initializeDatabase } from './migrate.js';
 import { loadReadwiseHostAssignment } from './readwiseHostAssignment.js';
 import { rebuildRestoredLibrarySearchIndex } from './restoredLibrarySearchIndex.js';
 import { startSearchAliasMirror } from './searchAliasMirror.js';
-import {
-  restoreSqliteDatabase,
-  verifySqliteDatabaseFile,
-  type SqliteRestoreResult
-} from './sqliteBackupRestore.js';
+import { restoreSqliteDatabase, type SqliteRestoreResult } from './sqliteBackupRestore.js';
+import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 import {
   finishSyncGroupBackupRestore
 } from './syncGroupBackupRestore.js';
@@ -59,7 +56,7 @@ async function restoreBackup(sourcePath: string, restoredAt: string, choice?: Ba
   let replacementComplete = false;
   try {
     const databasePath = await snapshotBackupRestoreSource(artifacts, sourcePath, path.dirname(targetPath));
-    verifySqliteDatabaseFile(databasePath);
+    await verifySqliteDatabaseFileOffMainThread(databasePath);
     const selection = await selectBackupRestoreSync({ sourcePath, databasePath,
       targetPath, current: connection.driver, ...(choice ? { choice } : {}) });
     await prepareForegroundTimeBackupCandidate(databasePath, foregroundTime, loadOrCreateDesktopHostName());
@@ -69,11 +66,10 @@ async function restoreBackup(sourcePath: string, restoredAt: string, choice?: Ba
       sourceDatabase: connection.sqlite,
       sourcePath: targetPath
     });
+    await verifySqliteDatabaseFileOffMainThread(databasePath);
     closeDatabaseConnection();
     connectionClosed = true;
-    const result = await restoreSqliteDatabase({
-      sourcePath: databasePath, targetPath, onTemporaryDatabase: artifacts.trackCandidate
-    });
+    const result = await replaceWithVerifiedCandidate(databasePath, targetPath, artifacts);
     replacementComplete = true;
     const restored = initializeRestoredLibrary();
     if (selection.snapshot) finishSyncGroupBackupRestore(restored.driver, selection.snapshot, restoredAt,
@@ -105,6 +101,13 @@ async function restoreBackup(sourcePath: string, restoredAt: string, choice?: Ba
       snapshot: safetySnapshot, sourcePath
     });
   }
+}
+
+/** The candidate was checked off the main thread just before the connection closed. */
+function replaceWithVerifiedCandidate(databasePath: string, targetPath: string, artifacts: DatabaseRestoreArtifacts) {
+  return restoreSqliteDatabase({
+    sourcePath: databasePath, sourceVerified: true, targetPath, onTemporaryDatabase: artifacts.trackCandidate
+  });
 }
 
 function restoreFailure(state: 'unchanged' | 'restored', error: unknown) {
