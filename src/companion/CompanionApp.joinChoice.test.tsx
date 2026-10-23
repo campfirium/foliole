@@ -27,13 +27,36 @@ it('hosts the real join mode choice and allows cancellation without a selection'
   await expect(choice).resolves.toBeNull();
 });
 
-it.each([
-  ['use-group', /overwrite this device/],
-  ['overwrite', /overwrite the entire group/]
-])('returns the explicit %s direction', async (mode, label) => {
+function startChoice() {
   render(<CompanionApp />);
   let choice!: ReturnType<typeof chooseSyncGroupJoinMode>;
   act(() => { choice = chooseSyncGroupJoinMode(t); });
-  fireEvent.click(await screen.findByRole('button', { name: label }));
-  await expect(choice).resolves.toBe(mode);
+  return () => choice;
+}
+
+it('returns use-group without extra confirmation', async () => {
+  const choice = startChoice();
+  fireEvent.click(await screen.findByRole('button', { name: /overwrite this device/ }));
+  await expect(choice()).resolves.toBe('use-group');
+});
+
+it('requires two explicit confirmations before overwriting the entire group', async () => {
+  const choice = startChoice();
+  fireEvent.click(await screen.findByRole('button', { name: /overwrite the entire group/ }));
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Overwrite the entire sync group with this device’s data?');
+  fireEvent.click(screen.getByRole('button', { name: 'Yes, continue' }));
+  expect(await screen.findByText(/old or empty copy/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Overwrite the entire group' }));
+  await expect(choice()).resolves.toBe('overwrite');
+});
+
+it.each(['first', 'final'])('cancels the overwrite when the %s confirmation is declined', async (step) => {
+  const choice = startChoice();
+  fireEvent.click(await screen.findByRole('button', { name: /overwrite the entire group/ }));
+  if (step === 'final') {
+    fireEvent.click(await screen.findByRole('button', { name: 'Yes, continue' }));
+    await screen.findByText(/old or empty copy/);
+  }
+  fireEvent.click(await screen.findByRole('button', { name: 'No' }));
+  await expect(choice()).resolves.toBeNull();
 });

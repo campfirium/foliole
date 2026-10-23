@@ -5,8 +5,8 @@ export function AppChoiceDialog(props: { options: AppChoiceOptions; onChoose(val
   return (
     <div className="mt-4 flex flex-col gap-2">
       {props.options.choices.map((choice) => (
-        <AppButton data-choice-value={choice.value} data-testid="app-choice" key={choice.value}
-          variant="default" onClick={() => props.onChoose(choice.value)}>
+        <AppButton className="min-h-12 touch-manipulation py-2.5 leading-snug" data-choice-value={choice.value}
+          data-testid="app-choice" key={choice.value} size="md" variant="default" onClick={() => props.onChoose(choice.value)}>
           {choice.label}
         </AppButton>
       ))}
