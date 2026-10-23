@@ -11,7 +11,11 @@ import {
   waitForIosBridgeResult
 } from './ios-acceptance-infrastructure-error.mjs';
 import { writeIosAcceptanceAttemptEvidence } from './ios-acceptance-attempt-evidence.mjs';
-import { restartBridgeResultTimeoutMs, runAcceptanceRestart } from './ios-acceptance-restart-runner.mjs';
+import {
+  launchAndReadAfterBridge,
+  restartBridgeResultTimeoutMs,
+  runAcceptanceRestart
+} from './ios-acceptance-restart-runner.mjs';
 import { readAcceptanceScenarioSnapshot } from './ios-acceptance-snapshot.mjs';
 import { iosAcceptanceSimulatorName } from './ios-acceptance-simulator-identity.mjs';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from './ios-dedicated-simulator-runtime.mjs';
@@ -22,10 +26,8 @@ import { prepareIosAcceptanceCache, resolveIosAcceptanceCache } from './ios-loca
 import {
   createSimulatorAcceptanceBuildArgs,
   parseBootstrapSnapshot,
-  readBridgeFailure,
   verifyAcceptanceAppSignature,
   verifyBridgeResult,
-  waitForBootstrapSnapshotOrFailure,
   waitForBootstrapSnapshot,
   writeAcceptanceFailure
 } from './ios-simulator-acceptance-runner.mjs';
@@ -191,14 +193,14 @@ function readSnapshot(options, scenario, containerPath) {
 async function runInitialAcceptanceLaunch(options, scenario, udid, containerPath, bridgeResultPath) {
   if (scenario !== 'sync-group-signed-transport') {
     const databasePath = path.join(containerPath, DATABASE_RELATIVE_PATH);
-    const first = await waitForBootstrapSnapshotOrFailure(
-      () => readBootstrapSnapshot(options, databasePath),
-      () => readBridgeFailure(bridgeResultPath),
-      () => launchApp(options, udid), BOOTSTRAP_TIMEOUT_MS
-    );
-    const firstBridge = verifyBridgeResult(await readBridgeResult(
-      bridgeResultPath, restartBridgeResultTimeoutMs(scenario)
-    ), scenario);
+    const { bridge: firstBridge, snapshot: first } = await launchAndReadAfterBridge({
+      bootstrapTimeoutMs: BOOTSTRAP_TIMEOUT_MS, launch: () => launchApp(options, udid),
+      readBootstrap: () => readBootstrapSnapshot(options, databasePath),
+      readBridgeResult: () => readBridgeResult(
+        bridgeResultPath, BOOTSTRAP_TIMEOUT_MS + restartBridgeResultTimeoutMs(scenario)
+      ),
+      scenario
+    });
     return { databasePath, first, firstBridge };
   }
   launchApp(options, udid);

@@ -10,7 +10,6 @@ import {
   readBootstrapSnapshot
 } from './ios-bootstrap-acceptance-attempt.mjs';
 import { resolveAcceptanceDatabasePath } from './ios-bootstrap-database-path.mjs';
-import { waitForBootstrapSnapshotOrFailure } from './ios-simulator-acceptance-runner.mjs';
 
 describe('iOS bootstrap acceptance database path', () => {
   it('uses the runtime-published database path inside the application container', () => {
@@ -25,15 +24,6 @@ describe('iOS bootstrap acceptance database path', () => {
 });
 
 describe('iOS bootstrap database readiness', () => {
-  it('surfaces a WebView startup failure while bootstrap readiness is pending', async () => {
-    await expect(waitForBootstrapSnapshotOrFailure(
-      () => ({ deviceId: '', tableCount: 0 }),
-      () => 'content acceptance module failed to load',
-      undefined,
-      100
-    )).rejects.toThrow('content acceptance module failed to load');
-  });
-
   it('does not let the sqlite probe create the runtime database before the app', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-ios-bootstrap-path-'));
     const database = path.join(directory, 'foliole-companionSQLite.db');

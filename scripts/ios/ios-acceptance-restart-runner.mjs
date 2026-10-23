@@ -16,9 +16,20 @@ export function restartBridgeResultTimeoutMs(scenario) {
   return LIVE_PACK_SCENARIOS.has(scenario) ? SYNC_PACK_BRIDGE_RESULT_TIMEOUT_MS : DEFAULT_BRIDGE_RESULT_TIMEOUT_MS;
 }
 
+/**
+ * The SQLite plugin opens the database without a busy handler, so a host sqlite3 read racing
+ * the app's open (its last-connection checkpoint holds an exclusive lock) fails the launch.
+ * The host reads the database only after the launch published its bridge result.
+ */
+export async function launchAndReadAfterBridge(options) {
+  options.launch();
+  const bridge = verifyBridgeResult(await readBridgeResult(options), options.scenario);
+  const snapshot = await waitForBootstrapSnapshot(options.readBootstrap, undefined, options.bootstrapTimeoutMs);
+  return { bridge, snapshot };
+}
+
 export async function runAcceptanceRestart(options) {
-  const second = await waitForBootstrapSnapshot(options.readBootstrap, options.launch, options.bootstrapTimeoutMs);
-  const secondBridge = verifyBridgeResult(await readBridgeResult(options), options.scenario);
+  const { bridge: secondBridge, snapshot: second } = await launchAndReadAfterBridge(options);
   options.terminate();
   return { second, secondBridge, syncPackRejections: [] };
 }
