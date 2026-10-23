@@ -8,7 +8,6 @@ const commands = new Set<string>([
   NATIVE_COMMANDS.updateNodeContent,
   NATIVE_COMMANDS.updateNodeReveal,
   NATIVE_COMMANDS.updateNodeContentWithAnchors,
-  NATIVE_COMMANDS.flushDirtyNodeSyncVersions,
   NATIVE_COMMANDS.replaceNodeOrder,
   NATIVE_COMMANDS.moveNodes,
   NATIVE_COMMANDS.softDeleteNodes,

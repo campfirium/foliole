@@ -3,10 +3,10 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
 import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import {
-  flushAllDirtyNodeSyncVersions,
   moveNodes,
   replaceNodeOrder,
 } from '../database/nodeMutations.js';
+import { drainDirtyNodeSyncVersions } from '../database/nodeSyncVersionDrain.js';
 import { restoreNodesWithParents, softDeleteNodesWithParents } from '../database/nodeTrashTransitions.js';
 import {
   upsertVersionedNodeContentWithAnchors,
@@ -172,7 +172,7 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     return handleNodeContentWithAnchorsCommand(args, originWindow);
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
-    return flushAllDirtyNodeSyncVersions();
+    return drainDirtyNodeSyncVersions('foreground');
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));

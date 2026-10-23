@@ -107,6 +107,14 @@ export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void
 }
 
 export function softDeleteNodes(input: SoftDeleteNodesInput): void {
+  softDeleteNodesDeferringSyncVersions(input);
+  for (const nodeId of input.nodeIds) {
+    flushNodeSyncVersion(nodeId, input.deletedAt);
+  }
+}
+
+/** Commits the deletion and leaves the deleted nodes dirty for a later version flush. */
+export function softDeleteNodesDeferringSyncVersions(input: SoftDeleteNodesInput): void {
   assertFoliolePublishedDeleteAllowed(input.nodeIds);
   const connection = openDatabaseConnection();
   const hostName = loadOrCreateDesktopHostName(input.deletedAt);
@@ -125,9 +133,6 @@ export function softDeleteNodes(input: SoftDeleteNodesInput): void {
       );
     }
   });
-  for (const nodeId of input.nodeIds) {
-    flushNodeSyncVersion(nodeId, input.deletedAt);
-  }
 }
 
 export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {

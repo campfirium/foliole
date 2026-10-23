@@ -26,7 +26,7 @@ const {
   showOpenDialog,
   syncAppMenuState,
   requestDevShellRestart,
-  flushAllDirtyNodeSyncVersions
+  drainDirtyNodeSyncVersions
 } = vi.hoisted(() => ({
   defaultReviewSchedulerSettings: {
     algorithm: 'ts-fsrs@5.4.0 using FSRS-6.0',
@@ -82,7 +82,7 @@ const {
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.md'] }),
   syncAppMenuState: vi.fn(),
   requestDevShellRestart: vi.fn(() => false),
-  flushAllDirtyNodeSyncVersions: vi.fn(() => ['node-1'])
+  drainDirtyNodeSyncVersions: vi.fn(async () => ['node-1'])
 }));
 
 vi.mock('electron', () => ({
@@ -113,13 +113,13 @@ vi.mock('./paths.js', () => ({
 }));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
-  flushAllDirtyNodeSyncVersions,
   replaceNodeOrder: vi.fn(),
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshots: vi.fn()
 }));
+vi.mock('../database/nodeSyncVersionDrain.js', () => ({ drainDirtyNodeSyncVersions }));
 vi.mock('../database/importPipeline.js', () => ({ recordPreparedImportFailure, runPreparedImport }));
 vi.mock('./storage.js', () => ({ loadAppSettingsState: vi.fn().mockResolvedValue({}), saveAppSettingsState: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../reviewSchedulerSettings.js', () => ({
@@ -278,7 +278,7 @@ it('flushes dirty node sync versions through invoke channel', async () => {
     } satisfies NativeInvokeRequest<'flush_dirty_node_sync_versions'>)
   ).resolves.toEqual(['node-1']);
 
-  expect(flushAllDirtyNodeSyncVersions).toHaveBeenCalledTimes(1);
+  expect(drainDirtyNodeSyncVersions).toHaveBeenCalledWith('foreground');
 });
 
 it('restores window when toggle command runs while maximized', async () => {

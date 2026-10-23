@@ -120,6 +120,7 @@ function shouldCoordinateStorageDispatch(command: string, args: Record<string, u
 const STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION = new Set<string>([
   // Queues each chunk as its own foreground write.
   NATIVE_COMMANDS.deleteNodesPermanently,
+  NATIVE_COMMANDS.flushDirtyNodeSyncVersions,
   NATIVE_COMMANDS.resolveAttachmentResource,
   NATIVE_COMMANDS.activateReadwiseOnThisHost,
   NATIVE_COMMANDS.completeSyncGroupJoin,

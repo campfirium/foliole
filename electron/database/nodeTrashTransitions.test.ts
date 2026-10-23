@@ -15,10 +15,12 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 vi.mock('../foliolePublish/foliolePublishManagement.js', () => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
+vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { seedNode } from './nodeMutations.test.helpers.js';
+import { drainDirtyNodeSyncVersions } from './nodeSyncVersionDrain.js';
 import { restoreNodesWithParents, softDeleteNodesWithParents } from './nodeTrashTransitions.js';
 
 const timestamp = '2026-09-21T01:00:00.000Z';
@@ -34,6 +36,7 @@ beforeEach(async () => {
   openDatabaseConnection().driver.execute('UPDATE nodes SET image_regions = ? WHERE id = ?', [JSON.stringify(regions), 'parent']);
 });
 afterEach(async () => {
+  await drainDirtyNodeSyncVersions();
   closeDatabaseConnection();
   await fs.rm(appDataDir, { recursive: true, force: true });
 });

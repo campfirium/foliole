@@ -2,7 +2,8 @@ import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashPare
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
-import { restoreNodes, softDeleteNodes } from './nodeMutations.js';
+import { restoreNodes, softDeleteNodesDeferringSyncVersions } from './nodeMutations.js';
+import { scheduleNodeSyncVersionDrain } from './nodeSyncVersionDrain.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { withTransaction } from './transaction.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
@@ -31,22 +32,26 @@ function persistParentUpdates(nodeIds: string[], updates: NativeTrashParentUpdat
   }
 }
 
+/** Commits the visible Trash state; the deleted nodes' sync versions follow in background batches. */
 export function softDeleteNodesWithParents(input: NativeSoftDeleteNodesArgs) {
-  return withTransaction(openDatabaseConnection().driver, () => {
-    softDeleteNodes(input);
+  withTransaction(openDatabaseConnection().driver, () => {
+    softDeleteNodesDeferringSyncVersions(input);
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
   });
+  scheduleNodeSyncVersionDrain();
 }
 
 export function restoreNodesWithParents(input: NativeRestoreNodesArgs) {
-  return withTransaction(openDatabaseConnection().driver, () => {
-    const result = restoreNodes(input);
-    if (input.parentUpdates?.length && (result.skippedConflicts.length > 0 ||
-        result.restoredNodeIds.length !== input.nodeIds.length ||
-        !input.nodeIds.every((id) => result.restoredNodeIds.includes(id)))) {
+  const result = withTransaction(openDatabaseConnection().driver, () => {
+    const restored = restoreNodes(input);
+    if (input.parentUpdates?.length && (restored.skippedConflicts.length > 0 ||
+        restored.restoredNodeIds.length !== input.nodeIds.length ||
+        !input.nodeIds.every((id) => restored.restoredNodeIds.includes(id)))) {
       throw new Error('cannot restore complete Trash transition');
     }
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
-    return { ...result, nodeOrder: loadWorkspaceListSnapshot()?.nodeOrder ?? [] };
+    return { ...restored, nodeOrder: loadWorkspaceListSnapshot()?.nodeOrder ?? [] };
   });
+  scheduleNodeSyncVersionDrain();
+  return result;
 }
