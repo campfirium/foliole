@@ -1,4 +1,5 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
+import type { FramedSyncInventoryDifference } from '../../../../../lib/core/sync/framedSyncInventory.js';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import type {
@@ -53,11 +54,8 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     peerRound, signal,
     localLibraryEpoch: local.library_epoch, peerState,
     ...(options.restoreId ? { restoreId: options.restoreId } : {}),
-    reportObjectError: (difference, error) => console.error('[request-sync] object rejected', {
-      objectId: difference.globalId, objectType: difference.objectType,
-      sourceDeviceId: difference.direction === 'local_to_remote' ? group.local_device_identity_key : peerState.sender_device_identity_key,
-      error: error instanceof Error ? error.message : String(error)
-    }) });
+    ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+    reportObjectError: objectRejectionReporter(group.local_device_identity_key, peerState.sender_device_identity_key) });
   const syncedStructureElapsedMs = Date.now() - startedAt;
   const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
   if (databaseConfirmedAt && !options.restoreId) {
@@ -94,6 +92,14 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     syncedAttachmentResourceElapsedMs: Date.now() - resourcesStartedAt,
     syncedStructureElapsedMs
   };
+  });
+}
+
+function objectRejectionReporter(localDeviceId: string, peerDeviceId: string) {
+  return (difference: FramedSyncInventoryDifference, error: unknown) => console.error('[request-sync] object rejected', {
+    objectId: difference.globalId, objectType: difference.objectType,
+    sourceDeviceId: difference.direction === 'local_to_remote' ? localDeviceId : peerDeviceId,
+    error: error instanceof Error ? error.message : String(error)
   });
 }
 

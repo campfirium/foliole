@@ -9,9 +9,11 @@ import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/reque
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
+import type { CompanionDesktopSyncProgress } from '../../../companionDesktopSyncTypes.js';
 import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
+import { createOverwriteReceiveProgress } from './companionOverwriteReceiveProgress.js';
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
@@ -25,6 +27,7 @@ type RoundInput = {
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
   reportObjectError: RequestSyncDatabaseRoundPort['reportObjectError'];
+  onProgress?(progress: CompanionDesktopSyncProgress): void;
 };
 
 export function runCompanionRequestSyncDatabaseRound(input: RoundInput) {
@@ -54,13 +57,14 @@ async function runRound(input: RoundInput) {
   let receivingOverwrite = Boolean(overwriteId);
   const received = new Set<string>();
   const sent = new Set<string>();
+  const receiveProgress = createOverwriteReceiveProgress(overwriteId ? input.onProgress : undefined, () => receivingOverwrite);
   let workspaceChanged = Boolean(overwriteId);
   const port: RequestSyncDatabaseRoundPort = {
-    exchangeInventory: async () => exchangeRequestSyncInventory(host, exchange, receivingOverwrite
+    exchangeInventory: async () => receiveProgress.inventory(await exchangeRequestSyncInventory(host, exchange, receivingOverwrite
       ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
         protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
-        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined),
+        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined)),
     transferObjects: async differences => {
       const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
       for (const [index, result] of results.entries()) if (!result.error) {
@@ -69,6 +73,7 @@ async function runRound(input: RoundInput) {
           workspaceChanged = true;
         }
       }
+      receiveProgress.received(received.size);
       return results;
     },
     reportObjectError: input.reportObjectError,

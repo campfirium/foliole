@@ -104,6 +104,11 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.syncSetup.receiving.title': 'Receiving sync group data',
   'companion.syncSetup.receiving.failed': 'Could not receive the sync group data. Try syncing again.',
   'companion.syncSetup.receiving.detail': 'This device has been approved. Keep both devices open and connected until the data is ready.',
+  'companion.syncSetup.receiving.progress': 'Received {completed} of {total}',
+  'companion.syncSetup.receiving.preparing': 'Comparing with the group…',
+  'companion.syncSetup.receiving.lastActivity': 'Last received {time}',
+  'companion.syncSetup.receiving.paused': 'Paused while Foliole was in the background. It continues automatically.',
+  'companion.syncSetup.receiving.retry': 'Try again',
   'companion.syncSetup.waiting': 'Waiting for approval... {seconds}s left',
   'companion.syncSetup.title': 'Connect to a Sync Group',
   'companion.syncSetup.instructions':

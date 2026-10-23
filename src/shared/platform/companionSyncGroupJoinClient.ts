@@ -7,7 +7,7 @@ import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../lib/pla
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract';
 
 import { requestCompanionSyncGroupEndpoint } from './companion/network/companionSyncGroupHttpRequest';
-import { completeCompanionSyncGroupAdoption } from './companion/sync/completeCompanionSyncGroupAdoption';
+import { runPendingCompanionSyncGroupAdoption } from './companion/sync/companionSyncGroupAdoptionRun';
 import { joinCompanionSyncGroup, loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import {
   createCompanionSyncGroupJoinPublicKey,
@@ -67,7 +67,7 @@ export async function completeCompanionSyncGroupJoin(args: {
       throw new Error('sync_group_identity_mismatch');
     }
     args.onAccepted?.();
-    await completeCompanionSyncGroupAdoption();
+    await runPendingCompanionSyncGroupAdoption();
     cancelCompanionSyncGroupJoin(args.requestId);
     return existing;
   }
@@ -98,7 +98,7 @@ export async function completeCompanionSyncGroupJoin(args: {
     workgroupKey: info.workgroup_key
   });
   args.onAccepted?.();
-  if (pending!.mode === 'use-group') await completeCompanionSyncGroupAdoption();
+  if (pending!.mode === 'use-group') await runPendingCompanionSyncGroupAdoption();
   dropCompanionSyncGroupJoinPrivateKey(keyId);
   keyIds.delete(args.requestId);
   return group;

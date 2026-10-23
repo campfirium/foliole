@@ -2,6 +2,10 @@ import { act, render, renderHook, screen, waitFor } from '@testing-library/react
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
+import {
+  readCompanionSyncGroupAdoptionRun,
+  runPendingCompanionSyncGroupAdoption
+} from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 
 vi.mock('../shared/localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
 const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'use-group' as string | null) }));
@@ -21,6 +25,10 @@ vi.mock('../shared/platform/companion/sync/completeCompanionSyncGroupAdoption', 
 }));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: runtime.loadGroup
+}));
+const adoptionRecord = vi.hoisted(() => ({ value: null as null | Record<string, string> }));
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => ({ read: async () => adoptionRecord.value })
 }));
 vi.mock('../shared/platform/companion/syncGroupDiscoverySession', () => ({
   startCompanionSyncGroupDiscoverySession: vi.fn(async (callback) => {
@@ -49,6 +57,7 @@ const candidate = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adoptionRecord.value = null;
   runtime.callback = null;
   choice.select.mockResolvedValue('use-group');
   runtime.loadGroup.mockResolvedValue(null);
@@ -62,17 +71,27 @@ beforeEach(() => {
   runtime.complete.mockResolvedValue({ group_id: candidate.group_id });
 });
 
-it('reports a failed resumed adoption and releases the receiving screen', async () => {
-  const onError = vi.fn();
+it('keeps a failed resumed adoption on the receiving screen until a retry finishes it', async () => {
   runtime.loadGroup.mockResolvedValue({ group_id: candidate.group_id });
-  runtime.adopt.mockRejectedValue(new Error('sync_group_local_adoption_source_unavailable'));
+  adoptionRecord.value = { groupId: candidate.group_id };
+  runtime.adopt.mockRejectedValueOnce(new Error('sync_group_local_adoption_source_unavailable'));
   const { result, unmount } = renderHook(() => useCompanionSyncGroupJoin({
     bootstrapState: { database_path: '/library/foliole.db' } as never,
-    onError, onSaveEndpoint: vi.fn()
+    onError: vi.fn(), onSaveEndpoint: vi.fn()
   }));
   try {
-    await waitFor(() => expect(onError).toHaveBeenCalledWith('sync_group_local_adoption_failed'));
+    await waitFor(() => expect(result.current.member).toBe(true));
+    await act(async () => { await runPendingCompanionSyncGroupAdoption().catch(() => undefined); });
+    expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'failed',
+      error: 'sync_group_local_adoption_source_unavailable' });
     expect(result.current.joined).toBe(false);
+    expect(result.current.status).toBe('adopting');
+    await act(async () => {
+      const retried = runPendingCompanionSyncGroupAdoption();
+      adoptionRecord.value = null;
+      await retried;
+    });
+    expect(result.current.joined).toBe(true);
     expect(result.current.status).toBe('idle');
   } finally { unmount(); }
 });
@@ -167,6 +186,7 @@ it('does not show an approved request as expired while group data is still arriv
   runtime.complete.mockImplementation(client.completeCompanionSyncGroupJoin);
   let finishAdoption!: () => void;
   runtime.adopt.mockReturnValue(new Promise<void>((resolve) => { finishAdoption = resolve; }));
+  adoptionRecord.value = { groupId: candidate.group_id };
   let view: ReturnType<typeof render> | undefined;
   try {
     await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
@@ -184,6 +204,7 @@ it('does not show an approved request as expired while group data is still arriv
     expect(screen.queryByText('companion.syncSetup.approval.title')).not.toBeInTheDocument();
     expect(screen.getByText('companion.syncSetup.receiving.title')).toBeInTheDocument();
     expect(result.current.joined).toBe(false);
+    adoptionRecord.value = null;
     await act(async () => { finishAdoption(); });
     expect(result.current.joined).toBe(true);
   } finally {

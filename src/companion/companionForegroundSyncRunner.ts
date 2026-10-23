@@ -3,6 +3,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
+import { hasPendingCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import { traceCompanionSyncEvent } from '../shared/platform/companion/sync/diagnostics/companionDesktopSyncTrace';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -107,7 +108,8 @@ function shouldStartForegroundSync(
 ) {
   if (args.cancelled() || !args.isAppActiveRef.current) return false;
   if (!args.isSyncGroupReadyRef.current) return false;
-  if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current)) return false;
+  // A pending adoption carries its own provider endpoint.
+  if (!resolveCompanionWorkspaceSyncEndpoint(args.stateRef.current) && !hasPendingCompanionSyncGroupAdoption()) return false;
   if (reason === 'foreground') {
     const elapsed = now - args.lastForegroundAtRef.current;
     if (elapsed >= 0 && elapsed < FOREGROUND_DUPLICATE_EVENT_WINDOW_MS) return false;

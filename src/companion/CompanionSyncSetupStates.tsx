@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { CompanionSyncGroupAdoptionRun } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import { AppSpinner } from '../shared/ui';
 
 function PrimaryAction(props: {
@@ -89,11 +90,45 @@ export function AwaitingApprovalState(props: {
   );
 }
 
-export function ReceivingGroupDataState() {
+type AdoptionRun = Exclude<CompanionSyncGroupAdoptionRun, { phase: 'none' }>;
+
+function ReceivingProgress(props: { run: AdoptionRun }) {
   const t = useTranslation();
+  const { completed, lastActivityAt, total } = props.run;
+  const progressPct = total ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+  return (
+    <div className="space-y-2" data-testid="companion-sync-receiving-progress">
+      <div className="text-sm text-foreground">
+        {total === null ? t('companion.syncSetup.receiving.preparing')
+          : t('companion.syncSetup.receiving.progress', { completed, total })}
+      </div>
+      <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-companion-subtle">
+        <div className="h-full rounded-full bg-companion-accent transition-all duration-500" style={{ width: `${progressPct}%` }} />
+      </div>
+      {lastActivityAt ? <div className="text-xs text-accent">
+        {t('companion.syncSetup.receiving.lastActivity', {
+          time: new Date(lastActivityAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        })}
+      </div> : null}
+    </div>
+  );
+}
+
+export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoptionRun; onRetry(): void }) {
+  const t = useTranslation();
+  const run = props.run.phase === 'none' ? null : props.run;
   return <SyncStatusCard title={t('companion.syncSetup.receiving.title')}
     detail={t('companion.syncSetup.receiving.detail')}>
-    <AppSpinner decorative size="sm" />
+    <div className="space-y-4" data-phase={run?.phase ?? 'starting'} data-testid="companion-sync-receiving">
+      {run ? <ReceivingProgress run={run} /> : <AppSpinner decorative size="sm" />}
+      {run?.phase === 'paused' ? <p className="text-sm text-accent">{t('companion.syncSetup.receiving.paused')}</p> : null}
+      {run?.phase === 'failed' ? <>
+        <p className="text-sm text-error" data-error-code={run.error ?? undefined}>{t('companion.syncSetup.receiving.failed')}</p>
+        <PrimaryAction onClick={props.onRetry} testId="companion-sync-receiving-retry">
+          {t('companion.syncSetup.receiving.retry')}
+        </PrimaryAction>
+      </> : null}
+    </div>
   </SyncStatusCard>;
 }
 

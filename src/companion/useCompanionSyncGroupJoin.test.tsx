@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
+import { runPendingCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 
 vi.mock('../shared/localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
 const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'use-group' as string | null) }));
@@ -21,6 +22,10 @@ vi.mock('../shared/platform/companion/sync/completeCompanionSyncGroupAdoption', 
 }));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: runtime.loadGroup
+}));
+const adoptionRecord = vi.hoisted(() => ({ value: null as null | Record<string, string> }));
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => ({ read: async () => adoptionRecord.value })
 }));
 vi.mock('../shared/platform/companion/syncGroupDiscoverySession', () => ({
   startCompanionSyncGroupDiscoverySession: vi.fn(async (callback) => {
@@ -48,6 +53,7 @@ const candidate = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adoptionRecord.value = null;
   runtime.callback = null;
   choice.select.mockResolvedValue('use-group');
   runtime.loadGroup.mockResolvedValue(null);
@@ -221,15 +227,21 @@ it.each(['overwrite', null])('requests membership only after choosing %s', async
 it('waits for a resumed local replacement before showing successful membership', async () => {
   let finish!: () => void;
   runtime.loadGroup.mockResolvedValue({ group_id: candidate.group_id });
+  adoptionRecord.value = { groupId: candidate.group_id };
   runtime.adopt.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
   const { result } = renderHook(() => useCompanionSyncGroupJoin({
     bootstrapState: { database_path: '/library/foliole.db' } as never,
     onError: vi.fn(), onSaveEndpoint: vi.fn()
   }));
-  await waitFor(() => expect(runtime.adopt).toHaveBeenCalledOnce());
+  await waitFor(() => expect(result.current.member).toBe(true));
   expect(result.current.joined).toBe(false);
   expect(result.current.status).toBe('adopting');
-  await act(async () => finish());
+  // The sync scheduler, not the join screen, continues the persisted adoption.
+  let adoption!: Promise<boolean>;
+  act(() => { adoption = runPendingCompanionSyncGroupAdoption(); });
+  await waitFor(() => expect(runtime.adopt).toHaveBeenCalledOnce());
+  adoptionRecord.value = null;
+  await act(async () => { finish(); await adoption; });
   expect(result.current.joined).toBe(true);
   expect(result.current.status).toBe('idle');
 });

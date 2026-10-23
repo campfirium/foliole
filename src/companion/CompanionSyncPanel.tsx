@@ -2,6 +2,7 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
+import { runPendingCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { isNativeCompanionSyncParticipationRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -13,6 +14,7 @@ import { CompanionSyncParticipationControls } from './CompanionSyncParticipation
 import { useCompanionSyncProtocolNoticeRetry } from './CompanionSyncProtocolNotice';
 import { AwaitingApprovalState, EmptyDiscoveryState, ReceivingGroupDataState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
+import { useCompanionSyncGroupAdoptionRun } from './useCompanionSyncGroupAdoptionRun';
 import type { CompanionSyncGroupJoinStatus } from './useCompanionSyncGroupJoin';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
@@ -99,6 +101,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
 export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const t = useTranslation();
   const retryProtocolNotice = useCompanionSyncProtocolNoticeRetry();
+  const adoptionRun = useCompanionSyncGroupAdoptionRun();
   const endpointUrl = props.joinRequest?.endpointUrl ?? props.discoveries[0]?.endpointUrl
     ?? props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT;
   const busy = props.joinStatus === 'requesting';
@@ -110,7 +113,9 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
       <div className="flex flex-col gap-5">
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
-        {props.joinStatus === 'adopting' ? <ReceivingGroupDataState />
+        {props.joinStatus === 'adopting' || adoptionRun.phase !== 'none'
+          ? <ReceivingGroupDataState run={adoptionRun}
+            onRetry={() => { void runPendingCompanionSyncGroupAdoption().catch(() => undefined); }} />
           : props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
           onPull={(url) => { retryProtocolNotice(); return props.onPull(url); }}
           manualSyncFailureDetail={formatManualSyncFailure(props.error, t)} />

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { completeCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/completeCompanionSyncGroupAdoption';
+import { hydrateCompanionSyncGroupAdoptionRun } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
@@ -17,6 +17,7 @@ import type {
   CompanionSyncGroupDiscovery,
   PendingSyncGroupJoinRequest
 } from './companionSyncGroupJoinModel';
+import { useCompanionSyncGroupAdoptionRun } from './useCompanionSyncGroupAdoptionRun';
 
 export type CompanionSyncGroupJoinStatus = 'idle' | 'discovering' | 'requesting' | 'awaiting-acceptance' | 'adopting';
 
@@ -86,6 +87,10 @@ function useJoinCompletion(args: {
       setJoined(true);
       publishCompanionSyncMutationRevision({ kind: 'full' });
       return group;
+    }, async (error: unknown) => {
+      // Membership already written: the scheduler continues the interrupted adoption.
+      if (await loadCompanionSyncGroup().catch(() => null)) { setPendingRequest(null); setStatus('idle'); setJoined(true); }
+      throw error;
     }).finally(() => { completionRef.current = null; });
     return completionRef.current;
   }, [databasePath, pendingRequest, pendingRequestRef, setJoined, setPendingRequest, setStatus]);
@@ -212,17 +217,16 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
   useEffect(() => {
     void loadCompanionSyncGroup().then(async (group) => {
-      if (group) {
-        setStatus('adopting');
-        await completeCompanionSyncGroupAdoption();
-      }
-      setStatus('idle');
+      if (group) await hydrateCompanionSyncGroupAdoptionRun();
       setJoined(Boolean(group));
     }).catch(() => {
-      setJoined(false); setStatus('idle');
+      setJoined(false);
       onResumeErrorRef.current('sync_group_local_adoption_failed');
     });
   }, [args.bootstrapState.database_path]);
   useJoinAcceptancePolling(pendingRequest, complete);
-  return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };
+  const adoption = useCompanionSyncGroupAdoptionRun();
+  const adopting = joined && adoption.phase !== 'none';
+  return { cancel, complete, discoveries, discover, joined: joined && !adopting, member: joined, pendingRequest, request,
+    status: adopting ? 'adopting' as const : status };
 }

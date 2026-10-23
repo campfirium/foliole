@@ -178,7 +178,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   useCompanionAutoSync(
     viewState,
     setMergedSyncProgress,
-    join.joined,
+    join.member,
     participationActions.participation.hydrated,
     participationActions.participation.sync_enabled,
     participationActions.participation.sync_paused
