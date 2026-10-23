@@ -26,6 +26,8 @@ export async function buildRestoreFixture(outputPath: string) {
   });
 }
 
+const FIXTURE_REPLY_TIMEOUT_MS = 120_000;
+
 export function startRestoreFixture(script: string, root: string, port: number) {
   const child = fork(script, [], { execPath: process.execPath,
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', FOLIOLE_ELECTRON_TEST_STATE_ROOT: root,
@@ -52,10 +54,16 @@ export function startRestoreFixture(script: string, root: string, port: number) 
   const send = (action: string, args: Record<string, unknown> = {}) => new Promise<unknown>((resolve, reject) => {
     if (!child.connected) { reject(new Error(`fixture unavailable: ${diagnostics}`)); return; }
     const id = ++sequence;
-
+    // A reply that never arrives would otherwise hold the test until its overall timeout with no clue.
+    const watchdog = setTimeout(() => {
+      pending.delete(id);
+      const message = `fixture ${path.basename(root)} action ${action} gave no reply in ${FIXTURE_REPLY_TIMEOUT_MS} ms`;
+      process.stderr.write(`[fixture-hang] ${message}\n${diagnostics.slice(-6000)}\n`);
+      reject(new Error(message));
+    }, FIXTURE_REPLY_TIMEOUT_MS);
     pending.set(id, {
-      resolve(value) {  resolve(value); },
-      reject(error) {  reject(error); }
+      resolve(value) { clearTimeout(watchdog); resolve(value); },
+      reject(error) { clearTimeout(watchdog); reject(error); }
     });
     child.send({ id, action, args }, (error) => {
       if (error) { pending.delete(id); reject(error); }

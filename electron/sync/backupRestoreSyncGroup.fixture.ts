@@ -221,7 +221,12 @@ process.on('message', (message: { id: number; action: string; args: Record<strin
     : message.action.startsWith('watched')
       ? (action: string, args: Record<string, unknown>) => runWithDatabaseConnectionOwner(() => runWatchedSettingsFixture(action, args))
       : message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
-  void handler(message.action, message.args).then(
+  const startedAt = Date.now();
+  // Names an action that keeps running, so a hung test shows which step never settled.
+  const slow = setInterval(() => {
+    console.error(`[fixture-action] ${message.action} still running after ${Math.round((Date.now() - startedAt) / 1000)} s`);
+  }, 30_000);
+  void handler(message.action, message.args).finally(() => clearInterval(slow)).then(
     (result) => process.send?.({ id: message.id, result }),
     async (error: unknown) => {
       if (message.action === 'joinComplete') {
