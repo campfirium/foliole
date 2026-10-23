@@ -5,6 +5,7 @@ import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/works
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { companionWorkspaceSnapshots, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
+import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
 import { mergeCompanionLocalState } from './sync/workspace-state/companionLocalStateProjection.js';
@@ -17,7 +18,8 @@ async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: W
   return getIosCompanionDatabaseOwner().readSnapshot(async db => {
     const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
       ? await readScoped(db, input.current, input.scope) : null;
-    return scoped ?? loadIosCompanionWorkspaceSnapshot(db);
+    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db);
+    return next && attachOpenCompanionVirtualFolderResults(db, next);
   });
 }
 

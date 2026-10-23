@@ -19,7 +19,7 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', ()
 }));
 vi.mock('../shared/platform/companion/runtime/companionVirtualFolderResults', async original => {
   const actual = await original<typeof import('../shared/platform/companion/runtime/companionVirtualFolderResults')>();
-  return { loadCompanionVirtualFolderResultIds: async (...args: Parameters<typeof actual.loadCompanionVirtualFolderResultIds>) => {
+  return { ...actual, loadCompanionVirtualFolderResultIds: async (...args: Parameters<typeof actual.loadCompanionVirtualFolderResultIds>) => {
     const result = await actual.loadCompanionVirtualFolderResultIds(...args);
     runtime.queries += 1;
     const wait = runtime.wait;

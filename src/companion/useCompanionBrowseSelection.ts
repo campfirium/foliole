@@ -5,6 +5,7 @@ import {
   DEFAULT_FOLDER_LIST_SORT_KEY
 } from '../features/nodes/model/folderListOrdering';
 import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
+import { retainCompanionOpenVirtualFolder } from '../shared/platform/companion/browse/companionOpenVirtualFolders';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
@@ -47,6 +48,9 @@ export function useCompanionBrowseSelection(
       resolveCompanionTrashFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
     [selectedBrowseNodeId, browseSnapshot, sort.sortDirection, sort.sortKey]
   );
+
+  useEffect(() => selectedBrowseNodeId ? retainCompanionOpenVirtualFolder(selectedBrowseNodeId) : undefined,
+    [selectedBrowseNodeId]);
 
   useEffect(() => {
     if (selectedBrowseNodeId && !snapshot?.nodesById[selectedBrowseNodeId] && !resolvedReadableArticle && !browsedFolder) {
