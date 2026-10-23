@@ -24,6 +24,8 @@ it('renders dialog content with shared floating surface baseline', async () => {
   expect(dialog.className).toContain('border-[var(--app-floating-border-color)]');
   expect(dialog.className).toContain('bg-[var(--app-floating-surface-bg)]');
   expect(screen.getByLabelText('Demo overlay')).toBeInTheDocument();
+  // Opacity modifiers compile to color-mix(), which legacy Android WebViews drop to transparent.
+  expect(screen.getByLabelText('Demo overlay').className).not.toMatch(/\bbg-foreground\//u);
   expect(screen.getByText('Shared dialog')).toHaveClass('text-ui-md', 'font-normal');
   expect(screen.getByText('Shared dialog')).not.toHaveClass('font-semibold');
   expect(screen.getByText('Body copy').className).toContain('text-foreground/68');

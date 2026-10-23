@@ -11,6 +11,15 @@
   --companion-list-body: var(--companion-text-secondary);
   --companion-list-meta: var(--companion-text-tertiary);
 }
+/* Android WebView before Chrome 111 has no color-mix(); the generated fallback keeps only the
+   surface color, which erases floating borders and dialog band dividers. */
+@supports not (color: color-mix(in lab, red, red)) {
+  :root,
+  :root[data-resolved-base-color='dark'] {
+    --app-floating-border-color: rgb(var(--color-foreground) / 0.16);
+    --app-floating-divider-color: rgb(var(--color-foreground) / 0.1);
+  }
+}
 html, body, #root, #root * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
 .companion-toolbar-title {

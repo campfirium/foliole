@@ -16,7 +16,7 @@ const AppDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn('fixed inset-0 z-modal-overlay bg-foreground/10', className)}
+    className={cn('fixed inset-0 z-modal-overlay bg-[rgb(var(--color-foreground)/0.1)]', className)}
     {...props}
   />
 ));
