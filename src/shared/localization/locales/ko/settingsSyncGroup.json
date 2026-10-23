@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "제거 중",
+  "settings.companionSync.group.removing.progress": "제거 중 {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "확인한 기기",
   "settings.companionSync.group.title": "동기화 그룹",
   "settings.companionSync.group.named": "{name}의 동기화 그룹",

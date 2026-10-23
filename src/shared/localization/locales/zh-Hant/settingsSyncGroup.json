@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "移除中",
+  "settings.companionSync.group.removing.progress": "移除中 {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "已確認的裝置",
   "settings.companionSync.group.title": "同步群組",
   "settings.companionSync.group.named": "{name} 的同步群組",

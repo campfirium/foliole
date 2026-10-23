@@ -183,10 +183,10 @@ it('keeps removing targets out of normal devices and displays all remaining conf
     removing_devices: [{ target: { device_identity_key: 'Phone', device_name: 'Phone' },
       confirmed_devices: [{ device_identity_key: 'Mac', device_name: 'Mac (identity)' }] }]
   });
-  expect(screen.getAllByText('Mac (identity)')).toHaveLength(2);
+  expect(screen.getAllByText('Mac (identity)')).toHaveLength(1);
   expect(screen.getAllByText('Phone')).toHaveLength(1);
   expect(screen.queryByRole('button', { name: 'Remove from Sync Group' })).not.toBeInTheDocument();
-  expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Mac');
+  expect(screen.getByText('Removing 1/1').closest('[role="listitem"]')).toHaveTextContent('Phone');
 });
 
 it.each([true, false])('overwrites an expired device only after the user confirms (confirmed=%s)', async confirmed => {

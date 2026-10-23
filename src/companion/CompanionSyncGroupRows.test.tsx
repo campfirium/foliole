@@ -80,8 +80,8 @@ it('keeps pending targets out of normal members and shows the same confirmation 
     removing_devices: [{ target: { device_identity_key: 'Old phone', device_name: 'Old phone' },
       confirmed_devices: [{ device_identity_key: 'Local', device_name: 'Local (identity)' }] }]
   }} />);
-  expect(screen.getByRole('table', { name: 'Removing' })).toHaveTextContent('Local');
-  expect(screen.getAllByText('Local (identity)')).toHaveLength(2);
+  expect(screen.getByText('Removing 1/1').closest('[role="listitem"]')).toHaveTextContent('Old phone');
+  expect(screen.getAllByText('Local (identity)')).toHaveLength(1);
   expect(screen.getAllByText('Old phone')).toHaveLength(1);
   expect(await screen.findByText('Waiting client')).toBeInTheDocument();
 });

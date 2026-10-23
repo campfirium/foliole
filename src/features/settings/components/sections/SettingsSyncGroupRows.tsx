@@ -144,6 +144,8 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
   if (!props.group) return <EmptySyncGroupRow {...props} />;
   const group = props.group;
   const groupHeadingId = `sync-group-${group.group_id}-heading`;
+  const activeDevices = group.devices.filter((device) => device.state === 'active' &&
+    !props.removingDevices.some(entry => entry.target.device_identity_key === device.device_identity_key));
   return (
     <>
       <div className="px-settings-panel-x pt-1">
@@ -163,16 +165,15 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
           </div>
           <div aria-label={t('settings.companionSync.group.devices.title')}
             className="ml-5 divide-y divide-settings-divider/65 pl-5" role="list">
-            {group.devices.filter((device) => device.state === 'active' &&
-              !props.removingDevices.some(entry => entry.target.device_identity_key === device.device_identity_key)).map((device) => (
+            {activeDevices.map((device) => (
               <SettingsSyncGroupDeviceRow device={device} disabled={props.isBusy} group={group}
                 key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
                 syncEnabled={props.syncEnabled}
                 displayName={group.device_display_names?.[device.device_identity_key] ?? syncGroupDeviceDisplayName(device, group.devices)} />
             ))}
+            <SyncGroupRemovingDevices entries={props.removingDevices} requiredCount={activeDevices.length} />
           </div>
-          <SyncGroupRemovingDevices entries={props.removingDevices} />
         </section>
       </div>
       {props.joinRequests.length > 0 ? (

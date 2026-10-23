@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "Usuwanie",
+  "settings.companionSync.group.removing.progress": "Usuwanie {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "Urządzenia, które potwierdziły",
   "settings.companionSync.group.title": "Grupy synchronizacji",
   "settings.companionSync.group.named": "Grupa synchronizacji: {name}",

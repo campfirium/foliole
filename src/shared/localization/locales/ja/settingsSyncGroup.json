@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "削除中",
+  "settings.companionSync.group.removing.progress": "削除中 {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "確認済みのデバイス",
   "settings.companionSync.group.title": "同期グループ",
   "settings.companionSync.group.named": "{name} の同期グループ",

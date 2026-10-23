@@ -1,5 +1,5 @@
 export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
-  'settings.companionSync.group.removing.title': 'Removing',
+  'settings.companionSync.group.removing.progress': 'Removing {confirmed}/{total}',
   'settings.companionSync.group.removing.confirmed': 'Confirmed devices',
   'settings.companionSync.group.title': 'Sync Groups',
   'settings.companionSync.group.named': "{name}'s Sync Group",

@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "Удаление",
+  "settings.companionSync.group.removing.progress": "Удаление {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "Подтвердившие устройства",
   "settings.companionSync.group.title": "Группы синхронизации",
   "settings.companionSync.group.named": "Группа синхронизации {name}",

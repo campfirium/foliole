@@ -62,10 +62,11 @@ function SyncGroupDevices(props: {
   providerState: CompanionSyncGroupProviderState | null;
 }) {
   const t = useTranslation();
+  const activeDevices = props.group.devices.filter((device) => device.state === 'active' &&
+    !props.group.removing_devices?.some(entry => entry.target.device_identity_key === device.device_identity_key));
   return (
     <div aria-label={t('companion.sync.devices')} className="ml-4 divide-y divide-companion-divider border-t border-companion-divider pl-4" role="list">
-      {props.group.devices.filter((device) => device.state === 'active' &&
-        !props.group.removing_devices?.some(entry => entry.target.device_identity_key === device.device_identity_key)).map((device) => {
+      {activeDevices.map((device) => {
         const isLocal = device.device_identity_key === props.group.local_device_identity_key;
         return (
           <div className="flex min-h-14 items-center justify-between gap-4 py-2.5" key={device.device_identity_key} role="listitem">
@@ -89,6 +90,7 @@ function SyncGroupDevices(props: {
           </div>
         );
       })}
+      <SyncGroupRemovingDevices entries={props.group.removing_devices ?? []} requiredCount={activeDevices.length} />
     </div>
   );
 }
@@ -112,7 +114,6 @@ export function CompanionSyncGroupRows(props: { group: SyncGroupPayload; onLeave
       <CompanionSyncGroupJoinApproval provider={provider} />
       <SyncGroupDevices group={props.group} onTogglePause={togglePause}
         paused={participation.sync_paused} providerState={provider.state} />
-      <SyncGroupRemovingDevices entries={props.group.removing_devices ?? []} />
     </section>
   );
 }

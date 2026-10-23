@@ -1,5 +1,5 @@
 {
-  "settings.companionSync.group.removing.title": "Removendo",
+  "settings.companionSync.group.removing.progress": "Removendo {confirmed}/{total}",
   "settings.companionSync.group.removing.confirmed": "Dispositivos confirmados",
   "settings.companionSync.group.title": "Grupos de sincronização",
   "settings.companionSync.group.named": "Grupo de sincronização de {name}",
