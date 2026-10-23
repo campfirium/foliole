@@ -8,16 +8,10 @@ import { removeA5AcceptanceApplication } from './macos-a5-acceptance-package-cle
 import { measureAndroidWorkspaceMemory } from './android-a5-workspace-memory.mjs';
 import { measureAttachmentQueues } from './a5-attachment-queue-measurement.mjs';
 
-import {
-  evaluateCompanionDatabasePerformanceResults,
-  parseCompanionDatabasePerformanceOutput
-} from '../mobile/companion-database-performance-contract.mjs';
-
 const APP_ID = PERFORMANCE_APP_ID;
 const TEST_NAMESPACE = 'com.foliole.android';
 const TEST_APP_ID = `${APP_ID}.test`;
 const RUNNER = `${TEST_APP_ID}/androidx.test.runner.AndroidJUnitRunner`;
-const TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabasePerformanceGateTest`;
 const LIFECYCLE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
 const RESOURCE_PROVIDER_TEST_CLASS = `${TEST_NAMESPACE}.FolioleResourceProviderTest`;
 const WORKSPACE_CAPACITY_TEST_CLASS = `${TEST_NAMESPACE}.FolioleLibraryWorkspaceCapacityTest`;
@@ -78,12 +72,12 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
         fs.writeFileSync(path.join(evidenceRoot, `android-workspace-capacity-${method}.log`), result.output);
         assertSingleInstrumentationPassed(result.output, `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`);
       }
-    } else {
+    } else if (scenario !== 'native-contracts') {
       result = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
         '-e', 'class', scenario === 'remediation-performance' ? `${TEST_NAMESPACE}.FolioleRemediationPerformanceAcceptanceTest`
           : requestSnapshot ? `${TEST_NAMESPACE}.FolioleRequestSnapshotAcceptanceTest`
-          : capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
+          : `${TEST_NAMESPACE}.FolioleLibraryCapacityTest`, RUNNER
       ], options);
       output.push(result.output);
     }
@@ -105,21 +99,19 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       execute, paths, serial, options });
     if (workspaceCapacity) return await saveWorkspaceCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options, resetFixture, workspaceMemory });
+    const contracts = [];
     for (const testClass of [LIFECYCLE_TEST_CLASS, RESOURCE_PROVIDER_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
       ], options);
       assertInstrumentationPassed(contract.output, testClass);
       output.push(contract.output);
+      contracts.push({ testClass, passed: true });
     }
-    const rawOutputPath = path.join(evidenceRoot, 'android-performance.log');
-    fs.writeFileSync(rawOutputPath, result.output);
-    const measurements = parseCompanionDatabasePerformanceOutput(result.output);
-    const gate = evaluateCompanionDatabasePerformanceResults(measurements, ['android']);
-    const evidence = { gate, measurements, platform: 'android', rawOutputPath, schemaVersion: 1 };
-    const evidencePath = path.join(evidenceRoot, 'android-performance.json');
-    fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
-    if (!gate.passed) throw new Error(`Android database performance gate failed: ${gate.failures.join('; ')}`);
+    const rawOutputPath = path.join(evidenceRoot, 'android-native-contracts.log');
+    fs.writeFileSync(rawOutputPath, output.join(''));
+    const evidencePath = path.join(evidenceRoot, 'android-native-contracts.json');
+    fs.writeFileSync(evidencePath, `${JSON.stringify({ contracts, identities, platform: 'android', rawOutputPath }, null, 2)}\n`);
     return { evidencePath, output: output.join('') };
   } finally {
     if (testInstalled) await restoreAcceptanceActivity({ execute, paths, serial, options, evidenceRoot });

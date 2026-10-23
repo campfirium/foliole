@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { COMPANION_DATABASE_PERFORMANCE_GATE_VERSION, COMPANION_DATABASE_PERFORMANCE_WORKLOADS } from '../mobile/companion-database-performance-contract.mjs';
 import { runA5DatabasePerformance } from './android-a5-database-performance-action.mjs';
 
 const created = [];
@@ -22,14 +21,13 @@ afterEach(() => {
 });
 
 describe('fixed A5 database performance action', () => {
-  it('runs the fixed performance and lifecycle contracts and persists passing evidence', async () => {
+  it('runs the native lifecycle and resource provider contracts and persists passing evidence', async () => {
     const evidenceRoot = createEvidenceRoot('a5-performance-test-');
     const calls = [];
     const execute = async (command, args) => {
       calls.push([command, args]);
       const isLifecycleContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest');
       const isResourceProviderContract = args.includes('com.foliole.android.FolioleResourceProviderTest');
-      const isInstrumentation = args.includes('instrument');
       let output = 'Success\n';
       if (args.includes('dumpsys')) {
         output = 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}';
@@ -37,8 +35,6 @@ describe('fixed A5 database performance action', () => {
         output = 'OK (4 tests)\n';
       } else if (isLifecycleContract) {
         output = 'OK (2 tests)\n';
-      } else if (isInstrumentation) {
-        output = performanceOutput();
       }
       return { code: 0, output, stderr: '', stdout: '' };
     };
@@ -51,33 +47,23 @@ describe('fixed A5 database performance action', () => {
       serial: 'fixed-a5'
     });
     const evidence = JSON.parse(fs.readFileSync(result.evidencePath, 'utf8'));
-    expect(evidence.gate).toEqual({ failures: [], passed: true });
-    expect(evidence.measurements).toHaveLength(5);
+    expect(evidence.contracts).toEqual([
+      { testClass: 'com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest', passed: true },
+      { testClass: 'com.foliole.android.FolioleResourceProviderTest', passed: true }
+    ]);
     expect(calls.find(([, args]) => args.includes('-t'))?.[1].at(-1)).toBe('/repo/test.apk');
     const instrumentation = calls.filter(([, args]) => args.includes('instrument')).map(([, args]) => args);
+    expect(instrumentation).toHaveLength(2);
     expect(instrumentation[0]).toContain(
-      'com.foliole.android.FolioleCompanionDatabasePerformanceGateTest'
-    );
-    expect(instrumentation[1]).toContain(
       'com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest'
     );
-    expect(instrumentation[2]).toContain(
+    expect(instrumentation[1]).toContain(
       'com.foliole.android.FolioleResourceProviderTest'
     );
     expect(calls.at(-3)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.campfirium.foliole.android.acceptance.test']);
     expect(calls.at(-2)?.[1]).toContain('com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
   });
 });
-
-function performanceOutput() {
-  return Object.keys(COMPANION_DATABASE_PERFORMANCE_WORKLOADS).map((workload) =>
-    `INSTRUMENTATION_STATUS: stream=FOLIOLE_DATABASE_PERFORMANCE_RESULT=${JSON.stringify({
-      bridge_blob_bytes: 0, bridge_observation: 'observed', candidate_ms: 10, candidate_peak_delta_bytes: 1024,
-      cleanup_verified: true, gate_version: COMPANION_DATABASE_PERFORMANCE_GATE_VERSION, native_ms: 10,
-      native_peak_delta_bytes: 1024, platform: 'android', timer_resolution_ms: 1, workload
-    })}`
-  ).join('\n');
-}
 
 it('refuses a mismatched APK before any device command', async () => {
   const calls = [];

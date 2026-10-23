@@ -6,7 +6,7 @@ import { removeA5AcceptanceTestApplication } from './macos-a5-acceptance-package
 export async function runIsolatedImageContract(args, testClass, validateOutput, dependencies) {
   args.assertFixed();
   const build = dependencies.buildIsolated ?? buildA5DatabasePerformance;
-  build({ ...args, env: { ...args.env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'native-gate' } });
+  build({ ...args, env: { ...args.env, FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'native-contracts' } });
   const cleanup = dependencies.cleanupTest ?? removeA5AcceptanceTestApplication;
   const runId = args.buildIdentity();
   const root = path.join(args.paths.artifactsRoot, 'a5-image-contract', runId);
