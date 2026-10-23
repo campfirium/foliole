@@ -105,7 +105,13 @@ async function runStatement(connection: SQLiteDBConnection, sql: string, params:
     // One explicit row avoids executeSet treating a leading BLOB as a batch of rows.
     return connection.executeSet([{ statement: sql, values: [values] }], false);
   }
-  return connection.run(sql, normalizeParams(params, platform), false);
+  return connection.run(platform === 'android' ? withoutPluginDeleteScan(sql) : sql, normalizeParams(params, platform), false);
+}
+
+// The Android plugin inspects every table's columns before each statement whose first word is DELETE,
+// for a soft-delete sync feature Foliole does not use. A no-op WITH clause keeps the same delete.
+function withoutPluginDeleteScan(sql: string) {
+  return /^\s*DELETE\b/iu.test(sql) ? `WITH foliole_delete(x) AS (SELECT 1) ${sql.trimStart()}` : sql;
 }
 
 function normalizeParams(params: DbParams, platform: string) {
