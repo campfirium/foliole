@@ -1,5 +1,4 @@
 import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
@@ -16,6 +15,7 @@ import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnot
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } from './companionSelectionToolbarState';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
@@ -89,20 +89,14 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   useEffect(() => {
     if (reading.isContentEditing) toolbar.editorRef.current?.focus();
   }, [reading.isContentEditing, toolbar.editorRef]);
-  async function toggleContentEditing() {
-    if (reading.isContentEditing) {
-      try { await props.activity?.flush(); } catch { return; }
-      reading.exitContentEditing();
-      props.activity?.setEditing(false);
-      return;
-    }
-    toolbar.clearSelectionAndCloseToolbar();
-    flushSync(() => {
-      reading.enterContentEditing();
-      props.activity?.setEditing(true);
-    });
-    toolbar.editorRef.current?.focus();
-  }
+  const { cancelContentEditing, toggleContentEditing } = useCompanionContentEditingActions({
+    activity: props.activity,
+    editing: reading.isContentEditing,
+    enter: reading.enterContentEditing,
+    exit: reading.exitContentEditing,
+    focusEditor: () => toolbar.editorRef.current?.focus(),
+    prepareEnter: toolbar.clearSelectionAndCloseToolbar
+  });
   useCompanionReadableAndroidBack({
     editing: reading.isContentEditing,
     selectionOpen: Boolean(toolbar.selectionToolbar),
@@ -123,6 +117,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     toolbar.setSelectionToolbar(resolveExistingHighlightToolbarState(cloze, getDefaultSelectionClientPoint()));
   } : undefined;
   return {
+    cancelContentEditing,
     openClozeRemoval,
     ...toolbarEvents,
     reading,
@@ -160,6 +155,7 @@ function ImmersiveArticleChrome(props: {
       onReadingTypographySettingsChange={readingTypography.updateSettings}
       readingTypographySaveError={readingTypography.saveError}
       onSelectOutlineItem={model.selectOutlineItem}
+      onCancelContentEditing={model.cancelContentEditing}
       onToggleContentEditing={model.toggleContentEditing}
       openReadingSheet={model.reading.openReadingSheet}
       outlineOpen={model.reading.isOutlineOpen}

@@ -9,6 +9,8 @@ export class ContentDraftSession {
   value: string;
   error: string | null = null;
   ready: boolean;
+  /** Counts content adopted from versions this session did not submit. */
+  foreignAdoptions = 0;
   private imageReferences = new Map<string, ContentImageReference>();
   private sequence = 0;
   private acknowledged = 0;
@@ -88,6 +90,7 @@ export class ContentDraftSession {
         if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
         return;
       }
+      if (source.versionId !== this.base.versionId) this.foreignAdoptions += 1;
       this.base = source;
       this.value = source.content;
       this.publish();
@@ -158,6 +161,7 @@ export class ContentDraftSession {
         this.refreshSaved = error.refresh;
         return error.acknowledgement;
       });
+      if (ack.currentVersionId !== ack.submittedVersionId) this.foreignAdoptions += 1;
       this.acknowledged = edit.sequence;
       this.pending = null;
       this.error = null;

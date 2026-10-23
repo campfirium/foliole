@@ -230,8 +230,12 @@ function useReadableDocumentActivity(props: Parameters<typeof ReadableArticleDoc
     const activity = props.activity;
     if (!activity) return;
     activity.flushDraft = editorState.flushPendingSave;
-    return () => { if (activity.flushDraft === editorState.flushPendingSave) activity.flushDraft = null; };
-  }, [props.activity, editorState.flushPendingSave]);
+    activity.editRound = editorState.editRound;
+    return () => {
+      if (activity.flushDraft === editorState.flushPendingSave) activity.flushDraft = null;
+      if (activity.editRound === editorState.editRound) activity.editRound = null;
+    };
+  }, [props.activity, editorState.flushPendingSave, editorState.editRound]);
   return useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;
     await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);

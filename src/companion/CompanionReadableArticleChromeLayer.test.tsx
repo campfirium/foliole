@@ -26,6 +26,7 @@ function renderChrome(onRestoreFromTrash?: (nodeId: string) => void, sheet: 'hig
       editor={null}
       isChromeVisible
       isContentEditing={false}
+      onCancelContentEditing={vi.fn()}
       onExit={vi.fn()}
       onFindInDocument={vi.fn()}
       onOpenActions={vi.fn()}

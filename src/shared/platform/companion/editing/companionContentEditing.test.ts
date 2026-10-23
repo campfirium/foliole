@@ -204,7 +204,7 @@ it('opens editable content promptly with ten thousand visible topics', { meta: {
     }
   })();
   const started = performance.now();
-  expect(await readCompanionContentSource('topic')).toEqual({ content: baseline, versionId: 'base' });
+  expect(await readCompanionContentSource('topic')).toEqual({ content: baseline, imageReferences: [], versionId: 'base' });
   process.stdout.write(JSON.stringify({ event: 'timing_metric', test: 'companionContentEditing ten thousand topics',
     name: 'readSourceMs', valueMs: performance.now() - started, budgetMs: 1000 }) + '\n');
 });

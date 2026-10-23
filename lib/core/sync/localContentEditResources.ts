@@ -21,6 +21,17 @@ export function parseNewImageReferences(value: unknown): ContentImageReference[]
   });
 }
 
+/** Image resources a later edit can submit again to restore this record's images. */
+export function contentImageReferences(record: NativeSyncNodeRecord): ContentImageReference[] {
+  const sources = parseImageSources(record.snapshot.image_sources);
+  return parseNodeResourceReferences(record.snapshot.resource_references)
+    .filter(reference => reference.role === 'image')
+    .map((reference): ContentImageReference => {
+      const source = sources[reference.storage_key];
+      return source ? { ...reference, source_url: source } : reference;
+    });
+}
+
 export function contentEditImageInputHash(value: unknown) {
   return hashText(JSON.stringify(parseNewImageReferences(value)));
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import type { EditorContentChangeMeta } from '../features/editor/adapters/EditorAdapter';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import { ContentDraftSession } from '../shared/platform/companion/editing/contentDraftSession';
+import { ContentEditRound } from '../shared/platform/companion/editing/contentEditRound';
 
 import { useCompanionDrafts } from './CompanionDraftProvider';
 
@@ -32,6 +33,7 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
     // Source refreshes must not replace an existing node's edit owner.
   }, [drafts, args.nodeId, Boolean(args.onSaveContent)]);
   if (session && args.onSaveContent) session.save = args.onSaveContent;
+  const editRound = useMemo(() => session ? new ContentEditRound(session) : null, [session]);
 
   useEffect(() => session?.subscribe(render), [session]);
   useEffect(() => {
@@ -51,11 +53,13 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
   }, [args.canEdit, session]);
 
   const handleChange = useCallback((value: string, meta?: EditorContentChangeMeta) => {
-    if (args.canEdit) session?.change(value, meta?.newImageReferences);
-  }, [args.canEdit, session]);
+    if (!args.canEdit) return;
+    editRound?.capture();
+    session?.change(value, meta?.newImageReferences);
+  }, [args.canEdit, editRound, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
   const markBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput(); }, [args.canEdit, session]);
-  return { error: session?.error ?? null, flushPendingSave, handleChange, markBufferedInput,
+  return { editRound, error: session?.error ?? null, flushPendingSave, handleChange, markBufferedInput,
     ready: session?.ready ?? false,
     value: session?.value ?? args.initialContent };
 }

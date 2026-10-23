@@ -57,13 +57,14 @@ function ChromeSpacer() {
 }
 
 function EditingChrome(props: {
+  onCancelContentEditing?: (() => void) | undefined;
   onToggleContentEditing?: (() => void) | undefined;
 }) {
   const t = useTranslation();
   return (
     <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
       <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
-        <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onToggleContentEditing} />
+        <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onCancelContentEditing} testId="companion-reading-edit-cancel" />
         <span className="min-w-0 flex-1 text-center text-[17px] font-normal text-foreground">
           {t('companion.reading.editContent')}
         </span>
@@ -117,6 +118,7 @@ export function ReadingChrome(props: {
   actionsAtTop?: boolean;
   canEditContent?: boolean;
   isContentEditing?: boolean;
+  onCancelContentEditing?: () => void;
   onExit(): void;
   onToggleContentEditing?: () => void;
   onOpenActions(): void;
@@ -126,7 +128,7 @@ export function ReadingChrome(props: {
   visible?: boolean;
 }) {
   if (props.isContentEditing) {
-    return <EditingChrome onToggleContentEditing={props.onToggleContentEditing} />;
+    return <EditingChrome onCancelContentEditing={props.onCancelContentEditing} onToggleContentEditing={props.onToggleContentEditing} />;
   }
   const controlsVisible = props.visible !== false;
   return (

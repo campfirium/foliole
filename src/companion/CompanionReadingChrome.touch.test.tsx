@@ -14,7 +14,8 @@ function touch(button: HTMLElement, type: string, x = 0) {
 function renderActions(editing = false) {
   const activate = vi.fn();
   render(<ReadingChrome canEditContent isContentEditing={editing} onExit={activate}
-    onOpenActions={activate} onOpenOutline={activate} onToggleContentEditing={activate} title="Topic" />);
+    onOpenActions={activate} onOpenOutline={activate} onCancelContentEditing={activate}
+    onToggleContentEditing={activate} title="Topic" />);
   return activate;
 }
 

@@ -14,7 +14,7 @@ function ReadingRoute() {
   if (!open) return <p>Search results</p>;
   return <ImmersiveChromeLayer
     actionsOpen={reading.isActionsSheetOpen} editor={null} isChromeVisible
-    isContentEditing={reading.isContentEditing} onExit={() => setOpen(false)}
+    isContentEditing={reading.isContentEditing} onCancelContentEditing={reading.exitContentEditing} onExit={() => setOpen(false)}
     onFindInDocument={reading.openDocumentSearch}
     onOpenActions={reading.setIsActionsSheetOpen} onOpenOutline={reading.setIsOutlineOpen}
     onOpenReadingSheet={reading.setOpenReadingSheet} onOpenSearchSheet={reading.setIsSearchSheetOpen}

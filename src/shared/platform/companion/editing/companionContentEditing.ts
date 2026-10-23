@@ -2,6 +2,7 @@ import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLi
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
+import { contentImageReferences } from '../../../../../lib/core/sync/localContentEditResources';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../../../../lib/core/sync/syncNodeGraph';
@@ -22,7 +23,7 @@ export async function readCompanionContentSource(nodeId: string, holdId?: string
     const current = await loadCurrentSyncNodeRecord(db, nodeId, false);
     if (!current?.version_id || current.snapshot.deleted_at) throw new Error('content_edit_node_unavailable');
     if (holdId) await retainLocalEditBase(db, { holdId, nodeId, versionId: current.version_id });
-    return { content: current.body_text ?? '', versionId: current.version_id };
+    return { content: current.body_text ?? '', imageReferences: contentImageReferences(current), versionId: current.version_id };
   };
   return holdId
     ? runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction(read)))

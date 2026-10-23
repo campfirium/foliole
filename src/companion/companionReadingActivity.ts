@@ -1,8 +1,11 @@
+import type { ContentEditRound } from '../shared/platform/companion/editing/contentEditRound';
+
 import { CompanionSelectionRefreshError } from './companionSelectionRefreshError';
 
 export class CompanionReadingActivity {
   editing = false;
   flushDraft: (() => Promise<void>) | null = null;
+  editRound: ContentEditRound | null = null;
   private pending = new Set<Promise<unknown>>();
   private errors = new Map<string, unknown>();
 

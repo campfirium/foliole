@@ -48,6 +48,7 @@ interface ImmersiveChromeLayerProps {
   onOpenClozeRemoval?: () => void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
+  onCancelContentEditing(): void;
   onToggleContentEditing(): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
   outlineOpen: boolean;
@@ -68,6 +69,7 @@ function ReadingChromeControls(props: {
   onOpenActions(open: boolean): void;
   onOpenAlternative?: () => void;
   onOpenOutline(open: boolean): void;
+  onCancelContentEditing(): void;
   onToggleContentEditing(): void;
   readableArticle: ReadableArticle;
 }) {
@@ -81,6 +83,7 @@ function ReadingChromeControls(props: {
       onOpenActions={() => props.onOpenActions(true)}
       {...definedProps({ onOpenAlternative: props.onOpenAlternative })}
       onOpenOutline={() => props.onOpenOutline(true)}
+      onCancelContentEditing={props.onCancelContentEditing}
       onToggleContentEditing={props.onToggleContentEditing}
       title={props.readableArticle.title}
     />
@@ -181,6 +184,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
             : undefined
         })}
         onOpenOutline={props.onOpenOutline}
+        onCancelContentEditing={props.onCancelContentEditing}
         onToggleContentEditing={props.onToggleContentEditing}
         readableArticle={props.readableArticle}
       />

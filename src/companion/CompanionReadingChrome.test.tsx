@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReadingChrome } from './CompanionReadingChrome';
@@ -99,5 +99,19 @@ describe('ReadingChrome editing', () => {
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
+  });
+
+  it('routes Cancel to discarding the editing round and Done to keeping it', () => {
+    const cancel = vi.fn();
+    const done = vi.fn();
+    render(<ReadingChrome isContentEditing onCancelContentEditing={cancel} onToggleContentEditing={done}
+      onExit={vi.fn()} onOpenActions={vi.fn()} onOpenOutline={vi.fn()} title="Topic" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }), { detail: 1 });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(done).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }), { detail: 1 });
+    expect(done).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
