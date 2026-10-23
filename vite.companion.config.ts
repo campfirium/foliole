@@ -8,6 +8,9 @@ import { defineConfig, mergeConfig } from 'vite';
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
+// Tailwind's pre-color-mix fallback for `<channel color>/<alpha>` utilities double-wraps rgb() and is invalid.
+const BROKEN_ALPHA_COLOR_FALLBACK =
+  /color-mix\(in srgb,\s*rgb\(rgb\((var\(--[\w-]+\)) \/ 1\) \/ 1\) ([\d.]+%),\s*transparent\)/gu;
 
 export function unwrapCssCascadeLayersForLegacyWebView(css: string) {
   const root = postcss.parse(css);
@@ -21,6 +24,14 @@ export function unwrapCssCascadeLayersForLegacyWebView(css: string) {
   return root.toString();
 }
 
+export function repairAlphaColorFallbacksForLegacyWebView(css: string) {
+  const root = postcss.parse(css);
+  root.walkDecls((declaration) => {
+    declaration.value = declaration.value.replace(BROKEN_ALPHA_COLOR_FALLBACK, 'rgb($1 / $2)');
+  });
+  return root.toString();
+}
+
 function companionLegacyWebViewCssPlugin(): Plugin {
   return {
     name: 'companion-legacy-webview-css',
@@ -29,7 +40,7 @@ function companionLegacyWebViewCssPlugin(): Plugin {
         if (asset.type !== 'asset' || !asset.fileName.endsWith('.css') || typeof asset.source !== 'string') {
           continue;
         }
-        asset.source = unwrapCssCascadeLayersForLegacyWebView(asset.source);
+        asset.source = repairAlphaColorFallbacksForLegacyWebView(unwrapCssCascadeLayersForLegacyWebView(asset.source));
       }
     }
   };

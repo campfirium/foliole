@@ -5,7 +5,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import capacitorConfig, { createCapacitorConfig } from '../capacitor.config.ts';
-import companionViteConfig, { unwrapCssCascadeLayersForLegacyWebView } from '../vite.companion.config.ts';
+import companionViteConfig, {
+  repairAlphaColorFallbacksForLegacyWebView,
+  unwrapCssCascadeLayersForLegacyWebView
+} from '../vite.companion.config.ts';
 import demoViteConfig, {
   demoManifestPlugin,
   filterDemoModulePreloadDependencies,
@@ -207,5 +210,19 @@ describe('vite config', () => {
     const css = '@layer theme{:root{--spacing:.25rem}}@layer utilities{.flex{display:flex}}@layer components;';
 
     expect(unwrapCssCascadeLayersForLegacyWebView(css)).toBe(':root{--spacing:.25rem}.flex{display:flex}');
+  });
+
+  it('gives channel-color alpha utilities a valid fallback for WebViews without color-mix', () => {
+    const modern = '@supports (color:color-mix(in lab, red, red)){.bg-foreground\\/10{background-color:color-mix(in oklab, rgb(var(--color-foreground) / 1) 10%, transparent)}}';
+    const css =
+      '.bg-foreground\\/10{background-color:color-mix(in srgb, rgb(rgb(var(--color-foreground) / 1) / 1) 10%, transparent)}' +
+      '.ring-border\\/35{--tw-ring-color:color-mix(in srgb, rgb(rgb(var(--color-border) / 1) / 1) 3.5%, transparent)}' +
+      modern;
+
+    expect(repairAlphaColorFallbacksForLegacyWebView(css)).toBe(
+      '.bg-foreground\\/10{background-color:rgb(var(--color-foreground) / 10%)}' +
+        '.ring-border\\/35{--tw-ring-color:rgb(var(--color-border) / 3.5%)}' +
+        modern
+    );
   });
 });
