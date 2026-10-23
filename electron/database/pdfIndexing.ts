@@ -1,7 +1,3 @@
-import fs from 'node:fs';
-
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
@@ -10,6 +6,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connec
 import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
 import { beginPdfIndexAttempt, isMountedPdf, readPdfIndexState, resetPdfIndexState, updatePdfIndexStatus } from './pdfIndexState.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
+import { extractPdfPageTextOffMainThread } from './pdfPageTextWorkerClient.js';
 
 const RETRY_LIMIT = 2;
 
@@ -28,66 +25,12 @@ interface PdfAttempt {
 }
 const activeAttempts = new Map<string, PdfAttempt>();
 
-export function toPdfDocumentData(bytes: Uint8Array) {
-  return new Uint8Array(bytes);
-}
-
-function resolvePdfPageText(content: { items: unknown[] }) {
-  return content.items
-    .map((item) => {
-      if (!item || typeof item !== 'object') {
-        return '';
-      }
-      return 'str' in item && typeof item.str === 'string' ? item.str : '';
-    })
-    .join('');
-}
-
-function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: number }) => { width?: number; height?: number } }) {
-  const viewport = pdfPage.getViewport({ scale: 1 });
-  if (
-    typeof viewport.width !== 'number' ||
-    !Number.isFinite(viewport.width) ||
-    viewport.width <= 0 ||
-    typeof viewport.height !== 'number' ||
-    !Number.isFinite(viewport.height) ||
-    viewport.height <= 0
-  ) {
-    return null;
-  }
-  return { height: viewport.height, width: viewport.width };
-}
-
 async function extractPdfPageText(attachmentId: string) {
   const resolved = await resolveAttachmentFile(`${attachmentId}.pdf`);
   if (resolved.status !== 'ready') {
     throw new Error('PDF attachment file is not available.');
   }
-
-  const bytes = fs.readFileSync(resolved.filePath);
-  const loadingTask = getDocument({
-    data: toPdfDocumentData(bytes),
-    isEvalSupported: false,
-    useWorkerFetch: false
-  });
-  const document = await loadingTask.promise;
-  try {
-    const pages: Array<{ page: number; text: string; pageHeight: number | null; pageWidth: number | null }> = [];
-    for (let page = 1; page <= document.numPages; page += 1) {
-      const pdfPage = await document.getPage(page);
-      const textContent = await pdfPage.getTextContent();
-      const pageDimensions = resolvePdfPageDimensions(pdfPage);
-      pages.push({
-        page,
-        pageHeight: pageDimensions?.height ?? null,
-        pageWidth: pageDimensions?.width ?? null,
-        text: resolvePdfPageText(textContent)
-      });
-    }
-    return pages;
-  } finally {
-    await document.destroy();
-  }
+  return extractPdfPageTextOffMainThread(resolved.filePath);
 }
 
 function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: number; text: string }>) {

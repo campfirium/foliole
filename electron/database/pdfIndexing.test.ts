@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { toPdfDocumentData } from './pdfIndexing.js';
+import { toPdfDocumentData } from './pdfPageTextExtraction.js';
 
 it('normalizes Buffer bytes to Uint8Array for pdfjs loading', () => {
   const buffer = Buffer.from([1, 2, 3, 4]);
