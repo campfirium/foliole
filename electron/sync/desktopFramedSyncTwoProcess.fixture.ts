@@ -110,13 +110,13 @@ async function loadProcessPort() {
 }
 
 function seed(args: Readonly<Record<string, unknown>>) {
-  const now = '2026-10-05T00:00:00.000Z';
+  const now = typeof args.updatedAt === 'string' ? args.updatedAt : '2026-10-05T00:00:00.000Z';
   upsertNodeSnapshot({
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
     content: String(args.content),
-    createdAt: now,
+    createdAt: '2026-10-05T00:00:00.000Z',
     isTitleManual: true,
-    kind: 'topic',
+    kind: args.kind === 'item' || args.kind === 'folder' ? args.kind : 'topic',
     nodeId: String(args.nodeId),
     parentNodeId: typeof args.parentNodeId === 'string' ? args.parentNodeId : null,
     position: 0,

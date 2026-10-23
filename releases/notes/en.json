@@ -1,4 +1,12 @@
 {
+  "0.7.16": {
+    "notes": [
+      "Fixed",
+      "Blocked exploitation of a Node.js security vulnerability (CVE-2026-111497) through LAN sync. Previously, an attack was possible only with sync enabled and an attacker on the same local network specifically targeting Foliole.",
+      "Upgrading the app or restoring an older backup no longer leaves it unresponsive for extended periods.",
+      "Prevented occasional incorrect merges during sync conflicts."
+    ]
+  },
   "0.7.15": {
     "notes": [
       "New",

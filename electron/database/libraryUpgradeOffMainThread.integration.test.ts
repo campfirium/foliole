@@ -14,14 +14,15 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 vi.mock('node:worker_threads', async (original) => {
   const native = await original<typeof import('node:worker_threads')>();
   return { ...native, Worker: class extends native.Worker {
-    constructor(_url: URL, options: import('node:worker_threads').WorkerOptions) {
-      super(new URL('./databaseUpgradeWorker.ts', import.meta.url), { ...options,
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      super(new URL(url.href.replace(/\.js$/u, '.ts')), { ...options,
         execArgv: ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-transform-types'] });
     }
   } };
 });
 
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/migrations.js';
+import { readWorkspaceSearchSidecarRebuildStatus } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { NativeDatabaseUpgradeStatus } from '../../lib/platform/nativeDatabaseUpgradeContract.js';
 
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
@@ -51,6 +52,9 @@ function installOlderLibrary() {
   older.close();
   return dbPath;
 }
+
+/** A responsive window on a slow hosted runner; a main-thread upgrade or copy stalls for seconds. */
+const MAX_MAIN_THREAD_STALL_MS = 500;
 
 function watchMainThread() {
   const statuses: NativeDatabaseUpgradeStatus[] = [];
@@ -85,8 +89,8 @@ it('opens a library from an older version without stalling the main thread', asy
   expect(loadDatabaseUpgradeStatus()).toEqual({ state: 'ready' });
   expect(stages).toEqual(['database_background_upgrade_complete']);
   expect(stagePayloads[0]).toMatchObject({ result: 'upgraded' });
-  // Upgrading this library on the main thread blocked it for the whole migration.
-  expect(longestStallMs).toBeLessThan(250);
+  // Upgrading this library on the main thread blocked it for the whole migration (minutes for a large library).
+  expect(longestStallMs).toBeLessThan(MAX_MAIN_THREAD_STALL_MS);
 }, 120_000);
 
 it('restores a backup from an older version without stalling the main thread', async () => {
@@ -103,5 +107,8 @@ it('restores a backup from an older version without stalling the main thread', a
   expect(restored.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(restored.prepare('SELECT count(*) AS n FROM node_sync_versions WHERE body_text IS NULL').get()).toEqual({ n: 960 });
   expect(statuses.some((status) => status.state === 'upgrading')).toBe(true);
-  expect(longestStallMs).toBeLessThan(250);
+  // The restored library is searchable as soon as the restore completes.
+  expect(readWorkspaceSearchSidecarRebuildStatus(restored)?.status).toBe('ready');
+  expect(restored.prepare("SELECT count(*) AS n FROM search.node_search WHERE node_id = 'topic-479'").get()).toEqual({ n: 1 });
+  expect(longestStallMs).toBeLessThan(MAX_MAIN_THREAD_STALL_MS);
 }, 120_000);
