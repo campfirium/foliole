@@ -15,6 +15,7 @@
 - 临时 PR、冻结候选或验收 worktree 必须由 `node scripts/diagnostics/transient-worktree-lifecycle.mjs create --path <path> --kind <development|acceptance> --target <branch>` 创建并登记；development 同时传 `--branch <branch>`。结果进入目标分支或证据收口后，同一流程调用 `finish --path <path>`。异常遗留在显式本地维护时调用该入口的 7 天 `sweep`，不得直接删除目录或让 lock 永久保留。
 - 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
 - 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；聊天编号、标题和改名统一按 `codex-task-lookup/references/task-identity.md` 执行，方案/闭环编号不能替代唯一聊天身份；按编号或关键词定位先用 `codex-task-lookup`，不用最近聊天列表猜任务。非会审任务在用户只要求继续时沿用已核实的原聊天，另开任务须有用户授权；会审任务的新建与续用按 `astra-review` 执行。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
+- 可为独立任务新开会话派活；会话之间不嵌套、不要求回报、不互相传话，进度只以台账、方案文件和提交为准。任务盘点、关闭、排序与待拍板事项只在用户触发时按 `task-steward` skill 执行。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。
 - 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。本条由根统一拥有，来源为用户对产品与控制面授权的分离；主要成本是控制面缺口可能使验收待完成，明确授权该结果后按其范围执行。
 - 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，需落库时使用 task-seed；可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
@@ -61,7 +62,8 @@
 
 ## Quality, Acceptance, And Preview
 
-- 每个 `/3` 闭环在下述本地行为测试门槛通过后勾选；当前 Mac 宿主的 Hidden Native E2E 按本地测试处理。真机（A5、Fri、Windows 开发机）验证只用固定冒烟清单 `.lab/atlas/0active/00-device-smoke-checklist.md` 与改动试用表 `.lab/atlas/0active/00-trials-open.md` / `00-trials-closed.md`，各处所称“真机清单”即指它们；表格式、试用方、积压提示与发布阻断由 `task-ledger` 技能拥有。任务在本地门槛与包含最终修改的 dev 远程 full 通过、写好试用行后经 `archive-record` 关闭，汇报写明真机未证明；不为等试用保留任务，已有未复验真机失败的任务保持开放。批次在用户要求时或发布时由发布主任务运行。本条由根拥有，来源为用户 2026-10-21 与 10-22 决定；主要成本是平台专属回归最晚到下一批次、移动端回归最晚到 beta 才暴露。
+- 每个 `/3` 闭环在下述本地行为测试门槛通过后勾选；当前 Mac 宿主的 Hidden Native E2E 按本地测试处理。真机（A5、Fri、Windows 开发机）验证只用固定冒烟清单 `.lab/atlas/0active/00-device-smoke-checklist.md` 与改动试用表 `.lab/atlas/0active/00-trials-open.md` / `00-trials-closed.md`，各处所称“真机清单”即指它们；表格式、试用方、积压提示与发布阻断由 `task-ledger` 技能拥有。任务在本地门槛通过、提交并写好试用行后经 `archive-record` 关闭，不等待推送或远程 full，汇报写明真机未证明；不为等试用保留任务，已有未复验真机失败的任务保持开放。批次在用户要求时或发布时由发布主任务运行。本条由根拥有，来源为用户 2026-10-21、10-22 与 10-23 决定；主要成本是平台专属回归最晚到下一批次、移动端回归最晚到 beta 才暴露。
+- 日常不手动推送：Mac `dev` 由 `scripts/macos/scheduled-dev-push-launchd.mjs` 安装的定时推送送出，之后的 Scheduled Dev Quality 是收尾检查，不属于任何任务；只有用户明确要求或发布流程需要时才手动推送，手动推送或手动远程 full 前先跑 Windows 预检。远程 full 失败另开修复任务，按方案记录的提交号追溯来源，不重开原任务，也不预先登记“待 full”。本条由根拥有，来源为用户 2026-10-23 决定；主要成本是远程回归最晚到下一次定时质检才暴露。
 - 使用 `npm` 与 `package.json` 中登记的入口，不用不存在的 `npm test` 兜底，也不得降低检查标准。普通本地优先 `npm run quality:fast`，或显式 `npm run test:files -- <files>`、`npm run test:sqlite:electron -- <files>`、`npm run lint:files -- <files>`。
 - `test:changed`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 只在 hosted lane 执行。`scripts/quality/quality-command-contracts.mjs` 是命令分类真相；dev hosted recheck 只用 `npm run quality:remote -- --scope <desktop|shared|android|ios|full>`。
 - 测试按风险分档，由 Agent 在每个闭环自行决定，不逐个请用户确认：触及 Task And Risk Routing 所列高风险范围的行为，使用真实 SQLite 或生产链路的集成测试；其他新增或改变的可观察行为维护一个最小、独立于实现方式的测试 contract；纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。修复任何来源（本地、远程、真机、用户）发现的 bug 都补一个修复前会失败的回归测试；只有真机能复现的部分登记真机清单。证明本次差异的测试应因旧行为不符合目标而失败、因新行为符合目标而通过，不能以缺少新 helper 或文件代替行为失败。保护未改变行为的回归测试可以前后都通过；无法安全复跑旧版时如实说明证据限制。不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构，也不由测试合同推导控制面建设授权。
@@ -75,7 +77,7 @@
 - 测试耗时与超期 skip 只记录和报警，不限制开发：hosted 耗时摘要在总耗时或单个 job 比最近成功运行慢 25% 以上且至少 1 分钟时标出报警，skip lint 报告超过 30 天的 skip，二者都不改变质检结论。真机批次出现失败时，执行批次的任务在清单历史段同时判断本地或远程测试是否本该抓住；本该抓住的按测试分档规则补回归测试，并把提交写进同一行。每次正式发布收尾时，发布主任务按 `foliole-release` 读取这些已有记录做测试复盘，结论（含“无”）写入清单历史段。不另建台账、扫描器或定时任务。本条由根拥有，来源为用户 2026-10-21 决定；主要成本是每次发布一次短复盘。
 - 长命令返回非终态、heartbeat 或仍在运行时使用 `quiet-wait`，不得用 agent 回合轮询。
 - 用户明确要求某宿主预览或“阶段验收”时，验证通过后按局部规则执行；Demo 可见改动刷新已打开的 Demo，无法控制时明确报告，不用 Hidden Native 替代。普通情况不读取持久 preview flag 自动开窗。
-- 最终汇报默认使用 `C / V / R / pushed`：`C` 写用户结果与已确认根因，`V` 写验证结论或跳过原因，`R` 只写真正剩余风险。证据文件使用绝对路径 Markdown 链接。
+- 最终汇报默认使用 `C / V / R / commit`：`C` 写用户结果与已确认根因，`V` 写验证结论或跳过原因，`R` 只写真正剩余风险。证据文件使用绝对路径 Markdown 链接。
 
 ## Structure, Language, And Files
 
@@ -87,7 +89,7 @@
 - 临时 HTML、截图、样例、日志、一次性产物及任务的非 Markdown 产物放 `.tmp/artifacts/`（属于任务时放 `.tmp/artifacts/<编号>/`）。只有 Foliole 自管且可重建的跨运行缓存可放根 `.cache/`；不得枚举或清理不属于当前任务的缓存。
 - 全仓临时产物与缓存清理独立于 DEV 启动、构建、缓存准备和验收。仅在没有构建或验收运行时按需显式执行：普通临时产物先运行 `node scripts/diagnostics/cleanup-local-artifacts.mjs --dry-run`，核对候选后用 `--apply` 替换 `--dry-run`；缓存及验收产物先运行 `node scripts/diagnostics/local-artifact-cache-retention.mjs`，核对候选后加 `--apply`。临时 worktree 仍使用登记入口的 `sweep`，不由普通目录清理代替。
 - `.lab/**` 是本地工作文档，默认忽略且不提交。重要且持久的产品边界决策才写入对应 `.lab/specs/**`；不要把背景、施工历史或临时争论写入 AGENTS。
-- 用户要求提交时必须使用 `commit-note` skill。
+- 闭环完成且本地门槛通过后，默认用 `commit-note` skill 提交，不另问用户；只用显式 pathspec 提交本轮改动。
 
 ## Detail Pointers
 
