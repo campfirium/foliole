@@ -20,6 +20,12 @@ const NODE_HEADERS_FETCH_FAILURE = [
   'npm error gyp http GET https://nodejs.org/download/release/v22.23.2/node-v22.23.2-headers.tar.gz',
   'npm error gyp ERR! stack Error: read ECONNRESET'
 ].join('\n');
+const NODE_HEADERS_TRUNCATED_FAILURE = [
+  'npm error gyp info using node-gyp@12.4.0',
+  'npm error gyp http GET https://nodejs.org/download/release/v22.23.4/node-v22.23.4-headers.tar.gz',
+  'npm error gyp http 200 https://nodejs.org/download/release/v22.23.4/node-v22.23.4-headers.tar.gz',
+  'npm error gyp ERR! Completion callback never invoked! '
+].join('\n');
 
 function result(status, stderr = '', extras = {}) {
   return { status, signal: null, stdout: '', stderr, ...extras };
@@ -142,5 +148,10 @@ describe('hosted npm ci recovery', () => {
     expect(isHostedNodeHeadersTransferFailure(NODE_HEADERS_FETCH_FAILURE, { env: HOSTED_ENV })).toBe(true);
     expect(isHostedNodeHeadersTransferFailure(NODE_HEADERS_FETCH_FAILURE, { env: {} })).toBe(false);
     expect(isHostedNodeHeadersTransferFailure('npm error read ECONNRESET', { env: HOSTED_ENV })).toBe(false);
+    expect(isHostedNodeHeadersTransferFailure(NODE_HEADERS_TRUNCATED_FAILURE, { env: HOSTED_ENV })).toBe(true);
+    const compiledThenStopped = NODE_HEADERS_TRUNCATED_FAILURE.replace(
+      'npm error gyp ERR!', 'npm error gyp info spawn msbuild\nnpm error gyp ERR!'
+    );
+    expect(isHostedNodeHeadersTransferFailure(compiledThenStopped, { env: HOSTED_ENV })).toBe(false);
   });
 });

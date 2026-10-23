@@ -14,6 +14,9 @@ const ELECTRON_INSTALL_SOURCE = [
 const NODE_HEADERS_INSTALL_SOURCE = [
   /\bnode-gyp\b[\s\S]{0,1000}?nodejs\.org[\\/]download[\\/]release[\\/][^\s]+-headers\.tar\.gz/iu
 ];
+// node-gyp ends this way when the headers response stops early after its 200 status line.
+const NODE_HEADERS_TRUNCATED_TRANSFER =
+  /gyp http 200 https:\/\/nodejs\.org\/download\/release\/\S+-headers\.tar\.gz\r?\n[^\n]*gyp ERR! Completion callback never invoked!/u;
 const TRANSIENT_TRANSFER_FAILURE = [
   /\bfetch failed\b/iu,
   /\b(?:ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENETUNREACH|ECONNREFUSED)\b/u,
@@ -33,7 +36,8 @@ export function isHostedNodeHeadersTransferFailure(output, options = {}) {
   if (!isGithubHosted(options.env ?? process.env)) return false;
   if ((options.args ?? []).includes('--ignore-scripts')) return false;
   return NODE_HEADERS_INSTALL_SOURCE.some((pattern) => pattern.test(output)) &&
-    TRANSIENT_TRANSFER_FAILURE.some((pattern) => pattern.test(output));
+    (TRANSIENT_TRANSFER_FAILURE.some((pattern) => pattern.test(output)) ||
+      NODE_HEADERS_TRUNCATED_TRANSFER.test(output));
 }
 
 // npm reports its own registry transport failures with a network code and a network section.
