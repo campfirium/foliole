@@ -13,7 +13,7 @@ import { snapshotBackupRestoreSource } from './backupRestoreSourceSnapshot.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { openDatabaseConnection } from './connection.js';
 import { createDatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
-import { verifySqliteDatabaseFile } from './sqliteBackupRestore.js';
+import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 export function readBackupRestoreSyncSettings(driver: DatabaseDriver) {
   const local = readBackupRestoreLocalGroup(driver);
@@ -52,7 +52,7 @@ export async function inspectBackupRestoreSync(sourcePath: string) {
   const artifacts = createDatabaseRestoreArtifacts();
   try {
     const file = await snapshotBackupRestoreSource(artifacts, sourcePath, path.dirname(connection.dbPath));
-    verifySqliteDatabaseFile(file);
+    await verifySqliteDatabaseFileOffMainThread(file);
     const sqlite = new Database(file, { readonly: true, fileMustExist: true });
     try {
       return await buildBackupRestoreSyncPreview(file, createBetterSqlite3Driver(sqlite), connection.driver);

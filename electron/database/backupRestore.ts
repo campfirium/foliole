@@ -38,10 +38,10 @@ import { initializeDatabase } from './migrate.js';
 import { cleanupOrphanedBackupSidecars } from './orphanedBackupSidecars.js';
 import {
   backupSqliteDatabase,
-  verifySqliteDatabaseFile,
   type SqliteBackupResult,
   type SqliteRestoreResult
 } from './sqliteBackupRestore.js';
+import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 export interface CreateApplicationDatabaseBackupOptions {
   destinationPath?: string;
@@ -165,7 +165,7 @@ export async function createApplicationDatabaseBackup(
     ? await createSnapshot(destinationPath)
     : await backupCompressedSqliteDatabase(backupOptions);
   if (options.destinationPath) {
-    verifySqliteDatabaseFile(result.destinationPath);
+    await verifySqliteDatabaseFileOffMainThread(result.destinationPath);
   }
   if (path.resolve(path.dirname(result.destinationPath)) === path.resolve(backupDirectory)) {
     registerGeneratedBackup(result.destinationPath);

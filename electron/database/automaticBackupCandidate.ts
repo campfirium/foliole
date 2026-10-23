@@ -9,10 +9,10 @@ import {
 } from './compressedSqliteBackup.js';
 import {
   backupSqliteDatabase,
-  verifySqliteDatabaseFile,
   type BackupSqliteDatabaseOptions,
   type SqliteBackupResult
 } from './sqliteBackupRestore.js';
+import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 interface CreateAutomaticBackupCandidateOptions extends BackupSqliteDatabaseOptions {
   createSnapshot?: (destinationPath: string) => Promise<SqliteBackupResult>;
@@ -31,7 +31,7 @@ export async function commitAutomaticBackupWhenChanged(
     const result = options.createSnapshot
       ? await options.createSnapshot(candidatePath)
       : await backupSqliteDatabase({ ...options, destinationPath: candidatePath });
-    verifySqliteDatabaseFile(candidatePath);
+    await verifySqliteDatabaseFileOffMainThread(candidatePath);
     if (options.latestOrdinary && await matchesRestorePoint(candidatePath, options.latestOrdinary)) {
       return null;
     }
@@ -49,7 +49,7 @@ async function matchesRestorePoint(candidatePath: string, restorePoint: Applicat
       restorePoint.filePath,
       path.dirname(candidatePath)
     );
-    verifySqliteDatabaseFile(materialized.databasePath);
+    await verifySqliteDatabaseFileOffMainThread(materialized.databasePath);
     const [candidateHash, restorePointHash] = await Promise.all([
       hashFile(candidatePath),
       hashFile(materialized.databasePath)

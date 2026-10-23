@@ -3,7 +3,6 @@ import { promises as fs } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { verifyDatabaseIntegrity } from './integrity.js';
 import { backupSqliteFileOffMainThread, verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 const require = createRequire(import.meta.url);
@@ -36,16 +35,6 @@ export interface RestoreSqliteDatabaseOptions {
   sourcePath: string;
   sourceVerified?: boolean;
   targetPath: string;
-}
-
-export function verifySqliteDatabaseFile(filePath: string) {
-  const resolvedPath = path.resolve(filePath);
-  const sqlite = new BetterSqlite3(resolvedPath, { fileMustExist: true, readonly: true });
-  try {
-    verifyDatabaseIntegrity(sqlite);
-  } finally {
-    sqlite.close();
-  }
 }
 
 export function resolveDefaultSqliteBackupPath(sourcePath: string, now = new Date()): string {

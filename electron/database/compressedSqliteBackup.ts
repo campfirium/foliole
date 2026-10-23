@@ -7,9 +7,9 @@ import { createGunzip, createGzip, constants } from 'node:zlib';
 import {
   backupSqliteDatabase,
   type BackupSqliteDatabaseOptions,
-  type SqliteBackupResult,
-  verifySqliteDatabaseFile
+  type SqliteBackupResult
 } from './sqliteBackupRestore.js';
+import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 export const COMPRESSED_SQLITE_BACKUP_SUFFIX = '.db.gz';
 const activeTemporaryPaths = new Set<string>();
@@ -37,7 +37,7 @@ export async function backupCompressedSqliteDatabase(
     const result = options.createSnapshot
       ? await options.createSnapshot(temporaryPath)
       : await backupSqliteDatabase({ ...options, destinationPath: temporaryPath });
-    verifySqliteDatabaseFile(temporaryPath);
+    await verifySqliteDatabaseFileOffMainThread(temporaryPath);
     await assertCompressionSpace(temporaryPath, path.dirname(destinationPath));
     await writeCompressedSqliteFile(temporaryPath, compressedTemporaryPath);
     const materialized = await materializeCompressedSqliteBackup(
@@ -45,7 +45,7 @@ export async function backupCompressedSqliteDatabase(
       path.dirname(destinationPath)
     );
     try {
-      verifySqliteDatabaseFile(materialized.databasePath);
+      await verifySqliteDatabaseFileOffMainThread(materialized.databasePath);
     } finally {
       await materialized.cleanup();
     }
@@ -118,7 +118,7 @@ export async function commitVerifiedCompressedSqliteFile(sourcePath: string, des
       path.dirname(destinationPath)
     );
     try {
-      verifySqliteDatabaseFile(materialized.databasePath);
+      await verifySqliteDatabaseFileOffMainThread(materialized.databasePath);
     } finally {
       await materialized.cleanup();
     }
