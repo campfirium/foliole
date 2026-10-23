@@ -14,7 +14,7 @@ vi.mock('./companion/runtime/companionFramedPayloadBudget', () => ({
 vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({}) }));
 
 vi.mock('./appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
-  subscribeNativeAppBackground: async (listener: () => void) => { native.background = listener; return () => {}; } }));
+  subscribeNativeAppEnteredBackground: async (listener: () => void) => { native.background = listener; return () => {}; } }));
 
 import { acquireCompanionDiscovery } from './companion/network/companionDiscoveryLease';
 import { discoverCompanionDesktops } from './companionWorkspaceDiscovery';

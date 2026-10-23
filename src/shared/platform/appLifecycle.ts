@@ -1,4 +1,5 @@
 import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 import { isNativeCompanionRuntime } from './companionBootstrap';
 
@@ -66,4 +67,24 @@ export async function subscribeNativeAppBackground(handler: () => void): Promise
       unsubscribe();
     }
   };
+}
+
+/**
+ * Fires only when the app actually leaves the screen. iOS reports transient
+ * interruptions (Control Center, call banners) as inactive; Android reports
+ * partial occlusion as pause. Neither should end work that only needs the app
+ * to stay alive.
+ */
+export async function subscribeNativeAppEnteredBackground(handler: () => void): Promise<Unsubscribe> {
+  if (!isNativeCompanionRuntime()) {
+    return () => undefined;
+  }
+  if (Capacitor.getPlatform() === 'ios') {
+    return toUnsubscribe(App.addListener('pause', handler));
+  }
+  return toUnsubscribe(App.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive) {
+      handler();
+    }
+  }));
 }

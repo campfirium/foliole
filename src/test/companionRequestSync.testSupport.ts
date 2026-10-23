@@ -45,6 +45,7 @@ vi.mock('../shared/platform/companion/sync/framed/companionFramedSyncFiles.js', 
   currentCompanionFramedSyncFiles: () => native.files!, createCompanionFramedSyncFiles: () => native.files!
 }));
 vi.mock('../shared/platform/appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
+  subscribeNativeAppEnteredBackground: async () => () => undefined,
   subscribeNativeAppBackground: async () => () => undefined }));
 
 export { native };

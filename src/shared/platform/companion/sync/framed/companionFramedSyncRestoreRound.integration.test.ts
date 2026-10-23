@@ -36,6 +36,7 @@ vi.mock('./companionFramedSyncFiles.js', () => ({
   currentCompanionFramedSyncFiles: () => native.files!, createCompanionFramedSyncFiles: () => native.files!
 }));
 vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
+  subscribeNativeAppEnteredBackground: async () => () => undefined,
   subscribeNativeAppBackground: async () => () => undefined }));
 
 import { rememberCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';

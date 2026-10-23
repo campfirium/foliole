@@ -30,6 +30,7 @@ vi.mock('@capacitor/core', async () => {
 });
 vi.mock('../shared/platform/appLifecycle', () => ({
   subscribeNativeAppForeground: async () => () => {},
+  subscribeNativeAppEnteredBackground: async () => () => {},
   subscribeNativeAppBackground: async () => () => {}
 }));
 

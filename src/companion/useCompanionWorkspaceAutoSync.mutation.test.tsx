@@ -17,7 +17,7 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
 }));
 vi.mock('../shared/platform/appLifecycle', () => ({
   readNativeAppActiveState: vi.fn(async () => true),
-  subscribeNativeAppBackground: vi.fn(async (handler: () => void) => {
+  subscribeNativeAppEnteredBackground: vi.fn(async (handler: () => void) => {
     lifecycle.backgroundHandlers.push(handler);
     return vi.fn();
   }),

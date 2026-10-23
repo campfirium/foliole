@@ -18,7 +18,7 @@ vi.mock('@capacitor-community/sqlite', async importOriginal => ({
 }));
 vi.mock('../shared/platform/appLifecycle', () => ({
   readNativeAppActiveState: async () => native.active,
-  subscribeNativeAppBackground: async (callback: () => void) => {
+  subscribeNativeAppEnteredBackground: async (callback: () => void) => {
     native.background.add(callback); return () => native.background.delete(callback);
   },
   subscribeNativeAppForeground: async (callback: () => void) => {

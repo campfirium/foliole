@@ -34,6 +34,7 @@ vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({ companionFrame
 }) }));
 vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => runtime.files! }));
 vi.mock('../../../appLifecycle.js', () => ({ readNativeAppActiveState: async () => true,
+  subscribeNativeAppEnteredBackground: async () => () => undefined,
   subscribeNativeAppBackground: async () => () => undefined }));
 
 

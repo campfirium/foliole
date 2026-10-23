@@ -4,7 +4,7 @@ const runtime = vi.hoisted(() => ({ database: {}, active: true, listeners: new S
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompanionDatabaseOwner: () => runtime.database }));
 vi.mock('../../../appLifecycle.js', () => ({
   readNativeAppActiveState: async () => runtime.active,
-  subscribeNativeAppBackground: async (listener: () => void) => {
+  subscribeNativeAppEnteredBackground: async (listener: () => void) => {
     runtime.listeners.add(listener);
     return () => { runtime.listeners.delete(listener); };
   }

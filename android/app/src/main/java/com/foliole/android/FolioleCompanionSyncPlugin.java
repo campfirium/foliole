@@ -125,6 +125,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         setParticipation(call, "syncPaused");
     }
 
+    @PluginMethod public void setSyncScreenAwake(PluginCall call) {
+        FolioleCompanionSyncScreenAwake.hold(getActivity(), Boolean.TRUE.equals(call.getBoolean("active")));
+        call.resolve();
+    }
+
     @PluginMethod public void acceptSyncGroupJoinRequest(PluginCall call) {
         async(call, "Failed to accept Device.", () ->
             withParticipation(FolioleCompanionSyncGroupProvider.accept(getContext(), call)));

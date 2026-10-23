@@ -4,15 +4,23 @@ const lifecycle = vi.hoisted(() => ({ active: true, background: undefined as (()
   remove: vi.fn() }));
 vi.mock('../../../appLifecycle.js', () => ({
   readNativeAppActiveState: async () => lifecycle.active,
-  subscribeNativeAppBackground: async (listener: () => void) => {
+  subscribeNativeAppEnteredBackground: async (listener: () => void) => {
     lifecycle.background = listener;
     return lifecycle.remove;
   }
 }));
 
+const screen = vi.hoisted(() => ({ held: 0 }));
+vi.mock('../../runtime/companionSyncScreenAwake.js', () => ({
+  holdCompanionSyncScreenAwake: () => {
+    screen.held += 1;
+    return () => { screen.held -= 1; };
+  }
+}));
+
 import { combineCompanionRequestSignals, withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 
-afterEach(() => { lifecycle.active = true; lifecycle.background = undefined; lifecycle.remove.mockClear(); });
+afterEach(() => { screen.held = 0; lifecycle.active = true; lifecycle.background = undefined; lifecycle.remove.mockClear(); });
 
 it.each([0, 1])('propagates cancellation from source %s and preserves the first reason', index => {
   const sources = [new AbortController(), new AbortController()];
@@ -63,4 +71,15 @@ it('waits for owned cleanup when background interrupts a request', async () => {
   release();
   await rejected;
   expect(lifecycle.remove).toHaveBeenCalledOnce();
+});
+
+it('keeps the screen on only while a round runs, including when it fails', async () => {
+  await expect(withCompanionRequestSyncLifecycle(async () => {
+    expect(screen.held).toBe(1);
+    throw new Error('round_failed');
+  })).rejects.toThrow('round_failed');
+  expect(screen.held).toBe(0);
+  lifecycle.active = false;
+  await expect(withCompanionRequestSyncLifecycle(async () => undefined)).rejects.toThrow('request_sync_foreground_ended');
+  expect(screen.held).toBe(0);
 });

@@ -1,17 +1,13 @@
 package com.foliole.android;
 
 import android.app.Activity;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.WindowManager;
 
 import java.lang.ref.WeakReference;
 
 final class FolioleCompanionSyncScreenAwake {
-    private static final long IDLE_CLEAR_MS = 45_000;
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static WeakReference<Activity> activity = new WeakReference<>(null);
-    private static final Runnable CLEAR = FolioleCompanionSyncScreenAwake::clearNow;
+    private static boolean held;
 
     private FolioleCompanionSyncScreenAwake() {}
 
@@ -19,24 +15,24 @@ final class FolioleCompanionSyncScreenAwake {
         activity = new WeakReference<>(next);
     }
 
-    static synchronized void touch() {
+    /** The renderer owns the hold for the duration of a request sync round. */
+    static synchronized void hold(Activity next, boolean active) {
+        if (next != null) activity = new WeakReference<>(next);
+        held = active;
+        apply(active);
+    }
+
+    /** Provider shutdown must not drop a hold owned by an active request sync round. */
+    static synchronized void clear() {
+        if (!held) apply(false);
+    }
+
+    private static void apply(boolean active) {
         Activity current = activity.get();
         if (current == null) return;
         current.runOnUiThread(() -> {
-            current.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            MAIN.removeCallbacks(CLEAR);
-            MAIN.postDelayed(CLEAR, IDLE_CLEAR_MS);
+            if (active) current.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else current.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         });
-    }
-
-    static synchronized void clear() {
-        MAIN.removeCallbacks(CLEAR);
-        clearNow();
-    }
-
-    private static synchronized void clearNow() {
-        Activity current = activity.get();
-        if (current != null) current.runOnUiThread(() ->
-            current.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
     }
 }

@@ -19,7 +19,7 @@ vi.mock('../companion/network/companionSyncGroupMemberState', () => ({ exchangeC
 vi.mock('../companion/sync/framed/companionRequestSyncResources', () => ({ pullCompanionRequestSyncResource: attachment.pull }));
 vi.mock('../appLifecycle', () => ({
   readNativeAppActiveState: async () => attachment.active,
-  subscribeNativeAppBackground: async (listener: () => void) => {
+  subscribeNativeAppEnteredBackground: async (listener: () => void) => {
     attachment.listeners.add(listener);
     return () => { attachment.listeners.delete(listener); };
   }

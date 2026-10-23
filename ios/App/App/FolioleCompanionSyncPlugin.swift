@@ -33,6 +33,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "validateFramedSyncPayloadLoan", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setSyncScreenAwake", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
     ]
 
@@ -107,6 +108,16 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func resolveSyncGroupDataRequest(_ call: CAPPluginCall) {
         do { try groupData.resolve(call.jsObjectRepresentation); call.resolve() }
         catch { call.reject("Failed to resolve Sync Group data request: \(error.localizedDescription)") }
+    }
+
+    /// The renderer owns the hold for the duration of a request sync round.
+    @objc func setSyncScreenAwake(_ call: CAPPluginCall) {
+        let active = call.getBool("active") ?? false
+        let pinned = ProcessInfo.processInfo.arguments.contains("--foliole-physical-acceptance")
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = active || pinned
+            call.resolve()
+        }
     }
 
     func required(_ value: [String: Any], _ key: String) throws -> String {
