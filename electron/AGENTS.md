@@ -30,6 +30,7 @@
 - 任何新增 renderer 可见能力，必须先定义或复用 bridge / IPC contract，再接业务消费；禁止先在 renderer 写假直连调用。
 - 涉及 preload、`contextBridge`、`ipcRenderer`、`window.electronAPI` 的改动，必须先核对 Electron 官方 `sandbox` / `contextIsolation` 边界。
 - preload 改动必须带一条“sandbox 受限 require 环境下 bridge 仍可暴露”的自动化回归测试。
+- `electron/preload.cjs` 不受根规则的单文件行数预算约束，新增 bridge 直接在该文件内追加：sandbox preload 只能 `require('electron')`，官方拆分路线只有构建期打包，其构建、路径与测试成本高于收益，单文件也便于审查安全边界。本条由本文件拥有，来源为用户 2026-10-23 决定；Electron sandbox 允许加载本地文件或项目已为 preload 引入打包步骤时失效，主要成本是该文件持续变长。
 - bridge payload、IPC 参数与返回值的结构变更，必须同步补测试；不得只改 happy path。
 - 数据库存储、备份、恢复、同步与设备身份相关改动，默认按永久态处理，不得只修页面即时表现。
 
