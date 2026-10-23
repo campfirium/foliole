@@ -1,6 +1,8 @@
 export interface AppChoiceOptions {
   title: string;
   description?: string;
+  /** When set, `danger` choices stay folded behind this toggle. */
+  moreLabel?: string;
   /** `primary` marks the safe default; `danger` renders as a small red link below the buttons. */
   choices: Array<{ value: string; label: string; tone?: 'primary' | 'danger' }>;
 }

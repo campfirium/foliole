@@ -17,7 +17,7 @@ import { requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs'
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
 import {
-  MACOS_DAILY_LIBRARY_HOME,
+  MACOS_DEV_LIBRARY_HOME,
   resolveMacosElectronDevPaths
 } from './macos-electron-dev-paths.mjs';
 import {
@@ -178,7 +178,7 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   const dailyEnv = createMacosDailyEnvironment({
     env: options.env ?? process.env,
     homeDir: options.homeDir,
-    libraryHome: options.libraryHome ?? MACOS_DAILY_LIBRARY_HOME,
+    libraryHome: options.libraryHome ?? MACOS_DEV_LIBRARY_HOME,
     paths,
     platform
   });

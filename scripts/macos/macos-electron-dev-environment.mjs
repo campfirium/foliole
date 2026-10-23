@@ -3,7 +3,9 @@
 import path from 'node:path';
 
 import { createDesktopIsolationContext } from '../desktop/playwright-desktop-isolation.mjs';
-import { MACOS_DAILY_LIBRARY_HOME } from './macos-electron-dev-paths.mjs';
+import {
+  MACOS_DAILY_LIBRARY_HOME, MACOS_DEV_LIBRARY_HOME, MACOS_DEV_SYNC_PORT
+} from './macos-electron-dev-paths.mjs';
 
 function readLibraryHomeArg(argv) {
   for (let index = 0; index < argv.length; index += 1) {
@@ -29,8 +31,12 @@ export function resolveMacosElectronDevLibraryHome(
   argv = process.argv.slice(3),
   cwd = process.cwd()
 ) {
-  const libraryHome = readLibraryHomeArg(argv);
-  return libraryHome ? path.resolve(cwd, libraryHome) : MACOS_DAILY_LIBRARY_HOME;
+  const explicit = readLibraryHomeArg(argv);
+  const libraryHome = explicit ? path.resolve(cwd, explicit) : MACOS_DEV_LIBRARY_HOME;
+  if (libraryHome === path.resolve(MACOS_DAILY_LIBRARY_HOME)) {
+    throw new Error(`macOS Electron dev refuses the daily library ${MACOS_DAILY_LIBRARY_HOME}`);
+  }
+  return libraryHome;
 }
 
 export function createMacosDailyEnvironment({ env, homeDir, libraryHome, paths, platform }) {
@@ -41,6 +47,7 @@ export function createMacosDailyEnvironment({ env, homeDir, libraryHome, paths, 
   return {
     ...env,
     ...isolation.env,
+    FOLIOLE_COMPANION_SYNC_PORT: env.FOLIOLE_COMPANION_SYNC_PORT || MACOS_DEV_SYNC_PORT,
     FOLIOLE_DEV_SHELL_RESTART_REQUEST_FILE: paths.shellRequestFile,
     FOLIOLE_ELECTRON_APP_ROOT: paths.appRoot,
     FOLIOLE_LIBRARY_HOME: libraryHome,

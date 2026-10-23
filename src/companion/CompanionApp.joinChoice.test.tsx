@@ -22,7 +22,7 @@ it('hosts the real join mode choice and allows cancellation without a selection'
   expect(await screen.findByRole('dialog')).toHaveTextContent('Join sync group');
   expect(screen.queryByRole('button', { name: 'Merge data' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /overwrite this device/ })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /overwrite the entire group/ })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /overwrite the entire group/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await expect(choice).resolves.toBeNull();
 });
@@ -40,18 +40,23 @@ it('returns use-group without extra confirmation', async () => {
   await expect(choice()).resolves.toBe('use-group');
 });
 
-it('shows the group data as the primary button and the overwrite as a separate red link', async () => {
+async function openOtherOptions() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Other options' }));
+  return screen.getByRole('button', { name: /overwrite the entire group/ });
+}
+
+it('folds the group overwrite behind other options as a red link', async () => {
   startChoice();
   const useGroup = await screen.findByRole('button', { name: /overwrite this device/ });
-  const overwrite = screen.getByRole('button', { name: /overwrite the entire group/ });
+  const overwrite = await openOtherOptions();
   expect(useGroup.className).not.toContain('text-error');
   expect(overwrite.className).toContain('text-error');
 });
 
 async function passFirstConfirmation() {
-  fireEvent.click(await screen.findByRole('button', { name: /overwrite the entire group/ }));
+  fireEvent.click(await openOtherOptions());
   expect(await screen.findByRole('dialog')).toHaveTextContent('Overwrite the entire sync group with this device’s data?');
-  fireEvent.click(screen.getByRole('button', { name: 'Yes, continue' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   return screen.findByRole('textbox', { name: 'Sync group name' });
 }
 
@@ -73,7 +78,7 @@ it('overwrites the entire group only after typing the exact group name', async (
 it.each(['first', 'final'])('cancels the overwrite when the %s confirmation is declined', async (step) => {
   const choice = startChoice();
   if (step === 'final') await passFirstConfirmation();
-  else fireEvent.click(await screen.findByRole('button', { name: /overwrite the entire group/ }));
-  fireEvent.click(await screen.findByRole('button', { name: 'No' }));
+  else fireEvent.click(await openOtherOptions());
+  fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
   await expect(choice()).resolves.toBeNull();
 });

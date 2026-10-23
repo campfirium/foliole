@@ -8,6 +8,7 @@ export async function chooseSyncGroupJoinMode(t: Translate, groupName: string): 
   const choice = await requestAppChoice({
     title: t('syncGroup.join.mode.title'),
     description: t('syncGroup.join.mode.description'),
+    moreLabel: t('syncGroup.join.mode.more'),
     choices: [
       { value: 'use-group', label: t('syncGroup.join.mode.useGroup'), tone: 'primary' },
       { value: 'overwrite', label: t('syncGroup.join.mode.overwrite'), tone: 'danger' }
@@ -21,9 +22,7 @@ export async function chooseSyncGroupJoinMode(t: Translate, groupName: string): 
 async function confirmGroupOverwrite(t: Translate, groupName: string) {
   const first = await requestAppConfirmation({
     title: t('syncGroup.join.overwrite.confirmTitle'),
-    description: t('syncGroup.join.overwrite.confirmDescription'),
-    cancelLabel: t('syncGroup.join.overwrite.no'),
-    confirmLabel: t('syncGroup.join.overwrite.yes')
+    description: t('syncGroup.join.overwrite.confirmDescription')
   });
   if (!first) return false;
   const typed = await requestAppTextInput({
@@ -33,7 +32,6 @@ async function confirmGroupOverwrite(t: Translate, groupName: string) {
     inputLabel: t('syncGroup.join.overwrite.typeNameLabel'),
     placeholder: groupName,
     requiredValue: groupName,
-    cancelLabel: t('syncGroup.join.overwrite.no'),
     confirmLabel: t('syncGroup.join.overwrite.finalConfirm')
   });
   return typed !== null;
