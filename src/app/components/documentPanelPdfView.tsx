@@ -11,8 +11,10 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
+import { ReadwisePdfOriginalMissingState } from './ReadwisePdfOriginalMissingState';
 
-export type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
+export type PdfDocumentSurfaceState =
+  'empty' | 'failed' | 'loading' | 'readwise-original-missing' | 'readwise-original-unavailable' | 'ready';
 type PdfIndexStatus = 'failed' | 'indexing' | 'pending' | 'ready' | null;
 
 const PdfDocumentSurface = lazy(() =>
@@ -27,10 +29,16 @@ function isPdfSourceDetails(details: RuntimeNodeSourceDetails | null) {
   if (!details) {
     return false;
   }
+  return details.importSource?.sourceKind.toLowerCase() === 'pdf' || isPdfPath(details.keepImportItem?.sourcePath);
+}
+
+function resolveReadwiseOriginalState(details: RuntimeNodeSourceDetails): PdfDocumentSurfaceState | null {
   const source = details.importSource;
-  const readwisePdf = source?.sourceKind.toLowerCase() === 'pdf' && source.readwiseOriginalFile !== undefined;
-  return (readwisePdf ? source?.readwiseOriginalFile?.status === 'localized' : source?.sourceKind.toLowerCase() === 'pdf') ||
-    isPdfPath(details.keepImportItem?.sourcePath);
+  if (source?.sourceKind.toLowerCase() !== 'pdf' || source.readwiseOriginalFile === undefined) return null;
+  const original = source.readwiseOriginalFile;
+  if (original?.status === 'localized') return null;
+  return original?.reason === 'original_file_not_distributed'
+    ? 'readwise-original-unavailable' : 'readwise-original-missing';
 }
 
 function resolvePdfSourceHint(details: RuntimeNodeSourceDetails) {
@@ -72,6 +80,10 @@ export function resolvePdfDocumentSurface(
   }
 
   const sourceHint = resolvePdfSourceHint(details);
+  const readwiseOriginalState = resolveReadwiseOriginalState(details);
+  if (readwiseOriginalState) {
+    return { details, pdfIndexStatus: null, sourceHint: null, state: readwiseOriginalState };
+  }
   if (details.keepImportItem?.lastStatus === 'failed') {
     return { details, pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'failed' };
   }
@@ -86,7 +98,10 @@ export function resolvePdfDocumentSurface(
   return { details, pdfIndexStatus: details.importSource?.pdfIndexStatus ?? null, sourceHint, state: 'ready' };
 }
 
-function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>, t: Translate) {
+function renderPdfStateSurface(state: Exclude<PdfDocumentSurfaceState, 'ready'>, nodeId: string, t: Translate) {
+  if (state === 'readwise-original-missing' || state === 'readwise-original-unavailable') {
+    return <ReadwisePdfOriginalMissingState nodeId={nodeId} unavailable={state === 'readwise-original-unavailable'} />;
+  }
   if (state === 'loading') {
     return (
       <div data-testid="pdf-document-state-loading">
@@ -127,7 +142,7 @@ export function renderPdfDocumentSurface(
 ) {
   if (pdfDocumentSurface.state === 'ready') {
     return (
-      <Suspense fallback={renderPdfStateSurface('loading', t)}>
+      <Suspense fallback={renderPdfStateSurface('loading', pdfDocumentSurface.details.sourceNodeId, t)}>
         <PdfDocumentSurface
           highlightLocators={highlightLocators}
           isVisible
@@ -153,7 +168,7 @@ export function renderPdfDocumentSurface(
     <section aria-label={t('desktop.pdf.readerPanel')} className="workspace-region-main-document flex min-h-0 flex-1 flex-col" data-testid="pdf-document-surface">
       <div className="mx-auto flex min-h-0 w-full max-w-[var(--document-max-width)] flex-1 flex-col px-6 py-5 max-[1080px]:px-4">
         <div className="flex min-h-[360px] flex-1 items-center justify-center rounded-xl border border-border bg-bg-elevated px-6 py-8 shadow-page">
-          {renderPdfStateSurface(pdfDocumentSurface.state, t)}
+          {renderPdfStateSurface(pdfDocumentSurface.state, pdfDocumentSurface.details.sourceNodeId, t)}
         </div>
       </div>
     </section>

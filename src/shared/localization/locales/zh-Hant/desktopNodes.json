@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "從 Readwise 重新同步",
   "desktop.nodeList.readwiseResync.confirm.description": "來源內容的處理方式仍在改進中。版面異常時，可以嘗試重新處理。",
   "desktop.nodeList.readwiseResync.confirm.epub": "封面、內文圖片和目錄也會一併重建。",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "將從 Readwise 取得 PDF 原件，並把 Readwise 標註重新定位到 PDF 上。主題的其他內容不會變動。",
   "desktop.nodeList.readwiseResync.confirm.preserve": "對內文的修改會被覆寫，螢光標示、挖空和註記會保留。如果問題仍未解決，請回報。",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "這本書目前使用 EPUB 內文。重新同步後會切回 Readwise 提供的內容。",
   "desktop.nodeList.readwiseResync.confirm.confirm": "重新同步",

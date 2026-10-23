@@ -11,6 +11,8 @@ import { readReadwisePdfPages, placeReadwisePdfHighlights } from './readwisePdfP
 import { beginReadwiseSourceOperation, finishReadwiseSourceOperation, isReadwiseSourceOperationRunning } from './readwiseSourceOperationLock.js';
 import { captureReadwiseSourceResyncSnapshot, loadReadwiseSourceResyncTarget, readReadwiseSourceResyncRuntimeStatus } from './readwiseSourceResyncTarget.js';
 
+type ReadwisePdfTarget = NonNullable<ReturnType<typeof loadReadwiseSourceResyncTarget>>;
+
 function targetFor(nodeId: string) {
   const target = loadReadwiseSourceResyncTarget(nodeId);
   return target?.state.metadata.category === 'pdf' && target.state.originalFile?.status !== 'localized' ? target : null;
@@ -38,31 +40,7 @@ export async function getReadwisePdfOriginal(
   if (!start) return { node_id: nodeId, status: 'not_applicable' };
   if (start.blocked) return { node_id: nodeId, status: 'source_inactive' };
   try {
-    const remote = await fetchReadwiseRawSourceDocument(start.target.documentId, dependencies);
-    if (remote?.category !== 'pdf' || !remote.rawSourceUrl) throw new Error('original_file_not_distributed');
-    const prepared = await prepareReadwiseApiOriginalFile({
-      category: 'pdf', documentId: start.target.documentId, hasHtmlBody: true,
-      ...(dependencies ? { dependencies } : {}), rawSourceUrl: remote.rawSourceUrl
-    });
-    if (!prepared.bytes || prepared.state.status !== 'localized') {
-      throw new Error(prepared.state.reason ?? 'original_file_download_failed');
-    }
-    const localized = prepared.state;
-    const pages = await readReadwisePdfPages(prepared.bytes);
-    await stageReadwiseApiOriginalFile({ bytes: prepared.bytes, state: localized, title: start.target.title });
-    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
-      if (readReadwiseSourceResyncRuntimeStatus(start.target) !== 'ready' ||
-        captureReadwiseSourceResyncSnapshot(start.target) !== start.snapshot || !targetFor(nodeId)) {
-        throw new Error('readwise_pdf_target_changed');
-      }
-      const source = loadReadwiseApiImportSource(start.target.connectionRef, start.target.documentId);
-      if (!source || source.nodeId !== nodeId) throw new Error('readwise_pdf_target_changed');
-      attachReadwiseApiOriginalFile(nodeId, localized, start.target.title);
-      saveOriginalFileState(start.target.connectionRef, start.target.documentId, localized);
-      placeReadwisePdfHighlights({ connectionRef: start.target.connectionRef, documentId: start.target.documentId, nodeId, pages });
-      markPdfAttachmentIndexPending(localized.attachmentId);
-      enqueuePdfAttachmentIndexing(localized.attachmentId);
-    }));
+    await localizeReadwisePdfOriginal(start.target, start.snapshot, dependencies);
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -72,4 +50,37 @@ export async function getReadwisePdfOriginal(
   } finally {
     finishReadwiseSourceOperation(nodeId);
   }
+}
+
+export async function localizeReadwisePdfOriginal(
+  target: ReadwisePdfTarget,
+  snapshot: string,
+  dependencies?: ReadwiseApiFetchDependencies
+) {
+  const nodeId = target.nodeId;
+  const remote = await fetchReadwiseRawSourceDocument(target.documentId, dependencies);
+  if (remote?.category !== 'pdf' || !remote.rawSourceUrl) throw new Error('original_file_not_distributed');
+  const prepared = await prepareReadwiseApiOriginalFile({
+    category: 'pdf', documentId: target.documentId, hasHtmlBody: true,
+    ...(dependencies ? { dependencies } : {}), rawSourceUrl: remote.rawSourceUrl
+  });
+  if (!prepared.bytes || prepared.state.status !== 'localized') {
+    throw new Error(prepared.state.reason ?? 'original_file_download_failed');
+  }
+  const localized = prepared.state;
+  const pages = await readReadwisePdfPages(prepared.bytes);
+  await stageReadwiseApiOriginalFile({ bytes: prepared.bytes, state: localized, title: target.title });
+  await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
+    if (readReadwiseSourceResyncRuntimeStatus(target) !== 'ready' ||
+      captureReadwiseSourceResyncSnapshot(target) !== snapshot || !targetFor(nodeId)) {
+      throw new Error('readwise_pdf_target_changed');
+    }
+    const source = loadReadwiseApiImportSource(target.connectionRef, target.documentId);
+    if (!source || source.nodeId !== nodeId) throw new Error('readwise_pdf_target_changed');
+    attachReadwiseApiOriginalFile(nodeId, localized, target.title);
+    saveOriginalFileState(target.connectionRef, target.documentId, localized);
+    placeReadwisePdfHighlights({ connectionRef: target.connectionRef, documentId: target.documentId, nodeId, pages });
+    markPdfAttachmentIndexPending(localized.attachmentId);
+    enqueuePdfAttachmentIndexing(localized.attachmentId);
+  }));
 }

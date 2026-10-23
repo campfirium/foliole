@@ -51,7 +51,7 @@ beforeEach(() => {
   mocks.commit.mockImplementation(() => undefined);
 });
 
-it('places highlights again after resyncing a PDF that already has a local original', async () => {
+it('places highlights again without rebuilding the Reader body for a PDF that already has a local original', async () => {
   mocks.loadTarget.mockReturnValue({ ...target, state: {
     bodyAuthority: 'reader_html', metadata: { category: 'pdf' },
     originalFile: { attachmentId: 'original', status: 'localized' }
@@ -61,6 +61,8 @@ it('places highlights again after resyncing a PDF that already has a local origi
   expect(mocks.placePdf).toHaveBeenCalledWith({
     attachmentId: 'original', connectionRef: 'connection', documentId: 'document', nodeId: 'source'
   });
+  expect(mocks.prepare).not.toHaveBeenCalled();
+  expect(mocks.commit).not.toHaveBeenCalled();
 });
 
 it('reports persisted source facts and runtime eligibility', () => {

@@ -5,10 +5,9 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { updatePdfSurfaceCacheStats } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
 
+import type { PdfDocumentSurfaceState } from './documentPanelPdfView';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
-
-type PdfDocumentSurfaceState = 'empty' | 'failed' | 'loading' | 'ready';
 
 const MAX_CACHED_SURFACES = 3;
 const PdfDocumentSurface = lazy(() =>
@@ -33,7 +32,7 @@ function shouldDisplayCachedSurface(activeNodeId: string | null, nodeId: string,
   if (activeNodeId !== nodeId) {
     return false;
   }
-  return activePdfState !== 'failed' && activePdfState !== 'empty';
+  return activePdfState === null || activePdfState === 'loading' || activePdfState === 'ready';
 }
 
 function resolveRenderEntries(

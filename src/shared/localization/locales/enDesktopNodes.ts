@@ -84,6 +84,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.readwiseResync.confirm.title': 'Resync from Readwise',
   'desktop.nodeList.readwiseResync.confirm.description': 'Source content processing is still being improved. If the layout looks wrong, you can try processing it again.',
   'desktop.nodeList.readwiseResync.confirm.epub': 'Its cover, body images, and table of contents will also be rebuilt.',
+  'desktop.nodeList.readwiseResync.confirm.pdf': 'This gets the original PDF from Readwise and places Readwise highlights on it again. Nothing else in the topic changes.',
   'desktop.nodeList.readwiseResync.confirm.preserve': 'Changes to the body will be overwritten. Highlights, clozes, and annotations will be preserved. If the problem persists, please send feedback.',
   'desktop.nodeList.readwiseResync.confirm.switchFromEpub': 'This book currently uses EPUB content. Resyncing will switch it back to content from Readwise.',
   'desktop.nodeList.readwiseResync.confirm.confirm': 'Resync',

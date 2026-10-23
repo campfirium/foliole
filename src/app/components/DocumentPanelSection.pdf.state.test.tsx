@@ -14,6 +14,11 @@ vi.mock('./DocumentPanelBody', () => ({ DocumentPanelBody: () => <div data-testi
 vi.mock('./ReadwiseBookActionsPanel', () => ({ ReadwiseBookActionsPanel: () => null }));
 vi.mock('./useNodeSourceUpdatePreview', () => ({ useNodeSourceUpdatePreview: () => ({ isLoading: false, value: null }) }));
 
+vi.mock('../../shared/platform/import/readwisePdfOriginalRuntimeRepository', () => ({
+  getRuntimeReadwisePdfOriginal: vi.fn(),
+  loadRuntimeReadwisePdfOriginalActionState: vi.fn(async (nodeId: string) => ({ node_id: nodeId, status: 'ready' }))
+}));
+
 const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn() }));
 vi.mock('./useNodeSourceDetails', () => ({ useNodeSourceDetails }));
 
@@ -123,4 +128,25 @@ it.each([
   renderSection();
   expect(screen.getByTestId(expectedTestId)).toBeInTheDocument();
   expect(screen.getByText(expectedTitle)).toBeInTheDocument();
+});
+
+it.each([
+  {
+    expectedTitle: 'Original PDF not saved yet',
+    readwiseOriginalFile: null
+  },
+  {
+    expectedTitle: 'Readwise didn\'t provide the original PDF',
+    readwiseOriginalFile: { attachmentId: null, reason: 'original_file_not_distributed', status: 'html_only' }
+  }
+])('shows a Readwise PDF without a local original as a retrievable original: $expectedTitle', async ({ expectedTitle, readwiseOriginalFile }) => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails({
+    importSource: { ...defaultImportSource, readwiseOriginalFile, sourceLocator: '' }
+  }) as never);
+  renderSection();
+  expect(screen.getByTestId('pdf-document-state-readwise-original-missing')).toBeInTheDocument();
+  expect(screen.getByText(expectedTitle)).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Get original PDF' })).toBeEnabled();
+  expect(screen.queryByText('PDF file not linked yet')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('document-panel-body')).not.toBeInTheDocument();
 });

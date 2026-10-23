@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Resynchroniser depuis Readwise",
   "desktop.nodeList.readwiseResync.confirm.description": "Le traitement du contenu source est encore en cours d’amélioration. Si la mise en page semble incorrecte, vous pouvez essayer de le traiter à nouveau.",
   "desktop.nodeList.readwiseResync.confirm.epub": "La couverture, les images du texte et la table des matières seront également reconstruites.",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "Le PDF d’origine sera récupéré depuis Readwise et les surlignages Readwise y seront replacés. Rien d’autre ne change dans la rubrique.",
   "desktop.nodeList.readwiseResync.confirm.preserve": "Les modifications du texte seront écrasées. Les surlignages, trous et annotations seront conservés. Si le problème persiste, envoyez-nous vos commentaires.",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "Ce livre utilise actuellement le contenu EPUB. La resynchronisation le ramènera au contenu de Readwise.",
   "desktop.nodeList.readwiseResync.confirm.confirm": "Resynchroniser",

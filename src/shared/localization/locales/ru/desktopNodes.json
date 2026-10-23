@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Повторно синхронизировать из Readwise",
   "desktop.nodeList.readwiseResync.confirm.description": "Обработка исходного содержимого ещё совершенствуется. Если вёрстка выглядит неправильно, попробуйте обработать его заново.",
   "desktop.nodeList.readwiseResync.confirm.epub": "Обложка, изображения в тексте и оглавление также будут пересобраны.",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "Исходный PDF будет получен из Readwise, а выделения Readwise снова размещены в нём. Остальное в теме не изменится.",
   "desktop.nodeList.readwiseResync.confirm.preserve": "Изменения в тексте будут перезаписаны. Выделения, пропуски и примечания сохранятся. Если проблема не исчезнет, отправьте отзыв.",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "Сейчас эта книга использует содержимое EPUB. Повторная синхронизация вернёт содержимое из Readwise.",
   "desktop.nodeList.readwiseResync.confirm.confirm": "Синхронизировать повторно",

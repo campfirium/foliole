@@ -3,16 +3,19 @@ import { useEffect, useState } from 'react';
 
 import type { NativeReadwiseSourceResyncActionState } from '../../../../lib/platform/nativeReadwiseContract';
 import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
+import { READWISE_ORIGINAL_FILE_LOADED_EVENT } from '../../../shared/platform/import/readwiseOriginalFileLoadedEvent';
 import {
   loadRuntimeReadwiseSourceResyncActionState,
   resyncRuntimeReadwiseSource
 } from '../../../shared/platform/import/readwiseSourceResyncRuntimeRepository';
 import { requestAppConfirmation } from '../../../shared/ui/appConfirmation';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
+import { refreshWorkspaceState } from '../../../store/workspaceRefreshScheduler';
 
 import { NodeContextMenuItem, NodeContextMenuSeparator } from './nodeListContextMenuPresentation';
 
 function confirmationDescription(state: NativeReadwiseSourceResyncActionState, t: Translate) {
+  if (state.category === 'pdf') return [t('desktop.nodeList.readwiseResync.confirm.pdf')];
   const lines = [
     t('desktop.nodeList.readwiseResync.confirm.description'),
     t('desktop.nodeList.readwiseResync.confirm.preserve')
@@ -61,10 +64,16 @@ export function ReadwiseSourceResyncMenuItem(props: {
     showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.running'));
     const result = await resyncRuntimeReadwiseSource(props.nodeId).catch(() => null);
     if (result?.status === 'completed') {
+      if (state.category === 'pdf') {
+        await refreshWorkspaceState('readwise-book-load');
+        window.dispatchEvent(new CustomEvent(READWISE_ORIGINAL_FILE_LOADED_EVENT, { detail: { nodeId: props.nodeId } }));
+      }
       showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.success'), 'info', undefined, { durationMs: 8000 });
       return;
     }
-    showAppRuntimeNotice(t('desktop.nodeList.readwiseResync.failed'), 'error');
+    showAppRuntimeNotice(t(result?.error_code === 'original_file_not_distributed'
+      ? 'desktop.nodeList.readwisePdf.missing'
+      : 'desktop.nodeList.readwiseResync.failed'), 'error');
   };
   const followsEpubAction = state.category === 'epub';
   return (

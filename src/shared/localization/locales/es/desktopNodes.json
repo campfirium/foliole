@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Volver a sincronizar desde Readwise",
   "desktop.nodeList.readwiseResync.confirm.description": "El procesamiento del contenido de origen aún se está mejorando. Si el diseño no se ve bien, puedes intentar procesarlo de nuevo.",
   "desktop.nodeList.readwiseResync.confirm.epub": "También se reconstruirán la portada, las imágenes del texto y el índice.",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "Se obtendrá el PDF original de Readwise y se volverán a colocar en él los subrayados de Readwise. Nada más del tema cambiará.",
   "desktop.nodeList.readwiseResync.confirm.preserve": "Los cambios en el texto se sobrescribirán. Los destacados, huecos y anotaciones se conservarán. Si el problema persiste, envía tus comentarios.",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "Este libro usa actualmente contenido EPUB. Al volver a sincronizar, volverá al contenido de Readwise.",
   "desktop.nodeList.readwiseResync.confirm.confirm": "Volver a sincronizar",

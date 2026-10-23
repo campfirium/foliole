@@ -76,7 +76,7 @@ describe('resolvePdfDocumentSurface', () => {
 });
 
 describe('Readwise API PDF source routing', () => {
-  it('keeps a Readwise PDF on its readable HTML surface when the original file is unavailable', () => {
+  it('shows the Readwise original state instead of the Reader text when the original file is unavailable', () => {
     expect(resolvePdfDocumentSurface('node-pdf-root', false, {
       ...pdfSourceDetails,
       importSource: {
@@ -86,7 +86,7 @@ describe('Readwise API PDF source routing', () => {
         },
         sourceLocator: ''
       }
-    })).toBeNull();
+    })).toMatchObject({ state: 'readwise-original-unavailable' });
   });
 
   it('opens a localized Readwise PDF through the managed PDF reader', () => {

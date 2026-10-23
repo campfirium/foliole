@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Erneut aus Readwise synchronisieren",
   "desktop.nodeList.readwiseResync.confirm.description": "Die Verarbeitung von Quellinhalten wird noch verbessert. Wenn das Layout falsch aussieht, können Sie versuchen, den Inhalt erneut zu verarbeiten.",
   "desktop.nodeList.readwiseResync.confirm.epub": "Cover, Bilder im Text und Inhaltsverzeichnis werden ebenfalls neu aufgebaut.",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "Das Original-PDF wird von Readwise abgerufen und die Readwise-Markierungen werden erneut darauf platziert. Sonst ändert sich nichts am Thema.",
   "desktop.nodeList.readwiseResync.confirm.preserve": "Änderungen am Text werden überschrieben. Markierungen, Lücken und Anmerkungen bleiben erhalten. Wenn das Problem weiterhin besteht, senden Sie bitte Feedback.",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "Dieses Buch verwendet derzeit EPUB-Inhalte. Durch die erneute Synchronisierung wechselt es zurück zu Inhalten aus Readwise.",
   "desktop.nodeList.readwiseResync.confirm.confirm": "Erneut synchronisieren",

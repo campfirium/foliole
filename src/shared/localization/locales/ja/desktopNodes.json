@@ -84,6 +84,7 @@
   "desktop.nodeList.readwiseResync.confirm.title": "Readwise から再同期",
   "desktop.nodeList.readwiseResync.confirm.description": "元コンテンツの処理はまだ改善中です。レイアウトがおかしい場合は、もう一度処理してみてください。",
   "desktop.nodeList.readwiseResync.confirm.epub": "表紙、本文の画像、目次も再構築されます。",
+  "desktop.nodeList.readwiseResync.confirm.pdf": "Readwise から元の PDF を取得し、Readwise のハイライトを PDF 上に配置し直します。トピックのその他の内容は変わりません。",
   "desktop.nodeList.readwiseResync.confirm.preserve": "本文への変更は上書きされます。ハイライト、穴埋め、注釈は保持されます。問題が解決しない場合は、フィードバックをお送りください。",
   "desktop.nodeList.readwiseResync.confirm.switchFromEpub": "この本は現在 EPUB の本文を使用しています。再同期すると Readwise のコンテンツに戻ります。",
   "desktop.nodeList.readwiseResync.confirm.confirm": "再同期",

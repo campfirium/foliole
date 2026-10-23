@@ -5,6 +5,7 @@ import type {
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import { localizeReadwisePdfOriginal } from './readwisePdfOriginalAction.js';
 import { placeReadwisePdfHighlightsFromAttachment } from './readwisePdfPlacement.js';
 import {
   beginReadwiseSourceOperation,
@@ -41,24 +42,15 @@ export async function resyncReadwiseSource(
   });
   if (start.status !== 'ready') return { node_id: nodeId, status: start.status };
   try {
+    if (start.target.state.metadata.category === 'pdf') {
+      await resyncReadwisePdfOriginal(start.target, start.expectedSnapshot, dependencies);
+      return { node_id: nodeId, status: 'completed' };
+    }
     const candidate = await prepareReadwiseSourceResync(start.target, dependencies);
     const importedAt = new Date().toISOString();
     await runWithDatabaseConnectionOwner(() => commitReadwiseSourceResync({
       candidate, expectedSnapshot: start.expectedSnapshot, importedAt, target: start.target
     }));
-    const originalFile = start.target.state.originalFile;
-    if (candidate.document.category === 'pdf' && originalFile?.status === 'localized') {
-      try {
-        await placeReadwisePdfHighlightsFromAttachment({
-          attachmentId: originalFile.attachmentId,
-          connectionRef: start.target.connectionRef,
-          documentId: start.target.documentId,
-          nodeId
-        });
-      } catch (error) {
-        console.error('[readwise-source-resync] PDF highlight placement failed', { error, nodeId });
-      }
-    }
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     const errorCode = readErrorCode(error);
@@ -67,6 +59,24 @@ export async function resyncReadwiseSource(
   } finally {
     finishReadwiseSourceOperation(nodeId);
   }
+}
+
+async function resyncReadwisePdfOriginal(
+  target: NonNullable<ReturnType<typeof loadReadwiseSourceResyncTarget>>,
+  snapshot: string,
+  dependencies?: ReadwiseApiFetchDependencies
+) {
+  const originalFile = target.state.originalFile;
+  if (originalFile?.status !== 'localized') {
+    await localizeReadwisePdfOriginal(target, snapshot, dependencies);
+    return;
+  }
+  await placeReadwisePdfHighlightsFromAttachment({
+    attachmentId: originalFile.attachmentId,
+    connectionRef: target.connectionRef,
+    documentId: target.documentId,
+    nodeId: target.nodeId
+  });
 }
 
 function state(

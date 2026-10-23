@@ -74,7 +74,7 @@ async function toNativeImportSource(
         reason: readwiseState.originalFile.reason,
         status: readwiseState.originalFile.status
       }
-    } : {}),
+    } : isReadwisePdfSource(record) ? { readwise_original_file: null } : {}),
     source_fingerprint: record.source_fingerprint,
     source_kind: record.source_kind,
     source_locator: sourceLocator,
@@ -82,6 +82,10 @@ async function toNativeImportSource(
     ...(typeof record.pdf_index_status === 'string' ? { pdf_index_status: record.pdf_index_status } : {}),
     ...(typeof record.pdf_indexed_at === 'string' ? { pdf_indexed_at: record.pdf_indexed_at } : {})
   };
+}
+
+function isReadwisePdfSource(record: { source_kind: string; source_locator: string }) {
+  return record.source_kind.toLowerCase() === 'pdf' && record.source_locator.startsWith('readwise://');
 }
 
 function parseJson(value: string) {
