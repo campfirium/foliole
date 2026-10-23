@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
+import { holdCompanionSyncAppliedRefresh } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncOptions,
@@ -91,6 +92,7 @@ function applyRemainingProgress(args: {
 export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
   let receivedChanges = false;
   const refresh = () => { void refreshCompanionSyncDisplay(args).catch(() => args.setError?.('sync_display_unavailable')); };
+  const releaseAppliedRefresh = holdCompanionSyncAppliedRefresh();
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     ...(args.framedPeer ? { framedPeer: args.framedPeer } : {}),
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
@@ -106,6 +108,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     },
     resourcesOnly: args.continuationMode === 'resources-only'
   }).finally(() => {
+    releaseAppliedRefresh();
     if (receivedChanges) {
       if (args.deferAfterRelease) args.deferAfterRelease(refresh);
       else refresh();

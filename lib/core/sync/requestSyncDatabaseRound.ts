@@ -36,6 +36,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   const result = (pending: number) => ({ complete: pending === 0, pending, transferred,
     madeProgress: pending < initialPending,
     ...(pending > 0 && pending >= initialPending && sourceChanged && committed ? { dynamicBacklog: true as const } : {}) });
+  let yielded = false;
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const differences = compareFramedSyncDatabaseInventories(inventories);
@@ -45,6 +46,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     }
     const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged);
     transferred += round.delivered.length;
+    yielded = round.yielded;
     localChanged = port.watchLocalChanges?.();
     const next = await port.exchangeInventory();
     sourceChanged ||= round.sourceChanged || Boolean(next.inventoryDeferred);
@@ -57,8 +59,20 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     }
     inventories = next;
   }
+  const sent = yielded ? await sendLocalChanges(port, inventories, signal) : null;
+  if (sent) {
+    transferred += sent.delivered.length;
+    return result(Math.max(pendingObjects(inventories) - sent.delivered.length, sent.deferred.length));
+  }
   const pending = pendingObjects(inventories);
   return result(pending);
+}
+
+/** The last pass stopped pulling for a local edit; send it now rather than in the next scheduled round. */
+async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories, signal?: AbortSignal) {
+  const outgoing = compareFramedSyncDatabaseInventories(inventories)
+    .filter(difference => difference.direction === 'local_to_remote');
+  return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false) : null;
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
@@ -67,10 +81,11 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   const outcomes = new Map<string, RequestSyncObjectResult>();
   const attempted: FramedSyncInventoryDifference[] = [];
   const sizer = pullBatchSizer(Boolean(localChanged));
+  let yielded = false;
   for (const batch of directionBatches(differences, sizer.next)) {
     signal?.throwIfAborted();
     const pull = batch[0]!.direction === 'remote_to_local';
-    if (pull && localChanged?.()) break;
+    if (pull && localChanged?.()) { yielded = true; break; }
     const startedAt = Date.now();
     const results = await port.transferObjects(batch);
     if (results.length !== batch.length) throw new Error('request_sync_batch_results_missing');
@@ -108,7 +123,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       return 'deferred';
     }
   }, createFramedSyncInventoryDependencyLookup(inventories));
-  return { delivered, deferred, sourceChanged };
+  return { delivered, deferred, sourceChanged, yielded };
 }
 
 /** Local changes go out first, so an edit never waits behind applying what the peer sent. */

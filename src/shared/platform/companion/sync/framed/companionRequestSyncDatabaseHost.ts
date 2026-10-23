@@ -1,6 +1,6 @@
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
-import { registerCompanionWorkspaceRefresh } from '../../companionWorkspaceSnapshotStore.js';
+import { registerCompanionSyncAppliedRefresh } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
@@ -22,7 +22,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
     enqueueSearchInvalidations: false,
     objectApplied: async object => {
       if (session !== getCompanionReadingScope()) return;
-      registerCompanionWorkspaceRefresh(object.workspaceScope);
+      registerCompanionSyncAppliedRefresh(object.workspaceScope);
       await objectApplied?.(object);
     },
     objectOptions: async db => ({ hostName: await iosCompanionHostName(db) }),

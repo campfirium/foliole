@@ -185,3 +185,34 @@ it.each([
   expect(result.pending).toBe(counts.at(-1));
   expect(result.madeProgress).toBe(false);
 });
+
+it('sends a local edit that interrupts the last pass before the round ends', async () => {
+  const local: FramedSyncInventoryEntry[] = [];
+  const remote: FramedSyncInventoryEntry[] = [];
+  let exchanges = 0;
+  let edits = 0;
+  const result = await runRequestSyncDatabaseRound({
+    // The desktop keeps adding notes, so every pass still has pulls left when the next one starts.
+    exchangeInventory: async () => {
+      exchanges++;
+      for (let index = 0; index < 20; index++) remote.push(entry(`desktop-${exchanges}-${index}`));
+      const sorted = (values: FramedSyncInventoryEntry[]) => [...values].sort((a, b) => a.globalId.localeCompare(b.globalId));
+      return { local: sorted(local), remote: sorted(remote) };
+    },
+    transferObjects: async differences => differences.map(difference => {
+      if (difference.direction === 'local_to_remote') remote.push(difference.sourceSnapshot);
+      else local.push(difference.sourceSnapshot);
+      // The phone edit lands while the last allowed pass applies its first pull batch.
+      if (exchanges === 4 && !edits) { edits++; local.push(entry('phone-edit')); }
+      return outcome(difference);
+    }),
+    reportObjectError: () => { throw new Error('unexpected_error'); },
+    watchLocalChanges: () => {
+      const seen = edits;
+      return () => edits !== seen;
+    }
+  });
+  expect(edits).toBe(1);
+  expect(remote.map(value => value.globalId)).toContain('phone-edit');
+  expect(result.complete).toBe(false);
+});
