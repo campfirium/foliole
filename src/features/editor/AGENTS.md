@@ -3,7 +3,7 @@
 ## Scope
 
 - 本规则适用于 `src/features/editor/**`。
-- 触及 renderer UI 时仍必须按根规则读取 `DESIGN.md` 与 `.lab/specs/shared/ui/llm-ui-rules.md`。
+- 触及 renderer UI 时仍必须按根规则读取 `DESIGN.md`。
 
 ## Markdown Parser
 

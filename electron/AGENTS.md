@@ -8,21 +8,12 @@
 ## Desktop Host Rules
 
 - 本项目默认桌面优先，不按纯 Web 方案优先。
-- 当前 Codex 所在的原生桌面宿主是日常开发与本轮桌面行为的主验收宿主；不得因默认产品视角或另一平台仍有专项风险，就跳过当前宿主验收或把它挂成未来任务。
 - 当前活跃 Foliole library 及其原生宿主是用户数据与主数据库的事实来源；必须从当前运行时、library selection 或用户明确路径解析数据库，不得用历史平台默认路径替代当前主库。
 - macOS 与 Windows 分别负责各自当前原生宿主和活跃 library 的数据库核对；Windows 只对 Windows ABI、原生 shell、dialog、tray、notification、安装包与 Windows 路径语义等 Windows 专属结论具有权威性。
-- 诊断主数据库时必须先使用 `query-foliole-db` skill 的当前宿主只读流程；显式路径优先，自动解析只允许在候选唯一时采用，多候选必须停下确认。读取活库必须使用能观察 WAL 的只读连接，`immutable` 只用于已停止写入的快照。
 - 系统能力优先经 Electron main process 暴露，再由 renderer 通过 bridge 调用；业务层不得散落 `ipcRenderer` 调用。
 - 文件路径、数据库路径、日志路径等统一由 Electron main process 解析；前端禁止拼平台绝对路径。
 - 持久化主路径统一走 Electron main process 与 sqlite；`localStorage` 仅允许用于可丢失 UI 偏好且必须可审计。
 - 桌面窗口已可见但 bridge-backed controls 失效时，默认优先排查 preload / bridge 链路，不得先草率归因为 renderer 未启动。
-
-## Read Before Editing
-
-- 任务涉及 Electron 信任边界、preload、IPC、bridge 时，先读 `.lab/specs/desktop/electron/runtime-trust.md`。
-- 任务涉及 Windows 预览、桌面启动、热重启、镜像同步或桌面验收时，先读 `.lab/specs/desktop/electron/windows-dev-loop.md`。
-- dev 远程 full 不再运行 Windows 预览验收阶段（release 链与显式单阶段触发保留）；改动 Windows 宿主、原生 shell 或预览恢复链路时，其 Windows 开发机场景登记到根规则的真机清单，由批次经 `scripts/windows/windows-dev-control.mjs` 已登记动作执行并绑定候选版本，源码与判据未变时证据继续有效。发布批次必须完成对应 Windows 开发机场景；T7 的 Windows 安装冒烟不替代这些产品场景。`internal-install` / `internal-open` 的 `--revision <完整 SHA>` 接受 Mac 当前位于 dev 或 release、且属于其中之一的提交；验 release 候选会让 LAN 镜像与 `D:\C\foliole` 暂时指向该提交，下一次日常动作恢复为 Mac dev。
-- 任务涉及 workspace 桌面表面或桌面 UI 验收时，按需补读 `.lab/specs/desktop/workspace/**` 对应条目。
 
 ## Implementation Rules
 
@@ -30,7 +21,7 @@
 - 任何新增 renderer 可见能力，必须先定义或复用 bridge / IPC contract，再接业务消费；禁止先在 renderer 写假直连调用。
 - 涉及 preload、`contextBridge`、`ipcRenderer`、`window.electronAPI` 的改动，必须先核对 Electron 官方 `sandbox` / `contextIsolation` 边界。
 - preload 改动必须带一条“sandbox 受限 require 环境下 bridge 仍可暴露”的自动化回归测试。
-- `electron/preload.cjs` 不受根规则的单文件行数预算约束，新增 bridge 直接在该文件内追加：sandbox preload 只能 `require('electron')`，官方拆分路线只有构建期打包，其构建、路径与测试成本高于收益，单文件也便于审查安全边界。本条由本文件拥有，来源为用户 2026-10-23 决定；Electron sandbox 允许加载本地文件或项目已为 preload 引入打包步骤时失效，主要成本是该文件持续变长。
+- `electron/preload.cjs` 不受根规则的单文件行数预算约束，新增 bridge 直接在该文件内追加：sandbox preload 只能 `require('electron')`，官方拆分路线只有构建期打包，其构建、路径与测试成本高于收益，单文件也便于审查安全边界；Electron sandbox 允许加载本地文件或项目已为 preload 引入打包步骤时，本例外失效。
 - bridge payload、IPC 参数与返回值的结构变更，必须同步补测试；不得只改 happy path。
 - 数据库存储、备份、恢复、同步与设备身份相关改动，默认按永久态处理，不得只修页面即时表现。
 
@@ -40,30 +31,14 @@
 - 判断 Windows Electron runtime 是否可信时，必须以 main path、ready marker、runtime pid、boot session 与 bridge availability 的同轮校验为准；不得用“窗口可见”或“进程存在”替代可信判定。
 - 若同一轮日志已出现 `database_init_complete` 与 `bridge_ready`，同时出现 `window_error`、`renderer_error_boundary` 或 `app_ready_timeout`，必须先定位 renderer 错误源码与最近消费契约改动；不得继续优先归因数据库、Windows checkout 或 Electron 启动链路。
 
-## Windows Native Shell Policy
+## Windows Scripts And Native Modules
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 日常只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作，将 Mac `dev` 的已提交候选精确覆盖到 LAN Git 同名镜像，再覆盖固定 `D:\C\foliole`。registry 是日常动作清单的机械真相，AGENTS 不复制枚举。Windows 不决定候选；正式多端验收在本轮开始时记录 Mac 最新 `dev` 完整 SHA，后续 HEAD 前进也沿用该 SHA，trusted runtime revision 只证明产品 runtime 等价，最终验收源码 revision 取 controller 已同步的本轮 SHA。不得从 Windows 回传或合并源码。
-- 多端同步验收只在测试环境进行，日常与测试环境的划分、端口和不请用户操作测试端的要求由 `foliole-client-control` 技能拥有。已安装 Internal 客户端只做安装冒烟：Mac 未提交改动留在原工作区，不进入本轮安装包；Windows 打包源码仍由 Mac `dev` 的固定镜像入口精确对齐本轮 SHA 和日常 `D:\C\foliole`，不建立第二份源码 checkout；只读核对安装来源、运行身份、版本和数据根，不入组、不写测试对象、不为验收清库或重置资料。
-- Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node 或其他 source/build 控制面。
-- A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
-- Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
 - 涉及环境变量、后台进程、重定向、路径拼接、Electron 启动或多步 Windows 命令时，必须优先写成 Node `.mjs` runner；确实需要 Windows 宿主能力时，使用已提交的 `.ps1` / `.cmd` 文件入口，并通过简单 `-File` 或脚本路径调用。
-- Windows 原生 Codex 检查或控制 Windows Electron dev runtime 时，优先使用 `npm run windows:client:native -- <status|start|stop|restart|full-restart>`；该入口参照既有 ready marker / bridge marker 信任语义，但用 Node 原生进程控制直接启动 `electron-dev-native.mjs`，避免旧 PowerShell client wrapper 和 inline command 转义。
-- Windows 原生 Codex 会话直接站在 Windows checkout 内诊断时，使用 `npm run windows:preview:native`；该入口复用既有 client control、restart intent、renderer reload intent、ready marker 与 native ABI preflight 语义。
-- Windows 使用 `D:\C\foliole` 的 `dev` Git 仓库作为 Windows 桌面、同步验收与 A5 Android 的唯一源码现场；每次固定动作先成功 fetch Mac 权威 LAN 镜像，再 `reset --hard` 到该结果并用 `git clean -fd` 清除非忽略的 untracked 源码漂移，最后复核工作区干净。fetch 失败时不得先覆盖本地内容。
-- Windows 固定仓库不得 commit / push 回 Mac 或任何源码上游；本地源码改动不保留、不 stash、不合并、不回传，也不交给用户处理。`git clean` 不使用 `-x`，不得清理 ignored runtime、library、证据或工具缓存。
-- Windows 原生 Codex 需要快速确认本机环境与脚本入口时，优先使用 `npm run windows:native:check`；该入口覆盖 native preflight 与核心路径测试，不替代本轮能力闭环所需的最小相关验证。
 - `electron-dev-native.mjs` 只负责设置 Windows 原生试点的独立 userData / session，然后复用已验证的 `scripts/electron-dev.mjs`；不得为原生试点另写一套 Electron/Vite 启动协议，除非先证明旧 dev runner 在 Windows 原生下不可用。
 - 禁止在仓库脚本中新增 `powershell.exe -Command ...`、复杂 `cmd.exe /c ... && ...`、内联 `set VAR=... && npm ...`、或跨 PowerShell / cmd 多层嵌套命令；这些模式必须沉到受测 runner 文件中。临时诊断需要复杂 PowerShell 参数时，使用 `powershell.exe -NoProfile -EncodedCommand` 并把 stdout、stderr、exit code 写入 `.tmp/` 后再读取。
 - 遇到 `better-sqlite3` / native module 的 `NODE_MODULE_VERSION` mismatch 时，使用 `npm run electron:rebuild:native` 恢复 Electron ABI；不得使用普通 `npm rebuild better-sqlite3` 替代。
 - 根 `node_modules/better-sqlite3` 默认归 Electron ABI 所有；新增真实 sqlite 开发脚本不得用普通 Node 直接加载根 `better-sqlite3`，必须走受控 Electron ABI runner 或先在实施说明中登记例外。
 - `npm install` / `npm ci` 后默认重新校验 native ABI；若 Windows 预览入口报 ABI mismatch，预览前检查可以先运行 `npm run electron:rebuild:native` 修复 Electron ABI 并复验，复验失败才允许失败；Electron-as-Node runner 仍应直接提示运行该命令，不得使用普通 `npm rebuild better-sqlite3`。
-
-## macOS Desktop Interaction
-
-- macOS Codex 会话调试或操作桌面客户端时，默认不得抢占用户当前桌面；优先使用日志 / CLI、应用级后台状态读取或不激活窗口的 Computer Use 操作，能在后台完成时不得将 Foliole 拉到前台。
-- 当目标是已由统一脚本启动的 Foliole DEV 且验收确需 Computer Use 时，先用 `cua.getState()` 核实 `com.campfirium.foliole.dev` 正在运行，再仅按该 bundle ID 连接；不得调用 `cua.getApp("Foliole")`，它会解析并启动正式版 `/Applications/Foliole.app`。DEV 不在 inventory 时返回统一脚本诊断，不尝试应用名称。此规则由本文件拥有；仅当 DEV bundle identity 改变或 Computer Use 提供经验证的 non-launching process binding 时修订，固定成本是一轮 inventory 读取。
-- 只有验收目标依赖真实焦点、键盘输入、菜单栏、拖拽或窗口呈现，或用户当次明确要求可见预览时，才允许前台操作；执行前必须先在 commentary 说明会短暂打扰桌面，结束后只停止或隐藏本轮启动的窗口，不得关闭用户原有窗口；同仓 Foliole DEV 预览阻塞验收 resource gate 时按下述专门规则处理。
 
 ## Validation
 
@@ -73,6 +48,5 @@
 - 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。
 - Hidden/Visible spec 只断言稳定用户行为。UI、layout、空白页或视觉回归还必须产出截图或 trace 到 `.tmp/artifacts/`；不得用 DOM 顺序、坐标或文本存在代替视觉证据。最终汇报说明自动断言覆盖的用户效果与未覆盖观察点。
 - Desktop Playwright 使用共享 harness、隔离 state root 与 resource gate，并在共享工作区串行执行；并发占用是资源冲突，不得报告为产品失败。不得绕开 runner 直接运行裸 Playwright CLI。
-- macOS Hidden/Visible Native 验收被同仓 Foliole DEV 预览占用 resource gate 时，核实 holder 是 `scripts/macos/macos-electron-dev.mjs` 后记录恢复意图，直接运行 `npm run macos:dev:stop` 并继续验收，不要求用户手动关闭。无论验收通过或失败，验收命令到达终态后都必须运行 `npm run macos:dev:open` 并以 `npm run macos:dev:status` 核实 `RUNNING`；只有用户当次明确要求保持关闭时才不恢复。该规则只授权停止和恢复当前仓库原本已运行的 DEV 预览，不扩张到原本未运行的预览、正式版、其他应用或无法核实身份的 holder。单一 owner 为本文件，主要成本是验收前后各一次 DEV 生命周期切换；当验收入口不再互斥或 stop/open 入口失效时修订。
 - macOS preview 使用 `npm run electron:dev` 的 `.tmp` sandbox，native preflight 使用 `npm run electron:native:health`。Windows 人工预览使用 `npm run windows:preview:native`，仅在 Windows 专属触发成立时执行。
 - Windows 专属证据覆盖 Windows path/`app.getPath`、ABI、native shell/dialog/tray/notification、主数据库、installer/updater 与 Windows preload/IPC 边界；Linux Electron + Xvfb 或 macOS preview 不得替代。

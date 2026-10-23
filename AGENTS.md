@@ -1,24 +1,20 @@
 # AGENTS
 
+若存在同目录 `AGENTS.local.md`（本机私有，不进入版本库），与本文件同时读取；子目录同理。
+
 ## Decision Order
 
-- 结果由用户当次最新指令定义；已有审定方案只补充用户已批准的稳定目标，不得扩张授权。代码、测试、fixture 或 controller 不能借当前实现改写目标；现场证据若证伪正式合同，停下交用户并由 `/2` 修订。
-- 执行路线先保护用户数据、安全、Mac `dev` 源码真相和结果真实性，再以已核实的当前现场事实选择路径；条件保护只有触发证据成立时高于实现偏好。在这些约束内，默认选择最快、最短、成熟且可复验的路线。
+- 结果由用户当次最新指令定义；已有审定方案只补充用户已批准的稳定目标，不得扩张授权。代码、测试、fixture 或 controller 不能借当前实现改写目标；现场证据若证伪正式合同，停下交用户。
+- 执行路线先保护用户数据、安全、`dev` 源码真相和结果真实性，再以已核实的当前现场事实选择路径；条件保护只有触发证据成立时高于实现偏好。在这些约束内，默认选择最快、最短、成熟且可复验的路线。
 - 规则适用顺序是：根的跨仓硬边界与机械入口由局部规则细化，局部规则由当前任务和现场条件触发；计划只定义目标语义，不能反向定义当前事实。
 - 条件保护必须保留条件语气；触发证据不存在或失效证据成立时，不得继续按永久禁令执行。计划、交接与执行不得把“当……时 / 仅在……下”加强成无条件“必须 / 不得”。实现偏好可被更短且同样可靠的成熟路线替换。
-- 新增非显然绝对禁令前，必须明确单一 owner、来源、触发条件、失效证据和主要成本；无法说明时，只能写成条件保护或实现偏好。修规则优先删除、压缩、下沉和归一 owner，不另造治理体系。
 
 ## Repository And Work Unit
 
 - 当前仓库是 `Electron + React + TypeScript + Vite + Capacitor` 多平台单仓；`electron/`、`android/`、`ios/` 只承载薄宿主，`src/app/` 与 `src/companion/` 承载 renderer shell，跨宿主业务、状态与稳定调用面归 `src/features/`、`src/store/`、`src/shared/`。
-- 默认直接在 `dev` 连续小步推进，不创建 feature branch / worktree，除非用户明确要求。Windows 与 LAN Git 日常只消费 Mac `dev` 的精确镜像；用户明确建立的长期专项 branch 只能使用隔离 checkout，不得占用或决定日常源码现场。Windows 不向 Mac 提供、合并或决定源码候选。
-- 临时 PR、冻结候选或验收 worktree 必须由 `node scripts/diagnostics/transient-worktree-lifecycle.mjs create --path <path> --kind <development|acceptance> --target <branch>` 创建并登记；development 同时传 `--branch <branch>`。结果进入目标分支或证据收口后，同一流程调用 `finish --path <path>`。异常遗留在显式本地维护时调用该入口的 7 天 `sweep`，不得直接删除目录或让 lock 永久保留。
-- 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
-- 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；聊天编号、标题和改名统一按 `codex-task-lookup/references/task-identity.md` 执行，方案/闭环编号不能替代唯一聊天身份；按编号或关键词定位先用 `codex-task-lookup`，不用最近聊天列表猜任务。非会审任务在用户只要求继续时沿用已核实的原聊天，另开任务须有用户授权；会审任务的新建与续用按 `astra-review` 执行。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
-- 可为独立任务新开会话派活；会话之间不嵌套、不要求回报、不互相传话，进度只以台账、方案文件和提交为准。任务统筹（对账、关闭、排序与待拍板事项）只在用户输入 `/11` 或说“任务统筹”“统筹下任务”时按 `11` skill 执行。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。
-- 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。本条由根统一拥有，来源为用户对产品与控制面授权的分离；主要成本是控制面缺口可能使验收待完成，明确授权该结果后按其范围执行。
-- 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，需落库时使用 task-seed；可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
+- 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。
+- 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
 - 共享目标是“共享核心 + 薄宿主适配”；平台差异进入 `src/shared/platform/**` 或对应宿主，不在 feature/store/editor 业务逻辑中复制平台分支。正式图标、菜单与命令必须同源、同名。
 
 ## AGENTS Routing
@@ -35,23 +31,16 @@
 | `src/app/components/**` | `src/app/components/AGENTS.md` |
 
 - 跨多个范围时读齐相关局部规则。脚本路径域以 `scripts/lib/path-domains.mjs` 为机械真相；质量、preview、lint 和 pre-push 不另建路由表。
-- 新增、重写或审计 agent 规则必须使用 `agents-maintainer`；根只保留全仓硬边界、风险/文档触发和机械入口，宿主命令、预览与诊断细节归局部 owner。
 
 ## Read Before Editing
 
-- 用户可见布局、信息层级或控件组合：先读 `DESIGN.md`；renderer UI 再读 `.lab/specs/shared/ui/llm-ui-rules.md`。
-- UI 文案、产品对象命名、空状态、按钮、菜单、队列或阅读单元称呼：再读 `.lab/specs/_product/terminology-and-copy.md`，并按用户效果、轻原理和内部语言分层；不得从变量、数据库字段、IPC/action 名或临时术语直接生成最终文案。
+- 用户可见布局、信息层级或控件组合：先读 `DESIGN.md`。
 - `docs/i18n/guides/**`：先读 `docs/i18n/guides/README.md`；英文 `en` 是必需源。Demo 可提供浏览器预置体验，但不得暗示为 Web 版、正式数据环境、桌面替代品或长期在线工作区。
-- 具体现有规范按任务需要读取对应 `.lab/specs/**`；不全量通读。只有判断停车策略时才读取 `.lab/internal/runtime/park.flag`。
 
-## Task And Risk Routing
+## Risk Routing
 
-- 第一次读文件、跑命令或修改前，将最新请求判为 `DIRECT`、`FOLLOW_PLAN`、`NEEDS_EVAL` 或 `STOP_CONFIRM`；只有 `DIRECT` 可静默执行。`FOLLOW_PLAN` 先读方案；`NEEDS_EVAL` 先说明任务类型、影响范围、已定路线、边界排除和停工点；`STOP_CONFIRM` 等待用户确认。
-- 短标题按“本轮点名文件/方案 > 与最新请求共享同一最终结果的 active plan > 最近未完成明确指令”解析；active plan 只能帮助定位已属同一结果的工作，不能因专题相同、存在依赖或尚未归档而取得新问题的所有权。仍无唯一目标时只问一个问题；歧义与未确认根因只写现象、假设和待确认点。
 - sync、schema/migration、preload/IPC/native bridge、Capacitor/宿主生命周期、review queue、delete/restore、import/reimport、持久化、冲突、安全边界、不可逆数据与人工验收失败复修属于高风险触发；评估中建议 High/XHigh，并按适用局部规则核对官方来源。
-- 扫描、轮询、自造协议、新依赖、长期双写、运行时迁移、隐式 fallback、局部复制或先污染后清理若成为拟议主路线，先说明其身份、触发证据和退出条件并进入 `STOP_CONFIRM`。
-- 任何方案写入前先由本规则唯一判定归属：用户只在讨论、质疑或纠正理解且未要求记录时，不修改方案；只有最新请求与已有方案共享同一最终结果、不变量和整体验收时，才用 `/2` 修订该方案；能够独立命名或独立验收的结果，即使同专题、阻塞原验收或由执行中发现，也不得追加或改写原方案，用户要求记录时交 `task-seed`，要求立即规划时另建方案。归属确定后，修改已有行为先描述现状，再逐层展开目标伪代码，与用户对齐后才拆闭环；`/3` 负责实现和验证，`/4` 负责最终验收，具体流程只由技能定义。
-- 未获用户当次授权不得使用子代理。获授权后也只分流边界清晰的只读会诊或机械整改；主进程负责根因、语义、最终 diff、验证与提交收口。
+- 扫描、轮询、自造协议、新依赖、长期双写、运行时迁移、隐式 fallback、局部复制或先污染后清理若成为拟议主路线，先说明其身份、触发证据和退出条件并等待用户确认。
 
 ## Architecture And Data
 
@@ -60,45 +49,21 @@
 - 用户可感知且影响重启后结果、队列、图标、过滤、调度、统计或后续行为的状态默认是永久态；必须覆盖 renderer 写入、bridge/runtime sync、持久化与 hydrate。只有弹窗、hover/focus、当前会话游标、瞬时滚动/选区等纯 UI 过程量可不持久化。
 - 数据、同步、合并与冲突处理必须可恢复且不得静默覆盖。不可替代原始事实受保护；可重建副本与明确退役旧状态不得诱发长期双读双写、自动探测回退或运行时兼容迁移，除非用户明确要求。
 
-## Quality, Acceptance, And Preview
+## Quality And Tests
 
-- 每个 `/3` 闭环在下述本地行为测试门槛通过后勾选；当前 Mac 宿主的 Hidden Native E2E 按本地测试处理。真机（A5、Fri、Windows 开发机）验证只用固定冒烟清单 `.lab/atlas/0active/01-smoke.md` 与改动试用表 `.lab/atlas/0active/00-trials-open.md` / `01-trials-closed.md`，各处所称“真机清单”即指它们；表格式、试用方、积压提示与发布阻断由 `task-ledger` 技能拥有。任务在本地门槛通过、提交并写好试用行后经 `archive-record` 关闭，不等待推送或远程 full，汇报写明真机未证明；不为等试用保留任务，已有未复验真机失败的任务保持开放。批次在用户要求时或发布时由发布主任务运行。本条由根拥有，来源为用户 2026-10-21、10-22 与 10-23 决定；主要成本是平台专属回归最晚到下一批次、移动端回归最晚到 beta 才暴露。
-- 日常不手动推送：Mac `dev` 由 `scripts/macos/scheduled-dev-push-launchd.mjs` 安装的定时推送送出，之后的 Scheduled Dev Quality 是收尾检查，不属于任何任务；只有用户明确要求或发布流程需要时才手动推送，手动推送或手动远程 full 前先跑 Windows 预检。远程 full 失败另开修复任务，按方案记录的提交号追溯来源，不重开原任务，也不预先登记“待 full”。本条由根拥有，来源为用户 2026-10-23 决定；主要成本是远程回归最晚到下一次定时质检才暴露。
 - 使用 `npm` 与 `package.json` 中登记的入口，不用不存在的 `npm test` 兜底，也不得降低检查标准。普通本地优先 `npm run quality:fast`，或显式 `npm run test:files -- <files>`、`npm run test:sqlite:electron -- <files>`、`npm run lint:files -- <files>`。
 - `test:changed`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 只在 hosted lane 执行。`scripts/quality/quality-command-contracts.mjs` 是命令分类真相；dev hosted recheck 只用 `npm run quality:remote -- --scope <desktop|shared|android|ios|full>`。
-- 测试按风险分档，由 Agent 在每个闭环自行决定，不逐个请用户确认：触及 Task And Risk Routing 所列高风险范围的行为，使用真实 SQLite 或生产链路的集成测试；其他新增或改变的可观察行为维护一个最小、独立于实现方式的测试 contract；纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。修复任何来源（本地、远程、真机、用户）发现的 bug 都补一个修复前会失败的回归测试；只有真机能复现的部分登记真机清单。证明本次差异的测试应因旧行为不符合目标而失败、因新行为符合目标而通过，不能以缺少新 helper 或文件代替行为失败。保护未改变行为的回归测试可以前后都通过；无法安全复跑旧版时如实说明证据限制。不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构，也不由测试合同推导控制面建设授权。
+- 测试按风险分档，由 Agent 在每个闭环自行决定，不逐个请用户确认：触及 Risk Routing 所列高风险范围的行为，使用真实 SQLite 或生产链路的集成测试；其他新增或改变的可观察行为维护一个最小、独立于实现方式的测试 contract；纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。修复任何来源（本地、远程、真机、用户）发现的 bug 都补一个修复前会失败的回归测试。证明本次差异的测试应因旧行为不符合目标而失败、因新行为符合目标而通过，不能以缺少新 helper 或文件代替行为失败。保护未改变行为的回归测试可以前后都通过；无法安全复跑旧版时如实说明证据限制。不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构，也不由测试合同推导控制面建设授权。
 - 测试只在以下情形删除或合并：与另一测试守同一 contract；守已退役语义；反复不稳定且当轮无法修复（先按 skip 规则标注，30 天内修复或删除）；只锁函数名、源码文本或偶然结构。删除时在提交的 `context` 写明它守的 contract 现由哪个测试覆盖；不得为缩短运行时间删除唯一守着某 contract 的测试。
-- **任务关闭与真机批次前，本轮全部适用本地行为测试必须通过。** Agent 主动从本轮验收目标确定场景，不等待用户指定测试方法；所有可本地复现的场景须覆盖初始状态、操作序列和结果断言。涉及多实例交互时，使用独立实例与临时数据运行生产链路的确定性集成测试，断言各端最终持久化结果；不得用 mock 替掉本次待验证链路。单元测试、lint、构建或独立原型通过不能替代该集成覆盖。存在未覆盖、失败或跳过的适用场景时，不得关闭任务或开始真机批次；场景可以提前登记到真机清单，但登记不替代测试、不作关闭依据；“全部”限本轮验收范围，不要求每次全仓测试。关闭或开始批次前在当前任务列明场景对应的测试、执行命令与通过结果；已有有效证据可复用，受影响证据随源码或判据变化失效。本条由根统一拥有，各宿主和技能只引用此前置条件。
-- 真机发现非平台专属 bug，先补本地失败回归、修复并通过上述门槛，再继续验收；不得以“预览、试跑、探索”名义重放产品场景验证修复。现场取证可先行，但限于取得构造复现或区分根因所需的证据，不替代修复后的本地验证。仅真实 OS、硬件、权限或网络栈才能验证的部分，以及无稳定自动化断言的纯视觉检查，可说明具体依赖与本地无法证明的原因后登记到真机清单；未写测试、搭建困难或根因未知不构成平台专属证据。例外只豁免该部分，仍须完成可本地覆盖部分；取得本地可复现证据后转回本地。批次发现的问题：本地可复现的补回归测试后修复，随质量闸长期保留；只有真机能复现的修复后在 `01-trials-closed.md` 或固定冒烟运行记录记一行，同类第二次在真机出现时才加入固定冒烟；试用通过不新增长期测试。问题由仍开放的来源任务修复，来源已关闭或涉及多个任务时另开修复任务，随下一批次复验；发布批次失败由发布主任务修复、形成新候选并复验。
-- 运行时或用户可见行为改动，当前 Mac 宿主的可见验收按局部规则在单项内完成；其他宿主的真机部分登记到真机清单。文档、agent 规则、只读诊断、测试或脚本内部改动且不改变运行时行为时可跳过宿主验收，并在最终汇报说明。
-- 本机开发、诊断和提交前宿主试跑可消费当前工作区。真机批次与发布验收若需冻结候选，必须绑定精确 revision；单项任务关闭不需要多宿主 accepted tip。候选 revision 是验证输入，整体 accepted revision 是本轮适用的产品行为、质量检查与必要人工确认通过后的结论。单入口报告的 accepted tip 只证明该入口的验收范围。最终多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据；此要求不构成开始产品验证前等待 hosted quality 完成的条件。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
+- **本地行为测试门槛**：本轮全部适用本地行为测试必须通过。Agent 主动从本轮验收目标确定场景，不等待用户指定测试方法；所有可本地复现的场景须覆盖初始状态、操作序列和结果断言。涉及多实例交互时，使用独立实例与临时数据运行生产链路的确定性集成测试，断言各端最终持久化结果；不得用 mock 替掉本次待验证链路。单元测试、lint、构建或独立原型通过不能替代该集成覆盖。“全部”限本轮验收范围，不要求每次全仓测试。
 - 新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`，超过 30 天复查。E2E 不进入质量闸，按宿主局部规则单独执行。
-- 测试耗时与超期 skip 只记录和报警，不限制开发：hosted 耗时摘要在总耗时或单个 job 比最近成功运行慢 25% 以上且至少 1 分钟时标出报警，skip lint 报告超过 30 天的 skip，二者都不改变质检结论。真机批次出现失败时，执行批次的任务在清单历史段同时判断本地或远程测试是否本该抓住；本该抓住的按测试分档规则补回归测试，并把提交写进同一行。每次正式发布收尾时，发布主任务按 `foliole-release` 读取这些已有记录做测试复盘，结论（含“无”）写入清单历史段。不另建台账、扫描器或定时任务。本条由根拥有，来源为用户 2026-10-21 决定；主要成本是每次发布一次短复盘。
-- 长命令返回非终态、heartbeat 或仍在运行时使用 `quiet-wait`，不得用 agent 回合轮询。
-- 用户明确要求某宿主预览或“阶段验收”时，验证通过后按局部规则执行；Demo 可见改动刷新已打开的 Demo，无法控制时明确报告，不用 Hidden Native 替代。普通情况不读取持久 preview flag 自动开窗。
-- 最终汇报默认使用 `C / V / R / commit`：`C` 写用户结果与已确认根因，`V` 写验证结论或跳过原因，`R` 只写真正剩余风险。证据文件使用绝对路径 Markdown 链接。
+- 测试耗时与超期 skip 只记录和报警，不限制开发：hosted 耗时摘要在总耗时或单个 job 比最近成功运行慢 25% 以上且至少 1 分钟时标出报警，skip lint 报告超过 30 天的 skip，二者都不改变质检结论。
 
 ## Structure, Language, And Files
 
 - 单文件目标不超过 220 行，超过 260 行必须拆分；单函数目标不超过 40 行，超过 60 行必须拆分。规划列出候选文件后先运行 `node scripts/check-file-budget.mjs <files>`；删除、搬移或微修可继续处理被判 `split` 的原文件。
 - 每个文件只承载一个核心职责；不得用压缩格式、合并语句或删留白规避规模约束。
-- 代码、注释、提交信息、UI 文案与配置键使用英文；对外沟通默认中文。`.lab/specs/**` 文件名用英文 slug、正文默认中文；其他落库文档默认中文。
-- Atlas 编号：一个编号对应一个可独立命名或独立验收的结果；方案、聊天与文件都归属编号，有无方案不影响编号。`S<n>` 表示未开始、`T<n>` 表示已开始，共用 `.lab/internal/track-sequence`，只由 `implementation-plan-writer/scripts/allocate-track-number.mjs` 分配，分配后立即用 `task-ledger` 登记，永久占用不复用。开新聊天时判定一次：同一结果沿用原号，新结果现在做取 `T`、以后做取 `S`，纯讨论不取号；已有聊天首次往 Atlas 状态目录写文件或开始执行改动前，先取得或归属编号。从任何入口开始处理 `S<n>`，先按 `task-seed` 领取为 `T<n>`；归属不清只问一个问题。发布也取 `T` 号。取号与登记是规则步骤，不需另行授权；委派或交接给其他聊天时，在提示中写明所属编号，接收方的产物一律按该编号写附件。不得为避开命名把应进 Atlas 的产物放到别处。
-- Atlas 状态目录（`0active`、`1planned`、`2later`、`3done`、`4dropped`）只放 Markdown，目录表示状态，名称只有：常驻台账 `00-<name>.md`（开放任务表与开放试用表，用户日常看）与 `01-<name>.md`（已关闭表与固定冒烟表，agent 使用）、种子 `S<n>-<slug>.md`、主文档 `T<n>-<slug>.md`、闭环 `T<n>-<k>-<slug>.md`、附件 `T<n>[-<k>]-<E|A|H|R>-<slug>.md`（证据/验收/交接/报告）。slug 用小写英文，日期写正文不进文件名；附件随所属方案经 `archive-record` 归档。其他 Atlas 目录按用途命名：审计与性能记录 `YYMMDD-<slug>`，术语与参考用 slug。新建文件由 `~/.codex/guards/foliole_atlas_name_guard.py` hook 拒绝不合规名称或未登记编号。本条由根拥有，来源为用户 2026-10-23 决定；主要成本是讨论结论落盘前须先取号。
-- 临时 HTML、截图、样例、日志、一次性产物及任务的非 Markdown 产物放 `.tmp/artifacts/`（属于任务时放 `.tmp/artifacts/<编号>/`）。只有 Foliole 自管且可重建的跨运行缓存可放根 `.cache/`；不得枚举或清理不属于当前任务的缓存。
-- 全仓临时产物与缓存清理独立于 DEV 启动、构建、缓存准备和验收。仅在没有构建或验收运行时按需显式执行：普通临时产物先运行 `node scripts/diagnostics/cleanup-local-artifacts.mjs --dry-run`，核对候选后用 `--apply` 替换 `--dry-run`；缓存及验收产物先运行 `node scripts/diagnostics/local-artifact-cache-retention.mjs`，核对候选后加 `--apply`。临时 worktree 仍使用登记入口的 `sweep`，不由普通目录清理代替。
-- `.lab/**` 是本地工作文档，默认忽略且不提交。重要且持久的产品边界决策才写入对应 `.lab/specs/**`；不要把背景、施工历史或临时争论写入 AGENTS。
-- 闭环完成且本地门槛通过后，默认用 `commit-note` skill 提交，不另问用户；只用显式 pathspec 提交本轮改动。
-
-## Detail Pointers
-
-- 方法论与治理：`.lab/specs/_product/methodology.md`、`.lab/specs/_governance/`
-- UI 与文案：`DESIGN.md`、`.lab/specs/shared/ui/llm-ui-rules.md`、`.lab/specs/_product/terminology-and-copy.md`
-- 宿主架构：`.lab/specs/desktop/electron/windows-dev-loop.md`、`.lab/specs/desktop/workspace/shell-layout.md`、`.lab/specs/architecture/multi-target-repo-layout-expectation.md`
-
-## Claude Code Delegation
-
-- 适用于 Claude Code：主 Agent（Opus）负责整体任务、规划、关键决策、集成、最终 diff、验证与提交收口。用户已长期授权主 Agent 将任务委派给 `.claude/agents/implementer.md`（Sonnet），此授权仅覆盖该子 Agent，其他子代理仍按 Task And Risk Routing 的当次授权规则。
-- 仅当任务边界明确（文件、目标行为与验证命令可写清）、可独立执行且预计降低总消耗时才委派；简报须自足，主 Agent 必须复核其 diff 与验证结果。
-- 复杂、模糊、高度耦合或属高风险触发的工作由主 Agent 直接处理，不为节省额度强行拆分。
+- 代码、注释、提交信息、UI 文案与配置键使用英文；对外沟通默认中文。
+- 临时 HTML、截图、样例、日志、一次性产物放 `.tmp/artifacts/`。只有 Foliole 自管且可重建的跨运行缓存可放根 `.cache/`；不得枚举或清理不属于当前任务的缓存。
+- 全仓临时产物与缓存清理独立于 DEV 启动、构建、缓存准备和验收。仅在没有构建或验收运行时按需显式执行：普通临时产物先运行 `node scripts/diagnostics/cleanup-local-artifacts.mjs --dry-run`，核对候选后用 `--apply` 替换 `--dry-run`；缓存及验收产物先运行 `node scripts/diagnostics/local-artifact-cache-retention.mjs`，核对候选后加 `--apply`。临时 worktree 使用其登记入口的 `sweep`，不由普通目录清理代替。

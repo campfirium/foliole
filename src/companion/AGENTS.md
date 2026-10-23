@@ -15,9 +15,7 @@
 
 ## Read Before Editing
 
-- companion UI 改动前必须先读 `DESIGN.md` 与 `.lab/specs/shared/ui/llm-ui-rules.md`。
-- 任务涉及 companion 产品边界时，先读 `.lab/specs/shared/platform/android-companion-expectation.md`。
-- 任务涉及共享平台边界或宿主可移植性时，按需读取 `.lab/specs/shared/platform/runtime-portability-expectation.md`。
+- companion UI 改动前必须先读 `DESIGN.md`。
 
 ## Implementation Rules
 
@@ -28,7 +26,3 @@
 - 若一个交互只适用于移动端，优先留在 companion 壳，不要把平台分支散落到共享 feature 里。
 - companion 可调整布局、密度、触屏交互和样式表达，但不得改写共享业务语义；若发现现有 desktop 实现过于宿主耦合，应先做最小共享化重构，再继续 companion 接线。
 
-## Validation
-
-- companion 进入真机产品验收前先满足根规则的本地行为测试门槛；Web 诊断、quality 升级、真实 A5、Android WebView 与真机 L1 的触发和入口统一由 `android/AGENTS.md` 维护。
-- 现有固定动作不足以验收真实 companion 内容、持久化结果或 Android WebView CSS 时，必须停下重新评估；不得直接调用 adb、Gradle 或另建真机入口。
