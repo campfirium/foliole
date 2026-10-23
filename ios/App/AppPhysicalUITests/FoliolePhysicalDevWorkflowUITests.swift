@@ -11,33 +11,20 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
 
-        let browse = app.buttons["Browse"]
-        if !browse.waitForExistence(timeout: 5) {
-            let exit = app.buttons["Exit"]
-            let body = app.descendants(matching: .any).matching(identifier: "Topic body").firstMatch
-            if !exit.exists, body.waitForExistence(timeout: 5) {
-                let passage = body.staticTexts.firstMatch
-                XCTAssertTrue(passage.waitForExistence(timeout: 5), "The restored topic text is unavailable.")
-                passage.tap()
-            }
-            if exit.waitForExistence(timeout: 5) { exit.tap() }
-        }
-        XCTAssertTrue(browse.waitForExistence(timeout: 45),
-                      "Browse did not become available on the iPhone development build.")
-        browse.tap()
+        openBrowseSurface(in: app)
 
         let capture = app.buttons["Capture"]
-        XCTAssertTrue(capture.waitForExistence(timeout: 15),
+        XCTAssertTrue(waitDismissingSyncNotice(capture, in: app, timeout: 15),
                       "Capture is unavailable on the Browse surface.")
         capture.tap()
 
         let editor = app.textViews["Capture text"]
-        XCTAssertTrue(editor.waitForExistence(timeout: 30),
+        XCTAssertTrue(waitDismissingSyncNotice(editor, in: app, timeout: 30),
                       "The Capture sheet did not open after the real device tap.")
         attachScreenshot(named: "Fri-dev-workflow-operated")
 
         let cancel = app.buttons["Cancel"]
-        XCTAssertTrue(cancel.waitForExistence(timeout: 15), "Capture Cancel is unavailable.")
+        XCTAssertTrue(waitDismissingSyncNotice(cancel, in: app, timeout: 15), "Capture Cancel is unavailable.")
         cancel.tap()
         XCTAssertFalse(editor.waitForExistence(timeout: 5),
                        "Capture sheet remained open after the real device tap.")

@@ -62,6 +62,7 @@
 		50F311011FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */; };
 		50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */; };
 		50F200111FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */; };
+		50F500111FED79650016851F /* FoliolePhysicalBrowseEntryUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F500121FED79650016851F /* FoliolePhysicalBrowseEntryUITestSupport.swift */; };
 		50F300111FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F300121FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift */; };
 		50F400111FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F400121FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift */; };
 		50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */; };
@@ -194,6 +195,7 @@
 		50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalJoinChoiceUITestSupport.swift; sourceTree = "<group>"; };
 		50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITestSupport.swift; sourceTree = "<group>"; };
 		50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalBodyPersistenceUITestSupport.swift; sourceTree = "<group>"; };
+		50F500121FED79650016851F /* FoliolePhysicalBrowseEntryUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalBrowseEntryUITestSupport.swift; sourceTree = "<group>"; };
 		50F300121FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalBrowseNavigationUITestSupport.swift; sourceTree = "<group>"; };
 		50F400121FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalTopicEditingUITestSupport.swift; sourceTree = "<group>"; };
 		50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupMutationUITestSupport.swift; sourceTree = "<group>"; };
@@ -396,6 +398,7 @@
 				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
 				50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */,
 				50F300121FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift */,
+				50F500121FED79650016851F /* FoliolePhysicalBrowseEntryUITestSupport.swift */,
 				50F400121FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift */,
 				50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */,
 				50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */,
@@ -679,6 +682,7 @@
 				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
 				50F200111FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift in Sources */,
 				50F300111FED79650016851F /* FoliolePhysicalBrowseNavigationUITestSupport.swift in Sources */,
+				50F500111FED79650016851F /* FoliolePhysicalBrowseEntryUITestSupport.swift in Sources */,
 				50F400111FED79650016851F /* FoliolePhysicalTopicEditingUITestSupport.swift in Sources */,
 				50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */,
 				50F311011FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift in Sources */,
