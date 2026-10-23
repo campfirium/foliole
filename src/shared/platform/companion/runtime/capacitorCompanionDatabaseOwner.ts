@@ -8,10 +8,11 @@ import {
 } from '../../../../../lib/core/database/companionDatabaseLifecycle';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
+import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
+import { createOwnedCompanionConnection } from './companionOwnedConnection';
 import { CompanionRequestSyncSnapshots } from './companionRequestSyncSnapshot';
 
 export interface CapacitorCompanionDatabaseManager {
@@ -152,9 +153,7 @@ export class CapacitorCompanionDatabaseOwner {
     const existing = await this.manager.isConnection(COMPANION_DATABASE_NAME, false);
     const connection = existing.result
       ? await this.manager.retrieveConnection(COMPANION_DATABASE_NAME, false)
-      : await this.manager.createConnection(
-        COMPANION_DATABASE_NAME, false, 'no-encryption', COMPANION_DATABASE_VERSION, false
-      );
+      : await createOwnedCompanionConnection(this.manager, false);
     if (!(await connection.isDBOpen()).result) await connection.open();
     return connection;
   }

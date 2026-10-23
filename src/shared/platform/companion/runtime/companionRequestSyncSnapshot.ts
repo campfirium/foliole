@@ -1,10 +1,11 @@
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
+import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 
 import type { CapacitorCompanionDatabaseManager } from './capacitorCompanionDatabaseOwner';
+import { createOwnedCompanionConnection } from './companionOwnedConnection';
 
 /** The plugin permits one readonly connection per database, independent of its writer. */
 export class CompanionRequestSyncSnapshots {
@@ -35,8 +36,7 @@ export class CompanionRequestSyncSnapshots {
   private async snapshot<T>(execute: (db: DbPort) => Promise<T>, signal?: AbortSignal) {
     this.checkCancellation(signal);
     await this.releaseConnection();
-    const connection = await this.manager.createConnection(COMPANION_DATABASE_NAME,
-      false, 'no-encryption', COMPANION_DATABASE_VERSION, true);
+    const connection = await createOwnedCompanionConnection(this.manager, true);
     this.hasConnection = true;
     try {
       await connection.open().catch(error => {

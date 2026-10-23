@@ -197,3 +197,13 @@ it('preserves a failed close for retry without poisoning subsequent operations',
   expect(manager.closeConnection).toHaveBeenCalledTimes(2);
   await expect(owner.read(async () => true)).rejects.toThrow('not open');
 });
+
+it('reports native open failures other than a replaced document connection', async () => {
+  const { manager, owner } = harness();
+  vi.mocked(manager.isConnection).mockResolvedValue({ result: false });
+  vi.mocked(manager.createConnection).mockRejectedValue(new Error('CreateConnection: database disk image is malformed'));
+
+  await expect(owner.open({ expectedHostName: 'device', now: '2026-10-23T00:00:00Z' })).rejects.toThrow(/malformed/);
+  expect(manager.closeConnection).not.toHaveBeenCalled();
+  expect(manager.createConnection).toHaveBeenCalledTimes(1);
+});
