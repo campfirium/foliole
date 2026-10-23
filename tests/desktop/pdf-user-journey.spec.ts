@@ -20,8 +20,10 @@ const PDF_PAGE_INPUT_NAME = /PDF page|PDF 页码/;
 const PDF_SEARCH_INPUT_NAME = /PDF search|PDF 搜索/;
 const ZOOM_IN_NAME = /Zoom in|放大/;
 const ZOOM_VALUE_NAME = /Set zoom level|设置缩放级别/;
+const FIT_WIDTH_NAME = /^(Fit width|适合宽度)$/;
 const PDF_HIGHLIGHT_TEXT = 'gamma keyword';
 const PDF_HIGHLIGHT_ACTIONS_SCREENSHOT = path.resolve('.tmp/artifacts/pdf-selection-highlight-toolbar-hidden-native.png');
+const PDF_INVERTED_PAGE_SCREENSHOT = path.resolve('.tmp/artifacts/pdf-inverted-dark-page-hidden-native.png');
 
 async function installPdfFixtureSelection(desktopApp: ElectronApplication, fixturePath = FIXTURE_PATH) {
   await desktopApp.evaluate(({ dialog }, selectedFixturePath) => {
@@ -116,6 +118,10 @@ async function collectPdfViewState(desktopWindow: Page, nodeId: string) {
 }
 
 async function selectPdfHighlightText(desktopWindow: Page) {
+  // A pointer selection moves the mouse onto the text and focus out of the toolbar,
+  // which lets the floating top bars hide.
+  await desktopWindow.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await getPdfReaderRegion(desktopWindow).locator('.textLayer span', { hasText: PDF_HIGHLIGHT_TEXT }).first().hover();
   const selected = await desktopWindow.evaluate((text) => {
     const surface = document.querySelector<HTMLElement>('[data-testid="pdf-document-surface"]');
     const walker = surface ? document.createTreeWalker(surface, NodeFilter.SHOW_TEXT) : null;
@@ -158,20 +164,24 @@ test('PDF user journey @pdf imports, reads, searches, zooms, and restores page s
 
   await desktopWindow.getByRole('textbox', { name: PDF_SEARCH_INPUT_NAME }).fill('gamma keyword');
   await expect(desktopWindow.getByText('1 / 1')).toBeVisible();
+  await expect(desktopWindow.getByRole('textbox', { name: PDF_PAGE_INPUT_NAME })).toHaveValue('3');
 
   await desktopWindow.getByRole('button', { name: ZOOM_IN_NAME }).click();
   await desktopWindow.getByRole('button', { name: ZOOM_VALUE_NAME }).click();
   await desktopWindow.getByRole('menuitem', { name: '150%' }).click();
   await expect(desktopWindow.getByRole('button', { name: ZOOM_VALUE_NAME })).toHaveText('150%');
+  await expect.poll(() => collectPdfViewState(desktopWindow, importedNodeId)).toMatchObject({
+    selection: { from: 3 }
+  });
 
   await desktopWindow.reload();
   await expectWorkspaceReady(desktopWindow);
   await openImportedPdf(desktopWindow, importedNodeId);
-  await expect(desktopWindow.getByRole('textbox', { name: PDF_PAGE_INPUT_NAME })).toHaveValue('2');
-  await expectPdfPageReady(desktopWindow, 2);
+  await expect(desktopWindow.getByRole('textbox', { name: PDF_PAGE_INPUT_NAME })).toHaveValue('3');
+  await expectPdfPageReady(desktopWindow, 3);
 });
 
-test('PDF inverted dark mode @pdf crops rendered page side gutters', async ({
+test('PDF inverted dark mode @pdf renders full inverted pages', async ({
   desktopApp,
   desktopWindow
 }) => {
@@ -188,29 +198,18 @@ test('PDF inverted dark mode @pdf crops rendered page side gutters', async ({
   await openImportedPdf(desktopWindow, importedNodeId);
   await expectPdfPageReady(desktopWindow, 1);
 
-  const cropMetrics = await desktopWindow.waitForFunction(() => {
-    const shell = document.querySelector<HTMLElement>('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]');
-    const cropFrame = shell?.querySelector<HTMLElement>('[data-testid="pdf-document-page-crop-frame"]') ?? null;
-    const cropContent = shell?.querySelector<HTMLElement>('.pdf-document-page-crop-content') ?? null;
-    const page = shell?.querySelector<HTMLElement>('.react-pdf__Page') ?? null;
-    const canvas = page?.querySelector<HTMLCanvasElement>('canvas') ?? null;
-    if (!cropFrame || !cropContent || !page || !canvas) {
-      return null;
-    }
-    const frameWidth = cropFrame.getBoundingClientRect().width;
-    const pageWidth = page.getBoundingClientRect().width;
-    const canvasWidth = canvas.getBoundingClientRect().width;
-    const marginLeft = Number.parseFloat(cropContent.style.marginLeft || '0');
-    if (frameWidth > 0 && pageWidth > 0 && canvasWidth > 0 && frameWidth < pageWidth - 0.5 && marginLeft < 0) {
-      return { canvasWidth, frameWidth, marginLeft, pageWidth };
-    }
-    return null;
-  });
-
-  const metrics = await cropMetrics.jsonValue();
-  expect(metrics).toMatchObject({
-    marginLeft: expect.any(Number)
-  });
+  const shell = desktopWindow.locator('[data-testid="pdf-document-page-shell"][data-pdf-page-state="ready"]').first();
+  await expect.poll(async () => {
+    const frame = await shell.getByTestId('pdf-document-page-frame').boundingBox();
+    const canvas = await shell.locator('.react-pdf__Page canvas').boundingBox();
+    if (!frame || !canvas || canvas.width === 0) return false;
+    return Math.abs(frame.width - canvas.width) < 2 && Math.abs(frame.height - canvas.height) < 2;
+  }).toBe(true);
+  await expect(shell.locator('.pdf-document-page-crop-content')).toHaveCount(0);
+  expect(await shell.locator('.react-pdf__Page').evaluate((page) => getComputedStyle(page).filter)).toContain('invert');
+  await desktopWindow.getByRole('button', { name: FIT_WIDTH_NAME }).click();
+  await expectPdfPageReady(desktopWindow, 1);
+  await getPdfReaderRegion(desktopWindow).screenshot({ path: PDF_INVERTED_PAGE_SCREENSHOT });
 });
 
 test('PDF highlight journey @pdf opens shared actions and deletes a saved highlight', async ({
@@ -223,9 +222,12 @@ test('PDF highlight journey @pdf opens shared actions and deletes a saved highli
   await openImportedPdf(desktopWindow, importedNodeId);
   const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
   if (await exitFlow.isVisible().catch(() => false)) await exitFlow.click();
+  // The single-line fixture makes the automatic view zoom far past normal reading sizes.
+  await desktopWindow.getByRole('button', { name: FIT_WIDTH_NAME }).click();
   await jumpToPdfPage(desktopWindow, 3);
 
   await selectPdfHighlightText(desktopWindow);
+  await expect(desktopWindow.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'false');
   const createHighlightButton = desktopWindow.getByRole('button', { name: /^(Highlight|高亮)$/ });
   const pendingSelection = getPdfReaderRegion(desktopWindow).locator('[data-testid="pdf-selection-rect"], [data-testid="pdf-selection-marker"]').first();
   await expect(createHighlightButton).toBeVisible();
