@@ -2,8 +2,8 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
 import { mergeNodeBody } from './syncNodeBodyMerge.js';
+import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
 import { loadMergeBaseState } from './syncNodeMergeBaseSnapshot.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';

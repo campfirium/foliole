@@ -16,7 +16,6 @@ import {
   createInternalDatabaseSnapshotWithBackup,
   type InternalDatabaseSnapshotResult
 } from './internalSnapshots.js';
-import { verifySqliteDatabaseFileOffMainThread } from './sqliteFileOffMainThread.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -104,7 +103,7 @@ export async function assertManagedSafetySnapshotIntegrity(filePath: string) {
   const resolvedPath = path.resolve(filePath);
   const materialized = await materializeCompressedSqliteBackup(resolvedPath, path.dirname(resolvedPath));
   try {
-    await assertSqliteSnapshotIntegrityOffMainThread(materialized.databasePath);
+    assertSqliteSnapshotIntegrity(materialized.databasePath);
   } finally {
     await materialized.cleanup();
   }
@@ -114,7 +113,7 @@ async function settleSnapshotCompression(snapshot: InternalDatabaseSnapshotResul
   const compressedPath = `${snapshot.destinationPath}.gz`;
   let compressedCreated = false;
   try {
-    await assertSqliteSnapshotIntegrityOffMainThread(snapshot.destinationPath);
+    assertSqliteSnapshotIntegrity(snapshot.destinationPath);
     await compressSqliteFile(snapshot.destinationPath, compressedPath);
     compressedCreated = true;
     await assertManagedSafetySnapshotIntegrity(compressedPath);
@@ -162,14 +161,5 @@ function assertSqliteSnapshotIntegrity(filePath: string) {
     for (const suffix of ['-journal', '-shm', '-wal']) {
       rmSync(`${filePath}${suffix}`, { force: true });
     }
-  }
-}
-
-/** The same snapshot check, run in a worker because snapshots are taken while the window is in use. */
-async function assertSqliteSnapshotIntegrityOffMainThread(filePath: string) {
-  try {
-    await verifySqliteDatabaseFileOffMainThread(filePath);
-  } finally {
-    for (const suffix of ['-journal', '-shm', '-wal']) await fs.rm(`${filePath}${suffix}`, { force: true });
   }
 }
