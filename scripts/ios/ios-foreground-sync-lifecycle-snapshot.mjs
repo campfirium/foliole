@@ -22,17 +22,19 @@ export function verifyForegroundSyncLifecycleAcceptance(args) {
   const phases = observations.phase_requests;
   const backgroundRetryCount = args.backgroundDeltas[2];
   const restartExtraCount = Math.max(0, (phases.restart ?? 0) - 1);
+  // Retries before Settings took over follow the foreground schedule; only background ones are bounded.
+  const failedResumeCount = phases['failed-resume'] ?? 0;
   const backgroundPassed = args.backgroundDeltas.length === 3 && args.backgroundDeltas[0] === 0 &&
     args.backgroundDeltas[1] === 0 && (backgroundRetryCount === 0 || backgroundRetryCount === 1);
   // Startup includes the join adoption before the shell's single foreground sync.
   const countsPassed = phases['endpoint-ready'] === 2 && phases['resume-single-flight'] === 1 &&
-    phases['failed-resume'] === 1 + backgroundRetryCount && phases['recovered-resume'] === 1 &&
+    failedResumeCount >= 1 + backgroundRetryCount && phases['recovered-resume'] === 1 &&
     (phases.restart === 1 || phases.restart === 2);
   const requestPassed = hostedProviderLifecyclePassed(args.observations) && countsPassed &&
     observations.max_concurrency === 1 &&
-    observations.active_requests === 0 && observations.failed_requests === 1 + backgroundRetryCount &&
+    observations.active_requests === 0 && observations.failed_requests === failedResumeCount &&
     observations.completed_requests === 5 + restartExtraCount &&
-    observations.request_count === 6 + backgroundRetryCount + restartExtraCount;
+    observations.request_count === observations.completed_requests + failedResumeCount;
   const lifecyclePassed = backgroundPassed &&
     args.lifecycle.pause_count >= 2 && args.lifecycle.active_count >= 2 && args.lifecycle.resume_count >= 2;
   const snapshotsPassed = isForegroundSyncLifecycleSnapshotSettled(args.beforeRestart) &&

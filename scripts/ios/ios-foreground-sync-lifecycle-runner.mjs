@@ -177,10 +177,11 @@ function bootAndInstall(options, udid) {
 }
 
 async function enterBackground(options, udid, resultPath, deltas, previous = { pause_count: 0 }) {
-  const before = readServiceObservations(options).foreground_sync_lifecycle.request_count;
   recordAction(options, 'background', 'launch-settings');
   runAllowFailure(options, 'xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences']);
   run(options, 'xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
+  // Settings can take seconds to launch on a loaded simulator; earlier requests ran in the foreground.
+  const before = readServiceObservations(options).foreground_sync_lifecycle.request_count;
   const lifecycle = await waitForBridge(options, resultPath,
     (value) => value.phase === 'background' && value.pause_count > (previous.pause_count ?? 0), 'Capacitor pause');
   await delay(3_000);

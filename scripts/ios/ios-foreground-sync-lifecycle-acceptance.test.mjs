@@ -185,6 +185,23 @@ describe('iOS foreground sync lifecycle acceptance', () => {
       afterRestart: snapshot, backgroundDeltas: [0, 0, 1], beforeRestart: snapshot,
       lifecycle: { active_count: 2, pause_count: 3, resume_count: 2 }, observations: opportunistic
     })).toMatchObject({ background_retry_request_count: 1 });
+    const foregroundRetries = { registration, foreground_sync_lifecycle: {
+      ...observations.foreground_sync_lifecycle,
+      failed_requests: 3,
+      phase_requests: { ...phase_requests, 'failed-resume': 3 },
+      request_count: 8
+    } };
+    expect(verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 3, pause_count: 3, resume_count: 3 }, observations: foregroundRetries
+    })).toMatchObject({ background_retry_request_count: 0 });
+    expect(() => verifyForegroundSyncLifecycleAcceptance({
+      afterRestart: snapshot, backgroundDeltas: [0, 0, 0], beforeRestart: snapshot,
+      lifecycle: { active_count: 3, pause_count: 3, resume_count: 3 },
+      observations: { registration, foreground_sync_lifecycle: {
+        ...foregroundRetries.foreground_sync_lifecycle, failed_requests: 2, request_count: 7
+      } }
+    })).toThrow('evidence is incomplete');
     const restartDoubleActive = { registration, foreground_sync_lifecycle: {
       ...observations.foreground_sync_lifecycle,
       completed_requests: 6,
