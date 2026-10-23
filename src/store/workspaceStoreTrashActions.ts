@@ -4,15 +4,11 @@ import { removeImageClozeRegion } from '../features/image-cloze/model/imageCloze
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { findLiveImageClozeChildNodeIds } from './workspaceImageClozeRegionDeleteTargets';
 import type { WorkspaceState } from './workspaceStore';
+import { createDeleteNodesPermanentlyAction } from './workspaceStorePermanentDeleteAction';
 import { createRestoreNodeAction } from './workspaceStoreRestoreAction';
 import { createDeleteNodesAction } from './workspaceStoreStructureDeleteAction';
-import { computeDeleteNodesMutation, computeDeleteNodesPermanentlyMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
-import { collectDeleteActionTargets } from './workspaceTrashMutationTargets';
-import {
-  commitPermanentDeleteMutation,
-  commitSoftDeleteMutation,
-  type TrashRuntimeHandlers
-} from './workspaceTrashRuntimeCommit';
+import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
+import { commitSoftDeleteMutation, type TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
 
 type WorkspaceSet = (
   partial:
@@ -149,28 +145,6 @@ function createDeleteImageClozeRegionAction(
     if (updatedParentNode) {
       runtimeHandlers.syncNodeContent(updatedParentNode);
     }
-  };
-}
-
-function createDeleteNodesPermanentlyAction(
-  set: WorkspaceSet,
-  runtimeHandlers: TrashRuntimeHandlers
-): WorkspaceTrashActions['deleteNodesPermanently'] {
-  return async (nodeIds) => {
-    let mutation: DeleteNodeMutationResult | null = null;
-    set((state) => {
-      mutation = computeDeleteNodesPermanentlyMutation(state, collectDeleteActionTargets(state, nodeIds));
-      return state;
-    });
-    const result = await commitPermanentDeleteMutation(runtimeHandlers, mutation);
-    set((state) => {
-      const committedNodeIds = result?.removedNodeIds ?? [];
-      if (committedNodeIds.length === 0) {
-        return state;
-      }
-      const committedMutation = computeDeleteNodesPermanentlyMutation(state, committedNodeIds);
-      return committedMutation ? committedMutation.patch : state;
-    });
   };
 }
 

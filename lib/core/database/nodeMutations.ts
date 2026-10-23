@@ -19,7 +19,11 @@ import {
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
 import { ensureNodeParentMembership } from './nodeOrderMutations.js';
-import { deleteNodesPermanently, type DeleteNodesPermanentlyInput } from './nodePermanentDeleteMutations.js';
+import {
+  deleteNodesPermanently,
+  deleteNodesPermanentlyDeferringBodies,
+  type DeleteNodesPermanentlyInput
+} from './nodePermanentDeleteMutations.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
 import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
@@ -38,7 +42,7 @@ export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
 export type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
 export type { MoveNodePatchInput, MoveNodesInput, MoveNodesResult } from './nodeMoveMutations.js';
 export { moveNodes } from './nodeMoveMutations.js';
-export { deleteNodesPermanently };
+export { deleteNodesPermanently, deleteNodesPermanentlyDeferringBodies };
 export { replaceNodeOrder } from './nodeOrderMutations.js';
 
 export interface SoftDeleteNodesInput {

@@ -3,7 +3,6 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
 import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import {
-  deleteNodesPermanently,
   flushAllDirtyNodeSyncVersions,
   moveNodes,
   replaceNodeOrder,
@@ -25,11 +24,11 @@ import {
   parseNodeSnapshotArgs
 } from './commandParsers.js';
 import {
-  parseDeleteNodesPermanentlyArgs,
   parseMoveNodesArgs,
   parseRestoreNodesArgs,
   parseSoftDeleteNodesArgs
 } from './nodeCommandArgs.js';
+import { handlePermanentDeleteNodeCommand } from './permanentDeleteCommand.js';
 import { parseSplitTopicArgs } from './splitTopicCommandArgs.js';
 import { readObjectArg } from './storageCommandSupport.js';
 import { handleLocalContentEditCommand } from './storageLocalContentEditCommand.js';
@@ -77,14 +76,6 @@ function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow
   softDeleteNodesWithParents(parsed);
   scheduleMirrorSync([...parsed.nodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
   return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds }, originWindow);
-}
-
-function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
-  const parsed = parseDeleteNodesPermanentlyArgs(args);
-  const affectedParentNodeIds = deleteNodesPermanently(parsed);
-  const removedNodeIds = parsed.nodeIds;
-  scheduleMirrorSync([...new Set([...removedNodeIds, ...affectedParentNodeIds])]);
-  return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds }, originWindow);
 }
 
 function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {

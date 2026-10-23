@@ -1,5 +1,4 @@
 import {
-  deleteNodesPermanently as deleteNodesPermanentlyViaDriver,
   moveNodes as moveNodesViaDriver,
   replaceNodeOrder as replaceNodeOrderViaDriver,
   restoreNodes as restoreNodesViaDriver,
@@ -18,16 +17,13 @@ import type {
   UpsertNodeSnapshotInput
 } from '../../lib/core/database/nodeMutations.js';
 import type { UpsertNodeSnapshotOptions } from '../../lib/core/database/nodeMutations.js';
+import { collectTextBodyBlobCandidates } from '../../lib/core/database/textBodyBlobCollection.js';
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
-import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
+import { deletePermanentDeleteChunk, finishPermanentDelete, preparePermanentDelete } from './nodePermanentDeleteChunks.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
-import {
-  cleanupOrphanAttachments,
-  createAttachmentCleanupPlan
-} from './orphanAttachmentCleanup.js';
 import {
   clearNodeSourceDisposition,
   recordNodeSourceDisposition
@@ -153,55 +149,13 @@ export function restoreNodes(input: RestoreNodesInput): RestoreNodesResult {
   });
 }
 
+/** Synchronous whole-set deletion for maintenance callers; the trash command uses the chunked path. */
 export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): string[] {
-  assertFoliolePublishedDeleteAllowed(input.nodeIds);
-  const connection = openDatabaseConnection();
-  const deletedAt = new Date().toISOString();
-  const hostName = loadOrCreateDesktopHostName(deletedAt);
-  const attachmentCleanupPlan = createAttachmentCleanupPlan(input.nodeIds);
-  const nodeDeletedAt = readNodeDeletedAtForPermanentDelete(input.nodeIds, deletedAt);
-  for (const row of nodeDeletedAt) {
-    recordNodeSourceDisposition(row.nodeId, 'hard_deleted', row.deletedAt);
-  }
-  markKeepImportItemsLocallyDeletedByNodeDeletedAt(nodeDeletedAt);
-  withTransaction(connection.driver, () => {
-    for (const nodeId of input.nodeIds) {
-      connection.driver.execute(
-        `UPDATE nodes
-         SET deleted_at = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
-         WHERE id = ?`,
-        [deletedAt, deletedAt, hostName, nodeId]
-      );
-    }
-  });
-  for (const nodeId of input.nodeIds) {
-    flushNodeSyncVersion(nodeId, deletedAt);
-  }
-  const affectedParentNodeIds = deleteNodesPermanentlyViaDriver(connection.driver, {
-    ...input,
-    deletedAt
-  });
-  withTransaction(connection.driver, () => {
-    return cleanupOrphanAttachments(connection.driver, attachmentCleanupPlan);
-  });
-  return affectedParentNodeIds;
-}
-
-function readNodeDeletedAtForPermanentDelete(nodeIds: string[], fallbackDeletedAt: string) {
-  if (nodeIds.length === 0) {
-    return [];
-  }
-  const placeholders = nodeIds.map(() => '?').join(', ');
-  const rows = openDatabaseConnection().driver.queryAll<{ deleted_at: string | null; id: string }>(
-    `SELECT id, deleted_at
-     FROM nodes
-     WHERE id IN (${placeholders})`,
-    nodeIds
-  );
-  return rows.map((row) => ({
-    deletedAt: row.deleted_at ?? fallbackDeletedAt,
-    nodeId: row.id
-  }));
+  const plan = preparePermanentDelete(input.nodeIds);
+  const released = deletePermanentDeleteChunk(plan.nodeIds);
+  if (released.length) collectTextBodyBlobCandidates(openDatabaseConnection().driver, released);
+  finishPermanentDelete(plan, input.nodeOrder);
+  return [];
 }
 
 export function flushAllDirtyNodeSyncVersions() {

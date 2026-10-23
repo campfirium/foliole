@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { deleteNodesPermanently, moveNodes, replaceNodeOrder } from '../database/nodeMutations.js';
+import { moveNodes, replaceNodeOrder } from '../database/nodeMutations.js';
+import { deletePermanentDeleteChunk, finishPermanentDelete } from '../database/nodePermanentDeleteChunks.js';
 import { restoreNodesWithParents as restoreNodes, softDeleteNodesWithParents as softDeleteNodes } from '../database/nodeTrashTransitions.js';
 import { upsertVersionedNodeSnapshot, upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
@@ -48,6 +49,13 @@ vi.mock('../database/nodeMutations.js', () => ({
   upsertNodeSnapshot: vi.fn(),
   upsertNodeSnapshotWithOrder: vi.fn()
 }));
+vi.mock('../database/nodePermanentDeleteChunks.js', () => ({
+  deletePermanentDeleteChunk: vi.fn(() => []),
+  finishPermanentDelete: vi.fn(),
+  preparePermanentDelete: vi.fn((nodeIds: string[]) => ({ attachmentCleanupPlan: { candidates: [], retainedKeys: [] }, nodeIds })),
+  splitPermanentDeleteChunks: vi.fn((plan: { nodeIds: string[] }) => [plan.nodeIds])
+}));
+vi.mock('../database/releasedBodyCollectionTask.js', () => ({ enqueueReleasedBodyCollection: vi.fn() }));
 vi.mock('../database/nodeTrashTransitions.js', () => ({ restoreNodesWithParents: vi.fn(), softDeleteNodesWithParents: vi.fn() }));
 vi.mock('../database/nodeVersionedMutations.js', () => ({ upsertVersionedNodeContentWithAnchors: vi.fn(),
   upsertVersionedNodeSnapshot: vi.fn(), upsertVersionedNodeSnapshotWithOrder: vi.fn() }));
@@ -65,7 +73,6 @@ vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollection
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(deleteNodesPermanently).mockReturnValue([]);
   vi.mocked(moveNodes).mockReturnValue({ movedNodeIds: ['node-2'], nodeOrder: ['node-1', 'node-2'] });
   vi.mocked(restoreNodes).mockReturnValue({ nodeOrder: ['node-1'], restoredNodeIds: ['node-1'], skippedConflicts: [] });
 });
@@ -242,8 +249,6 @@ it('handles restore and permanent delete node commands', async () => {
       }
     })
   ).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
-  expect(deleteNodesPermanently).toHaveBeenCalledWith({
-    nodeIds: ['node-3'],
-    nodeOrder: ['node-1', 'node-2']
-  });
+  expect(deletePermanentDeleteChunk).toHaveBeenCalledWith(['node-3']);
+  expect(finishPermanentDelete).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ['node-3'] }), ['node-1', 'node-2']);
 });

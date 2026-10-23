@@ -10,7 +10,8 @@ export type DesktopMaintenanceOperationName =
   | 'legacy-webview-migration'
   | 'managed-inbox-import'
   | 'pdf-indexing'
-  | 'readwise-api-import';
+  | 'readwise-api-import'
+  | 'released-body-collection';
 
 const total = { resource: 'total' as const };
 const library = { resource: 'library' as const };
@@ -43,6 +44,22 @@ export const DESKTOP_MAINTENANCE_OPERATION_DEFINITIONS: Record<
     trigger: 'App-ready when the library collection marker is incomplete.',
     verification: 'Upgrade, holder protection, rollback, restart, cancellation, and sync.',
     workload: 'At most 32 inline nodes or body hashes per worker transaction.'
+  },
+  'released-body-collection': {
+    ...base,
+    completion: 'Text bodies released by a permanent delete are collected once no holder remains.',
+    concurrencyKey: 'released-body-collection',
+    cost: 'heavy',
+    evidence: 'Each worker transaction rechecks all holders before deleting a released body.',
+    label: 'Deleted body storage cleanup',
+    priority: 'background',
+    recovery: 'Uncollected bodies stay stored; a failed batch deletes nothing.',
+    resources: [...databaseWrite, { resource: 'cpu-heavy' }],
+    runOn: 'utility',
+    source: 'released-body-collection',
+    trigger: 'After the trash or a selection is deleted permanently.',
+    verification: 'Holder protection, released collection, and responsive permanent delete.',
+    workload: 'At most 4 released body hashes per worker transaction.'
   },
   'image-address-migration': {
     ...base,

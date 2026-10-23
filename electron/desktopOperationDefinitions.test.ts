@@ -11,7 +11,7 @@ import {
 it('keeps every registered operation executable and auditable from one definition', () => {
   const definitions = listDesktopOperationDefinitions();
 
-  expect(definitions).toHaveLength(14);
+  expect(definitions).toHaveLength(15);
   for (const definition of definitions) {
     expect(definition).toMatchObject({
       blocksStartup: false,
@@ -31,7 +31,7 @@ it('keeps every registered operation executable and auditable from one definitio
 
   const mainDatabaseOperations = definitions.filter((definition) => [
     'legacy-body-collection', 'automatic-backup', 'image-address-migration', 'keep-import', 'managed-inbox-import',
-    'pdf-indexing', 'readwise-api-import'
+    'pdf-indexing', 'readwise-api-import', 'released-body-collection'
   ].includes(definition.name));
   for (const definition of mainDatabaseOperations) {
     expect(definition.resources).toContainEqual({ resource: 'main-database-write' });

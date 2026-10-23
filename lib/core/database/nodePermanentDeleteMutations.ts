@@ -18,6 +18,20 @@ export interface DeleteNodesPermanentlyInput {
 }
 
 export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): string[] {
+  const released = deleteNodesPermanentlyDeferringBodies(driver, input);
+  // Stored text bodies no longer referenced by anything are removed with the deletion.
+  if (released.length) collectTextBodyBlobCandidates(driver, released);
+  return [];
+}
+
+/**
+ * Deletes the rows and returns the released text body hashes for the caller to collect.
+ * Without `nodeOrder` the parent order is left for a later rewrite.
+ */
+export function deleteNodesPermanentlyDeferringBodies(
+  driver: DatabaseDriver,
+  input: Omit<DeleteNodesPermanentlyInput, 'nodeOrder'> & { nodeOrder?: string[] }
+): string[] {
   const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
@@ -27,7 +41,7 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
     "DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?"
   );
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
-  const released = driver.transaction(() => {
+  return driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
     advanceWorkspaceSearchSourceRevision(driver);
     const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
@@ -46,13 +60,9 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteNodeStatement.run([nodeId]);
       driver.execute(DELETE_NODE_SEARCH_PENDING_SQL, [nodeId]);
     }
-    rewriteExistingNodeOrder(driver, input.nodeOrder);
+    if (input.nodeOrder) rewriteExistingNodeOrder(driver, input.nodeOrder);
     markWorkspaceSearchSourceRevisionQueued(driver);
     markWorkspaceSearchSourceIndexedIfSettled(driver);
     return hashes;
   });
-  // Stored text bodies no longer referenced by anything are removed with the deletion.
-  if (released.length) collectTextBodyBlobCandidates(driver, released);
-
-  return [];
 }

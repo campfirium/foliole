@@ -12,8 +12,7 @@ const commands = new Set<string>([
   NATIVE_COMMANDS.replaceNodeOrder,
   NATIVE_COMMANDS.moveNodes,
   NATIVE_COMMANDS.softDeleteNodes,
-  NATIVE_COMMANDS.restoreNodes,
-  NATIVE_COMMANDS.deleteNodesPermanently
+  NATIVE_COMMANDS.restoreNodes
 ]);
 
 export function isForegroundNodeMutationCommand(command: string) {
