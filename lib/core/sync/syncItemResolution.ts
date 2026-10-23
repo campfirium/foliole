@@ -2,7 +2,8 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord, loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
+import { loadMergeBaseSnapshot } from './syncNodeMergeBaseSnapshot.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
 import { mergeNodeSnapshot } from './syncNodeSnapshotMerge.js';
@@ -27,12 +28,7 @@ export async function resolveItemSourceConflict<M extends SyncNodeRecordMetadata
   }
   for (const metadata of ordered) {
     const incoming = await source.load(port, metadata);
-    const base = await loadMergeBase(port, local.version_id!, incoming.version_id!);
-    if (base && storedSyncNodeVersionBody(base) === null) {
-      throw new Error(`sync_item_merge_base_body_unavailable:${base.version_id}`);
-    }
-    const baseSnapshot = base
-      ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
+    const baseSnapshot = await loadMergeBaseSnapshot(port, local.version_id!, incoming.version_id!, 'item');
     const { snapshot, winner } = mergeNodeSnapshot(baseSnapshot, local, incoming, false);
     const resolution = buildResolutionRecord(
       [local, incoming], winner, snapshot.content ?? '', snapshot
