@@ -13,8 +13,8 @@ import { renderArticleMirrorInWorker } from './articleMirrorRenderWorkerClient.j
 import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
 import {
   captureMirrorOutputSnapshot,
-  isMirrorArticleStillAbsent,
-  isMirrorPlanCurrent,
+  createMirrorPlanCurrency,
+  type MirrorPlanCurrency,
   mirrorPlanRevision
 } from './mirrorOutputSnapshot.js';
 import {
@@ -68,6 +68,7 @@ async function prepareFullMirrorRebuild(mirrorRoot: string) {
 }
 
 async function removeObsoleteMirrorRecords(
+  currency: MirrorPlanCurrency,
   mode: MirrorSyncMode,
   mirrorRoot: string,
   recordsByArticleId: Map<string, MirrorArticleRecord>,
@@ -86,9 +87,9 @@ async function removeObsoleteMirrorRecords(
       continue;
     }
     await runWithDatabaseConnectionOwner(async () => {
-      if (!isMirrorArticleStillAbsent(record.articleId)) return;
+      if (!currency.isArticleStillAbsent(record.articleId)) return;
       await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath), protectedPaths);
-      deleteMirrorArticleRecord(record.articleId);
+      await currency.ownWrite(() => deleteMirrorArticleRecord(record.articleId));
     });
   }
 }
@@ -110,6 +111,7 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
 }
 
 async function commitRenderedMirror(args: {
+  currency: MirrorPlanCurrency;
   markdown: string;
   paths: ReturnType<typeof loadLibraryPathSettingsSync>;
   persistedRecord: MirrorArticleRecord | null;
@@ -119,20 +121,21 @@ async function commitRenderedMirror(args: {
   updatedAt: string;
 }) {
   return runWithDatabaseConnectionOwner(async () => {
-    if (!isMirrorPlanCurrent(args.plan.articleId, args.revision)) return false;
+    if (!args.currency.isPlanCurrent(args.plan.articleId, args.revision)) return false;
     if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
       await removeMirrorFileAndLegacyDirectory(
         resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath), args.protectedPaths);
     }
     await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
     await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
-    saveMirrorArticleRecord({ articleId: args.plan.articleId,
-      mirroredAt: args.updatedAt, relativePath: args.plan.relativePath });
+    await args.currency.ownWrite(() => saveMirrorArticleRecord({ articleId: args.plan.articleId,
+      mirroredAt: args.updatedAt, relativePath: args.plan.relativePath }));
     return true;
   });
 }
 
 async function processMirrorPlans(args: {
+  currency: MirrorPlanCurrency;
   mode: MirrorSyncMode;
   options: MirrorSyncOptions;
   paths: ReturnType<typeof loadLibraryPathSettingsSync>;
@@ -164,7 +167,7 @@ async function processMirrorPlans(args: {
         args.options.taskContext?.signal
       );
       const revision = mirrorPlanRevision(args.snapshot, plan);
-      const committed = await commitRenderedMirror({ markdown, paths: args.paths, persistedRecord,
+      const committed = await commitRenderedMirror({ currency: args.currency, markdown, paths: args.paths, persistedRecord,
         plan, protectedPaths: args.protectedPaths, revision, updatedAt: args.updatedAt });
       if (committed) rebuiltArticleCount += 1;
       else {
@@ -173,7 +176,7 @@ async function processMirrorPlans(args: {
           message: 'mirror source changed; retry queued', total: args.plans.length, unit: 'article' });
       }
     } else if (!persistedRecord && effectiveRecord) {
-      await runWithDatabaseConnectionOwner(() => saveMirrorArticleRecord(effectiveRecord));
+      await runWithDatabaseConnectionOwner(() => args.currency.ownWrite(() => saveMirrorArticleRecord(effectiveRecord)));
     }
     visitedArticleCount += 1;
     args.options.taskContext?.progress({
@@ -193,7 +196,10 @@ async function syncMirrorOutput(
   attempt = 1
 ): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
-  const captured = await runWithDatabaseConnectionOwner(captureMirrorOutputSnapshot);
+  const { captured, currency } = await runWithDatabaseConnectionOwner(() => {
+    const capturedOutput = captureMirrorOutputSnapshot();
+    return { captured: capturedOutput, currency: createMirrorPlanCurrency(capturedOutput) };
+  });
   const { paths, plans, recordsByArticleId, snapshot } = captured;
   const targetArticleIds = new Set(plans.map((plan) => plan.articleId));
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
@@ -208,13 +214,13 @@ async function syncMirrorOutput(
     await runWithDatabaseConnectionOwner(() => pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath)));
   }
 
-  await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
+  await removeObsoleteMirrorRecords(currency, mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
 
   await runWithDatabaseConnectionOwner(() => removeLegacyMirrorArtifacts(
     paths.mirror, plans.map((plan) => plan.targetPath), protectedPaths));
 
   const processed = snapshot
-    ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
+    ? await processMirrorPlans({ currency, mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
     : { pendingArticleIds: [], rebuiltArticleCount: 0 };
 
   if (processed.pendingArticleIds.length > 0 && attempt < 3) {

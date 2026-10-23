@@ -41,7 +41,7 @@ import * as nodeDocument from '../database/workspaceNodeDocument.js';
 import * as workspaceSnapshot from '../database/workspaceSnapshot.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
-import { captureMirrorOutputSnapshot, isMirrorPlanCurrent, mirrorPlanRevision } from './mirrorOutputSnapshot.js';
+import { captureMirrorOutputSnapshot, createMirrorPlanCurrency, mirrorPlanRevision } from './mirrorOutputSnapshot.js';
 import { rebuildAllMirrorOutput, syncIncrementalMirrorOutput } from './mirrorOutputSync.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
@@ -66,7 +66,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it.each(['incremental', 'full'] as const)('reads full-library bodies only once for a stable %s pass', async (mode) => {
+it.each(['incremental', 'full'] as const)('loads the full library a bounded number of times for a stable %s pass', async (mode) => {
   for (const id of ['first', 'second', 'third']) {
     save(id, null, 'topic', id, `---\nauthor: ${id}\n---\nBody`, '2026-10-06T00:00:00.000Z');
   }
@@ -75,6 +75,8 @@ it.each(['incremental', 'full'] as const)('reads full-library bodies only once f
   if (mode === 'full') await rebuildAllMirrorOutput();
   else await syncIncrementalMirrorOutput(['first']);
   expect(load.mock.calls.filter(([options]) => options?.includeBody).length).toBe(1);
+  // Checking each rendered article must not reload the whole workspace again.
+  expect(load).toHaveBeenCalledTimes(1);
   expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(mode === 'full' ? ['first', 'second', 'third'] : ['first']);
   await expect(fs.readFile(mirrorPath('first.md'), 'utf8')).resolves.toContain('author: first');
 });
@@ -84,9 +86,10 @@ it('preserves the full revision including author frontmatter in scoped validatio
   const captured = captureMirrorOutputSnapshot();
   const plan = captured.plans[0]!;
   const revision = mirrorPlanRevision(captured.snapshot!, plan);
-  expect(isMirrorPlanCurrent(plan.articleId, revision)).toBe(true);
+  const currency = createMirrorPlanCurrency(captured);
+  expect(currency.isPlanCurrent(plan.articleId, revision)).toBe(true);
   save('article', null, 'topic', 'Article', '---\nauthor: Grace\n---\nBody', '2026-10-06T00:00:00.000Z');
-  expect(isMirrorPlanCurrent(plan.articleId, revision)).toBe(false);
+  expect(currency.isPlanCurrent(plan.articleId, revision)).toBe(false);
 });
 
 it('returns after three changing-source attempts and schedules the remaining article', async () => {
