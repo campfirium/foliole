@@ -29,6 +29,8 @@ import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const DEFAULT_SYNC_PORT = 38641;
+/** Time an in-flight peer request gets to finish once the server stops. */
+const LAN_SERVER_STOP_GRACE_MS = 2_000;
 export const LAN_WORKSPACE_SYNC_HTTP_LIMITS = {
   headersTimeout: 10_000,
   keepAliveTimeout: 2_000,
@@ -254,6 +256,9 @@ export async function stopLanWorkspaceSyncServer() {
       }
       resolve();
     });
+    // close() waits for every open request; one still waiting on this stop would hold it forever.
+    server.closeIdleConnections();
+    setTimeout(() => server.closeAllConnections(), LAN_SERVER_STOP_GRACE_MS).unref();
   });
   activeStatus = {
     advertised_urls: [],

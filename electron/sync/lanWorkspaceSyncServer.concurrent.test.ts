@@ -10,8 +10,15 @@ const runtime = vi.hoisted(() => {
     stopAutoSync: vi.fn(),
     loadGroup: vi.fn(() => ({ devices: [], group_id: 'group-test' })),
     releaseAdvertisement: () => releaseAdvertisement(),
+    openConnection: false,
+    onConnectionsClosed: () => {},
     server: {
-      close: vi.fn((callback?: (error?: Error) => void) => callback?.()),
+      close: vi.fn((callback?: (error?: Error) => void) => {
+        if (runtime.openConnection) runtime.onConnectionsClosed = () => callback?.();
+        else callback?.();
+      }),
+      closeAllConnections: vi.fn(() => { runtime.openConnection = false; runtime.onConnectionsClosed(); }),
+      closeIdleConnections: vi.fn(),
       listen: vi.fn((_port: number, _host: string, callback: () => void) => callback()),
       once: vi.fn(), headersTimeout: 0, keepAliveTimeout: 0, requestTimeout: 0
     }
@@ -123,3 +130,16 @@ it('notifies a waiting observer after the provider becomes ready', async () => {
   expect(getLanWorkspaceSyncServerStatus().topology_status).toBe('ready');
   expect(observed).toContain('ready');
 });
+
+it('finishes a stop while a peer request on an open connection never completes', async () => {
+  await (async () => {
+    const starting = ensureLanWorkspaceSyncServer({ appVersion: '1.0.0', deviceId: 'desktop-a' });
+    await vi.waitFor(() => expect(runtime.advertise).toHaveBeenCalledOnce());
+    runtime.releaseAdvertisement();
+    await starting;
+  })();
+  // A peer request still being handled keeps its connection open, which alone would hold close() forever.
+  runtime.openConnection = true;
+  expect((await stopLanWorkspaceSyncServer()).state).toBe('stopped');
+  expect(runtime.server.closeAllConnections).toHaveBeenCalled();
+}, 10_000);
