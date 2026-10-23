@@ -7,24 +7,25 @@ import { loadMergeBaseCandidates, storedSyncNodeVersionBody, type StoredSyncNode
 type Snapshot = NativeSyncNodeRecord['snapshot'];
 
 /**
- * Loads the snapshot a node metadata merge compares both heads against.
+ * Loads the snapshot and body a node merge compares both heads against.
  * Heads merged from the same origins in different orders have several best common
  * ancestors; only facts every one of them shares can serve as the base.
  */
-export async function loadMergeBaseSnapshot(port: DbPort, leftId: string, rightId: string, scope: 'folder' | 'item') {
+export async function loadMergeBaseState(port: DbPort, leftId: string, rightId: string, scope: 'folder' | 'item') {
   const candidates = await loadMergeBaseCandidates(port, leftId, rightId);
   if (candidates.length === 0) return null;
   const rows = await port.query<StoredSyncNodeVersionRow>(
     `SELECT * FROM node_sync_versions WHERE version_id IN (${candidates.map(() => '?').join(', ')})
      ORDER BY version_id`, candidates);
-  for (const row of rows) {
-    if (storedSyncNodeVersionBody(row) === null) {
-      throw new Error(`sync_${scope}_merge_base_body_unavailable:${row.version_id}`);
-    }
-  }
+  const bodies = rows.map((row) => {
+    const body = storedSyncNodeVersionBody(row);
+    if (body === null) throw new Error(`sync_${scope}_merge_base_body_unavailable:${row.version_id}`);
+    return body;
+  });
+  if (rows.length !== candidates.length) return null;
   const snapshots = rows.map((row) => JSON.parse(row.snapshot_json) as Snapshot);
-  if (candidates.length === 1) return snapshots[0] ?? null;
-  return snapshots.length === candidates.length ? sharedSnapshot(snapshots) : null;
+  const body = bodies.every((entry) => entry === bodies[0]) ? bodies[0]! : null;
+  return { body, snapshot: candidates.length === 1 ? snapshots[0]! : sharedSnapshot(snapshots) };
 }
 
 function sharedSnapshot(snapshots: Snapshot[]) {

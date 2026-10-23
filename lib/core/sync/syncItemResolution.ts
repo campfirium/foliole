@@ -3,7 +3,8 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
-import { loadMergeBaseSnapshot } from './syncNodeMergeBaseSnapshot.js';
+import { mergeNodeBody } from './syncNodeBodyMerge.js';
+import { loadMergeBaseState } from './syncNodeMergeBaseSnapshot.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
 import { mergeNodeSnapshot } from './syncNodeSnapshotMerge.js';
@@ -28,11 +29,10 @@ export async function resolveItemSourceConflict<M extends SyncNodeRecordMetadata
   }
   for (const metadata of ordered) {
     const incoming = await source.load(port, metadata);
-    const baseSnapshot = await loadMergeBaseSnapshot(port, local.version_id!, incoming.version_id!, 'item');
-    const { snapshot, winner } = mergeNodeSnapshot(baseSnapshot, local, incoming, false);
-    const resolution = buildResolutionRecord(
-      [local, incoming], winner, snapshot.content ?? '', snapshot
-    );
+    const base = await loadMergeBaseState(port, local.version_id!, incoming.version_id!, 'item');
+    const merged = mergeNodeSnapshot(base?.snapshot ?? null, local, incoming, false);
+    const { body, snapshot } = await mergeNodeBody(port, base?.body ?? null, local, incoming, merged.snapshot);
+    const resolution = buildResolutionRecord([local, incoming], merged.winner, body, snapshot);
     const applied = await applySyncNodesWithDbPort(port, [resolution], {
       enqueueSearchInvalidations: false,
       includeAlreadyApplied: true,

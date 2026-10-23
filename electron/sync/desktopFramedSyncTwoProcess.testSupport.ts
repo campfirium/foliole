@@ -163,7 +163,8 @@ function startFixtureProcess(input: FixtureProcessInput) {
     diagnostics: () => diagnostics, invoke: send,
     init: async () => parseSnapshot(await send('init')),
     seed: async (args: Readonly<{
-      anchorLink?: NativeWorkspaceAnchorLink; content: string; nodeId: string; parentNodeId?: string; title: string
+      anchorLink?: NativeWorkspaceAnchorLink; content: string; kind?: 'folder' | 'item' | 'topic'; nodeId: string;
+      parentNodeId?: string; title: string; updatedAt?: string
     }>) =>
       parseSnapshot(await send('seed', args)),
     seedResource: (args: Readonly<{ bytes: Uint8Array; includeImageInBody?: boolean; nodeId: string }>) => seedResource(send, args),

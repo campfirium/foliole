@@ -46,7 +46,7 @@ export function mergeNodeSnapshot<T extends NodeSnapshotRecordMetadata>(
   const rightValues = right.snapshot as unknown as Record<string, unknown>;
   const baseValues = base as unknown as Record<string, unknown> | null;
   for (const key of new Set([...Object.keys(leftValues), ...Object.keys(rightValues)])) {
-    if (key === 'deleted_at' || key === 'updated_at' || key === 'created_at' ||
+    if (key === 'content' || key === 'deleted_at' || key === 'updated_at' || key === 'created_at' ||
         key === 'id' || key === 'kind' || (mergeFolderMembers && key === 'manual_child_order') ||
         !baseValues) continue;
     const leftChanged = !sameValue(leftValues[key], baseValues[key]);

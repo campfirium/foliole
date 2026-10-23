@@ -53,6 +53,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/pdfCrossPageAnchor.integration.test.ts',
   'electron/sync/desktopFramedSyncVersionChainRegression.integration.test.ts',
   'electron/sync/desktopFramedSyncRelationReviewProcess.integration.test.ts',
+  'electron/sync/desktopFramedSyncConcurrentNodeBody.integration.test.ts',
   'electron/database/requestSyncPreparedBody.integration.test.ts',
   'electron/database/requestSyncSnapshotOwnership.integration.test.ts',
   'electron/database/requestSyncDatabaseUnits.integration.test.ts',
