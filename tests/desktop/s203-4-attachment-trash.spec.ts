@@ -30,13 +30,13 @@ test('configures cleanup, moves an unused attachment, restores it for reading, a
   await page.evaluate(async () => window.electronAPI!.invoke('maintain_attachments', { action: 'observe' }));
   await section.getByRole('button', { name: /^(Mark ready to clean|标为可清理)$/, exact: true }).click();
   await expect(section.getByRole('button', { name: /^(Restore all|全部恢复)$/ })).toBeEnabled();
-  const restored = await desktopApp.evaluate((_, storageKey) => {
+  const restored = await desktopApp.evaluate(async (_, storageKey) => {
     const pathApi = process.getBuiltinModule('path')!;
     const fs = process.getBuiltinModule('fs')!;
     const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const { assetsDir } = require(pathApi.join(process.cwd(), 'dist/electron/database/runtimeDataPaths.js')).resolveRuntimeDataPaths();
     const before = fs.existsSync(pathApi.join(`${assetsDir}.trash`, storageKey));
-    const result = require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js')).resolveAttachmentFile(storageKey);
+    const result = await require(pathApi.join(process.cwd(), 'dist/electron/attachments/resourceResolver.js')).resolveAttachmentFile(storageKey);
     return { before, status: result.status, active: fs.existsSync(pathApi.join(assetsDir, storageKey)), trash: fs.existsSync(pathApi.join(`${assetsDir}.trash`, storageKey)) };
   }, key);
   expect(restored).toEqual({ before: true, status: 'ready', active: true, trash: false });
