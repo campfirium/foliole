@@ -23,12 +23,12 @@ test('configures cleanup, moves an unused attachment, restores it for reading, a
   await settings.getByRole('button', { name: /^(Storage|存储)$/ }).click();
   const section = settings.getByRole('region', { name: /^(Local attachments|本机附件)$/ });
   await expect(section).toBeVisible();
-  const threshold = section.getByRole('spinbutton', { name: /^(Cleanup threshold|清理阈值)$/ });
+  const threshold = section.getByRole('spinbutton', { name: /^(Days unused before cleanup|闲置多久后可清理)$/ });
   await threshold.fill('1');
   await threshold.press('Tab');
-  await expect(section.getByRole('button', { name: /^(Clean up|清理)$/, exact: true })).toBeEnabled();
+  await expect(section.getByRole('button', { name: /^(Mark ready to clean|标为可清理)$/, exact: true })).toBeEnabled();
   await page.evaluate(async () => window.electronAPI!.invoke('maintain_attachments', { action: 'observe' }));
-  await section.getByRole('button', { name: /^(Clean up|清理)$/, exact: true }).click();
+  await section.getByRole('button', { name: /^(Mark ready to clean|标为可清理)$/, exact: true }).click();
   await expect(section.getByRole('button', { name: /^(Restore all|全部恢复)$/ })).toBeEnabled();
   const restored = await desktopApp.evaluate((_, storageKey) => {
     const pathApi = process.getBuiltinModule('path')!;
@@ -56,8 +56,8 @@ test('configures cleanup, moves an unused attachment, restores it for reading, a
     require(pathApi.join(process.cwd(), 'dist/electron/attachments/attachmentTrashFiles.js')).moveAttachmentToTrash(assetsDir, storageKey);
   }, key);
   await section.getByRole('button', { name: /^(Refresh|刷新)$/, exact: true }).click();
-  await section.getByRole('button', { name: /^(Empty trash|清空回收站)$/, exact: true }).click();
-  await page.getByRole('dialog', { name: /^(Empty trash|清空回收站)$/, exact: true }).getByRole('button', { name: /^(Empty trash|清空回收站)$/, exact: true }).click();
+  await section.getByRole('button', { name: /^(Clean up|清理)$/, exact: true }).click();
+  await page.getByRole('dialog', { name: /^(Clean up these attachments\?|清理这些附件？)$/, exact: true }).getByRole('button', { name: /^(Clean up|清理)$/, exact: true }).click();
   await expect(section.getByRole('button', { name: /^(Restore all|全部恢复)$/ })).toBeDisabled();
   const result = await page.evaluate(async () => window.electronAPI!.invoke('maintain_attachments', { action: 'status' }));
   expect(result).toMatchObject({ observationThreshold: 1, trashBytes: 0, eligibleBytes: 0 });

@@ -58,12 +58,14 @@ export function SettingsAttachmentStorageSection() {
             if (status) void run({ action: 'configure', settings: { automatic, observationThreshold: status.observationThreshold } });
           }} /></SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('settings.attachments.eligible')} description={status ? bytes(status.eligibleBytes) : '—'}>
+      <SettingsRow title={t('settings.attachments.eligible')}
+        description={status ? `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
         <SettingsControlSlot><AppButton disabled={busy || !status} onClick={() => void run({ action: 'clean' })} size="sm">
           {t('settings.attachments.clean')}
         </AppButton></SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('settings.attachments.trash')} description={status ? bytes(status.trashBytes) : '—'}>
+      <SettingsRow title={t('settings.attachments.trash')}
+        description={status ? `${bytes(status.trashBytes)} · ${t('settings.attachments.trashHint')}` : '—'}>
         <SettingsControlSlot>
           <AppButton disabled={busy || !status?.trash.length} size="sm"
             onClick={() => void run({ action: 'restore', storageKeys: status?.trash.map((file) => file.storageKey) ?? [] })}>
@@ -74,19 +76,27 @@ export function SettingsAttachmentStorageSection() {
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
-      <AppDialog open={confirmEmpty} onOpenChange={setConfirmEmpty}>
-        <AppDialogPortal><AppDialogOverlay /><AppDialogContent layout="task" className="w-[calc(100vw-3rem)] max-w-[420px]">
-          <AppDialogTitle>{t('settings.attachments.empty')}</AppDialogTitle>
-          <AppDialogBody><AppDialogDescription>{t('settings.attachments.emptyHint')}</AppDialogDescription></AppDialogBody>
-          <AppDialogActions>
-          <AppButton onClick={() => setConfirmEmpty(false)}>{t('common.cancel')}</AppButton>
-          <AppButton disabled={busy} onClick={() => {
-            setConfirmEmpty(false); void run({ action: 'empty-trash' });
-          }}>{t('settings.attachments.empty')}</AppButton>
-        </AppDialogActions>
-        </AppDialogContent></AppDialogPortal>
-      </AppDialog>
+      <EmptyAttachmentTrashDialog busy={busy} open={confirmEmpty} size={bytes(status?.trashBytes ?? 0)}
+        onOpenChange={setConfirmEmpty} onConfirm={() => { setConfirmEmpty(false); void run({ action: 'empty-trash' }); }} />
     </SettingsSection>
+  );
+}
+
+function EmptyAttachmentTrashDialog({ busy, open, size, onOpenChange, onConfirm }: {
+  busy: boolean; open: boolean; size: string; onOpenChange: (open: boolean) => void; onConfirm: () => void;
+}) {
+  const t = useTranslation();
+  return (
+    <AppDialog open={open} onOpenChange={onOpenChange}>
+      <AppDialogPortal><AppDialogOverlay /><AppDialogContent layout="task" className="w-[calc(100vw-3rem)] max-w-[420px]">
+        <AppDialogTitle>{t('settings.attachments.emptyTitle')}</AppDialogTitle>
+        <AppDialogBody><AppDialogDescription>{t('settings.attachments.emptyHint', { size })}</AppDialogDescription></AppDialogBody>
+        <AppDialogActions>
+          <AppButton onClick={() => onOpenChange(false)}>{t('common.cancel')}</AppButton>
+          <AppButton disabled={busy} onClick={onConfirm}>{t('settings.attachments.empty')}</AppButton>
+        </AppDialogActions>
+      </AppDialogContent></AppDialogPortal>
+    </AppDialog>
   );
 }
 
