@@ -1,6 +1,7 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
 import { attachmentDatabaseRevision } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
 import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
+import { requeueMissingAttachmentArticles } from '../../../../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
@@ -70,6 +71,7 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
         } finally { activeDb = undefined; }
       })),
       move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
+      requestMissing: (storageKeys) => write(db => requeueMissingAttachmentArticles(db, storageKeys)),
       removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
     }, request, day, signal);
 }

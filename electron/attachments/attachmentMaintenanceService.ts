@@ -1,6 +1,9 @@
+import fs from 'node:fs';
+
 import { maintainAttachments } from '../../lib/core/attachments/attachmentMaintenance.js';
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../lib/core/attachments/attachmentReferenceSnapshot.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
+import { requeueMissingAttachmentArticles } from '../../lib/core/sync/attachmentDemandQueue.js';
 import type { AttachmentMaintenanceRequest } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -42,6 +45,12 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
     move: async (key, trash) => {
       (trash ? moveAttachmentToTrash : restoreAttachmentFromTrash)(assetsDir, key);
       await updateAvailability(assetsDir, key);
+    },
+    // An absent folder means unmounted or relocated storage, not files to download again.
+    requestMissing: async (keys) => {
+      if (!fs.existsSync(assetsDir)) return;
+      await runWithDatabaseConnectionOwner(() => requeueMissingAttachmentArticles(
+        createBetterSqliteDbPort(openDatabaseConnection().sqlite), keys));
     },
     removeTrash: async (key) => {
       removeTrashedAttachment(assetsDir, key);

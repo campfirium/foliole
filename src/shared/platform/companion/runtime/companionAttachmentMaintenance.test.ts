@@ -71,3 +71,26 @@ it('allows its own availability updates while cleaning multiple eligible files',
     expect(state.counts).toEqual({});
   } finally { await library.close(); }
 });
+
+it('queues the live article again when a referenced file is missing from the inventory', async () => {
+  const library = createDisplayLibrary('android');
+  runtime.owner = library.owner;
+  const key = `${'c'.repeat(64)}.png`;
+  runtime.files.mockImplementation(async ({ operation }) => {
+    if (operation === 'generation') return { generation: 'fixture' };
+    if (operation === 'read-state' || operation === 'write-state') return {};
+    if (operation === 'inventory') return { files: [] };
+    throw new Error(`Unexpected operation ${operation}`);
+  });
+  try {
+    await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00.000Z' });
+    await library.owner.runWriter(async db => {
+      await db.run(`INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('live','Live','![image](asset://${key})','now','now')`);
+      await db.run('DELETE FROM attachment_parse_queue');
+    });
+    await runCompanionAttachmentMaintenance({ action: 'observe' });
+    expect(await library.owner.read(db => db.query('SELECT article_id FROM attachment_parse_queue'))).toEqual([{ article_id: 'live' }]);
+    expect(await library.owner.read(db => db.query('SELECT available FROM framed_sync_resource_availability WHERE hash = ?',
+      [key.slice(0, 64)]))).toEqual([{ available: 0 }]);
+  } finally { await library.close(); }
+});

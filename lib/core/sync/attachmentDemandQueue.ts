@@ -1,4 +1,5 @@
 import { parseCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
+import { recordFramedSyncResourceAvailability } from '../database/framedSyncResourceAvailability.js';
 import { parseNodeResourceReferences } from '../database/nodeResourceReferences.js';
 import { collectArticleImageStorageKeys } from '../import/replaceArticleImageSource.js';
 
@@ -79,6 +80,16 @@ export async function selectPendingAttachments(db: DbPort) {
 
 export async function completeAttachmentDemand(db: DbPort, key: string) {
   await db.run('DELETE FROM attachment_pending WHERE storage_key = ?', [key]);
+}
+
+/** A referenced file found missing locally is demanded again through the live articles that mention it. */
+export async function requeueMissingAttachmentArticles(db: DbPort, storageKeys: readonly string[]) {
+  if (!storageKeys.length) return;
+  await db.run(`INSERT INTO attachment_parse_queue(article_id, registered_at)
+    SELECT DISTINCT n.id, ? FROM nodes n, json_each(?) key WHERE n.deleted_at IS NULL
+      AND (instr(COALESCE(n.content, ''), key.value) > 0 OR instr(COALESCE(n.resource_references, ''), key.value) > 0)
+    ON CONFLICT(article_id) DO NOTHING`, [new Date().toISOString(), JSON.stringify(storageKeys)]);
+  await recordFramedSyncResourceAvailability(db, storageKeys.map(key => key.slice(0, 64)), false);
 }
 
 export async function hasAttachmentDemand(db: DbPort) {

@@ -27,6 +27,7 @@ function fixture() {
       const to = trash ? values.trash : values.files;
       from.splice(from.indexOf(key), 1); to.push(key);
     },
+    requestMissing: async () => undefined,
     removeTrash: async (key) => { values.trash.splice(values.trash.indexOf(key), 1); }
   };
   return { port, values, state: () => state };

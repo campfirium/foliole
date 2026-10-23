@@ -10,6 +10,7 @@ export interface AttachmentMaintenancePort {
   writeState(state: AttachmentObservationState): Promise<void>;
   withStableRevision<T>(revision: string, action: () => Promise<T>): Promise<T>;
   move(storageKey: string, toTrash: boolean): Promise<void>;
+  requestMissing(storageKeys: string[]): Promise<void>;
   removeTrash(storageKey: string): Promise<void>;
 }
 
@@ -64,6 +65,8 @@ async function observeAndClean(port: AttachmentMaintenancePort, state: Attachmen
   const snapshot = await port.references();
   const files = await port.inventory(false);
   const references = new Set(snapshot.storageKeys);
+  const present = new Set(files.map((file) => file.storageKey));
+  const missing = snapshot.storageKeys.filter((key) => !present.has(key));
   const increment = action === 'observe' && state.lastObservationDay !== day;
   const counts: Record<string, number> = {};
   for (const file of files) {
@@ -75,6 +78,7 @@ async function observeAndClean(port: AttachmentMaintenancePort, state: Attachmen
     state.counts = counts;
     if (increment) state.lastObservationDay = day;
     await port.writeState(state);
+    if (missing.length) await port.requestMissing(missing);
   });
   if (action === 'clean' || (increment && state.automatic)) {
     for (const file of files.filter((entry) => counts[entry.storageKey]! >= state.observationThreshold)) {
