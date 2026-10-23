@@ -26,7 +26,7 @@ describe('Android Java SQL surface', () => {
     expect(formalSource).not.toContain('foliole-companionSQLite.db');
   });
 
-  it('exposes only network, Sync Group, file, and request-transfer methods from Java', () => {
+  it('exposes only network, Sync Group, file, request-transfer, and screen-awake methods from Java', () => {
     const plugin = source('FolioleCompanionSyncPlugin.java');
     const methods = [...plugin.matchAll(/@PluginMethod\s+public void\s+([A-Za-z0-9_]+)/g)]
       .map((match) => match[1]).sort();
@@ -40,7 +40,7 @@ describe('Android Java SQL surface', () => {
       'maintainAttachmentFiles',
       'readRemoteImageResponse', 'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
-      'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'setSyncEnabled', 'setSyncPaused', 'setSyncScreenAwake', 'signCompanionSyncRequest',
       'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());

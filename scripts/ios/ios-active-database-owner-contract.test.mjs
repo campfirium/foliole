@@ -24,7 +24,7 @@ describe('iOS active database ownership', () => {
     for (const token of RETIRED_ACTIVE_DATABASE_TOKENS) expect(source.join('\n')).not.toContain(token);
   });
 
-  it('exposes only Sync Group, network, discovery, file, and framed-transfer methods from Swift', async () => {
+  it('exposes only Sync Group, network, discovery, file, framed-transfer, and screen-awake methods from Swift', async () => {
     const plugin = await readFile(path.join(APP, 'FolioleCompanionSyncPlugin.swift'), 'utf8');
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
@@ -37,7 +37,8 @@ describe('iOS active database ownership', () => {
       'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
       'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource',
-      'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
+      'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'setSyncScreenAwake',
+      'signCompanionSyncRequest',
       'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());
