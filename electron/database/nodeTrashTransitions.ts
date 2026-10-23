@@ -1,3 +1,4 @@
+import { loadVisibleWorkspaceNodeOrder } from '../../lib/core/database/workspaceVisibleNodeOrder.js';
 import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -6,7 +7,6 @@ import { restoreNodes, softDeleteNodesDeferringSyncVersions } from './nodeMutati
 import { scheduleNodeSyncVersionDrain } from './nodeSyncVersionDrain.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { withTransaction } from './transaction.js';
-import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 function persistParentUpdates(nodeIds: string[], updates: NativeTrashParentUpdate[]) {
   const driver = openDatabaseConnection().driver;
@@ -42,7 +42,8 @@ export function softDeleteNodesWithParents(input: NativeSoftDeleteNodesArgs) {
 }
 
 export function restoreNodesWithParents(input: NativeRestoreNodesArgs) {
-  const result = withTransaction(openDatabaseConnection().driver, () => {
+  const driver = openDatabaseConnection().driver;
+  const result = withTransaction(driver, () => {
     const restored = restoreNodes(input);
     if (input.parentUpdates?.length && (restored.skippedConflicts.length > 0 ||
         restored.restoredNodeIds.length !== input.nodeIds.length ||
@@ -50,7 +51,7 @@ export function restoreNodesWithParents(input: NativeRestoreNodesArgs) {
       throw new Error('cannot restore complete Trash transition');
     }
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
-    return { ...restored, nodeOrder: loadWorkspaceListSnapshot()?.nodeOrder ?? [] };
+    return { ...restored, nodeOrder: loadVisibleWorkspaceNodeOrder(driver) };
   });
   scheduleNodeSyncVersionDrain();
   return result;

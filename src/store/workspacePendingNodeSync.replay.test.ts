@@ -154,7 +154,7 @@ it('does not replay pending nodes whose parent is absent from runtime storage', 
   await replayPendingWorkspaceNodeSync();
 
   expect(invoke).toHaveBeenCalledTimes(1);
-  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', undefined);
+  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', { includePdfOpenings: false });
   expect(hasPendingNodeSync('node-orphan')).toBe(true);
 });
 
@@ -173,7 +173,7 @@ it('does not replay stale pending nodes over newer runtime nodes', async () => {
   await replayPendingWorkspaceNodeSync();
 
   expect(invoke).toHaveBeenCalledTimes(1);
-  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', undefined);
+  expect(invoke).toHaveBeenCalledWith('load_workspace_list_snapshot', { includePdfOpenings: false });
   expect(hasPendingNodeSync('node-1')).toBe(true);
 });
 

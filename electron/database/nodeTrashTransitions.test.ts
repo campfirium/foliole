@@ -16,12 +16,21 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 vi.mock('../foliolePublish/foliolePublishManagement.js', () => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
 vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
+const fullListSnapshot = vi.hoisted(() => ({ loads: 0 }));
+vi.mock('../../lib/core/database/workspaceListSnapshot.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/core/database/workspaceListSnapshot.js')>();
+  return { ...actual, loadWorkspaceListSnapshot: (...args: Parameters<typeof actual.loadWorkspaceListSnapshot>) => {
+    fullListSnapshot.loads += 1;
+    return actual.loadWorkspaceListSnapshot(...args);
+  } };
+});
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { seedNode } from './nodeMutations.test.helpers.js';
 import { drainDirtyNodeSyncVersions } from './nodeSyncVersionDrain.js';
 import { restoreNodesWithParents, softDeleteNodesWithParents } from './nodeTrashTransitions.js';
+import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 const timestamp = '2026-09-21T01:00:00.000Z';
 const regions = [{ attachmentId: 'image', regions: [{ id: 'region', x: 0, y: 0, width: 0.5, height: 0.5 }] }];
@@ -82,6 +91,19 @@ it('commits delete, undo and redo with parent regions while preserving the paren
   softDeleteNodesWithParents(deletion);
   closeDatabaseConnection();
   expect(rows()).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'node-child', deleted_at: timestamp })]));
+});
+
+it('returns the visible list order on restore without loading the full list snapshot', () => {
+  seedNode('folder-gone', null, 2);
+  seedNode('gone-child', 'folder-gone', 3);
+  seedNode('later', null, 4);
+  softDeleteNodesWithParents({ nodeIds: ['folder-gone'], deletedAt: timestamp });
+  softDeleteNodesWithParents(deletion);
+  fullListSnapshot.loads = 0;
+  const restored = restoreNodesWithParents({ nodeIds: deletion.nodeIds });
+  expect(fullListSnapshot.loads).toBe(0);
+  expect(restored.nodeOrder).toEqual(['special-inbox', 'special-virtual-root', 'parent', 'node-child', 'later']);
+  expect(restored.nodeOrder).toEqual(loadWorkspaceListSnapshot().nodeOrder);
 });
 
 it('rolls back restored children when restoring parent regions fails', () => {
