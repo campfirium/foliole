@@ -1,4 +1,4 @@
-import { GraduationCap } from 'lucide-react';
+import { Route } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState } from '../shared/ui';
@@ -26,7 +26,7 @@ export function CompanionOnlyReviewContent(props: {
       <AppEmptyState
         className="min-h-0 items-start text-left text-companion-text-secondary"
         description={resolveOnlyReviewDescription(t, props)}
-        icon={<CompanionEmptyStateIcon Icon={GraduationCap} />}
+        icon={<CompanionEmptyStateIcon Icon={Route} />}
         title={resolveOnlyReviewTitle(t, props)}
       />
     </section>

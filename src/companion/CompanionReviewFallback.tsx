@@ -1,4 +1,4 @@
-import { GraduationCap } from 'lucide-react';
+import { Route } from 'lucide-react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState, AppErrorState } from '../shared/ui';
@@ -35,7 +35,7 @@ export function CompanionReviewFallback(props: {
             description={hasScheduledReviews
               ? t('companion.review.noDueDescription')
               : t('companion.review.noScheduledDescription')}
-            icon={<CompanionEmptyStateIcon Icon={GraduationCap} />}
+            icon={<CompanionEmptyStateIcon Icon={Route} />}
             title={hasScheduledReviews ? t('companion.review.noDueTitle') : t('companion.review.noScheduledTitle')}
           />
           {nextReadingLabel ? <p className="mt-3">{t('companion.review.nextReading', { date: nextReadingLabel })}</p> : null}
@@ -53,7 +53,7 @@ export function CompanionReviewFallback(props: {
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.review.noTopicsDescription')}
-          icon={<CompanionEmptyStateIcon Icon={GraduationCap} />}
+          icon={<CompanionEmptyStateIcon Icon={Route} />}
           title={t('companion.review.noTopicsTitle')}
         />
       )}

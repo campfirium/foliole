@@ -1,4 +1,4 @@
-import { FolderTree, ListFilter, X } from 'lucide-react';
+import { Library, ListFilter, X } from 'lucide-react';
 
 import type {
   FolderListSortDirection,
@@ -118,7 +118,7 @@ function resolveBrowseTopBar(args: {
   }
   return {
     title: args.folderTitle ?? args.t('companion.browse.title'),
-    leftAction: { icon: FolderTree, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
+    leftAction: { icon: Library, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };
 }

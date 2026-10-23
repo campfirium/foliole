@@ -1,11 +1,12 @@
 import {
   Activity,
-  BookOpenText,
-  FolderTree,
-  GraduationCap,
+  Library,
+  List,
   ListFilter,
+  PanelBottom,
+  RefreshCw,
+  Route,
   Search,
-  Settings,
   SlidersHorizontal,
   Unplug
 } from 'lucide-react';
@@ -50,10 +51,10 @@ export type CompanionResolvedTab = {
 };
 
 const PRIMARY_TABS: Record<CompanionPrimaryTabId, Omit<CompanionResolvedTab, 'id'>> = {
-  browse: { action: 'recent', icon: BookOpenText, labelKey: 'companion.tabs.browse', parentAction: 'recent' },
-  learn: { action: 'review', icon: GraduationCap, labelKey: 'companion.tabs.learn', parentAction: 'review' },
+  browse: { action: 'recent', icon: List, labelKey: 'companion.tabs.browse', parentAction: 'recent' },
+  learn: { action: 'review', icon: Route, labelKey: 'companion.tabs.learn', parentAction: 'review' },
   search: { action: 'search', icon: Search, labelKey: 'companion.tabs.search', parentAction: 'search' },
-  settings: { action: 'more', icon: Settings, labelKey: 'companion.tabs.settings', parentAction: 'more' }
+  settings: { action: 'more', icon: SlidersHorizontal, labelKey: 'companion.tabs.settings', parentAction: 'more' }
 };
 
 const PRIMARY_ACTION_BY_TAB_ID: Record<CompanionPrimaryTabId, CompanionTabAction> = {
@@ -64,10 +65,10 @@ const PRIMARY_ACTION_BY_TAB_ID: Record<CompanionPrimaryTabId, CompanionTabAction
 };
 
 export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] = [
-  { icon: FolderTree, id: 'directory', labelKey: 'companion.tabs.shortcut.directory', parentTab: 'browse' },
+  { icon: Library, id: 'directory', labelKey: 'companion.tabs.shortcut.directory', parentTab: 'browse' },
   { icon: ListFilter, id: 'onlyReview', labelKey: 'companion.tabs.shortcut.onlyReview', parentTab: 'learn' },
-  { icon: Settings, id: 'sync', labelKey: 'companion.tabs.shortcut.sync', parentTab: 'settings' },
-  { icon: SlidersHorizontal, id: 'tabs', labelKey: 'companion.tabs.shortcut.tabs', parentTab: 'settings' },
+  { icon: RefreshCw, id: 'sync', labelKey: 'companion.tabs.shortcut.sync', parentTab: 'settings' },
+  { icon: PanelBottom, id: 'tabs', labelKey: 'companion.tabs.shortcut.tabs', parentTab: 'settings' },
   { icon: Activity, id: 'syncActivity', labelKey: 'companion.tabs.shortcut.syncActivity', parentTab: 'settings' },
   { icon: Unplug, id: 'syncConnection', labelKey: 'companion.tabs.shortcut.syncConnection', parentTab: 'settings' },
 ];

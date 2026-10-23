@@ -41,7 +41,7 @@ function TabButton(props: {
           ''
         }`}
       >
-        <Icon className={`h-5 w-5 ${props.active ? 'text-companion-accent' : ''}`} />
+        <Icon className={`h-5 w-5 ${props.active ? 'text-companion-accent' : ''}`} strokeWidth={1.75} />
       </span>
       <span className="max-w-full truncate">{props.label}</span>
     </button>
