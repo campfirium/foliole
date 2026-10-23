@@ -15,7 +15,7 @@
 - 临时 PR、冻结候选或验收 worktree 必须由 `node scripts/diagnostics/transient-worktree-lifecycle.mjs create --path <path> --kind <development|acceptance> --target <branch>` 创建并登记；development 同时传 `--branch <branch>`。结果进入目标分支或证据收口后，同一流程调用 `finish --path <path>`。异常遗留在显式本地维护时调用该入口的 7 天 `sweep`，不得直接删除目录或让 lock 永久保留。
 - 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
 - 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；聊天编号、标题和改名统一按 `codex-task-lookup/references/task-identity.md` 执行，方案/闭环编号不能替代唯一聊天身份；按编号或关键词定位先用 `codex-task-lookup`，不用最近聊天列表猜任务。非会审任务在用户只要求继续时沿用已核实的原聊天，另开任务须有用户授权；会审任务的新建与续用按 `astra-review` 执行。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
-- 可为独立任务新开会话派活；会话之间不嵌套、不要求回报、不互相传话，进度只以台账、方案文件和提交为准。任务盘点、关闭、排序与待拍板事项只在用户触发时按 `task-steward` skill 执行。
+- 可为独立任务新开会话派活；会话之间不嵌套、不要求回报、不互相传话，进度只以台账、方案文件和提交为准。任务统筹（对账、关闭、排序与待拍板事项）只在用户于新会话中手动调用 `tongchou` skill 时执行。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。
 - 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。本条由根统一拥有，来源为用户对产品与控制面授权的分离；主要成本是控制面缺口可能使验收待完成，明确授权该结果后按其范围执行。
 - 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，需落库时使用 task-seed；可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
