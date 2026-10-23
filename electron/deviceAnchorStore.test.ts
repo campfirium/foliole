@@ -79,8 +79,10 @@ it.each([
 it('gives every test worker an isolated device identity root', () => {
   const stateRoot = process.env.FOLIOLE_ELECTRON_TEST_STATE_ROOT;
   expect(stateRoot && path.isAbsolute(stateRoot)).toBe(true);
-  expect(resolveDesktopDeviceAnchorFilePath({ platform: 'darwin' }))
-    .toBe(path.posix.join(stateRoot!, 'device-identity', 'anchor-v1'));
+  // The state root uses the host's path form, so resolve it as the host platform does.
+  const platform = process.platform === 'win32' ? 'win32' : 'darwin';
+  expect(resolveDesktopDeviceAnchorFilePath({ platform }))
+    .toBe(path.join(stateRoot!, 'device-identity', 'anchor-v1'));
 });
 
 it('keeps daily macOS DEV on the shared device identity despite its isolated runtime state', () => {
