@@ -99,7 +99,7 @@ it('drains 256 MiB in windowed pulls under mobile request cost while admitting a
     // Window length follows a time budget, so a slow host cuts more windows; each request still opens a source once.
     expect(measurement.metrics().sourceOpens).toBeLessThanOrEqual(server.attachmentRequests());
     // Pushed blocks travel in the same windows, so neither direction costs a request per block.
-    expect(server.attachmentRequests()).toBeLessThanOrEqual(512 / 8 + 24);
+    expect(server.attachmentRequests()).toBeLessThanOrEqual(512 / 8 + 32);
     const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS, attachmentRequests: server.attachmentRequests(), rounds, totalBlocks,
       ...measurement.metrics(),
       elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };

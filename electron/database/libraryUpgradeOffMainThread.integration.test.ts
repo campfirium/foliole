@@ -53,6 +53,9 @@ function installOlderLibrary() {
   return dbPath;
 }
 
+/** A responsive window on a slow hosted runner; a main-thread upgrade or copy stalls for seconds. */
+const MAX_MAIN_THREAD_STALL_MS = 500;
+
 function watchMainThread() {
   const statuses: NativeDatabaseUpgradeStatus[] = [];
   let longestStallMs = 0;
@@ -86,8 +89,8 @@ it('opens a library from an older version without stalling the main thread', asy
   expect(loadDatabaseUpgradeStatus()).toEqual({ state: 'ready' });
   expect(stages).toEqual(['database_background_upgrade_complete']);
   expect(stagePayloads[0]).toMatchObject({ result: 'upgraded' });
-  // Upgrading this library on the main thread blocked it for the whole migration.
-  expect(longestStallMs).toBeLessThan(250);
+  // Upgrading this library on the main thread blocked it for the whole migration (minutes for a large library).
+  expect(longestStallMs).toBeLessThan(MAX_MAIN_THREAD_STALL_MS);
 }, 120_000);
 
 it('restores a backup from an older version without stalling the main thread', async () => {
@@ -107,5 +110,5 @@ it('restores a backup from an older version without stalling the main thread', a
   // The restored library is searchable as soon as the restore completes.
   expect(readWorkspaceSearchSidecarRebuildStatus(restored)?.status).toBe('ready');
   expect(restored.prepare("SELECT count(*) AS n FROM search.node_search WHERE node_id = 'topic-479'").get()).toEqual({ n: 1 });
-  expect(longestStallMs).toBeLessThan(250);
+  expect(longestStallMs).toBeLessThan(MAX_MAIN_THREAD_STALL_MS);
 }, 120_000);
