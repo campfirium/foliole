@@ -1,4 +1,4 @@
-import { buildRemoteImageRenderUrl } from '../../../../lib/platform/remoteImageProtocolUrl';
+import { resolveRemoteImageRenderSource } from '../../../shared/platform/external/remoteImageRenderSource';
 import {
   loadRemoteImageSourceContext,
   type RemoteImageSourceContextState
@@ -21,7 +21,7 @@ export function buildRemoteRenderSource(
   sourceContext: RemoteImageSourceContextState,
   retryKey: string | null = null
 ) {
-  return buildRemoteImageRenderUrl({
+  return resolveRemoteImageRenderSource({
     nodeId: editorNodeId,
     persist: false,
     retryKey,

@@ -128,3 +128,17 @@ describe('missing Android attachment rendering', () => {
     adapter.destroy();
   });
 });
+
+describe('remote image rendering on native companion', () => {
+  it('loads remote http images from their original URL instead of the desktop-only protocol', async () => {
+    const source = 'https://readwise-assets.s3.amazonaws.com/media/reader/parsed_document_assets/1/page.jpeg';
+    const { adapter, host } = createAdapterHost(`![](${source})`);
+    adapter.setNodeId('node-remote');
+
+    await waitFor(() => {
+      expect(host.querySelector('.cm-md-image-element')?.getAttribute('src')).toBe(source);
+    });
+
+    adapter.destroy();
+  });
+});
