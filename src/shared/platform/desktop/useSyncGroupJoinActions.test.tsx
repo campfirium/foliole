@@ -44,6 +44,7 @@ afterEach(() => vi.useRealTimers());
 
 function renderActions(setOverview = vi.fn()) {
   const hook = renderHook(() => useDesktopSyncGroupJoinActions({
+    overview: { join_candidates: [{ endpoint_url: 'http://maci.local:38641', group_display_name: 'Home Library' }] } as never,
     setError: vi.fn(), setIsLoading: vi.fn(), setOverview, setPendingActionId: vi.fn()
   }));
   return { ...hook, setOverview };
@@ -54,6 +55,7 @@ it('requests admission before stopping discovery, then completes after approval'
 
   await act(() => result.current.requestJoin('http://maci.local:38641'));
 
+  expect(choice.select).toHaveBeenCalledWith(expect.any(Function), 'Home Library');
   expect(runtime.events).toEqual(['request', 'stop', 'complete']);
   expect(setOverview).toHaveBeenLastCalledWith({
     current_device: { device_name: 'V', platform: 'win32' }

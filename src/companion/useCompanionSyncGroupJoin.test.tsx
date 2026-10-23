@@ -208,6 +208,7 @@ it.each(['overwrite', null])('requests membership only after choosing %s', async
     candidates: [candidate], change: 'found', error_code: null, status: 'results'
   }));
   await act(() => result.current.request(candidate.endpoint_url));
+  expect(choice.select).toHaveBeenCalledWith(expect.any(Function), 'Foliole');
   if (mode === null) {
     expect(runtime.request).not.toHaveBeenCalled();
     expect(onSaveEndpoint).not.toHaveBeenCalled();

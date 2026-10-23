@@ -23,6 +23,8 @@
   "syncGroup.join.overwrite.finalDescription": "Biblioteka na tym urządzeniu stanie się jedyną kopią dla całej grupy. Dane na wszystkich pozostałych urządzeniach w grupie zostaną zastąpione, a zmiany istniejące tylko na nich zostaną utracone.",
   "syncGroup.join.overwrite.finalWarning": "Upewnij się, że to urządzenie ma najnowszą, pełną bibliotekę, a nie starą lub pustą kopię.",
   "syncGroup.join.overwrite.finalConfirm": "Nadpisz całą grupę",
+  "syncGroup.join.overwrite.typeName": "Aby potwierdzić, wpisz nazwę grupy synchronizacji „{name}”.",
+  "syncGroup.join.overwrite.typeNameLabel": "Nazwa grupy synchronizacji",
   "settings.companionSync.expired.title": "To urządzenie nie było synchronizowane od ponad 90 dni",
   "settings.companionSync.expired.description": "Grupa synchronizacji nie przechowuje już starszych zapisów, których to urządzenie by potrzebowało. Aby znów synchronizować, nadpisz to urządzenie danymi grupy; zmiany wprowadzone tutaj i nigdy niezsynchronizowane nie zostaną zachowane.",
   "settings.companionSync.expired.action": "Nadpisz to urządzenie",

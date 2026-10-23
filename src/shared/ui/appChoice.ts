@@ -1,7 +1,8 @@
 export interface AppChoiceOptions {
   title: string;
   description?: string;
-  choices: Array<{ value: string; label: string }>;
+  /** `primary` marks the safe default; `danger` renders as a small red link below the buttons. */
+  choices: Array<{ value: string; label: string; tone?: 'primary' | 'danger' }>;
 }
 
 type ChoiceHandler = (options: AppChoiceOptions) => Promise<string | null>;

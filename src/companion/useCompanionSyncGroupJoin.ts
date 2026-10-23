@@ -144,7 +144,7 @@ function useJoinRequest(args: { config: SyncGroupJoinArgs; discoveries: Companio
     if (!databasePath) throw new Error('companion_database_unavailable');
     const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
     if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
-    const mode = await chooseSyncGroupJoinMode(t);
+    const mode = await chooseSyncGroupJoinMode(t, candidate.groupDisplayName);
     if (!mode) return null;
     setStatus('requesting'); args.config.onError(null);
     try {

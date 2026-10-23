@@ -9,6 +9,8 @@ export interface AppTextInputOptions extends AppConfirmationOptions {
   defaultValue?: string;
   inputLabel: string;
   placeholder?: string;
+  /** Confirm stays disabled until the typed value matches exactly. */
+  requiredValue?: string;
 }
 
 type AppConfirmationHandler = (options: AppConfirmationOptions) => Promise<boolean>;

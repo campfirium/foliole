@@ -23,6 +23,8 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'syncGroup.join.overwrite.finalDescription': '本机的资料库将成为整个同步组唯一的版本。组内其他所有设备的资料都会被替换，只存在于那些设备上的改动将会丢失。',
   'syncGroup.join.overwrite.finalWarning': '请确认本机是你最新、完整的资料库，而不是旧的或空的存档。',
   'syncGroup.join.overwrite.finalConfirm': '覆盖整个同步组',
+  'syncGroup.join.overwrite.typeName': '请输入同步组名称“{name}”以确认。',
+  'syncGroup.join.overwrite.typeNameLabel': '同步组名称',
   'settings.companionSync.expired.title': '本机已超过 90 天未同步',
   'settings.companionSync.expired.description': '同步组已不再保留本机需要的旧记录。要继续同步，需用同步组资料覆盖本机；本机从未同步出去的改动不会保留。',
   'settings.companionSync.expired.action': '覆盖本机',

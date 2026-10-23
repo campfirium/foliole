@@ -50,6 +50,11 @@ function cancelDialog(dialog: ActiveDialog) {
   else dialog.resolve(null);
 }
 
+function canConfirm(dialog: ActiveDialog | null) {
+  if (dialog?.kind !== 'text-input' || dialog.options.requiredValue === undefined) return true;
+  return dialog.inputValue.trim() === dialog.options.requiredValue.trim();
+}
+
 const AppConfirmationContext = createContext(null);
 
 function normalizeDescription(description: AppConfirmationOptions['description']) {
@@ -145,7 +150,7 @@ function ActiveAppDialog(props: {
               </AppButton>
             ) : null}
             {props.activeDialog?.kind !== 'choice' ? (
-              <AppButton onClick={() => props.onClose(true)} variant="default">
+              <AppButton disabled={!canConfirm(props.activeDialog)} onClick={() => props.onClose(true)} variant="default">
                 {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
               </AppButton>
             ) : null}
@@ -198,7 +203,7 @@ function AppTextInputDialogField(props: {
       className="mt-4"
       onSubmit={(event) => {
         event.preventDefault();
-        props.onClose(true);
+        if (canConfirm(props.activeDialog)) props.onClose(true);
       }}
     >
       <label className="sr-only" htmlFor="app-text-input-dialog-field">

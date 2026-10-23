@@ -23,6 +23,8 @@
   "syncGroup.join.overwrite.finalDescription": "このデバイスのライブラリがグループ全体の唯一のコピーになります。グループ内の他のすべてのデバイスのデータは置き換えられ、それらのデバイスにしかない変更は失われます。",
   "syncGroup.join.overwrite.finalWarning": "このデバイスに最新で完全なライブラリがあり、古いコピーや空のコピーではないことを確認してください。",
   "syncGroup.join.overwrite.finalConfirm": "グループ全体を上書き",
+  "syncGroup.join.overwrite.typeName": "確認のため、同期グループ名「{name}」を入力してください。",
+  "syncGroup.join.overwrite.typeNameLabel": "同期グループ名",
   "settings.companionSync.expired.title": "このデバイスは 90 日以上同期されていません",
   "settings.companionSync.expired.description": "同期グループには、このデバイスが必要とする古い記録がもう残っていません。再び同期するには、同期グループのデータでこのデバイスを上書きしてください。一度も同期されていないこのデバイスの変更は保持されません。",
   "settings.companionSync.expired.action": "このデバイスを上書き",

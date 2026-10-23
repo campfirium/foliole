@@ -2,23 +2,23 @@ import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../lib/pla
 import type { Translate } from '../localization/LocalizationProvider';
 
 import { requestAppChoice } from './appChoice';
-import { requestAppConfirmation } from './appConfirmation';
+import { requestAppConfirmation, requestAppTextInput } from './appConfirmation';
 
-export async function chooseSyncGroupJoinMode(t: Translate): Promise<SyncGroupJoinMode | null> {
+export async function chooseSyncGroupJoinMode(t: Translate, groupName: string): Promise<SyncGroupJoinMode | null> {
   const choice = await requestAppChoice({
     title: t('syncGroup.join.mode.title'),
     description: t('syncGroup.join.mode.description'),
     choices: [
-      { value: 'use-group', label: t('syncGroup.join.mode.useGroup') },
-      { value: 'overwrite', label: t('syncGroup.join.mode.overwrite') }
+      { value: 'use-group', label: t('syncGroup.join.mode.useGroup'), tone: 'primary' },
+      { value: 'overwrite', label: t('syncGroup.join.mode.overwrite'), tone: 'danger' }
     ]
   });
   const mode = choice === null ? null : parseSyncGroupJoinMode(choice);
   if (mode !== 'overwrite') return mode;
-  return await confirmGroupOverwrite(t) ? mode : null;
+  return await confirmGroupOverwrite(t, groupName) ? mode : null;
 }
 
-async function confirmGroupOverwrite(t: Translate) {
+async function confirmGroupOverwrite(t: Translate, groupName: string) {
   const first = await requestAppConfirmation({
     title: t('syncGroup.join.overwrite.confirmTitle'),
     description: t('syncGroup.join.overwrite.confirmDescription'),
@@ -26,10 +26,15 @@ async function confirmGroupOverwrite(t: Translate) {
     confirmLabel: t('syncGroup.join.overwrite.yes')
   });
   if (!first) return false;
-  return requestAppConfirmation({
+  const typed = await requestAppTextInput({
     title: t('syncGroup.join.overwrite.finalTitle'),
-    description: [t('syncGroup.join.overwrite.finalDescription'), t('syncGroup.join.overwrite.finalWarning')],
+    description: [t('syncGroup.join.overwrite.finalDescription'), t('syncGroup.join.overwrite.finalWarning'),
+      t('syncGroup.join.overwrite.typeName', { name: groupName })],
+    inputLabel: t('syncGroup.join.overwrite.typeNameLabel'),
+    placeholder: groupName,
+    requiredValue: groupName,
     cancelLabel: t('syncGroup.join.overwrite.no'),
     confirmLabel: t('syncGroup.join.overwrite.finalConfirm')
   });
+  return typed !== null;
 }

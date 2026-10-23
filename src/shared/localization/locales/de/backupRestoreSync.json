@@ -23,6 +23,8 @@
   "syncGroup.join.overwrite.finalDescription": "Die Bibliothek auf diesem Gerät wird zur einzigen Kopie für die gesamte Gruppe. Die Daten auf allen anderen Geräten der Gruppe werden ersetzt, und Änderungen, die nur dort vorhanden sind, gehen verloren.",
   "syncGroup.join.overwrite.finalWarning": "Stelle sicher, dass dieses Gerät deine aktuelle, vollständige Bibliothek enthält und keine alte oder leere Kopie ist.",
   "syncGroup.join.overwrite.finalConfirm": "Gesamte Gruppe überschreiben",
+  "syncGroup.join.overwrite.typeName": "Gib zur Bestätigung den Namen der Synchronisierungsgruppe „{name}“ ein.",
+  "syncGroup.join.overwrite.typeNameLabel": "Name der Synchronisierungsgruppe",
   "settings.companionSync.expired.title": "Dieses Gerät wurde seit über 90 Tagen nicht synchronisiert",
   "settings.companionSync.expired.description": "Die Synchronisierungsgruppe bewahrt die älteren Einträge, die dieses Gerät bräuchte, nicht mehr auf. Um wieder zu synchronisieren, überschreiben Sie dieses Gerät mit den Daten der Gruppe; nie synchronisierte Änderungen auf diesem Gerät bleiben nicht erhalten.",
   "settings.companionSync.expired.action": "Dieses Gerät überschreiben",

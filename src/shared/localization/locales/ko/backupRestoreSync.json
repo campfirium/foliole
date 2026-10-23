@@ -23,6 +23,8 @@
   "syncGroup.join.overwrite.finalDescription": "이 기기의 라이브러리가 그룹 전체의 유일한 사본이 됩니다. 그룹의 다른 모든 기기 데이터가 교체되며, 그 기기에만 있는 변경 사항은 사라집니다.",
   "syncGroup.join.overwrite.finalWarning": "이 기기에 최신의 완전한 라이브러리가 있고 오래되었거나 비어 있는 사본이 아닌지 확인하세요.",
   "syncGroup.join.overwrite.finalConfirm": "그룹 전체 덮어쓰기",
+  "syncGroup.join.overwrite.typeName": "확인하려면 동기화 그룹 이름 “{name}”을(를) 입력하세요.",
+  "syncGroup.join.overwrite.typeNameLabel": "동기화 그룹 이름",
   "settings.companionSync.expired.title": "이 기기는 90일 넘게 동기화되지 않았습니다",
   "settings.companionSync.expired.description": "동기화 그룹에 이 기기에 필요한 이전 기록이 더 이상 남아 있지 않습니다. 다시 동기화하려면 동기화 그룹의 데이터로 이 기기를 덮어쓰세요. 한 번도 동기화되지 않은 이 기기의 변경 사항은 유지되지 않습니다.",
   "settings.companionSync.expired.action": "이 기기 덮어쓰기",

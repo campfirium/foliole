@@ -23,6 +23,8 @@
   "syncGroup.join.overwrite.finalDescription": "La bibliothèque de cet appareil deviendra la seule copie pour tout le groupe. Les données de tous les autres appareils du groupe seront remplacées et les modifications qui n’existent que sur eux seront perdues.",
   "syncGroup.join.overwrite.finalWarning": "Vérifiez que cet appareil contient votre bibliothèque la plus récente et complète, et non une copie ancienne ou vide.",
   "syncGroup.join.overwrite.finalConfirm": "Écraser tout le groupe",
+  "syncGroup.join.overwrite.typeName": "Pour confirmer, saisissez le nom du groupe de synchronisation « {name} ».",
+  "syncGroup.join.overwrite.typeNameLabel": "Nom du groupe de synchronisation",
   "settings.companionSync.expired.title": "Cet appareil n’a pas été synchronisé depuis plus de 90 jours",
   "settings.companionSync.expired.description": "Le groupe de synchronisation ne conserve plus les anciens enregistrements dont cet appareil aurait besoin. Pour synchroniser à nouveau, écrasez cet appareil avec les données du groupe ; les modifications faites ici et jamais synchronisées ne seront pas conservées.",
   "settings.companionSync.expired.action": "Écraser cet appareil",

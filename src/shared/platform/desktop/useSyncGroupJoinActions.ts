@@ -27,6 +27,7 @@ async function waitForJoinAcceptance(expiresAt: string) {
 export function useDesktopSyncGroupJoinActions(args: {
   setError(value: string | null): void;
   setIsLoading(value: boolean): void;
+  overview: DesktopSyncGroupOverviewPayload;
   setOverview(value: DesktopSyncGroupOverviewPayload): void;
   setPendingActionId(value: string | null): void;
 }) {
@@ -62,7 +63,9 @@ export function useDesktopSyncGroupJoinActions(args: {
     },
     onDiscoveryChanged: onDesktopSyncGroupDiscoveryChanged,
     requestJoin: async (endpointUrl: string) => {
-      const mode = await chooseSyncGroupJoinMode(t);
+      const candidate = args.overview.join_candidates?.find((value) => value.endpoint_url === endpointUrl);
+      if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
+      const mode = await chooseSyncGroupJoinMode(t, candidate.group_display_name);
       if (!mode) return;
       return run('request-sync-group-join', async () => {
         const overview = await requestDesktopSyncGroupJoin(endpointUrl, mode);
