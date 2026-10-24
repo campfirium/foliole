@@ -13,6 +13,7 @@ const { resolveAppPaths } = vi.hoisted(() => ({
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths }));
 
 import {
+  appendMainProcessDiagnosticLog,
   logMainProcessException,
   logMainProcessOperationFailure,
   startLocalCrashReporter
@@ -111,4 +112,17 @@ it('writes operation failures without embedding the raw error stack', async () =
   });
   expect(recordText).not.toContain('/Users/alice/private/book.md');
   expect(recordText).not.toContain('stack');
+});
+
+it('writes non-error main process events at their declared level', async () => {
+  const logDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-main-diagnostics-')), 'logs');
+  resolveAppPaths.mockReturnValue({ app_log_dir: logDir });
+
+  appendMainProcessDiagnosticLog('global_clip_shortcut_registered', { shortcuts: ['Alt+A'] }, 'info');
+
+  await vi.waitFor(() => {
+    const fileName = fs.readdirSync(logDir).find((file) => file.startsWith('runtime-')) as string;
+    const record = JSON.parse(fs.readFileSync(path.join(logDir, fileName), 'utf8').trim().split('\n')[0] ?? '{}');
+    expect(record).toMatchObject({ event: 'global_clip_shortcut_registered', level: 'info' });
+  });
 });

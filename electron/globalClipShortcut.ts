@@ -2,7 +2,7 @@ import { app, globalShortcut, powerMonitor, type App, type GlobalShortcut, type 
 
 import { getDefaultGlobalCaptureAccelerator } from '../lib/platform/globalCaptureShortcut.js';
 
-import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
+import { appendMainProcessDiagnosticLog, type MainDiagnosticLevel } from './diagnostics/mainProcessDiagnostics.js';
 import { getGlobalClipShortcutAccelerators } from './globalClipSettings.js';
 
 export interface GlobalClipShortcutConfig {
@@ -14,7 +14,7 @@ interface InstallGlobalClipShortcutDeps {
   appRef?: Pick<App, 'on'>;
   captureToInbox: () => Promise<unknown>;
   globalShortcutRef?: Pick<GlobalShortcut, 'register' | 'unregister'>;
-  log?: (event: string, payload?: Record<string, unknown>) => void;
+  log?: (event: string, payload?: Record<string, unknown>, level?: MainDiagnosticLevel) => void;
   platform?: NodeJS.Platform;
   powerMonitorRef?: Pick<PowerMonitor, 'on'>;
   resolveAccelerators?: () => string[];
@@ -68,15 +68,25 @@ function registerShortcut(deps: InstalledGlobalClipShortcutDeps, accelerator: st
   return false;
 }
 
+function isFullyRegistered(accelerators: string[]) {
+  return accelerators.length > 0
+    && accelerators.length === configuredAccelerators.length
+    && accelerators.every((accelerator, index) => configuredAccelerators[index] === accelerator)
+    && activeAccelerators.length === configuredAccelerators.length;
+}
+
 export function refreshGlobalClipShortcut() {
   if (!installedDeps) return false;
+  const accelerators = Array.from(new Set(installedDeps.resolveAccelerators().filter(Boolean)));
+  // Every app settings save lands here; an unchanged, fully registered set needs no re-registration.
+  if (isFullyRegistered(accelerators)) return true;
   unregisterActiveShortcuts(installedDeps);
-  configuredAccelerators = Array.from(new Set(installedDeps.resolveAccelerators().filter(Boolean)));
+  configuredAccelerators = accelerators;
   for (const accelerator of configuredAccelerators) {
     if (registerShortcut(installedDeps, accelerator)) activeAccelerators.push(accelerator);
   }
   if (activeAccelerators.length) {
-    installedDeps.log('global_clip_shortcut_registered', { shortcuts: activeAccelerators });
+    installedDeps.log('global_clip_shortcut_registered', { shortcuts: activeAccelerators }, 'info');
   }
   return configuredAccelerators.length > 0 && activeAccelerators.length === configuredAccelerators.length;
 }

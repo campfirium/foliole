@@ -41,7 +41,7 @@ function createTrayIcon(platform: NodeJS.Platform = process.platform) {
     icon_path: iconPath,
     is_packaged: app.isPackaged,
     platform
-  });
+  }, 'warn');
   return null;
 }
 

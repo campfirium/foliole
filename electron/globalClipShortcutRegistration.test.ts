@@ -158,3 +158,18 @@ it.each(['activate', 'resume'] as const)('retries an unavailable shortcut on %s 
   retry?.();
   expect(globalShortcutRef.register).toHaveBeenCalledTimes(2);
 });
+
+it('keeps an unchanged registered shortcut on repeated settings saves without error-level logs', () => {
+  const log = vi.fn();
+  const globalShortcutRef = { register: vi.fn(() => true), unregister: vi.fn() };
+  installGlobalClipShortcut({ captureToInbox: vi.fn(async () => null), globalShortcutRef, log, platform: 'darwin' });
+
+  for (let index = 0; index < 3; index += 1) {
+    expect(refreshGlobalClipShortcutFromSettings(() => ['Alt+A'])).toBe(true);
+  }
+
+  expect(globalShortcutRef.register).toHaveBeenCalledTimes(1);
+  expect(globalShortcutRef.unregister).not.toHaveBeenCalled();
+  const registeredLogs = log.mock.calls.filter(([event]) => event === 'global_clip_shortcut_registered');
+  expect(registeredLogs).toEqual([['global_clip_shortcut_registered', { shortcuts: ['Alt+A'] }, 'info']]);
+});

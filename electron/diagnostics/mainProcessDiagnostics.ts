@@ -6,6 +6,8 @@ type CrashReporter = typeof electronCrashReporter;
 
 type MainDiagnosticPayload = Record<string, unknown>;
 
+export type MainDiagnosticLevel = 'error' | 'warn' | 'info';
+
 function serializeErrorLike(value: unknown): Record<string, unknown> {
   if (value instanceof Error) {
     return {
@@ -44,11 +46,12 @@ function serializeMainDiagnosticPayload(payload: MainDiagnosticPayload) {
 
 export function appendMainProcessDiagnosticLog(
   event: string,
-  payload: MainDiagnosticPayload = {}
+  payload: MainDiagnosticPayload = {},
+  level: MainDiagnosticLevel = 'error'
 ) {
   void appendDiagnosticLog({
     event,
-    level: 'error',
+    level,
     occurred_at: new Date().toISOString(),
     payload: serializeMainDiagnosticPayload(payload),
     source: 'electron.main'

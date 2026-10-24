@@ -196,5 +196,5 @@ it('does not install a transparent tray when the icon cannot be decoded', async 
     icon_path: path.join('/app', 'build', 'icon.ico'),
     is_packaged: false,
     platform: 'win32'
-  });
+  }, 'warn');
 });
