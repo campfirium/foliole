@@ -61,7 +61,7 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 const REQUIRED_HELPERS_BY_FILE = new Map([
-  ['src/features/settings/components/SettingsSidebar.tsx', ['settingsSidebarBadgeClassName', 'settingsSidebarItemClassName']],
+  ['src/features/settings/components/SettingsSidebar.tsx', ['SettingsNavigation', 'settingsSidebarItemClassName']],
   ['src/features/settings/components/SettingsSearchBox.tsx', ['settingsSelectableOptionClassName', 'settingsPopoverSurfaceClassName']],
   ['src/features/settings/components/sections/SettingsRailIconPicker.tsx', ['settingsIconGridButtonClassName']],
   ['src/features/settings/components/sections/WorkspaceSurfaceColorEditorValueFields.tsx', ['settingsCompactButtonClassName', 'settingsCompactFieldClassName']],

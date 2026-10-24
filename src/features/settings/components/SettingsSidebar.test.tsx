@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, expect, it, vi } from 'vitest';
 
 import packageJson from '../../../../package.json';
@@ -86,4 +86,27 @@ it('groups workspace and control settings in product order', () => {
     'Publish'
   ]);
   expect(screen.queryByRole('button', { name: 'Models' })).not.toBeInTheDocument();
+});
+
+it('keeps category selection owned by the caller and omits hidden categories', () => {
+  const onSelect = vi.fn();
+  const { rerender } = render(
+    <LocalizationProvider>
+      <SettingsSidebar activeCategory="editor" hiddenCategoryIds={['about', 'publishing']} setActiveCategory={onSelect} />
+    </LocalizationProvider>
+  );
+
+  expect(screen.queryByRole('button', { name: 'About' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  expect(onSelect).toHaveBeenCalledExactlyOnceWith('appearance');
+  expect(screen.getByRole('button', { name: 'Editor' })).toHaveAttribute('aria-current', 'page');
+
+  rerender(
+    <LocalizationProvider>
+      <SettingsSidebar activeCategory="appearance" hiddenCategoryIds={['about', 'publishing']} setActiveCategory={onSelect} />
+    </LocalizationProvider>
+  );
+  expect(screen.getByRole('button', { name: 'Appearance' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('button', { name: 'Editor' })).not.toHaveAttribute('aria-current');
 });

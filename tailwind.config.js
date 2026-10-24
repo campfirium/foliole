@@ -129,6 +129,8 @@ export default {
         'shellless-input': ['var(--app-shellless-input-font-family)']
       },
       fontSize: {
+        'settings-brand': ['1.05rem', { lineHeight: '1.25rem' }],
+        'settings-navigation-group': ['0.72rem', { lineHeight: '1.25rem' }],
         'ui-xs': ['11px', { lineHeight: '1rem' }],
         'ui-sm': ['12px', { lineHeight: '1.25rem' }],
         'ui-base': ['13px', { lineHeight: '1.25rem' }],
@@ -147,6 +149,7 @@ export default {
         ]
       },
       spacing: {
+        'settings-navigation-header': '64px',
         'dialog-column-gap': '4rem',
         'dialog-gutter': '3rem',
         'dialog-section-gap': '2.5rem',
@@ -165,6 +168,7 @@ export default {
       minWidth: { 'statistics-table': '60rem', 'statistics-time-table': '120rem' },
       maxHeight: { 'floating-workspace': 'calc(100dvh - 2rem)' },
       width: {
+        'settings-navigation-brand': '220px',
         'dialog-notice': 'min(30rem, calc(100vw - 2rem))',
         'floating-workspace': '65rem',
         'statistics-panel': 'min(77.5rem, calc(100vw - 2.25rem))',

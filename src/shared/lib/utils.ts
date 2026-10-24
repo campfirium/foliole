@@ -6,6 +6,8 @@ const mergeClassNames = extendTailwindMerge({
     classGroups: {
       shadow: ['shadow-popover', 'shadow-panel', 'shadow-settings', 'shadow-control', 'shadow-page', 'shadow-marker', 'shadow-inspector-section', 'shadow-picker-thumb-ring', 'shadow-picker-thumb-ring-strong', 'shadow-shellless', 'shadow-debug'],
       'font-size': [
+        'text-settings-brand',
+        'text-settings-navigation-group',
         'text-ui-xs',
         'text-ui-sm',
         'text-ui-base',

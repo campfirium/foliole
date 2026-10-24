@@ -31,7 +31,7 @@ import {
 
 import { cn } from '@/shared/lib/utils';
 import { useAppVersion } from '@/shared/platform/appVersion';
-import { AppButton, AppPanel, settingsSidebarBadgeClassName, settingsSidebarItemClassName } from '@/shared/ui';
+import { AppButton, SettingsNavigation, SettingsNavigationBrand, SettingsNavigationGroup, settingsSidebarItemClassName } from '@/shared/ui';
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
@@ -68,34 +68,27 @@ export function SettingsSidebar(props: {
   }));
   const about = hidden.has('about') ? undefined : getSettingsCategoryOption('about', t);
   return (
-    <AppPanel
-      as="aside"
+    <SettingsNavigation
       ariaLabel={t('settings.sidebar.aria')}
-      bodyClassName="px-4 pb-5 pt-3 [--app-scrollbar-thumb-color:var(--role-list-scrollbar)] [--app-scrollbar-thumb-hover-color:var(--role-list-scrollbar-hover)] [--app-scrollbar-track-bg:transparent]"
-      className="border-r border-settings-divider"
-      headerClassName="h-[64px] min-h-0 border-b border-settings-divider/55 px-5 py-0"
-      scrollBody
-      surfaceClassName="bg-settings-sidebar"
+      navigationLabel={t('settings.navigation.aria')}
       title={<SettingsSidebarBrand {...definedProps({ badge: props.brandBadge })} />}
     >
-      <nav aria-label={t('settings.navigation.aria')} className="flex w-full flex-col items-stretch gap-4">
-        {about ? (
-          <SettingsSidebarItem
-            active={about.id === props.activeCategory}
-            category={about}
-            onSelect={props.setActiveCategory}
-          />
-        ) : null}
-        {groups.map((group) => (
-          <SettingsSidebarGroup
-            activeCategory={props.activeCategory}
-            group={group}
-            key={group.label}
-            setActiveCategory={props.setActiveCategory}
-          />
-        ))}
-      </nav>
-    </AppPanel>
+      {about ? (
+        <SettingsSidebarItem
+          active={about.id === props.activeCategory}
+          category={about}
+          onSelect={props.setActiveCategory}
+        />
+      ) : null}
+      {groups.map((group) => (
+        <SettingsSidebarGroup
+          activeCategory={props.activeCategory}
+          group={group}
+          key={group.label}
+          setActiveCategory={props.setActiveCategory}
+        />
+      ))}
+    </SettingsNavigation>
   );
 }
 
@@ -103,25 +96,19 @@ function SettingsSidebarBrand(props: { badge?: string }) {
   const appVersion = useAppVersion();
 
   return (
-    <div className="flex w-[220px] min-w-0 items-center gap-3">
-      <img
-        alt=""
-        aria-hidden="true"
-        className="size-8 shrink-0 object-contain"
-        src={folioleLeafUrl}
-      />
-      <div className="flex min-w-0 flex-1 items-baseline gap-2">
-        <div className="truncate text-[1.05rem] font-semibold leading-5 text-foreground">Foliole</div>
-        {props.badge ? (
-          <span className="shrink-0 text-ui-xs font-semibold uppercase tracking-[0.12em] text-foreground/45">
-            {props.badge}
-          </span>
-        ) : null}
-      </div>
-      <span className={settingsSidebarBadgeClassName('ml-auto')}>
-        v{appVersion}
-      </span>
-    </div>
+    <SettingsNavigationBrand
+      {...definedProps({ badge: props.badge })}
+      logo={(
+        <img
+          alt=""
+          aria-hidden="true"
+          className="size-8 shrink-0 object-contain"
+          src={folioleLeafUrl}
+        />
+      )}
+      name="Foliole"
+      version={<>v{appVersion}</>}
+    />
   );
 }
 
@@ -132,24 +119,19 @@ function SettingsSidebarGroup(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="relative w-full pt-4 before:absolute before:left-3 before:right-3 before:top-0 before:border-t before:border-settings-divider/65 first:pt-0 first:before:hidden">
-      <div className="mb-1 flex w-full items-center gap-2 px-3 text-[0.72rem] font-semibold uppercase leading-5 tracking-[0.12em] text-foreground/58">
-        <span>{props.group.label}</span>
-      </div>
-      <div className="flex w-full flex-col items-stretch gap-0.5">
-        {props.group.categoryIds.map((categoryId) => {
-          const category = getSettingsCategoryOption(categoryId, t);
-          return category ? (
-            <SettingsSidebarItem
-              active={category.id === props.activeCategory}
-              category={category}
-              key={category.id}
-              onSelect={props.setActiveCategory}
-            />
-          ) : null;
-        })}
-      </div>
-    </div>
+    <SettingsNavigationGroup title={props.group.label}>
+      {props.group.categoryIds.map((categoryId) => {
+        const category = getSettingsCategoryOption(categoryId, t);
+        return category ? (
+          <SettingsSidebarItem
+            active={category.id === props.activeCategory}
+            category={category}
+            key={category.id}
+            onSelect={props.setActiveCategory}
+          />
+        ) : null;
+      })}
+    </SettingsNavigationGroup>
   );
 }
 
