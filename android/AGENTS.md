@@ -37,5 +37,5 @@
 
 ## Validation
 
-- `npm run android:web:dev` 是跨宿主前台 companion Web 诊断入口，不具备真机、SQLite 或 Capacitor 宿主验收语义，也不得后台化。
+- `npm run android:web:dev` 是 companion 浏览器预览入口：开发服务器以本机 SQLite 副本提供数据，并注入只在开发时存在的预览宿主；只用于界面调试，不具备真机、Capacitor 宿主或验收语义，预览代码不得进入正式构建。
 - hosted Linux 的 `android:sync`、`android:host:lint`、`android:host:test` 只服务 GitHub T6 原生宿主质量检查，不是 Windows 或 A5 设备入口。

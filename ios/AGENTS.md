@@ -22,6 +22,7 @@
 - 不需要真实 iOS runtime 的改动先使用登记的显式文件检查；`quality:ios*` 与 `ios:sync:preflight` 均为 hosted-only。
 - 隔离 Simulator 验收必须保留 Xcode 的本地签名并在安装前验证签名；`CODE_SIGNING_ALLOWED=NO` 只用于不运行 App 的通用编译检查，不得复用其产物验收 Keychain 或可见运行态，否则会产生缺少 entitlement 的假红灯。
 - 需要人工打开工程时使用 `npx cap open ios`；需要模拟器或真机可见验收时使用 `npx cap run ios --target <device-id>`。
+- 界面实时调试使用 `node scripts/ios/ios-simulator-live.mjs`：在专用模拟器 `Foliole Live Reload` 上构建并安装 `com.campfirium.foliole.ios.dev`，从当前工作区实时加载，Ctrl-C 结束后恢复 iOS 工程配置；它不是 Simulator 验收入口，不替代签名隔离验收。正式构建不得带 `FOLIOLE_DEV_LIVE_RELOAD`。
 - 宿主或插件变更先完成 companion build 与 `npx cap sync ios`，再执行无签名原生构建；用户可见行为进入 iOS runtime 后完成适用的 Simulator 场景。
 - 非 iOS 日常质量入口不默认执行 iOS preflight；`sync:sql-surface:scan` 只有在扫描范围出现 `iosRuntime` capability 标记时，才把 iOS runtime 缺口升级为硬失败。
 - 一旦仓库引入新的 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则。
