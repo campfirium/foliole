@@ -2,11 +2,7 @@ import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { runWithDatabaseConnectionOwner } from './connection.js';
-import {
-  markExternalDocumentsMissing,
-  replaceExternalDocumentsForFolder,
-  upsertExternalDocuments
-} from './externalDocuments.js';
+import { replaceExternalDocumentsForFolder } from './externalDocuments.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import {
   type ExternalSearchWorkContext,
@@ -17,6 +13,7 @@ import {
   type ScannedDocument,
   type ScannedDocumentEntry
 } from './externalSearchCacheSupport.js';
+import { commitExternalDocumentChunks } from './externalSearchCommitChunks.js';
 import { applyFolderDocumentChanges } from './externalSearchDocumentChanges.js';
 import {
   loadExternalSearchFolders,
@@ -87,36 +84,24 @@ async function syncExternalSearchFolder(
     await options.taskContext?.yieldIfNeeded?.();
   }
   await runWithDatabaseConnectionOwner(() => assertExternalSearchFolderConfigured(folder));
-  const indexedAt = await applyFolderDocumentChanges({
-    db,
-    deletedAbsolutePaths,
-    documentsToUpsert,
-    folder,
+  const indexedAt = new Date().toISOString();
+  const chunkOptions = {
     ...(options.documentChunkSize === undefined ? {} : { documentChunkSize: options.documentChunkSize }),
     ...(options.taskContext === undefined ? {} : { context: options.taskContext })
+  };
+  await commitExternalDocumentChunks({
+    assertFolderConfigured: () => assertExternalSearchFolderConfigured(folder),
+    ...chunkOptions,
+    deletedRelativePaths: deletedRows.map((row) => row.relative_path),
+    documents: documentsToUpsert,
+    folder,
+    indexedAt
   });
-  await commitExternalDocumentChanges(folder, documentsToUpsert, deletedRows, indexedAt);
+  await applyFolderDocumentChanges({ db, deletedAbsolutePaths, documentsToUpsert, folder, indexedAt, ...chunkOptions });
   return {
     documentCount: scannedEntries.length,
     indexedAt
   };
-}
-
-function commitExternalDocumentChanges(
-  folder: ReturnType<typeof loadExternalSearchFolders>[number],
-  documentsToUpsert: ScannedDocument[],
-  deletedRows: CachedFolderDocumentRow[],
-  indexedAt: string
-) {
-  return runWithDatabaseConnectionOwner(() => {
-    assertExternalSearchFolderConfigured(folder);
-    upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
-    markExternalDocumentsMissing(
-      deletedRows.map((row) => ({ relativePath: row.relative_path })),
-      folder.id,
-      indexedAt
-    );
-  });
 }
 
 export async function rebuildExternalSearchIndexes(folderId?: string) {

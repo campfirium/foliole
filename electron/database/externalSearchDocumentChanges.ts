@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import type { ExternalSearchWorkContext, ScannedDocument } from './externalSearchCacheSupport.js';
+import { EXTERNAL_SEARCH_DOCUMENT_CHUNK_SIZE } from './externalSearchCommitChunks.js';
 
 interface FolderDocumentChangeArgs {
   db: import('better-sqlite3').Database;
@@ -11,6 +12,7 @@ interface FolderDocumentChangeArgs {
   documentsToUpsert: ScannedDocument[];
   folder: NativeExternalSearchFolder;
   context?: ExternalSearchWorkContext;
+  indexedAt: string;
 }
 
 async function applyDeletedExternalSearchChunks(args: FolderDocumentChangeArgs & {
@@ -19,7 +21,7 @@ async function applyDeletedExternalSearchChunks(args: FolderDocumentChangeArgs &
   markDocMissing: import('better-sqlite3').Statement;
   total: number;
 }) {
-  const chunkSize = args.documentChunkSize ?? 100;
+  const chunkSize = args.documentChunkSize ?? EXTERNAL_SEARCH_DOCUMENT_CHUNK_SIZE;
   let completed = args.completed;
   for (let index = 0; index < args.deletedAbsolutePaths.length; index += chunkSize) {
     const chunk = args.deletedAbsolutePaths.slice(index, index + chunkSize);
@@ -78,7 +80,7 @@ async function applyUpsertExternalSearchChunks(args: FolderDocumentChangeArgs & 
   total: number;
   upsertDoc: import('better-sqlite3').Statement;
 }) {
-  const chunkSize = args.documentChunkSize ?? 100;
+  const chunkSize = args.documentChunkSize ?? EXTERNAL_SEARCH_DOCUMENT_CHUNK_SIZE;
   let completed = args.completed;
   for (let index = 0; index < args.documentsToUpsert.length; index += chunkSize) {
     const chunk = args.documentsToUpsert.slice(index, index + chunkSize);
@@ -101,9 +103,8 @@ export async function applyFolderDocumentChanges(args: FolderDocumentChangeArgs)
   const insertFts = args.db.prepare(`INSERT INTO external_search_fts (
     title, file_name, relative_path, content, absolute_path, folder_id, folder_path, modified_at
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  const indexedAt = new Date().toISOString();
+  const { indexedAt } = args;
   const total = args.deletedAbsolutePaths.length + args.documentsToUpsert.length;
   const completed = await applyDeletedExternalSearchChunks({ ...args, completed: 0, deleteFts, markDocMissing, total });
   await applyUpsertExternalSearchChunks({ ...args, completed, deleteFts, indexedAt, insertFts, total, upsertDoc });
-  return indexedAt;
 }
