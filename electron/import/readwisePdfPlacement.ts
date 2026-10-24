@@ -1,6 +1,4 @@
-import { readFileSync } from 'node:fs';
-
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { promises as fs } from 'node:fs';
 
 import { parseHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
@@ -9,6 +7,7 @@ import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core
 import { locateReadwiseTextInPdf, type PdfPageForMatch } from '../../lib/core/readwise/readwisePdfMatch.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { extractPdfMatchPagesOffMainThread } from '../database/pdfPageTextWorkerClient.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 interface HighlightRow extends DatabaseRow {
@@ -17,31 +16,8 @@ interface HighlightRow extends DatabaseRow {
   parent_id: string | null;
 }
 
-export async function readReadwisePdfPages(bytes: Uint8Array): Promise<PdfPageForMatch[]> {
-  const task = getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, useWorkerFetch: false });
-  const document = await task.promise;
-  try {
-    const pages: PdfPageForMatch[] = [];
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1 });
-      const content = await page.getTextContent();
-      pages.push({
-        geometrySupported: viewport.transform.every((value, index) =>
-          Math.abs(value - [1, 0, 0, -1, 0, viewport.height][index]!) < 0.001
-        ),
-        height: viewport.height,
-        items: content.items.filter((item) => 'str' in item).map((item) => ({
-          direction: item.dir, height: item.height, str: item.str, transform: item.transform, width: item.width
-        })),
-        page: pageNumber,
-        width: viewport.width
-      });
-    }
-    return pages;
-  } finally {
-    await document.destroy();
-  }
+export function readReadwisePdfPages(bytes: Uint8Array): Promise<PdfPageForMatch[]> {
+  return extractPdfMatchPagesOffMainThread(bytes);
 }
 
 export function placeReadwisePdfHighlights(input: {
@@ -87,7 +63,7 @@ export async function placeReadwisePdfHighlightsFromAttachment(input: {
 }) {
   const file = await resolveAttachmentFile(`${input.attachmentId}.pdf`);
   if (file.status !== 'ready') return;
-  const pages = await readReadwisePdfPages(readFileSync(file.filePath));
+  const pages = await readReadwisePdfPages(await fs.readFile(file.filePath));
   await runWithDatabaseConnectionOwner(() => placeReadwisePdfHighlights({ connectionRef: input.connectionRef,
     documentId: input.documentId,
     nodeId: input.nodeId,

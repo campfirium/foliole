@@ -2,6 +2,8 @@ import { promises as fs } from 'node:fs';
 
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
+import type { PdfPageForMatch } from '../../lib/core/readwise/readwisePdfMatch.js';
+
 export interface ExtractedPdfPage {
   page: number;
   pageHeight: number | null;
@@ -39,9 +41,9 @@ function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: numbe
   return { height: viewport.height, width: viewport.width };
 }
 
-/** Reads every page's text; pdf.js parses in the calling thread, so the main process runs this in a worker. */
-export async function extractPdfPageTextFromFile(filePath: string): Promise<ExtractedPdfPage[]> {
-  const bytes = await fs.readFile(filePath);
+type PdfPageProxy = Awaited<ReturnType<Awaited<ReturnType<typeof getDocument>['promise']>['getPage']>>;
+
+async function mapPdfPages<T>(bytes: Uint8Array, read: (pdfPage: PdfPageProxy, page: number) => Promise<T>) {
   const loadingTask = getDocument({
     data: toPdfDocumentData(bytes),
     isEvalSupported: false,
@@ -49,20 +51,45 @@ export async function extractPdfPageTextFromFile(filePath: string): Promise<Extr
   });
   const document = await loadingTask.promise;
   try {
-    const pages: ExtractedPdfPage[] = [];
+    const pages: T[] = [];
     for (let page = 1; page <= document.numPages; page += 1) {
-      const pdfPage = await document.getPage(page);
-      const textContent = await pdfPage.getTextContent();
-      const pageDimensions = resolvePdfPageDimensions(pdfPage);
-      pages.push({
-        page,
-        pageHeight: pageDimensions?.height ?? null,
-        pageWidth: pageDimensions?.width ?? null,
-        text: resolvePdfPageText(textContent)
-      });
+      pages.push(await read(await document.getPage(page), page));
     }
     return pages;
   } finally {
     await document.destroy();
   }
+}
+
+/** Reads every page's text; pdf.js parses in the calling thread, so the main process runs this in a worker. */
+export async function extractPdfPageTextFromFile(filePath: string): Promise<ExtractedPdfPage[]> {
+  return mapPdfPages(await fs.readFile(filePath), async (pdfPage, page) => {
+    const textContent = await pdfPage.getTextContent();
+    const pageDimensions = resolvePdfPageDimensions(pdfPage);
+    return {
+      page,
+      pageHeight: pageDimensions?.height ?? null,
+      pageWidth: pageDimensions?.width ?? null,
+      text: resolvePdfPageText(textContent)
+    };
+  });
+}
+
+/** Reads positioned text items so Readwise highlights can be matched to PDF page geometry. */
+export function extractPdfMatchPages(bytes: Uint8Array): Promise<PdfPageForMatch[]> {
+  return mapPdfPages(bytes, async (pdfPage, page) => {
+    const viewport = pdfPage.getViewport({ scale: 1 });
+    const content = await pdfPage.getTextContent();
+    return {
+      geometrySupported: viewport.transform.every((value, index) =>
+        Math.abs(value - [1, 0, 0, -1, 0, viewport.height][index]!) < 0.001
+      ),
+      height: viewport.height,
+      items: content.items.filter((item) => 'str' in item).map((item) => ({
+        direction: item.dir, height: item.height, str: item.str, transform: item.transform, width: item.width
+      })),
+      page,
+      width: viewport.width
+    };
+  });
 }

@@ -1,10 +1,8 @@
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { extractPdfPageTextFromFile } from './pdfPageTextExtraction.js';
+import { runPdfPageTextRequest, type PdfPageTextRequest } from './pdfPageTextRequest.js';
 
-const { filePath } = workerData as { filePath: string };
-
-extractPdfPageTextFromFile(filePath).then(
+runPdfPageTextRequest(workerData as PdfPageTextRequest).then(
   (pages) => parentPort?.postMessage({ ok: true, pages }),
   (error: unknown) => parentPort?.postMessage({
     message: error instanceof Error ? error.message : String(error),
