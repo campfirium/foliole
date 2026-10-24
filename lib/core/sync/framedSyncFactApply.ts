@@ -13,7 +13,7 @@ import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncN
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
 import { appliedStateWorkspaceScope, joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
-import { withRequestSyncCurrentVersion, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
+import { withRequestSyncCurrentVersion, withRequestSyncCurrentVersions, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
 import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
@@ -29,27 +29,21 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   enqueueSearchInvalidations?: boolean;
   requireCompleteVersionGraph?: boolean;
   currentVersion?: RequestSyncCurrentVersion;
+  /** Several received objects in one call: each source's object id and its trusted reference, if any. */
+  currentVersions?: { sourceIds: readonly string[]; references: readonly RequestSyncCurrentVersion[] };
   visibilityPruning?: DeferredVisibilityPruning;
   /** Set by a batch that projects parent child orders once after all its objects. */
   parentOrderFlush?: { requested: boolean };
 }) {
   return db.transaction(async (tx) => {
-    const nodes: CanonicalFact[] = [];
-    for (const source of sources) {
-      let identity: Pick<CanonicalFact, 'globalId' | 'objectType'> | undefined;
-      for await (const fact of source(tx)) {
-        identity ??= { globalId: fact.globalId, objectType: fact.objectType };
-        if (fact.globalId !== identity.globalId || fact.objectType !== identity.objectType ||
-            ![1, 2, 3, 4].includes(fact.kind)) throw new Error('framed_sync_process_fact_set_invalid');
-        if (fact.kind === 2) nodes.push(fact);
-      }
-      if (!identity && !options.currentVersion) throw new Error('framed_sync_process_fact_set_invalid');
-    }
+    const nodes = await collectNodeFacts(tx, sources, options);
     const restoredSource = framedSyncNodeRecordSource(nodes, options.loadBody);
     const validated = options.requireCompleteVersionGraph
       ? await requestSyncNodeSource(tx, restoredSource) : restoredSource;
     await assertFramedSyncNodeParentDependencies(tx, validated.records.filter(record => !validated.isIdentityOnly(record)));
-    const selected = await withRequestSyncCurrentVersion(tx, validated, options.currentVersion);
+    const selected = options.currentVersions
+      ? await withRequestSyncCurrentVersions(tx, validated, options.currentVersions.references)
+      : await withRequestSyncCurrentVersion(tx, validated, options.currentVersion);
     const hasStoredReference = selected.records.some(record => !validated.records.includes(record));
     const nodeSource = hasStoredReference ? await requestSyncNodeSource(tx, selected) : selected;
     if (hasStoredReference) await assertFramedSyncNodeParentDependencies(tx, nodeSource.records);
@@ -83,6 +77,25 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
     workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
   });
+}
+
+async function collectNodeFacts(tx: DbPort, sources: readonly FramedFactSource[],
+  options: Pick<Parameters<typeof applyFramedFactSources>[2], 'currentVersion' | 'currentVersions'>) {
+  const nodes: CanonicalFact[] = [];
+  for (const [index, source] of sources.entries()) {
+    let identity: Pick<CanonicalFact, 'globalId' | 'objectType'> | undefined;
+    for await (const fact of source(tx)) {
+      identity ??= { globalId: fact.globalId, objectType: fact.objectType };
+      if (fact.globalId !== identity.globalId || fact.objectType !== identity.objectType ||
+          ![1, 2, 3, 4].includes(fact.kind)) throw new Error('framed_sync_process_fact_set_invalid');
+      if (fact.kind === 2) nodes.push(fact);
+    }
+    if (!identity && !options.currentVersion && !options.currentVersions?.references
+      .some(reference => reference.globalId === options.currentVersions?.sourceIds[index])) {
+      throw new Error('framed_sync_process_fact_set_invalid');
+    }
+  }
+  return nodes;
 }
 
 async function flushParentOrders(tx: DbPort, scope: WorkspaceRefreshScope, deferred?: { requested: boolean }) {

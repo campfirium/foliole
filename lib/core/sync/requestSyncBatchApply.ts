@@ -4,7 +4,8 @@ import { joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
 import type { RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { recordRequestSyncInbound, type RequestSyncBatchScope } from './requestSyncBatchScope.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
-import { applyRequestSyncObject, openRequestSyncObjectInbound } from './requestSyncObjectApply.js';
+import { applyRequestSyncNodeBatch } from './requestSyncNodeBatchApply.js';
+import { applyRequestSyncObject, openRequestSyncObjectInbound, type RequestSyncObjectInput } from './requestSyncObjectApply.js';
 import {
   applyReceivedRequestSyncObject,
   receivedObjectInput,
@@ -43,8 +44,17 @@ async function applyStagedObjects(tx: DbPort, host: RequestSyncDatabaseHost, inp
   const inputs = staged.map(({ header, files }) => receivedObjectInput(host, input, header, files, objectOptions, pruning));
   const batch: RequestSyncBatchScope = { overwriting: await openRequestSyncObjectInbound(tx, inputs[0]!),
     parentOrder: { requested: false } };
-  const results = [];
-  for (const objectInput of inputs) results.push(await applyRequestSyncObject(tx, { ...objectInput, batch }));
+  // Nodes first: states, relations and reviews in the same batch may refer to them.
+  const nodes = inputs.filter(objectInput => objectInput.objectType === 'node');
+  const applied = new Map<RequestSyncObjectInput, Awaited<ReturnType<typeof applyRequestSyncObject>>>();
+  if (nodes.length) {
+    const nodeResults = await applyRequestSyncNodeBatch(tx, nodes, batch);
+    nodes.forEach((objectInput, index) => applied.set(objectInput, nodeResults[index]!));
+  }
+  for (const objectInput of inputs) {
+    if (objectInput.objectType !== 'node') applied.set(objectInput, await applyRequestSyncObject(tx, { ...objectInput, batch }));
+  }
+  const results = inputs.map(objectInput => applied.get(objectInput)!);
   await recordRequestSyncInbound(tx, inputs[0]!.context, inputs[0]!.requestId);
   const structure = batch.parentOrder.requested && await flushCurrentParentOrderProjectionsWithDbPort(tx);
   const expanded = pruning.requested && await pruneLearningRowsWithoutVisibleNodes(tx);

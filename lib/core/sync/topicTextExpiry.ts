@@ -6,6 +6,17 @@ import { buildResolutionRecord } from './syncNodeResolution.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
 import { availableTextAlternatives, textAlternatives } from './topicTextState.js';
 
+/** One read narrows a set of nodes to those whose current version has an expired text alternative. */
+export async function findTopicsWithExpiredText(db: DbPort, nodeIds: readonly string[], now: string) {
+  if (!nodeIds.length) return new Set<string>();
+  const rows = await db.query<{ id: string }>(
+    `SELECT DISTINCT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
+     json_each(v.snapshot_json, '$.text_alternatives') entry
+     WHERE n.id IN (SELECT value FROM json_each(?)) AND json_extract(entry.value, '$.expires_at') <= ?`,
+    [JSON.stringify(nodeIds), now]);
+  return new Set(rows.map(row => row.id));
+}
+
 /** Expiration changes the whole version, so stale peers cannot restore removed attachments. */
 export async function expireTopicText(db: DbPort, nodeId: string, now: string, collectVersionPayloads = true) {
   return db.transaction(async (tx) => {

@@ -9,7 +9,7 @@ import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import { resolveTopicSourceConflict } from './syncTopicConflict.js';
-import { expireTopicText } from './topicTextExpiry.js';
+import { expireTopicText, findTopicsWithExpiredText } from './topicTextExpiry.js';
 
 type ConvergeOptions = { collectVersionPayloads?: boolean; visibilityPruning?: DeferredVisibilityPruning };
 
@@ -38,8 +38,9 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
   let expired = false;
-  for (const nodeId of new Set(records.map((record) => record.object_id))) {
-    if (await expireTopicText(port, nodeId, new Date().toISOString(), false)) expired = true;
+  const now = new Date().toISOString();
+  for (const nodeId of await findTopicsWithExpiredText(port, [...new Set(records.map(record => record.object_id))], now)) {
+    if (await expireTopicText(port, nodeId, now, false)) expired = true;
   }
   const revivedIds = await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])

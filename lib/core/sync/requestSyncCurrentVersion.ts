@@ -49,3 +49,24 @@ export async function withRequestSyncCurrentVersion(db: DbPort, source: SyncNode
     isIdentityOnly: metadata => metadata === record ? false : source.isIdentityOnly(metadata),
     load: (tx, metadata) => metadata === record ? Promise.resolve(record) : source.load(tx, metadata) };
 }
+
+/** Selects each object's trusted reference separately when one call applies several received objects. */
+export async function withRequestSyncCurrentVersions(db: DbPort, source: SyncNodeRecordSource,
+  references: readonly RequestSyncCurrentVersion[]): Promise<SyncNodeRecordSource> {
+  const byObject = new Map<string, typeof source.records[number][]>();
+  for (const record of source.records) byObject.set(record.object_id, [...byObject.get(record.object_id) ?? [], record]);
+  const reference = new Map(references.map(value => [value.globalId, value]));
+  const owners = new Map<typeof source.records[number], SyncNodeRecordSource>();
+  for (const objectId of new Set([...byObject.keys(), ...reference.keys()])) {
+    const part = { ...source, records: byObject.get(objectId) ?? [] };
+    const selected = await withRequestSyncCurrentVersion(db, part, reference.get(objectId));
+    for (const record of selected.records) owners.set(record, selected);
+  }
+  const owner = (record: typeof source.records[number]) => {
+    const value = owners.get(record);
+    if (!value) throw new Error('request_sync_current_version_source_changed');
+    return value;
+  };
+  return { records: [...owners.keys()], isIdentityOnly: record => owner(record).isIdentityOnly(record),
+    load: (tx, record) => owner(record).load(tx, record) };
+}

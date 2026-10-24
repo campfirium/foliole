@@ -7,11 +7,14 @@ import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../.
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
 
 const bad = vi.hoisted(() => ({ globalId: null as string | null }));
-vi.mock('../../../../../../lib/core/sync/requestSyncObjectApply.js', async original => {
-  const actual = await original<typeof import('../../../../../../lib/core/sync/requestSyncObjectApply.js')>();
-  return { ...actual, applyRequestSyncObject: (db: DbPort, input: Parameters<typeof actual.applyRequestSyncObject>[1]) => {
-    if (input.globalId === bad.globalId) throw new Error('test_object_rejected');
-    return actual.applyRequestSyncObject(db, input);
+vi.mock('../../../../../../lib/core/sync/requestSyncObjectFacts.js', async original => {
+  const actual = await original<typeof import('../../../../../../lib/core/sync/requestSyncObjectFacts.js')>();
+  return { ...actual, finishReceivedNode: (...args: Parameters<typeof actual.finishReceivedNode>) => {
+    if (args[1].globalId === bad.globalId) throw new Error('test_object_rejected');
+    return actual.finishReceivedNode(...args);
+  }, finishReceivedNodes: (...args: Parameters<typeof actual.finishReceivedNodes>) => {
+    if (args[1].some(input => input.globalId === bad.globalId)) throw new Error('test_object_rejected');
+    return actual.finishReceivedNodes(...args);
   } };
 });
 

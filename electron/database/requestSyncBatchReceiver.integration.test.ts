@@ -138,7 +138,7 @@ it.each(['wrongObjectId', 'wrongGlobalId'] as const)('rejects mismatched %s befo
 });
 
 
-it('retries a child after its structural parent arrives in the same real SQLite round', async () => {
+it('applies a child whose structural parent arrives in the same real SQLite round', async () => {
   const fixture = await receiver();
   const source = await batchFixture(); fixtures.push(source);
   const child = batchRecord('a-child', 'Child完整正文');
@@ -161,8 +161,8 @@ it('retries a child after its structural parent arrives in the same real SQLite 
     reportObjectError: (_difference, error) => { throw error; }
   });
   expect(result).toMatchObject({ complete: true, pending: 0 });
-  expect(attempts[0]).toEqual(['a-child', 'm-neighbor', 'z-parent']);
-  expect(attempts).toContainEqual(['a-child']);
+  // Parent and child in one received batch apply together, so the child needs no separate retry.
+  expect(attempts).toEqual([['a-child', 'm-neighbor', 'z-parent']]);
   expect(await fixture.device.db.query('SELECT id, parent_id, content FROM nodes ORDER BY id')).toEqual([
     { id: 'a-child', parent_id: 'z-parent', content: 'Child完整正文' },
     { id: 'm-neighbor', parent_id: null, content: 'Independent😀' },
