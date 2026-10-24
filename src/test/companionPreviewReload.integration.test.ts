@@ -32,9 +32,9 @@ it('reloads the document for bootstrap dependencies but keeps UI updates hot', a
   const send = vi.spyOn(server.environments.client.hot, 'send');
   server.watcher.emit('change', owner);
   await vi.waitFor(() => expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: 'full-reload' })));
-  expect(send.mock.calls.some(([message]) => typeof message === 'object' && message.type === 'update')).toBe(false);
+  expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'update' }));
   send.mockClear();
   server.watcher.emit('change', path.join(root, 'ui.js'));
   await vi.waitFor(() => expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: 'update' })));
-  expect(send.mock.calls.some(([message]) => typeof message === 'object' && message.type === 'full-reload')).toBe(false);
+  expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'full-reload' }));
 });

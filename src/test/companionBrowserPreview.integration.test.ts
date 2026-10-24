@@ -111,26 +111,31 @@ it('resolves attachments copied beside the library and reports the rest as missi
   expect(resolveCompanionPreviewAttachment(file, encodeURIComponent('../../outside.png'))).toBeNull();
 });
 
+function createPreviewSqliteClient() {
+  const bridge = createCompanionPreviewBridge(createCompanionPreviewPlugins('Web preview'));
+  return (method: string, options: unknown) => bridge.nativePromise('CapacitorSQLite', method, options);
+}
+
 it('keeps independent documents connected while another document closes and reopens', async () => {
-  const first = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
-  const second = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
+  const first = createPreviewSqliteClient();
+  const second = createPreviewSqliteClient();
   const target = { database: 'foliole-companion', readonly: false };
-  await first.createConnection(target);
-  await first.open(target);
-  await first.execute({ ...target, statement: 'CREATE TABLE preview_probe (value TEXT)' });
-  await first.run({ ...target, statement: "INSERT INTO preview_probe VALUES ('kept')" });
-  await second.createConnection(target);
-  await second.open(target);
-  await first.closeAllConnections({});
-  await expect(second.query({ ...target, statement: 'SELECT value FROM preview_probe' }))
+  await first('createConnection', target);
+  await first('open', target);
+  await first('execute', { ...target, statement: 'CREATE TABLE preview_probe (value TEXT)' });
+  await first('run', { ...target, statement: "INSERT INTO preview_probe VALUES ('kept')" });
+  await second('createConnection', target);
+  await second('open', target);
+  await first('closeAllConnections', {});
+  await expect(second('query', { ...target, statement: 'SELECT value FROM preview_probe' }))
     .resolves.toEqual({ values: [{ value: 'kept' }] });
-  await first.createConnection(target);
-  await first.open(target);
-  await second.run({ ...target, statement: "INSERT INTO preview_probe VALUES ('second')" });
-  await second.closeAllConnections({});
-  await expect(first.query({ ...target, statement: 'SELECT value FROM preview_probe' }))
+  await first('createConnection', target);
+  await first('open', target);
+  await second('run', { ...target, statement: "INSERT INTO preview_probe VALUES ('second')" });
+  await second('closeAllConnections', {});
+  await expect(first('query', { ...target, statement: 'SELECT value FROM preview_probe' }))
     .resolves.toEqual({ values: [{ value: 'kept' }, { value: 'second' }] });
-  await first.closeAllConnections({});
+  await first('closeAllConnections', {});
   const persisted = new Database(file, { readonly: true });
   try {
     expect(persisted.prepare('SELECT value FROM preview_probe').all()).toEqual([{ value: 'kept' }, { value: 'second' }]);
@@ -138,23 +143,23 @@ it('keeps independent documents connected while another document closes and reop
 });
 
 it('lets a document commit while another document waits for its SQLite writer', async () => {
-  const first = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
-  const second = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
+  const first = createPreviewSqliteClient();
+  const second = createPreviewSqliteClient();
   const target = { database: 'foliole-companion', readonly: false };
   for (const client of [first, second]) {
-    await client.createConnection(target);
-    await client.open(target);
-    await client.execute({ ...target, statement: 'PRAGMA journal_mode = WAL', transaction: false });
+    await client('createConnection', target);
+    await client('open', target);
+    await client('execute', { ...target, statement: 'PRAGMA journal_mode = WAL', transaction: false });
   }
-  await first.execute({ ...target, statement: 'CREATE TABLE preview_writer (value TEXT)' });
-  await first.beginTransaction(target);
-  await first.run({ ...target, statement: "INSERT INTO preview_writer VALUES ('first')" });
-  const waiting = second.run({ ...target, statement: "INSERT INTO preview_writer VALUES ('second')" });
+  await first('execute', { ...target, statement: 'CREATE TABLE preview_writer (value TEXT)' });
+  await first('beginTransaction', target);
+  await first('run', { ...target, statement: "INSERT INTO preview_writer VALUES ('first')" });
+  const waiting = second('run', { ...target, statement: "INSERT INTO preview_writer VALUES ('second')" });
   const completed = expect(waiting).resolves.toMatchObject({ changes: { changes: 1 } });
-  await first.commitTransaction(target);
+  await first('commitTransaction', target);
   await completed;
-  await first.closeAllConnections({});
-  await second.closeAllConnections({});
+  await first('closeAllConnections', {});
+  await second('closeAllConnections', {});
   const persisted = new Database(file, { readonly: true });
   try {
     expect(persisted.prepare('SELECT value FROM preview_writer').all()).toEqual([{ value: 'first' }, { value: 'second' }]);
@@ -162,27 +167,27 @@ it('lets a document commit while another document waits for its SQLite writer', 
 }, 15000);
 
 it('acquires the native write transaction before reading a snapshot', async () => {
-  const first = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
-  const second = createCompanionPreviewPlugins('Web preview').CapacitorSQLite;
+  const first = createPreviewSqliteClient();
+  const second = createPreviewSqliteClient();
   const target = { database: 'foliole-companion', readonly: false };
   for (const client of [first, second]) {
-    await client.createConnection(target);
-    await client.open(target);
-    await client.execute({ ...target, statement: 'PRAGMA journal_mode = WAL', transaction: false });
+    await client('createConnection', target);
+    await client('open', target);
+    await client('execute', { ...target, statement: 'PRAGMA journal_mode = WAL', transaction: false });
   }
-  await first.execute({ ...target, statement: 'CREATE TABLE preview_snapshot (value TEXT)' });
-  await second.execute({ ...target, statement: 'PRAGMA busy_timeout = 0', transaction: false });
-  await first.beginTransaction(target);
-  await first.run({ ...target, statement: "INSERT INTO preview_snapshot VALUES ('committed')" });
-  await expect(second.beginTransaction(target)).rejects.toMatchObject({ code: 'SQLITE_BUSY' });
-  await first.commitTransaction(target);
-  await second.beginTransaction(target);
-  await expect(second.query({ ...target, statement: 'SELECT value FROM preview_snapshot' }))
+  await first('execute', { ...target, statement: 'CREATE TABLE preview_snapshot (value TEXT)' });
+  await second('execute', { ...target, statement: 'PRAGMA busy_timeout = 0', transaction: false });
+  await first('beginTransaction', target);
+  await first('run', { ...target, statement: "INSERT INTO preview_snapshot VALUES ('committed')" });
+  await expect(second('beginTransaction', target)).rejects.toMatchObject({ code: 'SQLITE_BUSY' });
+  await first('commitTransaction', target);
+  await second('beginTransaction', target);
+  await expect(second('query', { ...target, statement: 'SELECT value FROM preview_snapshot' }))
     .resolves.toEqual({ values: [{ value: 'committed' }] });
-  await second.run({ ...target, statement: "INSERT INTO preview_snapshot VALUES ('next')" });
-  await second.commitTransaction(target);
-  await first.closeAllConnections({});
-  await second.closeAllConnections({});
+  await second('run', { ...target, statement: "INSERT INTO preview_snapshot VALUES ('next')" });
+  await second('commitTransaction', target);
+  await first('closeAllConnections', {});
+  await second('closeAllConnections', {});
   const persisted = new Database(file, { readonly: true });
   try {
     expect(persisted.prepare('SELECT value FROM preview_snapshot').all())
