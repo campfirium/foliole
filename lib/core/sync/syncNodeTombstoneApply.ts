@@ -30,6 +30,8 @@ async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
   await port.run('DELETE FROM node_reading WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [nodeId]);
   await port.run("DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?", [nodeId]);
+  // Phones keep a per-device reading position that references the node without cascading.
+  await port.run('DELETE FROM node_view_state WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM nodes WHERE id = ?', [nodeId]);
 }
 
