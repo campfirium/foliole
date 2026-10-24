@@ -148,7 +148,6 @@ function ReadableArticleTextDocument(props: {
         readingTargetViewportMode="center"
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
         {...definedProps({
-          contentPaddingTop: props.readableArticle.contentPaddingTop,
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: props.canEdit ? props.editorState.handleChange : undefined,
           onEditorReady: props.onEditorReady,

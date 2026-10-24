@@ -18,7 +18,6 @@ import { definedProps } from '@/shared/lib/definedProps';
 
 export function CompanionArticleDocument(props: {
   content: string;
-  contentPaddingTop?: string;
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
@@ -57,7 +56,6 @@ export function CompanionArticleDocument(props: {
         readOnlyInteractionMode={!props.onChange ? 'document' : 'editor'}
         value={props.content}
         {...definedProps({
-          contentPaddingTop: props.contentPaddingTop,
           hideTitleHeading: props.hideTitleHeading,
           nodeViewState: props.nodeViewState,
           onBlurCapture: props.onBlurCapture,

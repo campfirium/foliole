@@ -11,7 +11,7 @@ export function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]
   }
 
   return (
-    <nav aria-label={t('companion.review.breadcrumb')} className="mb-2">
+    <nav aria-label={t('companion.review.breadcrumb')}>
       <div className="line-clamp-1 text-[12px] leading-5 text-companion-text-secondary">
         {props.items.map((item, index) => (
           <Fragment key={item.id}>

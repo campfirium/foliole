@@ -128,7 +128,7 @@ describe('companionReadableArticle title and reading helpers', () => {
 });
 
 describe('companionReadableArticle title slot', () => {
-  it('reserves title space for titleless companion articles and derived cards', () => {
+  it('does not add an empty title slot to titleless companion articles or derived cards', () => {
     const snapshot = createExplicitArticleSnapshot();
     snapshot.nodesById['node-1'] = {
       ...snapshot.nodesById['node-1']!,
@@ -142,12 +142,11 @@ describe('companionReadableArticle title slot', () => {
       parentNodeId: 'node-1'
     };
 
-    const titleSlot = 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))';
-    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.contentPaddingTop).toBe(titleSlot);
-    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBe(titleSlot);
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')).not.toHaveProperty('contentPaddingTop');
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')).not.toHaveProperty('contentPaddingTop');
   });
 
-  it('does not reserve title space for visible headings and keeps it for titleless child topics', () => {
+  it('keeps visible headings and titleless child topics free of an empty title slot', () => {
     const snapshot = createExplicitArticleSnapshot();
     snapshot.nodesById['node-1'] = {
       ...snapshot.nodesById['node-1']!,
@@ -159,9 +158,8 @@ describe('companionReadableArticle title slot', () => {
       parentNodeId: 'node-1'
     };
 
-    const titleSlot = 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))';
-    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')?.contentPaddingTop).toBeUndefined();
-    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')?.contentPaddingTop).toBe(titleSlot);
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')).not.toHaveProperty('contentPaddingTop');
+    expect(resolveReadableCompanionArticleByNodeId(snapshot, 'node-2')).not.toHaveProperty('contentPaddingTop');
   });
 });
 

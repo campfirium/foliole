@@ -16,7 +16,7 @@ function TopBarIconButton(props: TopBarAction & { testId?: string }) {
   return (
     <button
       aria-label={props.label}
-      className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-companion-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent"
+      className="inline-flex h-11 w-10 shrink-0 items-center justify-center text-companion-text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent"
       data-testid={props.testId}
       onClick={props.onClick}
       type="button"

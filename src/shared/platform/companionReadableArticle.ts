@@ -14,7 +14,6 @@ import {
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
-import { resolveCompanionArticleContentPaddingTop } from './companionReadableArticleTitleSlot';
 export type { CompanionRecentArticle } from './companionBrowseLists';
 
 export interface CompanionReadableArticle {
@@ -22,7 +21,6 @@ export interface CompanionReadableArticle {
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   content: string;
-  contentPaddingTop?: string;
   hideTitleHeading: boolean;
   isTrashed?: boolean;
   loadedNodeContentById?: Record<string, string>;
@@ -79,10 +77,8 @@ function resolveReferencePdfAttachmentId(node: CompanionReadableNode) {
 }
 
 function buildReadableArticleFromSnapshot(snapshot: WorkspaceSnapshot, node: CompanionReadableNode, isTrashed = false) {
-  const contentPaddingTop = resolveCompanionArticleContentPaddingTop(snapshot, node);
   return {
     ...buildReadableArticle(node, snapshot.persistedNodeViewById?.[node.id] ?? null),
-    ...(contentPaddingTop ? { contentPaddingTop } : {}),
     ...(isTrashed ? { isTrashed } : {}),
     textAnchorDecorations: collectDocumentTextAnchorDecorations({
       activeNodeId: node.id,

@@ -5,7 +5,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 import type { CompanionTopicSearchResult } from '../shared/platform/companionFullTextSearch';
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
-import { AppButton, appInputBorderFocusVisibleClassName } from '../shared/ui';
+import { AppButton, appFocusSilentClassName } from '../shared/ui';
 
 import { CompanionSearchResults } from './CompanionSearchResults';
 import { useCompanionSearch } from './useCompanionSearch';
@@ -22,13 +22,14 @@ export function CompanionSearchContent(props: {
   const topicOpen = useCompanionSearchTopicOpen(query, props.onOpenTopic);
 
   return (
-    <section className="pb-4 pt-3" data-search-status={searchState.status}>
+    <section className="companion-page-start pb-4" data-search-status={searchState.status}>
       <label className="block">
         <span className="sr-only">{t('companion.search.label')}</span>
         <input
           className={cn(
             'h-11 w-full rounded-none border-0 border-b border-companion-divider bg-transparent px-0 text-base text-foreground transition placeholder:text-companion-text-secondary',
-            appInputBorderFocusVisibleClassName
+            appFocusSilentClassName,
+            'focus-visible:border-companion-accent'
           )}
           data-testid="companion-search-input"
           onChange={(event) => setQuery(event.target.value)}

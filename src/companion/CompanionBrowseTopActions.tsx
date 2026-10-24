@@ -1,4 +1,4 @@
-import { Check, ChevronRight, ClipboardPlus, MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { Check, ChevronRight, Plus, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import type {
@@ -190,7 +190,7 @@ export function CompanionBrowseTopActions(props: {
     <div className="flex items-center gap-1">
       {supportsCompanionNodeMutationSurface('quick-capture') ? (
         <CompanionTopActionButton
-          icon={ClipboardPlus}
+          icon={Plus}
           label={t('companion.capture.title')}
           onClick={props.onOpenCapture}
           testId="companion-capture-open"

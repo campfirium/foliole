@@ -27,7 +27,7 @@ export function CompanionReviewFallback(props: {
   const hasScheduledReviews = props.reviewSession.scheduledFsrsCount > 0 || props.reviewSession.scheduledReadingCount > 0;
 
   return (
-    <section className="border-t border-companion-divider px-1 py-6 text-sm leading-6 text-companion-text-secondary">
+    <section className="companion-page-start px-1 pb-6 text-sm leading-6 text-companion-text-secondary">
       {props.hasSnapshot ? (
         <>
           <AppEmptyState

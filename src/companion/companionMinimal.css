@@ -1,5 +1,6 @@
 /* Companion-only visual roles: shared by navigation, lists and secondary pages. */
 :root {
+  --companion-page-content-gap: 8px;
   --companion-divider: #e8e9eb;
   --companion-list-title: #202226;
   --companion-list-body: #7b8087;
@@ -22,6 +23,7 @@
 }
 html, body, #root, #root * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
+.companion-page-start { padding-top: var(--companion-page-content-gap); }
 .companion-toolbar-title {
   position: absolute;
   left: 50%;
@@ -81,3 +83,5 @@ html, body, #root, #root * { scrollbar-width: none; }
   outline: 2px solid var(--companion-accent);
   outline-offset: -2px;
 }
+
+.companion-topic-row-first { padding-top: var(--companion-page-content-gap); }

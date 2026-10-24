@@ -89,7 +89,7 @@ function CompanionDirectoryListContent(props: {
 }) {
   const t = useTranslation();
   return (
-    <section>
+    <section className="companion-page-start">
       <CompanionDirectoryList
         directory={props.directory}
         viewKey={props.viewKey}

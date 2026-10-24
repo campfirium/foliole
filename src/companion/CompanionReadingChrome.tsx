@@ -19,7 +19,7 @@ function ReadingChromeButton(props: {
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
-      className="inline-flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
+      className="inline-flex h-11 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
       data-testid={props.testId}
       disabled={props.disabled}
       {...activation}

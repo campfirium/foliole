@@ -84,6 +84,7 @@ export function formatCompanionTopicDate(value: string, locale: string, now = ne
 }
 
 export function RecentArticleRow(props: {
+  first?: boolean;
   article: CompanionRecentArticle;
   currentArticleId: string | null;
   onSelectArticle(nodeId: string): void;
@@ -96,7 +97,7 @@ export function RecentArticleRow(props: {
   const open = () => props.onSelectArticle(props.article.nodeId);
   const status = renderBodyStatus(props.article.bodyStatus, t);
   return (
-    <div className="companion-topic-row">
+    <div className={`companion-topic-row ${props.first ? 'companion-topic-row-first' : ''}`}>
       <button aria-label={t('desktop.nodeBrowse.openTopic', { title: props.article.title })} className="companion-topic-open" data-testid={props.testId} onClick={open} type="button">
         <h2 ref={titleRef} className="companion-topic-title line-clamp-2 break-words [overflow-wrap:anywhere]">{props.article.title}</h2>
         <RecentArticlePreview lineClamp={previewLineClamp} preview={props.article.preview} />
@@ -131,7 +132,7 @@ export function RecentArticleList(props: {
     <section>
       <CompanionListViewport viewKey="recent" items={props.recentArticles}
         getItemKey={(article) => article.nodeId} estimateSize={() => 124}
-        renderItem={(article) => <RecentArticleRow article={article}
+        renderItem={(article) => <RecentArticleRow first={article === props.recentArticles[0]} article={article}
           currentArticleId={props.currentArticleId} onSelectArticle={props.onSelectArticle} />} />
     </section>
   );

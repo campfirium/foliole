@@ -28,8 +28,8 @@ function SettingsListItem(props: {
   );
 }
 
-function SettingsListSection(props: { children: ReactNode; title: string }) {
-  return <CompanionListSection title={props.title}>{props.children}</CompanionListSection>;
+function SettingsListSection(props: { children: ReactNode; first?: boolean; title: string }) {
+  return <CompanionListSection isFirst={Boolean(props.first)} title={props.title}>{props.children}</CompanionListSection>;
 }
 
 function DataAppearanceSettingsSection(props: {
@@ -71,9 +71,9 @@ export function CompanionSettingsList(props: {
 }) {
   const t = useTranslation();
   return (
-    <section className="pb-4 pt-3">
+    <section className="companion-page-start pb-4">
       <div className="space-y-5">
-        <SettingsListSection title={t('companion.settings.section.syncDevice')}>
+        <SettingsListSection first title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
             Icon={RefreshCw}
             accent
