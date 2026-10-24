@@ -45,10 +45,11 @@ export function initialCompanionNavigation(hasWorkspace: boolean): CompanionNavi
 }
 
 export function restoreCompanionNavigation(value: string | null, snapshot: WorkspaceSnapshot | null) {
-  if (!value || !snapshot) return initialCompanionNavigation(Boolean(snapshot));
+  if (!value) return initialCompanionNavigation(Boolean(snapshot));
   const result = navigationSchema.safeParse(JSON.parse(value));
   if (!result.success) throw new Error('Invalid saved companion navigation.');
   const state = result.data;
+  if (!snapshot) return { ...initialCompanionNavigation(false), settingsPage: state.settingsPage };
   // Removed or no-longer-visible targets return to their own list, never enter Flow.
   const browsingTrash = state.isBrowseDirectoryOpen && ['trash', 'trashFolder'].includes(state.directorySelection.kind);
   const canRestore = (id: string) => isCanonicalVisibleNodeId(snapshot, id) ||

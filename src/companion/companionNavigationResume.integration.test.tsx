@@ -80,7 +80,8 @@ it.each(['search', 'more', 'recent'] as const)('restores the %s page after a sep
 
 function Page() {
   const [action] = useCompanionNavigationField('activeAction', 'review');
-  return <p data-testid="page">{action}</p>;
+  const [settingsPage] = useCompanionNavigationField('settingsPage', 'list');
+  return <p data-testid="page">{action}:{settingsPage}</p>;
 }
 
 it('does not mount a default page or overwrite saved navigation before hydrate completes', async () => {
@@ -229,4 +230,13 @@ it('opens a new PDF search target instead of applying an older reading position'
   await runCompanionSyncWriterTask(async () => undefined);
   const saved = JSON.parse((await loadCompanionNavigationResume(snapshot.libraryScope!))!);
   expect(saved.pdfPositionById.pdf).toBeUndefined();
+});
+
+it('keeps the settings subpage after reopening before joining a workspace', async () => {
+  await saveCompanionNavigationResume('unjoined', JSON.stringify({
+    ...initialCompanionNavigation(false), settingsPage: 'storage'
+  }));
+  await library.reopen();
+  render(<CompanionNavigationProvider ready snapshot={null} libraryScope="unjoined"><Page /></CompanionNavigationProvider>);
+  await waitFor(() => expect(screen.getByTestId('page')).toHaveTextContent('more:storage'));
 });
