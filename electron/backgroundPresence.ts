@@ -25,9 +25,10 @@ export function resetBackgroundPresenceForTests() {
 
 function resolveTrayIconPath(platform: NodeJS.Platform = process.platform) {
   const iconName = platform === 'win32' ? 'icon.ico' : 'FolioleStatusTemplate.png';
-  const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
   const pathApi = platform === 'darwin' ? path.posix : path;
-  return pathApi.join(basePath, 'build', iconName);
+  if (app.isPackaged) return pathApi.join(process.resourcesPath, 'build', iconName);
+  // Unpackaged runs launch dist/electron/main.js, so the app path is the compiled runtime directory.
+  return pathApi.join(app.getAppPath(), '..', '..', 'build', iconName);
 }
 
 function createTrayIcon(platform: NodeJS.Platform = process.platform) {

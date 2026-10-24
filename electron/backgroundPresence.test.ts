@@ -1,11 +1,13 @@
 // @vitest-environment node
 
+import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  appPath: '/app',
+  appPath: '/app/dist/electron',
   isPackaged: false as boolean,
   appQuit: vi.fn(),
   appendMainProcessDiagnosticLog: vi.fn(),
@@ -65,7 +67,7 @@ vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  mocks.appPath = '/app';
+  mocks.appPath = '/app/dist/electron';
   mocks.isPackaged = false;
   const { resetBackgroundPresenceForTests } = await import('./backgroundPresence.js');
   resetBackgroundPresenceForTests();
@@ -197,4 +199,20 @@ it('does not install a transparent tray when the icon cannot be decoded', async 
     is_packaged: false,
     platform: 'win32'
   }, 'warn');
+});
+
+it('resolves the repository tray icons when an unpackaged run starts from the compiled main entry', async () => {
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  mocks.appPath = path.join(repoRoot, 'dist', 'electron');
+  const fromDisk = (iconPath: string) => ({ isEmpty: () => !existsSync(iconPath), path: iconPath, setTemplateImage: mocks.setTemplateImage });
+  mocks.createFromPath.mockImplementationOnce(fromDisk).mockImplementationOnce(fromDisk);
+  const { installBackgroundTray, resetBackgroundPresenceForTests } = await import('./backgroundPresence.js');
+
+  for (const platform of ['darwin', 'win32'] as const) {
+    resetBackgroundPresenceForTests();
+    installBackgroundTray({ getMainWindow: () => null, openMainWindow: vi.fn().mockResolvedValue(null), platform });
+  }
+
+  expect(mocks.trayInstances).toHaveLength(2);
+  expect(mocks.appendMainProcessDiagnosticLog).not.toHaveBeenCalledWith('tray_icon_empty', expect.anything(), 'warn');
 });
