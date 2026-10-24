@@ -29,7 +29,7 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionD
 
 import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
 
-it.each([false, true])('refreshes an open missing image after complete bytes and index commit (retry=%s)', async retry => {
+it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeFile=%s)', async (retry, nativeFile) => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-image-'));
   const sqlite = new Database(path.join(root, 'library.db'));
   initializeDatabaseSchema(sqlite);
@@ -53,13 +53,19 @@ it.each([false, true])('refreshes an open missing image after complete bytes and
   try {
     await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
     const resource = { storageKey: key, byteLength: bytes.length };
-    await host.receive(resource, 0, bytes.subarray(0, BLOCK));
+    const receive = async (offset: number, block: Uint8Array) => {
+      if (!nativeFile) return host.receive(resource, offset, block);
+      const staged = path.join(root, 'native-block');
+      await writeFile(staged, block);
+      return host.receiveFile!(resource, offset, { key: staged, byteLength: block.length });
+    };
+    await receive(0, bytes.subarray(0, BLOCK));
     expect(widget.querySelector('img')).toBeNull();
     if (retry) {
-      await expect(host.receive(resource, BLOCK, bytes.subarray(BLOCK))).rejects.toThrow('index interrupted');
+      await expect(receive(BLOCK, bytes.subarray(BLOCK))).rejects.toThrow('index interrupted');
       expect(widget.querySelector('img')).toBeNull();
       await host.status(resource);
-    } else await host.receive(resource, BLOCK, bytes.subarray(BLOCK));
+    } else await receive(BLOCK, bytes.subarray(BLOCK));
     expect(await readFile(final)).toEqual(bytes);
     expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().get()).toBe(1);
     await waitFor(() => expect(widget.querySelector('.cm-md-image-element')).toHaveAttribute('src', `file://${final}`));
@@ -87,6 +93,7 @@ function fileOperations(root: string) {
         catch { return { present: false, length: 0, hash: '' }; }
       }
       case 'truncate': await appendFile(partial, ''); await truncate(partial, input.length); return {};
+      case 'append-file': await appendFile(partial, await readFile(input.file_key!)); return {};
       case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
       case 'hash': return { hash: digest(await readFile(file)) };
       case 'discard': await rm(partial, { force: true }); return {};

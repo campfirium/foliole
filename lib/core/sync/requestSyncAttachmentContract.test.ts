@@ -20,7 +20,7 @@ it('round-trips the block identity, offset and bytes through the production code
 });
 
 it.each([
-  { maxBlocks: 9 }, { maxBlocks: -1 }, { pending: 'true' },
+  { maxBlocks: 33 }, { maxBlocks: -1 }, { pending: 'true' },
   { storageKey: '../file.pdf' }, { requestId: new Uint8Array(15) }, { offset: -1 },
   { offset: '18446744073709551615' }, { data: new Uint8Array(524289) },
   { operation: 'delete' }, { state: 'accepted' }, { storageKeys: Array(257).fill(storageKey) }
@@ -38,7 +38,7 @@ it('rejects a valid encrypted reply belonging to a different request or attachme
 });
 
 it('round-trips scan continuation and bounded pull windows through the production codec', () => {
-  for (const fields of [{ operation: 'needs', pending: true }, { operation: 'pull', maxBlocks: 8 }]) {
+  for (const fields of [{ operation: 'needs', pending: true }, { operation: 'pull', maxBlocks: 32 }]) {
     const input = attachmentMessage({ ...message, ...fields, operation: fields.operation as 'needs' | 'pull' });
     const decoded = decodeAndValidateProtocolMessage(encodeValidatedProtocolMessage(input.payloadCase, input.payload),
       FRAMED_SYNC_FRAME_TYPES.sessionControl);

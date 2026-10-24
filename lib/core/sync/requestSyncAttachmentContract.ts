@@ -5,8 +5,8 @@ import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { bytes } from './framedSyncDecodedValues.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 
-/** Pull responses and push requests each carry at most this many consecutive blocks (4 MiB). */
-export const ATTACHMENT_WINDOW_BLOCKS = 8;
+/** Pull responses and push requests each carry at most this many consecutive blocks (16 MiB). */
+export const ATTACHMENT_WINDOW_BLOCKS = 32;
 const integer = z.union([z.number(), z.string().regex(/^\d+$/u).transform(Number)])
   .pipe(z.number().int().nonnegative().max(FRAMED_SYNC_LIMITS.maxBlobBytes));
 const key = attachmentBlockResourceSchema.shape.storageKey;

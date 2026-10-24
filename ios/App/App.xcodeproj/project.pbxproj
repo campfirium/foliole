@@ -99,6 +99,8 @@
 		343B00000000000000000002 /* FolioleAttachmentBlockStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343A00000000000000000002 /* FolioleAttachmentBlockStorage.swift */; };
 		15AA332B58A9435F804AE1B3 /* FolioleCompanionRequestSyncHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */; };
 		7A2A126298AE4935B29CA44C /* FolioleRequestSyncHTTPChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */; };
+		438B00000000000000000001 /* FolioleRequestSyncAttachmentFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438A00000000000000000001 /* FolioleRequestSyncAttachmentFrames.swift */; };
+		438B00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438A00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -237,6 +239,8 @@
 		343A00000000000000000002 /* FolioleAttachmentBlockStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBlockStorage.swift; sourceTree = "<group>"; };
 		CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionRequestSyncHTTP.swift; sourceTree = "<group>"; };
 		780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncHTTPChunks.swift; sourceTree = "<group>"; };
+		438A00000000000000000001 /* FolioleRequestSyncAttachmentFrames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncAttachmentFrames.swift; sourceTree = "<group>"; };
+		438A00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncAttachmentResponse.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -320,6 +324,8 @@
 				326A00000000000000000025 /* FolioleFramedSyncPayloadCancellation.swift */,
 				326A00000000000000000024 /* FolioleCompanionFramedSyncPayloadBudget.swift */,
 				CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */,
+				438A00000000000000000001 /* FolioleRequestSyncAttachmentFrames.swift */,
+				438A00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift */,
 				780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */,
 				B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */,
 				341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */,
@@ -614,6 +620,8 @@
 				326B00000000000000000025 /* FolioleFramedSyncPayloadCancellation.swift in Sources */,
 				326B00000000000000000024 /* FolioleCompanionFramedSyncPayloadBudget.swift in Sources */,
 				15AA332B58A9435F804AE1B3 /* FolioleCompanionRequestSyncHTTP.swift in Sources */,
+				438B00000000000000000001 /* FolioleRequestSyncAttachmentFrames.swift in Sources */,
+				438B00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift in Sources */,
 				7A2A126298AE4935B29CA44C /* FolioleRequestSyncHTTPChunks.swift in Sources */,
 				89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */,
 				341B00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift in Sources */,

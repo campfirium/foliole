@@ -1,9 +1,11 @@
+import type { AttachmentBlockFile } from './attachmentBlockTransfer.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { differingInventoryBuckets, inventoryBucket, summarizeInventoryBuckets } from './framedSyncInventoryBuckets.js';
 import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
 import { differingNodeIds } from './framedSyncInventorySummary.js';
+import type { AttachmentRequest } from './requestSyncAttachmentContract.js';
 import { requestSyncDifferenceMessages } from './requestSyncDifferenceWire.js';
 import { mergeRequestSyncNodeDetails, readRequestSyncNodeDetails } from './requestSyncInventoryExpansion.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
@@ -13,6 +15,9 @@ import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthentica
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export interface RequestSyncExchange {
+  /** The adapter authenticates frames and keeps block bytes in request-owned native files. */
+  pullAttachment?(query: AttachmentRequest,
+    consume: (message: AttachmentRequest, file?: AttachmentBlockFile) => Promise<void>): Promise<void>;
   context: RequestSyncAuthenticatedContext;
   groupKey: Uint8Array;
   signal?: AbortSignal;

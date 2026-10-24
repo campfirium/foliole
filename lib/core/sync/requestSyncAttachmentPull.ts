@@ -1,4 +1,5 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResource } from './attachmentBlockReceiver.js';
+import type { AttachmentBlockFile } from './attachmentBlockTransfer.js';
 import { ATTACHMENT_WINDOW_BLOCKS, attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
@@ -12,20 +13,32 @@ type AttachmentQuery = Partial<AttachmentRequest> & Pick<AttachmentRequest, 'ope
 
 /** Several inputs form one push window under a shared request ID; the reply answers the first. */
 export async function attachmentRequest(exchange: RequestSyncExchange, input: AttachmentQuery | AttachmentQuery[],
-  consume: (message: AttachmentRequest) => Promise<void>) {
+  consume: (message: AttachmentRequest, file?: AttachmentBlockFile) => Promise<void>) {
   const requestId = crypto.getRandomValues(new Uint8Array(16));
   const queries = (Array.isArray(input) ? input : [input]).map(item => attachmentRequestSchema.parse({ requestId, ...item }));
   const query = queries[0]!;
+  let count = 0;
+  let ended = false;
+  const accept = async (message: AttachmentRequest, file?: AttachmentBlockFile) => {
+    if (ended) throw new Error('attachment_response_invalid');
+    assertAttachmentResponse(message, query);
+    if (file && (message.state !== 'block' || message.operation !== 'pull' || message.data.length)) {
+      throw new Error('attachment_response_file_invalid');
+    }
+    await consume(message, file);
+    count++;
+    ended = message.state === 'end' || !['needs', 'pull'].includes(query.operation);
+  };
+  if (queries.length === 1 && query.operation === 'pull' && exchange.pullAttachment) {
+    await exchange.pullAttachment(query, accept);
+    if (!count || !ended) throw new Error('attachment_response_incomplete');
+    return;
+  }
   return withControlRequest(exchange, '/companion/framed-sync?request=attachments', queries.map(item => attachmentMessage(item)), async response => {
-    let count = 0;
-    let ended = false;
     for await (const decoded of readRequestSyncWire({ ...exchange, ...response })) {
       if (ended || decoded.message.payloadCase !== 'request_attachment') throw new Error('attachment_response_invalid');
       const message = attachmentRequestSchema.parse(decoded.message.payload);
-      assertAttachmentResponse(message, query);
-      await consume(message);
-      count++;
-      ended = message.state === 'end' || !['needs', 'pull'].includes(query.operation);
+      await accept(message);
     }
     if (!count || !ended) throw new Error('attachment_response_incomplete');
   });
@@ -56,17 +69,20 @@ async function pullWindow(host: RequestSyncAttachmentHost, exchange: RequestSync
   let offset = start;
   let receivedOffset = start;
   let paused = false;
-  await attachmentRequest(exchange, { ...resource, operation: 'pull', offset, maxBlocks: ATTACHMENT_WINDOW_BLOCKS }, async message => {
+  await attachmentRequest(exchange, { ...resource, operation: 'pull', offset, maxBlocks: ATTACHMENT_WINDOW_BLOCKS }, async (message, file) => {
+    const length = file?.byteLength ?? message.data.length;
     if (message.byteLength !== resource.byteLength || message.offset !== offset) throw new Error('attachment_pull_offset_invalid');
     if (message.state === 'end') {
       if (!wireBlocks && !message.pending && offset !== resource.byteLength) throw new Error('attachment_pull_incomplete');
     } else if (message.state === 'block') {
-      if (wireBlocks >= ATTACHMENT_WINDOW_BLOCKS || message.data.length !== Math.min(ATTACHMENT_BLOCK_BYTES, resource.byteLength - offset)) {
+      if (wireBlocks >= ATTACHMENT_WINDOW_BLOCKS || length !== Math.min(ATTACHMENT_BLOCK_BYTES, resource.byteLength - offset)) {
         throw new Error('attachment_pull_block_limit_invalid');
       }
       if (!paused) {
-        const result = await host.receive(resource, offset, message.data);
-        if (result.kind === 'offset' || result.offset !== offset + message.data.length) {
+        const receiving = file ? host.receiveFile?.(resource, offset, file) : host.receive(resource, offset, message.data);
+        if (!receiving) throw new Error('attachment_file_receiver_missing');
+        const result = await receiving;
+        if (result.kind === 'offset' || result.offset !== offset + length) {
           throw new Error('attachment_pull_receiver_changed');
         }
         receivedOffset = result.offset;
@@ -74,7 +90,7 @@ async function pullWindow(host: RequestSyncAttachmentHost, exchange: RequestSync
         paused = shouldYield();
       }
       // Authenticate and drain the bounded response; uncommitted blocks resume from receivedOffset.
-      offset += message.data.length;
+      offset += length;
       wireBlocks++;
     } else throw new Error('attachment_pull_state_invalid');
   });

@@ -3,6 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.foliole.android.framed.FramedSyncFiles;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -38,6 +39,23 @@ public final class FolioleAttachmentBlockFiles {
             owner.onAttachmentClose(() -> close(owner));
         }
         if (owner.isClosed()) throw new IllegalStateException("attachment_owner_closed");
+        if (call.getString("action", "").equals("append-file")) {
+            String source = call.getString("file_key", "");
+            if (!source.matches("requests/[a-f0-9-]{36}/attachment-[0-9]+")) {
+                throw new IllegalArgumentException("attachment_block_file_invalid");
+            }
+            byte[] bytes = new FramedSyncFiles(context, owner.libraryKey()).read(source);
+            if (bytes == null || bytes.length != number(call, "length") || bytes.length > 524288) {
+                throw new IllegalArgumentException("attachment_block_file_invalid");
+            }
+            files.acquire();
+            try (RandomAccessFile output = new RandomAccessFile(files.resolve(call.getString("key"), true), "rw")) {
+                long offset = number(call, "offset");
+                if (output.length() != offset) throw new IllegalArgumentException("attachment_block_range_invalid");
+                output.seek(offset); output.write(bytes);
+            }
+            return new JSObject();
+        }
         return files.execute(call);
     }
 

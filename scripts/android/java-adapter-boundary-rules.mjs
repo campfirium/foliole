@@ -56,6 +56,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionFramedSyncRoute.java',
       'FolioleCompanionRequestSyncHttp.java',
       'FolioleRequestSyncHttpChunks.java',
+      'FolioleRequestSyncAttachmentResponse.java',
       'FolioleRequestSyncRoute.java',
       'FolioleRequestSyncTiming.java',
       'FolioleCompanionFramedHttpBody.java',

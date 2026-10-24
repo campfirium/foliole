@@ -55,7 +55,7 @@ it.each([
   ['another file', [push(0), push(BLOCK, { storageKey: `${'b'.repeat(64)}.pdf` })]],
   ['another request', [push(0), push(BLOCK, { requestId: new Uint8Array(16).fill(4) })]],
   ['a non-push window', [push(0, { operation: 'status', data: new Uint8Array() }), push(BLOCK)]],
-  ['more than eight blocks', Array.from({ length: 9 }, (_, index) => push(index * BLOCK))]
+  ['more than thirty-two blocks', Array.from({ length: 33 }, (_, index) => push(index * BLOCK))]
 ])('rejects a push window with %s', async (_label, messages) => {
   await expect(respond(messages, offset => ({ kind: 'partial', offset: offset + BLOCK }))).rejects.toThrow();
 });

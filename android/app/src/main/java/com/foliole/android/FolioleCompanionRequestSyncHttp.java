@@ -92,7 +92,9 @@ final class FolioleCompanionRequestSyncHttp {
         return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
             output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check, progress, timing::chunk),
-            input -> FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress),
+            input -> call.getObject("attachment_response") == null
+                ? FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress)
+                : FolioleRequestSyncAttachmentResponse.read(call, files, directory, input, operation::check, progress, operation.owner),
             operation::opened, timing::phase);
     }
 

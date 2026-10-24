@@ -10,19 +10,19 @@ export type AttachmentBlockStatus = { kind: 'partial' | 'complete'; offset: numb
 export type AttachmentBlockResult = AttachmentBlockStatus | { kind: 'offset'; offset: number };
 
 /** The host holds the library receiver owner throughout this port's lifetime. */
-export interface AttachmentBlockFiles {
+export interface AttachmentBlockFiles<Bytes extends { byteLength: number } = Uint8Array> {
   exclusive<T>(hash: string, execute: () => Promise<T>): Promise<T>;
   complete(resource: AttachmentBlockResource): Promise<boolean>;
   partialLength(hash: string): Promise<number>;
   truncate(hash: string, length: number): Promise<void>;
-  append(hash: string, offset: number, bytes: Uint8Array): Promise<void>;
+  append(hash: string, offset: number, bytes: Bytes): Promise<void>;
   verifyPartial(hash: string): Promise<boolean>;
   discardPartial(hash: string): Promise<void>;
   publish(resource: AttachmentBlockResource): Promise<void>;
   availability(hash: string, available: boolean): Promise<void>;
 }
 
-export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
+export function createAttachmentBlockReceiver<Bytes extends { byteLength: number } = Uint8Array>(files: AttachmentBlockFiles<Bytes>) {
   const recovered = new Set<string>();
   const availability = availabilityRecorder(files);
 
@@ -58,7 +58,7 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
   }
 
   async function receive(resource: AttachmentBlockResource, offset: number,
-    bytes: Uint8Array): Promise<AttachmentBlockResult> {
+    bytes: Bytes): Promise<AttachmentBlockResult> {
     const current = await status(resource);
     if (current.kind === 'complete') return current;
     if (current.offset !== offset) return { kind: 'offset', offset: current.offset };
@@ -82,12 +82,12 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
 
   return {
     status: (resource: AttachmentBlockResource) => run(resource, status),
-    receive: (resource: AttachmentBlockResource, offset: number, bytes: Uint8Array) =>
+    receive: (resource: AttachmentBlockResource, offset: number, bytes: Bytes) =>
       run(resource, parsed => receive(parsed, offset, bytes))
   };
 }
 
-function availabilityRecorder(files: AttachmentBlockFiles) {
+function availabilityRecorder(files: Pick<AttachmentBlockFiles, 'availability'>) {
   const recorded = new Map<string, boolean>();
   return async (hash: string, available: boolean) => {
     if (recorded.get(hash) === available) return;

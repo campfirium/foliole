@@ -16,5 +16,5 @@ final class AttachmentRequestValidation {
             throw new FramedSyncValidationException("attachment_request_invalid");
         }
     }
-    private static boolean validKey(String key) { return key.matches("[a-f0-9]{64}\\.(png|jpg|gif|webp|pdf|epub)"); }
+    private static boolean validKey(String key) { return key.matches("[a-f0-9]{64}\\.(png|jpg|gif|webp|pdf|epub|pdftext)"); }
 }

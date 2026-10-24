@@ -73,6 +73,19 @@ extension FolioleCompanionSyncPlugin {
                         peer: peer, roundID: roundID, direction: "outbound")
                 }
             })
+        if call.getObject("attachment_response") != nil {
+            let cancellation = FolioleFramedSyncPayloadCancellation()
+            return try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                return try await FolioleFramedSyncPayloadWorker.run {
+                    try FolioleFramedSyncPayloadWorker.withCancellation(cancellation) {
+                        try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .inbound) { _ in
+                            try FolioleRequestSyncAttachmentResponse.read(call, files: files, directory: directory, input: response, owner: owner, bridge: bridge)
+                        }
+                    }
+                }
+            } onCancel: { cancellation.cancel() }
+        }
         return try FolioleRequestSyncHTTPChunks.split(files: files, directory: directory, input: response)
     }
 

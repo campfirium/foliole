@@ -15,14 +15,28 @@ const CHUNK_BYTES = 512 * 1024;
 const chunkKey = (directory: string, direction: 'in' | 'out', index: number) =>
   `${directory}/http-${direction}-${index}`;
 
-export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: {
+export interface CompanionRequestSyncHttpInput {
   endpointUrl: string;
   pathWithQuery: string;
   context: RequestSyncAuthenticatedContext;
   body: FramedSyncStreamBody;
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
-}, consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
+  attachmentResponse?: NativeRequestSyncHttpRequest['attachment_response'];
+}
+
+export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
+  consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
+  return withCompanionRequestSyncHttpResponse(files, input, async (response, directory) => {
+    const stream = await readFramedSyncStream(touchRequestSyncStream(
+      companionRequestSyncHttpChunks(files, directory, response, input.signal), input.peerRound?.lease));
+    try { return await consume(stream); }
+    finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
+  });
+}
+
+export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
+  consume: (response: Awaited<ReturnType<typeof FolioleCompanionSync.postRequestSyncHttp>>, directory: string) => Promise<T>) {
   return withRequestSyncFiles(files, async temporary => {
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
     const prepared = await spoolCompanionRequestSyncHttp({ write: (key, bytes) => temporary.writeScratchFile(key, bytes) }, temporary.directory, { ...input.body,
@@ -43,6 +57,7 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
         'x-foliole-library-epoch': input.context.initiatorLibraryEpoch
       }, sync_group_id: input.context.groupId, receiver_device_id: input.context.responderDeviceId,
       receiver_library_epoch: input.context.responderLibraryEpoch };
+    if (input.attachmentResponse) request.attachment_response = input.attachmentResponse;
     if (input.peerRound) request.peer_round_id = input.peerRound.id;
     input.signal?.throwIfAborted();
     const operation = FolioleCompanionSync.postRequestSyncHttp(request);
@@ -54,12 +69,7 @@ export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort
       const response = await operation;
       input.signal?.throwIfAborted();
       if (input.peerRound) input.peerRound.admitted = true;
-      const stream = await readFramedSyncStream(touchRequestSyncStream(
-        companionRequestSyncHttpChunks(files, temporary.directory, response, input.signal), input.peerRound?.lease));
-      try {
-        return await consume(stream);
-      }
-      finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
+      return await consume(response, temporary.directory);
     } finally {
       input.signal?.removeEventListener('abort', cancel);
       await cancellation;

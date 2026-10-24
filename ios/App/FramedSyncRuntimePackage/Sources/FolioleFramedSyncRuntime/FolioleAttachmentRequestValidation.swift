@@ -15,6 +15,6 @@ enum FolioleAttachmentRequestValidation {
         }
     }
     private static func validKey(_ key: String) -> Bool {
-        key.range(of: "^[a-f0-9]{64}\\.(png|jpg|gif|webp|pdf|epub)$", options: .regularExpression) != nil
+        key.range(of: "^[a-f0-9]{64}\\.(png|jpg|gif|webp|pdf|epub|pdftext)$", options: .regularExpression) != nil
     }
 }
