@@ -110,7 +110,8 @@ export function submitMonitorEvents(events, state, options = {}) {
   const persist = options.persist ?? ((value) => writeJson(STATE_FILE, value));
   const now = options.now ?? (() => new Date().toISOString());
   for (const event of events) {
-    submit(event);
+    if (state.submitted[event.dedupeKey]) continue;
+    submit({ ...event, reconcileOpen: false });
     const emittedAt = now();
     state.submitted[event.dedupeKey] = { emittedAt, title: event.title };
     acknowledgeEvent(state, event, emittedAt);
@@ -124,7 +125,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
   const state = emit ? persistedState : cloneJson(persistedState);
   const errors = [];
   const events = listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate)
-    .filter((event) => event.reconcileOpen || includeExisting || !state.submitted[event.dedupeKey]);
+    .filter((event) => !state.submitted[event.dedupeKey]);
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
   if (emit) writeJson(STATE_FILE, state);

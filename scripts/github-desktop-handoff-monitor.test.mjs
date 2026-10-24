@@ -12,6 +12,32 @@ import {
 } from './github-desktop-handoff-monitor.mjs';
 
 describe('github desktop handoff monitor workspace binding', () => {
+  it('hands off each signal once without reopening archived chats', () => {
+    const event = { dedupeKey: 'pr:42:local', reconcileOpen: true, title: 'PR #42' };
+    const state = { submitted: {} };
+    const delivered = [];
+    const options = {
+      persist: () => undefined,
+      submit: (value) => delivered.push(value)
+    };
+
+    submitMonitorEvents([event], state, options);
+    submitMonitorEvents([event], state, options);
+
+    expect(delivered).toEqual([{ ...event, reconcileOpen: false }]);
+    expect(state.submitted[event.dedupeKey]).toBeDefined();
+  });
+
+  it('does not replay signals inherited from the previous notification producer', () => {
+    const event = { dedupeKey: 'alerts:75', reconcileOpen: true };
+    const state = { submitted: { 'alerts:75': { emittedAt: '2026-10-24T00:00:00Z' } } };
+
+    submitMonitorEvents([event], state, {
+      persist: () => { throw new Error('unexpected checkpoint'); },
+      submit: () => { throw new Error('duplicate handoff'); }
+    });
+  });
+
   it('binds the current checkout without requiring a machine path in project declarations', () => {
     expect(bindMonitorWorkspace({ name: 'issues' }, '/workspace/foliole')).toEqual({
       name: 'issues',
