@@ -71,7 +71,7 @@ export function SettingsSidebar(props: {
     <AppPanel
       as="aside"
       ariaLabel={t('settings.sidebar.aria')}
-      bodyClassName="px-4 pb-5 pt-3 [--app-scrollbar-thumb-color:var(--workspace-region-main-topic-scrollbar-thumb-color)] [--app-scrollbar-thumb-hover-color:var(--workspace-region-main-topic-scrollbar-thumb-hover-color)] [--app-scrollbar-track-bg:transparent]"
+      bodyClassName="px-4 pb-5 pt-3 [--app-scrollbar-thumb-color:var(--role-list-scrollbar)] [--app-scrollbar-thumb-hover-color:var(--role-list-scrollbar-hover)] [--app-scrollbar-track-bg:transparent]"
       className="border-r border-settings-divider"
       headerClassName="h-[64px] min-h-0 border-b border-settings-divider/55 px-5 py-0"
       scrollBody

@@ -23,10 +23,10 @@ function resolveMermaidThemeConfig() {
   const root = document.documentElement;
   const styles = getComputedStyle(root);
   const darkMode = root.dataset.resolvedBaseColor === 'dark';
-  const foreground = resolveCssChannels(styles, '--color-foreground', darkMode ? '232 230 223' : '32 33 36');
-  const panel = resolveCssChannels(styles, '--color-bg-panel', darkMode ? '26 31 30' : '248 248 246');
-  const elevated = resolveCssChannels(styles, '--color-bg-elevated', darkMode ? '32 39 37' : '255 255 255');
-  const border = resolveCssChannels(styles, '--color-border-strong', darkMode ? '122 124 116' : '148 151 156');
+  const foreground = resolveCssChannels(styles, '--role-ink-rgb', darkMode ? '232 230 223' : '32 33 36');
+  const panel = resolveCssChannels(styles, '--role-legacy-panel-rgb', darkMode ? '26 31 30' : '248 248 246');
+  const elevated = resolveCssChannels(styles, '--role-legacy-elevated-rgb', darkMode ? '32 39 37' : '255 255 255');
+  const border = resolveCssChannels(styles, '--role-legacy-border-strong-rgb', darkMode ? '122 124 116' : '148 151 156');
   const fontFamily = resolveCssFontFamily(styles);
   const signature = [darkMode, foreground, panel, elevated, border, fontFamily].join('|');
 

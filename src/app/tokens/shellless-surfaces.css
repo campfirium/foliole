@@ -1,14 +1,14 @@
 :root {
-  --app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-document-token-bg) 12%);
+  --app-shellless-surface-bg: color-mix(in srgb, var(--role-content-bg) 88%, var(--role-content-tint-bg) 12%);
   --app-shellless-input-bg: var(--app-shellless-surface-bg);
-  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-shellless-fg: rgb(var(--color-foreground) / 0.86);
-  --app-shellless-title-fg: rgb(var(--color-foreground) / 0.68);
-  --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.52);
-  --app-shellless-faint-fg: rgb(var(--color-foreground) / 0.38);
-  --app-shellless-placeholder-fg: rgb(var(--color-foreground) / 0.36);
-  --app-shellless-control-fg: rgb(var(--color-foreground) / 0.52);
+  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--role-line-strong-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--role-line-subtle-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-shellless-fg: rgb(var(--role-ink-rgb) / 0.86);
+  --app-shellless-title-fg: rgb(var(--role-ink-rgb) / 0.68);
+  --app-shellless-muted-fg: rgb(var(--role-ink-rgb) / 0.52);
+  --app-shellless-faint-fg: rgb(var(--role-ink-rgb) / 0.38);
+  --app-shellless-placeholder-fg: rgb(var(--role-ink-rgb) / 0.36);
+  --app-shellless-control-fg: rgb(var(--role-ink-rgb) / 0.52);
   --app-shellless-ui-font-family: var(--app-interface-font-family, var(--font-family-interface));
   --app-shellless-input-font-family: var(--content-panel-font-family, var(--font-family-text));
   --app-shellless-input-font-size: 15px;
@@ -24,18 +24,18 @@
   --app-shellless-control-border-color: var(--app-control-border-color);
   --app-shellless-control-border-hover-color: var(--app-control-border-hover-color);
   --app-shellless-control-hover-bg: var(--app-control-bg-hover-color);
-  --app-shellless-brand-mark-color: rgb(var(--app-accent-color-rgb) / 0.22);
+  --app-shellless-brand-mark-color: rgb(var(--role-accent-rgb) / 0.22);
 }
 
 :root[data-resolved-base-color='dark'] {
-  --app-shellless-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 92%, var(--workspace-region-main-document-token-bg) 8%);
+  --app-shellless-surface-bg: color-mix(in srgb, var(--role-content-bg) 92%, var(--role-content-tint-bg) 8%);
   --app-shellless-input-bg: var(--app-shellless-surface-bg);
-  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-shellless-fg: rgb(var(--color-foreground) / 0.78);
-  --app-shellless-title-fg: rgb(var(--color-foreground) / 0.64);
-  --app-shellless-muted-fg: rgb(var(--color-foreground) / 0.5);
-  --app-shellless-control-fg: rgb(var(--color-foreground) / 0.58);
+  --app-shellless-border-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--role-line-strong-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-shellless-divider-color: color-mix(in oklab, var(--app-shellless-surface-bg) var(--role-line-subtle-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-shellless-fg: rgb(var(--role-ink-rgb) / 0.78);
+  --app-shellless-title-fg: rgb(var(--role-ink-rgb) / 0.64);
+  --app-shellless-muted-fg: rgb(var(--role-ink-rgb) / 0.5);
+  --app-shellless-control-fg: rgb(var(--role-ink-rgb) / 0.58);
   --app-shellless-shadow: 0 10px 26px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.14);
 }
 

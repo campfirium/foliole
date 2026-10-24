@@ -37,8 +37,8 @@
 .pdf-floating-window-title::after {
   background: color-mix(
     in oklab,
-    var(--workspace-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight),
-    var(--workspace-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))
+    var(--role-content-top-bg) var(--role-line-subtle-weight),
+    var(--role-content-top-line-mix, var(--role-line-mix))
   );
   content: '';
   position: absolute;
@@ -46,6 +46,6 @@
   bottom: 0;
   height: 1px;
   pointer-events: none;
-  opacity: var(--workspace-divider-opacity);
+  opacity: var(--role-column-line-opacity);
   z-index: var(--z-local-feedback);
 }

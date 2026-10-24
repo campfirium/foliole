@@ -50,7 +50,7 @@ function renderVirtualResultItem(props: FolderListItemProps & { dateLabel: strin
 
   return (
     <li
-      className={`list-none border-b border-[var(--workspace-region-main-document-content-divider)] ${
+      className={`list-none border-b border-[var(--role-content-line)] ${
         props.isBulkSelectionActive ? 'bg-[var(--app-surface-control-bg)]' : ''
       }`}
       data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}

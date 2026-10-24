@@ -13,11 +13,11 @@
 .workspace-floating-sidebar-left {
   left: 0;
   width: min(var(--workspace-list-width), 100%);
-  background: var(--workspace-region-main-folder-bg);
+  background: var(--role-nav-bg);
 }
 
 .workspace-floating-sidebar-right {
   right: 0;
   width: min(var(--workspace-right-sidebar-width), 100%);
-  background: var(--workspace-region-main-sidebar-bg);
+  background: var(--role-sidebar-bg);
 }

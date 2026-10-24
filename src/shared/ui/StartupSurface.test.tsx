@@ -90,6 +90,6 @@ it('keeps startup emphasis action aligned with the workspace shell button style'
   const emphasisDeclarations = emphasisRule.split('}')[0];
 
   expect(emphasisDeclarations).toContain('background: transparent');
-  expect(emphasisDeclarations).toContain('--color-border-strong');
+  expect(emphasisDeclarations).toContain('--role-legacy-border-strong-rgb');
   expect(emphasisDeclarations).not.toContain('color-mix');
 });

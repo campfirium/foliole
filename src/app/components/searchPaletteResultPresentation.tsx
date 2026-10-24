@@ -47,7 +47,7 @@ export function renderSearchResultText(text: string, query: string, options?: { 
       <span
         className="font-semibold"
         key={`${segment.text}-${index}`}
-        style={{ color: 'var(--app-accent-color)' }}
+        style={{ color: 'var(--role-accent)' }}
       >
         {segment.text}
       </span>

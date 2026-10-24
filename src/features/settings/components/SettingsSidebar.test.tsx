@@ -29,7 +29,7 @@ it('keeps category groups and rows stretched across the sidebar', () => {
   const group = editor.closest('.relative');
 
   expect(scrollBody).toHaveClass('overflow-auto');
-  expect(scrollBody?.className).toContain('--workspace-region-main-topic-scrollbar-thumb-color');
+  expect(scrollBody?.className).toContain('--role-list-scrollbar');
   expect(nav).toHaveClass('w-full');
   expect(nav).toHaveClass('items-stretch');
   expect(group).toHaveClass('before:left-3');

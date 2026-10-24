@@ -9,10 +9,10 @@ export const liveMarkdownTableTheme = {
   },
   '.cm-md-table-preview-button': {
     alignItems: 'center',
-    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-elevated)) 92%, transparent)',
-    border: '1px solid rgb(var(--color-border) / 0.5)',
+    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--role-legacy-elevated-rgb)) 92%, transparent)',
+    border: '1px solid rgb(var(--role-legacy-border-rgb) / 0.5)',
     borderRadius: 'var(--editor-radius-xl)',
-    color: 'rgb(var(--color-foreground) / 0.72)',
+    color: 'rgb(var(--role-ink-rgb) / 0.72)',
     cursor: 'pointer',
     display: 'inline-flex',
     height: '1.75rem',
@@ -30,8 +30,8 @@ export const liveMarkdownTableTheme = {
     opacity: '1'
   },
   '.cm-md-table-preview-button:hover': {
-    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-elevated)) 82%, var(--color-foreground) 8%)',
-    color: 'rgb(var(--color-foreground))'
+    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--role-legacy-elevated-rgb)) 82%, var(--role-ink-rgb) 8%)',
+    color: 'rgb(var(--role-ink-rgb))'
   },
   '.cm-md-table-preview-button:focus-visible': {
     outline: '1px solid rgb(var(--color-ring))',
@@ -48,10 +48,10 @@ export const liveMarkdownTableTheme = {
     width: '0.95rem'
   },
   '.cm-md-table': {
-    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
+    borderBottom: '1.5px solid rgb(var(--role-legacy-border-strong-rgb) / 0.62)',
     borderCollapse: 'separate',
     borderSpacing: '0',
-    borderTop: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
+    borderTop: '1.5px solid rgb(var(--role-legacy-border-strong-rgb) / 0.62)',
     fontSize: '0.94em',
     lineHeight: '1.45',
     minWidth: '100%',
@@ -61,7 +61,7 @@ export const liveMarkdownTableTheme = {
   '.cm-md-table-preview': { minWidth: 'max-content' },
   '.cm-md-table-cell': {
     border: '0',
-    borderBottom: '1px solid rgb(var(--color-border) / 0.42)',
+    borderBottom: '1px solid rgb(var(--role-legacy-border-rgb) / 0.42)',
     maxWidth: '24rem',
     padding: '0.38rem 0.58rem',
     textAlign: 'left',
@@ -69,8 +69,8 @@ export const liveMarkdownTableTheme = {
     whiteSpace: 'normal'
   },
   '.cm-md-table-row-header .cm-md-table-cell': {
-    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--color-bg-subtle)) 84%, var(--color-foreground) 6%)',
-    borderBottom: '1.5px solid rgb(var(--color-border-strong) / 0.62)',
+    backgroundColor: 'color-mix(in srgb, var(--app-surface, var(--role-legacy-subtle-rgb)) 84%, var(--role-ink-rgb) 6%)',
+    borderBottom: '1.5px solid rgb(var(--role-legacy-border-strong-rgb) / 0.62)',
     fontWeight: '650'
   },
   '.cm-md-table-row:last-child .cm-md-table-cell': { borderBottom: '0' }

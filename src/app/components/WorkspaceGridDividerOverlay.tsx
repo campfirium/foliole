@@ -25,7 +25,7 @@ function WorkspaceGridDivider({
       className={`pointer-events-none absolute z-local-overlay w-px -translate-x-1/2 ${
         column === 'sidebar' ? 'max-[1279px]:hidden' : hideBelowWorkspaceBreakpoint ? 'max-[1080px]:hidden' : ''
       }`}
-      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, opacity: 'var(--workspace-divider-opacity)', top }}
+      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, opacity: 'var(--role-column-line-opacity)', top }}
     />
   );
 }

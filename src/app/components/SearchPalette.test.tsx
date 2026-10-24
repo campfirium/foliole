@@ -143,7 +143,7 @@ it('renders search results as title context and path rows', async () => {
   expect(screen.getByText('Home / Atlas note')).toBeInTheDocument();
   const launchMatches = screen.getAllByText('launch');
   expect(launchMatches.every((node) => node.tagName === 'SPAN')).toBe(true);
-  expect(launchMatches.every((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
+  expect(launchMatches.every((node) => node.getAttribute('style')?.includes('var(--role-accent)'))).toBe(true);
   expect(screen.getByText('Highlight')).toBeInTheDocument();
   expect(screen.queryByText(/Foliole/i)).not.toBeInTheDocument();
   expect(screen.queryByText('Content')).not.toBeInTheDocument();

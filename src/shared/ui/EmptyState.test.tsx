@@ -27,7 +27,7 @@ describe('AppSpinner', () => {
   it('supports state tone styling for progress indicators', () => {
     render(<AppSpinner label="Sync progress" tone="accent" />);
 
-    expect(screen.getByLabelText('Sync progress').className).toContain('border-t-[rgb(var(--app-accent-color-rgb))]');
+    expect(screen.getByLabelText('Sync progress').className).toContain('border-t-[rgb(var(--role-accent-rgb))]');
   });
 
   it('hides decorative indicators from assistive technology', () => {

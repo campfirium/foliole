@@ -102,7 +102,7 @@ function WorkspaceSurfaceColorSliderSection(props: {
       </div>
       <div
         aria-label={t('settings.appearance.surface.colorPicker.alphaSlider')}
-        className={settingsPickerTrackClassName('h-5 bg-[linear-gradient(45deg,rgb(var(--color-foreground)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--color-foreground)_/_0.08)_50%,rgb(var(--color-foreground)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]')}
+        className={settingsPickerTrackClassName('h-5 bg-[linear-gradient(45deg,rgb(var(--role-ink-rgb)_/_0.08)_25%,transparent_25%,transparent_50%,rgb(var(--role-ink-rgb)_/_0.08)_50%,rgb(var(--role-ink-rgb)_/_0.08)_75%,transparent_75%,transparent_100%)] bg-[length:16px_16px]')}
         onPointerDown={(event) => trackSlider(event, (percent) => props.onAlphaChange(Math.round(percent)))}
         role="presentation"
       >

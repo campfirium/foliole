@@ -29,7 +29,7 @@ export function WorkspaceListStudyStatusBar({
   }
 
   return (
-    <div className="flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center border-t border-border bg-[var(--workspace-region-footer-document-bg)] px-4">
+    <div className="flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center border-t border-border bg-[var(--role-content-bottom-bg)] px-4">
       <p className="truncate text-xs font-medium text-foreground/70">
         Flow · {Math.max(reviewQueueCount, 0)} left · {Math.max(reviewCompletedCount, 0)} done · {getReviewStatusLabel(reviewStatus)}
       </p>

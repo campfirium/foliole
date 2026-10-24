@@ -15,13 +15,13 @@ export const liveMarkdownMermaidTheme = {
   },
   '.cm-md-mermaid-widget': {
     boxSizing: 'border-box',
-    color: 'var(--content-panel-text-color, var(--color-text-primary))',
+    color: 'var(--content-panel-text-color, var(--role-text))',
     margin: 'var(--editor-space-lg) 0 calc(var(--editor-space-lg) * 1.35)',
     padding: '0'
   },
   '.cm-md-mermaid-surface': {
-    backgroundColor: 'rgb(var(--color-foreground) / 0.045)',
-    border: '1px solid rgb(var(--color-border-strong) / 0.36)',
+    backgroundColor: 'rgb(var(--role-ink-rgb) / 0.045)',
+    border: '1px solid rgb(var(--role-legacy-border-strong-rgb) / 0.36)',
     borderRadius: 'var(--editor-radius-md)',
     boxSizing: 'border-box',
     overflow: 'hidden',
@@ -58,7 +58,7 @@ export const liveMarkdownMermaidTheme = {
     maxWidth: '100%'
   },
   '.cm-md-mermaid-body > svg text, .cm-md-mermaid-body > svg tspan, .cm-md-mermaid-preview > svg text, .cm-md-mermaid-preview > svg tspan': {
-    fill: 'var(--color-text-primary) !important'
+    fill: 'var(--role-text) !important'
   },
   '.cm-md-mermaid-body > svg .today, .cm-md-mermaid-preview > svg .today': {
     stroke: 'var(--color-danger, #ff6868) !important',
@@ -110,7 +110,7 @@ export const liveMarkdownMermaidTheme = {
     width: '92rem !important'
   },
   '.cm-md-mermaid-widget-error': {
-    color: 'var(--color-text-secondary)',
+    color: 'var(--role-text-secondary)',
     fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
     fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
     whiteSpace: 'pre-wrap'

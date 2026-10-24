@@ -21,7 +21,7 @@ export function ImportCatalogHeader(props: {
   title: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--workspace-region-main-document-content-divider)] pb-3">
+    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--role-content-line)] pb-3">
       <div className="flex min-w-0 items-baseline gap-2">
         <h2 className="truncate text-[13px] font-medium text-foreground">{props.title}</h2>
         <p className="shrink-0 text-sm font-medium text-foreground/58">{props.countLabel}</p>
@@ -124,7 +124,7 @@ function renderImportCatalogBody(props: Parameters<typeof ImportCatalogLayout>[0
     );
   }
   if (props.hasItems) {
-    return <ul className="flex flex-col divide-y divide-[var(--workspace-region-main-document-content-divider)] border-b border-[var(--workspace-region-main-document-content-divider)]">{props.children}</ul>;
+    return <ul className="flex flex-col divide-y divide-[var(--role-content-line)] border-b border-[var(--role-content-line)]">{props.children}</ul>;
   }
   return (
     <div className="flex min-h-[240px] flex-1 items-center justify-center px-6 py-10">

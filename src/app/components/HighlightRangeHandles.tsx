@@ -141,8 +141,8 @@ function HighlightRangeHandle(props: {
   const t = useTranslation();
   const label = props.side === 'from' ? t('desktop.highlightRange.start') : t('desktop.highlightRange.end');
   const color = props.kind === 'cloze'
-    ? 'rgb(var(--app-cloze-color-rgb) / 0.82)'
-    : 'rgb(var(--app-highlight-color-rgb) / 0.82)';
+    ? 'rgb(var(--role-cloze-rgb) / 0.82)'
+    : 'rgb(var(--role-highlight-rgb) / 0.82)';
   return (
     <button
       aria-label={label}

@@ -11,10 +11,10 @@ describe('color token boundary', () => {
   it('keeps legacy Tailwind action color aliases wired to semantic CSS variables', () => {
     const tailwindConfig = readWorkspaceFile('tailwind.config.js');
 
-    expect(tailwindConfig).toContain("primary: {\n          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)'");
-    expect(tailwindConfig).toContain("foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'");
-    expect(tailwindConfig).toContain("destructive: {\n          DEFAULT: 'rgb(var(--color-error) / <alpha-value>)'");
-    expect(tailwindConfig).toContain("foreground: 'rgb(var(--color-error-foreground) / <alpha-value>)'");
+    expect(tailwindConfig).toContain("primary: {\n          DEFAULT: 'rgb(var(--role-legacy-accent-rgb) / <alpha-value>)'");
+    expect(tailwindConfig).toContain("foreground: 'rgb(var(--role-legacy-accent-ink-rgb) / <alpha-value>)'");
+    expect(tailwindConfig).toContain("destructive: {\n          DEFAULT: 'rgb(var(--role-danger-rgb) / <alpha-value>)'");
+    expect(tailwindConfig).toContain("foreground: 'rgb(var(--role-danger-ink-rgb) / <alpha-value>)'");
     expect(tailwindConfig).not.toContain("DEFAULT: '#5f6368'");
     expect(tailwindConfig).not.toContain("DEFAULT: '#fb7185'");
   });

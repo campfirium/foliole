@@ -17,7 +17,7 @@ export function PdfHighlightOverlay({ locator, markerSize, pageDimensions, rotat
         viewBox="0 0 1 1"
       >
         <path d={pdfOverlayPath(locator.rects, pageDimensions, rotation)} data-testid="pdf-highlight-fill"
-          fill="var(--app-highlight-surface-color)" fillRule="nonzero" />
+          fill="var(--role-highlight-surface)" fillRule="nonzero" />
       </svg>
       {renderPdfOverlayRects(locator, 'pointer-events-none absolute z-surface')}
     </>

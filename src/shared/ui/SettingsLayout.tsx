@@ -153,7 +153,7 @@ export function settingsPaletteButtonClassName(active: boolean, className?: stri
 }
 
 export function settingsRangeClassName(className?: string) {
-  return cn('accent-[rgb(var(--app-accent-color-rgb))]', className);
+  return cn('accent-[rgb(var(--role-accent-rgb))]', className);
 }
 
 export function settingsControlValueClassName(className?: string) {

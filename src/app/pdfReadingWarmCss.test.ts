@@ -30,7 +30,7 @@ function expectOriginalModePdfBackground(styles: string) {
 function expectLightModePdfOriginalOverride(styles: string) {
   expect(styles).toContain(":root[data-resolved-base-color='light'] .pdf-document-surface,");
   expect(styles).toContain(
-    ":root[data-resolved-base-color='light'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {\n  background: rgb(var(--color-canvas));\n  filter: none;"
+    ":root[data-resolved-base-color='light'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {\n  background: rgb(var(--role-legacy-canvas-rgb));\n  filter: none;"
   );
 }
 
@@ -62,7 +62,7 @@ function expectInvertedPageBackgrounds(styles: string) {
 function expectStableInvertedBackgroundTokens(styles: string) {
   expect(styles).toContain('--pdf-reading-inverted-surface-color: rgb(23 23 23);');
   expect(styles).toContain('--pdf-reading-inverted-page-color: rgb(23 23 23);');
-  expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--color-app-shell))');
+  expect(styles).not.toContain('--pdf-reading-inverted-surface-color: color-mix(in srgb, rgb(var(--role-legacy-app-shell-rgb))');
 }
 
 describe('PDF warm reading CSS', () => {

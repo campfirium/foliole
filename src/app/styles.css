@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
 @import "./generated/appearance-colors.css";
+@import "./tokens/roles.css";
 @import "./tokens/shadows.css";
 @import "./tokens/shellless-surfaces.css";
 @import "./tokens/focus.css";
@@ -34,10 +35,7 @@
   --color-muted: 241 241 239;
   --color-card: 247 247 245;
   --color-popover: 247 247 245;
-  --color-text-primary: rgb(var(--color-foreground));
-  --color-text-secondary: rgb(var(--color-muted-foreground));
-  --color-bg-muted: rgb(var(--color-muted));
-  --content-panel-text-color: var(--color-text-primary);
+  --content-panel-text-color: var(--role-content-text);
   --navigation-title-font-size: 14px;
   --navigation-title-line-height: 20px;
   --navigation-meta-font-size: 12px;
@@ -49,47 +47,47 @@
   --workspace-document-content-divider-surface-weight: 91%;
   --workspace-region-main-document-token-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 88%, var(--workspace-region-main-sidebar-bg) 12%);
   --workspace-region-main-document-token-divider-mix-target: var(--workspace-region-main-sidebar-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-surface: rgb(var(--color-bg-panel));
-  --app-divider-mix-target: var(--workspace-divider-mix-target);
-  --app-divider-subtle: color-mix(in oklab, var(--app-surface) var(--workspace-divider-subtle-surface-weight), var(--app-divider-mix-target));
-  --app-divider-strong: color-mix(in oklab, var(--app-surface) var(--workspace-divider-strong-surface-weight), var(--app-divider-mix-target));
-  --window-titlebar-border-color: color-mix(in oklab, var(--workspace-region-titlebar-document-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target)));
-  --window-titlebar-title-color: rgb(var(--color-foreground) / 0.44);
-  --window-titlebar-action-color: rgb(var(--color-foreground) / 0.62);
-  --window-titlebar-action-hover-bg: rgb(var(--color-foreground) / 0.08);
-  --window-titlebar-action-hover-color: rgb(var(--color-foreground) / 0.92);
-  --window-titlebar-close-hover-bg: #e81123;
-  --window-titlebar-close-hover-color: #fff;
-  --node-icon-default-color: rgb(var(--color-foreground) / 0.65);
-  --app-control-border-color: rgb(var(--color-foreground) / 0.22);
-  --app-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
-  --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.04);
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-document-token-bg) 22%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
-  --app-floating-overlay-bg: rgb(var(--color-foreground) / 0.2);
-  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 76%, var(--workspace-region-main-document-token-bg) 24%);
-  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 84%, var(--workspace-region-main-document-token-bg) 16%);
-  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 32%, var(--workspace-region-main-document-bg) 68%);
-  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 34%, var(--workspace-region-main-document-bg) 66%);
-  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--workspace-region-main-document-token-bg) 68%, var(--workspace-region-main-document-bg) 32%) 96%, rgb(var(--color-foreground)) 4%);
+  --app-surface: rgb(var(--role-legacy-panel-rgb));
+  --app-divider-mix-target: var(--role-line-mix);
+  --app-divider-subtle: color-mix(in oklab, var(--app-surface) var(--role-line-subtle-weight), var(--app-divider-mix-target));
+  --app-divider-strong: color-mix(in oklab, var(--app-surface) var(--role-line-strong-weight), var(--app-divider-mix-target));
+  --window-titlebar-border-color: color-mix(in oklab, var(--role-content-top-bg) var(--role-line-strong-weight), var(--role-content-top-line-mix, var(--role-line-mix)));
+  --window-titlebar-title-color: rgb(var(--role-ink-rgb) / 0.44);
+  --window-titlebar-action-color: rgb(var(--role-ink-rgb) / 0.62);
+  --window-titlebar-action-hover-bg: rgb(var(--role-ink-rgb) / 0.08);
+  --window-titlebar-action-hover-color: rgb(var(--role-ink-rgb) / 0.92);
+  --window-titlebar-close-hover-bg: var(--role-os-close-bg);
+  --window-titlebar-close-hover-color: var(--role-os-close-ink);
+  --node-icon-default-color: rgb(var(--role-ink-rgb) / 0.65);
+  --app-control-border-color: rgb(var(--role-ink-rgb) / 0.22);
+  --app-control-border-hover-color: rgb(var(--role-ink-rgb) / 0.36);
+  --app-control-bg-hover-color: rgb(var(--role-ink-rgb) / 0.04);
+  --app-surface-control-bg: color-mix(in srgb, var(--role-content-bg) 78%, var(--role-content-tint-bg) 22%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--role-content-bg) 68%, var(--role-content-tint-bg) 32%);
+  --app-floating-overlay-bg: rgb(var(--role-ink-rgb) / 0.2);
+  --app-floating-surface-bg: color-mix(in srgb, var(--role-content-bg) 76%, var(--role-content-tint-bg) 24%);
+  --app-floating-input-bg: color-mix(in srgb, var(--role-content-bg) 84%, var(--role-content-tint-bg) 16%);
+  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--role-line-strong-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--role-line-subtle-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-floating-muted-bg: color-mix(in srgb, var(--role-content-tint-bg) 32%, var(--role-content-bg) 68%);
+  --app-floating-item-hover-bg: color-mix(in srgb, var(--role-content-tint-bg) 34%, var(--role-content-bg) 66%);
+  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--role-content-tint-bg) 68%, var(--role-content-bg) 32%) 96%, rgb(var(--role-ink-rgb)) 4%);
   --app-floating-item-active-bg: var(--app-list-item-selected-bg);
-  --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 86%, var(--workspace-region-main-topic-scrollbar-thumb-color) 14%);
+  --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--role-content-scrollbar) 86%, var(--role-list-scrollbar) 14%);
   --app-selection-toolbar-opacity: 1;
-  --app-tooltip-bg: color-mix(in srgb, rgb(var(--color-bg-elevated)) 92%, rgb(var(--color-bg-panel)) 8%);
-  --app-tooltip-fg: rgb(var(--color-foreground));
-  --app-tooltip-border-color: rgb(var(--color-foreground) / 0.13);
+  --app-tooltip-bg: color-mix(in srgb, rgb(var(--role-legacy-elevated-rgb)) 92%, rgb(var(--role-legacy-panel-rgb)) 8%);
+  --app-tooltip-fg: rgb(var(--role-ink-rgb));
+  --app-tooltip-border-color: rgb(var(--role-ink-rgb) / 0.13);
   --app-tooltip-radius: var(--radius-md);
   --app-tooltip-padding-x: 0.625rem;
   --app-tooltip-padding-y: 0.375rem;
   --app-tooltip-font-size: 12px;
   --app-tooltip-line-height: 1.25rem;
   --app-tooltip-shadow: var(--shadow-popover);
-  --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.16);
-  --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.12);
-  --app-diff-removed-surface-color: rgb(var(--color-error) / 0.14);
-  --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.1);
+  --app-diff-added-surface-color: rgb(var(--role-accent-rgb) / 0.16);
+  --app-diff-added-spacer-color: rgb(var(--role-accent-rgb) / 0.12);
+  --app-diff-removed-surface-color: rgb(var(--role-danger-rgb) / 0.14);
+  --app-diff-removed-spacer-color: rgb(var(--role-danger-rgb) / 0.1);
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -105,45 +103,45 @@
   --editor-space-sm: 0.45rem;
   --editor-space-md: 0.75rem;
   --editor-border-width-accent: 2px;
-  --editor-source-highlight-surface-color: rgb(var(--app-cloze-color-rgb) / 0.34);
-  --editor-shadow-inset-match: inset 0 0 0 1px color-mix(in srgb, var(--app-accent-color) 30%, transparent);
+  --editor-source-highlight-surface-color: rgb(var(--role-cloze-rgb) / 0.34);
+  --editor-shadow-inset-match: inset 0 0 0 1px color-mix(in srgb, var(--role-accent) 30%, transparent);
   --app-scrollbar-size: 10px;
   --app-scrollbar-thumb-inset: 3px;
   --app-scrollbar-thumb-color: color-mix(in srgb, var(--app-surface) 98%, var(--app-scrollbar-thumb-hover-color) 2%);
-  --app-scrollbar-thumb-hover-color: color-mix(in srgb, var(--app-surface) 96%, rgb(var(--color-foreground)) 4%);
-  --app-inspector-section-bg: #fbfbfb;
-  --app-inspector-section-elevated-bg: #ffffff;
+  --app-scrollbar-thumb-hover-color: color-mix(in srgb, var(--app-surface) 96%, rgb(var(--role-ink-rgb)) 4%);
+  --app-inspector-section-bg: var(--role-legacy-inspector-bg);
+  --app-inspector-section-elevated-bg: var(--role-legacy-inspector-raised-bg);
   --app-inspector-section-shadow-color: rgb(15 23 42 / 0.03);
-  --app-settings-shell-bg: var(--workspace-region-main-document-bg);
-  --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
-  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 24%, var(--workspace-region-main-document-bg) 76%);
-  --app-settings-selected-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 86%, rgb(var(--color-foreground)) 8%);
-  --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 34%, var(--workspace-region-main-document-bg) 66%);
-  --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 54%, var(--workspace-region-main-document-bg) 46%);
-  --app-settings-control-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 70%, rgb(var(--color-foreground)) 6%);
-  --app-settings-segmented-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 70%, rgb(var(--color-foreground)) 8%);
-  --app-settings-segmented-active-fg: rgb(var(--color-foreground));
-  --app-settings-control-border-color: rgb(var(--color-foreground) / 0.22);
-  --app-settings-control-border-hover-color: rgb(var(--color-foreground) / 0.36);
-  --app-settings-icon-color: rgb(var(--color-foreground) / 0.36);
-  --app-settings-icon-hover-color: rgb(var(--color-foreground) / 0.52);
-  --app-settings-icon-active-color: rgb(var(--color-foreground) / 0.58);
-  --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--color-foreground)) 18%, var(--workspace-region-main-document-bg) 82%);
-  --app-settings-switch-on-bg: rgb(var(--app-accent-color-rgb) / 0.76);
-  --app-settings-switch-knob-bg: var(--workspace-region-main-document-bg);
-  --companion-base: rgb(var(--color-canvas));
-  --companion-content: rgb(var(--color-canvas));
-  --companion-subtle: rgb(var(--color-bg-panel));
+  --app-settings-shell-bg: var(--role-content-bg);
+  --app-settings-sidebar-bg: var(--role-list-bg);
+  --app-settings-group-bg: color-mix(in srgb, var(--role-list-bg) 24%, var(--role-content-bg) 76%);
+  --app-settings-selected-bg: color-mix(in srgb, var(--role-list-bg) 86%, rgb(var(--role-ink-rgb)) 8%);
+  --app-settings-control-bg: color-mix(in srgb, var(--role-list-bg) 34%, var(--role-content-bg) 66%);
+  --app-settings-control-hover-bg: color-mix(in srgb, var(--role-list-bg) 54%, var(--role-content-bg) 46%);
+  --app-settings-control-active-bg: color-mix(in srgb, var(--role-list-bg) 70%, rgb(var(--role-ink-rgb)) 6%);
+  --app-settings-segmented-active-bg: color-mix(in srgb, var(--role-list-bg) 70%, rgb(var(--role-ink-rgb)) 8%);
+  --app-settings-segmented-active-fg: rgb(var(--role-ink-rgb));
+  --app-settings-control-border-color: rgb(var(--role-ink-rgb) / 0.22);
+  --app-settings-control-border-hover-color: rgb(var(--role-ink-rgb) / 0.36);
+  --app-settings-icon-color: rgb(var(--role-ink-rgb) / 0.36);
+  --app-settings-icon-hover-color: rgb(var(--role-ink-rgb) / 0.52);
+  --app-settings-icon-active-color: rgb(var(--role-ink-rgb) / 0.58);
+  --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--role-ink-rgb)) 18%, var(--role-content-bg) 82%);
+  --app-settings-switch-on-bg: rgb(var(--role-accent-rgb) / 0.76);
+  --app-settings-switch-knob-bg: var(--role-content-bg);
+  --companion-base: rgb(var(--role-legacy-canvas-rgb));
+  --companion-content: rgb(var(--role-legacy-canvas-rgb));
+  --companion-subtle: rgb(var(--role-legacy-panel-rgb));
   --companion-divider: #eeeeee;
   --companion-divider-strong: #dddddd;
-  --companion-accent: var(--app-accent-color);
-  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.075);
-  --companion-text-secondary: rgb(var(--color-muted-foreground));
-  --companion-text-tertiary: rgb(var(--color-muted-foreground) / 0.7);
+  --companion-accent: var(--role-accent);
+  --companion-accent-soft: rgb(var(--role-accent-rgb) / 0.075);
+  --companion-text-secondary: rgb(var(--role-ink-muted-rgb));
+  --companion-text-tertiary: rgb(var(--role-ink-muted-rgb) / 0.7);
   --pdf-reading-inverted-surface-color: rgb(23 23 23);
   --pdf-reading-inverted-page-color: rgb(23 23 23);
   --pdf-reading-inverted-page-filter-source-color: color-mix(in srgb, white 92%, rgb(17 20 19) 8%);
-  --pdf-reading-warm-surface-color: var(--workspace-region-main-document-bg);
+  --pdf-reading-warm-surface-color: var(--role-content-bg);
   --font-family-interface: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-text: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
   --font-family-sans: var(--font-family-text);
@@ -229,11 +227,6 @@
     rgb(var(--color-bg-panel))
   );
   --workspace-region-main-sidebar-panel-elevated-bg: rgb(var(--color-canvas));
-  --workspace-region-main-document-content-divider: color-mix(
-    in oklab,
-    var(--workspace-region-main-document-token-bg) var(--workspace-document-content-divider-surface-weight),
-    var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target))
-  );
 }
 
 :root:lang(zh) {
@@ -315,7 +308,7 @@
 }
 
 .companion-sheet-overlay {
-  background-color: rgb(var(--color-foreground) / 0.32);
+  background-color: rgb(var(--role-ink-rgb) / 0.32);
 }
 
 .companion-sheet-overlay[data-state='open'] {
@@ -369,52 +362,51 @@
   --workspace-divider-subtle-surface-weight: 93%;
   --workspace-divider-strong-surface-weight: 88%;
   --workspace-document-content-divider-surface-weight: 93%;
-  --app-control-border-color: rgb(var(--color-foreground) / 0.34);
-  --app-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
-  --app-control-bg-hover-color: rgb(var(--color-foreground) / 0.06);
-  --content-panel-text-color: #d8d8d8;
-  --app-diff-added-surface-color: rgb(var(--app-accent-color-rgb) / 0.18);
-  --app-diff-added-spacer-color: rgb(var(--app-accent-color-rgb) / 0.14);
-  --app-diff-removed-surface-color: rgb(var(--color-error) / 0.18);
-  --app-diff-removed-spacer-color: rgb(var(--color-error) / 0.14);
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 72%, var(--workspace-region-main-document-token-bg) 28%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 62%, var(--workspace-region-main-document-token-bg) 38%);
-  --app-floating-overlay-bg: rgb(var(--color-app-shell) / 0.7);
-  --app-floating-surface-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
-  --app-floating-input-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 76%, var(--workspace-region-main-document-token-bg) 24%);
-  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-strong-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target)));
-  --app-floating-muted-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 38%, var(--workspace-region-main-document-bg) 62%);
-  --app-floating-item-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-token-bg) 40%, var(--workspace-region-main-document-bg) 60%);
-  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--workspace-region-main-document-token-bg) 62%, var(--workspace-region-main-document-bg) 38%) 94%, rgb(var(--color-foreground)) 6%);
+  --app-control-border-color: rgb(var(--role-ink-rgb) / 0.34);
+  --app-control-border-hover-color: rgb(var(--role-ink-rgb) / 0.5);
+  --app-control-bg-hover-color: rgb(var(--role-ink-rgb) / 0.06);
+  --app-diff-added-surface-color: rgb(var(--role-accent-rgb) / 0.18);
+  --app-diff-added-spacer-color: rgb(var(--role-accent-rgb) / 0.14);
+  --app-diff-removed-surface-color: rgb(var(--role-danger-rgb) / 0.18);
+  --app-diff-removed-spacer-color: rgb(var(--role-danger-rgb) / 0.14);
+  --app-surface-control-bg: color-mix(in srgb, var(--role-content-bg) 72%, var(--role-content-tint-bg) 28%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--role-content-bg) 62%, var(--role-content-tint-bg) 38%);
+  --app-floating-overlay-bg: rgb(var(--role-legacy-app-shell-rgb) / 0.7);
+  --app-floating-surface-bg: color-mix(in srgb, var(--role-content-bg) 68%, var(--role-content-tint-bg) 32%);
+  --app-floating-input-bg: color-mix(in srgb, var(--role-content-bg) 76%, var(--role-content-tint-bg) 24%);
+  --app-floating-border-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--role-line-strong-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-floating-divider-color: color-mix(in oklab, var(--app-floating-surface-bg) var(--role-line-subtle-weight), var(--role-content-tint-line-mix, var(--role-line-mix)));
+  --app-floating-muted-bg: color-mix(in srgb, var(--role-content-tint-bg) 38%, var(--role-content-bg) 62%);
+  --app-floating-item-hover-bg: color-mix(in srgb, var(--role-content-tint-bg) 40%, var(--role-content-bg) 60%);
+  --app-list-item-selected-bg: color-mix(in srgb, color-mix(in srgb, var(--role-content-tint-bg) 62%, var(--role-content-bg) 38%) 94%, rgb(var(--role-ink-rgb)) 6%);
   --app-floating-item-active-bg: var(--app-list-item-selected-bg);
-  --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--workspace-region-main-document-scrollbar-thumb-color) 78%, var(--workspace-region-main-topic-scrollbar-thumb-color) 22%);
-  --app-tooltip-bg: color-mix(in srgb, rgb(var(--color-bg-elevated)) 92%, rgb(var(--color-bg-panel)) 8%);
-  --app-tooltip-fg: rgb(var(--color-foreground));
-  --app-tooltip-border-color: rgb(var(--color-foreground) / 0.16);
-  --app-settings-shell-bg: var(--workspace-region-main-document-bg);
-  --app-settings-sidebar-bg: var(--workspace-region-main-topic-bg);
-  --app-settings-group-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 36%, var(--workspace-region-main-document-bg) 64%);
-  --app-settings-selected-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 82%, rgb(var(--color-foreground)) 10%);
-  --app-settings-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 40%, var(--workspace-region-main-document-bg) 60%);
-  --app-settings-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 56%, var(--workspace-region-main-document-bg) 44%);
-  --app-settings-control-active-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 68%, rgb(var(--color-foreground)) 8%);
-  --app-settings-segmented-active-bg: rgb(var(--color-foreground) / 0.9);
-  --app-settings-segmented-active-fg: rgb(var(--color-accent-foreground));
-  --app-settings-control-border-color: rgb(var(--color-foreground) / 0.34);
-  --app-settings-control-border-hover-color: rgb(var(--color-foreground) / 0.5);
-  --app-settings-icon-color: rgb(var(--color-foreground) / 0.42);
-  --app-settings-icon-hover-color: rgb(var(--color-foreground) / 0.58);
-  --app-settings-icon-active-color: rgb(var(--color-foreground) / 0.66);
-  --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--color-foreground)) 18%, var(--workspace-region-main-document-bg) 82%);
-  --app-settings-switch-on-bg: rgb(var(--app-accent-color-rgb) / 0.72);
-  --app-settings-switch-knob-bg: rgb(var(--color-bg-elevated));
-  --companion-base: rgb(var(--color-canvas));
-  --companion-content: rgb(var(--color-bg-elevated));
-  --companion-subtle: rgb(var(--color-bg-panel));
+  --app-floating-scrollbar-thumb-color: color-mix(in srgb, var(--role-content-scrollbar) 78%, var(--role-list-scrollbar) 22%);
+  --app-tooltip-bg: color-mix(in srgb, rgb(var(--role-legacy-elevated-rgb)) 92%, rgb(var(--role-legacy-panel-rgb)) 8%);
+  --app-tooltip-fg: rgb(var(--role-ink-rgb));
+  --app-tooltip-border-color: rgb(var(--role-ink-rgb) / 0.16);
+  --app-settings-shell-bg: var(--role-content-bg);
+  --app-settings-sidebar-bg: var(--role-list-bg);
+  --app-settings-group-bg: color-mix(in srgb, var(--role-list-bg) 36%, var(--role-content-bg) 64%);
+  --app-settings-selected-bg: color-mix(in srgb, var(--role-list-bg) 82%, rgb(var(--role-ink-rgb)) 10%);
+  --app-settings-control-bg: color-mix(in srgb, var(--role-list-bg) 40%, var(--role-content-bg) 60%);
+  --app-settings-control-hover-bg: color-mix(in srgb, var(--role-list-bg) 56%, var(--role-content-bg) 44%);
+  --app-settings-control-active-bg: color-mix(in srgb, var(--role-list-bg) 68%, rgb(var(--role-ink-rgb)) 8%);
+  --app-settings-segmented-active-bg: rgb(var(--role-ink-rgb) / 0.9);
+  --app-settings-segmented-active-fg: rgb(var(--role-legacy-accent-ink-rgb));
+  --app-settings-control-border-color: rgb(var(--role-ink-rgb) / 0.34);
+  --app-settings-control-border-hover-color: rgb(var(--role-ink-rgb) / 0.5);
+  --app-settings-icon-color: rgb(var(--role-ink-rgb) / 0.42);
+  --app-settings-icon-hover-color: rgb(var(--role-ink-rgb) / 0.58);
+  --app-settings-icon-active-color: rgb(var(--role-ink-rgb) / 0.66);
+  --app-settings-switch-off-bg: color-mix(in srgb, rgb(var(--role-ink-rgb)) 18%, var(--role-content-bg) 82%);
+  --app-settings-switch-on-bg: rgb(var(--role-accent-rgb) / 0.72);
+  --app-settings-switch-knob-bg: rgb(var(--role-legacy-elevated-rgb));
+  --companion-base: rgb(var(--role-legacy-canvas-rgb));
+  --companion-content: rgb(var(--role-legacy-elevated-rgb));
+  --companion-subtle: rgb(var(--role-legacy-panel-rgb));
   --companion-divider: #444541;
   --companion-divider-strong: #555651;
-  --companion-accent-soft: rgb(var(--app-accent-color-rgb) / 0.16);
+  --companion-accent-soft: rgb(var(--role-accent-rgb) / 0.16);
   color-scheme: dark;
 }
 
@@ -426,8 +418,8 @@ body,
 
 body {
   margin: 0;
-  background: rgb(var(--color-canvas));
-  color: rgb(var(--color-foreground));
+  background: rgb(var(--role-legacy-canvas-rgb));
+  color: rgb(var(--role-ink-rgb));
   font-family: var(--app-interface-font-family, var(--font-family-interface));
   font-size: var(--app-font-size, 15px);
   line-height: 1.5;
@@ -439,8 +431,8 @@ body {
 
 .startup-surface {
   align-items: flex-start;
-  background: rgb(var(--color-canvas));
-  color: rgb(var(--color-foreground));
+  background: rgb(var(--role-legacy-canvas-rgb));
+  color: rgb(var(--role-ink-rgb));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -456,14 +448,14 @@ body {
 }
 
 .startup-surface__eyebrow {
-  color: rgb(var(--color-muted-foreground));
+  color: rgb(var(--role-ink-muted-rgb));
   font-size: 12px;
   font-weight: 600;
   margin: 0;
 }
 
 .startup-surface__title {
-  color: rgb(var(--color-foreground));
+  color: rgb(var(--role-ink-rgb));
   font-size: 20px;
   font-weight: 600;
   line-height: 1.25;
@@ -471,7 +463,7 @@ body {
 }
 
 .startup-surface__message {
-  color: rgb(var(--color-muted-foreground));
+  color: rgb(var(--role-ink-muted-rgb));
   font-size: 14px;
   margin: 4px 0 0;
   max-width: 60ch;
@@ -479,11 +471,11 @@ body {
 }
 
 .startup-surface__message[data-tone='critical'] {
-  color: rgb(var(--color-error-foreground));
+  color: rgb(var(--role-danger-ink-rgb));
 }
 
 .startup-surface__meta {
-  color: rgb(var(--color-muted-foreground));
+  color: rgb(var(--role-ink-muted-rgb));
   font-family: var(--font-family-mono);
   font-size: 12px;
   margin: 0;
@@ -503,7 +495,7 @@ body {
   background: var(--app-surface-control-bg);
   border: 1px solid var(--app-control-border-color);
   border-radius: var(--radius-md);
-  color: rgb(var(--color-foreground));
+  color: rgb(var(--role-ink-rgb));
   cursor: default;
   display: inline-flex;
   font: inherit;
@@ -520,8 +512,8 @@ body {
 
 .startup-surface__button[data-variant='emphasis'] {
   background: transparent;
-  border-color: rgb(var(--color-border-strong));
-  color: rgb(var(--color-foreground));
+  border-color: rgb(var(--role-legacy-border-strong-rgb));
+  color: rgb(var(--role-ink-rgb));
   font-weight: 500;
 }
 
@@ -531,13 +523,13 @@ b {
 }
 
 ::selection {
-  background-color: var(--app-text-selection-bg-color);
-  color: var(--app-text-selection-fg-color);
-  -webkit-text-fill-color: var(--app-text-selection-fg-color);
+  background-color: var(--role-text-selection-bg);
+  color: var(--role-text-selection-ink);
+  -webkit-text-fill-color: var(--role-text-selection-ink);
 }
 
 [data-node-icon='leaf'] {
-  color: color-mix(in srgb, var(--node-icon-custom-color, var(--node-icon-default-color)) 84%, rgb(var(--color-foreground)));
+  color: color-mix(in srgb, var(--node-icon-custom-color, var(--node-icon-default-color)) 84%, rgb(var(--role-ink-rgb)));
 }
 
 [data-node-icon='leaf'] svg {
@@ -557,16 +549,16 @@ b {
   background:
     linear-gradient(
       to right,
-      var(--workspace-region-titlebar-rail-bg) 0,
-      var(--workspace-region-titlebar-rail-bg) var(--workspace-rail-width),
-      var(--workspace-region-titlebar-folder-bg) var(--workspace-rail-width),
-      var(--workspace-region-titlebar-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      var(--workspace-region-titlebar-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      var(--workspace-region-titlebar-document-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      var(--workspace-region-titlebar-document-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--workspace-region-titlebar-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--workspace-region-titlebar-sidebar-bg) 100%
+      var(--role-frame-top-bg) 0,
+      var(--role-frame-top-bg) var(--workspace-rail-width),
+      var(--role-nav-top-bg) var(--workspace-rail-width),
+      var(--role-nav-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      var(--role-list-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      var(--role-list-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
+      var(--role-content-top-bg) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
+      var(--role-content-top-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--role-sidebar-top-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--role-sidebar-top-bg) 100%
     );
   display: grid;
   grid-template-columns: var(--window-titlebar-left-width, 40px) minmax(0, 1fr) var(--window-titlebar-right-width, 40px);
@@ -582,16 +574,16 @@ b {
   background:
     linear-gradient(
       to right,
-      color-mix(in oklab, var(--workspace-region-titlebar-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-rail-divider-mix-target, var(--workspace-divider-mix-target))) 0,
-      color-mix(in oklab, var(--workspace-region-titlebar-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-rail-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--workspace-region-titlebar-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-folder-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--workspace-region-titlebar-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-folder-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--workspace-region-titlebar-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--workspace-region-titlebar-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      color-mix(in oklab, var(--workspace-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
-      color-mix(in oklab, var(--workspace-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--workspace-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--workspace-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) 100%
+      color-mix(in oklab, var(--role-frame-top-bg) var(--role-line-subtle-weight), var(--role-frame-top-line-mix, var(--role-line-mix))) 0,
+      color-mix(in oklab, var(--role-frame-top-bg) var(--role-line-subtle-weight), var(--role-frame-top-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
+      color-mix(in oklab, var(--role-nav-top-bg) var(--role-line-subtle-weight), var(--role-nav-top-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
+      color-mix(in oklab, var(--role-nav-top-bg) var(--role-line-subtle-weight), var(--role-nav-top-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      color-mix(in oklab, var(--role-list-top-bg) var(--role-line-subtle-weight), var(--role-list-top-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))),
+      color-mix(in oklab, var(--role-list-top-bg) var(--role-line-subtle-weight), var(--role-list-top-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
+      color-mix(in oklab, var(--role-content-top-bg) var(--role-line-subtle-weight), var(--role-content-top-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px))),
+      color-mix(in oklab, var(--role-content-top-bg) var(--role-line-subtle-weight), var(--role-content-top-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      color-mix(in oklab, var(--role-sidebar-top-bg) var(--role-line-subtle-weight), var(--role-sidebar-top-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      color-mix(in oklab, var(--role-sidebar-top-bg) var(--role-line-subtle-weight), var(--role-sidebar-top-line-mix, var(--role-line-mix))) 100%
     );
   bottom: 0;
   content: '';
@@ -600,78 +592,78 @@ b {
   pointer-events: none;
   position: absolute;
   right: 0;
-  opacity: var(--workspace-divider-opacity);
+  opacity: var(--role-column-line-opacity);
   z-index: var(--z-local-feedback);
 }
 
 .workspace-region-main-rail {
-  background: var(--workspace-region-main-rail-bg);
-  --app-surface: var(--workspace-region-main-rail-bg);
-  --app-divider-mix-target: var(--workspace-region-main-rail-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-scrollbar-thumb-color: var(--workspace-region-main-rail-scrollbar-thumb-color);
-  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-rail-scrollbar-thumb-hover-color);
+  background: var(--role-frame-bg);
+  --app-surface: var(--role-frame-bg);
+  --app-divider-mix-target: var(--role-frame-line-mix, var(--role-line-mix));
+  --app-scrollbar-thumb-color: var(--role-frame-scrollbar);
+  --app-scrollbar-thumb-hover-color: var(--role-frame-scrollbar-hover);
 }
 
 .workspace-region-main-folder {
-  background: var(--workspace-region-main-folder-bg);
-  --app-surface: var(--workspace-region-main-folder-bg);
-  --app-divider-mix-target: var(--workspace-region-main-folder-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 94%, var(--workspace-region-main-topic-bg) 6%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-folder-bg) 88%, var(--workspace-region-main-topic-bg) 12%);
-  --app-scrollbar-thumb-color: var(--workspace-region-main-folder-scrollbar-thumb-color);
-  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-folder-scrollbar-thumb-hover-color);
+  background: var(--role-nav-bg);
+  --app-surface: var(--role-nav-bg);
+  --app-divider-mix-target: var(--role-nav-line-mix, var(--role-line-mix));
+  --app-surface-control-bg: color-mix(in srgb, var(--role-nav-bg) 94%, var(--role-list-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--role-nav-bg) 88%, var(--role-list-bg) 12%);
+  --app-scrollbar-thumb-color: var(--role-nav-scrollbar);
+  --app-scrollbar-thumb-hover-color: var(--role-nav-scrollbar-hover);
 }
 
 .workspace-region-main-topic {
-  background: var(--workspace-region-main-topic-bg);
-  --app-surface: var(--workspace-region-main-topic-bg);
-  --app-divider-mix-target: var(--workspace-region-main-topic-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 94%, var(--workspace-region-main-document-bg) 6%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-topic-bg) 88%, var(--workspace-region-main-document-bg) 12%);
-  --app-scrollbar-thumb-color: var(--workspace-region-main-topic-scrollbar-thumb-color);
-  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-topic-scrollbar-thumb-hover-color);
+  background: var(--role-list-bg);
+  --app-surface: var(--role-list-bg);
+  --app-divider-mix-target: var(--role-list-line-mix, var(--role-line-mix));
+  --app-surface-control-bg: color-mix(in srgb, var(--role-list-bg) 94%, var(--role-content-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--role-list-bg) 88%, var(--role-content-bg) 12%);
+  --app-scrollbar-thumb-color: var(--role-list-scrollbar);
+  --app-scrollbar-thumb-hover-color: var(--role-list-scrollbar-hover);
 }
 
 .workspace-region-main-document {
-  background: var(--workspace-region-main-document-bg);
-  --app-surface: var(--workspace-region-main-document-token-bg);
-  --app-divider-mix-target: var(--workspace-region-main-document-token-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-surface-control-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 78%, var(--workspace-region-main-document-token-bg) 22%);
-  --app-surface-control-hover-bg: color-mix(in srgb, var(--workspace-region-main-document-bg) 68%, var(--workspace-region-main-document-token-bg) 32%);
-  --app-scrollbar-thumb-color: var(--workspace-region-main-document-scrollbar-thumb-color);
-  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-document-scrollbar-thumb-hover-color);
+  background: var(--role-content-bg);
+  --app-surface: var(--role-content-tint-bg);
+  --app-divider-mix-target: var(--role-content-tint-line-mix, var(--role-line-mix));
+  --app-surface-control-bg: color-mix(in srgb, var(--role-content-bg) 78%, var(--role-content-tint-bg) 22%);
+  --app-surface-control-hover-bg: color-mix(in srgb, var(--role-content-bg) 68%, var(--role-content-tint-bg) 32%);
+  --app-scrollbar-thumb-color: var(--role-content-scrollbar);
+  --app-scrollbar-thumb-hover-color: var(--role-content-scrollbar-hover);
 }
 
 .workspace-toolbar-surface {
-  --app-surface: rgb(var(--color-bg-subtle));
-  --app-surface-control-bg: color-mix(in srgb, rgb(var(--color-bg-subtle)) 94%, var(--workspace-region-main-topic-bg) 6%);
-  --app-surface-control-hover-bg: color-mix(in srgb, rgb(var(--color-bg-subtle)) 88%, var(--workspace-region-main-topic-bg) 12%);
+  --app-surface: rgb(var(--role-legacy-subtle-rgb));
+  --app-surface-control-bg: color-mix(in srgb, rgb(var(--role-legacy-subtle-rgb)) 94%, var(--role-list-bg) 6%);
+  --app-surface-control-hover-bg: color-mix(in srgb, rgb(var(--role-legacy-subtle-rgb)) 88%, var(--role-list-bg) 12%);
 }
 
 .workspace-region-main-sidebar {
-  background: var(--workspace-region-main-sidebar-bg);
-  --app-surface: var(--workspace-region-main-sidebar-bg);
-  --app-divider-mix-target: var(--workspace-region-main-sidebar-divider-mix-target, var(--workspace-divider-mix-target));
-  --app-inspector-section-bg: var(--workspace-region-main-sidebar-panel-bg);
-  --app-inspector-section-elevated-bg: var(--workspace-region-main-sidebar-panel-elevated-bg);
-  --app-scrollbar-thumb-color: var(--workspace-region-main-sidebar-scrollbar-thumb-color);
-  --app-scrollbar-thumb-hover-color: var(--workspace-region-main-sidebar-scrollbar-thumb-hover-color);
+  background: var(--role-sidebar-bg);
+  --app-surface: var(--role-sidebar-bg);
+  --app-divider-mix-target: var(--role-sidebar-line-mix, var(--role-line-mix));
+  --app-inspector-section-bg: var(--role-sidebar-panel-bg);
+  --app-inspector-section-elevated-bg: var(--role-sidebar-panel-raised-bg);
+  --app-scrollbar-thumb-color: var(--role-sidebar-scrollbar);
+  --app-scrollbar-thumb-hover-color: var(--role-sidebar-scrollbar-hover);
 }
 
 .workspace-bottom-region-grid {
   background:
     linear-gradient(
       to right,
-      var(--workspace-region-footer-rail-bg) 0,
-      var(--workspace-region-footer-rail-bg) var(--workspace-rail-width),
-      var(--workspace-region-footer-folder-bg) var(--workspace-rail-width),
-      var(--workspace-region-footer-folder-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      var(--workspace-region-footer-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      var(--workspace-region-footer-topic-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      var(--workspace-region-footer-document-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      var(--workspace-region-footer-document-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--workspace-region-footer-sidebar-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--workspace-region-footer-sidebar-bg) 100%
+      var(--role-frame-bottom-bg) 0,
+      var(--role-frame-bottom-bg) var(--workspace-rail-width),
+      var(--role-nav-bottom-bg) var(--workspace-rail-width),
+      var(--role-nav-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
+      var(--role-list-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
+      var(--role-list-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--role-content-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      var(--role-content-bottom-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--role-sidebar-bottom-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      var(--role-sidebar-bottom-bg) 100%
     );
 }
 
@@ -679,16 +671,16 @@ b {
   background:
     linear-gradient(
       to right,
-      color-mix(in oklab, var(--workspace-region-footer-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-rail-divider-mix-target, var(--workspace-divider-mix-target))) 0,
-      color-mix(in oklab, var(--workspace-region-footer-rail-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-rail-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--workspace-region-footer-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-folder-divider-mix-target, var(--workspace-divider-mix-target))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--workspace-region-footer-folder-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-folder-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--workspace-region-footer-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--workspace-region-footer-topic-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-topic-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      color-mix(in oklab, var(--workspace-region-footer-document-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      color-mix(in oklab, var(--workspace-region-footer-document-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-document-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--workspace-region-footer-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--workspace-region-footer-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-footer-sidebar-divider-mix-target, var(--workspace-divider-mix-target))) 100%
+      color-mix(in oklab, var(--role-frame-bottom-bg) var(--role-line-subtle-weight), var(--role-frame-bottom-line-mix, var(--role-line-mix))) 0,
+      color-mix(in oklab, var(--role-frame-bottom-bg) var(--role-line-subtle-weight), var(--role-frame-bottom-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
+      color-mix(in oklab, var(--role-nav-bottom-bg) var(--role-line-subtle-weight), var(--role-nav-bottom-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
+      color-mix(in oklab, var(--role-nav-bottom-bg) var(--role-line-subtle-weight), var(--role-nav-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
+      color-mix(in oklab, var(--role-list-bottom-bg) var(--role-line-subtle-weight), var(--role-list-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
+      color-mix(in oklab, var(--role-list-bottom-bg) var(--role-line-subtle-weight), var(--role-list-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      color-mix(in oklab, var(--role-content-bottom-bg) var(--role-line-subtle-weight), var(--role-content-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
+      color-mix(in oklab, var(--role-content-bottom-bg) var(--role-line-subtle-weight), var(--role-content-bottom-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      color-mix(in oklab, var(--role-sidebar-bottom-bg) var(--role-line-subtle-weight), var(--role-sidebar-bottom-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
+      color-mix(in oklab, var(--role-sidebar-bottom-bg) var(--role-line-subtle-weight), var(--role-sidebar-bottom-line-mix, var(--role-line-mix))) 100%
     );
   content: '';
   height: 1px;
@@ -697,7 +689,7 @@ b {
   position: absolute;
   right: 0;
   top: 0;
-  opacity: var(--workspace-divider-opacity);
+  opacity: var(--role-column-line-opacity);
   z-index: var(--z-local-overlay);
 }
 
@@ -827,7 +819,7 @@ b {
 }
 
 .window-titlebar-left-timestamp {
-  color: rgb(var(--color-muted-foreground) / 0.82);
+  color: rgb(var(--role-ink-muted-rgb) / 0.82);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -853,7 +845,7 @@ b {
 
 .window-titlebar-right-divider {
   align-self: stretch;
-  background: color-mix(in oklab, var(--workspace-region-titlebar-sidebar-bg) var(--workspace-divider-subtle-surface-weight), var(--workspace-region-titlebar-sidebar-divider-mix-target, var(--workspace-divider-mix-target)));
+  background: color-mix(in oklab, var(--role-sidebar-top-bg) var(--role-line-subtle-weight), var(--role-sidebar-top-line-mix, var(--role-line-mix)));
   pointer-events: none;
 }
 
@@ -918,7 +910,7 @@ b {
 }
 
 .markdown-editor-host[data-immersive-editing='true'] .cm-activeLine {
-  background-color: rgb(var(--color-foreground) / 0.06) !important;
+  background-color: rgb(var(--role-ink-rgb) / 0.06) !important;
 }
 
 .markdown-editor-host .cm-scroller {
@@ -994,7 +986,7 @@ b {
 }
 
 .markdown-editor-host .cm-editor .cm-line.cm-paragraph-marker-line-image .cm-md-image-widget-block::before {
-  background-color: var(--app-accent-color);
+  background-color: var(--role-accent);
   bottom: 0;
   content: '';
   left: -1.2em;
@@ -1009,12 +1001,12 @@ b {
   background:
     linear-gradient(
       to bottom,
-      rgb(var(--app-highlight-color-rgb) / 0.38) 0,
-      rgb(var(--app-highlight-color-rgb) / 0.38) 0.5em,
+      rgb(var(--role-highlight-rgb) / 0.38) 0,
+      rgb(var(--role-highlight-rgb) / 0.38) 0.5em,
       transparent 0.5em,
       transparent calc(100% - 0.5em),
-      rgb(var(--app-highlight-color-rgb) / 0.38) calc(100% - 0.5em),
-      rgb(var(--app-highlight-color-rgb) / 0.38) 100%
+      rgb(var(--role-highlight-rgb) / 0.38) calc(100% - 0.5em),
+      rgb(var(--role-highlight-rgb) / 0.38) 100%
     );
   border-radius: var(--editor-radius-xl);
   padding-bottom: 0.5em;
@@ -1083,18 +1075,18 @@ b {
 
 .cm-md-image-cloze-region[data-region-state='normal'] {
   background: transparent;
-  border-color: rgb(var(--color-muted-foreground) / 0.9);
+  border-color: rgb(var(--role-ink-muted-rgb) / 0.9);
   border-style: dashed;
 }
 
 .cm-md-image-cloze-region[data-region-state='hidden'] {
-  background: rgb(var(--color-bg-elevated) / 0.98);
-  border-color: rgb(var(--color-border) / 0.98);
+  background: rgb(var(--role-legacy-elevated-rgb) / 0.98);
+  border-color: rgb(var(--role-legacy-border-rgb) / 0.98);
 }
 
 .cm-md-image-cloze-region[data-region-state='outlined'] {
   background: transparent;
-  border-color: rgb(var(--app-highlight-color-rgb) / 0.92);
+  border-color: rgb(var(--role-highlight-rgb) / 0.92);
   border-style: dashed;
 }
 
@@ -1104,17 +1096,17 @@ b {
 
 
 .cm-md-image-cloze-region[data-region-state='selected'] {
-  background: rgb(var(--app-cloze-color-rgb) / 0.14);
-  border-color: rgb(var(--app-cloze-color-rgb) / 0.92);
+  background: rgb(var(--role-cloze-rgb) / 0.14);
+  border-color: rgb(var(--role-cloze-rgb) / 0.92);
   border-style: solid;
 }
 
 .cm-md-image-cloze-action {
   align-items: center;
-  background: rgb(var(--color-bg-elevated) / 0.96);
-  border: 1px solid rgb(var(--color-border) / 0.85);
+  background: rgb(var(--role-legacy-elevated-rgb) / 0.96);
+  border: 1px solid rgb(var(--role-legacy-border-rgb) / 0.85);
   border-radius: var(--radius-md);
-  color: rgb(var(--color-foreground));
+  color: rgb(var(--role-ink-rgb));
   cursor: pointer;
   display: inline-flex;
   font-size: 12px;
@@ -1149,7 +1141,7 @@ b {
 
 .cm-md-image-cloze-draft {
   background: transparent;
-  border: 2px dashed rgb(var(--color-foreground) / 0.92);
+  border: 2px dashed rgb(var(--role-ink-rgb) / 0.92);
   border-radius: var(--radius-md);
   position: absolute;
 }
@@ -1177,9 +1169,9 @@ b {
 }
 
 .cm-md-image-cloze-feedback {
-  background: rgb(var(--color-foreground) / 0.92);
+  background: rgb(var(--role-ink-rgb) / 0.92);
   border-radius: 999px;
-  color: rgb(var(--color-canvas) / 0.96);
+  color: rgb(var(--role-legacy-canvas-rgb) / 0.96);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -1273,12 +1265,12 @@ b {
 :root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack),
 :root[data-resolved-base-color='light'] .pdf-document-surface,
 :root[data-resolved-base-color='light'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {
-  background: rgb(var(--color-canvas));
+  background: rgb(var(--role-legacy-canvas-rgb));
 }
 
 :root[data-pdf-reading-mode='original'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder),
 :root[data-resolved-base-color='light'] .pdf-document-surface :is(.react-pdf__Page, .pdf-document-page-placeholder) {
-  background: rgb(var(--color-canvas));
+  background: rgb(var(--role-legacy-canvas-rgb));
   filter: none;
 }
 
@@ -1336,7 +1328,7 @@ body.link-panel-dragging {
 
 .settings-root {
   align-items: center;
-  background: rgb(var(--color-foreground) / 0.08);
+  background: rgb(var(--role-ink-rgb) / 0.08);
   display: flex;
   inset: 0;
   justify-content: center;

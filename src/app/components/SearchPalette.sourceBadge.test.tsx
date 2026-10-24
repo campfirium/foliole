@@ -107,5 +107,5 @@ it('shows a watched source badge on the right for matching results', async () =>
 
   await waitFor(() => expect(screen.getByText('Articles Watch')).toBeInTheDocument());
   expect(screen.getByText('Folder A')).toBeInTheDocument();
-  expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--app-accent-color)'))).toBe(true);
+  expect(screen.getAllByText('测试').some((node) => node.getAttribute('style')?.includes('var(--role-accent)'))).toBe(true);
 });

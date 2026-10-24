@@ -1,0 +1,113 @@
+/* Role layer: the only color names component tokens, utilities and components may read.
+   Roles alias the palette cells (--workspace-region-*), divider settings (--workspace-divider-*),
+   base channels (--color-*) and user-chosen functional colors (--app-accent/selection/highlight/cloze-*).
+   Those layer-one names are written only by appearance settings, the startup skeleton and their defaults. */
+:root {
+  /* Surfaces: one role per workspace column; -top / -bottom are its titlebar and footer cells. */
+  --role-content-bottom-bg: var(--workspace-region-footer-document-bg);
+  --role-nav-bottom-bg: var(--workspace-region-footer-folder-bg);
+  --role-frame-bottom-bg: var(--workspace-region-footer-rail-bg);
+  --role-sidebar-bottom-bg: var(--workspace-region-footer-sidebar-bg);
+  --role-list-bottom-bg: var(--workspace-region-footer-topic-bg);
+  --role-content-bg: var(--workspace-region-main-document-bg);
+  --role-content-tint-bg: var(--workspace-region-main-document-token-bg);
+  --role-nav-bg: var(--workspace-region-main-folder-bg);
+  --role-frame-bg: var(--workspace-region-main-rail-bg);
+  --role-sidebar-bg: var(--workspace-region-main-sidebar-bg);
+  --role-sidebar-panel-bg: var(--workspace-region-main-sidebar-panel-bg);
+  --role-sidebar-panel-raised-bg: var(--workspace-region-main-sidebar-panel-elevated-bg);
+  --role-list-bg: var(--workspace-region-main-topic-bg);
+  --role-content-top-bg: var(--workspace-region-titlebar-document-bg);
+  --role-nav-top-bg: var(--workspace-region-titlebar-folder-bg);
+  --role-frame-top-bg: var(--workspace-region-titlebar-rail-bg);
+  --role-sidebar-top-bg: var(--workspace-region-titlebar-sidebar-bg);
+  --role-list-top-bg: var(--workspace-region-titlebar-topic-bg);
+  /* Lines: the color a divider leans toward on each surface, how far, and column-line opacity. */
+  --role-line-mix: var(--workspace-divider-mix-target);
+  --role-column-line-opacity: var(--workspace-divider-opacity);
+  --role-line-strong-weight: var(--workspace-divider-strong-surface-weight);
+  --role-line-subtle-weight: var(--workspace-divider-subtle-surface-weight);
+  --role-content-line-weight: var(--workspace-document-content-divider-surface-weight);
+  --role-content-bottom-line-mix: var(--workspace-region-footer-document-divider-mix-target);
+  --role-nav-bottom-line-mix: var(--workspace-region-footer-folder-divider-mix-target);
+  --role-frame-bottom-line-mix: var(--workspace-region-footer-rail-divider-mix-target);
+  --role-sidebar-bottom-line-mix: var(--workspace-region-footer-sidebar-divider-mix-target);
+  --role-list-bottom-line-mix: var(--workspace-region-footer-topic-divider-mix-target);
+  --role-content-line-mix: var(--workspace-region-main-document-divider-mix-target);
+  --role-content-tint-line-mix: var(--workspace-region-main-document-token-divider-mix-target);
+  --role-nav-line-mix: var(--workspace-region-main-folder-divider-mix-target);
+  --role-frame-line-mix: var(--workspace-region-main-rail-divider-mix-target);
+  --role-sidebar-line-mix: var(--workspace-region-main-sidebar-divider-mix-target);
+  --role-list-line-mix: var(--workspace-region-main-topic-divider-mix-target);
+  --role-content-top-line-mix: var(--workspace-region-titlebar-document-divider-mix-target);
+  --role-nav-top-line-mix: var(--workspace-region-titlebar-folder-divider-mix-target);
+  --role-frame-top-line-mix: var(--workspace-region-titlebar-rail-divider-mix-target);
+  --role-sidebar-top-line-mix: var(--workspace-region-titlebar-sidebar-divider-mix-target);
+  --role-list-top-line-mix: var(--workspace-region-titlebar-topic-divider-mix-target);
+  /* Scrollbars derived from each column surface. */
+  --role-content-scrollbar: var(--workspace-region-main-document-scrollbar-thumb-color);
+  --role-content-scrollbar-hover: var(--workspace-region-main-document-scrollbar-thumb-hover-color);
+  --role-nav-scrollbar: var(--workspace-region-main-folder-scrollbar-thumb-color);
+  --role-nav-scrollbar-hover: var(--workspace-region-main-folder-scrollbar-thumb-hover-color);
+  --role-frame-scrollbar: var(--workspace-region-main-rail-scrollbar-thumb-color);
+  --role-frame-scrollbar-hover: var(--workspace-region-main-rail-scrollbar-thumb-hover-color);
+  --role-sidebar-scrollbar: var(--workspace-region-main-sidebar-scrollbar-thumb-color);
+  --role-sidebar-scrollbar-hover: var(--workspace-region-main-sidebar-scrollbar-thumb-hover-color);
+  --role-list-scrollbar: var(--workspace-region-main-topic-scrollbar-thumb-color);
+  --role-list-scrollbar-hover: var(--workspace-region-main-topic-scrollbar-thumb-hover-color);
+  /* Ink and user-chosen functional colors. */
+  --role-accent: var(--app-accent-color);
+  --role-accent-rgb: var(--app-accent-color-rgb);
+  --role-cloze: var(--app-cloze-color);
+  --role-cloze-rgb: var(--app-cloze-color-rgb);
+  --role-cloze-surface: var(--app-cloze-surface-color);
+  --role-highlight: var(--app-highlight-color);
+  --role-highlight-rgb: var(--app-highlight-color-rgb);
+  --role-highlight-surface: var(--app-highlight-surface-color);
+  --role-selection: var(--app-selection-color);
+  --role-selection-rgb: var(--app-selection-color-rgb);
+  --role-selection-surface: var(--app-selection-surface-color);
+  --role-text-selection-bg: var(--app-text-selection-bg-color);
+  --role-text-selection-ink: var(--app-text-selection-fg-color);
+  --role-danger-rgb: var(--color-error);
+  --role-danger-ink-rgb: var(--color-error-foreground);
+  --role-danger-subtle-rgb: var(--color-error-subtle);
+  --role-ink-rgb: var(--color-foreground);
+  --role-ink-muted-rgb: var(--color-muted-foreground);
+  /* Transitional roles: fixed colors not yet derived from the palette; keep values until the palette takes them over. */
+  --role-legacy-accent-rgb: var(--color-accent);
+  --role-legacy-accent-ink-rgb: var(--color-accent-foreground);
+  --role-legacy-accent-strong-rgb: var(--color-accent-strong);
+  --role-legacy-app-shell-rgb: var(--color-app-shell);
+  --role-legacy-elevated-rgb: var(--color-bg-elevated);
+  --role-legacy-panel-rgb: var(--color-bg-panel);
+  --role-legacy-subtle-rgb: var(--color-bg-subtle);
+  --role-legacy-border-rgb: var(--color-border);
+  --role-legacy-border-strong-rgb: var(--color-border-strong);
+  --role-legacy-canvas-rgb: var(--color-canvas);
+  --role-legacy-card-rgb: var(--color-card);
+  --role-legacy-muted-rgb: var(--color-muted);
+  --role-legacy-popover-rgb: var(--color-popover);
+  --role-legacy-secondary-rgb: var(--color-secondary);
+  --role-legacy-settings-divider-rgb: var(--color-settings-divider);
+  --role-legacy-inspector-bg: #fbfbfb;
+  --role-legacy-inspector-raised-bg: #ffffff;
+  /* System conventions that stay fixed on purpose. */
+  --role-os-close-bg: #e81123;
+  --role-os-close-ink: #fff;
+  /* Derived roles. */
+  --role-content-text: var(--role-text);
+  --role-text: rgb(var(--role-ink-rgb));
+  --role-text-secondary: rgb(var(--role-ink-muted-rgb));
+  --role-legacy-muted-bg: rgb(var(--role-legacy-muted-rgb));
+  --role-content-line: color-mix(
+    in oklab,
+    var(--role-content-tint-bg) var(--role-content-line-weight),
+    var(--role-content-tint-line-mix, var(--role-line-mix))
+  );
+}
+
+:root[data-resolved-base-color='dark'] {
+  /* Transitional: dark reading text stays a fixed grey until it follows the ink color. */
+  --role-content-text: #d8d8d8;
+}

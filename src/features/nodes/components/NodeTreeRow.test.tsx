@@ -67,7 +67,7 @@ it('keeps selected rows in the calm list selection style', () => {
   expect(row.className).toContain('before:bottom-0.5');
   expect(row.className).toContain('before:bg-foreground/[0.05]');
   expect(row.className).not.toContain('border-border-strong');
-  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--role-legacy-border-strong-rgb))]');
 });
 
 it('keeps bulk-selected rows in place without using the active button style', () => {
@@ -92,7 +92,7 @@ it('keeps bulk-selected rows in place without using the active button style', ()
   expect(row).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(row.className).not.toContain('my-0.5');
   expect(row).toHaveStyle({ paddingTop: '0px', paddingBottom: '0px' });
-  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+  expect(row.className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--role-legacy-border-strong-rgb))]');
 });
 
 it('uses a lighter location highlight without selecting the row', () => {

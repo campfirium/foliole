@@ -19,7 +19,7 @@ export const liveMarkdownImageTheme = {
     verticalAlign: 'text-bottom'
   },
   '.cm-md-image-element': {
-    border: '1px solid color-mix(in srgb, var(--color-border-strong) 36%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--role-legacy-border-strong-rgb) 36%, transparent)',
     borderRadius: 'var(--editor-radius-xl)',
     boxSizing: 'border-box',
     display: 'block',
@@ -35,7 +35,7 @@ export const liveMarkdownImageTheme = {
   '.cm-md-image-element-inline': { height: '100%', margin: 0, maxHeight: '1lh', verticalAlign: 'bottom' },
   '.cm-md-image-status': {
     boxSizing: 'border-box',
-    color: 'var(--color-text-secondary)',
+    color: 'var(--role-text-secondary)',
     display: 'flex',
     flexDirection: 'column',
     lineHeight: '1.4',
@@ -43,8 +43,8 @@ export const liveMarkdownImageTheme = {
   },
   '.cm-md-image-status-frame': {
     alignItems: 'center',
-    backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 72%, var(--color-text-secondary) 4%)',
-    border: '1px solid color-mix(in srgb, var(--color-border-strong) 22%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--role-legacy-muted-bg) 72%, var(--role-text-secondary) 4%)',
+    border: '1px solid color-mix(in srgb, var(--role-legacy-border-strong-rgb) 22%, transparent)',
     borderRadius: 'var(--editor-radius-lg)',
     boxSizing: 'border-box',
     display: 'flex',
@@ -59,7 +59,7 @@ export const liveMarkdownImageTheme = {
     alignItems: 'center',
     display: 'inline-flex',
     flex: '0 0 auto',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 30%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 30%, transparent)',
     height: '3.5rem',
     justifyContent: 'center',
     opacity: '0.78',
@@ -76,7 +76,7 @@ export const liveMarkdownImageTheme = {
     minWidth: 0
   },
   '.cm-md-image-status-frame-caption': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 76%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 76%, transparent)',
     fontSize: '0.9rem',
     fontWeight: 500,
     lineHeight: '1.2',
@@ -85,7 +85,7 @@ export const liveMarkdownImageTheme = {
     whiteSpace: 'nowrap'
   },
   '.cm-md-image-status-frame-source': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 68%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 68%, transparent)',
     fontSize: '0.78rem',
     lineHeight: '1.25',
     marginTop: '0.12rem',
@@ -114,7 +114,7 @@ export const liveMarkdownImageTheme = {
     backgroundColor: 'transparent',
     border: 0,
     borderRadius: 'var(--editor-radius-md)',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 54%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 54%, transparent)',
     cursor: 'pointer',
     display: 'inline-flex',
     height: '2rem',
@@ -123,8 +123,8 @@ export const liveMarkdownImageTheme = {
     width: '2rem'
   },
   '.cm-md-image-status-toolbar-button:hover, .cm-md-image-status-toolbar-button:focus-visible': {
-    backgroundColor: 'color-mix(in srgb, var(--color-bg-elevated) 64%, transparent)',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 78%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--role-legacy-elevated-rgb) 64%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 78%, transparent)',
     outline: 'none'
   },
   '.cm-md-image-status-toolbar-icon': {
@@ -132,13 +132,13 @@ export const liveMarkdownImageTheme = {
     width: '1.12rem'
   },
   '.cm-md-readwise-original-file-action': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 58%, transparent)'
+    color: 'color-mix(in srgb, var(--role-text-secondary) 58%, transparent)'
   },
   '.cm-md-readwise-original-file-action:hover, .cm-md-readwise-original-file-action:focus-visible': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 84%, transparent)'
+    color: 'color-mix(in srgb, var(--role-text-secondary) 84%, transparent)'
   },
   '.cm-md-readwise-original-file-detail': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 64%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 64%, transparent)',
     fontSize: '0.78rem',
     lineHeight: '1.35',
     marginTop: '0.55rem',
@@ -147,8 +147,8 @@ export const liveMarkdownImageTheme = {
   },
   '.cm-md-image-status-block': {},
   '.cm-md-image-status-inline': {
-    backgroundColor: 'color-mix(in srgb, var(--color-bg-muted) 48%, transparent)',
-    border: '1px solid color-mix(in srgb, var(--color-border-strong) 12%, transparent)',
+    backgroundColor: 'color-mix(in srgb, var(--role-legacy-muted-bg) 48%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--role-legacy-border-strong-rgb) 12%, transparent)',
     borderRadius: 'var(--editor-radius-lg)',
     display: 'inline-flex',
     flexDirection: 'row',

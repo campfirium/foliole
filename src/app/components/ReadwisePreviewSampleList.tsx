@@ -24,7 +24,7 @@ function HighlightedExcerpt(props: { excerpt: string; highlightText: string }) {
   return (
     <span>
       {props.excerpt.slice(0, matchRange.start)}
-      <mark className="rounded-md bg-[var(--app-highlight-surface-color)] px-0.5 text-foreground">{props.excerpt.slice(matchRange.start, matchRange.end)}</mark>
+      <mark className="rounded-md bg-[var(--role-highlight-surface)] px-0.5 text-foreground">{props.excerpt.slice(matchRange.start, matchRange.end)}</mark>
       {props.excerpt.slice(matchRange.end)}
     </span>
   );

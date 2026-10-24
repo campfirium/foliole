@@ -94,7 +94,7 @@ it('renders review action bar with primary, secondary, and status slots', () => 
 
   expect(container.querySelector('[data-mode="study"]')).toBeInTheDocument();
   expect(screen.getByLabelText('Review mode toolbar').querySelector('.max-w-\\[var\\(--document-max-width\\)\\]')).toBeInTheDocument();
-  expect(screen.getByLabelText('Review mode toolbar').className).toContain('--workspace-region-footer-document-bg');
+  expect(screen.getByLabelText('Review mode toolbar').className).toContain('--role-content-bottom-bg');
   expect(screen.getByLabelText('Review mode toolbar').className).not.toContain('bg-bg-elevated');
   expect(
     screen.getByLabelText('Review mode toolbar').querySelector(

@@ -86,8 +86,8 @@ it('keeps split-search visual decisions out of the feature surface', () => {
   ].map(readWorkspaceFile).join('\n');
 
   expect(source).not.toContain('settingsFieldClassName');
-  expect(source).not.toContain('--app-selection-color');
-  expect(source).not.toContain('--app-selection-surface-color');
+  expect(source).not.toContain('--role-selection');
+  expect(source).not.toContain('--role-selection-surface');
   expect(source).not.toContain('hover:bg-foreground');
   expect(source).not.toMatch(/(?:h|w|text)-\[/u);
 });
@@ -104,7 +104,7 @@ it('keeps formal floating menus from defining private surface colors', () => {
 
   expect(combined).not.toContain('bg-[color-mix(in_oklab,var(--app-floating-surface-bg)');
   expect(combined).not.toContain('--node-context-menu-item-hover-bg');
-  expect(combined).not.toContain('--app-selection-surface-color');
+  expect(combined).not.toContain('--role-selection-surface');
 });
 
 it('keeps focus policy in shared app focus tokens', () => {

@@ -38,8 +38,7 @@ async function collectWorkspaceSurfaceMetrics(desktopWindow: import('@playwright
       },
       baseColor: document.documentElement.dataset.resolvedBaseColor ?? null,
       rootTokens: {
-        appShell: readVar('--color-app-shell'),
-        legacyBackground: readVar('--color-background')
+        appShell: readVar('--color-app-shell')
       },
       dividerWeights: {
         strong: readVar('--workspace-divider-strong-surface-weight'),
@@ -71,7 +70,7 @@ test('default dark workspace surfaces use the neutral dark surface ladder', asyn
   });
 
   expect(metrics.baseColor).toBe('dark');
-  expect(metrics.rootTokens).toEqual({ appShell: '17 20 19', legacyBackground: '' });
+  expect(metrics.rootTokens).toEqual({ appShell: '17 20 19' });
   expect(metrics.surfaces).toEqual(DARK_DEFAULT_SURFACES);
   expect(metrics.dividerWeights).toEqual({ strong: '88%', subtle: '93%' });
   expect(metrics.backgrounds).toMatchObject({

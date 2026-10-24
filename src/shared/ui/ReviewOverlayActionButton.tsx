@@ -38,7 +38,7 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
 });
 
 export function ReviewOverlayDivider() {
-  return <span aria-hidden="true" className="h-4 w-px shrink-0 bg-[rgb(var(--color-border)/0.42)]" data-review-overlay-divider />;
+  return <span aria-hidden="true" className="h-4 w-px shrink-0 bg-[rgb(var(--role-legacy-border-rgb)/0.42)]" data-review-overlay-divider />;
 }
 
 export function renderOverlayDividedActions(items: ReadonlyArray<{ key: string; node: ReactNode }>, surface: 'panel' | 'overlay') {

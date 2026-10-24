@@ -221,7 +221,7 @@ export function MarkdownTablePreviewDialog(props: MarkdownTablePreviewDialogProp
           <AppDialogBody className="relative max-h-[calc(88vh-7rem)] overflow-hidden !p-0">
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-local-overlay h-8 bg-[var(--app-floating-surface-bg)]" />
             {props.table ? renderPreviewHeaderOverlay(props.table, columnCount) : null}
-            <div className="app-scrollbar max-h-[calc(88vh-7rem)] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
+            <div className="app-scrollbar max-h-[calc(88vh-7rem)] overflow-y-auto overflow-x-hidden px-10 pb-8 pt-8 [--app-scrollbar-thumb-color:rgb(var(--role-ink-rgb)/0.04)] [--app-scrollbar-thumb-hover-color:rgb(var(--role-ink-rgb)/0.12)]">
               {props.table ? renderPreviewTable(props.table) : null}
             </div>
           </AppDialogBody>

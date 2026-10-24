@@ -176,7 +176,7 @@ function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'docum
   void props.documentMaxWidth;
   return (
     <div aria-hidden="true" className="relative h-3 shrink-0">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-[var(--workspace-region-main-document-content-divider)] [width:min(100%,var(--document-max-width))]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-[var(--role-content-line)] [width:min(100%,var(--document-max-width))]" />
     </div>
   );
 }

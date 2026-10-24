@@ -9,8 +9,8 @@ import {
 import { createSettingsSearchRows } from '../model/settingsSearchRowCatalog';
 
 const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
-  'bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]',
-  'shadow-[inset_0_0_0_1px_rgb(var(--app-accent-color-rgb)_/_0.34)]',
+  'bg-[rgb(var(--role-accent-rgb)_/_0.12)]',
+  'shadow-[inset_0_0_0_1px_rgb(var(--role-accent-rgb)_/_0.34)]',
   'transition-[background-color,box-shadow]',
   'duration-150'
 ];

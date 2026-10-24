@@ -15,7 +15,7 @@ describe('surface taxonomy boundary', () => {
   it('names the window base after the app-shell role', () => {
     const appShell = findSurface('app-shell');
 
-    expect(appShell?.currentToken).toBe('--color-app-shell');
+    expect(appShell?.currentToken).toBe('--role-legacy-app-shell-rgb');
     expect(SURFACE_TAXONOMY.map((entry) => entry.currentToken)).not.toContain('--color-background');
   });
 

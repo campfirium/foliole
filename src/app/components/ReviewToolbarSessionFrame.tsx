@@ -69,11 +69,11 @@ export function ReviewToolbarProgressLine({
         <AppTooltipTrigger asChild>
           <span
             aria-label={progressLabel}
-            className="pointer-events-auto absolute left-[var(--review-sprout-position)] top-[-13px] z-workspace-overlay inline-flex size-5 -translate-x-1/2 items-start justify-center text-[rgb(var(--color-border))]"
+            className="pointer-events-auto absolute left-[var(--review-sprout-position)] top-[-13px] z-workspace-overlay inline-flex size-5 -translate-x-1/2 items-start justify-center text-[rgb(var(--role-legacy-border-rgb))]"
             role="img"
             tabIndex={0}
           >
-            <span className="mt-1.5 inline-flex size-2 items-center justify-center bg-[var(--workspace-region-footer-document-bg)]">
+            <span className="mt-1.5 inline-flex size-2 items-center justify-center bg-[var(--role-content-bottom-bg)]">
               <Sprout aria-hidden="true" className="size-2" strokeWidth={2} />
             </span>
           </span>

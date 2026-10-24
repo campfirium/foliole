@@ -81,7 +81,7 @@ it('uses the shared floating item token for hover and focus states', () => {
   const item = screen.getByRole('menuitem', { name: 'Highlight' });
   expect(item.className).toContain('focus:bg-[var(--app-floating-item-hover-bg)]');
   expect(item.className).toContain('hover:bg-[var(--app-floating-item-hover-bg)]');
-  expect(item.className).not.toContain('--app-selection-surface-color');
+  expect(item.className).not.toContain('--role-selection-surface');
 });
 
 it('renders menus above tooltip-level floating surfaces', () => {

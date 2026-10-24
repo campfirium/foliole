@@ -7,7 +7,9 @@ async function dismissSearchEnhancementPrompt(desktopWindow: import('@playwright
   const prompt = desktopWindow.getByRole('dialog', {
     name: /(Turn on search enhancement for languages without spaces|要为无空格语言开启搜索增强|使用中文、日文或韩文搜索)/
   });
-  if (await prompt.isVisible().catch(() => false)) {
+  const searchDialog = desktopWindow.getByRole('dialog', { name: /(Workspace search|工作区搜索)/ });
+  await expect(prompt.or(searchDialog)).toBeVisible();
+  if (await prompt.isVisible()) {
     await prompt.getByRole('button', { name: /(Not now|暂不)/ }).click();
     return true;
   }
@@ -15,10 +17,6 @@ async function dismissSearchEnhancementPrompt(desktopWindow: import('@playwright
 }
 
 async function expectPaletteInputNoFocusRing(input: Locator) {
-  await expect(input).toHaveClass(/appearance-none/);
-  await expect(input).toHaveClass(/\[box-shadow:none\]/);
-  await expect(input).toHaveClass(/focus:\[box-shadow:none\]/);
-  await expect(input).toHaveClass(/focus-visible:\[box-shadow:none\]/);
   await expect
     .poll(() =>
       input.evaluate((element) => {
@@ -29,29 +27,27 @@ async function expectPaletteInputNoFocusRing(input: Locator) {
           appearance: styles.getPropertyValue('appearance'),
           boxShadow: styles.boxShadow,
           outlineStyle: styles.outlineStyle,
-          outlineWidth: styles.outlineWidth,
           webkitAppearance: styles.getPropertyValue('-webkit-appearance')
         };
       })
     )
     .toMatchObject({
+      appearance: 'none',
       boxShadow: 'none',
-      outlineStyle: 'none',
-      outlineWidth: '0px'
+      outlineStyle: 'none'
     });
 }
 
 async function expectRailButtonsSuppressAccentFocusRing(ribbon: Locator) {
-  const classNames = await ribbon.getByRole('button').evaluateAll((buttons) =>
-    buttons.map((button) => button.className)
-  );
-  expect(classNames.length).toBeGreaterThan(0);
-  for (const className of classNames) {
-    expect(className).toContain('focus-visible:ring-0');
-    expect(className).toContain('focus-visible:[box-shadow:none]');
-    expect(className).toContain('focus-visible:[--tw-ring-shadow:0_0_#0000]');
-    expect(className).not.toContain('focus-visible:ring-border-strong');
-    expect(className).not.toContain('focus-visible:ring-ring');
+  const buttons = ribbon.getByRole('button');
+  expect(await buttons.count()).toBeGreaterThan(0);
+  for (const button of await buttons.all()) {
+    await button.focus();
+    await expect(button).toHaveCSS('outline-style', 'none');
+    const shadows = await button.evaluate((element) => getComputedStyle(element).boxShadow);
+    expect(shadows === 'none' || shadows.split(/,(?![^()]*\))/).every(
+      (shadow) => shadow.trim().startsWith('rgba(0, 0, 0, 0)')
+    )).toBe(true);
   }
 }
 
@@ -89,7 +85,7 @@ test('workspace rail opens search and command palette panels', async ({ desktopW
   await expectPaletteInputNoFocusRing(commandInput);
   await expect(commandDialog.getByText(/desktop\.command\./)).toHaveCount(0);
   await expect(commandDialog.getByText(/desktop\.command\.section\./)).toHaveCount(0);
-  await expect(commandDialog.getByRole('button', { name: /Command Palette|命令面板/ })).toBeVisible();
+  await expect(commandDialog.getByRole('button', { name: /^(Command Palette|命令面板)$/ })).toBeVisible();
 
   await testInfo.attach('command-palette-autofill-suppression', {
     body: await commandDialog.screenshot(),

@@ -19,7 +19,7 @@ function textElement(tagName: string, className: string, text: string) {
 function createSurface() {
   const overlay = document.createElement('div');
   // The boot skeleton is fixed at the top stacking level; a later sibling at that level paints above it.
-  overlay.className = 'fixed inset-0 z-[2147483647] bg-[rgb(var(--color-canvas))]';
+  overlay.className = 'fixed inset-0 z-[2147483647] bg-[rgb(var(--role-legacy-canvas-rgb))]';
   overlay.dataset.startupUpgrade = 'true';
   const section = document.createElement('section');
   section.className = 'startup-surface';

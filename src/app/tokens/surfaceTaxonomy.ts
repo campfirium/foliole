@@ -10,7 +10,7 @@ export type SurfaceTaxonomyEntry = {
 export const SURFACE_TAXONOMY = [
   {
     id: 'app-shell',
-    currentToken: '--color-app-shell',
+    currentToken: '--role-legacy-app-shell-rgb',
     purpose: 'Window-level base behind the desktop workbench.',
     forbidden: ['Do not use it as a local hover, selected, or control-fill color.'],
     notes: ['Startup fallback is a state of app-shell, not a separate surface layer.'],
@@ -24,21 +24,21 @@ export const SURFACE_TAXONOMY = [
   },
   {
     id: 'document',
-    currentToken: '--workspace-region-main-document-bg',
+    currentToken: '--role-content-bg',
     purpose: 'The primary reading and writing surface.',
     forbidden: ['Do not borrow rail or sidebar color as the default document overlay base.'],
     notes: ['Reading typography and input scale may follow document settings, but floating surfaces do not borrow document color directly.'],
   },
   {
     id: 'panel',
-    currentToken: '--color-bg-panel',
+    currentToken: '--role-legacy-panel-rgb',
     purpose: 'Secondary inspector, settings, and sidebar panel areas.',
     forbidden: ['Do not nest decorative cards when spacing or a divider can express the group.'],
   },
   {
     id: 'panel-surface',
     parent: 'panel',
-    currentToken: '--color-bg-elevated',
+    currentToken: '--role-legacy-elevated-rgb',
     purpose: 'A small raised surface inside a panel when a true local container is needed.',
     forbidden: ['Do not call this layer simply "surface"; the word is reserved for taxonomy discussion.'],
   },
@@ -69,7 +69,7 @@ export const SURFACE_TAXONOMY = [
   {
     id: 'startup-fallback',
     parent: 'app-shell',
-    currentToken: '--color-app-shell',
+    currentToken: '--role-legacy-app-shell-rgb',
     purpose: 'The app-shell fallback state shown before the full renderer surface is ready.',
     forbidden: ['Do not treat startup fallback button variants as the AppButton source of truth.'],
   },

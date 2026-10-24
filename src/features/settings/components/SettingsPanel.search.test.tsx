@@ -70,7 +70,7 @@ it('searches settings rows and jumps to the matching category row', async () => 
     expect(row).not.toBeNull();
   });
   await waitFor(() => {
-    expect(row).toHaveClass('bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]');
+    expect(row).toHaveClass('bg-[rgb(var(--role-accent-rgb)_/_0.12)]');
   });
   expect(screen.getByRole('button', { name: 'Review' })).toHaveAttribute('aria-current', 'page');
 });
@@ -83,7 +83,7 @@ it('jumps directly to a requested settings row', async () => {
   const row = await waitFor(() => {
     const target = document.querySelector('[data-settings-search-row-id="general-models"]');
     expect(target).not.toBeNull();
-    expect(target).toHaveClass('bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]');
+    expect(target).toHaveClass('bg-[rgb(var(--role-accent-rgb)_/_0.12)]');
     return target;
   });
   expect(row).not.toBeNull();
@@ -124,7 +124,7 @@ it('routes advanced mouse gesture terms to the current appearance section', asyn
 
   await waitFor(() => {
     expect(document.querySelector('[data-settings-search-row-id="mouse-gestures-appearance"]'))
-      .toHaveClass('bg-[rgb(var(--app-accent-color-rgb)_/_0.12)]');
+      .toHaveClass('bg-[rgb(var(--role-accent-rgb)_/_0.12)]');
   });
 });
 

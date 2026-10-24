@@ -44,10 +44,10 @@ beforeEach(() => {
 afterEach(() => {
   document.body.innerHTML = '';
   document.documentElement.removeAttribute('data-resolved-base-color');
-  document.documentElement.style.removeProperty('--color-foreground');
-  document.documentElement.style.removeProperty('--color-bg-panel');
-  document.documentElement.style.removeProperty('--color-bg-elevated');
-  document.documentElement.style.removeProperty('--color-border-strong');
+  document.documentElement.style.removeProperty('--role-ink-rgb');
+  document.documentElement.style.removeProperty('--role-legacy-panel-rgb');
+  document.documentElement.style.removeProperty('--role-legacy-elevated-rgb');
+  document.documentElement.style.removeProperty('--role-legacy-border-strong-rgb');
   setEditorDisplayMode('preview');
 });
 
@@ -107,7 +107,7 @@ describe('live markdown code fence highlighting', () => {
 
 describe('live markdown mermaid rendering', () => {
   it('renders mermaid fenced blocks as diagrams without changing editor content', async () => {
-    document.documentElement.style.setProperty('--color-foreground', '32 33 36');
+    document.documentElement.style.setProperty('--role-ink-rgb', '32 33 36');
     const initialContent = '```mermaid\ngantt\n  title Plan\n```\nAfter';
     const { adapter, host } = createAdapterHost(initialContent);
 
@@ -157,7 +157,7 @@ describe('live markdown mermaid preview action', () => {
 describe('live markdown imported mermaid rendering', () => {
   it('reinitializes mermaid with dark theme colors when the app theme changes', async () => {
     document.documentElement.dataset.resolvedBaseColor = 'dark';
-    document.documentElement.style.setProperty('--color-foreground', '232 230 223');
+    document.documentElement.style.setProperty('--role-ink-rgb', '232 230 223');
     const { adapter, host } = createAdapterHost('```mermaid\nquadrantChart\n  title Map\n```');
 
     await waitFor(() => {

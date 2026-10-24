@@ -5,7 +5,7 @@ export const liveMarkdownFrontmatterTheme = {
   '.cm-md-frontmatter-compact': {
     alignItems: 'center',
     display: 'flex',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 64%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 64%, transparent)',
     fontSize: '0.8rem',
     fontWeight: '420',
     gap: '0.58rem',
@@ -18,7 +18,7 @@ export const liveMarkdownFrontmatterTheme = {
   '.cm-md-frontmatter-header': {
     alignItems: 'center',
     display: 'flex',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 64%, transparent)',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 64%, transparent)',
     fontSize: '0.8rem',
     fontWeight: '420',
     gap: '0.58rem',
@@ -46,7 +46,7 @@ export const liveMarkdownFrontmatterTheme = {
     textDecoration: 'none'
   },
   '.cm-md-frontmatter-meta-link:hover': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 82%, var(--color-text-primary))',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 82%, var(--role-text))',
     textDecoration: 'underline',
     textDecorationColor: 'color-mix(in srgb, currentColor 42%, transparent)',
     textDecorationThickness: '1px',
@@ -79,7 +79,7 @@ export const liveMarkdownFrontmatterTheme = {
     textTransform: 'lowercase'
   },
   '.cm-md-frontmatter-toggle:hover': {
-    color: 'color-mix(in srgb, var(--color-text-secondary) 82%, var(--color-text-primary))'
+    color: 'color-mix(in srgb, var(--role-text-secondary) 82%, var(--role-text))'
   },
   '.cm-md-frontmatter-toggle:focus-visible': {
     outline: 'none',
@@ -95,11 +95,11 @@ export const liveMarkdownFrontmatterTheme = {
     width: '100%'
   },
   '.cm-md-frontmatter-yaml-input': {
-    backgroundColor: 'rgb(var(--color-foreground) / 0.026)',
-    border: '1px solid rgb(var(--color-border) / 0.58)',
+    backgroundColor: 'rgb(var(--role-ink-rgb) / 0.026)',
+    border: '1px solid rgb(var(--role-legacy-border-rgb) / 0.58)',
     borderRadius: 'var(--editor-radius-sm)',
     boxSizing: 'border-box',
-    color: 'color-mix(in srgb, var(--color-text-secondary) 92%, var(--color-text-primary))',
+    color: 'color-mix(in srgb, var(--role-text-secondary) 92%, var(--role-text))',
     display: 'block',
     fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))',
     fontSize: 'var(--content-panel-code-font-size, 0.86rem)',
@@ -110,6 +110,6 @@ export const liveMarkdownFrontmatterTheme = {
     width: '100%'
   },
   '.cm-md-frontmatter-yaml-input:focus': {
-    borderColor: 'rgb(var(--color-border-strong) / 0.72)'
+    borderColor: 'rgb(var(--role-legacy-border-strong-rgb) / 0.72)'
   }
 };

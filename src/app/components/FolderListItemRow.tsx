@@ -19,7 +19,7 @@ interface FolderListTextItemProps {
 export function FolderListTextItem(props: FolderListTextItemProps) {
   return (
     <li
-      className="box-border list-none border-b border-[var(--workspace-region-main-document-content-divider)]"
+      className="box-border list-none border-b border-[var(--role-content-line)]"
       style={{ height: FOLDER_LIST_ROW_HEIGHT_PX }}
     >
       <button

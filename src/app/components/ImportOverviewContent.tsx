@@ -44,7 +44,7 @@ function SectionBlock(props: { children: React.ReactNode; count: number; title: 
         <h3 className="text-sm font-semibold text-foreground">{props.title}</h3>
         <p className="text-sm text-foreground/58">{props.count}</p>
       </div>
-      <ul className="flex flex-col divide-y divide-[var(--workspace-region-main-document-content-divider)] border-b border-[var(--workspace-region-main-document-content-divider)]">{props.children}</ul>
+      <ul className="flex flex-col divide-y divide-[var(--role-content-line)] border-b border-[var(--role-content-line)]">{props.children}</ul>
     </section>
   );
 }

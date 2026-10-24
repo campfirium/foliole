@@ -78,7 +78,7 @@ export function StudySessionCompleteSummary({
 }: StudySessionCompleteSummaryProps) {
   const t = useTranslation();
   return (
-    <div className="flex min-h-0 flex-1 items-start justify-center bg-[var(--workspace-region-main-document-bg)] px-8 pt-[18vh] text-foreground">
+    <div className="flex min-h-0 flex-1 items-start justify-center bg-[var(--role-content-bg)] px-8 pt-[18vh] text-foreground">
       <div className="w-full max-w-[520px]">
         <h1 className="text-[30px] font-medium leading-tight text-foreground/90">{getCompletionTitle(reviewSessionMode, t)}</h1>
         <div className="mt-8 space-y-3">

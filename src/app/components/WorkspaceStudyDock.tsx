@@ -84,7 +84,7 @@ export function WorkspaceStudyDockTrigger(props: {
   return (
     <div
       className="flex h-[var(--workspace-bottom-toolbar-height)] w-[var(--workspace-rail-width)] shrink-0 items-center justify-center"
-      style={{ backgroundColor: 'var(--workspace-region-footer-rail-bg)' }}
+      style={{ backgroundColor: 'var(--role-frame-bottom-bg)' }}
     >
       <FlowAction
         canStartStudyMode={props.canStartStudyMode}

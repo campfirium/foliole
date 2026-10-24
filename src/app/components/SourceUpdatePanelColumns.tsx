@@ -10,11 +10,11 @@ import type { SourceUpdateOverviewSegment } from './sourceUpdateDiffModel';
 import { SourceUpdateOverviewRuler } from './SourceUpdateOverviewRuler';
 
 const DOCUMENT_PREVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--role-content-bg)]';
 const REFERENCE_PREVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-foreground/[0.10] bg-[var(--workspace-region-main-document-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-foreground/[0.10] bg-[var(--role-content-bg)]';
 const OVERVIEW_PANE_CLASS_NAME =
-  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--workspace-region-main-document-bg)]';
+  'flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--role-content-bg)]';
 
 interface DocumentSourceUpdatePanelLayoutProps {
   comparisonMode: DocumentComparisonMode;

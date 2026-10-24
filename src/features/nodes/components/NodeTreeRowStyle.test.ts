@@ -44,7 +44,7 @@ describe('resolveNodeRowButtonClassName', () => {
     expect(className).toContain('before:bottom-0.5');
     expect(className).toContain('before:bg-foreground/[0.05]');
     expect(className).not.toContain(' bg-foreground/[0.05]');
-    expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+    expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--role-legacy-border-strong-rgb))]');
   });
 
   it('keeps bulk selection from changing row spacing', () => {
@@ -54,6 +54,6 @@ describe('resolveNodeRowButtonClassName', () => {
     });
 
     expect(className).not.toContain('my-0.5');
-    expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--color-border-strong))]');
+    expect(className).not.toContain('shadow-[inset_2px_0_0_rgb(var(--role-legacy-border-strong-rgb))]');
   });
 });

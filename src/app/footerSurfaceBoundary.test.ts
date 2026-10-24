@@ -16,7 +16,7 @@ describe('footer surface boundary', () => {
   it('keeps footer bars on workspace footer region tokens', () => {
     const combined = FOOTER_SURFACE_FILES.map(readWorkspaceFile).join('\n');
 
-    expect(combined).toContain('--workspace-region-footer-document-bg');
+    expect(combined).toContain('--role-content-bottom-bg');
     expect(combined).not.toContain('bg-bg-panel');
     expect(combined).not.toContain('bg-bg-elevated');
   });

@@ -24,9 +24,9 @@ const TOOLTIP_SURFACE_CLASS_NAMES: Record<NonNullable<AppTooltipContentProps['su
   default: '',
   truncated: [
     'relative max-w-[min(15rem,calc(100vw-2rem))] overflow-visible border-transparent bg-transparent p-0',
-    '[--app-tooltip-bg:color-mix(in_srgb,rgb(var(--color-bg-elevated))_88%,rgb(var(--color-bg-panel))_12%)]',
-    '[--app-tooltip-border-color:rgb(var(--color-foreground)/0.12)]',
-    '[--app-tooltip-fg:rgb(var(--color-foreground)/0.86)]',
+    '[--app-tooltip-bg:color-mix(in_srgb,rgb(var(--role-legacy-elevated-rgb))_88%,rgb(var(--role-legacy-panel-rgb))_12%)]',
+    '[--app-tooltip-border-color:rgb(var(--role-ink-rgb)/0.12)]',
+    '[--app-tooltip-fg:rgb(var(--role-ink-rgb)/0.86)]',
     '[--app-tooltip-line-height:1.375rem]',
     '[--app-tooltip-padding-x:0.75rem]',
     '[--app-tooltip-padding-y:0.5rem]',

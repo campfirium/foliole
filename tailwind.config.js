@@ -27,13 +27,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: 'rgb(var(--color-canvas) / <alpha-value>)',
-        'bg-subtle': 'rgb(var(--color-bg-subtle) / <alpha-value>)',
-        'bg-panel': 'rgb(var(--color-bg-panel) / <alpha-value>)',
-        'bg-elevated': 'rgb(var(--color-bg-elevated) / <alpha-value>)',
-        'selection-blue': 'rgb(var(--app-selection-color-rgb) / <alpha-value>)',
-        'highlight-blue': 'rgb(var(--app-highlight-color-rgb) / <alpha-value>)',
-        'cloze-yellow': 'rgb(var(--app-cloze-color-rgb) / <alpha-value>)',
+        canvas: 'rgb(var(--role-legacy-canvas-rgb) / <alpha-value>)',
+        'bg-subtle': 'rgb(var(--role-legacy-subtle-rgb) / <alpha-value>)',
+        'bg-panel': 'rgb(var(--role-legacy-panel-rgb) / <alpha-value>)',
+        'bg-elevated': 'rgb(var(--role-legacy-elevated-rgb) / <alpha-value>)',
+        'selection-blue': 'rgb(var(--role-selection-rgb) / <alpha-value>)',
+        'highlight-blue': 'rgb(var(--role-highlight-rgb) / <alpha-value>)',
+        'cloze-yellow': 'rgb(var(--role-cloze-rgb) / <alpha-value>)',
         'companion-base': 'var(--companion-base)',
         'companion-content': 'var(--companion-content)',
         'companion-subtle': 'var(--companion-subtle)',
@@ -44,7 +44,7 @@ export default {
         'companion-text-secondary': 'var(--companion-text-secondary)',
         'companion-text-tertiary': 'var(--companion-text-tertiary)',
         divider: 'color-mix(in oklab, var(--app-divider-subtle) calc(<alpha-value> * 100%), transparent)',
-        'panel-outline': 'rgb(var(--color-foreground) / 0.14)',
+        'panel-outline': 'rgb(var(--role-ink-rgb) / 0.14)',
         'settings-shell': 'var(--app-settings-shell-bg)',
         'settings-sidebar': 'var(--app-settings-sidebar-bg)',
         'settings-group': 'var(--app-settings-group-bg)',
@@ -61,8 +61,8 @@ export default {
         'settings-icon-hover': 'var(--app-settings-icon-hover-color)',
         'settings-icon-active': 'var(--app-settings-icon-active-color)',
         'settings-segmented-active-foreground': 'var(--app-settings-segmented-active-fg)',
-        'settings-divider': 'rgb(var(--color-settings-divider) / <alpha-value>)',
-        'settings-outline': 'rgb(var(--color-foreground) / 0.14)',
+        'settings-divider': 'rgb(var(--role-legacy-settings-divider-rgb) / <alpha-value>)',
+        'settings-outline': 'rgb(var(--role-ink-rgb) / 0.14)',
         'settings-control-border': 'var(--app-settings-control-border-color)',
         'settings-control-border-hover': 'var(--app-settings-control-border-hover-color)',
         'shellless-surface': 'var(--app-shellless-surface-bg)',
@@ -80,47 +80,47 @@ export default {
         'shellless-control-hover': 'var(--app-shellless-control-hover-bg)',
         'shellless-brand-mark': 'var(--app-shellless-brand-mark-color)',
         border: {
-          DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
-          strong: 'rgb(var(--color-border-strong) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-border-rgb) / <alpha-value>)',
+          strong: 'rgb(var(--role-legacy-border-strong-rgb) / <alpha-value>)'
         },
         accent: {
-          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
-          strong: 'rgb(var(--color-accent-strong) / <alpha-value>)',
-          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-accent-rgb) / <alpha-value>)',
+          strong: 'rgb(var(--role-legacy-accent-strong-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-legacy-accent-ink-rgb) / <alpha-value>)'
         },
         error: {
-          DEFAULT: 'rgb(var(--color-error) / <alpha-value>)',
-          subtle: 'rgb(var(--color-error-subtle) / <alpha-value>)',
-          foreground: 'rgb(var(--color-error-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-danger-rgb) / <alpha-value>)',
+          subtle: 'rgb(var(--role-danger-subtle-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-danger-ink-rgb) / <alpha-value>)'
         },
-        'app-shell': 'rgb(var(--color-app-shell) / <alpha-value>)',
-        foreground: 'rgb(var(--color-foreground) / <alpha-value>)',
+        'app-shell': 'rgb(var(--role-legacy-app-shell-rgb) / <alpha-value>)',
+        foreground: 'rgb(var(--role-ink-rgb) / <alpha-value>)',
         primary: {
-          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
-          foreground: 'rgb(var(--color-accent-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-accent-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-legacy-accent-ink-rgb) / <alpha-value>)'
         },
         secondary: {
-          DEFAULT: 'rgb(var(--color-secondary) / <alpha-value>)',
-          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-secondary-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-ink-rgb) / <alpha-value>)'
         },
         muted: {
-          DEFAULT: 'rgb(var(--color-muted) / <alpha-value>)',
-          foreground: 'rgb(var(--color-muted-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-muted-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-ink-muted-rgb) / <alpha-value>)'
         },
         card: {
-          DEFAULT: 'rgb(var(--color-card) / <alpha-value>)',
-          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-card-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-ink-rgb) / <alpha-value>)'
         },
         popover: {
-          DEFAULT: 'rgb(var(--color-popover) / <alpha-value>)',
-          foreground: 'rgb(var(--color-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-legacy-popover-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-ink-rgb) / <alpha-value>)'
         },
         destructive: {
-          DEFAULT: 'rgb(var(--color-error) / <alpha-value>)',
-          foreground: 'rgb(var(--color-error-foreground) / <alpha-value>)'
+          DEFAULT: 'rgb(var(--role-danger-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--role-danger-ink-rgb) / <alpha-value>)'
         },
-        input: 'rgb(var(--color-border) / <alpha-value>)',
-        ring: 'rgb(var(--color-accent) / <alpha-value>)'
+        input: 'rgb(var(--role-legacy-border-rgb) / <alpha-value>)',
+        ring: 'rgb(var(--role-legacy-accent-rgb) / <alpha-value>)'
       },
       fontFamily: {
         sans: ['var(--font-family-interface)'],

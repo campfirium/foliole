@@ -26,6 +26,8 @@ const TITLEBAR_SURFACE_ROW_TEMPLATE = [
 ].join(' ');
 
 const WORKSPACE_SURFACE_COLUMNS = ['rail', 'folder', 'topic', 'document', 'sidebar'] as const;
+const SURFACE_COLUMN_ROLES = { rail: 'frame', folder: 'nav', topic: 'list', document: 'content', sidebar: 'sidebar' } as const;
+const SURFACE_ROW_ROLE_SUFFIXES = { titlebar: '-top', main: '', footer: '-bottom' } as const;
 export const WORKSPACE_RAIL_DIVIDER_LEFT = 'var(--workspace-rail-width)';
 export const WORKSPACE_LIST_DIVIDER_LEFT =
   'calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px) + (var(--workspace-list-splitter-width, 1px) / 2))';
@@ -34,8 +36,12 @@ export const WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT =
 export const WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT =
   'calc(100% - var(--workspace-right-sidebar-current-width, 320px) - (var(--workspace-right-sidebar-splitter-width, 1px) / 2))';
 
+function getSurfaceRole(row: WorkspaceSurfaceRow, column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]) {
+  return `--role-${SURFACE_COLUMN_ROLES[column]}${SURFACE_ROW_ROLE_SUFFIXES[row]}`;
+}
+
 function getSurfaceColor(row: WorkspaceSurfaceRow, column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]) {
-  return `var(--workspace-region-${row}-${column}-bg)`;
+  return `var(${getSurfaceRole(row, column)}-bg)`;
 }
 
 export function getWorkspaceSurfaceDividerColor(
@@ -43,8 +49,8 @@ export function getWorkspaceSurfaceDividerColor(
   column: (typeof WORKSPACE_SURFACE_COLUMNS)[number]
 ) {
   const surface = getSurfaceColor(row, column);
-  const mixTarget = `var(--workspace-region-${row}-${column}-divider-mix-target, var(--workspace-divider-mix-target))`;
-  return `color-mix(in oklab, ${surface} var(--workspace-divider-subtle-surface-weight), ${mixTarget})`;
+  const mixTarget = `var(${getSurfaceRole(row, column)}-line-mix, var(--role-line-mix))`;
+  return `color-mix(in oklab, ${surface} var(--role-line-subtle-weight), ${mixTarget})`;
 }
 
 export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceOverlayRow }) {
@@ -85,7 +91,7 @@ function WorkspaceSurfaceRowDivider({
       aria-hidden="true"
       className={`pointer-events-none absolute inset-y-0 z-local-overlay w-px -translate-x-1/2 ${className ?? ''}`}
       data-workspace-surface-divider={column}
-      style={{ backgroundColor: getWorkspaceSurfaceDividerColor(row, column), left, opacity: 'var(--workspace-divider-opacity)' }}
+      style={{ backgroundColor: getWorkspaceSurfaceDividerColor(row, column), left, opacity: 'var(--role-column-line-opacity)' }}
     />
   );
 }

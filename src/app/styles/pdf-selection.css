@@ -1,5 +1,5 @@
 .pdf-document-surface .textLayer :is(span, br)::selection {
-  background: var(--app-selection-surface-color);
+  background: var(--role-selection-surface);
   color: transparent;
   -webkit-text-fill-color: transparent;
 }

@@ -101,7 +101,7 @@ export function SettingsUpdateReleaseNotes({ currentVersion, onOpenChange, open,
             <AppDialogTitle className="text-ui-lg">{t('settings.about.update.pending.title')}</AppDialogTitle>
             <AppDialogDescription>{t('settings.about.update.pending.description')}</AppDialogDescription>
           </header>
-          <div className="app-scrollbar min-h-0 overflow-auto px-6 pb-5 pt-3 [--app-scrollbar-thumb-color:rgb(var(--color-foreground)/0.05)] [--app-scrollbar-thumb-hover-color:rgb(var(--color-foreground)/0.12)]">
+          <div className="app-scrollbar min-h-0 overflow-auto px-6 pb-5 pt-3 [--app-scrollbar-thumb-color:rgb(var(--role-ink-rgb)/0.05)] [--app-scrollbar-thumb-hover-color:rgb(var(--role-ink-rgb)/0.12)]">
             <div className="space-y-4">
               {sections.map(({ release, releaseNotes }) => (
                 <ReleaseNotesList

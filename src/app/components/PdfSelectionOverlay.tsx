@@ -8,7 +8,7 @@ export function PdfSelectionOverlay({ locator, markerSize }: { locator: Selectio
     return (
       <div className="pointer-events-none absolute inset-0" data-pdf-selection-overlay="true">
         {renderPdfOverlayMarker(locator, markerSize,
-          'pointer-events-none absolute z-surface-overlay -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)]',
+          'pointer-events-none absolute z-surface-overlay -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--role-selection-surface)]',
           'pdf-selection-marker')}
       </div>
     );
@@ -21,7 +21,7 @@ export function PdfSelectionOverlay({ locator, markerSize }: { locator: Selectio
       preserveAspectRatio="none"
       viewBox="0 0 1 1"
     >
-      <path d={pdfOverlayPath(locator.rects)} data-testid="pdf-selection-rect" fill="var(--app-selection-surface-color)" fillRule="nonzero" />
+      <path d={pdfOverlayPath(locator.rects)} data-testid="pdf-selection-rect" fill="var(--role-selection-surface)" fillRule="nonzero" />
     </svg>
   );
 }

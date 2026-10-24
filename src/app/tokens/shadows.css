@@ -6,8 +6,8 @@
   --shadow-inspector-section: 0 1px 0 var(--app-inspector-section-shadow-color);
   --shadow-page: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-marker: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-picker-thumb-ring: 0 0 0 1px rgb(var(--color-foreground) / 0.34);
-  --shadow-picker-thumb-ring-strong: 0 0 0 1px rgb(var(--color-foreground) / 0.45);
+  --shadow-picker-thumb-ring: 0 0 0 1px rgb(var(--role-ink-rgb) / 0.34);
+  --shadow-picker-thumb-ring-strong: 0 0 0 1px rgb(var(--role-ink-rgb) / 0.45);
   --shadow-debug: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 

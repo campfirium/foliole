@@ -33,7 +33,7 @@ export function ReviewActionBar({
     surface === 'panel'
       ? ({
           ...style,
-          borderTopColor: 'rgb(var(--color-border) / var(--workspace-divider-opacity))'
+          borderTopColor: 'rgb(var(--role-legacy-border-rgb) / var(--role-column-line-opacity))'
         } as CSSProperties)
       : style;
 
@@ -42,7 +42,7 @@ export function ReviewActionBar({
       aria-label={ariaLabel}
       className={cn(
         'relative flex h-[var(--workspace-bottom-toolbar-height)] flex-none items-center',
-        surface === 'panel' && 'w-full border-t border-border bg-[var(--workspace-region-footer-document-bg)]',
+        surface === 'panel' && 'w-full border-t border-border bg-[var(--role-content-bottom-bg)]',
         surface === 'overlay' &&
           appFloatingSurfaceClassName('popover', 'mx-auto w-fit max-w-[calc(100vw-3rem)] px-4'),
         className

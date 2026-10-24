@@ -48,7 +48,7 @@ const SPINNER_SIZE_CLASS_NAMES: Record<AppSpinnerSize, string> = {
 };
 
 const SPINNER_TONE_CLASS_NAMES: Record<AppSpinnerTone, string> = {
-  accent: 'border-t-[rgb(var(--app-accent-color-rgb))]',
+  accent: 'border-t-[rgb(var(--role-accent-rgb))]',
   danger: 'border-t-error',
   neutral: 'border-t-foreground/55'
 };
