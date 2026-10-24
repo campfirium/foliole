@@ -30,6 +30,8 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
   requireCompleteVersionGraph?: boolean;
   currentVersion?: RequestSyncCurrentVersion;
   visibilityPruning?: DeferredVisibilityPruning;
+  /** Set by a batch that projects parent child orders once after all its objects. */
+  parentOrderFlush?: { requested: boolean };
 }) {
   return db.transaction(async (tx) => {
     const nodes: CanonicalFact[] = [];
@@ -78,11 +80,18 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
       }
     }
-    if (await flushCurrentParentOrderProjectionsWithDbPort(tx)) {
-      workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [], structure: true });
-    }
+    workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
   });
+}
+
+async function flushParentOrders(tx: DbPort, scope: WorkspaceRefreshScope, deferred?: { requested: boolean }) {
+  if (deferred) {
+    deferred.requested = true;
+    return scope;
+  }
+  return await flushCurrentParentOrderProjectionsWithDbPort(tx)
+    ? joinWorkspaceScopes(scope, { kind: 'nodes', nodeIds: [], structure: true }) : scope;
 }
 
 async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,

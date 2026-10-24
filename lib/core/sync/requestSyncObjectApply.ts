@@ -13,14 +13,11 @@ import { applyFramedFactSources, type FramedFactSource } from './framedSyncFactA
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import { parseFramedSyncNodeChildIdentity } from './framedSyncNodeChildFact.js';
 import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
-import { recordFramedSyncPeerEpoch } from './framedSyncPeerEpoch.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { assertNodeVersionPeerEpoch } from './nodeVersionPeerProof.js';
-import { advanceLocalSourceRevision } from './nodeVersionSourceRevision.js';
+import { openRequestSyncInbound, recordRequestSyncInbound, type RequestSyncBatchScope } from './requestSyncBatchScope.js';
 import { REQUEST_CHAIN_HEAD_SQL } from './requestSyncBodyReferencePolicy.js';
 import { reconcileAdoptedPeerEpoch } from './syncGroupAdoptedPeerEpoch.js';
-import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
-import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
 import { assertCurrentNodeParentChain } from './syncNodeParentChain.js';
 import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
@@ -38,6 +35,7 @@ export interface RequestSyncObjectInput {
   enqueueSearchInvalidations?: boolean;
   signal?: AbortSignal;
   visibilityPruning?: DeferredVisibilityPruning;
+  batch?: RequestSyncBatchScope;
 }
 
 async function assertPeer(tx: DbPort, input: RequestSyncObjectInput, overwriting: boolean) {
@@ -59,13 +57,16 @@ async function assertPeer(tx: DbPort, input: RequestSyncObjectInput, overwriting
   assertNodeVersionPeerEpoch(known?.library_epoch, peerState.library_epoch);
 }
 
+/** Runs the sender and receiver-state checks a whole received batch shares. */
+export function openRequestSyncObjectInbound(tx: DbPort, input: RequestSyncObjectInput) {
+  return openRequestSyncInbound(tx, input.context, overwriting => assertPeer(tx, input, overwriting));
+}
+
 /** The response is transient. Only business facts and progress commit, together, for one object. */
 export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput) {
   return db.transaction(async tx => {
     input.signal?.throwIfAborted();
-    const overwriting = await assertSyncGroupOverwriteInbound(tx, input.context);
-    await assertPeer(tx, input, overwriting);
-    if (!overwriting) await assertSyncGroupLocalPublicationAllowed(tx);
+    if (!input.batch) await openRequestSyncInbound(tx, input.context, value => assertPeer(tx, input, value));
     let collectBodies = await changesCurrentVersion(tx, input);
     const source: FramedFactSource = async function* (port, kinds) {
       for await (const fact of input.facts(port, kinds)) {
@@ -84,17 +85,17 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
       ...(input.objectType === 'node' && input.currentVersionId
         ? { currentVersion: { globalId: input.globalId, versionId: input.currentVersionId } } : {}),
       ...(input.visibilityPruning ? { visibilityPruning: input.visibilityPruning } : {}),
+      ...(input.batch ? { parentOrderFlush: input.batch.parentOrder } : {}),
       requireCompleteVersionGraph: true, enqueueSearchInvalidations: input.enqueueSearchInvalidations ?? true });
     if (input.objectType === 'node') {
       await assertCurrentNodeParentChain(tx, input.globalId);
       await reconcileCurrentNodeBody(tx, input.globalId, input.enqueueSearchInvalidations ?? true);
       await releaseReceivedDeletionBodies(tx, input.globalId);
     }
-    await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
-    await recordFramedSyncPeerEpoch(tx, { groupId: input.context.groupId, libraryEpoch: input.context.senderLibraryEpoch,
-      peerDeviceId: input.context.senderDeviceId, transferId: input.requestId });
+    if (!input.batch) await recordRequestSyncInbound(tx, input.context, input.requestId);
     if (collectBodies) await collectNodeVersionPayloads(tx, input.globalId, Number.MAX_SAFE_INTEGER);
-    const sharedStateHash = await readAppliedStateHash(tx, input);
+    // A batch reports per-object success only; the single-object path returns the applied state.
+    const sharedStateHash = input.batch ? undefined : await readAppliedStateHash(tx, input);
     input.signal?.throwIfAborted();
     const workspaceScope = input.objectType === 'foreground_source'
       ? { kind: 'nodes' as const, nodeIds: [] } : input.objectType === 'node' && result.workspaceScope.kind === 'nodes'

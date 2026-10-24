@@ -17,13 +17,21 @@ vi.mock('../../../../../../lib/core/sync/requestSyncObjectApply.js', async origi
 
 const NODES = 60;
 const PRUNE = /DELETE FROM node_reading_host_state\s+WHERE node_id NOT IN \(SELECT id FROM nodes\)/u;
+const SHARED = [/INSERT INTO node_version_local_proof_state/u, /SELECT 1 FROM sync_group_devices peer JOIN sync_group_local_state/u];
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
 afterEach(async () => { bad.globalId = null; await host?.close(); host = undefined; });
 
-function counted(inner: DbPort, counts: { transactions: number; prunes: number }): DbPort {
+function counted(inner: DbPort, counts: { transactions: number; prunes: number; shared: number }): DbPort {
   const inside = (tx: DbPort): DbPort => ({
-    run: (sql: string, params?: DbParams) => { if (PRUNE.test(sql)) counts.prunes += 1; return tx.run(sql, params); },
-    query: (sql: string, params?: DbParams) => tx.query(sql, params) as never,
+    run: (sql: string, params?: DbParams) => {
+      if (PRUNE.test(sql)) counts.prunes += 1;
+      if (SHARED.some(pattern => pattern.test(sql))) counts.shared += 1;
+      return tx.run(sql, params);
+    },
+    query: (sql: string, params?: DbParams) => {
+      if (SHARED.some(pattern => pattern.test(sql))) counts.shared += 1;
+      return tx.query(sql, params) as never;
+    },
     transaction: execute => tx.transaction(nested => execute(inside(nested)))
   });
   return { ...inside(inner), transaction: execute => { counts.transactions += 1; return inner.transaction(tx => execute(inside(tx))); } };
@@ -46,7 +54,7 @@ function receivedIds(adoption: NonNullable<typeof host>) {
 
 it('applies each pulled batch in one transaction and prunes visibility once per batch', { meta: { calibratedMs: 20000 } }, async () => {
   const adoption = await adopt();
-  const counts = { transactions: 0, prunes: 0 };
+  const counts = { transactions: 0, prunes: 0, shared: 0 };
   const original = native.db!;
   const post = native.post.getMockImplementation()!;
   let pulls = 0;
@@ -59,6 +67,8 @@ it('applies each pulled batch in one transaction and prunes visibility once per 
   expect(pulls).toBeGreaterThan(0);
   expect(counts.prunes).toBeLessThanOrEqual(pulls);
   expect(counts.transactions).toBeLessThan(NODES / 2);
+  // Sender checks and source-revision bookkeeping run once per pulled batch, not once per object.
+  expect(counts.shared).toBeLessThanOrEqual(SHARED.length * (pulls + 2));
 });
 
 it('keeps the rest of a batch when one received object cannot be applied', { meta: { calibratedMs: 20000 } }, async () => {
