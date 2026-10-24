@@ -148,7 +148,7 @@ test('localizes a PDF and keeps explicit EPUB/PDF degradation without signed URL
     await session.firstWindow.locator(`[role="treeitem"][data-node-id="${nodeId('epub-html')}"]`).click();
     await expect(session.firstWindow.getByText('Readable EPUB text')).toBeVisible();
     await session.firstWindow.locator(`[role="treeitem"][data-node-id="${nodeId('pdf-unavailable')}"]`).click();
-    await expect(session.firstWindow.getByText(/original PDF was not synced/i)).toBeVisible();
+    await expect(session.firstWindow.getByTestId('pdf-document-state-readwise-original-missing')).toBeVisible();
     await capture(session, testInfo);
 
   } finally {
