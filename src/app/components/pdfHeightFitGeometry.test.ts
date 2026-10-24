@@ -16,6 +16,13 @@ it('uses the rotated content height while preserving full rotated page dimension
   expect(fit.pageHeight).toBe(600);
   expect(fit.pageWidth).toBe(800);
 });
+it('caps a sparse single-line range at the manual zoom maximum', () => {
+  const line = { x: 0.1, y: 0.1, width: 0.8, height: 0.0297 };
+  const fit = resolvePdfHeightFit({ width: 600, height: 800 }, line, 916, 0);
+  expect(fit.zoom).toBe(200);
+  expect(fit.pageHeight).toBe(1600);
+  expect(fit.pageWidth).toBe(1200);
+});
 it('positions the content top and horizontal center without altering the page', () => {
   const container = document.createElement('div');
   const shell = document.createElement('div');

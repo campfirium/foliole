@@ -1,4 +1,5 @@
 import type { PdfViewRect } from '../../features/pdf/model/pdfReadingView';
+import { PDF_ZOOM_MAX } from '../../features/pdf/model/pdfSystemStateUtils';
 
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import { rotatePdfNormalizedRect } from './pdfVisualExcerptGeometry';
@@ -9,7 +10,8 @@ export function resolvePdfHeightFit(dimensions: PdfPageDimensions, range: PdfVie
   const quarterTurn = rotation % 180 !== 0;
   const pageHeight = quarterTurn ? dimensions.width : dimensions.height;
   const pageWidth = quarterTurn ? dimensions.height : dimensions.width;
-  const scale = Math.max(1, viewportHeight - 16) / (pageHeight * rect.height);
+  const scale = Math.min(PDF_ZOOM_MAX / 100,
+    Math.max(1, viewportHeight - 16) / (pageHeight * rect.height));
   return { zoom: scale * 100, pageHeight: pageHeight * scale, pageWidth: pageWidth * scale, rect };
 }
 

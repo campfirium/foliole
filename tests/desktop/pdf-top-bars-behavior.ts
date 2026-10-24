@@ -35,6 +35,8 @@ export async function verifyScrollRevealsOnlyToolbar(page: Page) {
 export async function verifyUpperSideReveal(page: Page) {
   const scroll = page.getByTestId('pdf-scroll-container');
   await page.getByRole('button', { name: /Fit width|适合宽度/ }).click();
+  // Fit width leaves the page and toolbar inside the panel, so no stale horizontal scroll hides the side whitespace.
+  await expect.poll(() => scroll.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(0);
   for (const side of ['left', 'right']) for (const row of [0, 1, 2]) {
     await scroll.click({ position: { x: await scroll.evaluate((element) => element.clientWidth / 2), y: 240 } });
     await expect(page.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false');

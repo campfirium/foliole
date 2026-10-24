@@ -5,6 +5,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import type { PdfReadingView, PdfViewRect } from '../../src/features/pdf/model/pdfReadingView';
+import { PDF_ZOOM_MAX } from '../../src/features/pdf/model/pdfSystemStateUtils';
 
 import { expect, test } from './harness/fixtures';
 import { revealPdfBars } from './pdf-top-bars-interaction';
@@ -170,10 +171,15 @@ async function assertHeightFit(page: Page, rect: PdfViewRect | null | undefined,
     const canvas = await shell.locator('.react-pdf__Page canvas').boundingBox();
     const viewport = await page.getByTestId('pdf-scroll-container').boundingBox();
     const height = await page.getByTestId('pdf-scroll-container').evaluate((element) => element.clientHeight);
+    const zoom = await page.getByTestId('pdf-zoom-value').first().textContent();
     if (!frame || !canvas || !viewport || canvas.height === 0) return false;
+    const contentHeight = canvas.height * rect.height;
+    // A sparse range stops at the manual zoom maximum instead of filling the viewport.
+    const fitsHeight = zoom === `${PDF_ZOOM_MAX}%`
+      ? contentHeight <= height - 16 + 3
+      : Math.abs(contentHeight - (height - 16)) < 3;
     return Math.abs(frame.width - canvas.width) < 2 &&
-      Math.abs(frame.height - canvas.height) < 2 &&
-      Math.abs(canvas.height * rect.height - (height - 16)) < 3 &&
+      Math.abs(frame.height - canvas.height) < 2 && fitsHeight &&
       Math.abs(canvas.y + canvas.height * rect.y - viewport.y - 8) < 3;
   }).toBe(true);
   await expect(shell.locator('.pdf-document-page-crop-content')).toHaveCount(0);

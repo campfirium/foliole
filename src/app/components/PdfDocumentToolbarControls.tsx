@@ -97,7 +97,7 @@ function PdfSearchInput(props: SearchControlsProps & { canNavigateMatches: boole
   return (
     <AppInput
       aria-label={t('desktop.pdf.search.aria')}
-      className="h-8 w-36 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
+      className="h-8 w-36 min-w-0 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
       data-pdf-search-input="true"
       onKeyDown={(event) => handleSearchInputKeyDown(event, props.canNavigateMatches, props.onFindNext, props.onFindPrevious)}
       onChange={handleSearchInputChange}
@@ -132,8 +132,8 @@ export function PdfSearchControls(props: SearchControlsProps) {
   const hasSearchQuery = props.searchQuery.trim().length > 0;
 
   return (
-    <div className="flex items-center gap-1">
-      <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
+    <div className="flex min-w-0 items-center gap-1">
+      <Search aria-hidden="true" className="ml-1 shrink-0 text-foreground/55" size={15} strokeWidth={2.1} />
       <PdfSearchInput {...props} canNavigateMatches={canNavigateMatches} />
       <PdfSearchActionButtons {...props} canNavigateMatches={canNavigateMatches} hasSearchQuery={hasSearchQuery} />
       <p aria-live="polite" className="whitespace-nowrap text-center text-xs text-foreground/70" data-testid="pdf-search-status">

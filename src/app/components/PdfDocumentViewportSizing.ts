@@ -14,8 +14,11 @@ export function useFitWidthTargetWidth(scrollContainerRef: MutableRefObject<HTML
       setTargetWidth(container.clientWidth > 48 ? Math.max(160, container.clientWidth - 48) : null);
     };
     updateTargetWidth();
-    window.addEventListener('resize', updateTargetWidth);
-    return () => window.removeEventListener('resize', updateTargetWidth);
+    // The vertical scrollbar narrows the container after the first measurement.
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(updateTargetWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [scrollContainerRef]);
 
   return targetWidth;
