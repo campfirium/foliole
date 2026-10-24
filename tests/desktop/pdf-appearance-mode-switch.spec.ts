@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { ElectronApplication, Page } from '@playwright/test';
 
+import { cycleRailAppearanceTo } from './appearance-mode-rail-support';
 import { expect, test } from './harness/fixtures';
 
 const FIXTURE_PATH = path.resolve(
@@ -14,7 +15,6 @@ const SETTINGS_NAME = /^(Settings|设置)$/;
 const APPEARANCE_NAME = /^(Appearance|外观)$/;
 const COLOR_MODE_NAME = /^(Mode|模式)$/;
 const PDF_DARK_MODE_NAME = /^(PDF in dark mode|深色模式下的 PDF)$/;
-const TOGGLE_THEME_NAME = /^(Toggle Light\/Dark Mode|切换浅色\/深色模式)$/;
 
 async function installPdfFixtureSelection(desktopApp: ElectronApplication) {
   await desktopApp.evaluate(({ dialog }, fixturePath) => {
@@ -64,8 +64,6 @@ async function chooseRadio(desktopWindow: Page, groupName: RegExp, optionName: R
 async function collectPdfModeMetrics(desktopWindow: Page) {
   return desktopWindow.evaluate(() => {
     const root = document.documentElement;
-    const cropContent = document.querySelector<HTMLElement>('.pdf-document-page-crop-content');
-    const cropFrame = document.querySelector<HTMLElement>('[data-testid="pdf-document-page-crop-frame"]');
     const page = document.querySelector<HTMLElement>('.react-pdf__Page');
     const canvas = page?.querySelector<HTMLCanvasElement>('canvas') ?? null;
     const surface = document.querySelector<HTMLElement>('.pdf-document-surface');
@@ -83,8 +81,6 @@ async function collectPdfModeMetrics(desktopWindow: Page) {
       return color;
     };
     return {
-      cropFrameWidth: cropFrame?.getBoundingClientRect().width ?? null,
-      cropMarginLeft: Number.parseFloat(cropContent?.style.marginLeft || '0'),
       canvasWidth: canvas?.getBoundingClientRect().width ?? null,
       documentSurfaceToken: resolveCssColor(rootStyle.getPropertyValue('--workspace-region-main-document-bg').trim()),
       pageBackground: pageStyle?.backgroundColor ?? null,
@@ -139,9 +135,7 @@ test('PDF dark inverted mode @pdf follows live appearance mode switches', async 
   expect(darkMetrics.scrollBackground).toBe(darkMetrics.surfaceBackground);
   expect(darkMetrics.scrollbarColor).toContain(darkMetrics.surfaceBackground ?? '');
   expect(darkMetrics.surfaceBackground).not.toBe('rgb(244, 244, 244)');
-  expect(darkMetrics.cropFrameWidth).toBeLessThan((darkMetrics.pageWidth ?? 0) - 0.5);
-  expect(darkMetrics.cropFrameWidth).toBeLessThan((darkMetrics.canvasWidth ?? 0) - 0.5);
-  expect(darkMetrics.cropMarginLeft).toBeLessThan(0);
+  expect(Math.abs((darkMetrics.canvasWidth ?? 0) - (darkMetrics.pageWidth ?? -1))).toBeLessThan(1);
 
   await chooseRadio(desktopWindow, COLOR_MODE_NAME, /Light|浅色/);
   const lightMetrics = await waitForPdfModeMetrics(desktopWindow, {
@@ -163,9 +157,7 @@ test('PDF dark inverted mode @pdf follows live appearance mode switches', async 
   expect(restoredDarkMetrics.scrollBackground).toBe(restoredDarkMetrics.surfaceBackground);
   expect(restoredDarkMetrics.scrollbarColor).toContain(restoredDarkMetrics.surfaceBackground ?? '');
   expect(restoredDarkMetrics.surfaceBackground).toBe(darkMetrics.surfaceBackground);
-  expect(restoredDarkMetrics.cropFrameWidth).toBeLessThan((restoredDarkMetrics.pageWidth ?? 0) - 0.5);
-  expect(restoredDarkMetrics.cropFrameWidth).toBeLessThan((restoredDarkMetrics.canvasWidth ?? 0) - 0.5);
-  expect(restoredDarkMetrics.cropMarginLeft).toBeLessThan(0);
+  expect(Math.abs((restoredDarkMetrics.canvasWidth ?? 0) - (restoredDarkMetrics.pageWidth ?? -1))).toBeLessThan(1);
 });
 
 test('PDF background @pdf follows the rail light and dark toggle immediately', async ({
@@ -185,7 +177,7 @@ test('PDF background @pdf follows the rail light and dark toggle immediately', a
   });
   expect(readColorLuminance(initialDarkMetrics.surfaceBackground)).toBeLessThan(90);
 
-  await desktopWindow.getByRole('button', { name: TOGGLE_THEME_NAME }).click();
+  await cycleRailAppearanceTo(desktopWindow, 'light');
   const restoredLightMetrics = await waitForPdfModeMetrics(desktopWindow, {
     pdfReadingMode: 'original',
     resolvedBaseColor: 'light'
@@ -196,7 +188,7 @@ test('PDF background @pdf follows the rail light and dark toggle immediately', a
   expect(restoredLightMetrics.surfaceBackground).not.toBe(initialDarkMetrics.surfaceBackground);
   expect(restoredLightMetrics.topicBackground).not.toBe(initialDarkMetrics.topicBackground);
 
-  await desktopWindow.getByRole('button', { name: TOGGLE_THEME_NAME }).click();
+  await cycleRailAppearanceTo(desktopWindow, 'dark');
   const restoredDarkMetrics = await waitForPdfModeMetrics(desktopWindow, {
     pdfReadingMode: 'inverted',
     resolvedBaseColor: 'dark'

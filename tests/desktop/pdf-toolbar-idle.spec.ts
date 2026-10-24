@@ -28,7 +28,11 @@ test('PDF toolbar @pdf idles, reveals, and protects focused controls and menus',
   await desktopWindow.mouse.move(20, 200);
   await scroll.evaluate((element) => { element.scrollTop = 300; });
   await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(200);
-  await scroll.evaluate((element) => { element.scrollTop = 400; });
+  // Let the downward scroll reach the scroll handler before scrolling back up within another frame.
+  await scroll.evaluate(async (element) => {
+    element.scrollTop = 400;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
   await expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
   await scroll.evaluate((element) => { element.scrollTop = 300; });
   await expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');

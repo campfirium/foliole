@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { cycleRailAppearanceTo } from './appearance-mode-rail-support';
 import { expect, test } from './harness/fixtures';
 import { importPdf } from './pdf-image-excerpt-test-support';
 
@@ -28,12 +29,11 @@ test('PDF inverted reading has no bright page edge after theme switches @pdf', a
   await expect(heading).toBeInViewport();
   await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/pdf-page-edge-dark.png') });
 
-  const toggle = desktopWindow.getByRole('button', { name: /^(Appearance mode:|外观模式：)/ });
-  await toggle.click();
+  await cycleRailAppearanceTo(desktopWindow, 'light');
   await expect(root).toHaveAttribute('data-resolved-base-color', 'light');
   await expect(page).toHaveCSS('filter', 'none');
   await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/pdf-page-edge-light.png') });
-  await toggle.click();
+  await cycleRailAppearanceTo(desktopWindow, 'dark');
   await expect(root).toHaveAttribute('data-resolved-base-color', 'dark');
   await expect(page).toHaveCSS('box-shadow', 'none');
   await expect(page).toHaveCSS('filter', /invert/);

@@ -25,7 +25,7 @@ test('partial PDF dimensions recover and workspace search opens the exact distan
   const pageInput = desktopWindow.getByRole('textbox', { name: /PDF page|PDF 页码/ });
   await pageInput.fill('35');
   await pageInput.press('Enter');
-  await expect(desktopWindow.locator('[data-pdf-page-number="35"] .react-pdf__Page__textContent')).toContainText('Working set page 35');
+  await expect(desktopWindow.locator('[data-pdf-page-number="35"] .textLayer')).toContainText('Working set page 35');
   await expect(desktopWindow.locator('[data-pdf-page-number="35"] canvas')).toBeInViewport();
   await expect.poll(async () => (await readHeavyPdfPages(desktopWindow)).length).toBeLessThanOrEqual(5);
   await expect.poll(() => desktopWindow.evaluate(async (id) => {
