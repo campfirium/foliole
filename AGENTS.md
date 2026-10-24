@@ -34,7 +34,6 @@
 
 ## Read Before Editing
 
-- 用户可见布局、信息层级或控件组合：先读 `DESIGN.md`。
 - `docs/i18n/guides/**`：先读 `docs/i18n/guides/README.md`；英文 `en` 是必需源。Demo 可提供浏览器预置体验，但不得暗示为 Web 版、正式数据环境、桌面替代品或长期在线工作区。
 
 ## Risk Routing

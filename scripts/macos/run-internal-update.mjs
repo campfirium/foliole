@@ -26,7 +26,7 @@ const IRRELEVANT_PREFIXES = [
   'scripts/codex/', 'scripts/quality/', 'scripts/windows/', 'src/companion/', 'tests/'
 ];
 const IRRELEVANT_FILES = new Set([
-  'AGENTS.md', 'DESIGN.md', 'capacitor.config.ts', 'playwright.config.ts',
+  'AGENTS.md', 'capacitor.config.ts', 'playwright.config.ts',
   'playwright.desktop.config.ts', 'vite.companion.config.ts'
 ]);
 

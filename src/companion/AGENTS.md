@@ -13,10 +13,6 @@
 - companion 页面壳、路由、移动交互和触屏表面留在 `src/companion/**`；不要重新塞回 `src/app/**`。
 - 除移动端特有的页面壳、手势、布局密度、导航编排与少量触屏交互包装外，companion 默认不新增私有业务能力；与 desktop 同名、同责或用户感知相同的能力必须先收敛到共享层，再由 companion 消费。
 
-## Read Before Editing
-
-- companion UI 改动前必须先读 `DESIGN.md`。
-
 ## Implementation Rules
 
 - companion renderer 不得直接依赖 Electron-only bridge、Windows-only 路径、桌面专属运行假设或 sqlite 直连。
