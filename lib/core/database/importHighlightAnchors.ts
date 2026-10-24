@@ -55,9 +55,10 @@ function collectNormalizedSourceCandidates(
     .filter((candidate): candidate is string => Boolean(candidate));
 }
 
-function collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highlight: PreparedImportHighlightRecord) {
+function* collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highlight: PreparedImportHighlightRecord) {
   const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
-  const candidates = [highlightText, highlight.content.trim()];
+  const candidates = new Set([highlightText, highlight.content.trim()].filter(Boolean));
+  yield* candidates;
   const fullLocatorCandidates = highlight.locatorText ? resolveFullLocatorCandidate(highlightText, highlight.locatorText) : [];
   const locatorCandidates = highlight.locatorText
     ? [
@@ -66,9 +67,13 @@ function collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highligh
           .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
       ]
     : [];
-  candidates.push(...locatorCandidates);
-  const directCandidates = Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean)));
-  return Array.from(new Set([...directCandidates, ...collectNormalizedSourceCandidates(locator, directCandidates)]));
+  for (const candidate of locatorCandidates) {
+    const trimmed = candidate.trim();
+    if (!trimmed || candidates.has(trimmed)) continue;
+    candidates.add(trimmed);
+    yield trimmed;
+  }
+  yield* collectNormalizedSourceCandidates(locator, [...candidates]);
 }
 
 export function applyImportedHighlightAnchors(input: {
@@ -97,9 +102,11 @@ export function applyImportedHighlightAnchors(input: {
     const findAvailableOccurrence = input.ambiguityPolicy === 'first'
       ? findFirstAvailableImportedBodyOccurrence
       : findUniqueAvailableImportedBodyOccurrence;
-    const range = collectAnchorExcerptCandidates(locator, highlight)
-      .map((excerpt) => findAvailableOccurrence(content, excerpt, occupiedRanges))
-      .find((candidate) => candidate !== null);
+    let range: { from: number; to: number } | null = null;
+    for (const excerpt of collectAnchorExcerptCandidates(locator, highlight)) {
+      range = findAvailableOccurrence(content, excerpt, occupiedRanges);
+      if (range) break;
+    }
     if (!range) {
       return;
     }

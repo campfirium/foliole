@@ -14,7 +14,9 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -94,11 +96,21 @@ it.each([
   const children = driver.queryAll<{ id: string; anchor_link: string | null; content: string }>(
     'SELECT id, anchor_link, content FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [topic.latest_node_id]);
   expect(children).toHaveLength(HIGHLIGHT_COUNT);
-  expect(children.every((child) => child.anchor_link)).toBe(true);
+  const parentBody = loadNodeBodyResolution(driver, topic.latest_node_id)?.content;
+  expect(parentBody).toBeDefined();
+  for (const child of children) {
+    const locator = parseStoredAnchorLink(child.anchor_link)?.locator;
+    if (!locator || !('from' in locator) || !('to' in locator) || !('originalText' in locator)
+      || typeof locator.from !== 'number' || typeof locator.to !== 'number') {
+      throw new Error(`Imported highlight ${child.id} has no text locator`);
+    }
+    expect(parentBody?.slice(locator.from, locator.to)).toBe(locator.originalText);
+    expect(locator.originalText).toBe(child.content.replace(/\s+/g, ' '));
+  }
   const order = driver.queryOne<{ child_ids_json: string }>(
     'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [topic.latest_node_id]);
   const byId = new Map(children.map((child) => [child.id, child.content]));
   const ordered = (JSON.parse(order?.child_ids_json ?? '[]') as string[]).map((id) => byId.get(id));
   expect(ordered).toEqual(Array.from({ length: HIGHLIGHT_COUNT }, (_, index) => highlightText(passage(index))));
-  expect(longest).toBeLessThan(MAX_MAIN_THREAD_BLOCK_MS);
+  expect(longest, `Readwise import blocked the main thread for ${longest.toFixed(1)} ms`).toBeLessThan(MAX_MAIN_THREAD_BLOCK_MS);
 }, 120_000);
