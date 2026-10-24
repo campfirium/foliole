@@ -114,44 +114,41 @@ it.each([0, 1, 3793, 8000])('round-trips an inventory of %i entries through the 
   expect(result.hash).toBe(bytesToHex(sha256(bytes)));
 });
 
-it.each(['valid', 'wrong-owner', 'wrong-session', 'invalid-length'])('consumes only current authenticated attachment file references without reading payloads (%s)', async fault => {
+it.each(['valid', 'invalid-offset', 'excessive-blocks', 'missing-result'])('returns one bounded native write result without file payload reads (%s)', async fault => {
   const { files, values } = storage();
-  const { companionPullAttachment } = await import('./companionAttachmentHttp.js');
-  const { attachmentRequest } = await import('../../../../../../lib/core/sync/requestSyncAttachmentPull.js');
-  const { attachmentMessage, attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
-  const { encodeValidatedProtocolMessage } = await import('../../../../../../lib/core/sync/framedSyncProtocolCodec.js');
-  const key = `${'a'.repeat(64)}.pdf`;
+  const { companionReceiveAttachment } = await import('./companionAttachmentHttp.js');
+  const { attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
+  const query = attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16).fill(3),
+    storageKey: `${'a'.repeat(64)}.pdf`, byteLength: 512 * 1024, maxBlocks: 32 });
   native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
-    expect(request.attachment_response?.initiator_device_id).toBe('local');
-    const outgoing = await readFramedSyncStream((async function* () {
-      for (let index = 0; index < request.request_chunk_count; index++) yield values.get(`${request.directory}/http-out-${index}`)!;
-    })());
-    const queries = [];
-    for await (const item of readRequestSyncWire({ context, groupKey, ...outgoing })) queries.push(attachmentRequestSchema.parse(item.message.payload));
-    const query = queries[0]!;
-    const response = await prepareRequestSyncWire({ context: fault === 'wrong-session' ? { ...context, responderDeviceId: 'other' } : context,
-      groupKey, messages: async function* () { yield attachmentMessage({ ...query, state: 'end' }); } });
-    await files.write(`${request.directory}/attachment-0`, new Uint8Array(512 * 1024));
-    return { response_chunk_count: 0, response_byte_length: 0, attachment_response: {
-      preamble_base64: Buffer.from(response.preamble).toString('base64'),
-      messages: ['block', 'end'].map((state, index) => ({
-        metadata_base64: Buffer.from(encodeValidatedProtocolMessage('request_attachment', { ...query, state,
-          offset: index * 512 * 1024 })).toString('base64'),
-        file_key: index ? '' : `${fault === 'wrong-owner' ? 'requests/other' : request.directory}/attachment-0`,
-        byte_length: index ? 0 : 512 * 1024 + (fault === 'invalid-length' ? 1 : 0)
-      }))
-    } };
+    expect(request.attachment_receive).toMatchObject({ storage_key: query.storageKey, offset: 0,
+      byte_length: query.byteLength, max_blocks: 32, request_id_base64: Buffer.from(query.requestId).toString('base64') });
+    return { response_chunk_count: 0, response_byte_length: 0, ...(fault === 'missing-result' ? {} : {
+      attachment_receive: { offset: fault === 'invalid-offset' ? 1 : query.byteLength,
+        blocks: fault === 'excessive-blocks' ? 33 : 1, pending: false }
+    }) };
   });
-  const boundedFiles = { ...files, read: async () => { throw new Error('file_payload_crossed_bridge'); } };
-  const input = { context, groupKey, endpointUrl: 'http://127.0.0.1:1' };
-  const seen: number[] = [];
-  const receiving = attachmentRequest({ ...input, pullAttachment: companionPullAttachment(boundedFiles, input),
-    request: (pathWithQuery, body, consume) => withCompanionRequestSyncHttp(boundedFiles, { ...input, pathWithQuery, body }, consume)
-  }, { operation: 'pull', storageKey: key, byteLength: 512 * 1024, maxBlocks: 32 }, async (message, file) => {
-    expect(message.data).toHaveLength(0);
-    if (file) { expect(values.has(file.key)).toBe(true); seen.push(file.byteLength); }
-  });
-  if (fault === 'valid') { await receiving; expect(seen).toEqual([512 * 1024]); }
-  else { await expect(receiving).rejects.toThrow(); expect(seen).toEqual([]); }
+  const receiving = companionReceiveAttachment({ ...files, read: async () => { throw new Error('file_payload_crossed_bridge'); } },
+    { context, groupKey, endpointUrl: 'http://127.0.0.1:1' })(query);
+  if (fault === 'valid') await expect(receiving).resolves.toEqual({ offset: query.byteLength, blocks: 1, pending: false });
+  else await expect(receiving).rejects.toThrow();
   expect(values.size).toBe(0);
+});
+
+it.each(['E_ABORT', 'ENOSPC'])('cancels a blocked attachment request for data work and preserves storage failures (%s)', async code => {
+  const { files, values } = storage();
+  const { companionReceiveAttachment } = await import('./companionAttachmentHttp.js');
+  const { attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
+  const { requestAttachmentWorkYield } = await import('../../../../../../lib/core/sync/attachmentWorkBudget.js');
+  const error = Object.assign(new Error(code), { code });
+  let reject!: (reason: Error) => void;
+  native.cancel.mockImplementation(async () => { reject(error); });
+  native.post.mockImplementation(() => {
+    queueMicrotask(requestAttachmentWorkYield);
+    return new Promise((_resolve, fail) => { reject = fail; });
+  });
+  const receiving = companionReceiveAttachment(files, { context, groupKey, endpointUrl: 'http://127.0.0.1:1' })(
+    attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16), storageKey: `${'a'.repeat(64)}.pdf`, byteLength: 524288 }));
+  await expect(receiving).rejects.toThrow(code === 'E_ABORT' ? 'attachment_receive_paused' : 'ENOSPC');
+  expect(native.cancel).toHaveBeenCalledOnce(); expect(values.size).toBe(0);
 });

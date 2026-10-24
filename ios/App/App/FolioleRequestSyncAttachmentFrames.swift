@@ -1,35 +1,31 @@
 import Foundation
 import FolioleFramedSyncRuntime
 
-/** Authenticated frame/file primitive. Shared code decides offsets, recovery and publication. */
+/** Authenticates each frame and its write permission before invoking the file writer. */
 enum FolioleRequestSyncAttachmentFrames {
     static func read(stream: FolioleFramedSyncStreamReader, groupKey: Data, context: FolioleFramedSyncSessionContext,
-                     maxBlocks: Int = 32, check: () throws -> Void, consume: (Int, Data, Data) throws -> Void) throws -> Data {
-        guard (1...64).contains(maxBlocks) else { throw FolioleFramedSyncValidationError("attachment_response_window_invalid") }
+                     permission: FolioleAttachmentReceiveAuthorization, check: () throws -> Void,
+                     consume: (UInt64, Data) throws -> Void) throws {
         let preamble = try stream.nextPreamble()
         _ = try context.validate(preamble)
-        var sequence = 0
+        var sequence = 0, wireBytes = 96
         while let frame = try stream.nextFrame() {
             try check()
-            guard sequence < maxBlocks + 1 else { throw FolioleFramedSyncValidationError("attachment_response_frame_limit") }
+            wireBytes += 16 + frame.ciphertext.count
+            guard sequence < permission.maxBlocks + 1, wireBytes <= permission.maximumWireBytes else {
+                throw FolioleFramedSyncValidationError("attachment_response_frame_limit")
+            }
             let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(groupKey: groupKey, preamble: preamble,
                 frame: frame, expectedSequence: UInt64(sequence))
             let decoded = try FolioleFramedSyncCodec.decode(plaintext, authenticatedFrameType: frame.header.frameType.rawValue)
-            guard case .requestAttachment(var attachment) = decoded.payload, attachment.operation == "pull",
-                  !(attachment.state == "block" && sequence >= maxBlocks),
-                  (attachment.state == "block" ? !attachment.data.isEmpty : attachment.data.isEmpty) else {
-                throw FolioleFramedSyncValidationError("attachment_response_block_invalid")
+            guard case .requestAttachment(let attachment) = decoded.payload,
+                  plaintext.count - attachment.data.count <= 24584 else {
+                throw FolioleFramedSyncValidationError("attachment_response_invalid")
             }
-            let block = attachment.data
-            attachment.data = Data()
-            var envelope = Foliole_Sync_V22_ProtocolMessage()
-            envelope.requestAttachment = attachment
-            let metadata = try FolioleFramedSyncCodec.encode(FolioleFramedSyncCodec.validateOutbound(envelope, authenticatedFrameType: 1))
-            guard metadata.count <= 24576 else { throw FolioleFramedSyncValidationError("attachment_response_metadata_limit") }
-            try consume(sequence, metadata, block)
+            let offset = permission.offset
+            if try permission.accept(attachment) { try check(); try consume(offset, attachment.data) }
             sequence += 1
         }
-        try check()
-        return preamble.encoded
+        try check(); try permission.finish()
     }
 }

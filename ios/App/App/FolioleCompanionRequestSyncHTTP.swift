@@ -30,9 +30,16 @@ extension FolioleCompanionSyncPlugin {
             let owner = try Self.requestHTTPOwner(call)
             let id = try Self.requestHTTPID(call)
             try requestHTTPTasks.start(id) {
-                do { call.resolve(try await Self.postRequestHTTP(call, owner: owner, bridge: self.groupData)) }
+                do {
+                    let lifetime = try owner.beginOperation { requestHTTPTasks.cancel(id) }
+                    defer { owner.finishOperation(lifetime) }
+                    try Task.checkCancellation()
+                    call.resolve(try await Self.postRequestHTTP(call, owner: owner, bridge: self.groupData))
+                }
                 catch {
-                    if let network = error as? URLError, network.code == .timedOut {
+                    if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                        call.reject("request_sync_http_cancelled", "E_ABORT")
+                    } else if let network = error as? URLError, network.code == .timedOut {
                         call.reject("\(error.localizedDescription)", "ETIMEDOUT")
                     } else { call.reject("\(error.localizedDescription)") }
                 }
@@ -65,22 +72,26 @@ extension FolioleCompanionSyncPlugin {
         let body = temporary.appendingPathComponent("request.body")
         let response = temporary.appendingPathComponent("response.body")
         try FolioleRequestSyncHTTPChunks.assemble(files: files, directory: directory, count: count, output: body)
+        let permission = try FolioleRequestSyncAttachmentResponse.permission(call)
+        var lastProgress = -Double.infinity
         _ = try await FolioleFramedSyncHTTPTransport.post(endpoint: url,
             peer: .init(groupID: group, deviceID: peer, libraryEpoch: epoch, memberAuthHeaders: headers),
-            requestBodyURL: body, responseBodyURL: response, owner: owner, onProgress: {
+            requestBodyURL: body, responseBodyURL: response, owner: owner, maximumResponseBytes: permission?.maximumWireBytes, onProgress: {
+                if permission != nil && ProcessInfo.processInfo.systemUptime - lastProgress < 0.25 { return }
+                lastProgress = ProcessInfo.processInfo.systemUptime
                 if let roundID = call.getString("peer_round_id") {
                     try FolioleRequestSyncHTTPChunks.touchRound(bridge: bridge, owner: owner,
                         peer: peer, roundID: roundID, direction: "outbound")
                 }
             })
-        if call.getObject("attachment_response") != nil {
+        if let permission {
             let cancellation = FolioleFramedSyncPayloadCancellation()
             return try await withTaskCancellationHandler {
                 try Task.checkCancellation()
                 return try await FolioleFramedSyncPayloadWorker.run {
                     try FolioleFramedSyncPayloadWorker.withCancellation(cancellation) {
                         try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .inbound) { _ in
-                            try FolioleRequestSyncAttachmentResponse.read(call, files: files, directory: directory, input: response, owner: owner, bridge: bridge)
+                            try FolioleRequestSyncAttachmentResponse.read(call, permission: permission, input: response, owner: owner, bridge: bridge)
                         }
                     }
                 }

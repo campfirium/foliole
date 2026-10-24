@@ -3,7 +3,6 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
-import com.foliole.android.framed.FramedSyncFiles;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -24,6 +23,7 @@ public final class FolioleAttachmentBlockFiles {
     private final Map<String, RandomAccessFile> sources = new HashMap<>();
     private RandomAccessFile carrier;
     private FileLock lock;
+    private final java.util.Set<String> receiving = new java.util.HashSet<>();
 
     private FolioleAttachmentBlockFiles(Context context) throws Exception {
         this.context = context;
@@ -39,32 +39,38 @@ public final class FolioleAttachmentBlockFiles {
             owner.onAttachmentClose(() -> close(owner));
         }
         if (owner.isClosed()) throw new IllegalStateException("attachment_owner_closed");
-        if (call.getString("action", "").equals("append-file")) {
-            String source = call.getString("file_key", "");
-            if (!source.matches("requests/[a-f0-9-]{36}/attachment-[0-9]+")) {
-                throw new IllegalArgumentException("attachment_block_file_invalid");
-            }
-            byte[] bytes = new FramedSyncFiles(context, owner.libraryKey()).read(source);
-            if (bytes == null || bytes.length != number(call, "length") || bytes.length > 524288) {
-                throw new IllegalArgumentException("attachment_block_file_invalid");
-            }
-            files.acquire();
-            try (RandomAccessFile output = new RandomAccessFile(files.resolve(call.getString("key"), true), "rw")) {
-                long offset = number(call, "offset");
-                if (output.length() != offset) throw new IllegalArgumentException("attachment_block_range_invalid");
-                output.seek(offset); output.write(bytes);
-            }
-            return new JSObject();
-        }
         return files.execute(call);
     }
 
-    public static synchronized void close(FramedSyncPayloadBudget owner) {
-        FolioleAttachmentBlockFiles files = OWNERS.remove(owner);
-        if (files == null) return;
+    public static void close(FramedSyncPayloadBudget owner) {
+        FolioleCompanionRequestSyncHttp.cancelOwner(owner);
+        synchronized (FolioleAttachmentBlockFiles.class) {
+            FolioleAttachmentBlockFiles files = OWNERS.get(owner);
+            if (files != null && files.receiving.isEmpty()) dispose(owner, files);
+        }
+    }
+    private static void dispose(FramedSyncPayloadBudget owner, FolioleAttachmentBlockFiles files) {
+        OWNERS.remove(owner);
         for (RandomAccessFile source : files.sources.values()) closeFile(source);
         files.sources.clear();
         if (files.carrier != null) closeFile(files.carrier);
+    }
+    static synchronized FolioleAttachmentReceiveFile receive(Context context, FramedSyncPayloadBudget owner,
+        String key, long offset) throws Exception {
+        if (owner.isClosed()) throw new InterruptedException("request_sync_http_cancelled");
+        FolioleAttachmentBlockFiles files = OWNERS.get(owner);
+        if (files == null) throw new IllegalStateException("attachment_receiver_not_acquired");
+        files.acquire(); requireNotSending(key);
+        String hash = key.substring(0, 64);
+        if (!files.receiving.add(hash)) throw new IllegalStateException("attachment_receive_busy");
+        try {
+            return new FolioleAttachmentReceiveFile(files.resolve(key, true), offset, owner, () -> {
+                synchronized (FolioleAttachmentBlockFiles.class) {
+                    files.receiving.remove(hash);
+                    if (owner.isClosed() && files.receiving.isEmpty()) dispose(owner, files);
+                }
+            });
+        } catch (Exception error) { files.receiving.remove(hash); throw error; }
     }
     private static void closeFile(RandomAccessFile file) {
         try { file.close(); } catch (Exception error) { android.util.Log.e("Foliole", "Attachment file close failed", error); }
@@ -111,6 +117,7 @@ public final class FolioleAttachmentBlockFiles {
     }
 
     private JSObject mutate(PluginCall call, String action, String key) throws Exception {
+        if (receiving.contains(key.substring(0, 64))) throw new IllegalStateException("attachment_receive_busy");
         File file = resolve(key, true);
         if (action.equals("discard")) Files.deleteIfExists(file.toPath());
         else if (action.equals("publish")) {
@@ -129,6 +136,7 @@ public final class FolioleAttachmentBlockFiles {
 
     private JSObject source(PluginCall call, String action, String key) throws Exception {
         if (action.equals("source-open") || action.equals("source-stat")) {
+            if (action.equals("source-open") && receiving.contains(key.substring(0, 64))) throw new IllegalStateException("attachment_receive_busy");
             if (action.equals("source-open") && sources.containsKey(key)) throw new IllegalStateException("attachment_send_busy");
             File file = resolve(key, false);
             if (!file.exists()) file = new File(FolioleAttachmentMaintenanceFiles.directory(context, true), key);

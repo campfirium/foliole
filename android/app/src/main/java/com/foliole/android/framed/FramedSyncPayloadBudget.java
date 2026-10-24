@@ -19,6 +19,21 @@ public final class FramedSyncPayloadBudget {
     private final Condition changed = lock.newCondition();
     private final Map<Integer, Loan> loans = new HashMap<>();
     private volatile boolean closed;
+    private final Map<String, Runnable> operations = new HashMap<>();
+    public AutoCloseable operation(Runnable cancel) {
+        String id = UUID.randomUUID().toString();
+        lock.lock();
+        try {
+            if (closed) throw new IllegalStateException("framed_sync_payload_budget_closed");
+            operations.put(id, cancel);
+        } finally { lock.unlock(); }
+        return () -> { lock.lock(); try { operations.remove(id); changed.signalAll(); } finally { lock.unlock(); } };
+    }
+    private void cancelOperations() {
+        Runnable[] pending;
+        lock.lock(); try { pending = operations.values().toArray(new Runnable[0]); } finally { lock.unlock(); }
+        for (Runnable cancel : pending) cancel.run();
+    }
     private volatile Runnable attachmentCleanup = () -> {};
 
     public void onAttachmentClose(Runnable cleanup) {
@@ -59,6 +74,7 @@ public final class FramedSyncPayloadBudget {
         lock.lock();
         try { closed = true; changed.signalAll(); }
         finally { lock.unlock(); }
+        cancelOperations();
         attachmentCleanup.run();
     }
 
@@ -75,12 +91,13 @@ public final class FramedSyncPayloadBudget {
             }
             changed.signalAll();
         } finally { lock.unlock(); }
+        cancelOperations();
         attachmentCleanup.run();
     }
 
     public void drain() throws InterruptedException {
         lock.lockInterruptibly();
-        try { while (!loans.isEmpty()) changed.await(); }
+        try { while (!loans.isEmpty() || !operations.isEmpty()) changed.await(); }
         finally { lock.unlock(); }
     }
 

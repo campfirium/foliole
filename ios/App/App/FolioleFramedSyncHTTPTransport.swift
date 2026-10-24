@@ -18,7 +18,7 @@ enum FolioleFramedSyncHTTPTransport {
         responseBodyURL: URL,
         configuration: URLSessionConfiguration = makeConfiguration(),
         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
-        requestLoan: FolioleFramedSyncPayloadBudget.Loan? = nil, receiptSequence: Bool = false,
+        requestLoan: FolioleFramedSyncPayloadBudget.Loan? = nil, receiptSequence: Bool = false, maximumResponseBytes: Int? = nil,
         onProgress: (() throws -> Void)? = nil
     ) async throws -> URL {
         let request = try makeRequest(endpoint: endpoint, peer: peer)
@@ -32,7 +32,7 @@ enum FolioleFramedSyncHTTPTransport {
             responseURL: responseBodyURL,
             expectedDeviceID: peer.deviceID,
             expectedLibraryEpoch: peer.libraryEpoch, owner: owner, responseLane: responseLane,
-            receiptSequence: receiptSequence, onProgress: onProgress
+            receiptSequence: receiptSequence, maximumResponseBytes: maximumResponseBytes, onProgress: onProgress
         )
         let networkLoan = try await FolioleFramedSyncPayloadWorker.run {
             try owner.flatMap { requestLoan == nil ? try FolioleFramedSyncPayloadWorker.borrow($0, direction: .outbound) : nil }

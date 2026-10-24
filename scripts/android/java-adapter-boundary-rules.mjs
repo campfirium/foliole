@@ -95,6 +95,7 @@ export const CLASSIFICATIONS = {
       'FolioleRemoteImageFiles.java',
       'FolioleAttachmentMaintenanceFiles.java',
       'FolioleAttachmentBlockFiles.java',
+      'FolioleAttachmentReceiveFile.java',
       'MainActivity.java'
     ]
   }

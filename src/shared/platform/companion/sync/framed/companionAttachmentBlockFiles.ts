@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
-import type { AttachmentBlockFile } from '../../../../../../lib/core/sync/attachmentBlockTransfer.js';
 import { completeAttachmentDemand, recordAttachmentDemandAttempt } from '../../../../../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
@@ -40,7 +39,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
   const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
   let acquired: Promise<unknown> | undefined;
-  const receiver = createAttachmentBlockReceiver<Uint8Array | AttachmentBlockFile>({
+  const receiver = createAttachmentBlockReceiver({
     exclusive: (hash, execute) => files.exclusive(`attachment-${hash}`, async () => {
       acquired ??= call({ key: hash, action: 'acquire' }).catch(error => { acquired = undefined; throw error; });
       await acquired;
@@ -53,10 +52,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     },
     partialLength: async hash => (await stat(hash, true)).length,
     truncate: async (key, length) => { await call({ key, length, action: 'truncate' }); },
-    append: async (key, offset, bytes) => {
-      await call('key' in bytes ? { key, offset, file_key: bytes.key, length: bytes.byteLength, action: 'append-file' }
-        : { key, offset, base64: encode(bytes), action: 'append' });
-    },
+    append: async (key, offset, bytes) => { await call({ key, offset, base64: encode(bytes), action: 'append' }); },
     verifyPartial: async key => (await call({ key, partial: true, action: 'hash' })).hash === key,
     discardPartial: async key => { await call({ key, action: 'discard' }); },
     publish: async resource => { attachmentSourceVerification.invalidate(resource.storageKey); await call({ key: resource.storageKey, action: 'publish' }); },
@@ -75,7 +71,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
       return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true);
     },
     status: resource => completed(resource.storageKey, receiver.status(resource)),
-    receiveFile: (resource, offset, file) => completed(resource.storageKey, receiver.receive(resource, offset, file)),
+    receiveWindow: receiveCompanionWindow(db, receiver),
     receive: (resource, offset, bytes) => completed(resource.storageKey, receiver.receive(resource, offset, bytes)),
     withFile: (key, consume, options) => files.exclusive(`send-${key}`, async () => {
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
@@ -111,4 +107,14 @@ async function completeReceived<T extends AttachmentBlockResult>(db: RequestSync
   const result = await notifyComplete(key, pending);
   if (result.kind === 'complete' && !key.endsWith('.pdf')) await db.write(port => completeAttachmentDemand(port, key));
   return result;
+}
+
+function receiveCompanionWindow(db: RequestSyncDatabaseHost, receiver: ReturnType<typeof createAttachmentBlockReceiver>)
+  : NonNullable<RequestSyncAttachmentHost['receiveWindow']> {
+  return async (resource, offset, execute) => {
+    const result = await receiver.receiveWindow(resource, offset, execute);
+    if (result.offset === resource.byteLength) await completeReceived(db, resource.storageKey,
+      Promise.resolve({ kind: 'complete', offset: result.offset }));
+    return result;
+  };
 }

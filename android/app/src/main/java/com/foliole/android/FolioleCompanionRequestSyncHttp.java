@@ -50,9 +50,11 @@ final class FolioleCompanionRequestSyncHttp {
             Operation operation = new Operation(owner);
             if (ACTIVE.putIfAbsent(id, operation) != null) throw new IllegalStateException("request_sync_http_duplicate");
             try { executor.execute(() -> {
-                try { call.resolve(execute(context, call, operation)); }
+                try (var lifetime = owner.operation(operation::cancel)) { call.resolve(execute(context, call, operation)); }
                 catch (Exception error) {
-                    if (error instanceof java.net.SocketTimeoutException) call.reject(error.getMessage(), "ETIMEDOUT", error);
+                    if (operation.cancelled.get() && !(error instanceof FolioleAttachmentReceiveFile.StorageFailure) &&
+                        (com.foliole.android.framed.FramedSyncStreamReader.isTransportInterruption(error) || error instanceof InterruptedException)) call.reject("request_sync_http_cancelled", "E_ABORT", error);
+                    else if (error instanceof java.net.SocketTimeoutException) call.reject(error.getMessage(), "ETIMEDOUT", error);
                     else call.reject(error.getMessage(), error);
                 }
                 finally { ACTIVE.remove(id, operation); }
@@ -61,6 +63,10 @@ final class FolioleCompanionRequestSyncHttp {
                 throw error;
             }
         } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+
+    static void cancelOwner(FramedSyncPayloadBudget owner) {
+        for (Operation operation : ACTIVE.values()) if (operation.owner == owner) operation.cancel();
     }
 
     static void cancel(PluginCall call) throws Exception {
@@ -92,9 +98,9 @@ final class FolioleCompanionRequestSyncHttp {
         return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
             output -> FolioleRequestSyncHttpChunks.write(files, directory, count, output, operation::check, progress, timing::chunk),
-            input -> call.getObject("attachment_response") == null
+            input -> call.getObject("attachment_receive") == null
                 ? FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress)
-                : FolioleRequestSyncAttachmentResponse.read(call, files, directory, input, operation::check, progress, operation.owner),
+                : FolioleRequestSyncAttachmentResponse.read(context, call, input, operation::check, progress, operation.owner),
             operation::opened, timing::phase);
     }
 

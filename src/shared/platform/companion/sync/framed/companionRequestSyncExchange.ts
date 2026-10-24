@@ -3,7 +3,7 @@ import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/re
 import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 
-import { companionPullAttachment } from './companionAttachmentHttp.js';
+import { companionReceiveAttachment } from './companionAttachmentHttp.js';
 import { withCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
 
 export function createCompanionRequestSyncExchange(host: RequestSyncDatabaseHost, input: {
@@ -13,6 +13,6 @@ export function createCompanionRequestSyncExchange(host: RequestSyncDatabaseHost
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
 }): RequestSyncExchange {
-  return { ...input, pullAttachment: companionPullAttachment(host.files, input), request: (pathWithQuery, body, consume) =>
+  return { ...input, receiveAttachment: companionReceiveAttachment(host.files, input), request: (pathWithQuery, body, consume) =>
     withCompanionRequestSyncHttp(host.files, { ...input, pathWithQuery, body }, consume) };
 }

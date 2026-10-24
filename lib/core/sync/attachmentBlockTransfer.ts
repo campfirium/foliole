@@ -2,11 +2,14 @@ import { ATTACHMENT_BLOCK_BYTES, type AttachmentBlockResource, type AttachmentBl
   type AttachmentBlockStatus } from './attachmentBlockReceiver.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
 
-/** A request-owned native file; the owner removes it when response consumption ends. */
-export interface AttachmentBlockFile { key: string; byteLength: number }
+export interface AttachmentReceiveWindow { offset: number; blocks: number; pending: boolean }
+export type AttachmentReceiveOperation = () => Promise<AttachmentReceiveWindow>;
+export class AttachmentReceivePaused extends Error {
+  constructor() { super('attachment_receive_paused'); }
+}
 
 export interface AttachmentBlockDestination {
-  receiveFile?(resource: AttachmentBlockResource, offset: number, file: AttachmentBlockFile): Promise<AttachmentBlockResult>;
+  receiveWindow?(resource: AttachmentBlockResource, offset: number, execute: AttachmentReceiveOperation): Promise<AttachmentReceiveWindow>;
   status(resource: AttachmentBlockResource): Promise<AttachmentBlockStatus>;
   receive(resource: AttachmentBlockResource, offset: number, bytes: Uint8Array): Promise<AttachmentBlockResult>;
 }

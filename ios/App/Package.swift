@@ -40,6 +40,8 @@ let package = Package(
                 "FolioleFramedSyncHTTPReceiver.swift",
                 "FolioleRequestSyncHTTPChunks.swift",
                 "FolioleRequestSyncAttachmentFrames.swift",
+                "FolioleAttachmentReceiveAuthorization.swift",
+                "FolioleAttachmentReceiveFile.swift",
                 "FolioleRequestSyncRoute.swift",
                 "FolioleFramedSyncHTTPTransport.swift",
                 "FolioleFramedSyncFileResponse.swift",

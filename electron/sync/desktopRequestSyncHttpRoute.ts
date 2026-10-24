@@ -19,12 +19,13 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   groupKey: Uint8Array;
   signal: AbortSignal;
   onProgress?: () => void;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<void>;
 }) {
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {
     case 'round_finish': return respondRequestSyncRoundControl({ ...input,
       roundId: input.url.searchParams.get('peer_round_id') ?? '' });
-    case 'attachments': return respondRequestSyncAttachments(await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
+    case 'attachments': return respondRequestSyncAttachments<FramedSyncStreamBody | void>(await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
     case 'pulls': return respondRequestSyncDatabase(host, { ...input, mode: 'pulls' }, prepareDesktopRequestSyncBody);

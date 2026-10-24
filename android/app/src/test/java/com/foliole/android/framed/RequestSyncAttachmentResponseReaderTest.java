@@ -29,46 +29,50 @@ public final class RequestSyncAttachmentResponseReaderTest {
         return output.toByteArray();
     }
 
-    @Test public void streamsSixteenMiBAsBoundedNativeBlocksAndSmallMetadata() throws Exception {
-        int[] next = { 0 };
-        RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(wire(32)), KEY, CONTEXT, () -> {}, (index, metadata, block) -> {
-            assertEquals(next[0]++, index);
-            assertTrue(metadata.length < 256);
-            var message = ProtocolMessage.parseFrom(metadata).getRequestAttachment();
-            assertTrue(message.getData().isEmpty());
-            assertEquals(index == 32 ? 0 : 524288, block.length);
-            if (block.length > 0) assertEquals((byte) index, block[0]);
-        });
-        assertEquals(33, next[0]);
+    private AttachmentReceiveAuthorization permission(int size, int limit) {
+        return new AttachmentReceiveAuthorization(new byte[16], "a".repeat(64) + ".pdftext", (long) size * 524288, 0, limit);
     }
-
+    private void read(byte[] body, AttachmentReceiveAuthorization permission, RequestSyncAttachmentResponseReader.Check check,
+        RequestSyncAttachmentResponseReader.Consumer consume) throws Exception {
+        RequestSyncAttachmentResponseReader.read(new FramedSyncStreamReader(new ByteArrayInputStream(body)), KEY, CONTEXT, permission, check, consume);
+    }
+    @Test public void streamsSixteenMiBDirectlyAsBoundedAuthorizedBlocks() throws Exception {
+        int[] next = { 0 }; var permission = permission(32, 32);
+        read(wire(32), permission, () -> {}, (offset, block) -> {
+            assertEquals((long) next[0] * 524288, offset);
+            assertEquals((byte) next[0]++, block[0]); assertEquals(524288, block.length);
+        });
+        assertEquals(32, next[0]); assertEquals(16777216, permission.offset());
+    }
     @Test public void streamsThirtyTwoMiBWithinAnExplicitLargerWindow() throws Exception {
         int[] count = { 0 };
-        RequestSyncAttachmentResponseReader.read(new FramedSyncStreamReader(new ByteArrayInputStream(wire(64))), KEY, CONTEXT,
-            64, () -> {}, (index, metadata, block) -> { assertTrue(metadata.length < 256); count[0]++; });
-        assertEquals(65, count[0]);
+        read(wire(64), permission(64, 64), () -> {}, (offset, block) -> count[0]++);
+        assertEquals(64, count[0]);
     }
-
     @Test public void rejectsCorruptionBeforeHandingTheDamagedBlockToTheConsumer() throws Exception {
         byte[] body = wire(1); body[120] ^= 1;
-        int[] count = { 0 };
-        assertThrows(Exception.class, () -> RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(body), KEY, CONTEXT,
-            () -> {}, (index, metadata, block) -> count[0]++));
-        assertEquals(0, count[0]);
+        assertThrows(Exception.class, () -> read(body, permission(1, 1), () -> {}, (offset, block) -> fail()));
     }
-
-    @Test public void rejectsWrongPeerTruncationAndCancellation() throws Exception {
+    @Test public void rejectsWrongAuthorizationBeforeWriting() throws Exception {
+        byte[] body = wire(2);
+        for (var permission : new AttachmentReceiveAuthorization[] {
+            new AttachmentReceiveAuthorization(new byte[16], "b".repeat(64) + ".pdftext", 1048576, 0, 2),
+            new AttachmentReceiveAuthorization(new byte[16], "a".repeat(64) + ".pdftext", 1048577, 0, 2),
+            new AttachmentReceiveAuthorization(new byte[16], "a".repeat(64) + ".pdftext", 1048576, 524288, 2),
+            new AttachmentReceiveAuthorization(new byte[]{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, "a".repeat(64) + ".pdftext", 1048576, 0, 2)
+        }) assertThrows(Exception.class, () -> read(body, permission, () -> {}, (offset, block) -> fail()));
+    }
+    @Test public void rejectsTruncationAndCancellation() throws Exception {
         byte[] body = wire(1);
-        assertThrows(Exception.class, () -> RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(body), KEY,
-            new FramedSyncSessionContext("group", "other", "a-epoch", "b", "b-epoch"), () -> {}, (i, m, b) -> fail()));
-        assertThrows(Exception.class, () -> RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(Arrays.copyOf(body, 150)), KEY,
-            CONTEXT, () -> {}, (i, m, b) -> fail()));
-        assertThrows(InterruptedException.class, () -> RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(body), KEY,
-            CONTEXT, () -> { throw new InterruptedException("cancelled"); }, (i, m, b) -> fail()));
+        assertThrows(Exception.class, () -> read(Arrays.copyOf(body, 150), permission(1, 1), () -> {}, (offset, block) -> fail()));
+        assertThrows(InterruptedException.class, () -> read(body, permission(1, 1), () -> { throw new InterruptedException("cancelled"); }, (offset, block) -> fail()));
     }
-
-    @Test public void rejectsResponsesLargerThanTheWindow() throws Exception {
-        assertThrows(Exception.class, () -> RequestSyncAttachmentResponseReader.read(new ByteArrayInputStream(wire(33)), KEY,
-            CONTEXT, () -> {}, (i, m, b) -> {}));
+    @Test public void rejectsExtraFramesAndMissingEndAfterKeepingOnlyTheValidPrefix() throws Exception {
+        int[] count = {0};
+        assertThrows(Exception.class, () -> read(wire(33), permission(33, 32), () -> {}, (offset, block) -> count[0]++));
+        assertEquals(32, count[0]);
+        byte[] body = wire(1);
+        int firstFrameLength = java.nio.ByteBuffer.wrap(body, 96, 4).getInt();
+        assertThrows(Exception.class, () -> read(Arrays.copyOf(body, 112 + firstFrameLength), permission(1, 1), () -> {}, (offset, block) -> {}));
     }
 }

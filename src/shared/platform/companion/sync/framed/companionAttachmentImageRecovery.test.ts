@@ -29,7 +29,7 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionD
 
 import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
 
-it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeFile=%s)', async (retry, nativeFile) => {
+it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeWindow=%s)', async (retry, nativeWindow) => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-image-'));
   const sqlite = new Database(path.join(root, 'library.db'));
   initializeDatabaseSchema(sqlite);
@@ -54,10 +54,11 @@ it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes
     await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
     const resource = { storageKey: key, byteLength: bytes.length };
     const receive = async (offset: number, block: Uint8Array) => {
-      if (!nativeFile) return host.receive(resource, offset, block);
-      const staged = path.join(root, 'native-block');
-      await writeFile(staged, block);
-      return host.receiveFile!(resource, offset, { key: staged, byteLength: block.length });
+      if (!nativeWindow) return host.receive(resource, offset, block);
+      return host.receiveWindow!(resource, offset, async () => {
+        await appendFile(path.join(root, `.attachment-${hash}.partial`), block);
+        return { offset: offset + block.length, blocks: 1, pending: false };
+      });
     };
     await receive(0, bytes.subarray(0, BLOCK));
     expect(widget.querySelector('img')).toBeNull();
@@ -93,7 +94,6 @@ function fileOperations(root: string) {
         catch { return { present: false, length: 0, hash: '' }; }
       }
       case 'truncate': await appendFile(partial, ''); await truncate(partial, input.length); return {};
-      case 'append-file': await appendFile(partial, await readFile(input.file_key!)); return {};
       case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
       case 'hash': return { hash: digest(await readFile(file)) };
       case 'discard': await rm(partial, { force: true }); return {};

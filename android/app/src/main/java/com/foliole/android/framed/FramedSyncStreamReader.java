@@ -61,7 +61,7 @@ public final class FramedSyncStreamReader {
         return new TransportInterruption(code);
     }
 
-    static boolean isTransportInterruption(Exception error) {
+    public static boolean isTransportInterruption(Exception error) {
         return error instanceof IOException || error instanceof TransportInterruption;
     }
 

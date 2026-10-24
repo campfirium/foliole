@@ -3,16 +3,15 @@ import type { NativeCompanionFramedPayloadBudgetOwner } from './nativeCompanionF
 export type NativeHttpCancellation = (NativeCompanionFramedPayloadBudgetOwner & { request_id: string })
   | { request_id?: never; library_key?: never; generation_id?: never };
 
-export interface NativeAttachmentResponseContext {
+export interface NativeAttachmentReceivePlan {
   max_blocks: number;
+  request_id_base64: string;
+  storage_key: string;
+  byte_length: number;
+  offset: number;
   initiator_device_id: string;
   initiator_library_epoch: string;
 }
-export interface NativeAttachmentResponse {
-  preamble_base64: string;
-  messages: { metadata_base64: string; file_key: string; byte_length: number }[];
-}
-
 /** Shared code owns scheduling and publication; native HTTP may stage authenticated attachment bytes. */
 export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPayloadBudgetOwner {
   request_id: string;
@@ -24,14 +23,14 @@ export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPaylo
   receiver_device_id: string;
   receiver_library_epoch: string;
   peer_round_id?: string;
-  attachment_response?: NativeAttachmentResponseContext;
+  attachment_receive?: NativeAttachmentReceivePlan;
 }
 
 export interface NativeRequestSyncHttpPlugin {
   postRequestSyncHttp(request: NativeRequestSyncHttpRequest): Promise<{
     response_chunk_count: number;
     response_byte_length: number;
-    attachment_response?: NativeAttachmentResponse;
+    attachment_receive?: { offset: number; blocks: number; pending: boolean };
   }>;
   cancelRequestSyncHttp(request: NativeCompanionFramedPayloadBudgetOwner & { request_id: string }): Promise<void>;
 }

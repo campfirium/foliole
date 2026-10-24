@@ -33,6 +33,20 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
     private let lock = NSLock()
     private let callbacks = DispatchQueue(label: "com.campfirium.foliole.framed-budget", attributes: .concurrent)
     private var accepting = true
+    private var operations = [UUID: () -> Void]()
+    func beginOperation(cancel: @escaping () -> Void) throws -> UUID {
+        lock.lock(); defer { lock.unlock() }
+        guard accepting else { throw Self.closed() }
+        let id = UUID(); operations[id] = cancel; return id
+    }
+    func finishOperation(_ id: UUID) {
+        lock.lock()
+        operations.removeValue(forKey: id)
+        let completions = !accepting && active.isEmpty && operations.isEmpty ? drained : []
+        if !completions.isEmpty { drained.removeAll() }
+        lock.unlock()
+        for complete in completions { callbacks.async(execute: complete) }
+    }
     private struct Borrow { let loan: Loan; var nativeHeld = true; var producerHeld = false }
     private var active = [String: Borrow]()
     private var waiting = [Waiting]()
@@ -67,12 +81,14 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
     func retire(_ complete: @escaping () -> Void) {
         lock.lock(); accepting = false
         let abandoned = waiting; waiting.removeAll()
-        let ready = active.isEmpty
+        let ready = active.isEmpty && operations.isEmpty
+        let cancellations = Array(operations.values)
         let cleanup = attachmentCleanup
         attachmentCleanup = nil
         if !ready { drained.append(complete) }
         lock.unlock()
         for request in abandoned { callbacks.async { request.complete(.failure(Self.closed())) } }
+        for cancel in cancellations { cancel() }
         cleanup?()
         if ready { callbacks.async(execute: complete) }
     }
@@ -121,7 +137,7 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
         if borrow.nativeHeld || borrow.producerHeld { active[id] = borrow; lock.unlock(); return }
         active.removeValue(forKey: id)
         let grants = grantLocked()
-        let completions = !accepting && active.isEmpty ? drained : []
+        let completions = !accepting && active.isEmpty && operations.isEmpty ? drained : []
         if !completions.isEmpty { drained.removeAll() }
         lock.unlock()
         deliver(grants)

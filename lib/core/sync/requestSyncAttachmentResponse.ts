@@ -1,7 +1,7 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
-import { attachmentWorkBudget } from './attachmentWorkBudget.js';
+import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import { ATTACHMENT_WINDOW_BLOCKS, assertAttachmentPushWindow, attachmentMessage, attachmentRequestSchema,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
@@ -19,6 +19,7 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
   onProgress?: () => void;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<T>;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
   const window: AttachmentRequest[] = [];
   for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) {
@@ -30,7 +31,8 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
   assertAttachmentPushWindow(window);
   const reply = async (messages: AsyncIterable<RequestSyncMessage>) => {
     const stream = await prepareRequestSyncWire({ ...input, messages: () => messages });
-    try { return await consume(stream); }
+    try { return await (request.operation === 'pull' && input.consumePull
+      ? input.consumePull(stream, input.signal) : consume(stream)); }
     finally { await stream.frames.return(undefined); }
   };
   const withSource: AttachmentBlockSource['withFile'] = (key, action) => {
@@ -97,7 +99,7 @@ async function* sourceMessages(request: AttachmentRequest,
   if (request.byteLength !== file.resource.byteLength || request.offset > file.resource.byteLength ||
       request.offset % ATTACHMENT_BLOCK_BYTES !== 0) throw new Error('attachment_pull_range_invalid');
   const end = Math.min(request.offset + ATTACHMENT_BLOCK_BYTES * request.maxBlocks, file.resource.byteLength);
-  const shouldYield = attachmentWorkBudget(250);
+  const shouldYield = attachmentDataYield();
   let sentEnd = request.offset;
   for (let offset = request.offset; offset < end; offset += ATTACHMENT_BLOCK_BYTES) {
     if (offset > request.offset && shouldYield()) break;

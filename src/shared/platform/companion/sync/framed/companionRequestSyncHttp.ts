@@ -1,6 +1,8 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { AttachmentReceivePaused } from '../../../../../../lib/core/sync/attachmentBlockTransfer.js';
+import { onAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { encodeFramedSyncStream, readFramedSyncStream, type FramedSyncStreamBody } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { framedSyncPathWithIdentity } from '../../../../../../lib/core/sync/framedSyncHttpContract.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from '../../../../../../lib/core/sync/requestSyncFiles.js';
@@ -22,7 +24,7 @@ export interface CompanionRequestSyncHttpInput {
   body: FramedSyncStreamBody;
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
-  attachmentResponse?: NativeRequestSyncHttpRequest['attachment_response'];
+  attachmentReceive?: NativeRequestSyncHttpRequest['attachment_receive'];
 }
 
 export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
@@ -57,7 +59,7 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
         'x-foliole-library-epoch': input.context.initiatorLibraryEpoch
       }, sync_group_id: input.context.groupId, receiver_device_id: input.context.responderDeviceId,
       receiver_library_epoch: input.context.responderLibraryEpoch };
-    if (input.attachmentResponse) request.attachment_response = input.attachmentResponse;
+    if (input.attachmentReceive) request.attachment_receive = input.attachmentReceive;
     if (input.peerRound) request.peer_round_id = input.peerRound.id;
     input.signal?.throwIfAborted();
     const operation = FolioleCompanionSync.postRequestSyncHttp(request);
@@ -65,12 +67,18 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     const cancel = () => { cancellation = FolioleCompanionSync.cancelRequestSyncHttp({ ...owner, request_id: requestId });
       void cancellation.catch(() => undefined); };
     input.signal?.addEventListener('abort', cancel, { once: true });
+    let yielded = false;
+    const stopYield = input.attachmentReceive ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
     try {
       const response = await operation;
       input.signal?.throwIfAborted();
       if (input.peerRound) input.peerRound.admitted = true;
       return await consume(response, temporary.directory);
+    } catch (error) {
+      if (yielded && error && typeof error === 'object' && 'code' in error && error.code === 'E_ABORT') throw new AttachmentReceivePaused();
+      throw error;
     } finally {
+      stopYield();
       input.signal?.removeEventListener('abort', cancel);
       await cancellation;
     }

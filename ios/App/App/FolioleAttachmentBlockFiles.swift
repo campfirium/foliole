@@ -23,19 +23,21 @@ final class FolioleAttachmentBlockFiles {
         if call.getString("action") == "source-stat-batch", call.getArray("keys", String.self) == nil {
             throw FolioleFramedSyncValidationError("attachment_stat_batch_invalid")
         }
-        var data: Data?
-        if call.getString("action") == "append-file" {
-            guard let key = call.getString("file_key"),
-                  key.range(of: "^requests/[a-f0-9-]{36}/attachment-[0-9]+$", options: .regularExpression) != nil,
-                  let block = try FolioleFramedSyncFiles(libraryKey: owner.libraryKey).read(key),
-                  block.count <= 524288, Double(block.count) == call.getDouble("length") else {
-                throw FolioleFramedSyncValidationError("attachment_block_file_invalid")
-            }
-            data = block
-        }
         return try files.execute(action: call.getString("action") ?? "", key: call.getString("key") ?? "",
                                  partial: call.getBool("partial") ?? false, keys: call.getArray("keys", String.self) ?? [],
-                                 number: { call.getDouble($0) }, base64: call.getString("base64"), data: data) as! JSObject
+                                 number: { call.getDouble($0) }, base64: call.getString("base64")) as! JSObject
+    }
+
+    static func receive(_ owner: FolioleFramedSyncPayloadBudget, key: String, offset: UInt64,
+                        check: @escaping () throws -> Void) throws -> FolioleAttachmentReceiveFile {
+        mutex.lock(); defer { mutex.unlock() }
+        try owner.requireActive()
+        guard let files = owners[ObjectIdentifier(owner)] else { throw FolioleFramedSyncValidationError("attachment_receiver_not_acquired") }
+        try requireNotSending(key)
+        return try files.receive(key: key, offset: offset, check: check) {
+            mutex.lock(); defer { mutex.unlock() }
+            files.finishReceive(key)
+        }
     }
 
     static func close(_ owner: FolioleFramedSyncPayloadBudget) {

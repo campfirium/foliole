@@ -13,7 +13,7 @@ import { createSyncPeerRoundOwnership } from './syncPeerRoundOwnership.js';
 
 afterEach(() => vi.useRealTimers());
 
-it.each([{ maxBlocks: 1, expected: 1, interrupt: false }, { maxBlocks: 8, expected: 2, interrupt: false },
+it.each([{ maxBlocks: 1, expected: 1, interrupt: false }, { maxBlocks: 8, expected: 4, interrupt: false },
   { maxBlocks: 8, expected: 1, interrupt: true }])('bounds an encrypted pull window and renews its lease: %j', async ({ maxBlocks, expected, interrupt }) => {
   vi.useFakeTimers();
   const owner = createSyncPeerRoundOwnership(200);

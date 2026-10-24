@@ -2,6 +2,8 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
+    private let maximumResponseBytes: Int?
+    private var totalResponseBytes = 0
     private let owner: FolioleFramedSyncPayloadBudget?
     private let receiptSequence: Bool
     private let responseLane: FolioleFramedSyncPayloadBudget.Lane
@@ -24,7 +26,8 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
 
     init(responseURL: URL, expectedDeviceID: String, expectedLibraryEpoch: String,
          owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
-         receiptSequence: Bool = false, onProgress: (() throws -> Void)? = nil) {
+         receiptSequence: Bool = false, maximumResponseBytes: Int? = nil, onProgress: (() throws -> Void)? = nil) {
+        self.maximumResponseBytes = maximumResponseBytes
         self.onProgress = onProgress
         self.owner = owner; self.responseLane = responseLane; self.receiptSequence = receiptSequence
         self.responseURL = responseURL
@@ -129,6 +132,10 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             return
         }
         do {
+            if let maximumResponseBytes, data.count > maximumResponseBytes - totalResponseBytes {
+                throw FolioleFramedSyncValidationError("attachment_response_byte_limit")
+            }
+            totalResponseBytes += data.count
             if !data.isEmpty { try onProgress?() }
             if responseLane == .receipt {
                 let maximum = receiptSequence ? 2_097_152 + 128 * 32 : 1_048_576 + 112

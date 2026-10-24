@@ -4,6 +4,9 @@ import { setImmediate } from 'node:timers/promises';
 
 import { expect, it } from 'vitest';
 
+import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
+
 import { writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
 
 it('keeps a payload held until its local write callback completes even when write returns true', async () => {
@@ -84,4 +87,63 @@ it('closes the producer and returns the original disk or socket error', async ()
   expect(loaded).toBe(1);
   expect(closed).toBe(true);
   expect(target.destroyed).toBe(true);
+});
+
+it('holds frame capacity through slow write callbacks and prevents further source reads', async () => {
+  const budget = new FramedSyncPayloadBudget();
+  const held = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  const callbacks: Array<() => void> = [];
+  const written: Buffer[] = [];
+  let reads = 0;
+  const shared = Buffer.alloc(4);
+  async function* source() {
+    for (let index = 1; index <= 3; index++) {
+      reads++;
+      shared.fill(index);
+      yield shared;
+    }
+  }
+  const target = new Writable({ write(chunk: Buffer, _encoding, done) {
+    callbacks.push(() => { written.push(Buffer.from(chunk)); done(); });
+  } });
+  const sending = writeDesktopFramedSyncHttpBody(target, leaseFramedSyncPayloads(source(), budget, 'outbound'));
+  await setImmediate();
+  expect(reads).toBe(0);
+  held.release();
+  await setImmediate();
+  expect(reads).toBe(1);
+  let granted = false;
+  const competitor = budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES })
+    .then(lease => { granted = true; lease.release(); });
+  await setImmediate();
+  expect(granted).toBe(false);
+  callbacks.shift()?.();
+  await competitor;
+  while (!target.writableFinished) {
+    callbacks.shift()?.();
+    await setImmediate();
+  }
+  await sending;
+  expect(written).toEqual([Buffer.alloc(4, 1), Buffer.alloc(4, 2), Buffer.alloc(4, 3)]);
+  budget.close(); await budget.drained;
+});
+
+it.each([false, true])('cancels a frame reservation without reading or leaving a waiter, granted=%s', async granted => {
+  const budget = new FramedSyncPayloadBudget();
+  const held = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  const controller = new AbortController();
+  let reads = 0;
+  async function* source() { reads++; yield Buffer.from('payload'); }
+  const target = new Writable({ write(_chunk, _encoding, done) { done(); } });
+  const sending = writeDesktopFramedSyncHttpBody(target,
+    leaseFramedSyncPayloads(source(), budget, 'outbound', undefined, controller.signal));
+  const rejected = expect(sending).rejects.toThrow(/cancel|abort/iu);
+  await setImmediate();
+  if (granted) held.release();
+  controller.abort();
+  await rejected;
+  expect(reads).toBe(0);
+  held.release();
+  const next = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  next.release(); budget.close(); await budget.drained;
 });

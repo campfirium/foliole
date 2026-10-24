@@ -11,6 +11,7 @@ import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagno
 
 import { beginRequestHttpPhase, requestBodyTiming } from './companionLanRequestTiming.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { writeDesktopAttachmentPull } from './desktopAttachmentPullHttpWriter.js';
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
 import { encodeFramedSyncHttpBody, writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
 import { spoolDesktopFramedSyncSequence } from './desktopFramedSyncSequenceSpool.js';
@@ -33,9 +34,10 @@ type FramedPostArgs = {
   payloadBudget?: FramedSyncPayloadBudget | undefined;
   localIdentity: Readonly<{ deviceId: string; libraryEpoch: string }>;
   onStream: (input: Readonly<{
+    consumePull: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<void>;
     context: AuthenticatedContext;
     stream: FramedSyncStreamBody<FramedSyncWireFrame>;
-  }>) => Promise<FramedSyncStreamBody>;
+  }>) => Promise<FramedSyncStreamBody | void>;
   request: http.IncomingMessage;
   response: http.ServerResponse;
   onProgress?: () => void;
@@ -80,19 +82,32 @@ async function respondToVerifiedBody(args: FramedPostArgs, context: Authenticate
   const first = await units.next().finally(decoded);
   if (first.done) throw new Error('framed_sync_preamble_truncated');
   const lane = decodeFramedSyncPreamble(first.value.preamble).contextKind === 'transfer' ? 'receipt' : 'payload';
-  const spooled = beginRequestHttpPhase(response, 'response_spool_inclusive');
-  const reply = await spoolDesktopFramedSyncSequence({ lane, payloadBudget: args.payloadBudget,
-    bodies: (async function* () {
-      const handle = async (stream: FramedSyncStreamBody<FramedSyncWireFrame>) => {
-        const handled = beginRequestHttpPhase(response, 'business_handler');
-        try { return await args.onStream({ context, stream }); } finally { handled(); }
-      };
-      try {
-        yield await handle(first.value);
-        for await (const stream of units) yield await handle(stream);
-      } finally { await units.return(undefined); }
-    })()
-  }).finally(spooled);
+  const handle = async (stream: FramedSyncStreamBody<FramedSyncWireFrame>) => {
+    const handled = beginRequestHttpPhase(response, 'business_handler');
+    try { return await args.onStream({ context, stream, consumePull: async (reply, signal) => {
+      if (!(await units.next()).done) throw new Error('attachment_request_tail_invalid');
+      await writeDesktopAttachmentPull({ response, stream: reply, signal,
+        localIdentity: args.localIdentity, payloadBudget: args.payloadBudget, onProgress: args.onProgress });
+    } }); } finally { handled(); }
+  };
+  const reply = await (async () => {
+    try {
+      const firstReply = await handle(first.value);
+      if (!firstReply) return;
+      const spooled = beginRequestHttpPhase(response, 'response_spool_inclusive');
+      return await spoolDesktopFramedSyncSequence({ lane, payloadBudget: args.payloadBudget,
+        bodies: (async function* () {
+          yield firstReply;
+          for await (const stream of units) {
+            const next = await handle(stream);
+            if (!next) throw new Error('framed_sync_response_missing');
+            yield next;
+          }
+        })()
+      }).finally(spooled);
+    } finally { await units.return(undefined); }
+  })();
+  if (!reply) return;
   const sent = beginRequestHttpPhase(response, 'response_send');
   try {
     response.writeHead(200, {

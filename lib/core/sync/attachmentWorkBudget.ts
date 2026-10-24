@@ -3,9 +3,17 @@ let waiters = 0;
 let dataRounds = 0;
 let resourceRounds = 0;
 const listeners = new Set<() => void>();
+const priorityListeners = new Set<() => void>();
+export function onAttachmentWorkYield(listener: () => void) {
+  priorityListeners.add(listener);
+  return () => { priorityListeners.delete(listener); };
+}
 
 /** A queued data run takes precedence at the next recoverable attachment boundary. */
-export function requestAttachmentWorkYield() { priorityRevision++; }
+export function requestAttachmentWorkYield() {
+  priorityRevision++;
+  for (const listener of [...priorityListeners]) listener();
+}
 
 export function waitForAttachmentWorkYield() {
   waiters++;

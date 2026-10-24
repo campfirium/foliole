@@ -56,17 +56,17 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     payloadBudget: runtime.payloadBudget,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
     onProgress: () => lease?.touch(),
-    onStream: async ({ context, stream }) => {
+    onStream: async ({ context, stream, consumePull }) => {
         if (!round) throw new Error('sync_round_identity_missing');
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
         const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, () => relayInboundCommit(runtime.auth), timing);
         const reply = await respondDesktopRequestSyncHttp(host, {
-          context, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
+          context, consumePull, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
           onProgress: () => lease?.touch()
         });
-        return { ...reply, frames: touchRequestSyncStream(reply.frames, lease) };
+        return reply ? { ...reply, frames: touchRequestSyncStream(reply.frames, lease) } : undefined;
 
     },
     request: args.request,

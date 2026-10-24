@@ -30,46 +30,73 @@ final class FolioleRequestSyncAttachmentFramesTests: XCTestCase {
         }
         return encoded
     }
-    private func read(_ bytes: Data, peer: String = "b", check: () throws -> Void = {},
-                      consume: (Int, Data, Data) throws -> Void) throws {
-        _ = try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: bytes)),
-            groupKey: key, context: context(peer), check: check, consume: consume)
+    private func permission(_ blocks: Int, limit: Int = 32) throws -> FolioleAttachmentReceiveAuthorization {
+        try .init(requestID: Data(repeating: 0, count: 16), storageKey: String(repeating: "a", count: 64) + ".pdftext",
+                  byteLength: UInt64(blocks * 524288), offset: 0, maxBlocks: limit)
     }
-    func testStagesSixteenMiBWithSmallMetadataAndBoundedBlocks() throws {
-        var count = 0
-        try read(wire(32)) { index, metadata, block in
-            XCTAssertEqual(index, count); count += 1
-            XCTAssertLessThan(metadata.count, 256)
-            let decoded = try FolioleFramedSyncCodec.decode(metadata, authenticatedFrameType: 1)
-            guard case .requestAttachment(let message) = decoded.payload else { return XCTFail() }
-            XCTAssertTrue(message.data.isEmpty)
-            XCTAssertEqual(block.count, index == 32 ? 0 : 524288)
-        }
-        XCTAssertEqual(count, 33)
+    private func read(_ bytes: Data, blocks: Int = 1, peer: String = "b", check: () throws -> Void = {},
+                      consume: (UInt64, Data) throws -> Void) throws {
+        try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: bytes)),
+            groupKey: key, context: context(peer), permission: permission(blocks), check: check, consume: consume)
     }
-    func testStagesThirtyTwoMiBWithinAnExplicitLargerWindow() throws {
+    func testWritesSixteenMiBAsBoundedAuthorizedBlocks() throws {
         var count = 0
-        _ = try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: wire(64))),
-            groupKey: key, context: context(), maxBlocks: 64, check: {}) { _, metadata, _ in
-            XCTAssertLessThan(metadata.count, 256); count += 1
+        try read(wire(32), blocks: 32) { offset, block in
+            XCTAssertEqual(offset, UInt64(count * 524288)); count += 1
+            XCTAssertEqual(block.count, 524288)
         }
-        XCTAssertEqual(count, 65)
+        XCTAssertEqual(count, 32)
+    }
+    func testWritesThirtyTwoMiBWithinAnExplicitLargerWindow() throws {
+        var count = 0
+        try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: wire(64))),
+            groupKey: key, context: context(), permission: permission(64, limit: 64), check: {}) { _, _ in count += 1 }
+        XCTAssertEqual(count, 64)
     }
     func testRejectsCorruptionContextTruncationCancellationAndOversizedWindows() throws {
         let bytes = try wire(1)
         var corrupt = bytes; corrupt[120] ^= 1
-        XCTAssertThrowsError(try read(corrupt) { _, _, _ in XCTFail() })
-        XCTAssertThrowsError(try read(bytes, peer: "other") { _, _, _ in XCTFail() })
-        XCTAssertThrowsError(try read(Data(bytes.prefix(150))) { _, _, _ in XCTFail() })
-        XCTAssertThrowsError(try read(bytes, check: { throw CancellationError() }) { _, _, _ in XCTFail() })
-        XCTAssertThrowsError(try read(wire(33)) { _, _, _ in })
+        XCTAssertThrowsError(try read(corrupt) { _, _ in XCTFail() })
+        XCTAssertThrowsError(try read(bytes, peer: "other") { _, _ in XCTFail() })
+        XCTAssertThrowsError(try read(Data(bytes.prefix(150))) { _, _ in XCTFail() })
+        XCTAssertThrowsError(try read(bytes, check: { throw CancellationError() }) { _, _ in XCTFail() })
+        XCTAssertThrowsError(try read(wire(33), blocks: 33) { _, _ in })
     }
-    func testAppendsNativeBytesWithoutBase64AndRejectsChangedOffsets() throws {
+    func testRejectsOtherFileRequestOffsetAndLengthBeforeWriting() throws {
+        let data = try wire(2), original = String(repeating: "a", count: 64) + ".pdftext"
+        for permission in [
+            try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 0, count: 16), storageKey: String(repeating: "b", count: 64) + ".pdftext", byteLength: 1048576, offset: 0, maxBlocks: 2),
+            try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 1, count: 16), storageKey: original, byteLength: 1048576, offset: 0, maxBlocks: 2),
+            try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 0, count: 16), storageKey: original, byteLength: 1048577, offset: 0, maxBlocks: 2),
+            try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 0, count: 16), storageKey: original, byteLength: 1048576, offset: 524288, maxBlocks: 2)
+        ] {
+            XCTAssertThrowsError(try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: data)), groupKey: key,
+                context: context(), permission: permission, check: {}) { _, _ in XCTFail() })
+        }
+    }
+    func testDirectWriterRetainsItsLockUntilRealIoExits() throws {
         let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }
+        try fixture.call("truncate", numbers: ["length": 0])
         let bytes = Data(repeating: 7, count: 524288)
-        _ = try fixture.storage.execute(action: "append-file", key: fixture.key, number: { _ in 0 }, data: bytes)
+        let writer = try fixture.storage.receive(key: fixture.key, offset: 0, check: {}) { fixture.storage.finishReceive(fixture.key) }
+        try writer.append(offset: 0, data: bytes)
+        XCTAssertThrowsError(try writer.append(offset: 0, data: bytes))
+        fixture.storage.close()
+        let other = try FolioleAttachmentBlockStorage(root: fixture.root, trash: { fixture.trash }); defer { other.close() }
+        XCTAssertThrowsError(try other.execute(action: "acquire", key: fixture.key))
+        try writer.close()
+        XCTAssertNoThrow(try other.execute(action: "acquire", key: fixture.key))
         XCTAssertEqual(try Data(contentsOf: fixture.partial), bytes)
-        XCTAssertThrowsError(try fixture.storage.execute(action: "append-file", key: fixture.key, number: { _ in 0 }, data: bytes))
-        XCTAssertEqual(try Data(contentsOf: fixture.partial), bytes)
+    }
+    func testOwnerRetirementWaitsForNativeOperationAcknowledgement() throws {
+        let owner = FolioleFramedSyncPayloadBudget(libraryKey: "library", generationID: "generation")
+        let cancelled = expectation(description: "cancelled"), drained = expectation(description: "drained")
+        let operation = try owner.beginOperation { cancelled.fulfill() }
+        let premature = expectation(description: "no premature drain"); premature.isInverted = true
+        owner.retire { premature.fulfill(); drained.fulfill() }
+        wait(for: [cancelled, premature], timeout: 0.05)
+        owner.finishOperation(operation)
+        wait(for: [drained], timeout: 1)
+        XCTAssertThrowsError(try owner.beginOperation {})
     }
 }

@@ -1,4 +1,4 @@
-import type { AttachmentBlockFile } from './attachmentBlockTransfer.js';
+import type { AttachmentReceiveWindow } from './attachmentBlockTransfer.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
@@ -15,9 +15,8 @@ import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthentica
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export interface RequestSyncExchange {
-  /** The adapter authenticates frames and keeps block bytes in request-owned native files. */
-  pullAttachment?(query: AttachmentRequest,
-    consume: (message: AttachmentRequest, file?: AttachmentBlockFile) => Promise<void>): Promise<void>;
+  /** Native execution validates and writes one authorized range; shared code owns publication. */
+  receiveAttachment?(query: AttachmentRequest): Promise<AttachmentReceiveWindow>;
   context: RequestSyncAuthenticatedContext;
   groupKey: Uint8Array;
   signal?: AbortSignal;
