@@ -17,8 +17,33 @@ function resolveFirstHeadingEnd(content: string, from: number) {
   return match ? from + match[0].length : from;
 }
 
+interface ImportedBodyIndex {
+  content: string;
+  searchFrom: number;
+  loose?: { normalized: string; normalizedFrom: number; rawIndexes: number[] };
+}
+
+// One import anchors every highlight against the same body; keep its derived index instead of rebuilding it per call.
+let cachedBodyIndex: ImportedBodyIndex | null = null;
+
+function importedBodyIndex(content: string) {
+  if (cachedBodyIndex?.content !== content) {
+    cachedBodyIndex = { content, searchFrom: resolveFirstHeadingEnd(content, resolveFrontmatterEnd(content)) };
+  }
+  return cachedBodyIndex;
+}
+
 export function resolveImportedBodySearchFrom(content: string) {
-  return resolveFirstHeadingEnd(content, resolveFrontmatterEnd(content));
+  return importedBodyIndex(content).searchFrom;
+}
+
+function looseImportedBody(content: string) {
+  const index = importedBodyIndex(content);
+  if (!index.loose) {
+    const { normalized, rawIndexes } = normalizeLooseWhitespaceWithMap(content);
+    index.loose = { normalized, normalizedFrom: rawIndexes.findIndex((raw) => raw >= index.searchFrom), rawIndexes };
+  }
+  return index.loose;
 }
 
 function findExactOccurrences(content: string, excerpt: string, from: number) {
@@ -69,11 +94,10 @@ function normalizeLooseWhitespaceWithMap(value: string) {
 }
 
 function classifyLooseImportedBodyOccurrence(content: string, excerpt: string): ImportedBodyMatch {
-  const normalizedContent = normalizeLooseWhitespaceWithMap(content);
+  const normalizedContent = looseImportedBody(content);
   const normalizedExcerpt = normalizeLooseWhitespaceWithMap(excerpt).normalized;
   if (!normalizedContent.normalized || !normalizedExcerpt) return { range: null, status: 'missing' };
-  const bodyFrom = resolveImportedBodySearchFrom(content);
-  const normalizedFrom = normalizedContent.rawIndexes.findIndex((index) => index >= bodyFrom);
+  const { normalizedFrom } = normalizedContent;
   if (normalizedFrom < 0) return { range: null, status: 'missing' };
   const first = normalizedContent.normalized.indexOf(normalizedExcerpt, normalizedFrom);
   if (first < 0) return { range: null, status: 'missing' };

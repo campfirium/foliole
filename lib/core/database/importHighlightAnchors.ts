@@ -1,7 +1,7 @@
 import { createContextExcerptLocator, type ContextExcerptLocator } from '../import/contextExcerptLocator.js';
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 import { collectBoundaryFragments } from '../import/controlledContextText.js';
-import { trimMatchedExcerpt } from '../import/controlledContextTrim.js';
+import { trimMatchedExcerpts } from '../import/controlledContextTrim.js';
 import {
   findPreparedHighlightExcerptInLocator,
   prepareHighlightExcerptCandidate
@@ -62,8 +62,7 @@ function collectAnchorExcerptCandidates(locator: ContextExcerptLocator, highligh
   const locatorCandidates = highlight.locatorText
     ? [
         ...fullLocatorCandidates,
-        ...collectBoundaryFragments(highlightText)
-          .map((fragment) => trimMatchedExcerpt(highlight.locatorText ?? '', highlightText, fragment))
+        ...trimMatchedExcerpts(highlight.locatorText ?? '', highlightText, collectBoundaryFragments(highlightText))
           .filter((candidate) => !isUntrimmedLocatorCandidate(candidate, highlight.locatorText ?? '', highlightText))
       ]
     : [];

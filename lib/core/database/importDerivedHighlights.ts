@@ -11,7 +11,7 @@ import { parseImageSources, serializeImageSources, type ImageSources } from './i
 import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
 import { filterImportHighlightsWithinBudget } from './importHighlightTextBudget.js';
-import { ensureNodeParentMembership } from './nodeOrderMutations.js';
+import { ensureNodesParentMembership } from './nodeOrderMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 import { hashTextBody } from './textBodyHash.js';
 
@@ -68,10 +68,10 @@ export function insertImportedHighlightNodes(input: {
         [serializeImageSources(sources), nodeId]
       );
       insertedNodeIds.push(nodeId);
-      ensureNodeParentMembership(input.driver, nodeId);
     }
   });
 
+  ensureNodesParentMembership(input.driver, insertedNodeIds);
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);
 
   return insertedNodeIds.length;

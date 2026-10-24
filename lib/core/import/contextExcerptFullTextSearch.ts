@@ -130,13 +130,16 @@ function containsOrderedQuoteParts(match: string, quote: string) {
   return true;
 }
 
-function uniqueValidRawMatch(locator: FullTextLocator, ranges: Range[], quote: string, exactMatcher: RegExp | null) {
+function uniqueValidRawMatch(
+  locator: FullTextLocator, ranges: Range[], quote: string, quoteLocator: ContextExcerptQuoteLocator
+) {
   const validRanges = ranges
     .map((range) => toRawRange(locator, range.start, range.end))
     .filter((range): range is Range => range !== null)
     .filter((range) => {
       const match = sliceRaw(locator, range);
-      return containsOrderedQuoteParts(match, quote) && (exactMatcher?.test(match) || isLengthClose(match, quote));
+      return containsOrderedQuoteParts(match, quote)
+        && (isLengthClose(match, quote) || Boolean(quoteLocator.exactMatcher?.test(match)));
     });
   const onlyRange = validRanges[0];
   return validRanges.length === 1 && onlyRange ? sliceRaw(locator, onlyRange) : null;
@@ -215,7 +218,7 @@ export function findFullTextLocatorMatch(
     return null;
   }
   const exactRanges = collectStringRanges(locator.normalizedFullText, quoteLocator.normalizedQuote);
-  const exactMatch = uniqueValidRawMatch(locator, exactRanges, quote, quoteLocator.exactMatcher);
+  const exactMatch = uniqueValidRawMatch(locator, exactRanges, quote, quoteLocator);
   if (exactMatch) {
     return exactMatch;
   }
@@ -224,15 +227,15 @@ export function findFullTextLocatorMatch(
       locator,
       collectRegexRanges(locator.normalizedFullText, quoteLocator.exactMatcher),
       quote,
-      quoteLocator.exactMatcher
+      quoteLocator
     );
     if (regexMatch) {
       return regexMatch;
     }
   }
-  const orderedLineMatch = uniqueValidRawMatch(locator, collectOrderedLineRanges(locator, quote), quote, quoteLocator.exactMatcher);
+  const orderedLineMatch = uniqueValidRawMatch(locator, collectOrderedLineRanges(locator, quote), quote, quoteLocator);
   if (orderedLineMatch) {
     return orderedLineMatch;
   }
-  return uniqueValidRawMatch(locator, collectFragmentRanges(locator, quoteLocator), quote, quoteLocator.exactMatcher);
+  return uniqueValidRawMatch(locator, collectFragmentRanges(locator, quoteLocator), quote, quoteLocator);
 }

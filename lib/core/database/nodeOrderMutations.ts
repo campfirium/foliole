@@ -2,28 +2,48 @@ import { saveLocalCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
-  parentOrderId, readOrderMembers, readOrdersAroundNode, readParentChildOrders
+  parentOrderId, readOrderMembers, readOrdersAroundNodes, readParentChildOrders
 } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 
 export function ensureNodeParentMembership(driver: DatabaseDriver, nodeId: string) {
-  const node = driver.queryOne<{ parent_id: string | null }>('SELECT parent_id FROM nodes WHERE id = ?', [nodeId]);
-  if (!node) return;
-  const targetParent = parentOrderId(node.parent_id);
-  const orders = readOrdersAroundNode(driver, targetParent, nodeId);
+  ensureNodesParentMembership(driver, [nodeId]);
+}
+
+/** Same result as placing each node in turn, but writes every touched parent order once. */
+export function ensureNodesParentMembership(driver: DatabaseDriver, nodeIds: string[]) {
+  if (nodeIds.length === 0) return;
+  const nodes = driver.queryAll<{ id: string; parent_id: string | null }>(
+    'SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))', [JSON.stringify(nodeIds)]);
+  const parentById = new Map(nodes.map((node) => [node.id, parentOrderId(node.parent_id)]));
+  const orders = readOrdersAroundNodes(driver, [...new Set(parentById.values())], [...parentById.keys()]);
   const changes = new Map<string, string[]>();
-  for (const [parentId, childIds] of orders) {
-    if (parentId !== targetParent && childIds.includes(nodeId)) {
-      changes.set(parentId, childIds.filter((id) => id !== nodeId));
-    }
+  for (const nodeId of nodeIds) {
+    const targetParent = parentById.get(nodeId);
+    if (targetParent !== undefined) placeNodeInOrders(orders, changes, targetParent, nodeId);
   }
-  const targetOrder = orders.get(targetParent) ?? [];
-  if (!targetOrder.includes(nodeId)) changes.set(targetParent, [...targetOrder, nodeId]);
   if (changes.size === 0) return;
   const now = new Date().toISOString();
   const hostName = requireDatabaseHostName(driver);
   for (const [parentId, childIds] of changes) saveLocalCurrentParentOrder(driver,
     { parentId, childIds, now, hostName });
+}
+
+function placeNodeInOrders(
+  orders: Map<string, string[]>, changes: Map<string, string[]>, targetParent: string, nodeId: string
+) {
+  for (const [parentId, childIds] of orders) {
+    if (parentId !== targetParent && childIds.includes(nodeId)) {
+      const next = childIds.filter((id) => id !== nodeId);
+      orders.set(parentId, next);
+      changes.set(parentId, next);
+    }
+  }
+  const targetOrder = orders.get(targetParent) ?? [];
+  if (targetOrder.includes(nodeId)) return;
+  const next = [...targetOrder, nodeId];
+  orders.set(targetParent, next);
+  changes.set(targetParent, next);
 }
 
 function retainHiddenSlots(existing: string[], visible: string[], hidden: Set<string>) {

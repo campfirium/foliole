@@ -111,8 +111,13 @@ export function createContextExcerptQuoteLocator(quote: string): ContextExcerptQ
   if (!normalizedQuote) {
     return null;
   }
+  // Unicode property classes make each loose matcher costly to compile, so it is built only when a search needs it.
+  let exactMatcher: RegExp | null | undefined;
   return {
-    exactMatcher: createLooseMatcher(normalizedQuote),
+    get exactMatcher() {
+      if (exactMatcher === undefined) exactMatcher = createLooseMatcher(normalizedQuote);
+      return exactMatcher;
+    },
     normalizedQuote,
     orderedFragments: splitQuoteFragments(normalizedQuote)
   };

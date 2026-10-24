@@ -170,16 +170,17 @@ function tryExtractOrderedQuoteLines(rawExcerpt: string, quote: string) {
 }
 
 export function trimMatchedExcerpt(rawExcerpt: string, quote: string, anchorFragment: string) {
-  const directQuote = tryExtractDirectQuote(rawExcerpt, quote);
-  if (directQuote) {
-    return directQuote;
-  }
+  return trimMatchedExcerpts(rawExcerpt, quote, [anchorFragment])[0] ?? rawExcerpt.trim();
+}
 
-  const orderedQuoteLines = tryExtractOrderedQuoteLines(rawExcerpt, quote);
-  if (orderedQuoteLines) {
-    return orderedQuoteLines;
-  }
+/** Trims one excerpt around each anchor fragment, resolving the fragment-independent quote match once. */
+export function trimMatchedExcerpts(rawExcerpt: string, quote: string, anchorFragments: string[]) {
+  if (anchorFragments.length === 0) return [];
+  const wholeQuote = tryExtractDirectQuote(rawExcerpt, quote) || tryExtractOrderedQuoteLines(rawExcerpt, quote);
+  return anchorFragments.map((fragment) => wholeQuote || trimAroundAnchorFragment(rawExcerpt, quote, fragment));
+}
 
+function trimAroundAnchorFragment(rawExcerpt: string, quote: string, anchorFragment: string) {
   const normalizedExcerpt = normalizeText(rawExcerpt);
   const normalizedQuote = normalizeText(quote);
   const normalizedAnchor = normalizeText(anchorFragment);

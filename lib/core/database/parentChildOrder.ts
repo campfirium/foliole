@@ -26,11 +26,12 @@ export function readParentChildOrders(driver: DatabaseDriver) {
   return new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
 }
 
-/** The order of one parent plus every other stored order that still lists the node, in table order. */
-export function readOrdersAroundNode(driver: DatabaseDriver, parentId: string, nodeId: string) {
+/** The orders of the given parents plus every other stored order that still lists one of the nodes, in table order. */
+export function readOrdersAroundNodes(driver: DatabaseDriver, parentIds: string[], nodeIds: string[]) {
   const rows = driver.queryAll<ChildOrderRow>(`SELECT parent_id, child_ids_json FROM parent_child_order
-    WHERE parent_id = ? OR parent_id IN (SELECT parent_id FROM parent_child_order_members WHERE child_id = ?)
-    ORDER BY rowid`, [parentId, nodeId]);
+    WHERE parent_id IN (SELECT value FROM json_each(?)) OR parent_id IN (
+      SELECT parent_id FROM parent_child_order_members WHERE child_id IN (SELECT value FROM json_each(?)))
+    ORDER BY rowid`, [JSON.stringify(parentIds), JSON.stringify(nodeIds)]);
   return new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
 }
 
