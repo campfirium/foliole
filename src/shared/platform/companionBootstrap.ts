@@ -84,7 +84,7 @@ export async function loadCompanionBootstrapState(): Promise<NativeCompanionBoot
   if (runtime.kind === 'web-preview') {
     return createWebPreviewBootstrapState();
   }
-  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') {
+  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native' && runtime.kind !== 'browser-preview') {
     throw new Error('Native companion bootstrap is unavailable.');
   }
   nativeBootstrapPromise ??= initializeNativeCompanionBootstrapState();

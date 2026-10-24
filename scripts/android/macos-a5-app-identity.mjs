@@ -6,7 +6,8 @@ const A5_TEST_SYNC_PORT = '38644';
 const IDENTITY_KEY = 'FOLIOLE_A5_APP_IDENTITY';
 const BUILD_KEYS = ['FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID', 'FOLIOLE_ANDROID_COMPANION_SYNC_PORT'];
 const TEST_IDENTITY_ACTIONS = new Set([
-  'deploy', 'capture-annotation', 'system-entry-sync', 'sync-existing', 'sync-group-join-prepare'
+  'deploy', 'capture-annotation', 'preview-pull', 'system-entry-sync', 'sync-existing',
+  'sync-group-join-prepare'
 ]);
 const TEST_ONLY_ACTIONS = new Set(['reset-test-app']);
 

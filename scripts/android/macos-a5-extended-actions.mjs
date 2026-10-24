@@ -173,3 +173,13 @@ export async function recoverMacosA5SyncGroupRejoinEntry(args) {
     execute: args.execute, paths: args.paths, serial: args.serial });
   console.log(`[macos-a5-dev] sync-group-rejoin recovery=${result.manifestPath}`);
 }
+
+export async function runMacosA5ExistingSyncPreflight({ assertFixed, paths }) {
+  assertFixed(paths);
+  const { inspectExistingSyncDevice } = await import('./macos-a5-existing-sync-readiness-runner.mjs');
+  const { MACOS_DAILY_LIBRARY_HOME } = await import('../macos/macos-electron-dev-paths.mjs');
+  const result = await inspectExistingSyncDevice({ adb: paths.adb,
+    desktopDatabase: path.join(MACOS_DAILY_LIBRARY_HOME, 'Data', 'foliole.db') });
+  console.log(`[android-data] existing-sync-readiness=${JSON.stringify(result)}`);
+  if (result.resultStatus !== 'ready') throw new Error('Existing A5 content differences require review before sync.');
+}

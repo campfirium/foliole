@@ -9,7 +9,7 @@ import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContr
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { runCompanionHighValueMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from './companionRuntimeCapabilities';
 import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from './companionWorkspaceRuntimeRepository';
 
@@ -71,8 +71,7 @@ export async function applyCompanionSyncNodeVersionsWithinWriterTask(
 }
 
 function usesSharedOwner() {
-  const kind = getCompanionRuntimeCapability().kind;
-  return kind === 'android-native' || kind === 'ios-native';
+  return hasCompanionLocalDatabase(getCompanionRuntimeCapability());
 }
 
 export async function applyCompanionTrashRestoreNodeVersions(

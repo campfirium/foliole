@@ -58,7 +58,8 @@ async function initializeDatabase(
   manager: IosCompanionDatabaseManager,
   options: IosCompanionDatabaseBootstrapOptions
 ): Promise<NativeCompanionBootstrapState> {
-  const platform = nativeState.runtime_kind === 'android-capacitor' ? 'android' : 'ios';
+  // The browser preview host speaks the Android plugin's value encoding.
+  const platform = nativeState.runtime_kind === 'ios-capacitor' ? 'ios' : 'android';
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const result = await owner.open({
     allowCreate: true,

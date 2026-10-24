@@ -8,6 +8,7 @@ import {
   recoverMacosA5SyncGroupRejoinEntry,
   runMacosA5ClearAppDataEntry,
   runMacosA5ExistingSyncEntry,
+  runMacosA5ExistingSyncPreflight,
   runMacosA5SettledStoppedStatus,
   runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
@@ -39,20 +40,16 @@ export async function dispatchMacosA5Action({
   if (action === 'status') {
     assertFixed(paths);
   }
-  if (action === 'existing-sync-preflight') {
-    assertFixed(paths);
-    const { inspectExistingSyncDevice } = await import('./macos-a5-existing-sync-readiness-runner.mjs');
-    const { MACOS_DAILY_LIBRARY_HOME } = await import('../macos/macos-electron-dev-paths.mjs');
-    const result = await inspectExistingSyncDevice({ adb: paths.adb,
-      desktopDatabase: path.join(MACOS_DAILY_LIBRARY_HOME, 'Data', 'foliole.db') });
-    console.log(`[android-data] existing-sync-readiness=${JSON.stringify(result)}`);
-    if (result.resultStatus !== 'ready') throw new Error('Existing A5 content differences require review before sync.');
-  }
+  if (action === 'existing-sync-preflight') await runMacosA5ExistingSyncPreflight({ assertFixed, paths });
   if (action === 'sync-logs') {
     const { readA5SyncLogs } = await import('./macos-a5-sync-logs.mjs');
     const { filePath, rows } = readA5SyncLogs({ assertFixed: () => assertFixed(paths),
       buildIdentity, captured, paths, serial });
     console.log(`[macos-a5-dev] sync-logs=${filePath} records=${rows.length}`);
+  }
+  if (action === 'preview-pull') {
+    const { runMacosA5PreviewPull } = await import('./macos-a5-preview-pull.mjs');
+    await runMacosA5PreviewPull({ assertFixed: () => assertFixed(paths), env, paths, serial });
   }
   if (action === 's220-package-inventory') {
     const { inspectS220A5Packages } = await import('./macos-a5-s220-package-inventory.mjs');

@@ -5,6 +5,7 @@ import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContrac
 
 import {
   getCompanionRuntimeCapability,
+  hasCompanionLocalDatabase,
   isCompanionRuntimeCapabilityAvailable,
   requireAvailableCompanionRuntime,
   requireCompanionNativePlugin
@@ -37,22 +38,22 @@ export function isNativeCompanionAttachmentResourceRuntime() {
 
 export function isNativeCompanionTopicSearchRuntime() {
   const runtime = requireAvailableCompanionRuntime('topic-search');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionPdfPageTextRuntime() {
   const runtime = requireAvailableCompanionRuntime('pdf-page-text');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionExternalDocumentSearchRuntime() {
   const runtime = requireAvailableCompanionRuntime('external-document-search');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionExternalDocumentReadRuntime() {
   const runtime = requireAvailableCompanionRuntime('external-document-read');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionExternalDirectoryRuntime() {
@@ -62,37 +63,37 @@ export function isNativeCompanionExternalDirectoryRuntime() {
 
 export function isNativeCompanionSyncObjectReadRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-object-read');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionSyncDiagnosticsRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-diagnostics');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionViewStateWriteRuntime() {
   const runtime = requireAvailableCompanionRuntime('view-state-write');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionReadingWriteRuntime() {
   const runtime = requireAvailableCompanionRuntime('reading-write');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionOpenStateWriteRuntime() {
   const runtime = requireAvailableCompanionRuntime('open-state-write');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionReviewWriteRuntime() {
   const runtime = requireAvailableCompanionRuntime('review-write');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionNodeVersionWriteRuntime() {
   const runtime = requireAvailableCompanionRuntime('node-version-write');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function getNativeCompanionSettingWritePlatform() {
@@ -114,17 +115,16 @@ export function isNativeCompanionSyncGroupRuntime() {
 
 export function isNativeCompanionSyncGroupStoreRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-group-store');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isNativeCompanionSyncParticipationRuntime() {
   const runtime = requireAvailableCompanionRuntime('sync-participation');
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(runtime);
 }
 
 export function isAvailableNativeCompanionRuntime() {
-  const runtime = getCompanionRuntimeCapability();
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+  return hasCompanionLocalDatabase(getCompanionRuntimeCapability());
 }
 
 export type CompanionNodeMutationSurface =
@@ -145,7 +145,7 @@ const IOS_NODE_MUTATION_SURFACES = new Set<CompanionNodeMutationSurface>([
 export function supportsCompanionNodeMutationSurface(surface: CompanionNodeMutationSurface) {
   const runtime = getCompanionRuntimeCapability();
   if (runtime.kind === 'ios-native') return IOS_NODE_MUTATION_SURFACES.has(surface);
-  return runtime.kind === 'android-native' || runtime.kind === 'web-preview';
+  return runtime.kind === 'android-native' || runtime.kind === 'browser-preview' || runtime.kind === 'web-preview';
 }
 
 export function normalizeEndpointUrl(endpointUrl: string) {

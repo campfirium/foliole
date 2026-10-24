@@ -1,14 +1,13 @@
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot';
-import { getCompanionRuntimeCapability } from '../companionRuntimeCapabilities';
+import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from '../companionRuntimeCapabilities';
 import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncState';
 import { registerWorkspaceAttachmentResources } from '../runtime/workspaceAttachmentResourceRegistry';
 
 import { refreshCompanionWorkspaceSnapshot } from './companionWorkspaceSnapshotRefresh';
 
-// Native mutations have already committed; only the Web preview stores a supplied projection.
+// Database mutations have already committed; only the database-less Web shell stores a supplied projection.
 export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null, contentNodeId?: string) {
-  const runtime = getCompanionRuntimeCapability();
-  if (runtime.kind === 'android-native' || runtime.kind === 'ios-native') {
+  if (hasCompanionLocalDatabase(getCompanionRuntimeCapability())) {
     // A read-only preflight consumes committed scopes without inventing a mutation.
     // Supplied mutation projections still require a complete native read unless scoped.
     const snapshot = await refreshCompanionWorkspaceSnapshot(contentNodeId
@@ -23,7 +22,6 @@ export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: W
 }
 
 export async function refreshCompanionWorkspaceAfterSync() {
-  const runtime = getCompanionRuntimeCapability();
-  return runtime.kind === 'android-native' || runtime.kind === 'ios-native'
+  return hasCompanionLocalDatabase(getCompanionRuntimeCapability())
     ? refreshCompanionWorkspaceSnapshot() : readWebSyncState().workspace_snapshot;
 }

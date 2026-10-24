@@ -11,7 +11,7 @@ import {
   resolveReadableCompanionArticle,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from './companionRuntimeCapabilities';
 import {
   cancelCompanionSyncGroupJoin,
   completeCompanionSyncGroupJoin,
@@ -153,8 +153,7 @@ export async function loadCompanionReadableArticle(
 }
 
 function usesSharedOwner() {
-  const kind = getCompanionRuntimeCapability().kind;
-  return kind === 'android-native' || kind === 'ios-native';
+  return hasCompanionLocalDatabase(getCompanionRuntimeCapability());
 }
 
 function metadataFromState(state: NativeCompanionWorkspaceSyncState): CompanionSyncMetadata {

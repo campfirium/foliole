@@ -1,7 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 
+// Capacitor custom platform name of the dev-only browser preview host (a local database, no native host).
+export const COMPANION_BROWSER_PREVIEW_PLATFORM = 'foliole-browser-preview';
+
 export type CompanionRuntimeCapability =
   | { kind: 'web-preview'; platform: 'web' }
+  | { kind: 'browser-preview'; platform: typeof COMPANION_BROWSER_PREVIEW_PLATFORM }
   | { kind: 'android-native'; platform: 'android' }
   | { kind: 'ios-native'; platform: 'ios' }
   | { kind: 'native-unavailable'; platform: string };
@@ -57,7 +61,17 @@ export function getCompanionRuntimeCapability(): CompanionRuntimeCapability {
   const platform = Capacitor.getPlatform();
   if (platform === 'android') return { kind: 'android-native', platform };
   if (platform === 'ios') return { kind: 'ios-native', platform };
+  if (platform === COMPANION_BROWSER_PREVIEW_PLATFORM) return { kind: 'browser-preview', platform };
   return { kind: 'native-unavailable', platform };
+}
+
+export function isCompanionNativeHost(runtime = getCompanionRuntimeCapability()) {
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native';
+}
+
+// Local database reads and writes need an open companion database, not a native host.
+export function hasCompanionLocalDatabase(runtime: CompanionRuntimeCapability) {
+  return isCompanionNativeHost(runtime) || runtime.kind === 'browser-preview';
 }
 
 export function isCompanionRuntimeCapabilityAvailable(capability: string) {

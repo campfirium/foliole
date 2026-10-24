@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { createWebDevLaunch } from './android-web-dev.mjs';
+import { createWebDevLaunch, parseWebDevArgs } from './android-web-dev.mjs';
 
 describe('android Web dev entry', () => {
   it('runs the companion Vite server in the foreground without service state', () => {
@@ -24,11 +24,25 @@ describe('android Web dev entry', () => {
       ],
       options: {
         cwd: '/repo',
-        env: { FOLIOLE_VITE_PORT: '24604' },
+        env: {
+          FOLIOLE_COMPANION_PREVIEW_DB: '/repo/.cache/companion-preview/device/foliole-companionSQLite.db',
+          FOLIOLE_VITE_HMR: '1',
+          FOLIOLE_VITE_PORT: '24604'
+        },
         shell: false,
         stdio: 'inherit'
       }
     });
     expect(launch.options).not.toHaveProperty('detached');
+  });
+
+  it('keeps each preview data source in its own rebuildable library', () => {
+    const empty = createWebDevLaunch({ data: 'empty', root: '/repo' });
+
+    expect(empty.options.env.FOLIOLE_COMPANION_PREVIEW_DB)
+      .toBe('/repo/.cache/companion-preview/empty/foliole-companionSQLite.db');
+    expect(parseWebDevArgs([])).toEqual({ data: 'device' });
+    expect(parseWebDevArgs(['--data', 'empty'])).toEqual({ data: 'empty' });
+    expect(() => parseWebDevArgs(['--data', 'sample'])).toThrow('--data must be one of');
   });
 });

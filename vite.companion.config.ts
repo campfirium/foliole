@@ -5,6 +5,7 @@ import postcss from 'postcss';
 import type { Plugin } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
+import { companionPreviewServerPlugin } from './scripts/vite/companionPreviewServer';
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +51,7 @@ export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT, { pdfJsResources: true }),
   defineConfig({
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
-    plugins: [companionLegacyWebViewCssPlugin()],
+    plugins: [companionLegacyWebViewCssPlugin(), companionPreviewServerPlugin(PROJECT_ROOT)],
     build: {
       emptyOutDir: true,
       outDir: path.resolve(PROJECT_ROOT, 'dist/companion'),

@@ -12,6 +12,8 @@ const ACTION_OVERRIDES = Object.freeze({
     mutatesFixedA5: false },
   'sync-logs': { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     mutatesFixedA5: false },
+  'preview-pull': { deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'ordinary-only',
+    mutatesFixedA5: false },
   's220-package-inventory': { deviceLeaseMode: 'readonly-lifecycle',
     formalSourceClass: 'source-free-readonly', mutatesFixedA5: false },
   's220-main-compare': { deviceLeaseMode: 'readonly-lifecycle',
