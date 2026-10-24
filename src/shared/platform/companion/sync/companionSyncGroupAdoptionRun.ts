@@ -1,5 +1,6 @@
 import { isSyncPeerRoundRetryableError } from '../../../../../lib/core/sync/runSyncPeerRound';
 import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
+import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgroundWork';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
@@ -59,11 +60,14 @@ export function runPendingCompanionSyncGroupAdoption() {
   running ??= (async () => {
     if (!await hydrateCompanionSyncGroupAdoptionRun()) return false;
     active('receiving');
+    // Receiving a whole library is the long round people leave the app during.
+    const work = holdCompanionSyncBackgroundWork();
     try {
       await completeCompanionSyncGroupAdoption({ onProgress: progress => {
         if (progress.phase !== 'structure' || progress.total === null) return;
         active('receiving', { completed: progress.completed, total: progress.total,
           lastActivityAt: new Date().toISOString() });
+        work.report(progress.completed, progress.total);
       } });
     } catch (error) {
       const code = errorCode(error);
@@ -72,6 +76,8 @@ export function runPendingCompanionSyncGroupAdoption() {
         : isSyncPeerRoundRetryableError(error) ? 'receiving' : 'failed';
       active(phase, { error: code });
       throw error;
+    } finally {
+      work.release();
     }
     publish({ phase: 'none' });
     publishCompanionSyncMutationRevision({ kind: 'full' });

@@ -64,11 +64,18 @@ export interface CompanionWorkspaceSyncPlugin
     eventName: 'syncGroupDiscoveryChanged',
     listener: (event: CompanionNativeDiscoveryEvent) => void
   ): Promise<import('@capacitor/core').PluginListenerHandle>;
+  addListener(
+    eventName: 'syncBackgroundWorkEnded',
+    listener: (event: { reason: string }) => void
+  ): Promise<import('@capacitor/core').PluginListenerHandle>;
   loadSyncGroupProviderState(): Promise<CompanionSyncGroupProviderState>;
   loadSyncParticipationState(): Promise<CompanionSyncParticipationState>;
   setSyncEnabled(args: { sync_enabled: boolean }): Promise<CompanionSyncParticipationState>;
   setSyncPaused(args: { sync_paused: boolean }): Promise<CompanionSyncParticipationState>;
   setSyncScreenAwake(args: { active: boolean }): Promise<void>;
+  beginSyncBackgroundWork(args: { title: string; text: string; channel_name: string }): Promise<void>;
+  updateSyncBackgroundWork(args: { title: string; text: string; completed: number; total: number }): Promise<void>;
+  endSyncBackgroundWork(): Promise<void>;
   acceptSyncGroupJoinRequest(args: { request_id: string }): Promise<CompanionSyncGroupProviderState>;
   rejectSyncGroupJoinRequest(args: { request_id: string }): Promise<CompanionSyncGroupProviderState>;
   resolveSyncGroupDataRequest(args: {

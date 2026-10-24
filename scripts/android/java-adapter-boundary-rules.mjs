@@ -33,6 +33,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionShareInboxPlugin.java',
       'FolioleCompanionSyncParticipationActions.java',
       'FolioleCompanionSyncAsync.java',
+      'FolioleCompanionSyncBackgroundActions.java',
       'FolioleCompanionSyncPlugin.java',
       'FolioleCompanionSyncTrigger.java'
     ]
@@ -82,6 +83,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupRequestAuth.java',
       'FolioleCompanionSyncGroupSigning.java',
       'FolioleCompanionSyncScreenAwake.java',
+      'FolioleCompanionSyncBackgroundService.java',
+      'FolioleCompanionSyncBackgroundWork.java',
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncGroupHttpError.java',
       'FolioleCompanionSyncGroupSessionAuth.java',

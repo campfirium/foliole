@@ -109,6 +109,10 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.syncSetup.receiving.lastActivity': 'Last received {time}',
   'companion.syncSetup.receiving.paused': 'Paused while Foliole was in the background. It continues automatically.',
   'companion.syncSetup.receiving.retry': 'Try again',
+  'companion.syncBackground.title': 'Syncing with your sync group',
+  'companion.syncBackground.progress': '{completed} of {total}',
+  'companion.syncBackground.preparing': 'Comparing with the group…',
+  'companion.syncBackground.channel': 'Sync progress',
   'companion.syncSetup.waiting': 'Waiting for approval... {seconds}s left',
   'companion.syncSetup.title': 'Connect to a Sync Group',
   'companion.syncSetup.instructions':

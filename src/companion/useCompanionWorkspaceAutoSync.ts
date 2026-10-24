@@ -5,10 +5,10 @@ import { createMemberSyncCadence, type MemberSyncCadence } from '../../lib/core/
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import {
   readNativeAppActiveState,
-  subscribeNativeAppEnteredBackground,
   subscribeNativeAppForeground
 } from '../shared/platform/appLifecycle';
 import { closeCompanionDesktopSession } from '../shared/platform/companion/network/companionDesktopSession.js';
+import { subscribeCompanionSyncLeftScreen } from '../shared/platform/companion/runtime/companionSyncBackgroundWork.js';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
@@ -76,7 +76,7 @@ function subscribeForegroundSyncEvents(
     });
     void cadence.requestImmediate('foreground');
   }));
-  void keep(subscribeNativeAppEnteredBackground(() => {
+  void keep(subscribeCompanionSyncLeftScreen(() => {
     void closeCompanionDesktopSession();
     refs.isAppActiveRef.current = false;
     cadence.updateFreshness({ eligible: false, input: null });

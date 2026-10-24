@@ -3,10 +3,10 @@ import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../../..
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import { runSyncPeerRound } from '../../../../../../lib/core/sync/runSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../../../../../lib/core/sync/syncPeerRoundOwnership.js';
-import { subscribeNativeAppEnteredBackground } from '../../../appLifecycle.js';
 import { companionDesktopSessionId, recoverCompanionDesktopRound } from '../../network/companionDesktopSession.js';
 import type { CapacitorCompanionDatabaseOwner } from '../../runtime/capacitorCompanionDatabaseOwner.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
+import { subscribeCompanionSyncLeftScreen } from '../../runtime/companionSyncBackgroundWork.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
@@ -60,7 +60,7 @@ export async function companionSyncPeerRoundOwner() {
     state = { rounds: createSyncPeerRoundOwnership(60_000), ready: Promise.resolve() };
     const created = state;
     states.set(database, created);
-    created.ready = subscribeNativeAppEnteredBackground(() => closeCompanionSyncPeerRounds(database))
+    created.ready = subscribeCompanionSyncLeftScreen(() => closeCompanionSyncPeerRounds(database))
       .then(unsubscribe => {
         if (states.get(database) !== created) { unsubscribe(); throw new Error('sync_round_owner_closed'); }
         created.unsubscribe = unsubscribe;

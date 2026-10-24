@@ -38,6 +38,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         try {
             FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest);
             payloadBudget.attach(getBridge());
+            FolioleCompanionSyncBackgroundActions.listen(this::notifyListeners);
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
         }
@@ -123,6 +124,18 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void setSyncPaused(PluginCall call) {
         setParticipation(call, "syncPaused");
+    }
+
+    @PluginMethod public void beginSyncBackgroundWork(PluginCall call) {
+        FolioleCompanionSyncBackgroundActions.begin(getContext(), call);
+    }
+
+    @PluginMethod public void updateSyncBackgroundWork(PluginCall call) {
+        FolioleCompanionSyncBackgroundActions.update(getContext(), call);
+    }
+
+    @PluginMethod public void endSyncBackgroundWork(PluginCall call) {
+        FolioleCompanionSyncBackgroundActions.end(call);
     }
 
     @PluginMethod public void setSyncScreenAwake(PluginCall call) {

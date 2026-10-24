@@ -13,10 +13,11 @@ import type { CompanionDesktopSyncProgress } from '../../../companionDesktopSync
 import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
+import { createLargeRoundBackgroundWork } from './companionLargeRoundBackgroundWork.js';
 import { createOverwriteReceiveProgress } from './companionOverwriteReceiveProgress.js';
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
-import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+import { afterCompanionRequestSyncRounds, withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 
 type RoundInput = {
   endpointUrl: string;
@@ -28,10 +29,15 @@ type RoundInput = {
   peerRound?: RequestSyncPeerRound;
   reportObjectError: RequestSyncDatabaseRoundPort['reportObjectError'];
   onProgress?(progress: CompanionDesktopSyncProgress): void;
+  large?: ReturnType<typeof createLargeRoundBackgroundWork>;
 };
 
 export function runCompanionRequestSyncDatabaseRound(input: RoundInput) {
-  return withCompanionRequestSyncLifecycle(signal => runRound({ ...input, signal }), input.signal);
+  return withCompanionRequestSyncLifecycle(async signal => {
+    const large = createLargeRoundBackgroundWork();
+    // The rest of the same sync, such as resources and adoption completion, keeps the work too.
+    try { return await runRound({ ...input, signal, large }); } finally { afterCompanionRequestSyncRounds(large.release); }
+  }, input.signal);
 }
 
 async function runRound(input: RoundInput) {
@@ -60,11 +66,11 @@ async function runRound(input: RoundInput) {
   const receiveProgress = createOverwriteReceiveProgress(overwriteId ? input.onProgress : undefined, () => receivingOverwrite);
   let workspaceChanged = Boolean(overwriteId);
   const port: RequestSyncDatabaseRoundPort = {
-    exchangeInventory: async () => receiveProgress.inventory(await exchangeRequestSyncInventory(host, exchange, receivingOverwrite
+    exchangeInventory: async () => input.large!.inventory(receiveProgress.inventory(await exchangeRequestSyncInventory(host, exchange, receivingOverwrite
       ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
         protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
-        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined)),
+        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined))),
     transferObjects: async differences => {
       const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
       for (const [index, result] of results.entries()) if (!result.error) {
@@ -74,6 +80,7 @@ async function runRound(input: RoundInput) {
         }
       }
       receiveProgress.received(received.size);
+      input.large!.transferred(results.length);
       return results;
     },
     reportObjectError: input.reportObjectError,

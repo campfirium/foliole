@@ -1,4 +1,5 @@
-import { readNativeAppActiveState, subscribeNativeAppEnteredBackground } from '../../../appLifecycle.js';
+import { readNativeAppActiveState } from '../../../appLifecycle.js';
+import { isCompanionSyncBackgroundWorkHeld, subscribeCompanionSyncLeftScreen } from '../../runtime/companionSyncBackgroundWork.js';
 import { holdCompanionSyncScreenAwake } from '../../runtime/companionSyncScreenAwake.js';
 
 export function combineCompanionRequestSignals(signals: readonly AbortSignal[]) {
@@ -12,6 +13,20 @@ export function combineCompanionRequestSignals(signals: readonly AbortSignal[]) 
   return { signal: controller.signal, dispose: () => subscriptions.forEach(remove => remove()) };
 }
 
+let activeRounds = 0;
+const afterRounds: Array<() => void> = [];
+
+/** Runs once no request sync round is active, so nested steps of one sync share what outlives them. */
+export function afterCompanionRequestSyncRounds(task: () => void) {
+  if (activeRounds === 0) task();
+  else afterRounds.push(task);
+}
+
+function roundEnded() {
+  activeRounds -= 1;
+  if (activeRounds === 0) afterRounds.splice(0).forEach(task => task());
+}
+
 /**
  * A foreground request owns its cancellation until files and SQLite snapshots are released.
  * The screen stays on while it runs; only actually leaving the screen ends it.
@@ -23,10 +38,12 @@ export async function withCompanionRequestSyncLifecycle<T>(run: (signal: AbortSi
   parent?.addEventListener('abort', parentCancelled, { once: true });
   let unsubscribe: (() => void) | undefined;
   let releaseScreen: (() => void) | undefined;
+  activeRounds += 1;
   try {
     parent?.throwIfAborted();
-    unsubscribe = await subscribeNativeAppEnteredBackground(cancel);
-    if (!await readNativeAppActiveState()) cancel();
+    unsubscribe = await subscribeCompanionSyncLeftScreen(cancel);
+    // Steps of a round that keeps running off screen may start while the app is away.
+    if (!await readNativeAppActiveState() && !isCompanionSyncBackgroundWorkHeld()) cancel();
     controller.signal.throwIfAborted();
     releaseScreen = holdCompanionSyncScreenAwake();
     return await run(controller.signal);
@@ -34,5 +51,6 @@ export async function withCompanionRequestSyncLifecycle<T>(run: (signal: AbortSi
     releaseScreen?.();
     unsubscribe?.();
     parent?.removeEventListener('abort', parentCancelled);
+    roundEnded();
   }
 }
