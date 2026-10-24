@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 
@@ -9,6 +9,7 @@ import { createCompanionPreviewSqliteHost } from './companionPreviewSqliteHost';
 
 export const COMPANION_PREVIEW_DATABASE_ENV = 'FOLIOLE_COMPANION_PREVIEW_DB';
 export const COMPANION_PREVIEW_SQLITE_PATH = '/__foliole_preview/sqlite';
+export const COMPANION_PREVIEW_ATTACHMENTS_PATH = '/__foliole_preview/attachments';
 const PREVIEW_HOST_MODULE = 'scripts/vite/companionPreviewHost.ts';
 const FRESH_LIBRARY_HOST_NAME = 'Web preview';
 
@@ -63,6 +64,29 @@ export function companionPreviewHostTags(projectRoot: string, hostName: string):
   ];
 }
 
+const ATTACHMENT_CONTENT_TYPES: Record<string, string> = {
+  '.gif': 'image/gif', '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.pdf': 'application/pdf',
+  '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp'
+};
+
+// Mirrors the phone: an attachment lives at `files/attachments/<storage key>` beside the library.
+export function resolveCompanionPreviewAttachment(databaseFile: string, storageKey: string) {
+  const root = path.join(path.dirname(databaseFile), 'files', 'attachments');
+  const file = path.resolve(root, decodeURIComponent(storageKey));
+  if (!file.startsWith(`${root}${path.sep}`) || !existsSync(file) || !statSync(file).isFile()) return null;
+  return { contentType: ATTACHMENT_CONTENT_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream', file };
+}
+
+function serveAttachment(databaseFile: string, request: IncomingMessage, response: ServerResponse) {
+  const storageKey = (request.url ?? '').replace(/^\/+/u, '').split('?')[0] ?? '';
+  const found = resolveCompanionPreviewAttachment(databaseFile, storageKey);
+  if (!found) return send(response, 404, { ok: false, message: 'Attachment is not in the preview copy.' });
+  response.statusCode = 200;
+  response.setHeader('Content-Type', found.contentType);
+  if (request.method === 'HEAD') return response.end();
+  createReadStream(found.file).pipe(response);
+}
+
 /** Serves the companion preview database only to the local Vite dev server. */
 export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.ProcessEnv = process.env): Plugin {
   const databaseFile = env[COMPANION_PREVIEW_DATABASE_ENV];
@@ -77,6 +101,8 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
       if (!databaseFile) return;
       const host = createCompanionPreviewSqliteHost(databaseFile);
       server.httpServer?.once('close', () => host.close());
+      server.middlewares.use(COMPANION_PREVIEW_ATTACHMENTS_PATH, (request, response) =>
+        serveAttachment(databaseFile, request, response));
       server.middlewares.use(COMPANION_PREVIEW_SQLITE_PATH, (request, response) => {
         if (request.method !== 'POST') return send(response, 405, { ok: false, message: 'POST only' });
         void readBody(request).then(async (body) => {

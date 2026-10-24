@@ -1,6 +1,7 @@
 // @vitest-environment node
 
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -31,15 +32,26 @@ function pulledLibraryWithUncheckpointedRow() {
   return { pulled, writer };
 }
 
-it('installs a pulled library as one self-contained preview copy and discards the pull', async () => {
+function pulledAttachmentArchive(directory) {
+  const source = path.join(tempRoot(), 'device');
+  mkdirSync(path.join(source, 'files', 'attachments'), { recursive: true });
+  writeFileSync(path.join(source, 'files', 'attachments', 'key.png'), 'image');
+  const archive = path.join(directory, 'attachments.tar');
+  execFileSync('tar', ['-cf', archive, '-C', source, 'files/attachments']);
+  return archive;
+}
+
+it('installs a pulled library and its attachments as one standalone copy and discards the pull', async () => {
   const repoRoot = tempRoot();
   const { pulled, writer } = pulledLibraryWithUncheckpointedRow();
+  const archive = pulledAttachmentArchive(path.dirname(pulled));
 
-  const target = await pullCompanionPreviewDatabase({ adb: 'adb', appId: 'app', repoRoot, serial: 's',
-    pull: async () => ({ databasePath: pulled }) });
+  const { attachments, database: target } = await pullCompanionPreviewDatabase({ adb: 'adb', appId: 'app',
+    repoRoot, serial: 's', pull: async () => ({ attachmentArchivePath: archive, databasePath: pulled }) });
   writer.close();
 
   expect(target).toBe(companionPreviewDeviceDatabase(repoRoot));
+  expect(readFileSync(path.join(attachments, 'key.png'), 'utf8')).toBe('image');
   const copy = new Database(target, { readonly: true });
   expect(copy.prepare('SELECT id FROM nodes').all()).toEqual([{ id: 'only-in-wal' }]);
   copy.close();

@@ -1,15 +1,18 @@
 /* global console */
+import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-import { pullAndroidDatabase } from './android-device-database-pull.mjs';
-
 const require = createRequire(import.meta.url);
 const SIDECARS = ['-wal', '-shm'];
 
+export function companionPreviewDeviceRoot(repoRoot) {
+  return path.join(repoRoot, '.cache', 'companion-preview', 'device');
+}
+
 export function companionPreviewDeviceDatabase(repoRoot) {
-  return path.join(repoRoot, '.cache', 'companion-preview', 'device', 'foliole-companionSQLite.db');
+  return path.join(companionPreviewDeviceRoot(repoRoot), 'foliole-companionSQLite.db');
 }
 
 /**
@@ -34,10 +37,31 @@ export function installCompanionPreviewCopy(pulledPath, target, Database = requi
   return target;
 }
 
-export async function pullCompanionPreviewDatabase({ adb, appId, repoRoot, serial, pull = pullAndroidDatabase }) {
-  const { databasePath } = await pull({ adb, appId, serial });
+// The archive holds `files/attachments/<storage key>`, the layout the phone resolves attachments from.
+export function installCompanionPreviewAttachments(archivePath, root) {
+  rmSync(path.join(root, 'files'), { force: true, recursive: true });
+  if (!archivePath) return null;
+  execFileSync('tar', ['-xf', archivePath, '-C', root], { stdio: 'ignore' });
+  return path.join(root, 'files', 'attachments');
+}
+
+async function pullDeviceLibrary({ adb, appId, serial }) {
+  const { collectAndroidDeviceSnapshot } = await import('./android-device-snapshot.mjs');
+  const snapshot = await collectAndroidDeviceSnapshot({ adb, appId, serial, tables: [],
+    includeAttachments: true, includeEvents: false, keepPulledDatabase: true });
+  if (snapshot.error || !snapshot.database?.path || snapshot.database.integrity !== 'ok') {
+    throw new Error(`Android library pull failed: ${snapshot.error ?? snapshot.database?.error ?? 'unreadable'}`);
+  }
+  return { attachmentArchivePath: snapshot.attachments?.path ?? null, databasePath: snapshot.database.path };
+}
+
+/** Makes one standalone preview copy of the phone library and its attachments; nothing stays linked. */
+export async function pullCompanionPreviewDatabase({ adb, appId, repoRoot, serial, pull = pullDeviceLibrary }) {
+  const { attachmentArchivePath, databasePath } = await pull({ adb, appId, serial });
   try {
-    return installCompanionPreviewCopy(databasePath, companionPreviewDeviceDatabase(repoRoot));
+    const database = installCompanionPreviewCopy(databasePath, companionPreviewDeviceDatabase(repoRoot));
+    const attachments = installCompanionPreviewAttachments(attachmentArchivePath, companionPreviewDeviceRoot(repoRoot));
+    return { attachments, database };
   } finally {
     rmSync(path.dirname(databasePath), { force: true, recursive: true });
   }
@@ -46,7 +70,7 @@ export async function pullCompanionPreviewDatabase({ adb, appId, repoRoot, seria
 export async function runMacosA5PreviewPull({ assertFixed, env, paths, serial }) {
   assertFixed();
   const { macosA5AppId } = await import('./macos-a5-app-identity.mjs');
-  const target = await pullCompanionPreviewDatabase({ adb: paths.adb, appId: macosA5AppId(env),
+  const { attachments, database } = await pullCompanionPreviewDatabase({ adb: paths.adb, appId: macosA5AppId(env),
     repoRoot: paths.sourceRepoRoot, serial });
-  console.log(`[macos-a5-dev] preview-database=${target}`);
+  console.log(`[macos-a5-dev] preview-database=${database} preview-attachments=${attachments ?? 'none'}`);
 }

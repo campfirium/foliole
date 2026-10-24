@@ -12,6 +12,7 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 import { createBoundedCache } from '../lib/boundedCache';
 
+import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
 import {
   FolioleCompanionSync,
   isNativeCompanionAttachmentResourceRuntime
@@ -62,7 +63,8 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string, opti
   if (inFlight) return inFlight;
   if (options?.refresh) attachmentResourceResolutionCache.delete(storageKey);
 
-  if (isNativeCompanionAttachmentResourceRuntime()) {
+  // The browser preview reads attachments copied with its library; it never downloads them.
+  if (isNativeCompanionAttachmentResourceRuntime() || getCompanionRuntimeCapability().kind === 'browser-preview') {
     return trackAttachmentResourceResolution(storageKey, resolveNativeAttachmentResource(parsed));
   }
 

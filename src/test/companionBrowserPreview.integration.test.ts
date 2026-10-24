@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -10,7 +10,9 @@ import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import {
   COMPANION_PREVIEW_PLATFORM, createCompanionPreviewBridge, createCompanionPreviewPlugins, installCompanionPreviewHost
 } from '../../scripts/vite/companionPreviewHost';
-import { handleCompanionPreviewSqlite, readCompanionPreviewHostName } from '../../scripts/vite/companionPreviewServer';
+import {
+  handleCompanionPreviewSqlite, readCompanionPreviewHostName, resolveCompanionPreviewAttachment
+} from '../../scripts/vite/companionPreviewServer';
 import { createCompanionPreviewSqliteHost } from '../../scripts/vite/companionPreviewSqliteHost';
 
 // `@capacitor/core` lives outside the module reset and keeps the first bridge object it saw,
@@ -29,7 +31,9 @@ beforeEach(() => {
   root = mkdtempSync(path.join(os.tmpdir(), 'companion-preview-'));
   file = path.join(root, 'foliole-companionSQLite.db');
   sqlite = createCompanionPreviewSqliteHost(file);
-  vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+  vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
+    const attachment = url.match(/^\/__foliole_preview\/attachments\/(.+)$/u)?.[1];
+    if (attachment) return { ok: resolveCompanionPreviewAttachment(file, attachment) !== null };
     const { payload } = await handleCompanionPreviewSqlite(sqlite, init.body);
     return { ok: true, json: async () => payload };
   });
@@ -90,4 +94,19 @@ it('opens local database features while sync and network stay with the native ho
   expect(capabilities.isCompanionNativeHost()).toBe(false);
   expect(runtime.isNativeCompanionNetworkRuntime()).toBe(false);
   await expect(runtime.beginNativeCompanionSyncRun('manual', 'run-1')).rejects.toThrow('not implemented');
+});
+
+it('resolves attachments copied beside the library and reports the rest as missing files', async () => {
+  const storageKey = `${'a'.repeat(64)}.png`;
+  mkdirSync(path.join(root, 'files', 'attachments'), { recursive: true });
+  writeFileSync(path.join(root, 'files', 'attachments', storageKey), 'png');
+  writeFileSync(path.join(root, 'outside.png'), 'png');
+  await openPreview();
+  const { resolveRuntimeAttachmentResource } = await import('../shared/platform/attachmentResources');
+
+  expect(await resolveRuntimeAttachmentResource(`asset://${storageKey}`)).toEqual({
+    mime_type: 'image/png', resource_url: `/__foliole_preview/attachments/${storageKey}`, status: 'ready'
+  });
+  expect(await resolveRuntimeAttachmentResource(`asset://${'b'.repeat(64)}.png`)).toMatchObject({ status: 'missing_file' });
+  expect(resolveCompanionPreviewAttachment(file, encodeURIComponent('../../outside.png'))).toBeNull();
 });
