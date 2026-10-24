@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
@@ -15,6 +15,7 @@ import {
   resolveReadableCompanionTrashArticleByNodeId
 } from '../shared/platform/companionReadableArticle';
 
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -29,7 +30,7 @@ export function useCompanionBrowseSelection(
   }
 ) {
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
-  const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useState<string | null>(null);
+  const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useCompanionNavigationField('selectedBrowseNodeId', null);
   const resolvedReadableArticle = useMemo(
     () => {
       if (!selectedBrowseNodeId) {

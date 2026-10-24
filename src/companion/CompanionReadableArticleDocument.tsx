@@ -1,4 +1,4 @@
-import { lazy, Suspense, type CSSProperties, useCallback, useEffect, useRef } from 'react';
+import { Suspense, type CSSProperties, useCallback, useEffect, useRef } from 'react';
 
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 
@@ -8,6 +8,7 @@ import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
 } from './CompanionPdfReadingEntry';
+import { CompanionPersistedPdfDocument } from './CompanionPersistedPdfDocument';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { readingFontCssFamily } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
@@ -22,9 +23,6 @@ import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/co
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
-const SimplePdfDocument = lazy(() =>
-  import('@/features/pdf/components/SimplePdfDocument').then((module) => ({ default: module.SimplePdfDocument }))
-);
 
 const FONT_SIZE_VALUES: Record<CompanionReadingTypographySettings['fontSize'], string> = {
   default: '1.0625rem',
@@ -80,7 +78,7 @@ function renderOriginalPdf(
 ) {
   return (
     <Suspense fallback={null}>
-      <SimplePdfDocument
+      <CompanionPersistedPdfDocument key={article.pdfAttachmentId}
         attachmentId={article.pdfAttachmentId ?? ''}
         onMissingResource={onMissingResource}
         title={article.title}

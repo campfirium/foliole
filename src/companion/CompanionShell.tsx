@@ -1,207 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
+import { useEffect } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { cancelRetiredHandoffNotifications } from '../shared/platform/companionHandoffNotifications';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
-import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
-import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
-import { CompanionDraftProvider } from './CompanionDraftProvider';
-import type { CompanionTabAction } from './CompanionFloatingBars';
-import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
-import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
-import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
-import { CompanionShellView } from './CompanionShellView';
-import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
-import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
-import { useCompanionAndroidBack } from './useCompanionAndroidBack';
-import { useCompanionArticleSurface } from './useCompanionArticleSurface';
-import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
-import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
-import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
-import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
-import { useCompanionShellActions } from './useCompanionShellActions';
-import { useDirectoryReadingSequence, useSortedArticleSurface } from './useCompanionShellReading';
-import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
-import { useCompanionTabsConfig } from './useCompanionTabsConfig';
+import { CompanionNavigationProvider } from './CompanionNavigationProvider';
+import { CompanionRestoredShell } from './CompanionRestoredShell';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
-import { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
-function useCompanionNavigationVisibility(floatingBar: ReturnType<typeof useFloatingBarVisibility>, isReviewTaskActive: boolean) {
-  const isNavigationVisible = useMemo(
-    () => !isReviewTaskActive,
-    [isReviewTaskActive]
-  );
-
-  const handleContentTap = () => {
-    if (isReviewTaskActive || floatingBar.isVisible) {
-      return;
-    }
-    floatingBar.revealBar();
-  };
-
-  return { handleContentTap, isNavigationVisible };
-}
-
-function useCompanionShellScrollHandler(
-  floatingBar: ReturnType<typeof useFloatingBarVisibility>,
-  surface: ReturnType<typeof useCompanionArticleSurface>
-) {
-  return useCallback((event: ReactUIEvent<HTMLElement>) => {
-    floatingBar.handleContainerScroll(event);
-    surface.handleViewScroll(event.currentTarget.scrollTop);
-  }, [floatingBar, surface]);
-}
-
-function useResetCompanionSubsurfaces(args: {
-  activeAction: CompanionTabAction;
-  setIsBrowseDirectoryOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
-}) {
-  const { activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen } = args;
-  useEffect(() => {
-    if (activeAction !== 'recent') setIsBrowseDirectoryOpen(false);
-    if (activeAction !== 'review') setIsOnlyReviewOpen(false);
-  }, [activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen]);
-}
-
-function useCompanionReviewChrome(args: {
-  floatingBar: ReturnType<typeof useFloatingBarVisibility>;
-  surface: ReturnType<typeof useCompanionArticleSurface>;
-  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
-}) {
-  const isBottomBarDisabled = args.surface.isSubmittingGrade || args.surface.isSubmittingReadingAction;
-  const isReviewTaskActive = args.surface.activeAction === 'review' && Boolean(args.surface.effectiveReviewSession.currentCard);
-  const reviewBreadcrumbItems = useReviewBreadcrumbItems(
-    args.workspaceSync.state.workspace_snapshot,
-    args.surface.effectiveReviewSession.currentCard?.nodeId ?? null
-  );
-  const navigation = useCompanionNavigationVisibility(args.floatingBar, isReviewTaskActive);
-  return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
-}
-
-function buildCompanionShellModel(args: {
-  actions: ReturnType<typeof useCompanionShellActions>;
-  browseSort: ReturnType<typeof useCompanionBrowseSortState>;
-  companionTabs: ReturnType<typeof useCompanionTabsConfig>;
-  directoryState: ReturnType<typeof useCompanionDirectorySelectionState>;
-  floatingBar: ReturnType<typeof useFloatingBarVisibility>;
-  handleContainerScroll: ReturnType<typeof useCompanionShellScrollHandler>;
-  handleSaveCaptureText: ReturnType<typeof createCompanionCaptureTextSaveHandler>;
-  isBrowseDirectoryOpen: boolean;
-  isCaptureSheetOpen: boolean;
-  isOnlyReviewOpen: boolean;
-  reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
-  searchArticle: ReturnType<typeof useCompanionSearchNavigation>;
-  setIsCaptureSheetOpen(open: boolean): void;
-  setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
-  settingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['settingsPage'];
-  surface: ReturnType<typeof useCompanionArticleSurface>;
-  workspaceSync: ReturnType<typeof useCompanionWorkspaceSync>;
-}) {
-  return {
-    activeSecondaryDestinationId: args.actions.secondaryDestinations.activeSecondaryDestinationId,
-    browseSortDirection: args.browseSort.browseSortDirection,
-    browseSortKey: args.browseSort.browseSortKey,
-    companionTabs: args.companionTabs,
-    directorySelection: args.directoryState.directorySelection,
-    floatingBar: args.floatingBar,
-    handleContainerScroll: args.handleContainerScroll,
-    handleContentTap: args.reviewChrome.handleContentTap,
-    handleExitSearchArticle: args.searchArticle.exitTopic,
-    handleExitSearchExternalDocument: args.searchArticle.exitExternalDocument,
-    handleExitSearchPdf: args.searchArticle.exitPdf,
-    handleNavigationAction: args.actions.handleNavigationAction,
-    handleOpenSearchExternalDocument: args.searchArticle.openExternalDocument,
-    handleOpenSearchPdf: args.searchArticle.openPdf,
-    handleOpenSearchTopic: args.searchArticle.openTopic,
-    handleSaveCaptureText: args.handleSaveCaptureText,
-    handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
-    isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
-    isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isCaptureSheetOpen: args.isCaptureSheetOpen,
-    isOnlyReviewOpen: args.isOnlyReviewOpen,
-    isSearchArticleOpen: args.searchArticle.isTopicOpen,
-    isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
-    isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
-    reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
-    searchExternalDocument: args.searchArticle.externalDocument,
-    searchPdfResult: args.searchArticle.pdfResult,
-    searchMatch: args.searchArticle.searchMatch,
-    setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
-    setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
-    setBrowseSortKey: args.browseSort.setBrowseSortKey,
-    setDirectorySelection: args.directoryState.setDirectorySelection,
-    setSettingsPage: args.setSettingsPage,
-    settingsPage: args.settingsPage,
-    surface: args.surface,
-    topBarProps: args.actions.topBarProps,
-    workspaceSync: args.workspaceSync
-  };
-}
-
-function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
-  const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
-  const browseSort = useCompanionBrowseSortState();
-  const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useState(false);
-  const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
-  const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
-  const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
-  const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort, isOnlyReviewOpen);
-  const companionTabs = useCompanionTabsConfig();
-  const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
-    activeAction: surface.activeAction,
-    syncOnboardingStatus: workspaceSync.state.sync_onboarding_status
-  });
-  const reviewChrome = useCompanionReviewChrome({ floatingBar, surface, workspaceSync });
-  const searchArticle = useCompanionSearchNavigation(surface);
-  const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
-  const directoryReadingSequence = useDirectoryReadingSequence(directoryState, surface, workspaceSync);
-  const externalDirectory = useCompanionExternalDirectory();
-  const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
-  const handleSaveCaptureText = useMemo(() => createCompanionCaptureTextSaveHandler(workspaceSync), [workspaceSync]);
-  const actions = useCompanionShellActions({
-    browseSortDirection: browseSort.browseSortDirection,
-    browseSortKey: browseSort.browseSortKey,
-    directoryState,
-    externalDirectory,
-    isBrowseDirectoryOpen,
-    isOnlyReviewOpen,
-    setBrowseSortDirection: browseSort.setBrowseSortDirection,
-    setBrowseSortKey: browseSort.setBrowseSortKey,
-    setIsBrowseDirectoryOpen,
-    setIsCaptureSheetOpen,
-    setIsOnlyReviewOpen,
-    setSettingsPage,
-    settingsPage,
-    surface,
-    workspaceSync
-  });
-  useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen });
-
-  const model = buildCompanionShellModel({
-    actions,
-    browseSort,
-    companionTabs,
-    directoryState,
-    floatingBar,
-    handleContainerScroll,
-    handleSaveCaptureText,
-    isBrowseDirectoryOpen,
-    isCaptureSheetOpen,
-    isOnlyReviewOpen,
-    reviewChrome,
-    searchArticle,
-    setIsCaptureSheetOpen,
-    setSettingsPage,
-    settingsPage,
-    surface,
-    workspaceSync
-  });
-  return { ...model, directoryReadingSequence };
-}
-
-export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;
+export type { CompanionShellModel } from './CompanionRestoredShell';
 
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   useEffect(() => {
@@ -209,25 +16,10 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
       logRuntimeError('Retired reminder cancellation failed', { area: 'native', action: 'cancel-retired-reminders', error });
     });
   }, []);
-  const model = useCompanionShellModel(props.bootstrapState);
-  useCompanionAndroidBack(model);
-
-  return (
-    <CompanionCustomCssProvider
-      refreshKey={model.workspaceSync.state.last_synced_at}
-      runtimeKind={props.bootstrapState.runtime_kind}
-    >
-      <CompanionSyncGroupRuntime bootstrapState={props.bootstrapState} workspaceSync={model.workspaceSync}>
-        <CompanionNodeLinkRuntime model={model}>
-          <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
-            <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
-              <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
-                <CompanionShellView model={model} />
-              </CompanionDraftProvider>
-            </CompanionShareInboxNotice>
-          </CompanionSyncProtocolNotice>
-        </CompanionNodeLinkRuntime>
-      </CompanionSyncGroupRuntime>
-    </CompanionCustomCssProvider>
-  );
+  const workspaceSync = useCompanionWorkspaceSync(props.bootstrapState);
+  const snapshot = workspaceSync.state.workspace_snapshot;
+  return <CompanionNavigationProvider ready={workspaceSync.isWorkspaceSyncStateReady} snapshot={snapshot}
+    libraryScope={snapshot?.libraryScope ?? props.bootstrapState.database_path ?? 'preview'}>
+    <CompanionRestoredShell bootstrapState={props.bootstrapState} workspaceSync={workspaceSync} />
+  </CompanionNavigationProvider>;
 }

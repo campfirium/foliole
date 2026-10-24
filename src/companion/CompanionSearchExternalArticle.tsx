@@ -9,7 +9,7 @@ import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import type { CompanionSearchMatch } from './companionSearchMatch';
 
 export function CompanionSearchExternalArticle(props: {
-  document: CompanionExternalDocumentSearchResult;
+  document: Pick<CompanionExternalDocumentSearchResult, 'document_id'>;
   searchMatch?: CompanionSearchMatch | null | undefined;
   onExit(): void;
 }) {

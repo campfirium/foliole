@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback } from 'react';
+import { Suspense, useCallback } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { syncCompanionAttachmentResourceFromDesktop } from '../shared/platform/companionDesktopAttachmentResources';
@@ -6,10 +6,7 @@ import type { CompanionPdfPageTextSearchResult } from '../shared/platform/compan
 import { AppButton, AppLoadingState } from '../shared/ui';
 
 import { companionMobileRailClassName } from './companionCssCompatibility';
-
-const SimplePdfDocument = lazy(() =>
-  import('../features/pdf/components/SimplePdfDocument').then((module) => ({ default: module.SimplePdfDocument }))
-);
+import { CompanionPersistedPdfDocument } from './CompanionPersistedPdfDocument';
 
 export function CompanionSearchPdfLoadingState(props: { onExit(): void }) {
   const t = useTranslation();
@@ -29,7 +26,7 @@ export function CompanionSearchPdfLoadingState(props: { onExit(): void }) {
 
 export function CompanionSearchPdfDocument(props: {
   onExit(): void;
-  result: CompanionPdfPageTextSearchResult;
+  result: Pick<CompanionPdfPageTextSearchResult, 'attachment_id' | 'page'>;
   syncEndpointUrl: string | null;
 }) {
   const t = useTranslation();
@@ -40,7 +37,7 @@ export function CompanionSearchPdfDocument(props: {
   return (
     <section className={`fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-hidden bg-companion-base ${companionMobileRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] text-foreground`}>
       <Suspense fallback={<CompanionSearchPdfLoadingState onExit={props.onExit} />}>
-        <SimplePdfDocument
+        <CompanionPersistedPdfDocument key={props.result.attachment_id}
           attachmentId={props.result.attachment_id}
           backLabel={t('companion.back')}
           initialPage={props.result.page}

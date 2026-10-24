@@ -14,9 +14,9 @@ import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './co
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } from './companionSelectionToolbarState';
+import { useCompanionArticleScrollPosition } from './useCompanionArticleScrollPosition';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
-import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
@@ -171,9 +171,10 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const model = useImmersiveReadableArticleModel(props);
   const readingTypography = useCompanionReadingTypographySettings();
   const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
-  const scrollPosition = useCompanionImmersiveScrollPosition(
-    props.readableArticle.nodeId, props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, props.onScrollTopChange
-  );
+  const scrollPosition = useCompanionArticleScrollPosition({
+    nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
+    scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange
+  });
   const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section

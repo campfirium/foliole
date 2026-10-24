@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 
 import type { VirtualListAnchor } from '../../../shared/ui/virtualListPosition';
 
+export interface SimplePdfPosition { page: number; fraction: number }
+export interface SimplePdfPositionPersistence {
+  initial?: SimplePdfPosition | undefined;
+  onChange?: ((position: SimplePdfPosition) => void) | undefined;
+}
+
 interface SavedPage { anchor: VirtualListAnchor; fraction: number; width: number }
 interface PendingPage { page: number; fraction: number; attempts: number; until: number }
 interface PositionRefs {
@@ -9,6 +15,7 @@ interface PositionRefs {
   pending: MutableRefObject<PendingPage | null>;
   saved: MutableRefObject<SavedPage | undefined>;
   scrollRef: RefObject<HTMLDivElement | null>;
+  persistence: MutableRefObject<SimplePdfPositionPersistence | undefined>;
 }
 
 function usePagePosition(refs: PositionRefs, width: number, initialPage: number) {
@@ -26,7 +33,9 @@ function usePagePosition(refs: PositionRefs, width: number, initialPage: number)
         if (pending.current) return;
         const row = scrollRef.current?.querySelector<HTMLElement>(`[data-list-position-index="${next.index}"]`);
         const height = row?.getBoundingClientRect().height || width * 1.414;
-        saved.current = { anchor: next, fraction: Math.max(0, next.offset / height), width };
+        const fraction = Math.max(0, Math.min(1, next.offset / height));
+        saved.current = { anchor: next, fraction, width };
+        refs.persistence.current?.onChange?.({ page: next.index + 1, fraction });
       }
     };
   }, [initialPage, pending, saved, scrollRef, width]);
@@ -40,7 +49,7 @@ function usePagePositionLifetime(refs: PositionRefs, position: ReturnType<typeof
     const anchor = position.read();
     const page = anchor.index + 1;
     setPinned(page);
-    pending.current = { page, fraction: saved.current?.fraction ?? 0, attempts: 0, until: Date.now() + 3000 };
+    pending.current = { page, fraction: saved.current?.fraction ?? refs.persistence.current?.initial?.fraction ?? 0, attempts: 0, until: Date.now() + 3000 };
     const release = () => { pending.current = null; cancelAnimationFrame(frame.current); setPinned(null); };
     const timeout = window.setTimeout(release, 3000);
     const events = ['pointerdown', 'touchstart', 'wheel', 'keydown'] as const;
@@ -77,11 +86,13 @@ function usePageLayoutCorrection(refs: PositionRefs, width: number) {
 }
 
 // Only this viewer's current page is retained; no PDF resource is owned here.
-export function useSimplePdfPosition(scrollRef: RefObject<HTMLDivElement | null>, width: number, initialPage: number) {
+export function useSimplePdfPosition(scrollRef: RefObject<HTMLDivElement | null>, width: number, initialPage: number, persistence?: SimplePdfPositionPersistence) {
+  const latestPersistence = useRef(persistence);
+  latestPersistence.current = persistence;
   const saved = useRef<SavedPage>();
   const pending = useRef<PendingPage | null>(null);
   const frame = useRef(0);
-  const refs = { frame, pending, saved, scrollRef };
+  const refs = { frame, pending, saved, scrollRef, persistence: latestPersistence };
   const position = usePagePosition(refs, width, initialPage);
   const pinned = usePagePositionLifetime(refs, position, initialPage);
   const onLayoutReady = usePageLayoutCorrection(refs, width);

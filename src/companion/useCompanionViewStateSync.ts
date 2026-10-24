@@ -10,32 +10,48 @@ import type { CompanionTabAction } from './CompanionFloatingBars';
 
 function useCompanionScrollSave(currentViewNodeId: string | null) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlight = useRef<Promise<unknown>>(Promise.resolve());
   const pending = useRef<{ nodeId: string; scrollTop: number } | null>(null);
   const flush = useCallback(() => {
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = null;
     const position = pending.current;
     pending.current = null;
-    if (position) void saveCompanionSyncNodeViewState(position).catch(() => undefined);
+    if (position) {
+      inFlight.current = saveCompanionSyncNodeViewState(position);
+      void inFlight.current.catch(() => undefined);
+    }
+    return inFlight.current.then(() => undefined);
   }, []);
 
-  useEffect(() => flush, [currentViewNodeId, flush]);
+  useEffect(() => () => { void flush().catch(() => undefined); }, [currentViewNodeId, flush]);
+  useEffect(() => {
+    const onPageHide = () => { void flush().catch(() => undefined); };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onPageHide(); };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [flush]);
   useEffect(() => {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
-    void subscribeNativeAppBackground(flush).then((cleanup) => {
+    void subscribeNativeAppBackground(() => { void flush().catch(() => undefined); }).then((cleanup) => {
       if (disposed) cleanup();
       else unsubscribe = cleanup;
     }).catch(() => undefined);
     return () => { disposed = true; unsubscribe?.(); };
   }, [flush]);
 
-  return useCallback((scrollTop: number) => {
+  const handleScroll = useCallback((scrollTop: number) => {
     if (!currentViewNodeId) return;
     if (timer.current !== null) clearTimeout(timer.current);
     pending.current = { nodeId: currentViewNodeId, scrollTop };
-    timer.current = setTimeout(flush, 800);
+    timer.current = setTimeout(() => { void flush().catch(() => undefined); }, 800);
   }, [currentViewNodeId, flush]);
+  return Object.assign(handleScroll, { flush });
 }
 
 export function useCompanionViewStateSync(args: {

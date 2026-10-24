@@ -15,6 +15,7 @@ import { configurePdfWorker } from '../model/pdfWorker';
 
 import { SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
 import { SimplePdfPageStack } from './SimplePdfPageStack';
+import type { SimplePdfPositionPersistence } from './useSimplePdfPosition';
 
 configurePdfWorker();
 
@@ -102,6 +103,7 @@ export function SimplePdfDocument(props: {
   attachmentId: string;
   backLabel?: string;
   initialPage?: number;
+  positionPersistence?: SimplePdfPositionPersistence | undefined;
   onBackToText?: () => void;
   onMissingResource?: (attachmentId: string) => Promise<void> | void;
   title: string;
@@ -148,7 +150,8 @@ export function SimplePdfDocument(props: {
         >
           {pageWidth && totalPages ? <SimplePdfPageStack
             key={source}
-            initialPage={props.initialPage}
+            initialPage={props.positionPersistence?.initial?.page ?? props.initialPage}
+            persistence={props.positionPersistence}
             pageWidth={pageWidth}
             scrollRef={scrollContainerRef}
             totalPages={totalPages}

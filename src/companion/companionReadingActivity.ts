@@ -4,6 +4,7 @@ import { CompanionSelectionRefreshError } from './companionSelectionRefreshError
 
 export class CompanionReadingActivity {
   editing = false;
+  flushPosition: (() => Promise<void>) | null = null;
   flushDraft: (() => Promise<void>) | null = null;
   editRound: ContentEditRound | null = null;
   private pending = new Set<Promise<unknown>>();
@@ -37,5 +38,6 @@ export class CompanionReadingActivity {
     await Promise.all([...this.pending]);
     for (const [key, error] of this.errors) if (key !== retryingKey) throw error;
     await this.flushDraft?.();
+    await this.flushPosition?.();
   }
 }

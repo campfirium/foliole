@@ -5,7 +5,7 @@ import type { PdfCropBox } from '../model/pdfAutoCrop';
 
 import { SimplePdfPage } from './SimplePdfPage';
 import { useSimplePdfEndPadding } from './useSimplePdfEndPadding';
-import { useSimplePdfPosition } from './useSimplePdfPosition';
+import { useSimplePdfPosition, type SimplePdfPositionPersistence } from './useSimplePdfPosition';
 
 interface PageLayout { cropBox: PdfCropBox | null; height: number }
 
@@ -13,6 +13,7 @@ const pageKey = (page: number) => String(page);
 
 export function SimplePdfPageStack(props: {
   initialPage: number | undefined;
+  persistence?: SimplePdfPositionPersistence | undefined;
   pageWidth: number;
   scrollRef: RefObject<HTMLDivElement | null>;
   totalPages: number;
@@ -29,7 +30,7 @@ export function SimplePdfPageStack(props: {
     ? lastPage.height : props.pageWidth * 1.414 + 12;
   const paddingBottom = useSimplePdfEndPadding(props.scrollRef, lastHeight);
   const initialPage = Math.max(1, Math.min(props.initialPage ?? 1, props.totalPages));
-  const { onLayoutReady, pinned, position } = useSimplePdfPosition(props.scrollRef, props.pageWidth, initialPage);
+  const { onLayoutReady, pinned, position } = useSimplePdfPosition(props.scrollRef, props.pageWidth, initialPage, props.persistence);
   const estimateSize = useCallback((index: number) => crops.get(index + 1)?.height ?? props.pageWidth * 1.414 + 12, [crops, props.pageWidth]);
   return (
     <div className="min-w-full" style={{ width: props.pageWidth, paddingBottom }}>

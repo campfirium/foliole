@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 
 export function useCompanionDirectorySelectionState(isBrowseDirectoryOpen: boolean) {
-  const [directorySelection, setDirectorySelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
+  const [directorySelection, setDirectorySelection] = useCompanionNavigationField('directorySelection', { kind: 'root' });
 
   useEffect(() => {
     if (!isBrowseDirectoryOpen) {

@@ -1,19 +1,16 @@
-import { useState } from 'react';
-
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { resolveCompanionFolderViewByNodeId } from '../shared/platform/companionBrowseLists';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
-
-type ReadingSequence = { folderNodeId: string; nodeIds: readonly string[] };
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 
 export function useCompanionDirectoryReadingSequence(args: {
   selection: CompanionDirectorySelection;
   selectedNodeId: string | null;
   snapshot: WorkspaceSnapshot | null;
 }) {
-  const [sequence, setSequence] = useState<ReadingSequence | null>(null);
+  const [sequence, setSequence] = useCompanionNavigationField('directorySequence', null);
 
   function capture(nodeId: string, nodeIds: readonly string[] | null) {
     setSequence(args.selection.kind === 'internal' && nodeIds?.includes(nodeId)

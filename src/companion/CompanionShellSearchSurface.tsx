@@ -22,15 +22,15 @@ export type CompanionShellSearchRouteProps = {
   onOpenSearchExternalDocument(document: CompanionExternalDocumentSearchResult, query: string): void;
   onOpenSearchPdf(result: CompanionPdfPageTextSearchResult): void;
   onOpenSearchTopic(result: CompanionTopicSearchResult, query: string): void;
-  searchExternalDocument: CompanionExternalDocumentSearchResult | null;
+  searchExternalDocument: Pick<CompanionExternalDocumentSearchResult, 'document_id'> | null;
   searchMatch?: CompanionSearchMatch | null | undefined;
-  searchPdfResult: CompanionPdfPageTextSearchResult | null;
+  searchPdfResult: Pick<CompanionPdfPageTextSearchResult, 'attachment_id' | 'page'> | null;
 };
 
 export function renderCompanionShellSearchSurface(props: {
-  externalDocument: CompanionExternalDocumentSearchResult | null;
+  externalDocument: Pick<CompanionExternalDocumentSearchResult, 'document_id'> | null;
   searchMatch?: CompanionSearchMatch | null | undefined;
-  pdfResult: CompanionPdfPageTextSearchResult | null;
+  pdfResult: Pick<CompanionPdfPageTextSearchResult, 'attachment_id' | 'page'> | null;
   isTopicOpen: boolean;
   onExitExternalDocument(): void;
   onExitPdf(): void;

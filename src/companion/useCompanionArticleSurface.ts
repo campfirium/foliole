@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
+import { useCompanionNavigationField, useCompanionNavigationFlush, useHasCompanionNavigation } from './CompanionNavigationProvider';
 import { CompanionReadingActivity } from './companionReadingActivity';
 import { hydrateCompanionReviewSession } from './companionReviewSession';
 import { useCompanionActionState } from './useCompanionActionState';
@@ -16,7 +17,7 @@ type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 function useCompanionBrowseReturnState() {
-  const [browseReturnNodeId, setBrowseReturnNodeId] = useState<string | null>(null);
+  const [browseReturnNodeId, setBrowseReturnNodeId] = useCompanionNavigationField('browseReturnNodeId', null);
   return { browseReturnNodeId, setBrowseReturnNodeId };
 }
 
@@ -96,16 +97,15 @@ function useCompanionInteractionState(
 }
 
 function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
+  const restored = useHasCompanionNavigation();
   const isActiveActionUserOwnedRef = useRef(false);
-  const [activeAction, setActiveAction] = useState<CompanionTabAction>(() => {
-    return workspaceSync.state.workspace_snapshot ? 'review' : 'more';
-  });
+  const [activeAction, setActiveAction] = useCompanionNavigationField('activeAction', workspaceSync.state.workspace_snapshot ? 'review' : 'more');
   const setUserActiveAction = (action: CompanionTabAction) => {
     isActiveActionUserOwnedRef.current = true;
     setActiveAction(action);
   };
   useEffect(() => {
-    if (!workspaceSync.isWorkspaceSyncStateReady) return;
+    if (restored || !workspaceSync.isWorkspaceSyncStateReady) return;
     if (!workspaceSync.state.workspace_snapshot) {
       setActiveAction('more');
       isActiveActionUserOwnedRef.current = false;
@@ -145,6 +145,8 @@ export function useCompanionArticleSurface(
     reviewNodeId: effectiveReviewSession.currentCard?.nodeId ?? null,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId
   });
+  const flushNavigation = useCompanionNavigationFlush();
+  useReadingPositionFlush(readingActivity, handleViewScroll, flushNavigation);
   const interactionState = useCompanionInteractionState(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
@@ -187,4 +189,12 @@ function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
 function useReadingActivity(nodeId: string | null, libraryScope: string | undefined) {
   const [, changed] = useReducer((value: number) => value + 1, 0);
   return useMemo(() => new CompanionReadingActivity(nodeId, changed), [nodeId, libraryScope]);
+}
+
+function useReadingPositionFlush(activity: CompanionReadingActivity,
+  scroll: ReturnType<typeof useCompanionViewStateSync>, flushNavigation: () => Promise<void>) {
+  useEffect(() => {
+    activity.flushPosition = async () => { await scroll.flush(); await flushNavigation(); };
+    return () => { activity.flushPosition = null; };
+  }, [activity, scroll.flush, flushNavigation]);
 }

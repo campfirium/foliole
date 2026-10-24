@@ -58,3 +58,24 @@ it('bounds delayed corrections and releases a target even if rendering never com
   act(() => vi.advanceTimersByTime(3000));
   expect(result.current.pinned).toBeNull();
 });
+
+it('exports the observed page and fraction and restores them after a new reader mounts', () => {
+  const scroll = document.createElement('div');
+  const row = document.createElement('div');
+  row.dataset.listPositionIndex = '4';
+  row.getBoundingClientRect = () => new DOMRect(0, 100, 400, 1000);
+  scroll.getBoundingClientRect = () => new DOMRect(0, 0, 400, 600);
+  scroll.scrollTo = vi.fn();
+  scroll.append(row);
+  const onChange = vi.fn();
+  const ref = { current: scroll };
+  const first = renderHook(() => useSimplePdfPosition(ref, 400, 1, { onChange }));
+  act(() => scroll.dispatchEvent(new Event('wheel')));
+  act(() => first.result.current.position.write({ index: 4, key: '5', offset: 250, order: [] }));
+  expect(onChange).toHaveBeenLastCalledWith({ page: 5, fraction: 0.25 });
+  first.unmount();
+  const second = renderHook(() => useSimplePdfPosition(ref, 400, 5,
+    { initial: { page: 5, fraction: 0.25 } }));
+  act(() => { second.result.current.onLayoutReady(5); vi.advanceTimersByTime(20); });
+  expect(scroll.scrollTo).toHaveBeenLastCalledWith({ top: 350 });
+});

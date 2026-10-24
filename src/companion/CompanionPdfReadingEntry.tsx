@@ -1,9 +1,9 @@
-import { useState } from 'react';
-
 import { isOriginalFilePlaceholderContent } from '../../lib/core/import/filePlaceholderContent';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppButton } from '../shared/ui';
+
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 
 type PdfReadingArticle = {
   content: string;
@@ -20,7 +20,7 @@ export function resolveCompanionPdfReadingEntry(article: PdfReadingArticle) {
 }
 
 export function useCompanionPdfReadingEntry(article: PdfReadingArticle) {
-  const [originalPdfNodeId, setOriginalPdfNodeId] = useState<string | null>(null);
+  const [originalPdfNodeId, setOriginalPdfNodeId] = useCompanionNavigationField('originalPdfNodeId', null);
   const hasReadableText = resolveCompanionPdfReadingEntry(article) === 'text';
   const isViewingOriginal = Boolean(
     article.pdfAttachmentId && (!hasReadableText || originalPdfNodeId === article.nodeId)

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
@@ -7,6 +5,7 @@ import type { CompanionTopicSearchResult } from '../shared/platform/companionFul
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
 import { AppButton, appFocusSilentClassName } from '../shared/ui';
 
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { CompanionSearchResults } from './CompanionSearchResults';
 import { useCompanionSearch } from './useCompanionSearch';
 import { useCompanionSearchTopicOpen } from './useCompanionSearchTopicOpen';
@@ -17,7 +16,7 @@ export function CompanionSearchContent(props: {
   onOpenTopic?: ((result: CompanionTopicSearchResult, query: string) => void) | undefined;
 }) {
   const t = useTranslation();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useCompanionNavigationField('searchQuery', '');
   const searchState = useCompanionSearch(query);
   const topicOpen = useCompanionSearchTopicOpen(query, props.onOpenTopic);
 
