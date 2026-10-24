@@ -15,7 +15,7 @@ function topic(nodeId: string, record: NativeSyncNodeRecord): NativeSyncNodeReco
   return { ...record, object_id: nodeId, version_id: `${nodeId}:${record.version_id}`,
     parent_version_id: record.parent_version_id ? `${nodeId}:${record.parent_version_id}` : null,
     parent_version_ids: record.parent_version_ids?.map(id => `${nodeId}:${id}`) ?? [],
-    ancestor_version_ids: record.ancestor_version_ids.map(id => `${nodeId}:${id}`),
+    ancestor_version_ids: [...record.ancestor_version_ids].map(id => `${nodeId}:${id}`),
     snapshot: { ...record.snapshot, id: nodeId } };
 }
 
