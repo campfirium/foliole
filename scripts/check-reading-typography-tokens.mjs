@@ -2,7 +2,11 @@
 
 import { readFileSync } from 'node:fs';
 
-const SOURCES = ['src/app/generated/appearance-colors.css', 'src/app/styles.css'];
+const SOURCES = [
+  'src/app/generated/appearance-colors.css',
+  'src/app/tokens/roles.css',
+  'src/app/styles.css'
+];
 
 const TOKEN_RULES = {
   light: {

@@ -132,6 +132,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-privacy-manifest-host-contract.test.mjs',
   'scripts/ios/ios-resource-profile.test.mjs',
   'scripts/ios/ios-scene-lifecycle-host-contract.test.mjs',
+  'scripts/ios/ios-simulator-live.test.mjs',
   'scripts/ios/ios-state-writeback-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-group-discovery-contract.test.mjs',
   'scripts/ios/ios-sync-group-discovery-acceptance-runner.test.mjs',
