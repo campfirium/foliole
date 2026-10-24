@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  syncDeleteNodesPermanentlyToRuntime,
   syncRestoreNodesToRuntime,
   syncSoftDeleteNodesToRuntime
 } from './workspaceRuntimeSync';
@@ -65,32 +64,6 @@ describe('workspace trash mutation commit boundary', () => {
 
     expect(harness.getState().reviewSession.currentNodeId).toBe('node-1');
     expect(harness.getState().reviewSession.queueNodeIds).not.toContain(nodeId);
-  });
-
-  it('does not apply permanent delete patch when runtime fails', async () => {
-    const { actions, harness } = createHarness();
-    const nodeId = (await actions.createRootNode('root 2'))!;
-    vi.mocked(syncDeleteNodesPermanentlyToRuntime).mockResolvedValue(undefined);
-
-    await actions.deleteNodePermanently(nodeId);
-
-    expect(harness.getState().nodesById[nodeId]).toBeDefined();
-    expect(harness.getState().nodeOrder).toContain(nodeId);
-  });
-
-  it('applies permanent delete from runtime returned ids', async () => {
-    const { actions, harness } = createHarness();
-    const firstNodeId = (await actions.createRootNode('root 2'))!;
-    const secondNodeId = (await actions.createRootNode('root 3'))!;
-    vi.mocked(syncDeleteNodesPermanentlyToRuntime).mockImplementation(async (payload) => ({
-      nodeOrder: payload.nodeOrder,
-      removedNodeIds: [secondNodeId]
-    }));
-
-    await actions.deleteNodesPermanently([firstNodeId, secondNodeId]);
-
-    expect(harness.getState().nodesById[firstNodeId]).toBeDefined();
-    expect(harness.getState().nodesById[secondNodeId]).toBeUndefined();
   });
 
   it('keeps restore patch gated by runtime success', async () => {

@@ -1,15 +1,24 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
+import { getGuidedSampleContent } from '../../lib/core/guidedSample/guidedSampleContent';
 import { App } from '../app/App';
+import { ensureGuidedSampleTopicTree } from '../features/guidedSample/model/guidedSampleWorkspace';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { consumeGuidedSampleStartup } from '../shared/platform/desktop/guidedSampleStartupRuntime';
+import { createEmptyWorkspaceActionHistory } from '../store/workspaceActionHistory';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { mockEditorState } from './app-smoke.shared';
 
-const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
+vi.mock('../shared/platform/desktop/guidedSampleStartupRuntime', () => ({ consumeGuidedSampleStartup: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(consumeGuidedSampleStartup).mockReset();
+  vi.mocked(consumeGuidedSampleStartup).mockResolvedValue(null);
+});
 
 function createTopicFromHeaderMenu() {
   fireEvent.click(screen.getByRole('button', { name: 'Create topic' }));
@@ -55,18 +64,44 @@ function clearActiveNodeSelection() {
   });
 }
 
-it('opens the guided sample when no topic exists yet', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+it('leaves an empty library empty when the host has no startup sample', async () => {
   keepOnlyInboxWithoutActiveNode();
+  const empty = useWorkspaceStore.getState();
+
+  await act(async () => { render(<App />); });
+
+  expect(consumeGuidedSampleStartup).toHaveBeenCalledTimes(1);
+  const workspace = useWorkspaceStore.getState();
+  expect(workspace.nodeOrder).toEqual(empty.nodeOrder);
+  expect(workspace.nodesById).toEqual(empty.nodesById);
+  expect(workspace.activeNodeId).toBeNull();
+  expect(workspace.reviewSession.currentNodeId).toBeNull();
+  expect(workspace.appActionHistory.undoStack).toHaveLength(0);
+  expect(screen.getByText('No document selected')).toBeInTheDocument();
+  expect(screen.queryByTestId('editor-value')).not.toBeInTheDocument();
+});
+
+it('opens the host-seeded sample in Flow without creating more topics or undo entries', async () => {
+  keepOnlyInboxWithoutActiveNode();
+  const { rootNodeId, queueNodeIds } = await ensureGuidedSampleTopicTree(() => useWorkspaceStore.getState(), 'en');
+  if (!rootNodeId) throw new Error('expected a seeded sample root');
+  useWorkspaceStore.setState({ activeNodeId: null, appActionHistory: createEmptyWorkspaceActionHistory() });
+  const seeded = useWorkspaceStore.getState();
+  vi.mocked(consumeGuidedSampleStartup).mockResolvedValue(rootNodeId);
 
   render(<App />);
 
   await waitFor(() => {
-    const workspace = useWorkspaceStore.getState();
-    expect(workspace.nodeOrder.some((nodeId) =>
-      workspace.nodesById[nodeId]?.title === 'Welcome to Foliole'
-    )).toBe(true);
+    expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe(rootNodeId);
+    expect(screen.getByTestId('editor-value')).toHaveValue(getGuidedSampleContent('en').root.content);
+    expect(screen.getByLabelText('Flow toolbar')).toBeInTheDocument();
   });
-  expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
+  const workspace = useWorkspaceStore.getState();
+  expect(consumeGuidedSampleStartup).toHaveBeenCalledTimes(1);
+  expect(workspace.activeNodeId).toBe(rootNodeId);
+  expect(workspace.reviewSession.queueNodeIds).toEqual(queueNodeIds);
+  expect(workspace.nodeOrder).toEqual(seeded.nodeOrder);
+  expect(workspace.appActionHistory.undoStack).toHaveLength(0);
 });
 
 it('shows the document empty state when no note is selected', () => {

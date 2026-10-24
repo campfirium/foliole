@@ -71,11 +71,49 @@ it('keeps the nodes out of Trash when a refresh reloads them before the deletion
   expect(harness.getState().nodesById[nodeId]).toBeUndefined();
 });
 
-it('tells the user and reloads the workspace when the runtime deletion fails', async () => {
-  const { actions, nodeId } = await seedTrashedNode(async () => { throw new Error('delete failed'); });
+it.each(['rejects', 'returns no result'])('tells the user and reloads when runtime deletion %s', async (failure) => {
+  const { actions, nodeId } = await seedTrashedNode(async () => {
+    if (failure === 'rejects') throw new Error('delete failed');
+    return undefined;
+  });
 
-  await actions.deleteNodesPermanently([nodeId]);
+  await actions.deleteNodePermanently(nodeId);
   await vi.waitFor(() => expect(requestWorkspaceStateRefresh).toHaveBeenCalledWith('content-changed'));
 
   expect(showAppRuntimeNotice).toHaveBeenCalledWith('Could not delete from Trash. Please try again.', 'error');
+});
+
+it('reloads surviving nodes after a partial runtime deletion instead of leaving them hidden', async () => {
+  let finish!: (value: unknown) => void;
+  const { actions, harness, nodeId } = await seedTrashedNode(() => new Promise((resolve) => { finish = resolve; }));
+  const removedNodeId = (await actions.createRootNode('Also trashed'))!;
+  await actions.deleteNode(removedNodeId);
+  const beforeDelete = harness.getState();
+  const survivingNodes = { ...beforeDelete.nodesById };
+  delete survivingNodes[removedNodeId];
+  const survivingDeletedAt = { ...beforeDelete.trashedNodeDeletedAtById };
+  delete survivingDeletedAt[removedNodeId];
+  vi.mocked(requestWorkspaceStateRefresh).mockImplementationOnce(() => {
+    harness.setState({
+      nodesById: survivingNodes,
+      nodeOrder: beforeDelete.nodeOrder.filter((id) => id !== removedNodeId),
+      trashedNodeIds: [nodeId],
+      trashedNodeDeletedAtById: survivingDeletedAt
+    });
+  });
+
+  const deletion = actions.deleteNodesPermanently([nodeId, removedNodeId]);
+  expect(harness.getState().trashedNodeIds).toEqual([]);
+  expect(harness.getState().nodesById[nodeId]).toBeUndefined();
+  expect(harness.getState().nodesById[removedNodeId]).toBeUndefined();
+  finish({ nodeOrder: beforeDelete.nodeOrder.filter((id) => id !== removedNodeId), removedNodeIds: [removedNodeId] });
+  await deletion;
+  await vi.waitFor(() => expect(requestWorkspaceStateRefresh).toHaveBeenCalledWith('content-changed'));
+
+  expect(showAppRuntimeNotice).toHaveBeenCalledWith('Could not delete from Trash. Please try again.', 'error');
+  expect(harness.getState().nodesById[nodeId]).toEqual(beforeDelete.nodesById[nodeId]);
+  expect(harness.getState().trashedNodeIds).toEqual([nodeId]);
+  expect(harness.getState().nodeOrder).toContain(nodeId);
+  expect(harness.getState().nodesById[removedNodeId]).toBeUndefined();
+  expect(harness.getState().nodeOrder).not.toContain(removedNodeId);
 });
