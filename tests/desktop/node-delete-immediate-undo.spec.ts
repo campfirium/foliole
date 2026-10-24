@@ -5,9 +5,14 @@ import {
 } from './harness/contextualContentHistory';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
+import { waitForStartupGuidedSample } from './harness/startupGuidedSample';
+
+test.beforeEach(async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await waitForStartupGuidedSample(desktopWindow);
+});
 
 test('restores the current node immediately after body Escape and Delete', async ({ desktopWindow }) => {
-  await expectWorkspaceShell(desktopWindow);
   await seedContextualHistoryWorkspace(desktopWindow);
   const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
   if (await exitFlow.isVisible()) await exitFlow.click();
@@ -33,7 +38,6 @@ test('restores the current node immediately after body Escape and Delete', async
 
 for (const kind of ['topic', 'folder', 'item'] as const) {
   test(`restores a ${kind} deleted by an action while content owned undo`, async ({ desktopWindow }) => {
-    await expectWorkspaceShell(desktopWindow);
     await seedContextualHistoryWorkspace(desktopWindow);
     const nodeId = `immediate-undo-${kind}`;
     await desktopWindow.evaluate(async (seeds) => window.__folioleWorkspaceDebug?.seedNodes?.(seeds), [
