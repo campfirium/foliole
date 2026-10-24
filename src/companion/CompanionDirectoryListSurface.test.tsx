@@ -61,7 +61,7 @@ it('does not present a folder body status or repeat its type in the directory', 
     />
   </LocalizationProvider>);
 
-  expect(screen.getByRole('button', { name: '打开文件夹 收件箱' })).toHaveTextContent('新主题默认进入这里');
+  expect(screen.getByRole('button', { name: '打开文件夹 收件箱' })).not.toHaveTextContent('新主题默认进入这里');
   expect(screen.getByRole('button', { name: '打开文件夹 todo' })).not.toHaveTextContent('文件夹');
   expect(screen.queryByText('空主题')).not.toBeInTheDocument();
 });
