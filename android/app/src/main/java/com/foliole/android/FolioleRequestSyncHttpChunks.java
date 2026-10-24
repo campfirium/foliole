@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import com.foliole.android.framed.FramedSyncFiles;
+import com.foliole.android.framed.FramedSyncHttpTransport;
 import com.getcapacitor.JSObject;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +12,28 @@ final class FolioleRequestSyncHttpChunks {
     interface Check { void run() throws Exception; }
     interface Timing { void record(String phase, int index, int bytes, long nanos); }
     private FolioleRequestSyncHttpChunks() {}
+
+    static FramedSyncHttpTransport.RawRequestBody request(FramedSyncFiles files, String directory, int count,
+        Check check, Check progress, Timing timing) {
+        return new FramedSyncHttpTransport.RawRequestBody() {
+            private int completed;
+            private int lastBytes;
+            @Override public void write(OutputStream output) throws Exception {
+                FolioleRequestSyncHttpChunks.write(files, directory, count, output, check,
+                    () -> { if (++completed < count) progress.run(); }, (phase, index, bytes, nanos) -> {
+                        lastBytes = bytes;
+                        if (!phase.equals("touch_round") || index < count - 1) timing.record(phase, index, bytes, nanos);
+                    });
+            }
+            @Override public void sent() throws Exception {
+                check.run();
+                long started = System.nanoTime();
+                // The complete signed body can reach the peer while the final renewal crosses the bridge.
+                try { progress.run(); }
+                finally { timing.record("touch_round", count - 1, lastBytes, System.nanoTime() - started); }
+            }
+        };
+    }
 
     static void write(FramedSyncFiles files, String directory, int count, OutputStream output, Check check, Check progress) throws Exception {
         write(files, directory, count, output, check, progress, (phase, index, bytes, nanos) -> {});

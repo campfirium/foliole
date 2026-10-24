@@ -46,7 +46,7 @@ beforeAll(() => {
 });
 afterAll(() => { if (directory) fs.rmSync(directory, { recursive: true, force: true }); });
 
-it.each([4096, 100000])('preserves a %i-byte HTTP body and distinguishes a blocked renewal from output waits', size => {
+it.each([4096, 100000, 1048583])('sends a complete %i-byte HTTP body before its final renewal returns', size => {
   for (const blocked of [false, true]) {
     const run = spawnSync(java, ['-cp', directory, 'com.foliole.android.HttpTimingFixture', String(blocked), String(size)],
       { encoding: 'utf8', timeout: 5000 });
@@ -54,4 +54,20 @@ it.each([4096, 100000])('preserves a %i-byte HTTP body and distinguishes a block
     expect(run.status, run.stderr).toBe(0);
     expect(run.stdout).toContain('HTTP bytes, phase timing and metadata privacy verified');
   }
+});
+
+it('retains renewal backpressure between request chunks', () => {
+  const run = spawnSync(java, ['-cp', directory, 'com.foliole.android.HttpTimingFixture', 'true', '1048583', 'intermediate'],
+    { encoding: 'utf8', timeout: 5000 });
+  expect(run.error).toBeUndefined();
+  expect(run.status, run.stderr).toBe(0);
+  expect(run.stdout).toContain('HTTP bytes, phase timing and metadata privacy verified');
+});
+
+it('rejects a failed final renewal without consuming the response', () => {
+  const run = spawnSync(java, ['-cp', directory, 'com.foliole.android.HttpTimingFixture', 'true', '4096', 'reject'],
+    { encoding: 'utf8', timeout: 5000 });
+  expect(run.error).toBeUndefined();
+  expect(run.status, run.stderr).toBe(0);
+  expect(run.stdout).toContain('HTTP bytes, phase timing and metadata privacy verified');
 });

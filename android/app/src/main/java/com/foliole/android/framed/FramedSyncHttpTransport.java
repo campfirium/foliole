@@ -31,7 +31,10 @@ public final class FramedSyncHttpTransport {
         T read(InputStream input) throws Exception;
     }
 
-    public interface RawRequestBody { void write(OutputStream output) throws Exception; }
+    public interface RawRequestBody {
+        void write(OutputStream output) throws Exception;
+        default void sent() throws Exception {}
+    }
 
     private FramedSyncHttpTransport() {}
 

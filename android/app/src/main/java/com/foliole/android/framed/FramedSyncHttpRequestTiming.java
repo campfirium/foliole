@@ -21,6 +21,7 @@ public final class FramedSyncHttpRequestTiming {
             try { output.flush(); }
             finally { observer.record("flush", System.nanoTime() - flushing); }
         }
+        body.sent();
     }
 
     static int responseCode(HttpURLConnection connection, Observer observer) throws Exception {

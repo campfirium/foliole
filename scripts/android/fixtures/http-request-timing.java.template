@@ -16,12 +16,17 @@ public class HttpTimingFixture {
     public static void main(String[] args) throws Exception {
         boolean block = Boolean.parseBoolean(args[0]);
         int size = Integer.parseInt(args[1]);
+        boolean intermediate = args.length > 2 && args[2].equals("intermediate");
+        boolean reject = args.length > 2 && args[2].equals("reject");
+        var responseRead = new java.util.concurrent.atomic.AtomicBoolean();
+        int chunks = (size + 524287) / 524288;
+        var renewals = new java.util.concurrent.atomic.AtomicInteger();
         byte[] expected = new byte[size];
         Arrays.fill(expected, (byte) 65);
         var root = Files.createTempDirectory("foliole-body-probe-");
         var files = new FramedSyncFiles(new android.content.Context(root.toFile()), "fixture");
         String directory = "requests/probe";
-        files.write(directory + "/http-out-0", expected);
+        writeChunks(files, directory, expected, chunks);
         var headersSeen = new CountDownLatch(1);
         var bodySeen = new CountDownLatch(1);
         var progressEntered = new CountDownLatch(1);
@@ -29,19 +34,18 @@ public class HttpTimingFixture {
         var error = new AtomicReference<Throwable>();
         var timing = new FolioleRequestSyncTiming("request-1", new URL("http://127.0.0.1:1234/probe?request=objects&secret=never-log-this"));
         var received = new AtomicReference<byte[]>();
-        var times = new long[2];
         var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        configureServer(server, times, headersSeen, bodySeen, received, error);
+        configureServer(server, headersSeen, bodySeen, received, error);
         server.start();
         var url = new URL("http://127.0.0.1:" + server.getAddress().getPort() + "/probe");
         Thread client = new Thread(() -> {
             try {
                 FramedSyncHttpTransport.postRawStream(url, "group", "receiver", "epoch",
                     Map.of("x-device-id", "sender", "x-nonce", "nonce", "x-signature", "signature", "x-timestamp", "time"),
-                    output -> FolioleRequestSyncHttpChunks.write(files, directory, 1, output, () -> {}, () -> {
-                        progressEntered.countDown();
-                        if (block && !releaseProgress.await(3, TimeUnit.SECONDS)) throw new IllegalStateException("probe_release_timeout");
-                    }, timing::chunk), input -> input.readAllBytes(), connection -> {}, timing::phase);
+                    FolioleRequestSyncHttpChunks.request(files, directory, chunks, () -> {}, () -> {
+                        if (renewals.incrementAndGet() == (intermediate ? 1 : chunks))
+                            awaitRenewal(block, reject, progressEntered, releaseProgress);
+                    }, timing::chunk), input -> { responseRead.set(true); return input.readAllBytes(); }, connection -> {}, timing::phase);
             } catch (Throwable failure) { error.set(failure); }
         });
         boolean completeBeforeRelease;
@@ -50,30 +54,50 @@ public class HttpTimingFixture {
             if (!progressEntered.await(2, TimeUnit.SECONDS)) throw new AssertionError("progress_not_reached");
             if (!headersSeen.await(2, TimeUnit.SECONDS)) throw new AssertionError("headers_not_received");
             completeBeforeRelease = bodySeen.await(300, TimeUnit.MILLISECONDS);
+            if (block) {
+                if (responseRead.get()) throw new AssertionError("response_consumed_before_renewal");
+                releaseProgress.await(300, TimeUnit.MILLISECONDS);
+            }
             releaseProgress.countDown();
             client.join(2000);
-            if (client.isAlive() || error.get() != null) throw new AssertionError("transport_failure", error.get());
+            assertResponse(client, error.get(), responseRead.get(), reject);
+            if (renewals.get() != chunks) throw new AssertionError("renewal_count_changed");
             if (!Arrays.equals(expected, received.get())) throw new AssertionError("body_changed");
-            System.out.println("{\"blockedProgress\":" + block + ",\"bytes\":" + size
-                + ",\"bodyCompleteBeforeRelease\":" + completeBeforeRelease
-                + ",\"headersToBodyMs\":" + ((times[1] - times[0]) / 1_000_000.0) + "}");
+
         } finally {
             releaseProgress.countDown();
             server.stop(0);
             files.remove(directory);
         }
-        if (completeBeforeRelease == block) throw new AssertionError("progress_wait_observation_changed");
-        verifyTiming(size, block);
+        if (completeBeforeRelease == (block && intermediate)) throw new AssertionError("request_body_renewal_order_invalid");
+        verifyTiming(size, block, reject);
     }
 
-    private static void configureServer(HttpServer server, long[] times, CountDownLatch headersSeen,
+    private static void writeChunks(FramedSyncFiles files, String directory, byte[] bytes, int chunks) throws Exception {
+        for (int i = 0; i < chunks; i++) files.write(directory + "/http-out-" + i,
+            Arrays.copyOfRange(bytes, i * 524288, Math.min(bytes.length, (i + 1) * 524288)));
+    }
+
+    private static void awaitRenewal(boolean block, boolean reject, CountDownLatch entered, CountDownLatch release) throws Exception {
+        entered.countDown();
+        if (block && !release.await(3, TimeUnit.SECONDS)) throw new IllegalStateException("probe_release_timeout");
+        if (reject) throw new IllegalStateException("probe_renewal_rejected");
+    }
+
+    private static void assertResponse(Thread client, Throwable error, boolean consumed, boolean reject) {
+        if (client.isAlive()) throw new AssertionError("transport_did_not_stop");
+        if (reject) {
+            if (error == null || !"probe_renewal_rejected".equals(error.getMessage()) || consumed)
+                throw new AssertionError("renewal_failure_not_propagated", error);
+        } else if (error != null || !consumed) throw new AssertionError("transport_failure", error);
+    }
+
+    private static void configureServer(HttpServer server, CountDownLatch headersSeen,
         CountDownLatch bodySeen, AtomicReference<byte[]> received, AtomicReference<Throwable> error) {
         server.createContext("/probe", exchange -> {
             try {
-                times[0] = System.nanoTime();
                 headersSeen.countDown();
                 received.set(exchange.getRequestBody().readAllBytes());
-                times[1] = System.nanoTime();
                 bodySeen.countDown();
                 exchange.getResponseHeaders().set("Content-Type", FramedSyncHttpTransport.CONTENT_TYPE);
                 exchange.getResponseHeaders().set("X-Foliole-Device-Id", "receiver");
@@ -84,17 +108,18 @@ public class HttpTimingFixture {
         });
     }
 
-    private static void verifyTiming(int size, boolean block) {
+    private static void verifyTiming(int size, boolean block, boolean reject) {
         String logs = String.join("\n", android.util.Log.lines);
-        for (String phase : new String[] { "open_output", "write", "touch_round", "flush", "close_output", "response_code" }) {
+        for (String phase : new String[] { "open_output", "write", "touch_round", "flush", "close_output" }) {
             if (!logs.contains("phase=" + phase + " ")) throw new AssertionError("missing_phase_" + phase);
         }
+        if (logs.contains("phase=response_code ") == reject) throw new AssertionError("response_wait_before_renewal");
         if (!logs.contains("request_bytes=" + size)) throw new AssertionError("missing_byte_count");
         if (logs.contains("never-log-this") || logs.contains("secret=") || logs.contains("signature")) {
             throw new AssertionError("sensitive_metadata_logged");
         }
-        String touch = android.util.Log.lines.stream().filter(line -> line.contains("phase=touch_round ")).findFirst().orElseThrow();
-        double duration = Double.parseDouble(touch.split("duration_ms=")[1].split(" ")[0]);
+        double duration = android.util.Log.lines.stream().filter(line -> line.contains("phase=touch_round "))
+            .mapToDouble(line -> Double.parseDouble(line.split("duration_ms=")[1].split(" ")[0])).max().orElseThrow();
         if (block && duration < 250) throw new AssertionError("bridge_wait_not_measured");
         System.out.println("HTTP bytes, phase timing and metadata privacy verified");
     }
