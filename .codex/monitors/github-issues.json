@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "github-issues",
-  "enabled": true,
+  "enabled": false,
   "kind": "github-issue-handoff",
   "template": ".codex/monitors/templates/github-issues.md",
   "defaultPriority": "normal",
