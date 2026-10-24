@@ -12,6 +12,7 @@
   "lib/platform/nativeEditorOperationHistoryContract.ts",
   "lib/platform/nativeExternalSearchCommandMap.ts",
   "lib/platform/nativeFoliolePublishContract.ts",
+  "lib/platform/nativeGuidedSampleContract.ts",
   "lib/platform/nativeImportCommandMap.ts",
   "lib/platform/nativeInitialLibrarySetupContract.ts",
   "lib/platform/nativeLocalFileCommandMap.ts",

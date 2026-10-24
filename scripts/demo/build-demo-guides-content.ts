@@ -5,7 +5,7 @@ import { buildGuidedSampleContent } from './guided-sample-content.ts';
 
 const DEFAULT_CONTENT_ROOT = 'docs/i18n/guides';
 const DEFAULT_OUTPUT_PATH = 'src/demo/generated/demoPacks.ts';
-const DEFAULT_GUIDED_OUTPUT_PATH = 'src/features/guidedSample/generated/guidedSamplePacks.ts';
+const DEFAULT_GUIDED_OUTPUT_PATH = 'lib/core/guidedSample/generated/guidedSamplePacks.ts';
 
 function parseArgs(argv: string[]) {
   const flags = new Map<string, string>();

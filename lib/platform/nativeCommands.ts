@@ -11,6 +11,7 @@ export const NATIVE_COMMANDS = {
   folioleCliInstall: 'foliole_cli_install',
   appendReadingPositionTraceLog: 'append_reading_position_trace_log',
   bootReport: 'boot_report',
+  consumeGuidedSampleStartup: 'consume_guided_sample_startup',
   desktopUpdateCheck: 'desktop_update_check',
   desktopUpdateDownload: 'desktop_update_download',
   desktopUpdateInstall: 'desktop_update_install',

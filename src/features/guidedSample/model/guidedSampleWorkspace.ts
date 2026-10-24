@@ -1,17 +1,16 @@
+import {
+  getGuidedSampleContent,
+  getGuidedSampleRootTitles,
+  GUIDED_SAMPLE_MARKER,
+  GUIDED_SAMPLE_PRIORITY,
+  type GuidedSampleTopicTemplate
+} from '../../../../lib/core/guidedSample/guidedSampleContent';
 import type { WorkspaceState } from '../../../store/workspaceStore';
 import { deriveNodeTitleFromContent } from '../../nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../../nodes/model/specialNodes';
 
 import { importGuidedSampleTopicAssets } from './guidedSampleAssetImports';
-import {
-  getGuidedSampleContent,
-  getGuidedSampleRootTitles,
-  GUIDED_SAMPLE_MARKER,
-  type GuidedSampleTopicTemplate
-} from './guidedSampleContent';
 import { resolveGuidedSampleLocale, type GuidedSampleLocale } from './guidedSampleLocale';
-
-const GUIDED_SAMPLE_PRIORITY = 0;
 
 export interface GuidedSampleCreationResult {
   locale: GuidedSampleLocale;
@@ -85,7 +84,7 @@ function findChildTopicByTitle(state: GuidedSampleWorkspaceState, parentNodeId: 
   }) ?? null;
 }
 
-function collectGuidedSampleQueueNodeIds(state: GuidedSampleWorkspaceState, rootNodeId: string) {
+export function collectGuidedSampleQueueNodeIds(state: GuidedSampleWorkspaceState, rootNodeId: string) {
   return [
     rootNodeId,
     ...state.nodeOrder.filter((nodeId) => {

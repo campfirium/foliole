@@ -1,7 +1,7 @@
+import type { GuidedSampleTopicTemplate } from '../../../../lib/core/guidedSample/guidedSampleContent';
 import type { ContentImageReference } from '../../../../lib/core/sync/localContentEditResources';
 import { importClipboardImageAttachmentBytes } from '../../../shared/platform/attachmentImports';
 
-import type { GuidedSampleTopicTemplate } from './guidedSampleContent';
 
 function toAssetBaseUrl() {
   const baseUrl = import.meta.env.BASE_URL || './';

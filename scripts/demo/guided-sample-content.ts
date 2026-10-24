@@ -1,11 +1,11 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import appLocaleManifest from '../../lib/core/localization/appLocaleManifest.json' with { type: 'json' };
 import type {
   GuidedSampleContentPack,
   GuidedSampleTopicTemplate
-} from '../../src/features/guidedSample/model/guidedSamplePack.ts';
+} from '../../lib/core/guidedSample/guidedSamplePack.ts';
+import appLocaleManifest from '../../lib/core/localization/appLocaleManifest.json' with { type: 'json' };
 
 import {
   discoverLocales,
@@ -108,11 +108,11 @@ async function writeGeneratedPacks(outputPath: string, packs: Record<RegisteredA
   for (const locale of APP_LOCALES) {
     const name = locale.replaceAll('-', '_').toUpperCase();
     const fileName = locale.replaceAll('-', '_');
-    imports.push(`import { ${name}_GUIDED_SAMPLE_PACK } from './locales/${fileName}';`);
+    imports.push(`import { ${name}_GUIDED_SAMPLE_PACK } from './locales/${fileName}.js';`);
     entries.push(`  ${JSON.stringify(locale)}: ${name}_GUIDED_SAMPLE_PACK`);
-    const localeSource = `import type { GuidedSampleContentPack } from '../../model/guidedSamplePack';\n\nexport const ${name}_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = ${JSON.stringify(packs[locale], null, 2)};\n`;
+    const localeSource = `import type { GuidedSampleContentPack } from '../../guidedSamplePack.js';\n\nexport const ${name}_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = ${JSON.stringify(packs[locale], null, 2)};\n`;
     await writeIfChanged(path.join(localeDir, `${fileName}.ts`), localeSource);
   }
-  const source = `import type { GuidedSampleContentPack } from '../model/guidedSamplePack';\n\n${imports.sort().join('\n')}\n\nexport const GENERATED_GUIDED_SAMPLE_PACKS: Record<string, GuidedSampleContentPack> = {\n${entries.join(',\n')}\n};\n`;
+  const source = `import type { GuidedSampleContentPack } from '../guidedSamplePack.js';\n\n${imports.sort().join('\n')}\n\nexport const GENERATED_GUIDED_SAMPLE_PACKS: Record<string, GuidedSampleContentPack> = {\n${entries.join(',\n')}\n};\n`;
   await writeIfChanged(resolved, source);
 }

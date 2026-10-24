@@ -1,4 +1,7 @@
-import { ensureGuidedSampleTopicTree } from '../../features/guidedSample/model/guidedSampleWorkspace';
+import {
+  collectGuidedSampleQueueNodeIds,
+  ensureGuidedSampleTopicTree
+} from '../../features/guidedSample/model/guidedSampleWorkspace';
 import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { createStartedReviewSession } from '../../store/workspaceReviewReading';
@@ -31,11 +34,14 @@ function startGuidedSampleReviewSession(queueNodeIds: string[]) {
   return true;
 }
 
-export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandActions,
-  intent: 'user' | 'startup' = 'user') {
-  // Samples are created without activation; startup only yields when the user
-  // selected something else while they were being created.
-  const activeBefore = useWorkspaceStore.getState().activeNodeId;
+function startGuidedSampleFlow(actions: OpenGuidedSampleCommandActions, queueNodeIds: string[]) {
+  if (startGuidedSampleReviewSession(queueNodeIds)) {
+    actions.openNotesView();
+    actions.startStudyMode({ force: true });
+  }
+}
+
+export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandActions) {
   const result = await ensureGuidedSampleTopicTree(
     () => useWorkspaceStore.getState(),
     undefined,
@@ -44,25 +50,32 @@ export async function openGuidedSampleCommand(actions: OpenGuidedSampleCommandAc
   if (!result.rootNodeId) {
     return false;
   }
-  const mayOpen = () => {
-    const active = useWorkspaceStore.getState().activeNodeId;
-    return intent === 'user' || active === null || active === activeBefore || result.queueNodeIds.includes(active);
-  };
-  if (!mayOpen()) return false;
-
   actions.closeTrashView();
-  const opened = await openWorkspaceNodeWithPreparedDocument(result.rootNodeId, { forceLoad: true, shouldApply: mayOpen });
+  const opened = await openWorkspaceNodeWithPreparedDocument(result.rootNodeId, { forceLoad: true });
   if (!opened) return false;
 
   if (!result.wasWorkspaceEmpty) {
     actions.openNotesView();
     return true;
   }
+  startGuidedSampleFlow(actions, result.queueNodeIds);
+  return true;
+}
 
-  if (startGuidedSampleReviewSession(result.queueNodeIds)) {
-    actions.openNotesView();
-    actions.startStudyMode({ force: true });
-  }
+/** Opens the sample the host seeded into a new library, unless the user already moved elsewhere. */
+export async function openSeededGuidedSample(actions: OpenGuidedSampleCommandActions, rootNodeId: string) {
+  const state = useWorkspaceStore.getState();
+  if (!state.nodesById[rootNodeId] || state.trashedNodeIds.includes(rootNodeId)) return false;
+  const activeBefore = state.activeNodeId;
+  const queueNodeIds = collectGuidedSampleQueueNodeIds(state, rootNodeId);
+  const mayOpen = () => {
+    const active = useWorkspaceStore.getState().activeNodeId;
+    return active === null || active === activeBefore || queueNodeIds.includes(active);
+  };
+  actions.closeTrashView();
+  const opened = await openWorkspaceNodeWithPreparedDocument(rootNodeId, { forceLoad: true, shouldApply: mayOpen });
+  if (!opened || !mayOpen()) return false;
+  startGuidedSampleFlow(actions, queueNodeIds);
   return true;
 }
 

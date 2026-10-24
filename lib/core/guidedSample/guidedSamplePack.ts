@@ -1,4 +1,4 @@
-import type { AppLocale } from '../../../shared/localization/appLanguage';
+import type { RegisteredAppLocale as AppLocale } from '../localization/appLocaleRegistry.js';
 
 export interface GuidedSampleTopicTemplate {
   attachmentIds: string[];

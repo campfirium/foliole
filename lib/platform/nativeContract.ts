@@ -11,6 +11,7 @@ import type { NativeEditorOperationHistoryCommandMap } from './nativeEditorOpera
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeFoliolePublishCommandMap } from './nativeFoliolePublishContract.js';
 import type { ForegroundTimeHistoryArgs, ForegroundTimeHistory } from './nativeForegroundTimeContract.js';
+import type { NativeGuidedSampleCommandMap } from './nativeGuidedSampleContract.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInitialLibrarySetupCommandMap } from './nativeInitialLibrarySetupContract.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
@@ -58,7 +59,7 @@ export type * from './nativeAssistantImageContract.js';
 export type * from './nativeAssistantModelSettingsContract.js';
 export type * from './nativeBackupSearchContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeGuidedSampleCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

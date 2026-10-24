@@ -51,6 +51,7 @@ vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDia
 vi.mock('./externalDocumentFileOpen.js', () => ({ installExternalDocumentFileOpenLifecycle: vi.fn(() => ({ enqueueFromArgv: vi.fn(), setReadyWindow: vi.fn() })) }));
 vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({ notifyExternalSearchSecondInstance: vi.fn(), notifyExternalSearchUserActivity: vi.fn(), stopExternalSearchBackgroundRefresh: vi.fn() }));
 vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
+vi.mock('./guidedSampleStartupSeed.js', () => ({ seedStartupGuidedSample: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./globalClipShortcut.js', () => ({
   installGlobalClipShortcut: vi.fn(),
   refreshGlobalClipShortcutFromSettings: vi.fn()

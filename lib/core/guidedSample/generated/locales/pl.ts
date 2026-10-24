@@ -1,4 +1,4 @@
-import type { GuidedSampleContentPack } from '../../model/guidedSamplePack';
+import type { GuidedSampleContentPack } from '../../guidedSamplePack.js';
 
 export const PL_GUIDED_SAMPLE_PACK: GuidedSampleContentPack = {
   "locale": "pl",

@@ -1,11 +1,12 @@
-import type { AppLocale } from '../../../shared/localization/appLanguage';
-import { GENERATED_GUIDED_SAMPLE_PACKS } from '../generated/guidedSamplePacks';
+import type { RegisteredAppLocale as AppLocale } from '../localization/appLocaleRegistry.js';
 
-import type { GuidedSampleContentPack } from './guidedSamplePack';
+import { GENERATED_GUIDED_SAMPLE_PACKS } from './generated/guidedSamplePacks.js';
+import type { GuidedSampleContentPack } from './guidedSamplePack.js';
 
-export type { GuidedSampleTopicTemplate } from './guidedSamplePack';
+export type { GuidedSampleTopicTemplate } from './guidedSamplePack.js';
 
 export const GUIDED_SAMPLE_MARKER = '<!-- foliole-guided-sample:v1 -->';
+export const GUIDED_SAMPLE_PRIORITY = 0;
 const LEGACY_GUIDED_SAMPLE_ROOT_TITLES = ['Welcome to Foliole', '欢迎使用 Foliole'] as const;
 
 export function getGuidedSampleContent(locale: AppLocale) {

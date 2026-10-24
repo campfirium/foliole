@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
 
-import { APP_LOCALES } from '../../../../lib/core/localization/appLocaleRegistry';
-import { GENERATED_GUIDED_SAMPLE_PACKS } from '../generated/guidedSamplePacks';
+import { APP_LOCALES } from '../localization/appLocaleRegistry.js';
 
-import { getGuidedSampleContent, getGuidedSampleRootTitles } from './guidedSampleContent';
+import { GENERATED_GUIDED_SAMPLE_PACKS } from './generated/guidedSamplePacks.js';
+import { getGuidedSampleContent, getGuidedSampleRootTitles } from './guidedSampleContent.js';
 
 it('provides one ordered eight-topic guide with shared images for every app locale', () => {
   expect(Object.keys(GENERATED_GUIDED_SAMPLE_PACKS)).toEqual(APP_LOCALES);

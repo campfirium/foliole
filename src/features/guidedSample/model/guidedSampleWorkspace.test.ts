@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { GUIDED_SAMPLE_MARKER } from '../../../../lib/core/guidedSample/guidedSampleContent';
 import { buildLiveReviewQueueOutput } from '../../../store/workspaceReviewLiveQueue';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../../store/workspaceStore';
 import { INBOX_NODE_ID } from '../../nodes/model/specialNodes';
 
-import { GUIDED_SAMPLE_MARKER } from './guidedSampleContent';
 import { ensureGuidedSampleTopicTree, findGuidedSampleRootNodeId } from './guidedSampleWorkspace';
 
 const { importGuidedSampleTopicAssets } = vi.hoisted(() => ({

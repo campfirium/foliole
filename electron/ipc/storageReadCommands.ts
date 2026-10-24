@@ -5,6 +5,7 @@ import { currentLibraryScope } from '../database/attachmentResourceDescription.j
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadEditorOperationHistory, saveEditorOperationHistory } from '../database/editorOperationHistory.js';
 import { loadForegroundTimeHistory } from '../database/foregroundTimeHistory.js';
+import { consumeGuidedSampleStartup } from '../database/guidedSampleSeedState.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
 import { saveNodeOpenState } from '../database/nodeOpenState.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
@@ -47,6 +48,9 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   }
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
+  }
+  if (command === NATIVE_COMMANDS.consumeGuidedSampleStartup) {
+    return { rootNodeId: consumeGuidedSampleStartup() };
   }
   if (command === NATIVE_COMMANDS.loadEditorOperationHistory) {
     return loadEditorOperationHistory();

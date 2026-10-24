@@ -5,14 +5,12 @@ import { resolveFolioleAppVersion } from './appVersion.js';
 import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { shouldShowInitialWindow } from './backgroundStartup.js';
 import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
-import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
+import { beginDatabaseStartup, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { waitForApplicationDatabaseRestoreSettlement } from './database/databaseRestoreSettlement.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
-import { initializeDatabase } from './database/migrate.js';
-import { startSearchAliasMirror, stopSearchAliasMirror } from './database/searchAliasMirror.js';
+import { stopSearchAliasMirror } from './database/searchAliasMirror.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
-import { upgradeLibraryBeforeStartup } from './database/startupLibraryUpgrade.js';
 import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
 import { desktopTaskScheduler } from './desktopTaskScheduler.js';
 import { installDevRendererReloadIntentWatcher } from './devRendererReloadIntent.js';
@@ -21,12 +19,11 @@ import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
-import { startDesktopForegroundTime, stopDesktopForegroundTime } from './foregroundTimeRuntime.js';
+import { stopDesktopForegroundTime } from './foregroundTimeRuntime.js';
 import {
   createGlobalCapturePanelLaunchIntent,
   createGlobalCapturePanelSingleInstanceData
 } from './globalCapturePanelLaunchIntent.js';
-import { refreshGlobalClipShortcutFromSettings } from './globalClipShortcut.js';
 import { prepareGlobalClipToInboxWindows } from './globalClipToInbox.js';
 import { stopReadwiseBackgroundServices } from './import/readwiseBackgroundServices.js';
 import {
@@ -38,10 +35,10 @@ import {
 import { disposeAssistantCommandAdapter } from './ipc/assistantCommands.js';
 import { disposeBackupSearchSessions } from './ipc/backupSearchSessions.js';
 import { appendBootEvent } from './ipc/boot.js';
-import { installAppMenu } from './ipc/menu.js';
 import { wasOpenedAtLogin } from './loginItemSettings.js';
 import { installMacosDailyDebugExitHandler } from './macosDailyDebugExit.js';
 import { installDatabaseBackedEntryPoints } from './mainDatabaseBackedEntryPoints.js';
+import { initializeRuntimeServices } from './mainRuntimeServices.js';
 import { startInitialMainWindow } from './mainStartup.js';
 import {
   installSyncGroupJoinRequestFocusHandler,
@@ -115,30 +112,6 @@ function installBeforeQuitLifecycle() {
     quit: () => app.quit()
   });
   app.on('before-quit', coordinateBeforeQuit);
-}
-
-async function initializeRuntimeServices() {
-  try {
-    await appendBootEvent('database_init_start');
-    await upgradeLibraryBeforeStartup((stage, payload = null) => { void appendBootEvent(stage, payload).catch(() => undefined); });
-    await appendBootEvent('database_initialize_call_start');
-    initializeDatabase((stage, payload = null) => {
-      void appendBootEvent(stage, payload).catch((error) => appendMainProcessDiagnosticLog('boot_log_failed', {
-        error,
-        stage
-      }));
-    }, { deferSearchIndex: true, rebindMemberIdentity: true });
-    await appendBootEvent('database_initialize_call_complete');
-    await startSearchAliasMirror();
-    refreshGlobalClipShortcutFromSettings();
-    await appendBootEvent('database_init_complete');
-    startDesktopForegroundTime();
-    installAppMenu();
-    markDatabaseReady();
-  } catch (error) {
-    markDatabaseStartupFailed(error);
-    throw error;
-  }
 }
 
 function installAppProcessDiagnostics() {

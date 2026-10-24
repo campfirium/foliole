@@ -63,6 +63,7 @@ vi.mock('./externalSearchBackgroundRefreshRuntime.js', () => ({
   stopExternalSearchBackgroundRefresh: vi.fn()
 }));
 vi.mock('./globalClipToastNavigation.js', () => ({ installGlobalCaptureToastOpenHandler: vi.fn() }));
+vi.mock('./guidedSampleStartupSeed.js', () => ({ seedStartupGuidedSample: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./globalClipShortcut.js', () => ({
   installGlobalClipShortcut: vi.fn(),
   refreshGlobalClipShortcutFromSettings: vi.fn()

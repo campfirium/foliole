@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 
 import { buildGuidedSampleContent } from './guided-sample-content.ts';
 
-const GUIDED_OUTPUT = 'src/features/guidedSample/generated/guidedSamplePacks.ts';
+const GUIDED_OUTPUT = 'lib/core/guidedSample/generated/guidedSamplePacks.ts';
 
 it('keeps committed guided sample packs synchronized with the Guide sources', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-guided-sample-build-'));

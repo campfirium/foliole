@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { getGuidedSampleContent, getGuidedSampleRootTitles } from '../../../src/features/guidedSample/model/guidedSampleContent';
+import { getGuidedSampleContent, getGuidedSampleRootTitles } from '../../../lib/core/guidedSample/guidedSampleContent';
 
 const SAMPLE_CHILD_COUNT = getGuidedSampleContent('en').children.length;
 const SAMPLE_ROOT_TITLES = [...getGuidedSampleRootTitles()];

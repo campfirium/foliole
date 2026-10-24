@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({ assets: vi.fn() }));
 vi.mock('../../features/guidedSample/model/guidedSampleAssetImports', () => ({ importGuidedSampleTopicAssets: mocks.assets }));
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
 
-import { INBOX_NODE_ID } from '../../../lib/core/database/specialNodeIds';
 import { findGuidedSampleRootNodeId } from '../../features/guidedSample/model/guidedSampleWorkspace';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -21,33 +20,6 @@ beforeEach(() => {
 const actions = () => ({ closeTrashView: vi.fn(), openNotesView: vi.fn(),
   startReviewSession: vi.fn(() => true), startStudyMode: vi.fn() });
 
-it('keeps a newly created topic selected when startup sample assets finish later', async () => {
-  let finishAssets!: () => void;
-  mocks.assets.mockReturnValue(new Promise<void>(resolve => { finishAssets = resolve; }));
-  const controls = actions();
-  const opening = openGuidedSampleCommand(controls, 'startup');
-  await waitFor(() => expect(mocks.assets).toHaveBeenCalled());
-  const created = await useWorkspaceStore.getState().createRootNode('User draft');
-  finishAssets();
-  await opening;
-  expect(useWorkspaceStore.getState().activeNodeId).toBe(created);
-  expect(useWorkspaceStore.getState().nodesById[created!]?.content).toBe('User draft');
-  expect(controls.startStudyMode).not.toHaveBeenCalled();
-});
-
-it('opens the startup sample when the user has not taken over', async () => {
-  const controls = actions();
-  await openGuidedSampleCommand(controls, 'startup');
-  expect(useWorkspaceStore.getState().activeNodeId).toBe(findGuidedSampleRootNodeId(useWorkspaceStore.getState()));
-  expect(controls.startStudyMode).toHaveBeenCalledWith({ force: true });
-});
-it('opens the startup sample when a system folder was selected before it was created', async () => {
-  useWorkspaceStore.setState({ activeNodeId: INBOX_NODE_ID });
-  const controls = actions();
-  await openGuidedSampleCommand(controls, 'startup');
-  expect(useWorkspaceStore.getState().activeNodeId).toBe(findGuidedSampleRootNodeId(useWorkspaceStore.getState()));
-  expect(controls.startStudyMode).toHaveBeenCalledWith({ force: true });
-});
 it('honors an explicit sample command even when another topic is created while assets load', async () => {
   let finishAssets!: () => void;
   mocks.assets.mockReturnValue(new Promise<void>(resolve => { finishAssets = resolve; }));
