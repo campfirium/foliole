@@ -67,7 +67,6 @@ function nodeVersionTriggers() {
     ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
     ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
     ${framedSyncNodeInventorySql(`${ref}.node_id`)}`),
-    ...triggers('nodes', (ref) => framedSyncNodeInventorySql(`${ref}.id`)),
     `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_node_head_body
     AFTER UPDATE OF current_version_id ON nodes
     WHEN NEW.current_version_id IS NOT OLD.current_version_id BEGIN
@@ -118,6 +117,23 @@ export function createFramedSyncInventoryTriggers() {
 }
 
 export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers();
+
+/**
+ * The inventory projection reads no column of `nodes`, so these only rewrote unchanged rows and dropped their
+ * cached digests on every node write.
+ */
+const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['insert', 'update', 'delete']
+  .map(action => `trg_framed_inventory_nodes_${action}`);
+
+/** Drops every current and retired inventory trigger, so a rebuild never leaves an older definition behind. */
+export function dropFramedSyncInventoryTriggers() {
+  const current = FRAMED_SYNC_INVENTORY_TRIGGERS.map(sql => {
+    const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)?.[1];
+    if (!name) throw new Error('framed_sync_inventory_trigger_name_invalid');
+    return name;
+  });
+  return [...current, ...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS].map(name => `DROP TRIGGER IF EXISTS ${name}`);
+}
 
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [
   ...FRAMED_SYNC_INVENTORY_TABLES, ...FRAMED_SYNC_INVENTORY_LOOKUP_INDEXES, ...FRAMED_SYNC_INVENTORY_TRIGGERS

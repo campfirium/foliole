@@ -37,5 +37,7 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 166, migrate: migrateMissingCurrentVersionInventory },
   { version: 167, migrate: db => { db.exec(INVALIDATE_ALL_SYNC_DIGESTS); } },
   { version: 168, migrate: migrateFramedSyncInventoryLookups },
-  { version: 169, migrate: migrateParentChildOrderMembers }
+  { version: 169, migrate: migrateParentChildOrderMembers },
+  /** Reinstalls the inventory triggers without the ones on `nodes`. */
+  { version: 170, migrate: migrateFramedSyncInventoryLookups }
 ];
