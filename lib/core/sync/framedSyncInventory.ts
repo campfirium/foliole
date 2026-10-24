@@ -1,7 +1,7 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { assertFramedSyncDigest } from './framedSyncContract.js';
-import { changedNodeVersionIds, needsNodeCurrentReference } from './framedSyncNodeInventoryState.js';
+import { changedNodeVersionIds, missingNodeRelationIds, needsNodeCurrentReference } from './framedSyncNodeInventoryState.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
 export type FramedSyncInventoryEntry = Readonly<{
@@ -105,7 +105,7 @@ function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInve
   const resourceHashes = missingHashes(source.resourceHashes, destination?.resourceHashes ?? []);
   return {
     frontierFactIds: versionIds,
-    requiredRelationIds: missingStrings(
+    requiredRelationIds: source.versionStates ? missingNodeRelationIds(source, destination) : missingStrings(
       source.requiredRelationIds, destination?.requiredRelationIds ?? []),
     resourceHashes,
     reviewFactIds: missingStrings(source.reviewFactIds, destination?.reviewFactIds ?? []),

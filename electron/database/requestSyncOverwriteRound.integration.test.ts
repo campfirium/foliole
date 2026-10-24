@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
+import { recordTopicDailyCount } from '../../lib/core/database/reviewDailyCounts.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -13,6 +14,9 @@ import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../..
 import { loadLatestSyncGroupRestoreEvent, receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
+import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
+import type { Peer } from './syncLibrary.testSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const progress = { groupId: 'group', overwriteId: 'new-epoch', providerDeviceId: 'peer',
@@ -69,6 +73,36 @@ it.each(['adoption', 'restore'] as const)('resumes %s without clearing accepted 
     if (mode === 'restore') expect((await loadLatestSyncGroupRestoreEvent(target.db, 'group'))?.applied).toBe(true);
     expect(await target.db.query('SELECT id FROM nodes ORDER BY id')).toEqual([{ id: 'first' }, { id: 'second' }]);
 
+  } finally { source.sqlite.close(); target.sqlite.close(); await rm(root, { recursive: true }); }
+});
+
+it('finishes adoption when a topic counted here meanwhile is permanently deleted at the source', async () => {
+  const source = textDevice(); const target = textDevice();
+  await mkdir('.tmp/artifacts', { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/request-sync-overwrite-'));
+  try {
+    seed(target, 'local'); seed(source, 'peer');
+    await source.receive([textBranch('first', 'Read here')]);
+    await beginSyncGroupLocalAdoption(target.db, {
+      groupId: 'group', libraryEpoch: 'new-epoch', providerDeviceId: 'peer',
+      providerDeviceName: 'Peer', providerPlatform: 'mac', endpointUrl: 'http://localhost:1'
+    });
+    await prepareSyncGroupOverwrite(target.db, progress);
+    const local = host(target, path.join(root, 'target'));
+    const round = roundPort(target, source, local, host(source, path.join(root, 'source')));
+    await expect(runRequestSyncOverwriteRound(local, progress, { ...round, transferObjects: async differences => {
+      await round.transferObjects(differences);
+      throw new Error('connection_lost_after_commit');
+    } })).rejects.toThrow('connection_lost_after_commit');
+    // This device completes a review before the source removes the topic for good.
+    recordTopicDailyCount(createBetterSqlite3Driver(target.sqlite), { day: '2026-10-23', nodeId: 'topic', hostName: 'local' });
+    source.sqlite.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', '\"peer\"', 'now')").run();
+    const deletion = permanentlyDelete({ db: source.sqlite, driver: createBetterSqlite3Driver(source.sqlite), name: 'peer' } as Peer);
+
+    expect((await runRequestSyncOverwriteRound(local, progress, round)).complete).toBe(true);
+    expect(await loadSyncGroupLocalAdoption(target.db)).toBeNull();
+    expect(await target.db.query("SELECT version_id FROM node_sync_tombstones WHERE node_id = 'topic'"))
+      .toEqual([{ version_id: deletion.version_id }]);
   } finally { source.sqlite.close(); target.sqlite.close(); await rm(root, { recursive: true }); }
 });
 
