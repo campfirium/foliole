@@ -62,6 +62,9 @@ export function removeWhitelistedLocalStorageItem(key: string) {
     return;
   }
   assertLocalStorageWhitelist(key);
+  if (window.localStorage.getItem(key) === null) {
+    return;
+  }
   window.localStorage.removeItem(key);
   void persistSnapshotToRuntimeStorage();
 }

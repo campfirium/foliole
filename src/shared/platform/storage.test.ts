@@ -9,6 +9,7 @@ import {
 
 import {
   getLocalStorageWhitelist,
+  removeWhitelistedLocalStorageItem,
   RUNTIME_APP_SETTINGS_SAVED_EVENT,
   setWhitelistedLocalStorageItem
 } from './storage';
@@ -66,6 +67,24 @@ it('does not persist the runtime snapshot again when the local value is unchange
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '120');
 
   expect(invoke).not.toHaveBeenCalled();
+});
+
+it('does not persist the runtime snapshot when removing an absent local value', () => {
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeTrashManualCollapsed);
+
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+it('persists the runtime snapshot without the removed local value', async () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.nodeTrashManualCollapsed, '["node-1"]');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent, '120');
+
+  removeWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.nodeTrashManualCollapsed);
+
+  await vi.waitFor(() => expect(invoke).toHaveBeenCalledOnce());
+  expect(invoke).toHaveBeenCalledWith('save_app_settings_state', {
+    settings: { [APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent]: '120' }
+  });
 });
 
 it('notifies the current renderer after runtime settings finish saving', async () => {
