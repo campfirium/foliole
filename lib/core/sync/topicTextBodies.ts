@@ -30,6 +30,15 @@ export function readTopicTextSnapshot(snapshotJson: string, readable = true) {
   return { snapshot, bodies };
 }
 
+/** A deletion that released its text no longer lists the alternatives whose words went with it. */
+export function readTombstoneTextSnapshot(snapshotJson: string) {
+  const stored = JSON.parse(snapshotJson) as NativeSyncNodeRecord['snapshot'] & { text_alternative_bodies?: unknown };
+  if (stored.body_deleted !== true) return readTopicTextSnapshot(snapshotJson);
+  const { snapshot } = readTopicTextSnapshot(snapshotJson, false);
+  if (snapshot.text_alternatives?.length) snapshot.text_alternatives = [];
+  return { snapshot, bodies: [] as TopicTextBody[] };
+}
+
 export function serializeTopicTextSnapshot(record: NativeSyncNodeRecord) {
   const snapshot = { ...record.snapshot };
   if (record.body_text === null) return JSON.stringify(snapshot);

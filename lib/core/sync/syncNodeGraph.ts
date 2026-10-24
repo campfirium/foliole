@@ -4,7 +4,7 @@ import type { DbPort, DbRow } from './dbPort.js';
 import { loadSyncNodeAncestorGraph, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 import { cachedSyncNodeParents, loadAncestorDistances, loadSyncNodeVersionAncestors, loadSyncNodeVersionParents } from './syncNodeLineage.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
-import { readTopicTextSnapshot } from './topicTextBodies.js';
+import { readTombstoneTextSnapshot, readTopicTextSnapshot } from './topicTextBodies.js';
 
 export interface StoredSyncNodeVersionRow extends DbRow {
   body_text: string | null;
@@ -191,7 +191,8 @@ async function storedVersionToRecord(
   const isTombstone = row.is_tombstone === 1;
   const body = isTombstone ? row.body_text ?? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
-  const { snapshot, bodies } = readTopicTextSnapshot(row.snapshot_json, body !== null);
+  const { snapshot, bodies } = isTombstone ? readTombstoneTextSnapshot(row.snapshot_json)
+    : readTopicTextSnapshot(row.snapshot_json, body !== null);
   const parents = knownParents ?? await loadSyncNodeVersionParents(port, row.version_id);
   const record: NativeSyncNodeRecord = {
     ancestor_version_ids: includeAncestors ? await loadSyncNodeVersionAncestors(port, row.version_id) : [],

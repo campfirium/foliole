@@ -19,6 +19,7 @@ import {
 import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalence.js';
+import { isIncomingLocalAnchorRepair } from './syncNodeLocalAnchorRepair.js';
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
@@ -134,6 +135,7 @@ async function decideNodeApply(
     return 'skip_stale';
   }
   const decision = decideIncomingNodeApply(localNode, record, operation);
+  if (decision === 'block_incoming' && await isIncomingLocalAnchorRepair(port, record)) return 'apply_fast_forward';
   if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
   if (localNode.current_version_id && record.version_id &&
       await isStoredAncestorVersion(port, localNode.current_version_id, record.version_id)) {

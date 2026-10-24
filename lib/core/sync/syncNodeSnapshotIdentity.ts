@@ -26,11 +26,12 @@ function metadata(snapshot: Record<string, unknown>, skipped: ReadonlySet<string
  * text-derived field is skipped only once one side has actually cleared it with the text; a version
  * whose body was merely retired from history keeps its title and still has to match it.
  */
-export function isSyncNodeSnapshotIdentical(stored: string, incoming: NativeSyncNodeRecord['snapshot']) {
+export function isSyncNodeSnapshotIdentical(stored: string, incoming: NativeSyncNodeRecord['snapshot'],
+  ignored: readonly string[] = []) {
   const left = snapshotObject.parse(JSON.parse(stored));
   const right = snapshotObject.parse(incoming);
   const withoutText = left.body_deleted === true || right.body_deleted === true;
-  const skipped = new Set(withoutText ? [...TEXT_DERIVED_FIELDS]
-    .filter(name => isCleared(left[name]) || isCleared(right[name])) : []);
+  const skipped = new Set([...ignored, ...withoutText ? [...TEXT_DERIVED_FIELDS]
+    .filter(name => isCleared(left[name]) || isCleared(right[name])) : []]);
   return metadata(left, skipped) === metadata(right, skipped);
 }
