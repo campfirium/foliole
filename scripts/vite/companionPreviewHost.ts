@@ -13,7 +13,7 @@ export const COMPANION_PREVIEW_SQLITE_ENDPOINT = '/__foliole_preview/sqlite';
 export const COMPANION_PREVIEW_PLATFORM = 'foliole-browser-preview';
 
 // Every method the SQLite connection wrapper may call; the dev server rejects the ones it lacks.
-const SQLITE_METHODS = ['addSQLiteSuffix', 'addUpgradeStatement', 'beginTransaction', 'changeEncryptionSecret',
+const SQLITE_METHODS = ['closeAllConnections', 'addSQLiteSuffix', 'addUpgradeStatement', 'beginTransaction', 'changeEncryptionSecret',
   'checkConnectionsConsistency', 'checkEncryptionSecret', 'clearEncryptionSecret', 'close', 'closeConnection',
   'closeNCConnection', 'commitTransaction', 'copyFromAssets', 'createConnection', 'createNCConnection',
   'createSyncTable', 'deleteDatabase', 'deleteExportedRows', 'deleteOldDatabases', 'echo', 'enableLoadExtension',
@@ -24,9 +24,9 @@ const SQLITE_METHODS = ['addSQLiteSuffix', 'addUpgradeStatement', 'beginTransact
   'isTableExists', 'isTransactionActive', 'loadExtension', 'moveDatabasesAndAddSuffix', 'open', 'query',
   'rollbackTransaction', 'run', 'saveToLocalDisk', 'saveToStore', 'setEncryptionSecret', 'setSyncDate'];
 
-async function callPreviewSqlite(method: string, options: unknown) {
+async function callPreviewSqlite(session: string, method: string, options: unknown) {
   const response = await fetch(COMPANION_PREVIEW_SQLITE_ENDPOINT, {
-    body: JSON.stringify({ method, options }), headers: { 'Content-Type': 'application/json' }, method: 'POST'
+    body: JSON.stringify({ method, options, session }), headers: { 'Content-Type': 'application/json' }, method: 'POST'
   });
   if (!response.ok) throw new Error(`Companion preview database is unavailable (${response.status}).`);
   const reply = await response.json() as { code?: string; message?: string; ok: boolean; result?: unknown };
@@ -34,10 +34,10 @@ async function callPreviewSqlite(method: string, options: unknown) {
   throw Object.assign(new Error(reply.message ?? 'Companion preview database failed.'), reply.code ? { code: reply.code } : {});
 }
 
-export function createCompanionPreviewPlugins(hostName: string): PreviewPlugins {
+export function createCompanionPreviewPlugins(hostName: string, session = crypto.randomUUID()): PreviewPlugins {
   return {
     CapacitorSQLite: Object.fromEntries(SQLITE_METHODS.map((method) =>
-      [method, (options: unknown) => callPreviewSqlite(method, options)])),
+      [method, (options: unknown) => callPreviewSqlite(session, method, options)])),
     // A copied device library keeps its own host name, so opening it does not move host-owned state.
     FolioleCompanionBootstrap: {
       loadBootstrap: async () => ({ booted_at: new Date().toISOString(), database_path: null,
@@ -75,10 +75,18 @@ declare global {
 }
 
 export function installCompanionPreviewHost(target: object, hostName: string) {
+  const session = crypto.randomUUID();
   Object.assign(target, {
-    Capacitor: createCompanionPreviewBridge(createCompanionPreviewPlugins(hostName)),
+    Capacitor: createCompanionPreviewBridge(createCompanionPreviewPlugins(hostName, session)),
     CapacitorCustomPlatform: { name: COMPANION_PREVIEW_PLATFORM, plugins: {} }
   });
+  if (typeof window !== 'undefined' && target === window) {
+    window.addEventListener('pagehide', (event) => {
+      if (event.persisted) return;
+      navigator.sendBeacon(COMPANION_PREVIEW_SQLITE_ENDPOINT,
+        JSON.stringify({ method: 'closeAllConnections', options: {}, session }));
+    });
+  }
 }
 
 if (typeof window !== 'undefined' && typeof window.__FOLIOLE_COMPANION_PREVIEW_HOST__ === 'string') {

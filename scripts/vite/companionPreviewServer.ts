@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import type { HtmlTagDescriptor, Plugin } from 'vite';
+import { normalizePath, type EnvironmentModuleNode, type HtmlTagDescriptor, type Plugin } from 'vite';
 
 import { createCompanionPreviewSqliteHost } from './companionPreviewSqliteHost';
 
@@ -33,8 +33,9 @@ function send(response: ServerResponse, status: number, payload: unknown) {
 
 export async function handleCompanionPreviewSqlite(host: PreviewHost, body: string) {
   try {
-    const { method, options } = JSON.parse(body) as { method: string; options: unknown };
-    return { status: 200, payload: { ok: true, result: host.call(method, options ?? {}) } };
+    const { method, options, session } = JSON.parse(body) as { method: string; options: unknown; session: unknown };
+    if (typeof session !== 'string' || !session.trim()) throw new Error('Preview document session is required.');
+    return { status: 200, payload: { ok: true, result: await host.call(method, options ?? {}, session) } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const code = (error as { code?: unknown })?.code;
@@ -87,12 +88,35 @@ function serveAttachment(databaseFile: string, request: IncomingMessage, respons
   createReadStream(found.file).pipe(response);
 }
 
+// Bootstrap caches a ready promise while its dependencies own live database state.
+// React refresh cannot replace only one part of that document lifetime.
+function reachesBootstrap(modules: EnvironmentModuleNode[], bootstrapFile: string) {
+  const pending = [...modules];
+  const visited = new Set<EnvironmentModuleNode>();
+  while (pending.length) {
+    const module = pending.pop()!;
+    if (module.file === bootstrapFile) return true;
+    if (visited.has(module)) continue;
+    visited.add(module);
+    pending.push(...module.importers);
+  }
+  return false;
+}
+
 /** Serves the companion preview database only to the local Vite dev server. */
 export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.ProcessEnv = process.env): Plugin {
   const databaseFile = env[COMPANION_PREVIEW_DATABASE_ENV];
   return {
     name: 'foliole-companion-preview-server',
     apply: 'serve',
+    hotUpdate({ modules }) {
+      if (!databaseFile || this.environment.name !== 'client') return;
+      const bootstrapFile = normalizePath(path.resolve(projectRoot, 'src/shared/platform/companionBootstrap.ts'));
+      if (!reachesBootstrap(modules, bootstrapFile)) return;
+      this.environment.moduleGraph.invalidateAll();
+      this.environment.hot.send({ type: 'full-reload' });
+      return [];
+    },
     transformIndexHtml() {
       if (!databaseFile) return [];
       return companionPreviewHostTags(projectRoot, readCompanionPreviewHostName(databaseFile));
@@ -100,7 +124,9 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
     configureServer(server) {
       if (!databaseFile) return;
       const host = createCompanionPreviewSqliteHost(databaseFile);
-      server.httpServer?.once('close', () => host.close());
+      server.httpServer?.once('close', () => {
+        void host.close().catch((error: unknown) => server.config.logger.error(String(error)));
+      });
       server.middlewares.use(COMPANION_PREVIEW_ATTACHMENTS_PATH, (request, response) =>
         serveAttachment(databaseFile, request, response));
       server.middlewares.use(COMPANION_PREVIEW_SQLITE_PATH, (request, response) => {
