@@ -110,13 +110,13 @@ describe('vite config', () => {
 
   it('keeps full native payload logging out of installed Android builds', () => {
     expect(createCapacitorConfig({}).android?.loggingBehavior).toBe('none');
-    expect(createCapacitorConfig({ FOLIOLE_ANDROID_DEV_LIVE_RELOAD: '1' })
+    expect(createCapacitorConfig({ FOLIOLE_DEV_LIVE_RELOAD: '1' })
       .android?.loggingBehavior).toBe('debug');
   });
 
   it('keeps live reload out of normal builds and enables it only for the fixed A5 DEV sync', () => {
     expect(createCapacitorConfig({}).server).toBeUndefined();
-    expect(createCapacitorConfig({ FOLIOLE_ANDROID_DEV_LIVE_RELOAD: '1' }).server).toEqual({
+    expect(createCapacitorConfig({ FOLIOLE_DEV_LIVE_RELOAD: '1' }).server).toEqual({
       cleartext: true,
       url: WINDOWS_A5_LIVE_RELOAD_URL
     });

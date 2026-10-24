@@ -9,7 +9,7 @@ const TEST_IDENTITY_ACTIONS = new Set([
   'deploy', 'capture-annotation', 'preview-pull', 'system-entry-sync', 'sync-existing',
   'sync-group-join-prepare'
 ]);
-const TEST_ONLY_ACTIONS = new Set(['reset-test-app']);
+const TEST_ONLY_ACTIONS = new Set(['live', 'reset-test-app']);
 
 export function resolveMacosA5Identity(action, requested) {
   if (TEST_ONLY_ACTIONS.has(action)) return 'test';

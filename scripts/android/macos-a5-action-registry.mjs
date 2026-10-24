@@ -51,6 +51,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-existing': { requiresHiddenDesktopRuntime: true },
   'sync-now': { formalSourceClass: 'ordinary-only' },
   'reset-test-app': { formalSourceClass: 'ordinary-only' },
+  live: { formalSourceClass: 'ordinary-only' },
   'sync-group-rejoin': { requiresHiddenDesktopRuntime: true },
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });

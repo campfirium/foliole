@@ -1,6 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const A5_DEV_SERVER_URL = 'http://127.0.0.1:24605';
+// The live reload session serves the companion here; Android reaches it through adb reverse.
+const DEV_LIVE_RELOAD_URL = 'http://127.0.0.1:24605';
 
 export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): CapacitorConfig {
   return {
@@ -8,7 +9,7 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
     appName: 'Foliole',
     android: {
       // Native bridge logs serialize complete SQLite results on the WebView thread.
-      loggingBehavior: env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD === '1' ? 'debug' : 'none'
+      loggingBehavior: env.FOLIOLE_DEV_LIVE_RELOAD === '1' ? 'debug' : 'none'
     },
     plugins: {
       CapacitorSQLite: {
@@ -17,8 +18,8 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
         iosIsEncryption: false
       }
     },
-    ...(env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD === '1'
-      ? { server: { cleartext: true, url: A5_DEV_SERVER_URL } }
+    ...(env.FOLIOLE_DEV_LIVE_RELOAD === '1'
+      ? { server: { cleartext: true, url: DEV_LIVE_RELOAD_URL } }
       : {}),
     webDir: 'dist/companion'
   };

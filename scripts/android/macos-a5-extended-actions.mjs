@@ -183,3 +183,10 @@ export async function runMacosA5ExistingSyncPreflight({ assertFixed, paths }) {
   console.log(`[android-data] existing-sync-readiness=${JSON.stringify(result)}`);
   if (result.resultStatus !== 'ready') throw new Error('Existing A5 content differences require review before sync.');
 }
+
+export async function runMacosA5SyncLogs({ assertFixed, buildIdentity, captured, paths, serial }) {
+  const { readA5SyncLogs } = await import('./macos-a5-sync-logs.mjs');
+  const { filePath, rows } = readA5SyncLogs({ assertFixed: () => assertFixed(paths),
+    buildIdentity, captured, paths, serial });
+  console.log(`[macos-a5-dev] sync-logs=${filePath} records=${rows.length}`);
+}

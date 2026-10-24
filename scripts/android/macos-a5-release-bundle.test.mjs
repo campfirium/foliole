@@ -63,7 +63,7 @@ it.each([undefined, '0', '-1', '1.5', '2e3', '2100000001'])('rejects invalid bui
     .toThrow('VERSION_CODE');
 });
 
-it.each(['FOLIOLE_ANDROID_DEV_LIVE_RELOAD', 'FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID',
+it.each(['FOLIOLE_DEV_LIVE_RELOAD', 'FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID',
   'FOLIOLE_DATABASE_PERFORMANCE_SCENARIO', 'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE'])(
   'rejects %s before producing a release bundle', async (key) => {
   const args = fixture(); args.env[key] = '1';

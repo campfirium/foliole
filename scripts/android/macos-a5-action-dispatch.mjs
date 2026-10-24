@@ -10,6 +10,7 @@ import {
   runMacosA5ExistingSyncEntry,
   runMacosA5ExistingSyncPreflight,
   runMacosA5SettledStoppedStatus,
+  runMacosA5SyncLogs,
   runMacosA5SyncGroupRejoinEntry
 } from './macos-a5-extended-actions.mjs';
 import { buildA5DatabasePerformance } from './a5-database-performance-build.mjs';
@@ -41,11 +42,10 @@ export async function dispatchMacosA5Action({
     assertFixed(paths);
   }
   if (action === 'existing-sync-preflight') await runMacosA5ExistingSyncPreflight({ assertFixed, paths });
-  if (action === 'sync-logs') {
-    const { readA5SyncLogs } = await import('./macos-a5-sync-logs.mjs');
-    const { filePath, rows } = readA5SyncLogs({ assertFixed: () => assertFixed(paths),
-      buildIdentity, captured, paths, serial });
-    console.log(`[macos-a5-dev] sync-logs=${filePath} records=${rows.length}`);
+  if (action === 'sync-logs') await runMacosA5SyncLogs({ assertFixed, buildIdentity, captured, paths, serial });
+  if (action === 'live') {
+    const { runMacosA5Live } = await import('./macos-a5-live.mjs');
+    await runMacosA5Live({ assertFixed, captured, checked, env, paths, serial });
   }
   if (action === 'preview-pull') {
     const { runMacosA5PreviewPull } = await import('./macos-a5-preview-pull.mjs');

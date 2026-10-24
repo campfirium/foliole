@@ -44,7 +44,7 @@ export async function prepareWindowsAndroidDebugHost({
   const capacitorCli = path.join(paths.repoRoot, 'node_modules', '@capacitor', 'cli', 'bin', 'capacitor');
   const sync = await checked(execute, paths.systemNode, [capacitorCli, 'sync', 'android'], {
     ...options,
-    env: { ...commandEnv, FOLIOLE_ANDROID_DEV_LIVE_RELOAD: liveReload ? '1' : '0' },
+    env: { ...commandEnv, FOLIOLE_DEV_LIVE_RELOAD: liveReload ? '1' : '0' },
     timeoutCode: 'android_cap_sync_timeout'
   }, 'android-cap-sync');
   const webIndex = path.join(paths.repoRoot, 'android', 'app', 'src', 'main', 'assets', 'public', 'index.html');

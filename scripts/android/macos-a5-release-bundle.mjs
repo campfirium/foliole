@@ -15,7 +15,7 @@ export function releaseBundleInputs(env, root) {
     throw new Error('FOLIOLE_ANDROID_VERSION_CODE must be an integer from 1 to 2100000000.');
   }
   const forbidden = Object.entries(env).some(([key, value]) => value && value !== '0'
-    && (key === 'FOLIOLE_ANDROID_DEV_LIVE_RELOAD'
+    && (key === 'FOLIOLE_DEV_LIVE_RELOAD'
       || key === 'FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID'
       || key === 'FOLIOLE_DATABASE_PERFORMANCE_SCENARIO'
       || key.startsWith('VITE_FOLIOLE_') && key.includes('ACCEPTANCE')));

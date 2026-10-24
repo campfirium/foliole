@@ -45,7 +45,7 @@ it('builds companion Web, syncs Capacitor with DEV config, and verifies generate
     args: ['-C', paths.repoRoot, 'status', '--porcelain', '--untracked-files=all'],
     command: paths.gitPath
   });
-  expect(calls[1].options.env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD).toBe('1');
+  expect(calls[1].options.env.FOLIOLE_DEV_LIVE_RELOAD).toBe('1');
   expect(calls.map(({ args }) => args.join(' ')).join('\n')).not.toMatch(/gradle|install/iu);
 });
 
@@ -67,7 +67,7 @@ it('prepares bundled capture assets without a DEV server contract', async () => 
   });
   await expect(prepareWindowsAndroidDebugHost({ execute, liveReload: false, paths }))
     .resolves.toBe('ok\nok\n');
-  expect(calls[1].options.env.FOLIOLE_ANDROID_DEV_LIVE_RELOAD).toBe('0');
+  expect(calls[1].options.env.FOLIOLE_DEV_LIVE_RELOAD).toBe('0');
 });
 
 it('rejects a bundled capture sync that retains the DEV server', async () => {
