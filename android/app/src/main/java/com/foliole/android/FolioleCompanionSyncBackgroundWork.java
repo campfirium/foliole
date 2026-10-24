@@ -45,7 +45,10 @@ final class FolioleCompanionSyncBackgroundWork {
     static synchronized void update(Context context, String nextTitle, String nextText, int nextCompleted, int nextTotal) {
         title = nextTitle; text = nextText; completed = nextCompleted; total = nextTotal;
         if (service == null || !canNotify(context)) return;
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification(context));
+        try {
+            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification(context));
+        } catch (SecurityException ignored) {
+        }
     }
 
     static synchronized void end() {
