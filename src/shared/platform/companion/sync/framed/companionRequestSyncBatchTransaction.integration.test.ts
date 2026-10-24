@@ -40,10 +40,10 @@ function counted(inner: DbPort, counts: { transactions: number; prunes: number; 
   return { ...inside(inner), transaction: execute => { counts.transactions += 1; return inner.transaction(tx => execute(inside(tx))); } };
 }
 
-async function adopt() {
+async function adopt(count = NODES) {
   host = await createCompanionRequestFixture();
   const { fixture } = host;
-  await fixture.right.invoke('seed_complete_inventory', { count: NODES, bodyBytes: 400 });
+  await fixture.right.invoke('seed_complete_inventory', { count, bodyBytes: 400 });
   await beginSyncGroupLocalAdoption(host.db, { endpointUrl: fixture.rightSnapshot.origin,
     groupId: 't326-group', libraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
     providerDeviceId: fixture.rightSnapshot.deviceId, providerDeviceName: 'Provider', providerPlatform: 'darwin' });
@@ -82,4 +82,23 @@ it('keeps the rest of a batch when one received object cannot be applied', { met
   expect(received).not.toContain('t326-complete-00007');
   expect(received).toHaveLength(NODES - 1);
   expect(await loadSyncGroupLocalAdoption(adoption.db)).not.toBeNull();
+});
+
+it('receives a large first adoption in at most twelve database calls per node', { meta: { calibratedMs: 20000 } }, async () => {
+  const nodes = 200;
+  const adoption = await adopt(nodes);
+  let calls = 0;
+  const original = native.db!;
+  const counting = (port: DbPort): DbPort => ({
+    run: (sql: string, params?: DbParams) => { calls += 1; return port.run(sql, params); },
+    query: (sql: string, params?: DbParams) => { calls += 1; return port.query(sql, params) as never; },
+    transaction: execute => port.transaction(tx => execute(counting(tx)))
+  });
+  native.db = counting(original);
+  await adoption.sync();
+  native.db = original;
+  expect(await loadSyncGroupLocalAdoption(adoption.db)).toBeNull();
+  expect(receivedIds(adoption)).toHaveLength(nodes);
+  // Every call crosses the native bridge on phones; per-node work must be read and written per batch.
+  expect(calls / nodes).toBeLessThanOrEqual(12);
 });

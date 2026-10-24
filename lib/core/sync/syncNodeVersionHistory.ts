@@ -1,7 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
-import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
+import { loadStoredVersionIdentities, upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
@@ -67,7 +67,14 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
 
 export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
   source: SyncNodeRecordSource<M>, records: readonly M[], deferBodyRetirement = false) {
-  for (const metadata of records) await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement);
+  const ids = records.flatMap(record => record.version_id ? [record.version_id] : []);
+  // A version listed twice reads its own earlier write instead of the snapshot taken here.
+  const once = new Set(ids.filter((id, index) => ids.indexOf(id) === index && ids.lastIndexOf(id) === index));
+  const stored = await loadStoredVersionIdentities(port, [...once]);
+  for (const metadata of records) {
+    const known = metadata.version_id && once.has(metadata.version_id) ? stored.get(metadata.version_id) ?? null : undefined;
+    await upsertRemoteVersion(port, await source.load(port, metadata), deferBodyRetirement, known);
+  }
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

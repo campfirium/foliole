@@ -31,14 +31,36 @@ export interface AcceptedRemoteNodeOptions {
   enqueueSearchInvalidations?: boolean;
 }
 
-async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, deferBodyRetirement = false) {
+export type StoredVersionIdentity = { object_id: string; content_hash: string; host_name: string; created_at: string;
+  snapshot_json: string; body_text: string | null };
+
+/** One read of the stored identities of versions about to be retained; absent ids are new versions. */
+export async function loadStoredVersionIdentities(port: DbPort, versionIds: readonly string[]) {
+  if (!versionIds.length) return new Map<string, StoredVersionIdentity>();
+  const rows = await port.query<StoredVersionIdentity & { version_id: string }>(`SELECT version_id, object_id, content_hash,
+    host_name, created_at, snapshot_json, body_text FROM node_sync_versions
+    WHERE version_id IN (SELECT value FROM json_each(?))`, [JSON.stringify(versionIds)]);
+  return new Map(rows.map(({ version_id: id, ...row }) => [id, row]));
+}
+
+async function storedVersion(port: DbPort, record: NativeSyncNodeRecord, incomingBody: string | null,
+  known?: StoredVersionIdentity | null) {
+  if (known === undefined) {
+    const [row] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at, snapshot_json,
+      body_text IS NOT NULL AND ? IS NOT NULL AND body_text IS NOT ? AS body_mismatch
+      FROM node_sync_versions WHERE version_id = ?`, [incomingBody, incomingBody, record.version_id]);
+    return row;
+  }
+  if (known === null) return undefined;
+  return { ...known, body_mismatch: known.body_text !== null && incomingBody !== null && known.body_text !== incomingBody ? 1 : 0 };
+}
+
+async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, deferBodyRetirement = false,
+  known?: StoredVersionIdentity | null) {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) return;
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
-  const [existing] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at, snapshot_json,
-    body_text IS NOT NULL AS has_body,
-    body_text IS NOT NULL AND ? IS NOT NULL AND body_text IS NOT ? AS body_mismatch
-    FROM node_sync_versions WHERE version_id = ?`, [incomingBody, incomingBody, record.version_id]);
+  const existing = await storedVersion(port, record, incomingBody, known);
   if (existing) {
     if (record.body_text !== null) validateTopicTextBodies(
       textAlternativesSchema.parse(record.snapshot.text_alternatives ?? []), record.alternative_bodies ?? []);

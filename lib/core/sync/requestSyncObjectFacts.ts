@@ -7,6 +7,7 @@ import type { FramedFactSource } from './framedSyncFactApply.js';
 import { parseFramedSyncNodeChildIdentity } from './framedSyncNodeChildFact.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { REQUEST_CHAIN_HEAD_SQL } from './requestSyncBodyReferencePolicy.js';
+import { collectRequestSyncBodiesForNodes } from './requestSyncBodyRetention.js';
 import { assertCurrentNodeParentChain, assertCurrentNodeParentChains } from './syncNodeParentChain.js';
 
 type ReceivedObject = { globalId: string; objectType: string; currentVersionId?: string; facts: FramedFactSource;
@@ -66,7 +67,7 @@ export async function finishReceivedNodes(tx: DbPort, inputs: readonly ReceivedO
     WHERE tomb.node_id IN (SELECT value FROM json_each(?)) AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = tomb.node_id)`,
   [JSON.stringify(ids)]) : [];
   for (const { node_id: nodeId } of deleted) await releaseDeletedNodeBodies(tx, nodeId);
-  for (const id of ids) if (collect.get(id)) await collectNodeVersionPayloads(tx, id, Number.MAX_SAFE_INTEGER);
+  await collectRequestSyncBodiesForNodes(tx, ids.filter(id => collect.get(id)), Number.MAX_SAFE_INTEGER);
 }
 
 /** A received permanent deletion leaves no copy of the note's text on this device either. */

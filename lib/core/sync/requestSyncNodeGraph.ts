@@ -8,11 +8,31 @@ import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 type VersionRow = { version_id: string; parent_version_id: string | null };
 type EdgeRow = { version_id: string; parent_version_id: string };
 
-async function storedParents(db: DbPort, nodeId: string) {
-  const rows = await db.query<VersionRow>(
+type StoredGraphRows = { versions: Map<string, VersionRow[]>; edges: Map<string, EdgeRow[]> };
+
+/** The stored version rows and parent edges of several nodes, read once before any of them is written. */
+async function loadStoredGraphRows(db: DbPort, nodeIds: readonly string[]): Promise<StoredGraphRows> {
+  if (!nodeIds.length) return { versions: new Map(), edges: new Map() };
+  const ids = JSON.stringify(nodeIds);
+  const group = <T extends { object_id: string }>(rows: T[]) => {
+    const byNode = new Map<string, T[]>();
+    for (const row of rows) byNode.set(row.object_id, [...byNode.get(row.object_id) ?? [], row]);
+    return byNode;
+  };
+  return {
+    versions: group(await db.query<VersionRow & { object_id: string }>(`SELECT object_id, version_id, parent_version_id
+      FROM node_sync_versions WHERE object_id IN (SELECT value FROM json_each(?))`, [ids])),
+    edges: group(await db.query<EdgeRow & { object_id: string }>(`SELECT version.object_id, edge.*
+      FROM node_sync_version_parents edge JOIN node_sync_versions version ON version.version_id = edge.version_id
+      WHERE version.object_id IN (SELECT value FROM json_each(?)) ORDER BY edge.version_id, edge.ordinal`, [ids]))
+  };
+}
+
+async function storedParents(db: DbPort, nodeId: string, preloaded?: StoredGraphRows) {
+  const rows = preloaded ? preloaded.versions.get(nodeId) ?? [] : await db.query<VersionRow>(
     'SELECT version_id, parent_version_id FROM node_sync_versions WHERE object_id = ?', [nodeId]);
   const parents = new Map(rows.map(row => [row.version_id, row.parent_version_id ? [row.parent_version_id] : []]));
-  const edges = await db.query<EdgeRow>(CHAIN_EDGES_SQL, [nodeId]);
+  const edges = preloaded ? preloaded.edges.get(nodeId) ?? [] : await db.query<EdgeRow>(CHAIN_EDGES_SQL, [nodeId]);
   const replaced = new Set<string>();
   for (const edge of edges) {
     if (!replaced.has(edge.version_id)) { parents.set(edge.version_id, []); replaced.add(edge.version_id); }
@@ -27,8 +47,9 @@ export async function readRequestSyncNodeGraph(db: DbPort, nodeId: string) {
   return graph;
 }
 
-async function objectGraph(db: DbPort, nodeId: string, records: readonly SyncNodeRecordMetadata[]) {
-  const parents = await storedParents(db, nodeId);
+async function objectGraph(db: DbPort, nodeId: string, records: readonly SyncNodeRecordMetadata[],
+  preloaded: StoredGraphRows) {
+  const parents = await storedParents(db, nodeId, preloaded);
   for (const record of records) {
     if (!record.version_id) throw new Error('node_version_identity_missing');
     const incoming = record.parent_version_ids?.length ? record.parent_version_ids :
@@ -65,6 +86,7 @@ export async function requestSyncNodeSource(db: DbPort, source: SyncNodeRecordSo
     groups.set(record.object_id, group);
   }
   const originals = new Map<SyncNodeRecordMetadata, SyncNodeRecordMetadata>();
+  const preloaded = await loadStoredGraphRows(db, [...groups.keys()]);
   for (const [nodeId, records] of groups) {
     // A standalone deletion preserves metadata without claiming a complete original version.
     const versions = [];
@@ -72,7 +94,7 @@ export async function requestSyncNodeSource(db: DbPort, source: SyncNodeRecordSo
       if (!record.is_tombstone || source.isIdentityOnly(record) ||
           hasCompleteTombstoneVersion(await source.load(db, record))) versions.push(record);
     }
-    const graph = await objectGraph(db, nodeId, versions);
+    const graph = await objectGraph(db, nodeId, versions, preloaded);
     for (const record of records) {
       if (!record.version_id) throw new Error('node_version_identity_missing');
       originals.set({ ...record,
