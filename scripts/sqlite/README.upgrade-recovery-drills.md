@@ -6,9 +6,9 @@
 | --- | --- | --- |
 | 修改备份/恢复、业务持久化、正文或关系 | `node scripts/sqlite/upgrade-recovery-drills.mjs changed` | 内容/关系/永久设置摘要、全新目标恢复与冷启动、设备设置保留、压缩备份截断、失败回滚 |
 | 修改迁移/启动/schema；每次发布前 | `node scripts/sqlite/upgrade-recovery-drills.mjs release` | changed 加公开旧库来源校验、生产升级及两次冷开、失败升级回退与重试、companion SQLite 启动、动态版本链、已有资源保留与工作组身份 |
-| 每季度首个维护日；上次故障改变了恢复路径时 | `node scripts/sqlite/upgrade-recovery-drills.mjs quarterly` | release 加压缩中断清理、损坏库恢复、真实 SQLite/HTTP 工作组恢复分页/失败/重放/离线/旧流量和版本链重启 |
+| 发布前区间改过 schema/迁移/启动/恢复路径，或距上次执行已跨 3 次发布或超过 4 周；上次故障改变了恢复路径时 | `node scripts/sqlite/upgrade-recovery-drills.mjs quarterly` | release 加压缩中断清理、损坏库恢复、真实 SQLite/HTTP 工作组恢复分页/失败/重放/离线/旧流量和版本链重启 |
 
-定期方式：季度首个维护日人工或既有维护任务运行 quarterly，复核 report 与失败项。无需常驻 monitor，也不新增重复 schedule。每月涉及相关改动时运行对应 changed/release；月份本身不替代场景触发。发布任务必须在其精确候选上重新跑 release，不能复用另一 revision 的历史绿灯。
+发布前方式：发布预发布阶段按自上次执行以来的变更选择 release 或 quarterly，在冻结的精确候选上运行并复核 report 与失败项，不能复用另一 revision 的历史绿灯。无需常驻 monitor，也不新增重复 schedule。日常涉及相关改动时运行对应 changed/release；发布本身不替代场景触发。
 
 ## 结果标准
 

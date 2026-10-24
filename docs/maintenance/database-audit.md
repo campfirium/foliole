@@ -26,21 +26,21 @@ npm run database:audit -- --db .tmp/artifacts/database-audit-YYYYMMDD/main.db --
 
 定向报告只统计所选表及相关引用检查；完整库 integrity 明确为 `null`（未执行），不冒充全库通过。发布前在该候选对应的隔离 fresh/upgrade 库及取得的真实资料副本上各跑一次全量统计，复核新增/删除表用途、约束、资源 owner 与迁移结果。此入口不执行升级，schema 版本不同不能被“integrity ok”掩盖；升级验证复用已有公开版本 fixture / 对应迁移测试。本任务没有证明 schema 89 → 当前源码的升级通过。
 
-## 每月
+## 发布前对照
 
-每月第一次维护时，重新取得三种逻辑库的独立快照。保持标签、范围和测量方法相同，比较上月报告：
+发布预发布阶段判定需要数据库审计时（区间改过 schema/迁移、同步、导入、删除恢复或持久化，或距上次执行已跨 3 次发布或超过 4 周），重新取得三种逻辑库的独立快照。保持标签、范围和测量方法相同，比较该库上次审计报告：
 
 ```sh
-npm run database:audit -- --db .tmp/artifacts/database-audit-YYYYMMDD/main.db --out .tmp/artifacts/database-audit-YYYYMMDD/monthly.json --label same-library-main --baseline /previous/main.json --specialist
+npm run database:audit -- --db .tmp/artifacts/database-audit-YYYYMMDD/main.db --out .tmp/artifacts/database-audit-YYYYMMDD/release.json --label same-library-main --baseline /previous/main.json --specialist
 ```
 
-检查行数、payload 字节、状态积压、缺失引用和空间变化。schema 改变时在报告中保留 `schemaChanged` 并回查变更；首次没有上月基线时只建立基线，不编造增长率。payload 使用 BLOB 转换后的字节长度，包含字段但不等于磁盘占用；allocatedBytes 包含表和其索引，FTS shadow 表独立列出，虚拟表不能再与 shadow 空间重复相加。SQLite 未提供 dbstat 时空间为 null，不写零。复用专项报告的旧 content/preview 长度口径在非 ASCII 文本上可能是字符数，只将其重复行数与本次统一 byte 指标一起解读。
+检查行数、payload 字节、状态积压、缺失引用和空间变化。schema 改变时在报告中保留 `schemaChanged` 并回查变更；首次没有上次基线时只建立基线，不编造增长率。payload 使用 BLOB 转换后的字节长度，包含字段但不等于磁盘占用；allocatedBytes 包含表和其索引，FTS shadow 表独立列出，虚拟表不能再与 shadow 空间重复相加。SQLite 未提供 dbstat 时空间为 null，不写零。复用专项报告的旧 content/preview 长度口径在非 ASCII 文本上可能是字符数，只将其重复行数与本次统一 byte 指标一起解读。
 
 异常由既定退出条件判断：completed 搜索任务、过期 nonce、已消费 dependency staging 有已有生命周期入口；审计观察不触发它们。导入历史、同步 tombstone、版本 proof/hold、资源 manifest 不因“旧”而违规。直接引用缺失可能是合法历史保留或远程资源尚未到达，须结合逐表用途判断。产品问题保留未通过事实并另行处理。
 
-## 每季度
+## 逐表用途复核
 
-季度第一次维护先执行每月全量步骤，再逐行复核 [逐表用途清单](database-audit-tables.md)：本季每张新增、存续、删除的表都确认用途、读写者、事实/派生属性、引用与退出条件。名称匹配的源码位置只是可追溯候选，动态 SQL、trigger、跨宿主同步还需沿调用链复核；无法确认的用途/TTL明确保留未知。更新清单中的源码位置和生命周期证据，不把文件名当产品合同，不补自动删除策略。
+同一次发布前审计在全量对照之后，再逐行复核 [逐表用途清单](database-audit-tables.md)：自上次复核以来每张新增、存续、删除的表都确认用途、读写者、事实/派生属性、引用与退出条件。名称匹配的源码位置只是可追溯候选，动态 SQL、trigger、跨宿主同步还需沿调用链复核；无法确认的用途/TTL明确保留未知。更新清单中的源码位置和生命周期证据，不把文件名当产品合同，不补自动删除策略。
 
 这些是手动、按需可复跑入口；不安装常驻监控、不创建重复调度。必要场景覆盖见 `scripts/database/database-audit.test.mjs`：production fresh schema、WAL committed 数据、异常引用、UTF-8 字节、源库保全、覆盖拒绝、差异比较及定向范围。
 
