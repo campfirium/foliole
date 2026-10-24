@@ -18,6 +18,8 @@ import type { SyncGroupJoinDeviceFacts } from '../../lib/platform/syncGroupJoinC
 import { devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
+import { loadCurrentCredential } from '../shared/platform/companion/sync/syncGroupProviderCredentialStore.js';
+import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRuntimeRepository.js';
 
 const mobile = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null,
   facts: null as SyncGroupJoinDeviceFacts | null, post: vi.fn(), sign: vi.fn(), http: vi.fn() }));
@@ -81,7 +83,12 @@ function configureTransport(identity: string) {
     return { status: response.status, body };
   });
   mobile.post.mockImplementation(async input => {
-    try { return await postCompanionRequestFixture(mobile.files!, input); }
+    try { return await postCompanionRequestFixture(mobile.files!, input, {
+      loadCredential: groupId => loadCurrentCredential({ group_id: groupId }),
+      append: (key, offset, data) => FolioleCompanionSync.accessFramedSyncFile({ operation: 'attachment',
+        action: 'append', key, offset, base64: Buffer.from(data).toString('base64'),
+        library_key: input.library_key, generation_id: input.generation_id })
+    }); }
     catch (error) {
       if (!(error instanceof Error) || !error.message.includes(':{"ciphertext"')) throw error;
       const url = new URL(input.url);

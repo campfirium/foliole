@@ -42,7 +42,11 @@ function attachmentFiles(root: string) {
       }
       case 'source-read': return { base64: (await readFile(file)).subarray(input.offset, input.offset! + input.length!).toString('base64') };
       case 'truncate': await appendFile(partial, ''); await truncate(partial, input.length); return {};
-      case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
+      case 'append': {
+        if ((await stat(partial)).size !== input.offset) throw new Error('fixture_attachment_offset_mismatch');
+        await appendFile(partial, Buffer.from(input.base64!, 'base64'));
+        return {};
+      }
       case 'hash': return { hash: digest(await readFile(file)) };
       case 'discard': await rm(partial, { force: true }); return {};
       case 'publish': await rename(partial, file); return {};

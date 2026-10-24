@@ -19,6 +19,7 @@ import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runti
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
 import { syncCompanionIdentityObjects } from '../shared/platform/companion/sync/syncGroupIdentityCompanionResult.js';
+import { loadCurrentCredential } from '../shared/platform/companion/sync/syncGroupProviderCredentialStore.js';
 import type { CompanionDesktopSyncOptions } from '../shared/platform/companionDesktopSyncTypes.js';
 
 
@@ -95,7 +96,10 @@ export async function createCompanionRequestFixture(script = compiledScript) {
       await fs.writeFile(file, bytes);
     }
   };
-  const post = (input: NativeRequestSyncHttpRequest) => postCompanionRequestFixture(native.files!, input);
+  const post = (input: NativeRequestSyncHttpRequest) => postCompanionRequestFixture(native.files!, input, {
+    loadCredential: groupId => loadCurrentCredential({ group_id: groupId }),
+    append: (key, offset, data) => native.accessFile({ action: 'append', key, offset, base64: Buffer.from(data).toString('base64') })
+  });
   native.post.mockImplementation(post);
   configureAttachmentReads(fixture.leftSnapshot.stateRoot);
   native.sign.mockImplementation(input => ({ headers: createDesktopSyncGroupSignedHeaders({
