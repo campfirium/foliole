@@ -15,6 +15,7 @@ import {
 } from './CompanionReadingSheets';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 import { definedProps } from '@/shared/lib/definedProps';
@@ -35,6 +36,7 @@ interface ImmersiveChromeLayerProps {
   actionsOpen: boolean;
   canEditContent?: boolean;
   actionsAtTop?: boolean;
+  navigation?: CompanionReadingNavigationControls | undefined;
   editor: EditorAdapter | null;
   isChromeVisible: boolean;
   isContentEditing: boolean;
@@ -63,6 +65,7 @@ interface ImmersiveChromeLayerProps {
 function ReadingChromeControls(props: {
   canEditContent?: boolean;
   actionsAtTop?: boolean;
+  navigation?: CompanionReadingNavigationControls | undefined;
   isChromeVisible: boolean;
   isContentEditing: boolean;
   onExit(): void;
@@ -75,6 +78,7 @@ function ReadingChromeControls(props: {
 }) {
   return (
     <ReadingChrome
+      navigation={props.navigation}
       actionsAtTop={props.actionsAtTop === true}
       canEditContent={props.canEditContent === true}
       isContentEditing={props.isContentEditing}
@@ -173,6 +177,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
     <>
       <ReadingChromeControls
         {...definedProps({ canEditContent: props.canEditContent })}
+        navigation={props.navigation}
         actionsAtTop={props.actionsAtTop === true}
         isChromeVisible={props.isChromeVisible}
         isContentEditing={props.isContentEditing}

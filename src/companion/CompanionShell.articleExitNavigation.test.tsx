@@ -69,6 +69,8 @@ function createSurface(overrides?: Record<string, unknown>) {
   };
   return {
     activeAction: 'recent',
+    browseReturnNodeId: null,
+    readingActivity: new CompanionReadingActivity('topic-1', () => {}),
     browsedFolder: null,
     effectiveReviewSession: reviewSession,
     handleDismissReviewTopic: vi.fn(),

@@ -7,6 +7,7 @@
   "companion.reading.info": "情報",
   "companion.reading.outline": "概要",
   "companion.reading.more": "その他の読み取りアクション",
+  "companion.reading.previousTopic": "前のトピック",
   "companion.reading.nextTopic": "次のトピック",
   "companion.reading.nextTopicError": "続行する前に、現在の変更を完了するか再試行してください。",
   "companion.reading.editTopic": "トピックを編集",

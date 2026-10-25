@@ -7,6 +7,7 @@
   "companion.reading.info": "Información",
   "companion.reading.outline": "Esquema",
   "companion.reading.more": "Más acciones de lectura",
+  "companion.reading.previousTopic": "Tema anterior",
   "companion.reading.nextTopic": "Siguiente tema",
   "companion.reading.nextTopicError": "Termina o reintenta el cambio actual antes de continuar.",
   "companion.reading.editTopic": "Editar tema",

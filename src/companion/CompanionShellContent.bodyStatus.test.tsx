@@ -1,11 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { renderCompanionShellContent } from './CompanionShellContent';
 
 function createSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string) {
   return {
     activeAction: 'recent',
+    browseReturnNodeId: null,
+    readingActivity: new CompanionReadingActivity('topic-1', () => {}),
     browsedFolder: null,
     readableArticle: {
       bodyStatus,
@@ -31,7 +34,6 @@ function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string
     isBrowseDirectoryOpen: directory,
     isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
-    nextDirectoryTopicId: directory ? 'topic-2' : null,
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
@@ -53,7 +55,12 @@ function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string
     workspaceError: null,
     workspaceSync: {
       isWorkspaceSyncStateReady: true,
-      state: { endpoint_url: null, remembered_targets: [], workspace_snapshot: null }
+      state: { endpoint_url: null, remembered_targets: [], workspace_snapshot: directory ? {
+        nodeOrder: ['folder', 'topic-1', 'topic-2'], trashedNodeIds: [], untitledSequenceByParent: {},
+        nodesById: { folder: { id: 'folder', kind: 'folder', title: 'Folder', parentNodeId: null },
+          'topic-1': { id: 'topic-1', kind: 'topic', title: 'A', content: '', bodyStatus, parentNodeId: 'folder', updatedAt: '' },
+          'topic-2': { id: 'topic-2', kind: 'topic', title: 'B', content: 'Body', parentNodeId: 'folder', updatedAt: '' } }
+      } : null }
     } as never
   }));
 }

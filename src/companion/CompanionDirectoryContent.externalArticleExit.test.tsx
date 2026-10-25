@@ -196,7 +196,7 @@ describe('CompanionDirectoryContent virtual article selection', () => {
 
     fireEvent.click(screen.getByText('Alpha'));
 
-    expect(onSelectNode).toHaveBeenCalledWith('topic-a', null);
+    expect(onSelectNode).toHaveBeenCalledWith('topic-a');
     expect(onChangeSelection).not.toHaveBeenCalled();
   });
 
@@ -220,7 +220,7 @@ describe('CompanionDirectoryContent virtual article selection', () => {
 
     fireEvent.click(screen.getByText('Alpha'));
 
-    expect(onSelectNode).toHaveBeenCalledWith('topic-a', null);
+    expect(onSelectNode).toHaveBeenCalledWith('topic-a');
     expect(onChangeSelection).toHaveBeenCalledWith({ kind: 'virtual', nodeId: 'topic-a' });
   });
 

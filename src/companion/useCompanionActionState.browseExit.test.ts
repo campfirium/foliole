@@ -90,3 +90,13 @@ describe('useCompanionActionState browse exit', () => {
     expect(setActiveAction).toHaveBeenLastCalledWith('search');
   });
 });
+
+
+it('keeps the current container sublist when switching between its topics', () => {
+  const { actions, setBrowseReturnNodeId, setSelectedBrowseNodeId } = createActionState({
+    browseReturnNodeId: 'container', browsedFolderNodeId: null
+  });
+  actions.handleSelectBrowseNode('next-topic');
+  expect(setSelectedBrowseNodeId).toHaveBeenCalledWith('next-topic');
+  expect(setBrowseReturnNodeId).toHaveBeenCalledWith('container');
+});

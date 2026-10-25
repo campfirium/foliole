@@ -20,6 +20,7 @@ import { useCompanionContentEditingActions } from './useCompanionContentEditingA
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
+import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
@@ -30,6 +31,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 interface ImmersiveReadableArticleProps {
+  navigation?: CompanionReadingNavigationControls | undefined;
   activity?: CompanionReadingActivity;
   flow?: boolean;
   answer?: string | null;
@@ -140,6 +142,7 @@ function ImmersiveArticleChrome(props: {
   });
   return (
     <ImmersiveChromeLayer
+      navigation={articleProps.navigation}
       actionsAtTop={articleProps.flow === true}
       actionsOpen={model.reading.isActionsSheetOpen}
       canEditContent={Boolean(articleProps.onSaveArticleContent)}
@@ -204,7 +207,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           syncEndpointUrl: props.syncEndpointUrl
         })}
       />
-      {props.footer}
+      <>{props.footer}</>
       <SelectionAnnotationToolbarLayer
         key={props.readableArticle.nodeId}
         snapshot={props.snapshot}

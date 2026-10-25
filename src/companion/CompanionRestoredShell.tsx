@@ -20,7 +20,7 @@ import { useCompanionDirectorySelectionState } from './useCompanionDirectorySele
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
-import { useDirectoryReadingSequence, useSortedArticleSurface } from './useCompanionShellReading';
+import { useSortedArticleSurface } from './useCompanionShellReading';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -154,7 +154,6 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
   const reviewChrome = useCompanionReviewChrome({ floatingBar, surface, workspaceSync });
   const searchArticle = useCompanionSearchNavigation(surface);
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
-  const directoryReadingSequence = useDirectoryReadingSequence(directoryState, surface, workspaceSync);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
   const handleSaveCaptureText = useMemo(() => createCompanionCaptureTextSaveHandler(workspaceSync), [workspaceSync]);
@@ -196,7 +195,7 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     surface,
     workspaceSync
   });
-  return { ...model, directoryReadingSequence };
+  return model;
 }
 
 export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;

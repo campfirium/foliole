@@ -21,7 +21,6 @@ const navigationSchema = z.object({
   isBrowseDirectoryOpen: z.boolean(),
   isOnlyReviewOpen: z.boolean(),
   directorySelection,
-  directorySequence: z.object({ folderNodeId: z.string(), nodeIds: z.array(z.string()) }).nullable(),
   settingsPage: z.enum(['foregroundTime', 'list', 'sync', 'device', 'storage', 'appearance', 'debug',
     'tabs', 'syncGroup', 'syncActivity', 'syncConnection']),
   searchTopicNodeId: z.string().nullable(),
@@ -39,7 +38,7 @@ export function initialCompanionNavigation(hasWorkspace: boolean): CompanionNavi
   return {
     activeAction: hasWorkspace ? 'review' : 'more', selectedBrowseNodeId: null, browseReturnNodeId: null,
     isBrowseDirectoryOpen: false, isOnlyReviewOpen: false, directorySelection: { kind: 'root' },
-    directorySequence: null, settingsPage: 'list', searchTopicNodeId: null, searchQuery: '',
+    settingsPage: 'list', searchTopicNodeId: null, searchQuery: '',
     searchExternalDocumentId: null, searchPdf: null, externalScrollTopById: {}, originalPdfNodeId: null, pdfPositionById: {}
   };
 }

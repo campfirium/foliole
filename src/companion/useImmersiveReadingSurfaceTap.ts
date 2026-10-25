@@ -5,7 +5,10 @@ import { useCompanionTouchClick } from './useCompanionTouchClick';
 
 export function useImmersiveReadingSurfaceTap(editing: boolean, setVisible: Dispatch<SetStateAction<boolean>>) {
   const handlers = useCompanionTouchClick(() => setVisible((visible) => !visible), {
-    disabled: editing, ignoreTarget: isCompanionArticleInteractiveTarget, preserveSelection: true
+    disabled: editing,
+    ignoreTarget: target => isCompanionArticleInteractiveTarget(target) ||
+      (target instanceof Element && Boolean(target.closest('.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap'))),
+    preserveSelection: true
   });
   return {
     handleSurfaceClick: handlers.onClick,

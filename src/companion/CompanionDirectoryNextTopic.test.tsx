@@ -1,116 +1,82 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState } from 'react';
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
+import { createCollectionVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 
-import { CompanionDirectoryContent } from './CompanionDirectoryContent';
-import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
-import { CompanionReadingActivity } from './companionReadingActivity';
-import { useCompanionDirectoryReadingSequence } from './useCompanionDirectoryReadingSequence';
+import { resolveCompanionReadingNeighbors } from './companionReadingNeighbors';
 
-vi.mock('./useCompanionExternalDirectory', () => ({
-  useCompanionExternalDirectory: () => ({ entries: [], folders: [] }),
-  useCompanionExternalDocument: () => null
-}));
+function topic(id: string, parentNodeId: string | null = 'folder'): WorkspaceSnapshot['nodesById'][string] {
+  return { anchorLink: null, content: `# ${id}`, createdAt: '2026-01-01', hideTitleHeading: false,
+    id, isTitleManual: true, kind: 'topic', parentNodeId, reading: null,
+    reveal: null, review: null, title: id, updatedAt: `2026-01-0${id === 'A' ? 1 : id === 'B' ? 2 : 3}` };
+}
+function snapshot(): WorkspaceSnapshot {
+  return { activeNodeId: null, nodeOrder: ['folder', 'A', 'B', 'C', 'P', 'D', 'X'],
+    nodesById: { folder: { ...topic('folder', null), kind: 'folder' }, A: topic('A'), B: topic('B'),
+      C: topic('C'), P: topic('P'), D: topic('D', 'P'), X: topic('X', 'other') },
+    trashedNodeIds: [], untitledSequenceByParent: {} };
+}
+function neighbors(state = snapshot(), selectedBrowseNodeId: string | null = 'B',
+  options: Partial<Parameters<typeof resolveCompanionReadingNeighbors>[0]> = {}) {
+  return resolveCompanionReadingNeighbors({ directorySelection: { kind: 'internal', nodeId: 'folder' },
+    isBrowseDirectoryOpen: true, snapshot: state,
+    surface: { selectedBrowseNodeId, browseReturnNodeId: null, recentArticles: [] },
+    sort: { sortKey: 'dateSaved', sortDirection: 'asc' }, ...options });
+}
 
-function topic(id: string, openedAt: string): WorkspaceSnapshot['nodesById'][string] {
-  return {
-    anchorLink: null, content: `# ${id}`, createdAt: '2026-01-01', hideTitleHeading: false,
-    id, isTitleManual: true, kind: 'topic', parentNodeId: 'folder', reading: null,
-    reveal: null, review: null, title: id, updatedAt: openedAt
+it('uses the current directory sort, skips containers, and never crosses the directory boundary', () => {
+  const state = snapshot();
+  expect(neighbors(state)).toMatchObject({ previous: 'A', next: 'C' });
+  expect(neighbors(state, 'B', { sort: { sortKey: 'dateSaved', sortDirection: 'desc' } }))
+    .toMatchObject({ previous: 'C', next: 'A' });
+  expect(neighbors(state, 'C')).toMatchObject({ previous: 'B', next: null });
+  expect(neighbors(state, 'A')).toMatchObject({ previous: null, next: 'B' });
+  expect(neighbors(state, 'P')).toMatchObject({ previous: null, next: null });
+});
+
+it('follows live virtual results and disables both directions when the current topic leaves them', () => {
+  const state = snapshot();
+  state.nodesById.folder = { ...state.nodesById.folder!, virtualFilter: createCollectionVirtualNodeFilter('Test') };
+  state.virtualResultIdsByNodeId = { folder: ['C', 'B', 'A'] };
+  const options = { directorySelection: { kind: 'virtual' as const, nodeId: 'folder' } };
+  expect(neighbors(state, 'B', options)).toMatchObject({ previous: 'C', next: 'A' });
+  const changed = { ...state, virtualResultIdsByNodeId: { folder: ['A', 'B', 'X'] } };
+  expect(neighbors(changed, 'B', options)).toMatchObject({ previous: 'A', next: 'X' });
+  expect(neighbors({ ...changed, virtualResultIdsByNodeId: { folder: ['A'] } }, 'B', options))
+    .toMatchObject({ previous: null, next: null });
+});
+
+it('uses Browse list order across folders and the current container sublist within a container', () => {
+  const state = snapshot();
+  const recentArticles = ['C', 'B', 'X', 'A'].map(nodeId => ({ nodeId, title: nodeId, preview: null, updatedAt: '' }));
+  expect(neighbors(state, 'B', { isBrowseDirectoryOpen: false,
+    surface: { selectedBrowseNodeId: 'B', browseReturnNodeId: null, recentArticles } }))
+    .toMatchObject({ previous: 'C', next: 'X' });
+  state.nodesById.E = topic('E', 'P');
+  state.nodeOrder.push('E');
+  expect(neighbors(state, 'D', { isBrowseDirectoryOpen: false,
+    surface: { selectedBrowseNodeId: 'D', browseReturnNodeId: 'P', recentArticles } }))
+    .toMatchObject({ previous: null, next: 'E' });
+});
+
+it('disables missing, empty, single-topic and trash list targets', () => {
+  expect(neighbors(snapshot(), null)).toMatchObject({ previous: null, next: null });
+  expect(neighbors({ ...snapshot(), nodeOrder: [], nodesById: {} })).toMatchObject({ previous: null, next: null });
+  expect(neighbors(snapshot(), 'D', { directorySelection: { kind: 'internal', nodeId: 'P' } }))
+    .toMatchObject({ previous: null, next: null });
+  expect(neighbors(snapshot(), 'B', { directorySelection: { kind: 'trash' } })).toMatchObject({ enabled: false });
+});
+
+it('follows the latest last-opened ordering even when opening changes the next neighbor', () => {
+  const state = snapshot();
+  const nodeOpenStateById = {
+    A: { nodeId: 'A', lastOpenedAt: '2026-01-03T00:00:00Z' },
+    B: { nodeId: 'B', lastOpenedAt: '2026-01-02T00:00:00Z' },
+    C: { nodeId: 'C', lastOpenedAt: '2026-01-01T00:00:00Z' }
   };
-}
-
-const initialSnapshot: WorkspaceSnapshot = {
-  activeNodeId: null,
-  nodeOrder: ['folder', 'A', 'B', 'C'],
-  nodesById: {
-    folder: { ...topic('folder', '2026-01-01'), kind: 'folder', parentNodeId: null },
-    A: topic('A', '2026-01-03'),
-    B: topic('B', '2026-01-02'),
-    C: topic('C', '2026-01-01')
-  },
-  nodeOpenStateById: {
-    A: { nodeId: 'A', lastOpenedAt: '2026-01-03T00:00:00.000Z' },
-    B: { nodeId: 'B', lastOpenedAt: '2026-01-02T00:00:00.000Z' },
-    C: { nodeId: 'C', lastOpenedAt: '2026-01-01T00:00:00.000Z' }
-  },
-  trashedNodeIds: [], untitledSequenceByParent: {}
-};
-
-function DirectoryReadingHarness() {
-  const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selection = { kind: 'internal' as const, nodeId: 'folder' };
-  const sequence = useCompanionDirectoryReadingSequence({ selection, selectedNodeId: selectedId, snapshot });
-  const nextTopicNodeId = sequence.nextTopicNodeId;
-
-  function open(nodeId: string) {
-    setSelectedId(nodeId);
-    setSnapshot((current) => ({
-      ...current,
-      nodeOpenStateById: {
-        ...current.nodeOpenStateById,
-        [nodeId]: { nodeId, lastOpenedAt: `2026-01-0${4 + ['A', 'B', 'C'].indexOf(nodeId)}T00:00:00.000Z` }
-      }
-    }));
-  }
-
-  return selectedId ? <>
-    <article>{selectedId} body</article>
-    {nextTopicNodeId ? <CompanionNextTopicFooter activity={new CompanionReadingActivity(selectedId, () => undefined)}
-      onOpen={() => open(nextTopicNodeId)} /> : null}
-    <button onClick={() => setSelectedId(null)} type="button">Exit</button>
-  </> : <CompanionDirectoryContent
-    onChangeSelection={vi.fn()} onExitArticle={vi.fn()}
-    onSelectNode={(nodeId, order) => { sequence.capture(nodeId, order); open(nodeId); }}
-    selection={selection} snapshot={snapshot} sortDirection="desc" sortKey="dateLastOpened"
-  />;
-}
-
-it('continues through the opened directory order without a previous control or a changed-order repeat', async () => {
-  render(<LocalizationProvider initialLanguagePreference="en"><DirectoryReadingHarness /></LocalizationProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Open topic A' }));
-  expect(screen.getByText('A body')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Previous topic/i })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Next topic' })).not.toHaveTextContent('B');
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
-  expect(await screen.findByText('B body')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
-  expect(await screen.findByText('C body')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /Next topic/i })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
-  expect(screen.getByRole('button', { name: 'Open topic B' })).toBeInTheDocument();
-});
-
-it('keeps the current topic open when a pending edit cannot be saved', async () => {
-  const activity = new CompanionReadingActivity('A', () => undefined);
-  activity.flushDraft = vi.fn().mockRejectedValueOnce(new Error('save failed'));
-  const open = vi.fn();
-  render(<LocalizationProvider initialLanguagePreference="en">
-    <CompanionNextTopicFooter activity={activity} onOpen={open} />
-  </LocalizationProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Finish or retry the current change');
-  expect(open).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
-  await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
-});
-
-it('does not reopen the next topic after the reader was exited during a save', async () => {
-  const activity = new CompanionReadingActivity('A', () => undefined);
-  let finishSave: (() => void) | undefined;
-  activity.flushDraft = () => new Promise<void>((resolve) => { finishSave = resolve; });
-  const open = vi.fn();
-  const view = render(<LocalizationProvider initialLanguagePreference="en">
-    <CompanionNextTopicFooter activity={activity} onOpen={open} />
-  </LocalizationProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
-  await waitFor(() => expect(finishSave).toBeDefined());
-  view.unmount();
-  finishSave?.();
-  await Promise.resolve();
-  expect(open).not.toHaveBeenCalled();
+  const options = { sort: { sortKey: 'dateLastOpened' as const, sortDirection: 'desc' as const } };
+  expect(neighbors({ ...state, nodeOpenStateById }, 'B', options)).toMatchObject({ previous: 'A', next: 'C' });
+  expect(neighbors({ ...state, nodeOpenStateById: { ...nodeOpenStateById,
+    B: { nodeId: 'B', lastOpenedAt: '2026-01-04T00:00:00Z' } } }, 'B', options))
+    .toMatchObject({ previous: null, next: 'A' });
 });

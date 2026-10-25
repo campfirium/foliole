@@ -7,7 +7,6 @@ import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
-import { selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
@@ -26,7 +25,7 @@ interface CompanionDirectoryContentProps {
   selection: CompanionDirectorySelection;
   onChangeSelection(selection: CompanionDirectorySelection): void;
   onExitArticle(selection: CompanionDirectorySelection): void;
-  onSelectNode(nodeId: string, readingOrder: readonly string[] | null): void;
+  onSelectNode(nodeId: string): void;
   snapshot: WorkspaceSnapshot | null;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
@@ -66,18 +65,6 @@ function isDirectoryContainer(
     ));
   }
   return false;
-}
-
-function resolveReadingOrder(sections: ReturnType<typeof useCompanionDirectorySections>['sections'], snapshot: WorkspaceSnapshot | null) {
-  if (!snapshot) return [];
-  const parents = new Set(selectCanonicalVisibleNodeIds(snapshot)
-    .flatMap((nodeId) => {
-      const node = snapshot.nodesById[nodeId];
-      return node && !node.anchorLink && node.parentNodeId ? [node.parentNodeId] : [];
-    }));
-  return sections.flatMap((section) => section.items)
-    .filter((item) => item.source === 'internal' && item.kind === 'topic' && !parents.has(item.nodeId))
-    .map((item) => item.nodeId);
 }
 
 function CompanionDirectoryListContent(props: {
@@ -128,10 +115,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
       item.source === 'virtual' ||
       item.source === 'trash'
     ) {
-      const readingOrder = props.selection.kind === 'internal' && item.source === 'internal' && !isContainer
-        ? resolveReadingOrder(sections, props.snapshot)
-        : null;
-      props.onSelectNode(item.nodeId, readingOrder);
+      props.onSelectNode(item.nodeId);
     }
     if (!isContainer && item.source !== 'externalDocument') return;
     props.onChangeSelection(resolveItemSelection(item));

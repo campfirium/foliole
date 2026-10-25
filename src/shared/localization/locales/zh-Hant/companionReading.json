@@ -7,6 +7,7 @@
   "companion.reading.info": "資訊",
   "companion.reading.outline": "概要",
   "companion.reading.more": "更多讀書行動",
+  "companion.reading.previousTopic": "上一個主題",
   "companion.reading.nextTopic": "下一個主題",
   "companion.reading.nextTopicError": "請先完成或重試目前的變更，再繼續。",
   "companion.reading.editTopic": "編輯主題",

@@ -13,7 +13,7 @@ export function useCompanionTouchClick(onActivate: () => void, options: {
   const ignored = (target: EventTarget) => options.disabled || options.ignoreTarget?.(target);
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
-    compatibilityClickTarget.current = null;
+    compatibilityClickTarget.current = event.pointerType === 'touch' ? event.currentTarget : null;
     touch.current = event.pointerType === 'touch' && event.isPrimary && !ignored(event.target)
       ? { pointerId: event.pointerId, startedAt: Date.now(), x: event.clientX, y: event.clientY }
       : null;
@@ -40,7 +40,7 @@ export function useCompanionTouchClick(onActivate: () => void, options: {
     const handledTouchTarget = compatibilityClickTarget.current;
     compatibilityClickTarget.current = null;
     if (event.detail > 0 && handledTouchTarget === event.currentTarget) return;
-    if (ignored(event.target)) return;
+    if (ignored(event.target) || (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
     onActivate();
   }
 

@@ -59,7 +59,7 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
   }
 
   function handleSelectBrowseNode(nodeId: string) {
-    args.setBrowseReturnNodeId(args.browsedFolderNodeId);
+    args.setBrowseReturnNodeId(args.browsedFolderNodeId ?? (nodeId === args.browseReturnNodeId ? null : args.browseReturnNodeId));
     args.setSelectedBrowseNodeId(nodeId);
     loadArticle(args, nodeId);
     markOpened(args, nodeId);

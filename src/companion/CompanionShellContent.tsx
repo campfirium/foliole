@@ -11,6 +11,7 @@ import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionFolderArticleList } from './CompanionFolderArticleList';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
+import { resolveCompanionReadingNeighbors } from './companionReadingNeighbors';
 import { RecentArticleList } from './CompanionRecentArticleList';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
@@ -41,13 +42,11 @@ type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
-  onCaptureDirectoryReadingOrder?: (nodeId: string, readingOrder: readonly string[] | null) => void;
   onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
   settingsPage: CompanionSettingsPage;
   surface: Surface;
-  nextDirectoryTopicId?: string | null;
   workspaceError: string | null;
   workspaceSync: WorkspaceSync;
 };
@@ -56,7 +55,7 @@ function handleExitReadableArticle(surface: Surface) {
   surface.handleExitBrowseArticle();
 }
 
-function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync }) {
+function RecentBrowseContent(props: { surface: Surface; workspaceSync: WorkspaceSync; navigation: ReturnType<typeof readingNavigation> }) {
   if (props.surface.browsedFolder) {
     return (
       <>
@@ -72,6 +71,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
     return (
       <CompanionShellReadableArticle
+        navigation={props.navigation}
         onExit={() => handleExitReadableArticle(props.surface)}
         surface={props.surface}
         workspaceSync={props.workspaceSync}
@@ -89,9 +89,23 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   );
 }
 
+function readingNavigation(props: CompanionShellContentProps) {
+  const targets = resolveCompanionReadingNeighbors({ ...props,
+    snapshot: props.workspaceSync.state.workspace_snapshot,
+    sort: { sortKey: props.browseSortKey ?? DEFAULT_FOLDER_LIST_SORT_KEY,
+      sortDirection: props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION }
+  });
+  if (!targets.enabled) return undefined;
+  const { previous, next } = targets;
+  return { key: targets.key,
+    previous: previous ? () => props.surface.handleSelectBrowseNode(previous) : undefined,
+    next: next ? () => props.surface.handleSelectBrowseNode(next) : undefined
+  };
+}
+
 function renderRecentContent(props: CompanionShellContentProps) {
+  const navigation = readingNavigation(props);
   if (props.isBrowseDirectoryOpen) {
-    const nextDirectoryTopicId = props.nextDirectoryTopicId;
     if (
       (props.directorySelection.kind === 'internal' ||
         props.directorySelection.kind === 'trash' ||
@@ -102,8 +116,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
       return (
         <CompanionShellReadableArticle
           onExit={DirectoryArticle.resolveCompanionDirectoryArticleExit(props)}
-          onOpenNextTopic={nextDirectoryTopicId
-            ? () => props.surface.handleSelectBrowseNode(nextDirectoryTopicId) : undefined}
+          navigation={navigation}
           surface={props.surface}
           workspaceSync={props.workspaceSync}
         />
@@ -116,10 +129,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
           props.surface.handleExitDirectoryArticle();
           props.onChangeDirectorySelection(selection);
         }}
-        onSelectNode={(nodeId, readingOrder) => {
-          props.onCaptureDirectoryReadingOrder?.(nodeId, readingOrder);
-          props.surface.handleSelectBrowseNode(nodeId);
-        }}
+        onSelectNode={props.surface.handleSelectBrowseNode}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}
         sortDirection={props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION}
@@ -127,7 +137,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
       />
     );
   }
-  return <RecentBrowseContent surface={props.surface} workspaceSync={props.workspaceSync} />;
+  return <RecentBrowseContent navigation={navigation} surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
 export function renderCompanionShellContent(props: CompanionShellContentProps) {

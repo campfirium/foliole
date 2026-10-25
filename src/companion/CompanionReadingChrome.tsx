@@ -1,9 +1,10 @@
-import { ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
+import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionTouchClick } from './useCompanionTouchClick';
 
 function ReadingChromeButton(props: {
@@ -115,6 +116,7 @@ function ReadingTopChrome(props: {
 }
 
 export function ReadingChrome(props: {
+  navigation?: CompanionReadingNavigationControls | undefined;
   actionsAtTop?: boolean;
   canEditContent?: boolean;
   isContentEditing?: boolean;
@@ -143,7 +145,10 @@ export function ReadingChrome(props: {
       />
       {!props.actionsAtTop ? <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
-          {controlsVisible ? <ReadingActionsControls {...props} /> : <ChromeSpacer />}
+          {controlsVisible ? <>
+            {props.navigation ? <ReadingNavigationControls navigation={props.navigation} /> : null}
+            <ReadingActionsControls {...props} />
+          </> : <ChromeSpacer />}
         </div>
       </div> : null}
     </>
@@ -157,4 +162,14 @@ function ReadingActionsControls(props: { canEditContent?: boolean; onToggleConte
       onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
     <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
   </>;
+}
+
+function ReadingNavigationControls({ navigation }: { navigation: CompanionReadingNavigationControls }) {
+  const t = useTranslation();
+  return <div className="mr-auto flex items-center">
+    <ReadingChromeButton icon={ArrowLeft} label={t('companion.reading.previousTopic')}
+      disabled={navigation.disabled || !navigation.previous} onClick={navigation.previous} />
+    <ReadingChromeButton icon={ArrowRight} label={t('companion.reading.nextTopic')}
+      disabled={navigation.disabled || !navigation.next} onClick={navigation.next} />
+  </div>;
 }

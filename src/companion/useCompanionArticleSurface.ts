@@ -32,7 +32,7 @@ function useCompanionBrowseActions(args: {
   workspaceSync: CompanionWorkspaceSyncApi;
 }) {
   const browseReturn = useCompanionBrowseReturnState();
-  return useCompanionActionState({
+  const actions = useCompanionActionState({
     browseReturnNodeId: browseReturn.browseReturnNodeId,
     browsedFolderNodeId: args.browsedFolderNodeId,
     floatingBar: args.floatingBar,
@@ -44,6 +44,7 @@ function useCompanionBrowseActions(args: {
     snapshot: args.snapshot,
     workspaceSync: args.workspaceSync
   });
+  return { ...actions, browseReturnNodeId: browseReturn.browseReturnNodeId };
 }
 
 function useCompanionInteractionState(
@@ -66,6 +67,7 @@ function useCompanionInteractionState(
     workspaceSync
   });
   const {
+    browseReturnNodeId,
     handleExitBrowseArticle,
     handleExitDirectoryArticle,
     handleExitSearchArticle,
@@ -85,6 +87,7 @@ function useCompanionInteractionState(
 
   return {
     ...reviewActions,
+    browseReturnNodeId,
     handleRevealAnswer: flow.reveal,
     handleExitBrowseArticle,
     handleExitDirectoryArticle,
