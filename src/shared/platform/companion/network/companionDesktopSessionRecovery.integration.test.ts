@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { createMemberSyncCadence } from '../../../../../lib/core/sync/memberSyncCadence.js';
@@ -8,6 +11,65 @@ import { installSessionHttpBoundary } from '../../../../test/companionSessionHtt
 
 import { closeCompanionDesktopSession, companionDesktopSessionId, ensureCompanionDesktopSession,
   recoverCompanionDesktopRound, subscribeCompanionDesktopChanges } from './companionDesktopSession.js';
+
+it('ends an active data round when its notification session closes and resumes from committed data', { meta: { calibratedMs: 60_000 } }, async () => {
+  const mobile = await createCompanionRequestFixture();
+  installSessionHttpBoundary();
+  const endpoint = mobile.fixture.rightSnapshot.origin;
+  let requestsAfterClose = 0;
+  try {
+    await mobile.fixture.right.seed({ nodeId: 'before-session-close', title: 'Before', content: 'Committed before cancellation' });
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    const run = mobile.sync({ onStructureSynced: async () => {
+      await closeCompanionDesktopSession();
+      native.post.mockImplementation(async input => { requestsAfterClose++; return mobile.post(input); });
+    } });
+    await expect(run).rejects.toThrow('sync_session_cancelled');
+    expect(requestsAfterClose).toBe(0);
+    expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('before-session-close'))
+      .toBe('Committed before cancellation');
+    await mobile.restart();
+    await mobile.fixture.right.seed({ nodeId: 'after-session-close', title: 'After', content: 'Resumed after cancellation' });
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    await mobile.sync();
+    expect(mobile.sqlite.prepare('SELECT content FROM nodes WHERE id=?').pluck().get('after-session-close'))
+      .toBe('Resumed after cancellation');
+  } finally { await closeCompanionDesktopSession(); await mobile.close(); }
+});
+
+it('stops after an attachment window when its session closes and recovers the remaining file after reopening', { meta: { calibratedMs: 60_000 } }, async () => {
+  const mobile = await createCompanionRequestFixture();
+  installSessionHttpBoundary();
+  const endpoint = mobile.fixture.rightSnapshot.origin;
+  const bytes = Buffer.alloc(9 * 1024 * 1024 + 17, 0x71);
+  let closed = false;
+  let requestsAfterClose = 0;
+  try {
+    const resource = await mobile.fixture.right.seedResource({ nodeId: 'session-close-image', bytes, includeImageInBody: true });
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    native.post.mockImplementation(async input => {
+      if (closed) requestsAfterClose++;
+      const response = await mobile.post(input);
+      if (input.attachment_receive && !closed) {
+        closed = true;
+        await closeCompanionDesktopSession();
+      }
+      return response;
+    });
+    await expect(mobile.sync()).rejects.toThrow('sync_session_cancelled');
+    expect(closed).toBe(true);
+    expect(requestsAfterClose).toBe(0);
+    expect(mobile.sqlite.prepare('SELECT count(*) FROM attachment_pending WHERE storage_key=?').pluck().get(resource.storageKey)).toBe(1);
+    await mobile.restart();
+    native.post.mockImplementation(mobile.post);
+    await ensureCompanionDesktopSession(endpoint, mobile.fixture.rightSnapshot.deviceId);
+    await mobile.sync();
+    const file = path.join(mobile.fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', resource.storageKey);
+    expect(await readFile(file)).toEqual(bytes);
+    expect(mobile.sqlite.prepare('SELECT count(*) FROM attachment_pending WHERE storage_key=?').pluck().get(resource.storageKey)).toBe(0);
+    expect(mobile.sqlite.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash=?').pluck().get(resource.hash)).toBe(1);
+  } finally { await closeCompanionDesktopSession(); await mobile.close(); }
+});
 
 vi.mock('./signedRequest.js', () => ({ createSignedRequestHeaders: async (input: {
   endpointUrl: string; method: string; pathWithQuery: string

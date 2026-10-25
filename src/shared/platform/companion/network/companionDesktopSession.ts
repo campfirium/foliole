@@ -25,6 +25,11 @@ export function invalidateCompanionDesktopSession(endpoint: string) {
 
 export function companionDesktopSessionId(peer: string) { return current?.peer === peer ? current.reply.session : undefined; }
 
+export function companionDesktopRoundSession(peer: string) {
+  return current?.peer === peer
+    ? { id: current.reply.session, signal: current.controller.signal } : undefined;
+}
+
 export async function recoverCompanionDesktopRound(peer: string, sessionId: string) {
   if (current?.peer !== peer || current.reply.session !== sessionId) return;
   await closeCompanionDesktopSession();

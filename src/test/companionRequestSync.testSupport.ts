@@ -148,7 +148,11 @@ function configureAttachmentReads(stateRoot: string) {
         return false;
       }))) };
     const partial = path.join(assets, `.${input.key.slice(0, 64)}.partial`);
-    if (input.action === 'truncate') { await fs.writeFile(partial, Buffer.alloc(input.length ?? 0)); return {}; }
+    if (input.action === 'truncate') {
+      const file = await fs.open(partial, 'a');
+      try { await file.truncate(input.length ?? 0); } finally { await file.close(); }
+      return {};
+    }
     if (input.action === 'append') {
       const info = await fs.stat(partial);
       if (info.size !== input.offset) throw new Error('fixture_attachment_offset_mismatch');

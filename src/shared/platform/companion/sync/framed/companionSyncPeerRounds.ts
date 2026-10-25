@@ -3,7 +3,7 @@ import { withRequestSyncPeerRound, type RequestSyncPeerRound } from '../../../..
 import type { RequestSyncAuthenticatedContext } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import { runSyncPeerRound } from '../../../../../../lib/core/sync/runSyncPeerRound.js';
 import { createSyncPeerRoundOwnership } from '../../../../../../lib/core/sync/syncPeerRoundOwnership.js';
-import { companionDesktopSessionId, recoverCompanionDesktopRound } from '../../network/companionDesktopSession.js';
+import { companionDesktopRoundSession, recoverCompanionDesktopRound } from '../../network/companionDesktopSession.js';
 import type { CapacitorCompanionDatabaseOwner } from '../../runtime/capacitorCompanionDatabaseOwner.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { subscribeCompanionSyncLeftScreen } from '../../runtime/companionSyncBackgroundWork.js';
@@ -12,7 +12,7 @@ import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
 import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
-import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+import { combineCompanionRequestSignals, withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
 
 type State = {
   rounds: ReturnType<typeof createSyncPeerRoundOwnership>;
@@ -30,12 +30,15 @@ export function withCompanionSyncPeerRound<T>(peerId: string,
       if (!options.resourceOnly) await waitForAttachmentResourceRounds(signal);
       return await runSyncPeerRound({
         owner: await companionSyncPeerRoundOwner(), peerId, ...options, signal,
-        execute: (id, lease) => {
-          const sessionId = companionDesktopSessionId(peerId);
-          return run({ id, lease, admitted: false, ...(sessionId ? {
-            sessionId,
-            onUnconfirmedFinish: () => recoverCompanionDesktopRound(peerId, sessionId)
-          } : {}) }, lease.signal);
+        execute: async (id, lease) => {
+          const session = companionDesktopRoundSession(peerId);
+          const combined = combineCompanionRequestSignals([lease.signal, ...(session ? [session.signal] : [])]);
+          try {
+            return await run({ id, lease: { ...lease, signal: combined.signal }, admitted: false, ...(session ? {
+              sessionId: session.id,
+              onUnconfirmedFinish: () => recoverCompanionDesktopRound(peerId, session.id)
+            } : {}) }, combined.signal);
+          } finally { combined.dispose(); }
         }
       });
     } finally { releasePriority(); }
