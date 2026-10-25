@@ -22,7 +22,7 @@ export function CompanionItemAnswer(props: Props) {
   const t = useTranslation();
   if (!props.editing && !props.answer) return null;
   return <section style={props.style} className="border-t border-companion-divider pt-5">
-    <CompanionArticleDocument content={props.answer ?? ''} nodeId={props.nodeId + '::answer'}
+    <CompanionArticleDocument key={props.editing ? 'editing' : 'reading'} content={props.answer ?? ''} nodeId={props.nodeId + '::answer'}
       ariaLabel={t('companion.review.answer')} layout="review" scrollContainer="outer"
       onMissingAttachmentResource={props.onMissingResource}
       {...definedProps({
