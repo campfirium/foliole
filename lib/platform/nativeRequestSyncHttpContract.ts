@@ -24,6 +24,7 @@ export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPaylo
   receiver_library_epoch: string;
   peer_round_id?: string;
   attachment_receive?: NativeAttachmentReceivePlan;
+  attachment_batch?: { operation_id: string };
 }
 
 export interface NativeRequestSyncHttpPlugin {

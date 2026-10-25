@@ -20,6 +20,8 @@ export type FramedSyncWireFrame = Readonly<{
 export type FramedSyncEncodedFrame = Readonly<{
   ciphertext: Uint8Array;
   headerBytes: Uint8Array;
+  /** A source lease must remain held until this attachment end frame has been written. */
+  attachmentBoundary?: true;
 }>;
 
 export type FramedSyncStreamBody<Frame extends FramedSyncEncodedFrame = FramedSyncEncodedFrame> = Readonly<{

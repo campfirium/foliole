@@ -61,11 +61,11 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
   const inspect = (keys: string[]) => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
     attempted: key => database.write(port => recordAttachmentDemandAttempt(port, key)),
-    async needsSlice(shouldYield) {
-      return readRequestSyncAttachmentNeedsSlice(database, inspect, shouldYield);
+    async needsSlice(shouldYield, limit) {
+      return readRequestSyncAttachmentNeedsSlice(database, inspect, shouldYield, false, limit);
     },
     needs: () => readRequestSyncAttachmentNeeds(database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)))) };
-  return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
+  return { host, database, receiver, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };
 }
 
 export async function seedAttachmentTarget(keys: string[]) {

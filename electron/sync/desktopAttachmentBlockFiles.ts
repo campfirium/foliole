@@ -91,8 +91,9 @@ export async function openDesktopAttachmentBlockReceiver(input: {
   };
   try {
     await fs.mkdir(input.assetsDir, { recursive: true });
-    const receiver = createAttachmentBlockReceiver(createFiles(input.assetsDir, input.availability, exclusive));
-    return { kind: 'acquired' as const, ...receiver, async close() {
+    const files = createFiles(input.assetsDir, input.availability, exclusive);
+    const receiver = createAttachmentBlockReceiver(files);
+    return { kind: 'acquired' as const, ...receiver, files, async close() {
       closing = true;
       await Promise.all(active.values());
       owner.close();

@@ -103,6 +103,18 @@
 		438B00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438A00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift */; };
 		438B00000000000000000003 /* FolioleAttachmentReceiveAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438A00000000000000000003 /* FolioleAttachmentReceiveAuthorization.swift */; };
 		438B00000000000000000004 /* FolioleAttachmentReceiveFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438A00000000000000000004 /* FolioleAttachmentReceiveFile.swift */; };
+		C42EBD0BC89EB58A17F64E84 /* FolioleAttachmentBatchAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 015E7604FDBBF11B69403B4D /* FolioleAttachmentBatchAuthorization.swift */; };
+		3FC424F1798C3801D794C107 /* FolioleRequestSyncAttachmentBatchDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C43B538DAC20DE596404E8E /* FolioleRequestSyncAttachmentBatchDecoder.swift */; };
+		1C35623C004388658B0C5B38 /* FolioleAttachmentCompletionCapacity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB19EF45C49173BFA9261D8 /* FolioleAttachmentCompletionCapacity.swift */; };
+		97B0D1E2E2D5070C0A7256AA /* FolioleAttachmentCompletionQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F5DDED23441E2FC6B3812B /* FolioleAttachmentCompletionQueue.swift */; };
+		15C987E25425E3B361491A29 /* FolioleAttachmentBatchStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECEC2BAD04694B9131CF607A /* FolioleAttachmentBatchStorage.swift */; };
+		C64E102D156EBC3D0C38C458 /* FolioleAttachmentBatchReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2313960EC77C780A57003E31 /* FolioleAttachmentBatchReceiver.swift */; };
+		F559FC3F9ED4DEEE58D9F558 /* FolioleAttachmentBatchFinalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DF593212AA626C86BD59B7 /* FolioleAttachmentBatchFinalizer.swift */; };
+		4E36BE6D387BC6B33CACCCEB /* FolioleAttachmentBatchOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E384D201CA0F981961E17B6 /* FolioleAttachmentBatchOperation.swift */; };
+		99E3A6DC6876BA5D11482C98 /* FolioleAttachmentBatchOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4380D26D2CC15A374A3FD91 /* FolioleAttachmentBatchOptions.swift */; };
+		7B9F4C0294FD201CC4B59837 /* FolioleAttachmentBatches.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E601DA93B8D1FDE32CB513F /* FolioleAttachmentBatches.swift */; };
+		CA3F46EE259AFD9F6EA992F4 /* FolioleCompanionAttachmentBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524368B9754DDC0ABAFAF7CC /* FolioleCompanionAttachmentBatch.swift */; };
+		9EDB8379A8869F80772AFF9C /* FolioleRequestSyncAttachmentBatchResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCBD5520E37A0454A13E6E9D /* FolioleRequestSyncAttachmentBatchResponse.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -245,6 +257,18 @@
 		438A00000000000000000002 /* FolioleRequestSyncAttachmentResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncAttachmentResponse.swift; sourceTree = "<group>"; };
 		438A00000000000000000003 /* FolioleAttachmentReceiveAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentReceiveAuthorization.swift; sourceTree = "<group>"; };
 		438A00000000000000000004 /* FolioleAttachmentReceiveFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentReceiveFile.swift; sourceTree = "<group>"; };
+		015E7604FDBBF11B69403B4D /* FolioleAttachmentBatchAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchAuthorization.swift; sourceTree = "<group>"; };
+		4C43B538DAC20DE596404E8E /* FolioleRequestSyncAttachmentBatchDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncAttachmentBatchDecoder.swift; sourceTree = "<group>"; };
+		9BB19EF45C49173BFA9261D8 /* FolioleAttachmentCompletionCapacity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentCompletionCapacity.swift; sourceTree = "<group>"; };
+		09F5DDED23441E2FC6B3812B /* FolioleAttachmentCompletionQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentCompletionQueue.swift; sourceTree = "<group>"; };
+		ECEC2BAD04694B9131CF607A /* FolioleAttachmentBatchStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchStorage.swift; sourceTree = "<group>"; };
+		2313960EC77C780A57003E31 /* FolioleAttachmentBatchReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchReceiver.swift; sourceTree = "<group>"; };
+		D1DF593212AA626C86BD59B7 /* FolioleAttachmentBatchFinalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchFinalizer.swift; sourceTree = "<group>"; };
+		4E384D201CA0F981961E17B6 /* FolioleAttachmentBatchOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchOperation.swift; sourceTree = "<group>"; };
+		C4380D26D2CC15A374A3FD91 /* FolioleAttachmentBatchOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatchOptions.swift; sourceTree = "<group>"; };
+		0E601DA93B8D1FDE32CB513F /* FolioleAttachmentBatches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentBatches.swift; sourceTree = "<group>"; };
+		524368B9754DDC0ABAFAF7CC /* FolioleCompanionAttachmentBatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentBatch.swift; sourceTree = "<group>"; };
+		CCBD5520E37A0454A13E6E9D /* FolioleRequestSyncAttachmentBatchResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncAttachmentBatchResponse.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -337,6 +361,18 @@
 				341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */,
 				343A00000000000000000001 /* FolioleAttachmentBlockFiles.swift */,
 				343A00000000000000000002 /* FolioleAttachmentBlockStorage.swift */,
+				CCBD5520E37A0454A13E6E9D /* FolioleRequestSyncAttachmentBatchResponse.swift */,
+				524368B9754DDC0ABAFAF7CC /* FolioleCompanionAttachmentBatch.swift */,
+				0E601DA93B8D1FDE32CB513F /* FolioleAttachmentBatches.swift */,
+				C4380D26D2CC15A374A3FD91 /* FolioleAttachmentBatchOptions.swift */,
+				4E384D201CA0F981961E17B6 /* FolioleAttachmentBatchOperation.swift */,
+				D1DF593212AA626C86BD59B7 /* FolioleAttachmentBatchFinalizer.swift */,
+				2313960EC77C780A57003E31 /* FolioleAttachmentBatchReceiver.swift */,
+				ECEC2BAD04694B9131CF607A /* FolioleAttachmentBatchStorage.swift */,
+				09F5DDED23441E2FC6B3812B /* FolioleAttachmentCompletionQueue.swift */,
+				9BB19EF45C49173BFA9261D8 /* FolioleAttachmentCompletionCapacity.swift */,
+				4C43B538DAC20DE596404E8E /* FolioleRequestSyncAttachmentBatchDecoder.swift */,
+				015E7604FDBBF11B69403B4D /* FolioleAttachmentBatchAuthorization.swift */,
 				341A00000000000000000001 /* FolioleFramedSyncFiles.swift */,
 				326A00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift */,
 				326A00000000000000000022 /* FolioleFramedSyncPayloadBudgetRegistry.swift */,
@@ -635,6 +671,18 @@
 				341B00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift in Sources */,
 				343B00000000000000000001 /* FolioleAttachmentBlockFiles.swift in Sources */,
 				343B00000000000000000002 /* FolioleAttachmentBlockStorage.swift in Sources */,
+				9EDB8379A8869F80772AFF9C /* FolioleRequestSyncAttachmentBatchResponse.swift in Sources */,
+				CA3F46EE259AFD9F6EA992F4 /* FolioleCompanionAttachmentBatch.swift in Sources */,
+				7B9F4C0294FD201CC4B59837 /* FolioleAttachmentBatches.swift in Sources */,
+				99E3A6DC6876BA5D11482C98 /* FolioleAttachmentBatchOptions.swift in Sources */,
+				4E36BE6D387BC6B33CACCCEB /* FolioleAttachmentBatchOperation.swift in Sources */,
+				F559FC3F9ED4DEEE58D9F558 /* FolioleAttachmentBatchFinalizer.swift in Sources */,
+				C64E102D156EBC3D0C38C458 /* FolioleAttachmentBatchReceiver.swift in Sources */,
+				15C987E25425E3B361491A29 /* FolioleAttachmentBatchStorage.swift in Sources */,
+				97B0D1E2E2D5070C0A7256AA /* FolioleAttachmentCompletionQueue.swift in Sources */,
+				1C35623C004388658B0C5B38 /* FolioleAttachmentCompletionCapacity.swift in Sources */,
+				3FC424F1798C3801D794C107 /* FolioleRequestSyncAttachmentBatchDecoder.swift in Sources */,
+				C42EBD0BC89EB58A17F64E84 /* FolioleAttachmentBatchAuthorization.swift in Sources */,
 				341B00000000000000000001 /* FolioleFramedSyncFiles.swift in Sources */,
 				326B00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift in Sources */,
 				326B00000000000000000022 /* FolioleFramedSyncPayloadBudgetRegistry.swift in Sources */,

@@ -7,6 +7,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "FolioleCompanionSyncPlugin"
     public let jsName = "FolioleCompanionSync"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "attachmentBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "postRequestSyncHttp", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancelRequestSyncHttp", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "accessFramedSyncFile", returnType: CAPPluginReturnPromise),

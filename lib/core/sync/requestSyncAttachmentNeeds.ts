@@ -32,12 +32,12 @@ export async function readRequestSyncAttachmentNeeds(host: Pick<RequestSyncDatab
 }
 
 export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSyncDatabaseHost, 'readSnapshot' | 'write'>,
-  inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false) {
+  inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false, limit = 64) {
   if (!await host.readSnapshot(hasAttachmentDemand)) return { keys: [], pdfTextKeys: [], pending: false };
   await parseChangedAttachmentArticles(host, shouldYield);
   const parsingPending = await host.readSnapshot(async db =>
     (await db.query('SELECT 1 FROM attachment_parse_queue LIMIT 1')).length > 0);
-  const keys = await host.readSnapshot(selectPendingAttachments);
+  const keys = await host.readSnapshot(db => selectPendingAttachments(db, limit));
   if (!keys.length) return { keys: [], pdfTextKeys: [], pending: await host.readSnapshot(hasAttachmentDemand), parsingPending };
   const pdfTextKeys = requirePdfText ? await host.readSnapshot(db => missingPdfTextArtifacts(db, keys)) : [];
   const missing = await inspectAttachmentNeeds(host, keys, inspect);

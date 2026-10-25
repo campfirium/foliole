@@ -7,25 +7,35 @@ final class FolioleAttachmentReceiveFile {
     private let check: () throws -> Void
     private let finished: () -> Void
     private var closed = false
-    init(path: URL, offset: UInt64, check: @escaping () throws -> Void, finished: @escaping () -> Void) throws {
+    private var sealed = false
+    init(path: URL, offset: UInt64, partialLength: UInt64? = nil, check: @escaping () throws -> Void, finished: @escaping () -> Void) throws {
         self.check = check; self.finished = finished
-        let fd = Darwin.open(path.path, O_RDWR | O_NOFOLLOW)
+        try check()
+        let fd = Darwin.open(path.path, O_RDWR | O_CREAT | O_NOFOLLOW, 0o600)
         guard fd >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
         file = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
-        guard try file.seekToEnd() == offset else { closed = true; try file.close(); throw FolioleFramedSyncValidationError("attachment_partial_length_changed") }
+        do {
+            let expected = partialLength ?? offset
+            guard offset <= expected, try file.seekToEnd() == expected else { throw FolioleFramedSyncValidationError("attachment_partial_length_changed") }
+            try check(); try file.truncate(atOffset: offset); try file.seek(toOffset: offset)
+        } catch { closed = true; try file.close(); throw error }
     }
     func append(offset: UInt64, data: Data) throws {
         try check()
-        guard !closed, data.count <= 524288, try file.seekToEnd() == offset else {
+        guard !closed, !sealed, data.count <= 524288, try file.seekToEnd() == offset else {
             throw FolioleFramedSyncValidationError("attachment_partial_length_changed")
         }
         try file.write(contentsOf: data)
+    }
+    func seal() throws {
+        guard !sealed else { return }
+        try file.close(); sealed = true
     }
     func close() throws {
         guard !closed else { return }
         closed = true
         defer { finished() }
-        try file.close()
+        try seal()
     }
     deinit { try? close() }
 }

@@ -1,3 +1,4 @@
+import type { PrepareAttachmentBatch } from './attachmentBatchReceiveContract.js';
 import type { AttachmentReceiveWindow } from './attachmentBlockTransfer.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
@@ -14,14 +15,21 @@ import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
+export interface PreparedRequestSyncExchange {
+  send<T>(consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>, options?: { signal: AbortSignal }): Promise<T>;
+  dispose(): Promise<void>;
+}
+
 export interface RequestSyncExchange {
+  prepareAttachmentBatch?: PrepareAttachmentBatch;
+  prepareRequest?(path: string, body: FramedSyncStreamBody): Promise<PreparedRequestSyncExchange>;
   /** Native execution validates and writes one authorized range; shared code owns publication. */
   receiveAttachment?(query: AttachmentRequest): Promise<AttachmentReceiveWindow>;
   context: RequestSyncAuthenticatedContext;
   groupKey: Uint8Array;
   signal?: AbortSignal;
   request<T>(path: string, body: FramedSyncStreamBody,
-    consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>): Promise<T>;
+    consume: (response: FramedSyncStreamBody<FramedSyncWireFrame>) => Promise<T>, options?: { signal: AbortSignal }): Promise<T>;
 }
 
 export async function withControlRequest<T>(exchange: RequestSyncExchange,

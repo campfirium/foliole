@@ -1,3 +1,6 @@
+import { ATTACHMENT_BATCH_LIMITS, assertAttachmentBatchQueries } from './attachmentBatchContract.js';
+import type { AttachmentBatchHost } from './attachmentBatchReceiveContract.js';
+import { attachmentBatchSource } from './attachmentBatchSource.js';
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
@@ -9,32 +12,34 @@ import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 
 export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, AttachmentBlockSource {
+  batch?: AttachmentBatchHost;
   needs(): Promise<string[]>;
   attempted?(storageKey: string): Promise<void>;
   derivePdfText?(pdfKey: string, version: number): Promise<string | null>;
   importPdfText?(pdfKey: string, artifactKey: string): Promise<void>;
-  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; parsingPending?: boolean; pdfTextKeys?: string[] }>;
+  needsSlice(shouldYield: () => boolean, limit?: number): Promise<{ keys: string[]; pending: boolean; parsingPending?: boolean; pdfTextKeys?: string[] }>;
 }
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
   onProgress?: () => void;
-  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<T>;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, mode?: 'batch') => Promise<T>;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
-  const window: AttachmentRequest[] = [];
-  for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) {
-    if (window.length > ATTACHMENT_WINDOW_BLOCKS || decoded.message.payloadCase !== 'request_attachment') throw new Error('attachment_request_invalid');
-    window.push(attachmentRequestSchema.parse(decoded.message.payload));
-  }
+  const window = await readAttachmentRequests({ ...input, ...input.stream });
   const [request] = window;
   if (!request || request.state !== '') throw new Error('attachment_request_missing');
-  assertAttachmentPushWindow(window);
+  if (request.operation === 'batch_pull') assertAttachmentBatchQueries(window);
+  else assertAttachmentPushWindow(window);
   const reply = async (messages: AsyncIterable<RequestSyncMessage>) => {
     const stream = await prepareRequestSyncWire({ ...input, messages: () => messages });
-    try { return await (request.operation === 'pull' && input.consumePull
-      ? input.consumePull(stream, input.signal) : consume(stream)); }
+    try { return await ((request.operation === 'pull' || request.operation === 'batch_pull') && input.consumePull
+      ? input.consumePull(stream, input.signal, request.operation === 'batch_pull' ? 'batch' : undefined) : consume(stream)); }
     finally { await stream.frames.return(undefined); }
   };
+  if (request.operation === 'batch_pull') {
+    return reply(attachmentBatchSource({ source: host, queries: window, shouldYield: attachmentDataYield(),
+      ...(input.signal ? { signal: input.signal } : {}), onProgress: input.onProgress }));
+  }
   const withSource: AttachmentBlockSource['withFile'] = (key, action) => {
     const budget = attachmentWorkBudget(250);
     return host.withFile(key, action, { shouldYield: () => { input.signal?.throwIfAborted(); return budget(); } });
@@ -54,6 +59,28 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
       file => reply(sourceMessages(selected, file, input.signal, input.onProgress))), selected, reply);
   }
   return reply(responseMessages(host, window));
+}
+
+async function readAttachmentRequests(input: Parameters<typeof readRequestSyncWire>[0]) {
+  const window: AttachmentRequest[] = [];
+  let metadataBytes = 0;
+  for await (const decoded of readRequestSyncWire(input)) {
+    if (decoded.message.payloadCase !== 'request_attachment') throw new Error('attachment_request_invalid');
+    const message = attachmentRequestSchema.parse(decoded.message.payload);
+    const batch = (window[0] ?? message).operation === 'batch_pull';
+    if (window.length >= (batch ? ATTACHMENT_BATCH_LIMITS.entries : ATTACHMENT_WINDOW_BLOCKS)) {
+      throw new Error('attachment_request_invalid');
+    }
+    if (batch) {
+      assertAttachmentBatchQueries([message]);
+      metadataBytes += decoded.encoded.length;
+      if (metadataBytes > ATTACHMENT_BATCH_LIMITS.metadataBytes || decoded.encoded.length > ATTACHMENT_BATCH_LIMITS.frameMetadataBytes) {
+        throw new Error('attachment_batch_budget_exceeded');
+      }
+    }
+    window.push(message);
+  }
+  return window;
 }
 
 async function withPendingReply<T>(execute: () => Promise<T>, request: AttachmentRequest,

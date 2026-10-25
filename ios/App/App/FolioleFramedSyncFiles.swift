@@ -16,6 +16,18 @@ final class FolioleFramedSyncFiles {
         root = directory.appendingPathComponent("SyncRequests").appendingPathComponent(hash).resolvingSymlinksInPath()
     }
 
+    func singleAttachmentHTTPBody(directory: String, count: Int) throws -> URL {
+        guard count == 1 else { throw invalid("attachment_batch_request_chunk_count") }
+        let url = try resolve("\(directory)/http-out-0")
+        let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard info.isRegularFile == true, info.isSymbolicLink != true, let size = info.fileSize, size > 0, size <= 524288 else {
+            throw invalid("attachment_batch_request_body_invalid")
+        }
+        return url
+    }
+    func attachmentHTTPResponsePlaceholder(directory: String) throws -> URL {
+        try resolve("\(directory)/http-unused-\(UUID().uuidString.lowercased())")
+    }
     func read(_ key: String) throws -> Data? {
         let url = try resolve(key)
         return manager.fileExists(atPath: url.path) ? try Data(contentsOf: url) : nil

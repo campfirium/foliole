@@ -3,8 +3,8 @@ import Foundation
 enum FolioleAttachmentRequestValidation {
     static func validate(_ value: Foliole_Sync_V22_RequestAttachment) throws {
         try FolioleFramedSyncValueValidator.fixed(value.requestID, count: 16, "request_id")
-        let operations = ["needs", "describe", "pull", "status", "push"]
-        let states = ["", "partial", "complete", "offset", "block", "end"]
+        let operations = ["needs", "describe", "pull", "status", "push", "batch_pull"]
+        let states = ["", "partial", "complete", "offset", "block", "end", "description", "file_end", "range_end", "batch_end", "unavailable", "restart"]
         guard operations.contains(value.operation), states.contains(value.state),
               value.byteLength <= FolioleFramedSyncLimits.maxBlobBytes,
               value.offset <= FolioleFramedSyncLimits.maxBlobBytes,

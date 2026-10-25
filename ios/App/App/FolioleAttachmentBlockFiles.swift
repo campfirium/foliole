@@ -6,22 +6,20 @@ final class FolioleAttachmentBlockFiles {
     private static let mutex = NSRecursiveLock()
     private static var owners = [ObjectIdentifier: FolioleAttachmentBlockStorage]()
 
-    static func access(_ owner: FolioleFramedSyncPayloadBudget, _ call: CAPPluginCall) throws -> JSObject {
-        mutex.lock()
-        do { try owner.requireActive() } catch { mutex.unlock(); throw error }
+    static func storage(_ owner: FolioleFramedSyncPayloadBudget) throws -> FolioleAttachmentBlockStorage {
+        mutex.lock(); defer { mutex.unlock() }
+        try owner.requireActive()
         let id = ObjectIdentifier(owner)
-        let files: FolioleAttachmentBlockStorage
-        if let existing = owners[id] { files = existing }
-        else {
-            do {
-                files = try FolioleAttachmentBlockStorage(
-                    root: FolioleAttachmentMaintenanceFiles.directory(false).resolvingSymlinksInPath(),
-                    trash: { try FolioleAttachmentMaintenanceFiles.directory(true) })
-            } catch { mutex.unlock(); throw error }
-            owners[id] = files
-            owner.onAttachmentClose { close(owner) }
-        }
-        mutex.unlock()
+        if let existing = owners[id] { return existing }
+        let files = try FolioleAttachmentBlockStorage(
+            root: FolioleAttachmentMaintenanceFiles.directory(false).resolvingSymlinksInPath(),
+            trash: { try FolioleAttachmentMaintenanceFiles.directory(true) })
+        owners[id] = files
+        owner.onAttachmentClose { close(owner) }
+        return files
+    }
+    static func access(_ owner: FolioleFramedSyncPayloadBudget, _ call: CAPPluginCall) throws -> JSObject {
+        let files = try storage(owner)
         let operation = try owner.beginOperation {}
         defer { owner.finishOperation(operation) }
         try owner.requireActive()

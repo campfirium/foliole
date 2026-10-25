@@ -65,6 +65,11 @@ extension FolioleCompanionSyncPlugin {
               let epoch = call.getString("receiver_library_epoch") else {
             throw FolioleFramedSyncValidationError("request_sync_http_request_invalid")
         }
+        if call.getObject("attachment_batch") != nil {
+            return try await FolioleRequestSyncAttachmentBatchResponse.post(call, owner: owner, bridge: bridge,
+                files: FolioleFramedSyncFiles(libraryKey: owner.libraryKey), directory: directory, count: count, url: url,
+                peer: .init(groupID: group, deviceID: peer, libraryEpoch: epoch, memberAuthHeaders: headers))
+        }
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-request-http-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }

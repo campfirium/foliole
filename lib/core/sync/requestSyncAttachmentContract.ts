@@ -16,7 +16,7 @@ export const attachmentRequestSchema = z.object({
   requestId: binary.refine(bytes => bytes.length === 16),
   derive: z.enum(['', 'pdf_text']).default(''),
   extractorVersion: z.number().int().nonnegative().default(0),
-  operation: z.enum(['needs', 'describe', 'pull', 'status', 'push']),
+  operation: z.enum(['needs', 'describe', 'pull', 'status', 'push', 'batch_pull']),
   storageKey: z.union([key, z.literal('')]).default(''),
   byteLength: integer.default(0),
   offset: integer.default(0),
@@ -26,7 +26,7 @@ export const attachmentRequestSchema = z.object({
   pending: z.boolean().default(false),
   parsingPending: z.boolean().default(false),
   maxBlocks: z.number().int().min(0).max(ATTACHMENT_WINDOW_BLOCKS).transform(value => value || 1).default(1),
-  state: z.enum(['', 'partial', 'complete', 'offset', 'block', 'end']).default('')
+  state: z.enum(['', 'partial', 'complete', 'offset', 'block', 'end', 'description', 'file_end', 'range_end', 'batch_end', 'unavailable', 'restart']).default('')
 });
 export type AttachmentRequest = z.infer<typeof attachmentRequestSchema>;
 

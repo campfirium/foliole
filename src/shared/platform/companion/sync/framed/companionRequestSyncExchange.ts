@@ -13,6 +13,6 @@ export function createCompanionRequestSyncExchange(host: RequestSyncDatabaseHost
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
 }): RequestSyncExchange {
-  return { ...input, receiveAttachment: companionReceiveAttachment(host.files, input), request: (pathWithQuery, body, consume) =>
-    withCompanionRequestSyncHttp(host.files, { ...input, pathWithQuery, body }, consume) };
+  return { ...input, receiveAttachment: companionReceiveAttachment(host.files, input), request: (pathWithQuery, body, consume, options) =>
+    withCompanionRequestSyncHttp(host.files, { ...input, pathWithQuery, body, ...(options ? { signal: options.signal } : {}) }, consume) };
 }

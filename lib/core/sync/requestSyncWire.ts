@@ -1,3 +1,4 @@
+import type { FramedSyncEncodedFrame } from './framedSyncBinaryStream.js';
 import { deriveSessionFrameKey, encryptFrame, importFrameKey } from './framedSyncCrypto.js';
 import { decodeFramedSyncPreamble, encodeFrameHeader, encodeFramedSyncPreamble, frameAad, frameNonce } from './framedSyncFraming.js';
 import { decodeAndValidateProtocolMessage } from './framedSyncProtocolCodec.js';
@@ -8,7 +9,7 @@ import { encodeRequestSyncMessage, type RequestSyncMessage } from './requestSync
 import type { RequestSyncDecodedMessage } from './requestSyncObjectReceiver.js';
 
 export type RequestSyncAuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
-export type RequestSyncWireFrame = Readonly<{ headerBytes: Uint8Array; ciphertext: Uint8Array }>;
+export type RequestSyncWireFrame = FramedSyncEncodedFrame;
 
 /** Each one-shot stream uses fresh random key material; crashes abandon it instead of resuming a nonce sequence. */
 export async function prepareRequestSyncWire(input: {
@@ -35,7 +36,7 @@ export async function prepareRequestSyncWire(input: {
       const headerBytes = encodeFrameHeader({ frameType, flags: 0, sequence, ciphertextBytes: plaintext.length + 16 });
       const ciphertext = await encryptFrame({ aad: frameAad(preamble, headerBytes), key,
         nonce: frameNonce(noncePrefix, sequence++), plaintext });
-      yield { headerBytes, ciphertext };
+      yield message.attachmentBoundary ? { headerBytes, ciphertext, attachmentBoundary: true } : { headerBytes, ciphertext };
     }
   })();
   return { preamble, frames, contextId };

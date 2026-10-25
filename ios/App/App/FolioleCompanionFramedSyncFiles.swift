@@ -21,6 +21,9 @@ extension FolioleCompanionSyncPlugin {
         }
         let files = try FolioleFramedSyncFiles(libraryKey: owner.libraryKey)
         if call.getString("operation") == "attachment" { return try FolioleAttachmentBlockFiles.access(owner, call) }
+        let operation = try owner.beginOperation {}
+        defer { owner.finishOperation(operation) }
+        try owner.requireActive()
         switch call.getString("operation") {
         case "read":
             if let data = try files.read(key) { return ["base64": data.base64EncodedString()] }
