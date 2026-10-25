@@ -194,6 +194,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       <ImmersiveArticleChrome articleProps={props} model={model} readingTypography={readingTypography} />
       {props.header}
       <ImmersiveArticleContent
+        layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}
         onEditorReady={model.toolbar.handleEditorReady}
         readableArticle={pendingReadableArticle.readableArticle}

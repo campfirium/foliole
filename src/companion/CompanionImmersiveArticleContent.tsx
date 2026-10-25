@@ -12,6 +12,7 @@ export function ImmersiveArticleContent(props: {
   activity?: CompanionReadingActivity;
   answer?: string | null;
   isContentEditing: boolean;
+  layout?: 'article' | 'review';
   onEditorReady(adapter: EditorAdapter | null): void;
   onSaveArticleContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
@@ -24,6 +25,7 @@ export function ImmersiveArticleContent(props: {
     <div className="mx-auto min-h-full w-full max-w-[760px]">
       <ReadableArticleDocument
         allowContentEditing={props.isContentEditing}
+        layout={props.layout ?? 'article'}
         onEditorReady={props.onEditorReady}
         readableArticle={props.readableArticle}
         readingTypographySettings={props.readingTypographySettings}

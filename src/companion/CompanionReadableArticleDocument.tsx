@@ -118,6 +118,7 @@ function useReadableArticleEditorState(props: {
 
 function ReadableArticleTextDocument(props: {
   canEdit: boolean;
+  layout?: 'article' | 'review';
   editorState: ReturnType<typeof useCompanionTopicEditAutosave>;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   readableArticle: ReadableArticle;
@@ -138,6 +139,7 @@ function ReadableArticleTextDocument(props: {
       <CompanionArticleDocument
         key={props.canEdit ? `${props.readableArticle.nodeId}:editing` : `${props.readableArticle.nodeId}:reading`}
         content={props.editorState.value}
+        layout={props.layout ?? 'article'}
         hideTitleHeading={props.readableArticle.hideTitleHeading}
         nodeId={props.readableArticle.nodeId}
         onBlurCapture={() => void props.editorState.flushPendingSave().catch(() => undefined)}
@@ -158,10 +160,11 @@ function ReadableArticleTextDocument(props: {
   );
 }
 
-export function ReadableArticleDocument(props: {
+type ReadableArticleDocumentProps = {
   activity?: CompanionReadingActivity;
   answer?: string | null;
   allowContentEditing?: boolean;
+  layout?: 'article' | 'review';
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onSaveContent?: CompanionContentSaveHandler;
@@ -171,7 +174,9 @@ export function ReadableArticleDocument(props: {
   readingSelection?: EditorSelection | null;
   scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
-}) {
+};
+
+export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
   const pdfAttachmentId = props.readableArticle.pdfAttachmentId;
   const pdfReading = useCompanionPdfReadingEntry(props.readableArticle);
   const { canEdit, editorState: draft } = useReadableArticleEditorState({
@@ -203,6 +208,7 @@ export function ReadableArticleDocument(props: {
       ) : null}
       <ReadableArticleTextDocument
         canEdit={canEdit}
+        layout={props.layout ?? 'article'}
         editorState={editorState}
         onEditorReady={onEditorReady}
         readableArticle={props.readableArticle}

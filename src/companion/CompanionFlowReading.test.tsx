@@ -39,6 +39,7 @@ it('reveals the answer through the common reader and keeps it after a confirmed 
   expect(screen.queryByLabelText('Answer body')).not.toBeInTheDocument();
   fireEvent.click(screen.getByLabelText('Show Answer'));
   expect(screen.getByLabelText('Answer body')).toHaveValue('Answer');
+  expect(screen.getByLabelText('Topic body').closest('[data-companion-article-document]')).toHaveClass('min-h-0');
   fireEvent.click(view.container.querySelector('section')!);
   fireEvent.click(screen.getByTestId('companion-reading-edit'));
   expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
