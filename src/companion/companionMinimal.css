@@ -25,8 +25,7 @@
 html, body, #root, #root * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
 .companion-page-start { padding-top: var(--companion-page-content-gap); }
-.companion-reading-top-chrome::after,
-.companion-review-header::after {
+.companion-reading-top-chrome::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -101,11 +100,9 @@ html, body, #root, #root * { scrollbar-width: none; }
 .companion-review-surface {
   --companion-review-controls-height: 44px;
   --companion-review-breadcrumb-height: 36px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height) + var(--companion-review-breadcrumb-height) + var(--companion-page-content-gap));
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height) + var(--companion-page-content-gap));
 }
 .companion-review-header {
-  top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height));
-  padding-top: var(--companion-page-content-gap);
   padding-bottom: var(--companion-page-content-gap);
   min-height: var(--companion-review-breadcrumb-height);
 }
