@@ -158,7 +158,7 @@ export function ReadingChrome(props: {
 function ReadingActionsControls(props: { canEditContent?: boolean; onToggleContentEditing?: () => void; onOpenActions(): void }) {
   const t = useTranslation();
   return <>
-    {props.canEditContent ? <ReadingChromeButton icon={Pencil} label={t('companion.reading.editTopic')}
+    {props.canEditContent ? <ReadingChromeButton icon={Pencil} label={t('companion.reading.editContent')}
       onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
     <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
   </>;

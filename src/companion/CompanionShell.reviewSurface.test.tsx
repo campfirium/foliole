@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -27,8 +27,9 @@ afterEach(() => {
 function createSnapshot(): WorkspaceSnapshot {
   const topic: WorkspaceSnapshot['nodesById'][string] = {
     anchorLink: null,
-    content: '# Readable article',
+    content: 'Readable topic body',
     createdAt: '2026-04-22T08:00:00.000Z',
+    currentVersionId: 'base',
     hideTitleHeading: false,
     id: 'topic-1',
     isTitleManual: false,
@@ -252,6 +253,11 @@ it.each([readingReviewCard, fsrsReviewCard])('keeps the page toolbar hidden thro
   advance.mockImplementation(() => { loading.pending = true; });
   const refresh = await renderShellWithSurface(surface, loading);
 
+  fireEvent.click(screen.getByText(card.content));
+  fireEvent.click(screen.getByTestId('companion-reading-edit'));
+  expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.getByTestId('companion-reading-edit')).toBeInTheDocument());
   fireEvent.click(screen.getByLabelText(card.itemKind === 'fsrs' ? 'Good' : 'Read'));
   expect(advance).toHaveBeenCalledOnce();
   refresh();

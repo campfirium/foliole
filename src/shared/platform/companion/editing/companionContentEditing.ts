@@ -19,7 +19,7 @@ import type { CompanionContentEdit, CompanionContentSource } from './companionCo
 
 export async function readCompanionContentSource(nodeId: string, holdId?: string): Promise<CompanionContentSource> {
   const read = async (db: DbPort) => {
-    await requireEditableTopic(db, nodeId);
+    await requireEditableContentNode(db, nodeId);
     const current = await loadCurrentSyncNodeRecord(db, nodeId, false);
     if (!current?.version_id || current.snapshot.deleted_at) throw new Error('content_edit_node_unavailable');
     if (holdId) await retainLocalEditBase(db, { holdId, nodeId, versionId: current.version_id });
@@ -46,9 +46,9 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   if (!isNativeCompanionNodeVersionWriteRuntime()) throw new Error('content_edit_runtime_unavailable');
   const result = await runCompanionHighValueMutationTask(() =>
     writeIosCompanionDatabase((port) => port.transaction(async (db) => {
-      await requireEditableTopic(db, edit.nodeId);
+      await requireEditableContentNode(db, edit.nodeId);
       const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
-      if (!base || base.snapshot.kind !== 'topic') throw new Error('content_edit_base_unavailable');
+      if (!base || (base.snapshot.kind !== 'topic' && base.snapshot.kind !== 'item')) throw new Error('content_edit_base_unavailable');
       assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
         anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link) });
       const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
@@ -81,8 +81,8 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   return result;
 }
 
-async function requireEditableTopic(db: DbPort, nodeId: string) {
+async function requireEditableContentNode(db: DbPort, nodeId: string) {
   const [visible] = await db.query(`${VISIBLE_NODES_CTE_SQL}
-    SELECT n.id FROM nodes n JOIN visible_nodes v ON v.id = n.id WHERE n.id = ? AND n.kind = 'topic'`, [nodeId]);
-  if (!visible) throw new Error('This topic cannot be edited on this device.');
+    SELECT n.id FROM nodes n JOIN visible_nodes v ON v.id = n.id WHERE n.id = ? AND n.kind IN ('topic', 'item')`, [nodeId]);
+  if (!visible) throw new Error('This content cannot be edited on this device.');
 }

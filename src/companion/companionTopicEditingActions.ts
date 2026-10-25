@@ -16,10 +16,10 @@ interface PersistCompanionTopicContentArgs {
   snapshot: WorkspaceSnapshot | null;
 }
 
-function isEditableTopic(snapshot: WorkspaceSnapshot, node: WorkspaceNodeSnapshot | undefined) {
+function isEditableContentNode(snapshot: WorkspaceSnapshot, node: WorkspaceNodeSnapshot | undefined) {
   return Boolean(
     node &&
-    node.kind === 'topic' &&
+    (node.kind === 'topic' || node.kind === 'item') &&
     isCanonicalVisibleNodeId(snapshot, node.id)
   );
 }
@@ -82,7 +82,7 @@ async function remapCompanionChildAnchorVersions(args: {
 
 export async function persistCompanionTopicContent(args: PersistCompanionTopicContentArgs) {
   const node = args.snapshot?.nodesById[args.nodeId];
-  if (!args.snapshot || !isEditableTopic(args.snapshot, node)) {
+  if (!args.snapshot || !isEditableContentNode(args.snapshot, node)) {
     return null;
   }
   if (!node?.currentVersionId) {

@@ -226,3 +226,28 @@ it('rejects an oversized annotation edit before changing database facts', async 
   expect(database.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(before);
   expect(database.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(versions);
 });
+
+
+it.each(['android', 'ios'])('%s saves an item body across reopen without changing its answer or review state', async platform => {
+  state.platform = platform;
+  await insert(node({ id: 'item', kind: 'item', content: 'Question', reveal: 'Answer' }), 'item-base');
+  database.prepare("INSERT INTO node_review (node_id, due, state, reps, stability) VALUES ('item', ?, 2, 4, 3)")
+    .run(now);
+  database.exec(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version,
+    reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after)
+    VALUES ('log', 'op', 'mobile', 'item', 3, 'fsrs', 'now', 'before', 1, 2, 'after', 3, 4)`);
+  const review = database.prepare("SELECT * FROM node_review WHERE node_id = 'item'").get();
+  const logs = database.prepare('SELECT * FROM review_log').all();
+  const source = await readCompanionContentSource('item', 'item-editor');
+  expect(source.content).toBe('Question');
+  const saved = await saveCompanionContentEdit({ ...edit('Edited question', 'item-edit', source.versionId),
+    nodeId: 'item', holdId: 'item-editor' });
+  expect(saved.content).toBe('Edited question');
+  await state.owner!.close();
+  database.close();
+  database = new Database(path.join(directory, 'companion.db'));
+  expect(database.prepare("SELECT kind, content, reveal FROM nodes WHERE id = 'item'").get())
+    .toEqual({ kind: 'item', content: 'Edited question', reveal: 'Answer' });
+  expect(database.prepare("SELECT * FROM node_review WHERE node_id = 'item'").get()).toEqual(review);
+  expect(database.prepare('SELECT * FROM review_log').all()).toEqual(logs);
+});

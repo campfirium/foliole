@@ -20,7 +20,7 @@ function renderActions(editing = false) {
 }
 
 describe('ReadingChrome touch actions', () => {
-  it.each(['Exit', 'Outline', 'Edit topic', 'More reading actions', 'Cancel', 'Done'])(
+  it.each(['Exit', 'Outline', 'Edit content', 'More reading actions', 'Cancel', 'Done'])(
     'activates %s from a short touch without a compatibility click', (label) => {
       const activate = renderActions(label === 'Cancel' || label === 'Done');
       const button = screen.getByRole('button', { name: label });
@@ -32,7 +32,7 @@ describe('ReadingChrome touch actions', () => {
 
   it('consumes the compatibility click once and preserves keyboard and mouse activation', () => {
     const activate = renderActions();
-    const button = screen.getByRole('button', { name: 'Edit topic' });
+    const button = screen.getByRole('button', { name: 'Edit content' });
     touch(button, 'pointerdown');
     touch(button, 'pointerup');
     fireEvent.click(button, { detail: 1 });
@@ -47,7 +47,7 @@ describe('ReadingChrome touch actions', () => {
   it.each(['pointermove', 'pointercancel', 'long press'])(
     'does not activate from %s', (gesture) => {
       const activate = renderActions();
-      const button = screen.getByRole('button', { name: 'Edit topic' });
+      const button = screen.getByRole('button', { name: 'Edit content' });
       const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
       touch(button, 'pointerdown');
       if (gesture === 'long press') now.mockReturnValue(1_600);

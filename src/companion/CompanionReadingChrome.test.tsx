@@ -19,7 +19,7 @@ describe('ReadingChrome', () => {
     renderChrome();
 
     expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
 
     const navigation = screen.getByRole('button', { name: 'Exit' }).parentElement;
     expect(navigation).toContainElement(screen.getByRole('button', { name: 'Outline' }));
@@ -98,7 +98,7 @@ describe('ReadingChrome editing', () => {
     expect(screen.getByText('Edit content')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
   });
 
   it('routes Cancel to discarding the editing round and Done to keeping it', () => {

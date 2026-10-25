@@ -56,14 +56,14 @@ function readAppliedVersions() {
 }
 
 describe('companion topic content persistence', () => {
-  it('persists topic content as a node version and updates the local snapshot', async () => {
+  it.each(['topic', 'item'] as const)('persists %s content as a node version and updates the local snapshot', async (kind) => {
     const { persistCompanionTopicContent } = await import('./companionTopicEditingActions');
 
     const result = await persistCompanionTopicContent({
       content: 'Edited body',
       deviceId: 'android-device',
       nodeId: 'topic-1',
-      snapshot: createSnapshot()
+      snapshot: createSnapshot(createNode({ kind }))
     });
 
     expect(result?.snapshot.nodesById['topic-1']).toMatchObject({

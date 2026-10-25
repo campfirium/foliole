@@ -65,7 +65,7 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
       onRestoreFromTrash: createCompanionTrashRestoreHandler(workspaceSync)
     } : {}),
     ...(supportsCompanionNodeMutationSurface('topic-content-edit') &&
-      workspaceSync.state.workspace_snapshot?.nodesById[nodeId]?.kind === 'topic' ? {
+      ['topic', 'item'].includes(workspaceSync.state.workspace_snapshot?.nodesById[nodeId]?.kind ?? '') ? {
       onSaveArticleContent: createCompanionTopicContentSaveHandler(workspaceSync)
     } : {})
   };
