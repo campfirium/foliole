@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionReviewFallback } from './CompanionReviewFallback';
@@ -37,4 +38,14 @@ it('reports zero activity honestly when Flow was opened with an already clear qu
   expect(screen.getAllByText('0')).toHaveLength(2);
   expect(screen.queryByText('Just now')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
+});
+
+it('uses consistent Chinese labels for completed reading and review results', async () => {
+  renderWithLocalization(<LocalizationProvider initialLanguagePreference="zh-Hans">
+    <CompanionReviewFallback summary={summary} error={null} hasSnapshot hasTopics
+      canContinueReading onContinueReading={vi.fn()} />
+  </LocalizationProvider>);
+
+  expect(await screen.findByText('已复习')).toBeInTheDocument();
+  expect(await screen.findByText('已阅读')).toBeInTheDocument();
 });
