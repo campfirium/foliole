@@ -1,5 +1,6 @@
 import { computeSyncContentHash, type SyncObjectType } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
+import { runReviewProjectionFixture } from '../sync/reviewProjection.fixture.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
@@ -93,23 +94,8 @@ export function insertNodeReviewSyncState() {
      ) VALUES ('node', 'node-review-1', 1, 'node-review-node-hash',
        'desktop', '2026-04-27T00:00:00.000Z', 0)`
   );
-  driver.execute(
-    `INSERT INTO node_review (
-       node_id, due, last_review_at, state, stability, difficulty,
-       elapsed_days, scheduled_days, reps, lapses
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['node-review-1', '2026-04-28T00:00:00.000Z', '2026-04-27T00:05:00.000Z', 2, 3, 4, 1, 1, 2, 0]
-  );
-  driver.execute(
-    `INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ['log-1', 'op-1', 'android-test', 'node-review-1', 3, 'ts-fsrs@4', '2026-04-27T00:05:00.000Z']
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('node_review', 'node-review-1', 6, 'review-hash',
-       'android-test', '2026-04-27T00:05:00.000Z', 0)`
-  );
+  runReviewProjectionFixture({ nodeId: 'node-review-1', mode: 'grade', opId: 'op-1',
+    grade: 3, at: '2026-04-27T00:05:00.000Z' });
 }
 
 export function insertPdfPageTextSyncState() {

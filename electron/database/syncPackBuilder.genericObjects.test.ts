@@ -93,7 +93,7 @@ it('omits retired independent PDF page state while preserving its local text and
     .toEqual([{ attachment_id: 'pdf-1', page: 1, text: 'page text', page_width: 612, page_height: 792 }]);
 });
 
-it('transfers original review operations with the node review state', async () => {
+it('transfers original review facts and rebuilds the same review projection', async () => {
   insertNodeReviewSyncState();
   const source = openDatabaseConnection().driver;
   const logs = source.queryAll('SELECT * FROM review_log');
