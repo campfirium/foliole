@@ -7,7 +7,19 @@ import { createStoredSyncState } from '../shared/platform/companionWorkspaceSync
 const mocks = vi.hoisted(() => ({ read: vi.fn(), apply: vi.fn(), writer: vi.fn(), version: vi.fn(), native: vi.fn() }));
 vi.mock('../shared/platform/companion/runtime/companionWorkspaceNodeStore', () => ({ loadCompanionWorkspaceNode: mocks.read }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({ isAvailableNativeCompanionRuntime: mocks.native }));
-vi.mock('../shared/platform/companionSyncObjects', () => ({ applyCompanionSyncNodeVersionsWithinWriterTask: mocks.apply, applyCompanionLocalNodeVersions: mocks.apply }));
+vi.mock('../shared/platform/companionSyncObjects', () => ({ applyCompanionLocalNodeVersions: mocks.apply }));
+vi.mock('../shared/platform/companionSyncNodeVersions', () => ({ applyCompanionSyncNodeVersionsWithDbPort: mocks.apply }));
+vi.mock('../shared/platform/companion/runtime/iosCompanionActiveDatabase', () => ({
+  writeIosCompanionDatabase: (task: (db: unknown) => Promise<unknown>) => task({
+    transaction: (write: (db: unknown) => Promise<unknown>) => write({})
+  })
+}));
+vi.mock('../shared/platform/companion/editing/companionEditHistoryRecording', () => ({
+  readCompanionHistoryReview: async () => null, recordCompanionAnnotationHistory: async () => {}
+}));
+vi.mock('../shared/platform/companion/editing/companionEditHistoryRepository', () => ({
+  retainCompanionEditHistoryBase: async () => {}
+}));
 vi.mock('../shared/platform/companion/sync/mutation/companionSyncMutationRevision', () => ({ runCompanionOptionalHighValueMutationTask: mocks.writer }));
 vi.mock('./companionAnnotationNodeVersion', () => ({ toCompanionNativeNodeVersion: mocks.version }));
 
