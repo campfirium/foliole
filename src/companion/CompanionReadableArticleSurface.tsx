@@ -10,6 +10,7 @@ import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import type { CompanionReadingActivity } from './companionReadingActivity';
+import { CompanionReviewHeader } from './CompanionReviewHeader';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
@@ -112,7 +113,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
-  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} ${props.flow ? companionReviewBottomInsetClassName : ''} text-foreground`;
+  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${props.flow ? `companion-review-surface ${companionReviewBottomInsetClassName}` : chromeReservedSpacing} text-foreground`;
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
   const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
     reading.setIsActionsSheetOpen(false);
@@ -182,6 +183,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   return (
     <section
       className={model.surfaceClassName}
+      data-review-controls-visible={model.reading.isChromeVisible || model.reading.isContentEditing}
       onClick={model.reading.handleSurfaceClick}
       onPointerDown={model.handleSurfacePointerDown}
       onPointerMove={model.handleSurfacePointerMove}
@@ -192,7 +194,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={props} model={model} readingTypography={readingTypography} />
-      {props.header}
+      {props.flow ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : props.header}
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}

@@ -94,7 +94,7 @@ function mockWorkspaceSync() {
   });
 }
 
-async function renderShellWithSurface(surface: ReturnType<typeof reviewSurface>) {
+async function renderShellWithSurface(surface: ReturnType<typeof reviewSurface>, loading = { pending: false }) {
   useFloatingBarVisibility.mockReturnValue({
     handleContainerScroll: vi.fn(),
     handleTouchEnd: vi.fn(),
@@ -108,12 +108,11 @@ async function renderShellWithSurface(surface: ReturnType<typeof reviewSurface>)
     const session = options?.isOnlyReviewOpen ? surface.onlyReviewSession : surface.reviewSession;
     const card = session.currentCard;
     return { ...surface, effectiveReviewSession: session,
-      readableArticle: card ? { content: card.content, nodeId: card.nodeId,
+      readableArticle: loading.pending ? null : card ? { content: card.content, nodeId: card.nodeId,
         title: card.title, textAnchorDecorations: [] } : surface.readableArticle };
   });
   const { CompanionShell } = await import('./CompanionShell');
-  renderWithLocalization(
-    <CompanionShell
+  const shell = () => <CompanionShell
       bootstrapState={{
         booted_at: '2026-04-22T09:05:00.000Z',
         database_path: 'foliole-companion-preview.db',
@@ -121,8 +120,9 @@ async function renderShellWithSurface(surface: ReturnType<typeof reviewSurface>)
         device_id: 'android-test-device',
         runtime_kind: 'android-capacitor'
       }}
-    />
-  );
+    />;
+  const view = renderWithLocalization(shell());
+  return () => view.rerender(shell());
 }
 
 function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCard = currentCard) {
@@ -233,4 +233,24 @@ describe('CompanionShell review surfaces', () => {
     expect(content?.className).toContain('[padding-bottom:8rem]');
     expect(content?.className).not.toContain('[padding-bottom:4.5rem]');
   });
+});
+
+it.each([readingReviewCard, fsrsReviewCard])('keeps the page toolbar hidden through the next $itemKind body loading', async card => {
+  const loading = { pending: false };
+  const surface = reviewSurface(card);
+  const advance = card.itemKind === 'fsrs' ? surface.handleGradeReview : surface.handleReadReviewTopic;
+  advance.mockImplementation(() => { loading.pending = true; });
+  const refresh = await renderShellWithSurface(surface, loading);
+
+  fireEvent.click(screen.getByLabelText(card.itemKind === 'fsrs' ? 'Good' : 'Read'));
+  expect(advance).toHaveBeenCalledOnce();
+  refresh();
+  expect(screen.queryByRole('heading', { name: 'Flow' })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('companion-reading-exit')).not.toBeInTheDocument();
+  expect(screen.getByText('Loading topic body.')).toBeInTheDocument();
+
+  loading.pending = false;
+  refresh();
+  expect(screen.getByText(card.content)).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Flow' })).not.toBeInTheDocument();
 });

@@ -94,7 +94,7 @@ function isReadableArticleImmersive(model: CompanionShellModel) {
 
 function hasImmersiveReadingContent(model: CompanionShellModel): boolean {
   return isReadableArticleImmersive(model) || Boolean(model.surface.activeAction === 'review'
-    && model.surface.effectiveReviewSession.currentCard && model.surface.readableArticle);
+    && model.surface.effectiveReviewSession.currentCard);
 }
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {
