@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { randomUUID } from 'node:crypto';
 import { unlinkSync } from 'node:fs';
 
 import Database from 'better-sqlite3';
@@ -16,11 +15,11 @@ vi.mock('@capacitor/core', async () => {
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver';
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
+import { score } from '../../electron/database/reviewProjection.testSupport';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { syncRequestLibrary as sync } from '../../electron/database/syncRequestLibrary.testSupport';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
-import { applyReviewGrade } from '../../lib/core/database/reviewMutations';
 import { readCompanionHighlight } from '../shared/platform/companion/reading/companionHighlightRead';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -43,6 +42,14 @@ async function openMobile(peer: Peer) {
   await initializeIosCompanionDatabase({ booted_at: now, database_path: null, database_ready: false,
     host_name: peer.name, runtime_kind: 'android-capacitor' }, manager);
 }
+async function reopenMobile(peer: Peer) {
+  await closeIosCompanionDatabase();
+  peer.db.close();
+  peer.db = new Database(peer.file);
+  peer.driver = createBetterSqlite3Driver(peer.db);
+  peer.port = createBetterSqliteDbPort(peer.db);
+  await openMobile(peer);
+}
 function seed(peer: Peer) {
   for (const id of ['source', 'cloze', 'other']) {
     upsertNodeSnapshot(peer.driver, { nodeId: id, parentNodeId: id === 'source' ? null : 'source',
@@ -53,22 +60,21 @@ function seed(peer: Peer) {
           { from: 6, to: 10, originalText: 'Beta' }] } : { from: 6, to: 10, originalText: 'Beta' } } });
     flushNodeSyncVersionWithDriver(peer.driver, id, peer.name, now);
   }
-  const card = { due: now, last_review: now, state: 2 as const, stability: 4, difficulty: 3,
-    elapsed_days: 1, scheduled_days: 1, reps: 2, lapses: 0 };
-  applyReviewGrade(peer.driver, { nodeId: 'cloze', grade: 3, reviewedAt: now, schedulerVersion: 'fixture',
-    cardBefore: { ...card, reps: 1 }, cardAfter: card }, { hostName: peer.name, createId: randomUUID });
+  const reviewPeer = { sqlite: peer.db, id: peer.name };
+  score(reviewPeer, 'cloze-first', '2026-09-01T12:00:00.000Z', 3, 'cloze');
+  score(reviewPeer, 'cloze-second', '2026-09-03T12:00:00.000Z', 3, 'cloze');
 }
 async function snapshot() {
   return (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 }
-function assertFacts(peer: Peer, deleted: boolean, log: unknown[]) {
+function assertFacts(peer: Peer, deleted: boolean, log: unknown[], review: unknown) {
   const read = new Database(peer.file, { readonly: true });
   try {
     expect(Boolean((read.prepare('SELECT deleted_at FROM nodes WHERE id = ?').get('cloze') as { deleted_at: string | null }).deleted_at)).toBe(deleted);
     expect(read.prepare('SELECT deleted_at FROM nodes WHERE id IN (?, ?) ORDER BY id').all('source', 'other'))
       .toEqual([{ deleted_at: null }, { deleted_at: null }]);
     expect(read.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(log);
-    expect(read.prepare('SELECT * FROM node_review WHERE node_id = ?').get('cloze')).toBeUndefined();
+    expect(read.prepare('SELECT * FROM node_review WHERE node_id = ?').get('cloze')).toEqual(review);
   } finally { read.close(); }
 }
 
@@ -90,8 +96,10 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
   const source = await loadCompanionWorkspaceNode('source');
   const other = await loadCompanionWorkspaceNode('other');
   const log = mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-  expect(log).toHaveLength(1);
+  const review = mobile.db.prepare('SELECT * FROM node_review WHERE node_id = ?').get('cloze');
+  expect(log).toHaveLength(2);
   expect(initial.nodesById.cloze!.review?.reps).toBe(2);
+  for (const peer of [desktop, mobile]) assertFacts(peer, false, log, review);
   const session = resumeFlowSession(initial, 'review-first', 'cloze', now);
   expect(session.currentNodeId).toBe('cloze');
   session.isAnswerRevealed = true;
@@ -105,29 +113,27 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
     reviewedItemCount: reading.reviewedItemCount });
   expect(await loadCompanionWorkspaceNode('source')).toEqual(source);
   expect(await loadCompanionWorkspaceNode('other')).toEqual(other);
+  assertFacts(mobile, true, log, review);
   await sync(mobile, desktop);
   await sync(desktop, mobile);
-  for (const peer of [desktop, mobile]) assertFacts(peer, true, log);
+  for (const peer of [desktop, mobile]) assertFacts(peer, true, log, review);
 
-  await closeIosCompanionDatabase();
-  mobile.db.close();
-  mobile.db = new Database(mobile.file);
-  mobile.driver = createBetterSqlite3Driver(mobile.db);
-  mobile.port = createBetterSqliteDbPort(mobile.db);
-  await openMobile(mobile);
+  await reopenMobile(mobile);
+  assertFacts(mobile, true, log, review);
   await restoreCompanionTrashNode({ deviceId: mobile.name, nodeId: 'cloze', snapshot: await snapshot() });
   const restored = await loadCompanionWorkspaceNode('cloze');
   expect(restored).toMatchObject({ content: before!.content, reveal: before!.reveal, anchorLink: before!.anchorLink });
   expect(restored?.deletedAt).toBeFalsy();
   const restoredSnapshot = await snapshot();
-  expect(restoredSnapshot.nodesById.cloze!.review).toBeNull();
+  expect(restoredSnapshot.nodesById.cloze!.review).toEqual(initial.nodesById.cloze!.review);
+  assertFacts(mobile, false, log, review);
   const activeReading = reconcileFlowSession(deleted, reading, 'recommended');
   expect(reconcileFlowSession(restoredSnapshot, activeReading, 'recommended')).toMatchObject({
     currentNodeId: 'source', reviewedItemCount: reading.reviewedItemCount
   });
   await sync(mobile, desktop);
   await sync(desktop, mobile);
-  for (const peer of [desktop, mobile]) assertFacts(peer, false, log);
+  for (const peer of [desktop, mobile]) assertFacts(peer, false, log, review);
   expect(await loadCompanionWorkspaceNode('source')).toEqual(source);
   expect(await loadCompanionWorkspaceNode('other')).toEqual(other);
 });
