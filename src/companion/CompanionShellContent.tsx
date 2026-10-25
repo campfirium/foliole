@@ -176,7 +176,8 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
     if (props.isOnlyReviewOpen) return <CompanionOnlyReviewContent hasSnapshot={props.hasSnapshot}
       isAnswerRevealed={props.surface.isAnswerRevealed} reviewSession={props.surface.onlyReviewSession} />;
     return <CompanionReviewFallback error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}
-      reviewSession={props.surface.reviewSession} />;
+      hasTopics={props.surface.flowHasTopics} canContinueReading={props.surface.canContinueReading}
+      onContinueReading={props.surface.handleContinueReading} />;
   }
 
   return (

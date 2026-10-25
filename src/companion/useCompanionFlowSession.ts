@@ -4,8 +4,11 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
-import { advanceFlowSession, reconcileFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
+import { selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
+import { advanceFlowSession, flowState, reconcileFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
+import { buildReviewFlowWindow } from '../store/workspaceReviewFlowWindow';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
+import { canContinueReadingInFlowWindow, continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
 
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 
@@ -43,6 +46,11 @@ export function useCompanionFlowSession(args: {
   }, [identity, current.hydrated, current.session.currentNodeId]);
   const session = current.session;
   const view = flowView(args.snapshot, current);
+  const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
+  const hasTopics = Boolean(args.snapshot && selectCanonicalVisibleNodeIds(args.snapshot).some((id) => {
+    const kind = args.snapshot?.nodesById[id]?.kind;
+    return kind === 'topic' || kind === 'item';
+  }));
   function capture() { return { owner: current, scope, generation: current.generation, nodeId: session.currentNodeId }; }
   function matches(token: ReturnType<typeof capture>) {
     return getCompanionReadingScope() === token.scope && owner.current === token.owner && current.generation === token.generation &&
@@ -61,8 +69,28 @@ export function useCompanionFlowSession(args: {
     render();
   }
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
-  return { view, capture, matches, advance, resume, reveal,
+  function continueReading() { if (owner.current === current) continueCurrentFlow(latest.current, current, mode, render); }
+  return { view, capture, matches, advance, resume, reveal, continueReading, canContinueReading, hasTopics,
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
+}
+
+function continueCurrentFlow(args: Parameters<typeof useCompanionFlowSession>[0], current: FlowOwner,
+  mode: 'review-first' | 'recommended', render: () => void) {
+  if (!args.active || current.scope !== getCompanionReadingScope() ||
+    !canContinueFlowReading(args.snapshot, current, args.onlyReview) || !args.snapshot) return;
+  const next = continueReviewSessionReading(flowState(args.snapshot, current.session, mode), new Date().toISOString());
+  if (!next) return;
+  current.session = next;
+  current.generation += 1;
+  render();
+}
+
+function canContinueFlowReading(snapshot: WorkspaceSnapshot | null, current: FlowOwner, onlyReview: boolean) {
+  if (!snapshot || !current.hydrated || onlyReview || current.session.currentNodeId) return false;
+  const state = flowState(snapshot, current.session, 'recommended');
+  return canContinueReadingInFlowWindow({ reviewedItemCount: current.session.reviewedItemCount ?? 0,
+    continueNodeId: current.session.continueNodeId ?? null },
+  buildReviewFlowWindow(state, new Date().toISOString(), current.session.queueNodeIds));
 }
 
 function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],

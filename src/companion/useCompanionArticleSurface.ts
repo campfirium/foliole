@@ -89,6 +89,8 @@ function useCompanionInteractionState(
     ...reviewActions,
     browseReturnNodeId,
     handleRevealAnswer: flow.reveal,
+    handleContinueReading: flow.continueReading,
+    canContinueReading: flow.canContinueReading,
     handleExitBrowseArticle,
     handleExitDirectoryArticle,
     handleExitSearchArticle,
@@ -173,6 +175,7 @@ export function useCompanionArticleSurface(
     readingActivity,
     flowError: flow.error,
     flowReady: flow.ready,
+    flowHasTopics: flow.hasTopics,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
     handleViewScroll,
     ...interactionState

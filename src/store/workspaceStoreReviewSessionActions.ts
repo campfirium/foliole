@@ -1,16 +1,13 @@
-import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
-import {
-  buildReviewSessionReadingContinuationQueue,
-  buildStartReviewSessionQueue
-} from './workspaceReviewLiveQueue';
+import { buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
 import {
   advanceReviewSession,
   createEmptyReviewSession,
   createStartedReviewSession
 } from './workspaceReviewReading';
+import { continueReviewSessionReading } from './workspaceReviewReadingContinuation';
 import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
 import {
   createReviewSessionModePreference,
@@ -79,21 +76,14 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
     let continued = false;
     let openedNodeId: string | null = null;
     set((state) => {
-      const continueNodeId = state.reviewSession.continueNodeId;
-      const continueNode = continueNodeId ? state.nodesById[continueNodeId] : undefined;
-      if (!continueNodeId || !continueNode || state.trashedNodeIds.includes(continueNodeId)) return state;
-      if (!isReadingReviewItemNode(continueNode)) return state;
-      const queueNodeIds = buildReviewSessionReadingContinuationQueue(state, now, continueNodeId);
-      if (!queueNodeIds.includes(continueNodeId)) return state;
+      const reviewSession = continueReviewSessionReading(state, now);
+      if (!reviewSession?.currentNodeId) return state;
+      const continueNodeId = reviewSession.currentNodeId;
       continued = true;
       openedNodeId = continueNodeId;
       return {
         ...buildReviewActiveNodeContext(state, continueNodeId),
-        reviewSession: advanceReviewSession(state.reviewSession, {
-          nextNodeId: continueNodeId,
-          queueNodeIds,
-          totalNodeCount: resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount + queueNodeIds.length
-        })
+        reviewSession
       };
     });
     if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);

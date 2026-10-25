@@ -33,5 +33,6 @@ export function ReadableArticleOrFallback(props: {
       />
     );
   }
-  return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
+  return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} hasTopics={props.surface.flowHasTopics}
+    canContinueReading={props.surface.canContinueReading} onContinueReading={props.surface.handleContinueReading} />;
 }

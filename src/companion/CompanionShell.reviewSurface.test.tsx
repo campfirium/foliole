@@ -138,6 +138,9 @@ function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCa
   const onlyReviewSession = { ...reviewSession, currentCard: onlyReviewCard, queueNodeIds: onlyReviewCard ? ['item-1'] : [] };
   return {
     activeAction: 'review',
+    flowHasTopics: true,
+    canContinueReading: true,
+    handleContinueReading: vi.fn(),
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
@@ -191,11 +194,14 @@ const fsrsReviewCard = {
 describe('CompanionShell review surfaces', () => {
   const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
-  it('shows the review empty state instead of falling back to reading content', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
-    await renderShellWithSurface(reviewSurface(null));
+  it('shows Queue clear and continues Flow instead of falling back to reading content', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+    const surface = reviewSurface(null);
+    await renderShellWithSurface(surface);
 
-    expect(screen.getByText('No items are due right now')).toBeInTheDocument();
-    expect(screen.getByText(/Synced review state: 2 reading topics, 9 items\./)).toBeInTheDocument();
+    expect(screen.getByText('Queue clear')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
+    expect(surface.handleContinueReading).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/Synced review state/)).not.toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
   });
 

@@ -36,7 +36,7 @@ export function CompanionOnlyReviewContent(props: {
 function resolveOnlyReviewTitle(t: ReturnType<typeof useTranslation>, props: Parameters<typeof CompanionOnlyReviewContent>[0]) {
   if (!props.hasSnapshot) return t('companion.onlyReview.noTopicsTitle');
   if (props.reviewSession.scheduledFsrsCount === 0) return t('companion.onlyReview.noScheduledTitle');
-  return t('companion.onlyReview.noDueTitle');
+  return t('desktop.reviewSession.summary.clear');
 }
 
 function resolveOnlyReviewDescription(t: ReturnType<typeof useTranslation>, props: Parameters<typeof CompanionOnlyReviewContent>[0]) {

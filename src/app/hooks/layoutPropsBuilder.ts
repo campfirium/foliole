@@ -9,6 +9,7 @@ import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { buildReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 import { buildLiveReviewQueueOutput } from '../../store/workspaceReviewLiveQueue';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
+import { canContinueReadingInFlowWindow } from '../../store/workspaceReviewReadingContinuation';
 import { resolveReviewSessionProgress } from '../../store/workspaceReviewSessionProgress';
 import type { WorkspaceState } from '../../store/workspaceStore';
 import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
@@ -136,20 +137,6 @@ function createContinueReadingAction(args: BuildLayoutPropsArgs) {
     }
     args.exitReviewSession();
   };
-}
-
-function canContinueReadingInFlowWindow(
-  reviewSummary: WorkspaceLayoutReviewProps['reviewSummary'],
-  reviewFlowWindow: WorkspaceLayoutReviewProps['reviewFlowWindow']
-) {
-  return Boolean(
-    reviewSummary.reviewedItemCount > 0 &&
-    reviewSummary.continueNodeId &&
-    (
-      reviewFlowWindow.queueNodeIds.includes(reviewSummary.continueNodeId) ||
-      reviewFlowWindow.readyNodeIds.includes(reviewSummary.continueNodeId)
-    )
-  );
 }
 
 function buildReviewReadyDerivedState(args: BuildLayoutPropsArgs, isReviewReady: boolean) {

@@ -53,6 +53,7 @@ const controlledElectronSqliteTests = [
   'src/store/workspaceFlowSession.sync.integration.test.ts',
   'src/companion/CompanionSearchDeparture.integration.test.tsx',
   'src/companion/companionReviewContinuity.integration.test.tsx',
+  'src/companion/companionQueueClear.integration.test.tsx',
   'src/companion/companionCaptureRecovery.integration.test.tsx',
   'src/shared/platform/companionReviewSnapshot.integration.test.ts',
   'src/companion/useCompanionViewStateSync.integration.test.tsx',
