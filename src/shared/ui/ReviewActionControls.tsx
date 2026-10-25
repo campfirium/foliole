@@ -1,3 +1,5 @@
+import { Route } from 'lucide-react';
+
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { useTranslation } from '../localization/LocalizationProvider';
 import type { TranslationKey } from '../localization/translations';
@@ -192,13 +194,15 @@ export function ResumeReviewAction({
   surface?: ReviewActionSurface;
 }) {
   const t = useTranslation();
+  const icon = <Route aria-hidden="true" size={16} strokeWidth={1.75} />;
 
   if (surface === 'overlay') {
-    return <ReviewOverlayActionButton ariaLabel={t('desktop.reviewActions.resumeReview')} label={t('desktop.reviewActions.resume')} onClick={onResumeReviewItem} />;
+    return <ReviewOverlayActionButton icon={icon} ariaLabel={t('desktop.reviewActions.resumeReview')} label={t('desktop.reviewActions.resume')} onClick={onResumeReviewItem} />;
   }
 
   return (
     <AppButton aria-label={t('desktop.reviewActions.resumeReview')} className="min-w-32 px-5" onClick={onResumeReviewItem} size="md" variant="default">
+      {icon}
       {t('desktop.reviewActions.resume')}
     </AppButton>
   );

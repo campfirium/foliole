@@ -12,6 +12,7 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
   className?: string;
   'data-testid'?: string;
   disabled?: boolean;
+  icon?: ReactNode;
   label: string;
   loading?: boolean;
   loadingLabel?: string;
@@ -32,6 +33,7 @@ export const ReviewOverlayActionButton = forwardRef<HTMLButtonElement, {
       type="button"
     >
       {props.loading ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+      {!props.loading ? props.icon : null}
       <span>{props.loading ? props.loadingLabel ?? props.label : props.label}</span>
     </button>
   );

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { renderWithLocalization } from '../localization/testLocalization';
 import { preloadTranslationCatalog } from '../localization/translations';
 
-import { ReadingReviewActions, ReviewGradeActions } from './ReviewActionControls';
+import { ReadingReviewActions, ResumeReviewAction, ReviewGradeActions } from './ReviewActionControls';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -182,4 +182,14 @@ it('shows action help cards for grade actions when enabled', () => {
   expect(screen.getByRole('tooltip')).toHaveTextContent('Hard');
   expect(screen.getByRole('tooltip')).toHaveTextContent('Show this item again sooner than usual.');
   expect(screen.getByRole('tooltip')).toHaveStyle({ transform: 'translate(-50%, -100%)' });
+});
+
+it.each(['panel', 'overlay'] as const)('identifies Resume with a decorative Flow icon on the %s surface', surface => {
+  const resume = vi.fn();
+  renderWithLocalization(<ResumeReviewAction onResumeReviewItem={resume} surface={surface} />);
+  const button = screen.getByRole('button', { name: 'Resume review' });
+  expect(button).toHaveTextContent('Resume');
+  expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  fireEvent.click(button);
+  expect(resume).toHaveBeenCalledOnce();
 });
