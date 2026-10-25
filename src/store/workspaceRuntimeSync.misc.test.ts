@@ -89,10 +89,10 @@ describe('workspaceRuntimeSync persistence behavior', () => {
 describe('workspaceRuntimeSync review behavior', () => {
   beforeEach(resetRuntimeSyncTestState);
 
-  it('syncs review grade mutations through apply_review_grade command', async () => {
-    const invoke = vi.fn().mockResolvedValue(null);
+  it.each([null, { ...REVIEW_GRADE_PAYLOAD.cardAfter, due: '2026-03-12T00:00:00.000Z' }])('returns the persisted review projection through apply_review_grade: %j', async card => {
+    const invoke = vi.fn().mockResolvedValue(card);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toBeUndefined();
+    await expect(syncReviewGradeToRuntime(REVIEW_GRADE_PAYLOAD)).resolves.toEqual({ card });
     expect(invoke).toHaveBeenCalledWith('apply_review_grade', REVIEW_GRADE_PAYLOAD);
   });
 
