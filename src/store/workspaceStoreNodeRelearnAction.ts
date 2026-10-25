@@ -46,14 +46,14 @@ export function createRelearnNodeAction(set: WorkspaceSet): WorkspaceState['rele
       return state;
     });
     if (!relearned || !localPatch) return relearned;
-    if (shouldSyncNodeContent) {
-      set(localPatch);
-      if (nextNodeForSync) syncNodeContentToRuntime(nextNodeForSync);
-      return true;
-    }
     if (shouldSyncReviewReset) {
       if (!syncRelearnNodeToRuntime({ nodeId })) return false;
       set(localPatch);
+      return true;
+    }
+    if (shouldSyncNodeContent) {
+      set(localPatch);
+      if (nextNodeForSync) syncNodeContentToRuntime(nextNodeForSync);
       return true;
     }
     set(localPatch);

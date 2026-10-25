@@ -9,13 +9,14 @@ const FOLDER_ID = 'playwright-durable-folder';
 const TOPIC_ID = 'playwright-durable-reading-topic';
 const TOPIC_TITLE = 'Durable Reading Topic';
 
-async function seedDurableState(page: DesktopSession['firstWindow']) {
-  await page.evaluate(async ({ folderId, itemId, itemTitle, topicId, topicTitle }) => {
+async function seedDurableState(page: DesktopSession['firstWindow'], shelved: boolean) {
+  await page.evaluate(async ({ folderId, itemId, itemTitle, topicId, topicTitle, shelved }) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     await api?.seedNodes?.([
       { content: '', id: folderId, kind: 'folder', title: 'Durable Folder' },
       {
         content: 'Prompt', id: itemId, kind: 'item', parentNodeId: folderId, reveal: 'Answer', title: itemTitle,
+        shelvedAt: shelved ? '2026-10-01T00:00:00.000Z' : null,
         review: { due: '2099-07-10T10:00:00.000Z', lastReviewAt: null, state: 0, stability: 1, difficulty: 5, elapsedDays: 0, scheduledDays: 1, reps: 0, lapses: 0 }
       },
       {
@@ -24,7 +25,7 @@ async function seedDurableState(page: DesktopSession['firstWindow']) {
       }
     ]);
     await api?.openNode?.(itemId);
-  }, { folderId: FOLDER_ID, itemId: ITEM_ID, itemTitle: ITEM_TITLE, topicId: TOPIC_ID, topicTitle: TOPIC_TITLE });
+  }, { shelved, folderId: FOLDER_ID, itemId: ITEM_ID, itemTitle: ITEM_TITLE, topicId: TOPIC_ID, topicTitle: TOPIC_TITLE });
   const exitFlow = page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
   if (await exitFlow.isVisible().catch(() => false)) await exitFlow.click();
   await expect.poll(() => page.evaluate(async ({ itemId, topicId }) => {
@@ -78,6 +79,7 @@ async function readRestoredState(page: DesktopSession['firstWindow']) {
     const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
     return {
       activeNodeId: api?.getActiveNodeId?.() ?? null,
+      itemShelvedAt: api?.getNode?.(itemId)?.shelvedAt ?? null,
       itemReview: api?.getNode?.(itemId)?.review ?? null,
       itemIndex: orderedIds.indexOf(itemId),
       scrollTop: scroller?.scrollTop ?? 0,
@@ -87,32 +89,35 @@ async function readRestoredState(page: DesktopSession['firstWindow']) {
   }, { itemId: ITEM_ID, topicId: TOPIC_ID });
 }
 
-test('keeps order, relearn, and latest reading position across an immediate close', async ({ desktopSession, desktopWindow }, testInfo) => {
-  let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
-  try {
-    await expectWorkspaceShell(desktopWindow);
-    await seedDurableState(desktopWindow);
-    await relearnItem(desktopWindow);
-    expect(await scrollTopicWithoutWaitingForDebounce(desktopWindow)).toBeGreaterThan(0);
-    const readingTraces = await desktopWindow.evaluate(() => (
-      globalThis.window?.__folioleDebug?.getTraces?.().filter((trace) => trace.event.includes('reading-position') || trace.event.includes('reading-progress')) ?? []
-    ));
-    await testInfo.attach('permanent-state-fast-close-traces', { body: JSON.stringify(readingTraces, null, 2), contentType: 'application/json' });
-    expect(readingTraces.some((trace) => trace.event === 'reading-progress.capture-scroll')).toBe(true);
-    await desktopSession.electronApp.close();
+for (const shelved of [false, true]) {
+  test(`keeps order, relearn, and latest reading position across an immediate close with shelved=${shelved}`, async ({ desktopSession, desktopWindow }, testInfo) => {
+    let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
+    try {
+      await expectWorkspaceShell(desktopWindow);
+      await seedDurableState(desktopWindow, shelved);
+      await relearnItem(desktopWindow);
+      expect(await scrollTopicWithoutWaitingForDebounce(desktopWindow)).toBeGreaterThan(0);
+      const readingTraces = await desktopWindow.evaluate(() => (
+        globalThis.window?.__folioleDebug?.getTraces?.().filter((trace) => trace.event.includes('reading-position') || trace.event.includes('reading-progress')) ?? []
+      ));
+      await testInfo.attach('permanent-state-fast-close-traces', { body: JSON.stringify(readingTraces, null, 2), contentType: 'application/json' });
+      expect(readingTraces.some((trace) => trace.event === 'reading-progress.capture-scroll')).toBe(true);
+      await desktopSession.electronApp.close();
 
-    secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
-    await expectWorkspaceShell(secondSession.firstWindow);
-    const restored = await readRestoredState(secondSession.firstWindow);
-    await testInfo.attach('permanent-state-fast-close', { body: JSON.stringify(restored, null, 2), contentType: 'application/json' });
+      secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
+      await expectWorkspaceShell(secondSession.firstWindow);
+      const restored = await readRestoredState(secondSession.firstWindow);
+      await testInfo.attach('permanent-state-fast-close', { body: JSON.stringify(restored, null, 2), contentType: 'application/json' });
 
-    expect(restored.activeNodeId).toBe(TOPIC_ID);
-    expect(restored.itemReview).toBeNull();
-    expect(restored.itemIndex).toBeGreaterThanOrEqual(0);
-    expect(restored.topicIndex).toBeGreaterThan(restored.itemIndex);
-    expect(restored.viewState?.scrollTop).toBeGreaterThan(0);
-    expect(restored.scrollTop).toBeGreaterThan(0);
-  } finally {
-    await secondSession?.close();
-  }
-});
+      expect(restored.activeNodeId).toBe(TOPIC_ID);
+      expect(restored.itemReview).toBeNull();
+      expect(restored.itemShelvedAt).toBeNull();
+      expect(restored.itemIndex).toBeGreaterThanOrEqual(0);
+      expect(restored.topicIndex).toBeGreaterThan(restored.itemIndex);
+      expect(restored.viewState?.scrollTop).toBeGreaterThan(0);
+      expect(restored.scrollTop).toBeGreaterThan(0);
+    } finally {
+      await secondSession?.close();
+    }
+  });
+}

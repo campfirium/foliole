@@ -123,6 +123,9 @@ export function resetNodeReviewState(
   context: { deletedAt: string; hostName: string }
 ): void {
   driver.transaction(() => {
+    driver.prepare(`UPDATE nodes SET shelved_at = NULL, updated_at = ?,
+      last_modified_by_host_name = ?, sync_dirty = 1
+      WHERE id = ? AND shelved_at IS NOT NULL`).run([context.deletedAt, context.hostName, nodeId]);
     driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
     recordNodeReviewTombstone(driver, nodeId, context);
     const opId = `reset:${context.hostName}:${nodeId}:${context.deletedAt}`;
