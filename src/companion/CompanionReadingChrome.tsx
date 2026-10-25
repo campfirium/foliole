@@ -133,7 +133,6 @@ export function ReadingChrome(props: {
     return <EditingChrome onCancelContentEditing={props.onCancelContentEditing} onToggleContentEditing={props.onToggleContentEditing} />;
   }
   const controlsVisible = props.visible !== false;
-  if (props.actionsAtTop && !controlsVisible) return null;
   return (
     <>
       <ReadingTopChrome

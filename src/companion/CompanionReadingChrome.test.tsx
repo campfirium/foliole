@@ -115,3 +115,16 @@ describe('ReadingChrome editing', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
+
+it('reserves the review top toolbar area when its controls are hidden', () => {
+  const props = { actionsAtTop: true, title: 'Review', onExit: vi.fn(), onOpenActions: vi.fn(), onOpenOutline: vi.fn() };
+  const view = render(<ReadingChrome {...props} visible={false} />);
+  const reservedArea = view.container.querySelector('.companion-reading-top-chrome');
+  expect(reservedArea).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
+  view.rerender(<ReadingChrome {...props} visible />);
+  expect(view.container.querySelector('.companion-reading-top-chrome')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument();
+  view.rerender(<ReadingChrome {...props} visible={false} />);
+  expect(view.container.querySelector('.companion-reading-top-chrome')).toBeInTheDocument();
+});

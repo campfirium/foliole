@@ -99,12 +99,9 @@ html, body, #root, #root * { scrollbar-width: none; }
 .companion-topic-row-first { padding-top: var(--companion-page-content-gap); }
 
 .companion-review-surface {
-  --companion-review-controls-height: 0px;
+  --companion-review-controls-height: 44px;
   --companion-review-breadcrumb-height: 36px;
   padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height) + var(--companion-review-breadcrumb-height) + var(--companion-page-content-gap));
-}
-.companion-review-surface[data-review-controls-visible='true'] {
-  --companion-review-controls-height: 44px;
 }
 .companion-review-header {
   top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height));

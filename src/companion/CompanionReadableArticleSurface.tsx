@@ -183,7 +183,6 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   return (
     <section
       className={model.surfaceClassName}
-      data-review-controls-visible={model.reading.isChromeVisible || model.reading.isContentEditing}
       onClick={model.reading.handleSurfaceClick}
       onPointerDown={model.handleSurfacePointerDown}
       onPointerMove={model.handleSurfacePointerMove}
