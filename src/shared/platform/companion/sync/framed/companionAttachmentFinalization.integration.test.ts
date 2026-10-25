@@ -35,6 +35,7 @@ async function fixture(bytes: Buffer[], signal?: AbortSignal) {
     native.root = root; vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(root, 'target'));
   }, signal);
   native.sign.mockImplementation(f.sign);
+  native.cancel.mockResolvedValue(undefined);
   native.post.mockImplementation(request => f.post(request));
   return f;
 }
@@ -59,22 +60,33 @@ function persisted(f: Fixture, key: string) {
 it('writes B while A hashes, applies two-file backpressure, and waits for durable finalization before returning', async () => {
   const f = await fixture([Buffer.alloc(64 * 1024 * 1024 + 17, 0x61), ...[2, 3, 4].map(i => Buffer.alloc(1000 + i, i))]);
   const gates = [gate(), gate()];
+  const bothHashed = gate();
+  const cDispatched = gate();
   const started = new Set<string>();
   const original = hashing.hashResourceFile;
   vi.spyOn(hashing, 'hashResourceFile').mockImplementation(async file => {
     const hash = await original(file);
     const index = f.items.findIndex(item => path.basename(file) === `.attachment-${item.key.slice(0, 64)}.partial`);
-    if (index >= 0 && index < 2) { started.add(f.items[index]!.key); await gates[index]!.promise; }
+    if (index >= 0 && index < 2) {
+      started.add(f.items[index]!.key);
+      if (started.size === 2) bothHashed.release();
+      await gates[index]!.promise;
+    }
     return hash;
   });
   const failures: unknown[] = [];
   const notifications: unknown[] = [];
   vi.spyOn(published, 'notifyAttachmentPublished').mockImplementation(key => { notifications.push(persisted(f, key)); });
   let returned = false;
+  native.post.mockImplementation(request => {
+    if (request.attachment_receive?.storage_key === f.items[2]!.key) cDispatched.release();
+    return f.post(request);
+  });
   const run = exchangeRequestSyncAttachments(f.host, f.exchange, (_key, error) => failures.push(error), () => false)
     .then(result => { returned = true; return result; });
   try {
-    await vi.waitFor(() => expect(started.size, 'B must reach its real hash while A remains blocked').toBe(2));
+    await Promise.race([bothHashed.promise, run.then(() => { throw new Error('transfer_returned_before_both_hashes'); })]);
+    expect(started.size, 'B must reach its real hash while A remains blocked').toBe(2);
     const [a, b, c] = f.items;
     expect((await stat(path.join(f.local.assetsDir, `.attachment-${b!.key.slice(0, 64)}.partial`))).size).toBe(b!.bytes.length);
     expect(persisted(f, a!.key)).toEqual({ available: 0, pending: 1 });
@@ -82,7 +94,8 @@ it('writes B while A hashes, applies two-file backpressure, and waits for durabl
     expect(f.posted.some(post => post.key === c!.key)).toBe(false);
     expect(returned).toBe(false);
     gates[0]!.release();
-    await vi.waitFor(() => expect(f.posted.some(post => post.key === c!.key)).toBe(true));
+    await Promise.race([cDispatched.promise, run.then(() => { throw new Error('transfer_returned_before_third_dispatch'); })]);
+    expect(f.posted.some(post => post.key === c!.key)).toBe(true);
     expect(persisted(f, b!.key)).toEqual({ available: 0, pending: 1 });
     expect(returned).toBe(false);
     gates[1]!.release();

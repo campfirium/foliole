@@ -32,17 +32,14 @@ it('overlaps the first two preparations, replenishes during sends, and publishes
     native.root = root; vi.stubEnv('FOLIOLE_LIBRARY_HOME', path.join(root, 'target'));
   });
   native.sign.mockImplementation(f.sign);
-  let active = 0, maxActive = 0, secondPrepared = false, firstSend = true;
+  let active = 0, maxActive = 0, firstSend = true;
   let release = () => {};
   const second = new Promise<void>(resolve => { release = resolve; });
   const statuses: string[] = [];
   const host = { ...f.host, async status(...args: Parameters<typeof f.local.host.status>) {
     statuses.push(args[0].storageKey);
-    if (statuses.length === 2) { secondPrepared = true; release(); }
-    if (statuses.length === 1) {
-      await Promise.race([second, new Promise<void>(resolve => setTimeout(resolve, 500))]);
-      expect(secondPrepared, 'second preparation must start before first preparation finishes').toBe(true);
-    }
+    if (statuses.length === 2) release();
+    if (statuses.length === 1) await second;
     return f.local.host.status(...args);
   } };
   native.post.mockImplementation(async request => {
