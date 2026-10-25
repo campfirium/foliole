@@ -1,6 +1,19 @@
 import type { Virtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef } from 'react';
 
+function remeasureMountedRows(virtualizer: Virtualizer<HTMLElement, Element>) {
+  virtualizer.measure();
+  // Rebuild the cleared layout before applying sizes, even if React has not rendered yet.
+  virtualizer.getTotalSize();
+  for (const element of virtualizer.elementsCache.values()) {
+    if (!element.isConnected) continue;
+    const index = virtualizer.indexFromElement(element);
+    const size = virtualizer.options.measureElement(element, undefined, virtualizer);
+    virtualizer.resizeItem(index, size);
+  }
+  virtualizer.getTotalSize();
+}
+
 export function useVirtualListViewportRemeasure(args: {
   isVirtual: boolean;
   virtualizer: Virtualizer<HTMLElement, Element>;
@@ -11,9 +24,9 @@ export function useVirtualListViewportRemeasure(args: {
       window.cancelAnimationFrame(animationFrameRef.current);
     }
     animationFrameRef.current = window.requestAnimationFrame(() => {
-      args.virtualizer.measure();
+      remeasureMountedRows(args.virtualizer);
       animationFrameRef.current = window.requestAnimationFrame(() => {
-        args.virtualizer.measure();
+        remeasureMountedRows(args.virtualizer);
         animationFrameRef.current = null;
       });
     });
