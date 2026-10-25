@@ -29,7 +29,8 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionD
 
 import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
 
-it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeWindow=%s)', async (retry, nativeWindow) => {
+it.each([[false, false, false], [true, false, false], [false, true, false], [true, true, false],
+  [false, true, true], [true, true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeWindow=%s, asyncFinalization=%s)', async (retry, nativeWindow, asyncFinalization) => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-image-'));
   const sqlite = new Database(path.join(root, 'library.db'));
   initializeDatabaseSchema(sqlite);
@@ -47,6 +48,7 @@ it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes
       if (rejectIndex && existsSync(final)) { rejectIndex = false; throw new Error('index interrupted'); }
       return write(port);
     } }, { library_key: root, generation_id: 'generation' });
+  const session = asyncFinalization ? await host.openReceiveSession!({ shouldYield: () => false }) : undefined;
   const widget = createMarkdownImageWidgetDom({ alt: 'restored', attachmentId: hash, display: 'block',
     from: 0, source: `asset://${key}`, to: 90 });
   document.body.append(widget);
@@ -55,10 +57,13 @@ it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes
     const resource = { storageKey: key, byteLength: bytes.length };
     const receive = async (offset: number, block: Uint8Array) => {
       if (!nativeWindow) return host.receive(resource, offset, block);
-      return host.receiveWindow!(resource, offset, async () => {
+      if (session) await host.status(resource);
+      const result = await (session?.receiveWindow ?? host.receiveWindow!)(resource, offset, async () => {
         await appendFile(path.join(root, `.attachment-${hash}.partial`), block);
         return { offset: offset + block.length, blocks: 1, pending: false };
       });
+      await session?.settled(key);
+      return result;
     };
     await receive(0, bytes.subarray(0, BLOCK));
     expect(widget.querySelector('img')).toBeNull();
@@ -71,6 +76,7 @@ it.each([[false, false], [true, false], [false, true], [true, true]])('refreshes
     expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().get()).toBe(1);
     await waitFor(() => expect(widget.querySelector('.cm-md-image-element')).toHaveAttribute('src', `file://${final}`));
   } finally {
+    await session?.close();
     disposeMarkdownImageWidgetDom(widget); widget.remove(); resetAttachmentResourceResolutionCacheForTest();
     sqlite.close(); await rm(root, { recursive: true, force: true });
   }
@@ -187,4 +193,54 @@ it('verifies companion source bytes in the shared core and rejects corruption af
     await writeFile(path.join(root, key), bytes);
     await expect(host.withFile(key, file => file.read(0, BLOCK))).rejects.toThrow('attachment_source_invalid');
   } finally { sqlite.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+it('receives a prepared next file while the native file executor is occupied by the previous hash', async () => {
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/attachment-image-'));
+  const sqlite = new Database(path.join(root, 'library.db'));
+  initializeDatabaseSchema(sqlite);
+  const port = createBetterSqliteDbPort(sqlite);
+  const bytes = [Buffer.alloc(1013, 0x31), Buffer.alloc(1019, 0x32)];
+  const resources = bytes.map(value => ({ storageKey: `${digest(value)}.png`, byteLength: value.length }));
+  await seedAttachmentReferences(sqlite, resources.map(resource => resource.storageKey));
+  let release = () => {}, entered = false;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  let tail: Promise<unknown> = Promise.resolve();
+  const execute = fileOperations(root);
+  native.access.mockImplementation((input: NativeCompanionFramedFileRequest) => {
+    const operation = tail.then(async () => {
+      if (input.operation === 'attachment' && input.action === 'source-stat-batch') {
+        return { presence: resources.map(() => false) };
+      }
+      if (input.operation === 'attachment' && input.action === 'hash' && input.key === resources[0]!.storageKey.slice(0, 64)) {
+        entered = true; await blocked;
+      }
+      return execute(input);
+    });
+    tail = operation.catch(() => undefined);
+    return operation;
+  });
+  const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
+    readSnapshot: read => read(port), write: write => write(port) }, { library_key: root, generation_id: 'generation' });
+  await host.needsSlice(() => false);
+  for (const resource of resources) await host.status(resource);
+  const session = await host.openReceiveSession!({ shouldYield: () => false });
+  const receive = (index: number) => session.receiveWindow(resources[index]!, 0, async () => {
+    await appendFile(path.join(root, `.attachment-${resources[index]!.storageKey.slice(0, 64)}.partial`), bytes[index]!);
+    return { offset: bytes[index]!.length, blocks: 1, pending: false };
+  });
+  let next: Promise<unknown> | undefined;
+  try {
+    await receive(0);
+    await waitFor(() => expect(entered).toBe(true));
+    next = receive(1);
+    await waitFor(async () => expect(await readFile(path.join(root, `.attachment-${resources[1]!.storageKey.slice(0, 64)}.partial`))).toEqual(bytes[1]));
+    expect(existsSync(path.join(root, resources[0]!.storageKey))).toBe(false);
+    expect(sqlite.prepare('SELECT count(*) FROM attachment_pending').pluck().get()).toBe(2);
+    release(); await next;
+    await Promise.all(resources.map(resource => session.settled(resource.storageKey)));
+    expect(sqlite.prepare('SELECT count(*) FROM attachment_pending').pluck().get()).toBe(0);
+    expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability').pluck().all()).toEqual([1, 1]);
+    for (const [index, resource] of resources.entries()) expect(await readFile(path.join(root, resource.storageKey))).toEqual(bytes[index]);
+  } finally { release(); await next; await session.close(); sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });

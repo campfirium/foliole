@@ -16,6 +16,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopAttachmentPendingData.integration.test.ts',
   'electron/sync/desktopAttachmentSlices.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionAttachmentPreparation.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionAttachmentFinalization.integration.test.ts',
   'electron/sync/desktopAttachmentThroughput.integration.test.ts',
   'electron/sync/requestSyncMissingHistoricalBody.integration.test.ts',
   'electron/sync/requestSyncUnreadyOverwrite.integration.test.ts',

@@ -6,7 +6,7 @@ import Database from 'better-sqlite3';
 
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { recordAttachmentDemandAttempt } from '../../lib/core/sync/attachmentDemandQueue.js';
+import { completeAttachmentDemand, recordAttachmentDemandAttempt } from '../../lib/core/sync/attachmentDemandQueue.js';
 import { readRequestSyncAttachmentNeedsSlice, readRequestSyncAttachmentNeeds } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 import type { RequestSyncAttachmentHost } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -60,6 +60,10 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
   const source = createDesktopAttachmentBlockSource(assetsDir, databasePath);
   const inspect = (keys: string[]) => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)));
   const host: RequestSyncAttachmentHost = { ...receiver, ...source,
+    openReceiveSession: options => receiver.openReceiveSession(options, resource => database.write(port => port.transaction(async tx => {
+      await recordFramedSyncResourceAvailability(tx, [resource.storageKey.slice(0, 64)], true);
+      await completeAttachmentDemand(tx, resource.storageKey);
+    }))),
     attempted: key => database.write(port => recordAttachmentDemandAttempt(port, key)),
     async needsSlice(shouldYield) {
       return readRequestSyncAttachmentNeedsSlice(database, inspect, shouldYield);

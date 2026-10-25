@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
-import { createAttachmentBlockReceiver, type AttachmentBlockResult } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
+import { createAttachmentBlockReceiver, type AttachmentBlockResult, type AttachmentBlockResource } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
 import { completeAttachmentDemand, recordAttachmentDemandAttempt } from '../../../../../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { attachmentWorkBudget } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
@@ -62,6 +62,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
   const completed = <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => completeReceived(db, key, pending);
   const host: RequestSyncAttachmentHost = {
+    openReceiveSession: options => receiver.openReceiveSession(options, resource => commitReceived(db, resource)),
     attempted: key => db.write(port => recordAttachmentDemandAttempt(port, key)),
     async importPdfText(pdf, artifact) {
       await importCompanionPdfTextArtifact(db, host, pdf, artifact);
@@ -117,4 +118,12 @@ function receiveCompanionWindow(db: RequestSyncDatabaseHost, receiver: ReturnTyp
       Promise.resolve({ kind: 'complete', offset: result.offset }));
     return result;
   };
+}
+
+async function commitReceived(db: RequestSyncDatabaseHost, resource: AttachmentBlockResource) {
+  await db.write(port => port.transaction(async tx => {
+    await recordFramedSyncResourceAvailability(tx, [resource.storageKey.slice(0, 64)], true);
+    if (!resource.storageKey.endsWith('.pdf')) await completeAttachmentDemand(tx, resource.storageKey);
+  }));
+  notifyAttachmentResourceAvailable(resource.storageKey);
 }

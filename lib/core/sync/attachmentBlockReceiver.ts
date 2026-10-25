@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { AttachmentReceiveOperation } from './attachmentBlockTransfer.js';
+import { createAttachmentReceiveSession, type AttachmentReceiveSessionOptions } from './attachmentReceiveSession.js';
 
 export const ATTACHMENT_BLOCK_BYTES = 512 * 1024;
 export const attachmentBlockResourceSchema = z.object({
@@ -20,7 +21,8 @@ export interface AttachmentBlockFiles {
   append(hash: string, offset: number, bytes: Uint8Array): Promise<void>;
   verifyPartial(hash: string): Promise<boolean>;
   discardPartial(hash: string): Promise<void>;
-  publish(resource: AttachmentBlockResource): Promise<void>;
+  publish(resource: AttachmentBlockResource, options?: { notify: boolean }): Promise<void>;
+  notifyPublished?(resource: AttachmentBlockResource): void;
   availability(hash: string, available: boolean): Promise<void>;
 }
 
@@ -73,6 +75,9 @@ export function createAttachmentBlockReceiver(files: AttachmentBlockFiles) {
   }
 
   return {
+    openReceiveSession: (options: AttachmentReceiveSessionOptions, commit = async (resource: AttachmentBlockResource) => {
+      await availability(resource.storageKey.slice(0, 64), true);
+    }) => createAttachmentReceiveSession(files, options, commit, resource => { recovered.delete(resource.storageKey.slice(0, 64)); }),
     receiveWindow: (resource: AttachmentBlockResource, offset: number, execute: AttachmentReceiveOperation) =>
       run(resource, parsed => applyWindow({ files, resource: parsed, offset, execute, status, finish })),
     status: (resource: AttachmentBlockResource) => run(resource, status),

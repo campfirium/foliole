@@ -55,6 +55,12 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     return result;
   };
   return {
+    async openReceiveSession(options) {
+      return (await receiver()).openReceiveSession(options, resource => host.write(db => db.transaction(async tx => {
+        await recordFramedSyncResourceAvailability(tx, [resource.storageKey.slice(0, 64)], true);
+        await completeAttachmentDemand(tx, resource.storageKey);
+      })));
+    },
     attempted: key => host.write(db => recordAttachmentDemandAttempt(db, key)),
     derivePdfText: (key, version) => createDesktopPdfTextArtifact(host, assetsDir, key, version),
     async withFile(key, consume, options) { await checkLibrary(); return source.withFile(key, consume, options); },

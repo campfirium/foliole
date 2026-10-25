@@ -1,5 +1,6 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
+import type { AttachmentReceiveSession, AttachmentReceiveSessionOptions } from './attachmentReceiveSession.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
@@ -9,6 +10,7 @@ import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 
 export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, AttachmentBlockSource {
+  openReceiveSession?(options: AttachmentReceiveSessionOptions): Promise<AttachmentReceiveSession> | AttachmentReceiveSession;
   needs(): Promise<string[]>;
   attempted?(storageKey: string): Promise<void>;
   derivePdfText?(pdfKey: string, version: number): Promise<string | null>;

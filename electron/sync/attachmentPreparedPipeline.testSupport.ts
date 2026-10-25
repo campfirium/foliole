@@ -31,7 +31,7 @@ type ExchangeInput = Pick<RequestSyncExchange, 'context' | 'groupKey' | 'signal'
 export async function pipelineFixture(createExchange: (host: RequestSyncDatabaseHost, input: ExchangeInput) => RequestSyncExchange, bytes: Buffer[], setup: (root: string) => void, signal?: AbortSignal) {
   const directory = await attachmentHttpDirectory(); setup(directory.root);
   const items = bytes.map(bytes => ({ bytes, key: `${createHash('sha256').update(bytes).digest('hex')}.pdf` }));
-  const local = await attachmentHttpSource(items.map(item => item.key), directory.root);
+  let local = await attachmentHttpSource(items.map(item => item.key), directory.root);
   await seedAttachmentTarget(items.map(item => item.key));
   for (const item of items) await writeFile(path.join(resolveRuntimeDataPaths().assetsDir, item.key), item.bytes);
   const server = await attachmentHttpServer(0);
@@ -54,11 +54,15 @@ export async function pipelineFixture(createExchange: (host: RequestSyncDatabase
         'SELECT available FROM framed_sync_resource_availability ORDER BY hash').pluck().all() };
     } finally { persisted.close(); }
   }
-  const host = { ...local.host, async needsSlice(shouldYield: () => boolean) {
+  const orderedHost = () => ({ ...local.host, async needsSlice(shouldYield: () => boolean) {
     const demand = await local.host.needsSlice(shouldYield);
     return { ...demand, keys: items.map(item => item.key).filter(key => demand.keys.includes(key)) };
-  } };
-  return { directory, local, host, items, exchange, async resumeExchange() {
+  } });
+  return { directory, get local() { return local; }, get host() { return orderedHost(); }, items, exchange,
+    async reopenReceiver() {
+      await local.close();
+      local = await attachmentHttpSource(items.map(item => item.key), directory.root, true);
+    }, async resumeExchange() {
       await withRequestSyncPeerRound(makeExchange(), peerRound, async () => {});
       peerRound.lease.release(); peerRound = pipelineRound();
       return makeExchange();

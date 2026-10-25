@@ -31,11 +31,11 @@ async function verify(file: string, expected: string) {
 }
 
 /** The caller has verified the complete temporary file before publishing it. */
-export async function renameVerifiedAttachment(temporary: string, destination: string, expectedHash: string) {
+export async function renameVerifiedAttachment(temporary: string, destination: string, expectedHash: string, notify = true) {
   attachmentSourceVerification.invalidate(path.basename(destination));
   try {
     await rename(temporary, destination);
-    notifyAttachmentPublished(path.basename(destination));
+    if (notify) notifyAttachmentPublished(path.basename(destination));
     return true;
   }
   catch (error) {

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { createAttachmentBlockReceiver, type AttachmentBlockFiles,
   type AttachmentBlockResource } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { notifyAttachmentPublished } from '../attachments/attachmentPublishedEvents.js';
 import { renameVerifiedAttachment } from '../attachments/publishImmutableAttachment.js';
 
 import { tryAcquireAttachmentReceiveOwner } from './attachmentReceiveOwner.js';
@@ -62,10 +63,11 @@ function createFiles(assetsDir: string,
     },
     verifyPartial: async hash => await hashResourceFile(partial(hash)) === hash,
     discardPartial: hash => fs.rm(partial(hash), { force: true }),
-    async publish(resource) {
+    notifyPublished: resource => notifyAttachmentPublished(resource.storageKey),
+    async publish(resource, options) {
       const source = partial(resource.storageKey.slice(0, 64));
       const destination = path.join(assetsDir, resource.storageKey);
-      await renameVerifiedAttachment(source, destination, resource.storageKey.slice(0, 64));
+      await renameVerifiedAttachment(source, destination, resource.storageKey.slice(0, 64), options?.notify ?? true);
     }
   };
 }
