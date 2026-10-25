@@ -2,11 +2,24 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
+
+function persisted(databasePath: string, key: string) {
+  const db = new Database(databasePath, { readonly: true, fileMustExist: true });
+  try {
+    return {
+      versions: ['node_sync_versions', 'node_sync_version_parents'].map(table => db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()),
+      nodes: db.prepare('SELECT id, current_version_id, body_blob_hash, resource_references FROM nodes ORDER BY id').all(),
+      pending: db.prepare('SELECT * FROM attachment_pending WHERE storage_key = ?').all(key),
+      available: db.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash = ?').pluck().get(key.slice(0, 64))
+    };
+  } finally { db.close(); }
+}
 
 it('leaves externally removed files absent when the adopted article is unchanged', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
@@ -17,11 +30,14 @@ it('leaves externally removed files absent when the adopted article is unchanged
     await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
     const target = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
     expect(await fs.readFile(target)).toEqual(bytes);
+    const before = persisted(fixture.rightSnapshot.databasePath, seeded.storageKey);
+    expect(before.pending).toEqual([]);
+    expect(before.available).toBe(1);
     await fs.rm(target);
     const source = (await readFixtureInventory(fixture.left)).find((entry) => entry.objectType === 'node' && entry.globalId === nodeId)!;
     const missing = (await readFixtureInventory(fixture.right)).find((entry) => entry.objectType === 'node' && entry.globalId === nodeId)!;
     expect(source.sharedStateHash).toEqual(missing.sharedStateHash);
-    expect(source.resourceHashes.map((hash) => Buffer.from(hash).toString('hex'))).toContain(seeded.hash);
+    expect(source.resourceHashes.map((hash) => Buffer.from(hash).toString('hex'))).not.toContain(seeded.hash);
     expect(missing.resourceHashes).toEqual(source.resourceHashes);
     expect(await fs.stat(target).catch(() => null)).toBeNull();
     await fixture.right.invoke('round', { input: { kind: 'remember_peer',
@@ -35,6 +51,11 @@ it('leaves externally removed files absent when the adopted article is unchanged
     expect(received.frontierFactIds).toEqual(missing.frontierFactIds);
     expect(received.sharedStateHash).toEqual(missing.sharedStateHash);
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
+    expect(await fs.stat(target).catch(() => null)).toBeNull();
+    expect(persisted(fixture.rightSnapshot.databasePath, seeded.storageKey)).toEqual(before);
+    expect((await readFixtureInventory(fixture.right)).find(entry => entry.objectType === 'node' && entry.globalId === nodeId))
+      .toEqual(missing);
+
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
