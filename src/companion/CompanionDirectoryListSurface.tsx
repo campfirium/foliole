@@ -20,6 +20,7 @@ import {
 import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 import { CompanionListViewport } from './CompanionListViewport';
 import { RecentArticleRow } from './CompanionRecentArticleList';
+import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 import type { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 
 type DirectoryRowProps = {
@@ -43,6 +44,7 @@ function DirectoryRow(props: DirectoryRowProps) {
   });
   if (props.item.kind !== 'folder') return <DirectoryTopicRow {...props} title={title} />;
   return (
+    <div className="flex items-center">
     <button
       aria-label={t(
         props.item.kind === 'folder'
@@ -72,6 +74,8 @@ function DirectoryRow(props: DirectoryRowProps) {
         className="h-4 w-4 shrink-0 text-companion-text-tertiary"
       />
     </button>
+    {props.item.source === 'internal' && <CompanionTopicListMenu inline nodeId={props.item.nodeId} title={title} metadata={meta ?? ''} onOpen={() => props.onSelectItem(props.item)} />}
+    </div>
   );
 }
 

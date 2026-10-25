@@ -1,35 +1,24 @@
 import { Highlighter, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
 import { useContext, useRef } from 'react';
-import type { ReactNode, MutableRefObject } from 'react';
+import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
-import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
 import { VirtualListSurface } from '@/shared/ui/VirtualListSurface';
 
-export function ReadingBottomSheet(props: {
-  children: ReactNode;
-  scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
-  onOpenChange(open: boolean): void;
-  open: boolean;
-  title: string;
-}) {
-  return (
-    <CompanionBottomSheet scrollElementRef={props.scrollElementRef} onOpenChange={props.onOpenChange} open={props.open} title={props.title}>
-      {props.children}
-    </CompanionBottomSheet>
-  );
-}
+export { ReadingBottomSheet };
 
 function ReadingActionRow(props: {
   icon: ReactNode;
@@ -88,6 +77,7 @@ export function ReadingActionsSheet(props: {
       <div className="border-t border-companion-divider">
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
+        <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.find')}
@@ -113,7 +103,15 @@ export function ReadingActionsSheet(props: {
           label={t('companion.selection.deleteCloze')}
           onClick={props.onOpenClozeRemoval}
         /> : null}
-        {props.onRestoreFromTrash ? (
+        {props.onRestoreFromTrash && <ReadingTrashRestoreAction restore={restore} />}
+      </div>
+    </ReadingBottomSheet>
+  );
+}
+
+function ReadingTrashRestoreAction({ restore }: { restore: ReturnType<typeof useCompanionTrashRestoreAction> }) {
+  const t = useTranslation();
+  return (
           <>
             {restore.error ? <ReadingRestoreErrorMessage saved={restore.error === 'refresh'} /> : null}
             <ReadingActionRow
@@ -123,9 +121,6 @@ export function ReadingActionsSheet(props: {
               onClick={restore.restore}
             />
           </>
-        ) : null}
-      </div>
-    </ReadingBottomSheet>
   );
 }
 

@@ -183,6 +183,7 @@ export function useCompanionArticleSurface(
     flowReady: flow.ready,
     flowHasTopics: flow.hasTopics,
     flowHistoryKey: flow.historyKey,
+    ...flow.workspaceHistoryControls,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
     handleViewScroll,
     ...interactionState

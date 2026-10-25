@@ -52,7 +52,7 @@ export function CompanionFlowEdgeGestures(props: {
   if (unavailable) return <p role="alert" className="fixed bottom-20 left-6 right-6 z-20 text-sm text-error">{t('companion.reading.gestureError')}</p>;
   return <div className="pointer-events-none fixed inset-0 z-20">
     {(['redo', 'undo'] as const).map(mode => <button key={mode} type="button" data-testid={`flow-edge-${mode}`}
-      aria-label={t(mode === 'undo' ? 'companion.reading.undoFlow' : 'companion.reading.redoFlow')}
+      aria-label={t(mode === 'undo' ? 'desktop.command.undo' : 'desktop.command.redo')}
       disabled={mode === 'undo' ? !props.canUndo : !props.canRedo}
       className="pointer-events-auto absolute top-1/2 -translate-y-1/2"
       style={{ width: FLOW_GESTURE_REGION.edgeWidth, height: FLOW_GESTURE_REGION.bandHeight,

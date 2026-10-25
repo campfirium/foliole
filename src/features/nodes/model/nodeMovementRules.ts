@@ -5,7 +5,7 @@ import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 import type { Node } from './nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualRootNode, isVirtualNode } from './specialNodes';
 
-type MoveRuleNode = Pick<Node, 'anchorLink' | 'id' | 'specialKind'> & { kind?: NodeKind };
+type MoveRuleNode = Pick<Node, 'id' | 'specialKind'> & { anchorLink?: unknown; kind?: NodeKind };
 
 export function canNodeBeMoved(node: MoveRuleNode | null | undefined) {
   if (!node || isHomeNode(node) || isInboxNode(node) || isVirtualRootNode(node)) {

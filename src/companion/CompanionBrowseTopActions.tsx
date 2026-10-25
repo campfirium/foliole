@@ -19,6 +19,7 @@ import {
   translateCompanionSortOrderLabel
 } from './companionBrowseSortLabels';
 import { CompanionTopActionButton } from './CompanionTopActionButton';
+import { CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 function MenuRow(props: {
   active?: boolean;
@@ -75,6 +76,8 @@ function BrowseMainMenu(props: {
   const t = useTranslation();
   return (
     <>
+      <CompanionWorkspaceHistoryActions />
+      <CompanionWorkspaceCreateAction />
       <MenuRow
         label={t('companion.settings.sync.title')}
         {...definedProps({

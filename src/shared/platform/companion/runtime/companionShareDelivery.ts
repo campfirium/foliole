@@ -1,10 +1,9 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { isStoredVersionIdentical } from '../../../../../lib/core/sync/syncNodeGraph';
 import type { NativeSyncNodeRecord } from '../../../../../lib/platform/nativeSyncContract';
-import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
-import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { runCompanionHistoryMutation } from './companionFlowHistory';
+import { commitCompanionNodeHistoryWithDb } from './companionNodeHistory';
 
 async function hasSavedDelivery(db: DbPort, key: string, fingerprint: string, record: NativeSyncNodeRecord) {
   const [receipt] = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key = ?', [key]);
@@ -31,19 +30,14 @@ export async function persistCompanionShareDelivery(record: NativeSyncNodeRecord
   ])));
   const fingerprint = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   const key = `share-delivery:${record.object_id}`;
-  return runCompanionHighValueMutationTask(() => writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
+  return runCompanionHistoryMutation(async tx => {
     if (!await hasSavedDelivery(tx, key, fingerprint, record)) {
       if (!inboxAvailable) throw new Error('share_inbox_unavailable');
-      const result = await applySyncNodesWithDbPort(tx, [record], {
-        enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation: 'local_mutation'
-      });
-      if (!result.appliedIds.includes(record.object_id) || result.conflictNodes.length > 0) {
-        throw new Error('share_delivery_not_saved');
-      }
+      await commitCompanionNodeHistoryWithDb(tx, [record], 'Create topic', 'local_mutation', [record.object_id]);
     }
     // Keep the compact receipt after ack: Android can redeliver the same Intent,
     // and ordinary version collection can remove the original version identity.
     await tx.run(`INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO NOTHING`, [key, fingerprint, record.updated_at]);
-  })), { kind: 'full' });
+  });
 }

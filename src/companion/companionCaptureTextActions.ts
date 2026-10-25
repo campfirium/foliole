@@ -3,6 +3,8 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { commitCompanionNodeHistoryWithDb } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { persistCompanionShareDelivery } from '../shared/platform/companion/runtime/companionShareDelivery';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
@@ -101,7 +103,11 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
 
 export async function persistCompanionCapturedText(args: PersistCompanionCapturedTextArgs) {
   const draft = await buildCaptureTextDraft(args);
-  if (!draft.persisted) await applyCompanionLocalNodeVersions([draft.nodeVersion]);
+  if (!draft.persisted) {
+    if (isAvailableNativeCompanionRuntime()) await runCompanionHistoryMutation(db =>
+      commitCompanionNodeHistoryWithDb(db, [draft.nodeVersion], 'Create topic', 'local_mutation', [draft.node.id]));
+    else await applyCompanionLocalNodeVersions([draft.nodeVersion]);
+  }
   return {
     nodeId: draft.node.id,
     snapshot: draft.snapshot

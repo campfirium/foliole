@@ -3,26 +3,26 @@ import type { WorkspaceStructurePendingCreate } from './workspaceStructureHistor
 
 const ACTION_HISTORY_LIMIT = 50;
 
-export interface WorkspaceActionHistoryState {
+export interface WorkspaceActionHistoryState<Entry = WorkspaceActionHistoryEntry> {
   applying?: { entryId: string; mode: 'redo' | 'undo' } | null;
   pendingAction?: { entry: WorkspaceActionHistoryEntry; undoRequested: boolean } | null;
   pendingCreate?: WorkspaceStructurePendingCreate | null;
-  redoStack: WorkspaceActionHistoryEntry[];
-  undoStack: WorkspaceActionHistoryEntry[];
+  redoStack: Entry[];
+  undoStack: Entry[];
 }
 
-export function createEmptyWorkspaceActionHistory(): WorkspaceActionHistoryState {
+export function createEmptyWorkspaceActionHistory<Entry = WorkspaceActionHistoryEntry>(): WorkspaceActionHistoryState<Entry> {
   return { applying: null, pendingAction: null, pendingCreate: null, redoStack: [], undoStack: [] };
 }
 
-function trimHistoryStack(stack: WorkspaceActionHistoryEntry[]) {
+function trimHistoryStack<Entry>(stack: Entry[]) {
   return stack.slice(Math.max(0, stack.length - ACTION_HISTORY_LIMIT));
 }
 
-export function pushWorkspaceUndoEntry(
-  history: WorkspaceActionHistoryState,
-  entry: WorkspaceActionHistoryEntry
-): WorkspaceActionHistoryState {
+export function pushWorkspaceUndoEntry<Entry>(
+  history: WorkspaceActionHistoryState<Entry>,
+  entry: Entry
+): WorkspaceActionHistoryState<Entry> {
   return {
     ...history,
     redoStack: [],
@@ -76,16 +76,16 @@ export function settleWorkspaceStructureCreate(
   };
 }
 
-export function getWorkspaceHistoryTopEntry(history: WorkspaceActionHistoryState, mode: 'redo' | 'undo') {
+export function getWorkspaceHistoryTopEntry<Entry>(history: WorkspaceActionHistoryState<Entry>, mode: 'redo' | 'undo') {
   const stack = mode === 'undo' ? history.undoStack : history.redoStack;
   return stack[stack.length - 1] ?? null;
 }
 
-export function moveWorkspaceHistoryCursor(
-  history: WorkspaceActionHistoryState,
-  entry: WorkspaceActionHistoryEntry,
+export function moveWorkspaceHistoryCursor<Entry>(
+  history: WorkspaceActionHistoryState<Entry>,
+  entry: Entry,
   mode: 'redo' | 'undo'
-): WorkspaceActionHistoryState {
+): WorkspaceActionHistoryState<Entry> {
   if (mode === 'undo') {
     return {
       ...history,

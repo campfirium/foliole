@@ -1,6 +1,15 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.workspace.manage': '管理',
+  'companion.workspace.delete': '移到回收站',
+  'companion.workspace.deleteDescription': '将此对象及其子项移到回收站。',
+  'companion.workspace.root': '根目录',
+  'companion.workspace.kind': '类型',
+  'companion.workspace.name': '名称',
+  'companion.workspace.shelve': '搁置',
+  'companion.workspace.unshelve': '取消搁置',
+  'companion.workspace.savedRefreshError': '已保存，请刷新以显示变更。',
   'companion.reading.undoFlow': '撤销复习操作',
   'companion.reading.redoFlow': '重做复习操作',
   'companion.reading.gestureError': '暂时无法使用边缘手势，可在更多菜单中撤销或重做。',

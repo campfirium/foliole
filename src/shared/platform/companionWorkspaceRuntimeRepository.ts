@@ -132,14 +132,16 @@ export type CompanionNodeMutationSurface =
   | 'quick-capture'
   | 'selection-annotation'
   | 'topic-content-edit'
-  | 'trash-restore';
+  | 'trash-restore'
+  | 'workspace-structure';
 
 const IOS_NODE_MUTATION_SURFACES = new Set<CompanionNodeMutationSurface>([
   'existing-highlight-edit',
   'quick-capture',
   'selection-annotation',
   'topic-content-edit',
-  'trash-restore'
+  'trash-restore',
+  'workspace-structure'
 ]);
 
 export function supportsCompanionNodeMutationSurface(surface: CompanionNodeMutationSurface) {

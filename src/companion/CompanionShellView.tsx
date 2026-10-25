@@ -15,6 +15,7 @@ import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionShellTopBar } from './CompanionShellTopBar';
+import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 
 function openCompanionSyncSettings(model: CompanionShellModel) {
@@ -100,11 +101,22 @@ function hasImmersiveReadingContent(model: CompanionShellModel): boolean {
 
 function FlowHistorySurface(props: { children: React.ReactNode; model: CompanionShellModel }) {
   const { model } = props;
-  return (<CompanionFlowHistorySurface
+  return (
+    <CompanionWorkspaceActionsProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? 'preview'}
+      snapshot={model.workspaceSync.state.workspace_snapshot} refresh={model.workspaceSync.refreshAfterMutation}
+      captureFlow={model.surface.captureFlowHistoryContext}
+      currentNodeId={model.surface.readableArticle?.nodeId ?? model.surface.selectedBrowseNodeId}
+      flush={() => model.surface.readingActivity.flush()} restoreFlow={model.surface.restoreFlowHistorySession}
+      flowActive={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing}
+      applyFlow={model.surface.handleFlowHistory}>
+      <CompanionFlowHistorySurface
       active={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing &&
         !model.surface.readingActivity.editing && model.surface.flowReady}
       busy={model.isBottomBarDisabled} refreshPending={model.surface.historyRefreshPending} historyKey={model.surface.flowHistoryKey}
-      onApply={mode => void model.surface.handleFlowHistory(mode)}>{props.children}</CompanionFlowHistorySurface>);
+      onApply={mode => void model.surface.handleFlowHistory(mode)}>{props.children}
+      </CompanionFlowHistorySurface>
+    </CompanionWorkspaceActionsProvider>
+  );
 }
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {

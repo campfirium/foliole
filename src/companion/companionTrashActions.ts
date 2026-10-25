@@ -5,6 +5,8 @@ import {
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { loadCompanionWorkspaceNodes } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { applyCompanionTrashRestoreNodeVersions } from '../shared/platform/companionSyncObjects';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -103,7 +105,7 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
       node, args.deviceId, restoredAt, node.id === args.nodeId ? args.versionId : undefined
     ))
   );
-  await applyCompanionTrashRestoreNodeVersions(restored.map((entry) => entry.version));
+  await persistRestoredNodes(restored, args.deviceId, subtreeIds);
   const restoredIds = new Set(restoreResult.restoredNodeIds);
   const nextNodesById = {
     ...snapshot.nodesById,
@@ -130,4 +132,16 @@ export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeA
       trashedNodeIds: selectCanonicalTrashedNodeIds(nextSource).filter((nodeId) => !restoredIds.has(nodeId))
     }
   };
+}
+
+async function persistRestoredNodes(restored: Awaited<ReturnType<typeof buildRestoredNodeVersion>>[], deviceId: string, subtreeIds: string[]) {
+  if (isAvailableNativeCompanionRuntime()) await runCompanionHistoryMutation(async db => {
+    const versions = await Promise.all(restored.map(async entry => {
+      const patched = await createCompanionMetadataVersion(db, entry.node, deviceId, entry.version.version_id ?? undefined);
+      if (patched.parent_version_id !== entry.version.parent_version_id) throw new Error('local_restore_not_applied');
+      return patched;
+    }));
+    await commitCompanionNodeHistoryWithDb(db, versions, 'Restore', 'local_restore', subtreeIds);
+  });
+  else await applyCompanionTrashRestoreNodeVersions(restored.map(entry => entry.version));
 }

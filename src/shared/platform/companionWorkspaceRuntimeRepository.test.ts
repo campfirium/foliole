@@ -38,7 +38,8 @@ const NODE_MUTATION_SURFACES: CompanionNodeMutationSurface[] = [
   'quick-capture',
   'selection-annotation',
   'topic-content-edit',
-  'trash-restore'
+  'trash-restore',
+  'workspace-structure'
 ];
 
 function expectNodeMutationSurfaces(expected: boolean) {

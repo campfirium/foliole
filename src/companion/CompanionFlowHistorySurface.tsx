@@ -9,6 +9,7 @@ import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
 
 import { CompanionEditHistoryActions, type CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowEdgeGestures } from './CompanionFlowEdgeGestures';
+import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 type Controls = { refreshPending: boolean; busy: boolean; canUndo: boolean; canRedo: boolean; apply(mode: HistoryMode): void };
 const FlowHistoryContext = createContext<Controls | null>(null);
@@ -41,7 +42,7 @@ export function CompanionFlowHistorySurface(props: {
 export function CompanionFlowOrEditHistoryActions(props: { open: boolean; editHistory?: CompanionEditHistoryActionsProps }) {
   const controls = useContext(FlowHistoryContext);
   const t = useTranslation();
-  if (!controls) return props.editHistory ? <CompanionEditHistoryActions {...props.editHistory} open={props.open} /> : null;
+  if (!controls) return <>{props.editHistory && <CompanionEditHistoryActions {...props.editHistory} open={props.open} />}<CompanionWorkspaceHistoryActions /></>;
   if (controls.refreshPending) return <button type="button" disabled={controls.busy}
     className="min-h-11 w-full border-b border-companion-divider py-2 text-sm text-foreground"
     onClick={() => controls.apply('undo')}>{t('companion.selection.refresh')}</button>;
@@ -51,7 +52,7 @@ export function CompanionFlowOrEditHistoryActions(props: { open: boolean; editHi
       return <button key={mode} type="button" disabled={controls.busy || !(mode === 'undo' ? controls.canUndo : controls.canRedo)}
         className="flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-md px-2 text-sm text-foreground disabled:opacity-40"
         onClick={() => controls.apply(mode)}><Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-        {t(mode === 'undo' ? 'companion.reading.undoFlow' : 'companion.reading.redoFlow')}</button>;
+        {t(mode === 'undo' ? 'desktop.command.undo' : 'desktop.command.redo')}</button>;
     })}
   </div>;
 }

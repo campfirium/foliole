@@ -104,7 +104,7 @@ export function RecentArticleRow(props: {
         {status ? <p className="companion-topic-preview">{status}</p> : null}
         <p className="companion-topic-meta truncate">{meta}</p>
       </button>
-      <CompanionTopicListMenu metadata={meta} onOpen={open} title={props.article.title} />
+      <CompanionTopicListMenu nodeId={props.article.nodeId} metadata={meta} onOpen={open} title={props.article.title} />
     </div>
   );
 }

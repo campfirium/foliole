@@ -58,7 +58,7 @@ export function useCompanionFlowSession(args: {
     const kind = args.snapshot?.nodesById[id]?.kind;
     return kind === 'topic' || kind === 'item';
   }));
-  const historyKey = companionFlowHistoryKey(args.libraryScope, args.onlyReview);
+  const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { if (owner.current === current) continueCurrentFlow(latest.current, current, mode, render); }
   return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
@@ -114,11 +114,15 @@ function useFlowHydration(
     if (!args.ready || !args.snapshot) return;
     let cancelled = false;
     void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
-      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope, args.onlyReview)) : null
+      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null
     ]).then(([preferred, history]) => {
       if (cancelled || owner.current !== current || !latest.current.snapshot) return;
       current.session = resumeFlowSession(latest.current.snapshot, mode, preferred, new Date().toISOString());
       const entry = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
+      if (entry?.type === 'nodes.change') {
+        const saved = history!.undoStack.length ? entry.afterSession : entry.beforeSession;
+        if (saved?.currentNodeId === preferred) current.session = cloneWorkspaceReviewSession(saved);
+      }
       if (entry && (entry.type === 'review.grade' || entry.type === 'topic.dismiss')) {
         const replayMode = history!.undoStack.length ? 'undo' : 'redo';
         const context = replayMode === 'undo' ? entry.afterContext : entry.beforeContext;

@@ -1,4 +1,14 @@
 export const EN_COMPANION_READING_TRANSLATIONS = {
+  'companion.workspace.manage': 'Manage',
+  'companion.workspace.delete': 'Move to Trash',
+  'companion.workspace.deleteDescription': 'This moves the selected object and its children to Trash.',
+  'companion.workspace.root': 'Root directory',
+  'companion.workspace.kind': 'Type',
+  'companion.workspace.name': 'Name',
+  'companion.workspace.shelve': 'Shelve',
+  'companion.workspace.unshelve': 'Unshelve',
+  'companion.workspace.savedRefreshError': 'Saved. Refresh to show the change.',
+
   'companion.reading.undoFlow': 'Undo review action',
   'companion.reading.redoFlow': 'Redo review action',
   'companion.reading.gestureError': 'Edge gestures are unavailable. Use Actions to undo or redo.',

@@ -41,5 +41,9 @@ export function createCompanionFlowControls(args: {
     render();
   }
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
-  return { capture, historyContext, restore, matches, advance, resume, reveal };
+  const workspaceHistoryControls = {
+    captureFlowHistoryContext: () => ({ session: capture().session, mode }),
+    restoreFlowHistorySession: (session: FlowOwner['session']) => restore(capture(), session)
+  };
+  return { capture, historyContext, restore, matches, advance, resume, reveal, workspaceHistoryControls };
 }
