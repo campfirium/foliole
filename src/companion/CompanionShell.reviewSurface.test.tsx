@@ -200,13 +200,19 @@ describe('CompanionShell review surfaces', () => {
 
   it('shows Queue clear and continues Flow instead of falling back to reading content', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const surface = reviewSurface(null);
-    await renderShellWithSurface(surface);
+    const refresh = await renderShellWithSurface(surface);
 
     expect(screen.getByText('Queue clear')).toBeInTheDocument();
+    expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
     expect(surface.handleContinueReading).toHaveBeenCalledOnce();
     expect(screen.queryByText(/Synced review state/)).not.toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('companion-top-bar-left-action'));
+    expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
+    surface.activeAction = 'recent';
+    refresh();
+    expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
   });
 
   it('shows reading actions when the current review card is a reading item', async () => {

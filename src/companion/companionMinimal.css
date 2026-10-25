@@ -111,3 +111,18 @@ html, body, #root, #root * { scrollbar-width: none; }
 }
 
 .companion-review-surface > .companion-reading-top-chrome::after { display: none; }
+
+.companion-flow-complete {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: 18vh;
+  padding-bottom: 24px;
+}
+.companion-flow-complete h2 {
+  margin: 0 0 24px;
+  color: var(--role-content-text);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.25;
+}

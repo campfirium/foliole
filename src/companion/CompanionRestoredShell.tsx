@@ -26,14 +26,14 @@ import { useCompanionTabsConfig } from './useCompanionTabsConfig';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
-function useCompanionNavigationVisibility(floatingBar: ReturnType<typeof useFloatingBarVisibility>, isReviewTaskActive: boolean) {
+function useCompanionNavigationVisibility(floatingBar: ReturnType<typeof useFloatingBarVisibility>, isFlowActive: boolean) {
   const isNavigationVisible = useMemo(
-    () => !isReviewTaskActive,
-    [isReviewTaskActive]
+    () => !isFlowActive,
+    [isFlowActive]
   );
 
   const handleContentTap = () => {
-    if (isReviewTaskActive || floatingBar.isVisible) {
+    if (isFlowActive || floatingBar.isVisible) {
       return;
     }
     floatingBar.revealBar();
@@ -75,7 +75,7 @@ function useCompanionReviewChrome(args: {
     args.workspaceSync.state.workspace_snapshot,
     args.surface.effectiveReviewSession.currentCard?.nodeId ?? null
   );
-  const navigation = useCompanionNavigationVisibility(args.floatingBar, isReviewTaskActive);
+  const navigation = useCompanionNavigationVisibility(args.floatingBar, args.surface.activeAction === 'review');
   return { isBottomBarDisabled, isReviewTaskActive, reviewBreadcrumbItems, ...navigation };
 }
 
