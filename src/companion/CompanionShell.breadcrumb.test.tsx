@@ -78,7 +78,9 @@ function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {
   });
 }
 
-async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
+async function renderBreadcrumbShell(surface: Omit<ReturnType<typeof createItemReviewSurface>, 'selectedBrowseNodeId'> & {
+  selectedBrowseNodeId: string | null;
+} = createItemReviewSurface()) {
   mockBreadcrumbEnvironment(createBreadcrumbSnapshot());
   useCompanionArticleSurface.mockReturnValue(surface);
 

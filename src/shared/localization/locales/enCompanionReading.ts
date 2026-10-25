@@ -1,4 +1,8 @@
 export const EN_COMPANION_READING_TRANSLATIONS = {
+  'companion.reading.undoFlow': 'Undo review action',
+  'companion.reading.redoFlow': 'Redo review action',
+  'companion.reading.gestureError': 'Edge gestures are unavailable. Use Actions to undo or redo.',
+
   'companion.reading.historyError': 'Could not undo or redo. The content may have changed on another device. Refresh and try again.',
   'companion.reading.exit': 'Exit',
   'companion.reading.actions': 'Actions',

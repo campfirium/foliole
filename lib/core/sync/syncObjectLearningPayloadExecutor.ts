@@ -96,6 +96,17 @@ export async function applyNodeReviewObject(port: DbPort, record: SyncObjectReco
   if (!await shouldApplyNodeReview(port, record, text(payload.last_review_at), incomingReps)) {
     return false;
   }
+  await writeNodeReviewObject(port, record);
+}
+
+/** Writes an accepted review record without applying remote conflict arbitration. */
+export async function writeNodeReviewObject(port: DbPort, record: SyncObjectRecord) {
+  if (record.deleted_at) {
+    await port.run('DELETE FROM node_review WHERE node_id = ?', [record.object_id]);
+    return;
+  }
+  const payload = asObject(record);
+  const incomingReps = integer(payload.reps);
   await port.run(
     `INSERT INTO node_review (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET due = excluded.due, ` +

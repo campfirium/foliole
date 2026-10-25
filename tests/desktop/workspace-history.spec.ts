@@ -75,6 +75,9 @@ async function enterWorkspaceHistoryFlow(page: import('@playwright/test').Page) 
 
 test('keeps every workspace domain in one durable native history', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
   await seedWorkspaceHistory(desktopWindow);
   await enterWorkspaceHistoryFlow(desktopWindow);
 

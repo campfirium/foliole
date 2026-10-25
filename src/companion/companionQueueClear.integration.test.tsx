@@ -81,7 +81,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
     <button onClick={() => void surface.handleReadReviewTopic()}>Read</button>
   </>;
   if (only) return <CompanionOnlyReviewContent hasSnapshot isAnswerRevealed={false} reviewSession={surface.onlyReviewSession} />;
-  return <CompanionReviewFallback hasSnapshot error={error ?? surface.flowError}
+  return <CompanionReviewFallback hasSnapshot summary={surface.flowSummary} error={error ?? surface.flowError}
     {...{ hasTopics: surface.flowHasTopics, canContinueReading: surface.canContinueReading,
       onContinueReading: surface.handleContinueReading }} />;
 }
@@ -142,7 +142,8 @@ it('keeps Only Review clear of reading topics after its last grade', async () =>
 });
 
 it('shows refresh failures separately from Queue clear', () => {
-  render(<CompanionReviewFallback hasSnapshot hasTopics canContinueReading={false}
+  render(<CompanionReviewFallback summary={{ completedAt: null, sessionStartedAt: null,
+    readTopicCount: 0, readingElapsedMs: 0, reviewedItemCount: 0, reviewElapsedMs: 0 }} hasSnapshot hasTopics canContinueReading={false}
     onContinueReading={() => {}} error="Could not refresh the saved action." />);
   expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh the saved action.');
   expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();

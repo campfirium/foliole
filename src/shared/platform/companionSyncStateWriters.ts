@@ -136,7 +136,7 @@ export async function saveCompanionSyncNodeViewState(args: {
   );
 }
 
-function toReadingPayload(reading: NativeWorkspaceReadingProfile) {
+export function toReadingPayload(reading: NativeWorkspaceReadingProfile) {
   return {
     interval_duration_ms: reading.intervalDurationMs, interval_growth_factor: reading.intervalGrowthFactor,
     last_handled_at: reading.lastHandledAt, next_at: reading.nextAt, priority: reading.priority,

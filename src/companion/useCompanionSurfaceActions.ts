@@ -3,17 +3,20 @@ import { useRef, useState } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import type { FlowAction } from '../store/workspaceFlowSession';
 
+import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { confirmFlowMutation, isCompanionGradeDue, persistFlowMutation, type FlowMutation } from './companionFlowMutation';
 import type { CompanionReadingActivity } from './companionReadingActivity';
+import { useCompanionFlowHistoryReplay } from './useCompanionFlowHistoryReplay';
 import type { useCompanionFlowSession } from './useCompanionFlowSession';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
 type Flow = ReturnType<typeof useCompanionFlowSession>;
 type Token = ReturnType<Flow['capture']>;
-type Args = {
+export type CompanionSurfaceActionArgs = {
   floatingBar: ReturnType<typeof useFloatingBarVisibility>;
   flow: Flow;
   activity: CompanionReadingActivity;
@@ -22,7 +25,7 @@ type Args = {
   active: boolean;
 };
 
-export function useCompanionSurfaceActions(args: Args) {
+export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
   const [busy, setBusy] = useState(false);
   const [readingError, setReadingError] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -32,11 +35,9 @@ export function useCompanionSurfaceActions(args: Args) {
   latest.current = args;
 
   async function submit(action: FlowAction, grade?: ReviewGrade) {
-    if (locked.current || !args.active) return;
+    if (locked.current || !args.active || historyReplay.refreshPending) return;
     const token = args.flow.capture();
-    if (!pending.current && (!token.nodeId || !args.snapshot)) return;
-    if (!pending.current && (args.activity.nodeId !== token.nodeId || args.activity.editing)) return;
-    if (!pending.current && action === 'grade' && !args.flow.isAnswerRevealed) return;
+    if (!pending.current && !canSubmitFlowAction(args, token, action)) return;
     locked.current = true;
     setBusy(true);
     setReadingError(null);
@@ -53,9 +54,13 @@ export function useCompanionSurfaceActions(args: Args) {
         args.flow.resume(token, snapshot);
         return;
       }
-      if (action === 'soon') { args.flow.advance(token, action, snapshot, now); return; }
+      const history = args.flow.historyContext(token);
+      if (action === 'soon') {
+        await commitSoonAction(args, token, snapshot, now);
+        return;
+      }
       const mutation = await persistFlowMutation({ action, snapshot, nodeId: token.nodeId, now,
-        ...(grade ? { grade } : {}) });
+        ...(grade ? { grade } : {}), ...(history ? { history } : {}) });
       pending.current = { token, mutation };
       await finishPending(args, pending, setReadingError);
     } catch (error) {
@@ -66,7 +71,11 @@ export function useCompanionSurfaceActions(args: Args) {
       setBusy(false);
     }
   }
+  const historyReplay = useCompanionFlowHistoryReplay(args, locked, () => pending.current !== null,
+    setBusy, setReviewError);
   return {
+    handleFlowHistory: historyReplay.replay,
+    historyRefreshPending: historyReplay.refreshPending,
     handleGradeReview: (grade: ReviewGrade) => submit('grade', grade),
     handleReadReviewTopic: () => submit('read'),
     handlePostponeReviewTopic: () => submit('later'),
@@ -77,7 +86,7 @@ export function useCompanionSurfaceActions(args: Args) {
   };
 }
 
-async function finishPending(args: Args,
+async function finishPending(args: CompanionSurfaceActionArgs,
   pending: { current: { token: Token; mutation: FlowMutation } | null },
   setReadingError: (error: string) => void) {
     const saved = pending.current;
@@ -94,3 +103,16 @@ async function finishPending(args: Args,
     if (saved.mutation.partial) setReadingError('The topic was updated, but some related changes could not be saved.');
     args.floatingBar.revealBar();
   }
+
+async function commitSoonAction(args: CompanionSurfaceActionArgs, token: Token, snapshot: WorkspaceSnapshot, now: string) {
+  const history = args.flow.historyContext(token);
+  if (history && token.nodeId) await commitCompanionFlowHistory({ key: history.key,
+    entry: createCompanionFlowHistoryEntry({ action: 'soon', nodeId: token.nodeId, now,
+      before: snapshot, after: snapshot, history }) });
+  args.flow.advance(token, 'soon', snapshot, now);
+}
+
+function canSubmitFlowAction(args: CompanionSurfaceActionArgs, token: Token, action: FlowAction) {
+  return Boolean(token.nodeId && args.snapshot && args.activity.nodeId === token.nodeId && !args.activity.editing &&
+    (action !== 'grade' || args.flow.isAnswerRevealed));
+}

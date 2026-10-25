@@ -30,7 +30,8 @@ it.each([['android', false], ['android', true], ['ios', false], ['ios', true]] a
   const activity = new CompanionReadingActivity('topic', () => {});
   const document = (editing: boolean) => <MouseGestureSettingsProvider><CompanionDraftProvider><ReadableArticleDocument isReviewItem allowContentEditing={editing}
     activity={activity} onSaveContent={save} answer={revealed ? 'Answer' : null}
-    readableArticle={{ content: 'Question', nodeId: 'topic', title: 'Item', textAnchorDecorations: [] }}
+    readableArticle={{ content: 'Question', nodeId: 'topic', title: 'Item', hideTitleHeading: false,
+      persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
     readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
   </CompanionDraftProvider></MouseGestureSettingsProvider>;
   const view = renderWithLocalization(document(false));
@@ -61,7 +62,8 @@ it.each([['android', false], ['android', true], ['ios', false], ['ios', true]] a
     view.unmount();
     await activity.flush();
   });
-  await waitFor(() => expect(host.sqlite.prepare('SELECT count(*) FROM node_version_local_holds').pluck().get()).toBe(0));
+  await waitFor(() => expect(host.sqlite.prepare("SELECT count(*) FROM node_version_local_holds WHERE hold_id LIKE 'companion:%'")
+    .pluck().get()).toBe(0));
   await host.reopen();
   expect(host.sqlite.prepare("SELECT content, reveal FROM nodes WHERE id = 'topic'").get())
     .toEqual({ content: 'Question', reveal: 'Answer' });

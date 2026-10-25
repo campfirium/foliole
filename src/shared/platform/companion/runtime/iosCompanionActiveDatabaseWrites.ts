@@ -1,5 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { writeNodeReadingObject, applyNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
+import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 import { createCompanionUuid } from '../../companionUuid';
 
@@ -39,20 +39,24 @@ export function saveIosOpenState(args: { last_opened_at: string; node_id: string
 }
 
 export function saveIosReading(args: { node_id: string; reading_json: string; completedReviewDay?: string }) {
-  return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
-    const input = parseObject(args.reading_json);
-    const hostName = await iosCompanionHostName(tx);
-    const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
-    const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
-    void ignoredHost; void ignoredPosition;
-    const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
-      writeNodeReadingObject(tx, record, { hostName })
-    ), hashPayload);
-    if (args.completedReviewDay !== undefined) {
-      await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);
-    }
-    return result;
-  }));
+  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosReadingWithDb(tx, args)));
+}
+
+export async function saveIosReadingWithDb(tx: DbPort, args: {
+  node_id: string; reading_json: string; completedReviewDay?: string;
+}) {
+  const input = parseObject(args.reading_json);
+  const hostName = await iosCompanionHostName(tx);
+  const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
+  const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
+  void ignoredHost; void ignoredPosition;
+  const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
+    writeNodeReadingObject(tx, record, { hostName })
+  ), hashPayload);
+  if (args.completedReviewDay !== undefined) {
+    await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);
+  }
+  return result;
 }
 
 export function saveIosReview(args: { node_id: string; review_json: string; review_log_json?: string }) {
@@ -61,7 +65,7 @@ export function saveIosReview(args: { node_id: string; review_json: string; revi
 
 export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; review_json: string; review_log_json?: string }) {
   const payload = { ...parseObject(args.review_json), node_id: args.node_id };
-  const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => applyNodeReviewObject(tx, record));
+  const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => writeNodeReviewObject(tx, record));
   if (!args.review_log_json) return result;
   const opId = createCompanionUuid();
   await insertReviewLog(tx, args.node_id, opId, parseObject(args.review_log_json));

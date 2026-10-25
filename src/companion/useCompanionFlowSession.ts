@@ -3,17 +3,24 @@ import { useEffect, useReducer, useRef, useSyncExternalStore } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
-import { advanceFlowSession, flowState, reconcileFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
+import { getWorkspaceHistoryTopEntry } from '../store/workspaceActionHistoryState';
+import { flowState, reconcileFlowSession, resumeFlowSession } from '../store/workspaceFlowSession';
+import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 import { buildReviewFlowWindow } from '../store/workspaceReviewFlowWindow';
+import { resolveWorkspaceReviewHistoryTarget } from '../store/workspaceReviewHistoryTarget';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import { canContinueReadingInFlowWindow, continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
 
+import { createCompanionFlowControls } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 
-type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
-  generation: number; hydrated: boolean; error: string | null; kind: string | null;
+export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
+  generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
 export function useCompanionFlowSession(args: {
@@ -22,11 +29,11 @@ export function useCompanionFlowSession(args: {
   const [, render] = useReducer((value: number) => value + 1, 0);
   const scope = useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope);
   const identity = JSON.stringify([args.libraryScope, args.onlyReview]);
-  const owner = useRef({ identity, scope, session: createEmptyReviewSession(), generation: 0,
+  const owner = useRef({ identity, scope, session: createEmptyReviewSession(), generation: 0, epoch: 0,
     hydrated: false, error: null as string | null, kind: null as string | null,
     snapshot: null as WorkspaceSnapshot | null });
   if (owner.current.identity !== identity || owner.current.scope !== scope) owner.current = {
-    identity, scope, session: createEmptyReviewSession(), generation: owner.current.generation + 1,
+    identity, scope, session: createEmptyReviewSession(), generation: owner.current.generation + 1, epoch: owner.current.epoch + 1,
     hydrated: false, error: null, kind: null, snapshot: null
   };
   const current = owner.current;
@@ -51,26 +58,10 @@ export function useCompanionFlowSession(args: {
     const kind = args.snapshot?.nodesById[id]?.kind;
     return kind === 'topic' || kind === 'item';
   }));
-  function capture() { return { owner: current, scope, generation: current.generation, nodeId: session.currentNodeId }; }
-  function matches(token: ReturnType<typeof capture>) {
-    return getCompanionReadingScope() === token.scope && owner.current === token.owner && current.generation === token.generation &&
-      current.session.currentNodeId === token.nodeId;
-  }
-  function advance(token: ReturnType<typeof capture>, action: FlowAction, snapshot: WorkspaceSnapshot, now: string) {
-    if (!matches(token)) return;
-    current.session = advanceFlowSession({ action, snapshot, session: current.session, mode, now });
-    current.generation += 1;
-    render();
-  }
-  function resume(token: ReturnType<typeof capture>, snapshot: WorkspaceSnapshot) {
-    if (!matches(token)) return;
-    current.session = resumeFlowSession(snapshot, mode, null, new Date().toISOString());
-    current.generation += 1;
-    render();
-  }
-  function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
+  const historyKey = companionFlowHistoryKey(args.libraryScope, args.onlyReview);
+  const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { if (owner.current === current) continueCurrentFlow(latest.current, current, mode, render); }
-  return { view, capture, matches, advance, resume, reveal, continueReading, canContinueReading, hasTopics,
+  return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
     summary: { completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
@@ -105,6 +96,7 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
         current.session = resumeFlowSession(args.snapshot, mode, null, new Date().toISOString());
       }
       current.generation += 1;
+      current.epoch += 1;
       render();
     }
     wasActive.current = args.active;
@@ -121,9 +113,19 @@ function useFlowHydration(
   useEffect(() => {
     if (!args.ready || !args.snapshot) return;
     let cancelled = false;
-    void loadCompanionFlowResume(args.libraryScope, args.onlyReview).then((preferred) => {
+    void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
+      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope, args.onlyReview)) : null
+    ]).then(([preferred, history]) => {
       if (cancelled || owner.current !== current || !latest.current.snapshot) return;
       current.session = resumeFlowSession(latest.current.snapshot, mode, preferred, new Date().toISOString());
+      const entry = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
+      if (entry && (entry.type === 'review.grade' || entry.type === 'topic.dismiss')) {
+        const replayMode = history!.undoStack.length ? 'undo' : 'redo';
+        const context = replayMode === 'undo' ? entry.afterContext : entry.beforeContext;
+        if (context.reviewSession.currentNodeId === preferred &&
+          resolveWorkspaceReviewHistoryTarget({ ...latest.current.snapshot, entry, mode: replayMode,
+          reviewSession: context.reviewSession })) current.session = cloneWorkspaceReviewSession(context.reviewSession);
+      }
       current.hydrated = true;
       render();
     }).catch((error: unknown) => {

@@ -1,6 +1,10 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.reading.undoFlow': '撤销复习操作',
+  'companion.reading.redoFlow': '重做复习操作',
+  'companion.reading.gestureError': '暂时无法使用边缘手势，可在更多菜单中撤销或重做。',
+
   'companion.reading.historyError': '暂时无法撤销或重做，内容可能已在另一台设备上更改。请刷新后重试。',
   'companion.reading.exit': '退出',
   'companion.reading.actions': '操作',

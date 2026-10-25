@@ -9,7 +9,7 @@ export interface WorkspaceReviewGradeHistoryEntry {
   afterContext: WorkspaceHistoryContext;
   afterReview: NodeReviewProfile;
   beforeContext: WorkspaceHistoryContext;
-  beforeReview: NodeReviewProfile;
+  beforeReview: NodeReviewProfile | null;
   id: string;
   mutationTimestamp: string;
   nodeId: string;
@@ -43,7 +43,7 @@ export function createReviewGradeHistoryEntry(args: {
   afterContext: WorkspaceHistoryContext;
   afterReview: NodeReviewProfile;
   beforeContext: WorkspaceHistoryContext;
-  beforeReview: NodeReviewProfile;
+  beforeReview: NodeReviewProfile | null;
   id: string;
   mutationTimestamp: string;
   nodeId: string;
@@ -52,7 +52,7 @@ export function createReviewGradeHistoryEntry(args: {
     afterContext: { ...args.afterContext, reviewSession: cloneWorkspaceReviewSession(args.afterContext.reviewSession) },
     afterReview: cloneReviewProfile(args.afterReview)!,
     beforeContext: { ...args.beforeContext, reviewSession: cloneWorkspaceReviewSession(args.beforeContext.reviewSession) },
-    beforeReview: cloneReviewProfile(args.beforeReview)!,
+    beforeReview: cloneReviewProfile(args.beforeReview),
     id: args.id,
     mutationTimestamp: args.mutationTimestamp,
     nodeId: args.nodeId,

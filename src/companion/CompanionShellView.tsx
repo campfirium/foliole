@@ -8,6 +8,7 @@ import {
 } from './companionCssCompatibility';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
+import { CompanionFlowHistorySurface } from './CompanionFlowHistorySurface';
 import { CompanionListViewportProvider } from './CompanionListViewport';
 import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
 import type { CompanionShellModel } from './CompanionShell';
@@ -97,11 +98,20 @@ function hasImmersiveReadingContent(model: CompanionShellModel): boolean {
     && model.surface.effectiveReviewSession.currentCard);
 }
 
+function FlowHistorySurface(props: { children: React.ReactNode; model: CompanionShellModel }) {
+  const { model } = props;
+  return (<CompanionFlowHistorySurface
+      active={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing &&
+        !model.surface.readingActivity.editing && model.surface.flowReady}
+      busy={model.isBottomBarDisabled} refreshPending={model.surface.historyRefreshPending} historyKey={model.surface.flowHistoryKey}
+      onApply={mode => void model.surface.handleFlowHistory(mode)}>{props.children}</CompanionFlowHistorySurface>);
+}
+
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   return (
-    <>
+    <FlowHistorySurface model={model}>
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
         <CompanionPreviewLifecycle activity={model.surface.readingActivity}
           destination={JSON.stringify([model.surface.activeAction, model.settingsPage, model.activeSecondaryDestinationId,
@@ -151,6 +161,6 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         onRevealAnswer={model.surface.handleRevealAnswer}
         onSecondaryDestination={model.handleSecondaryDestination}
       />
-    </>
+    </FlowHistorySurface>
   );
 }

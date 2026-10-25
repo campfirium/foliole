@@ -81,6 +81,17 @@ it('preserves every persisted FSRS field through mobile load and reopen', async 
   expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(expected);
 });
 
+it('restores an earlier review snapshot through the local writer without adding a grade', async () => {
+  const before = desktopSnapshot().nodesById.card!.review!;
+  const result = await gradeCompanionReviewCard({ grade: 3, nodeId: 'card',
+    now: '2026-05-04T12:00:00.000Z', snapshot: desktopSnapshot() });
+  await persistCompanionReviewSyncObject({ itemKind: 'fsrs', nodeId: 'card',
+    snapshot: result!.snapshot, reviewLog: result!.reviewLog });
+  await saveCompanionSyncNodeReviewRecord({ nodeId: 'card', review: before });
+  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(before);
+  expect(database!.prepare('SELECT * FROM review_log').all()).toHaveLength(1);
+});
+
 it.each([1, 2, 3, 4] as const)('grades persisted mobile history like desktop for grade %s', async (grade) => {
   const now = '2026-05-04T12:00:00.000Z';
   const desktop = desktopSnapshot();

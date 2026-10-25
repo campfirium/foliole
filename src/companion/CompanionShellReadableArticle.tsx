@@ -81,7 +81,7 @@ function FlowFooter({ surface }: { surface: Surface }) {
   return (
     <CompanionBottomReviewBar
       hasAnswer={Boolean(surface.effectiveReviewSession.currentCard?.hasAnswer)}
-      disabled={surface.isSubmittingGrade || surface.isSubmittingReadingAction || surface.readingActivity.editing ||
+      disabled={surface.isSubmittingGrade || surface.isSubmittingReadingAction || surface.historyRefreshPending || surface.readingActivity.editing ||
         (!surface.readableArticle || Boolean(surface.readableArticle.bodyStatus && surface.readableArticle.bodyStatus !== 'ready'))}
       isAnswerRevealed={surface.isAnswerRevealed}
       itemKind={surface.effectiveReviewSession.currentCard?.itemKind ?? 'reading'}

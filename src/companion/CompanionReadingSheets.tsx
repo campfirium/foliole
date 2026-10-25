@@ -6,7 +6,8 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
-import { CompanionEditHistoryActions, type CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
+import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
+import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
@@ -85,7 +86,7 @@ export function ReadingActionsSheet(props: {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
-        {props.editHistory ? <CompanionEditHistoryActions {...props.editHistory} open={props.open} /> : null}
+        <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}

@@ -11,6 +11,37 @@ import java.time.Instant;
 public class FolioleCompanionBootstrapPlugin extends Plugin {
 
     @PluginMethod
+    public void setFlowGestureRegion(PluginCall call) {
+        Boolean enabled = call.getBoolean("enabled");
+        Double width = call.getDouble("edgeWidth");
+        Double height = call.getDouble("bandHeight");
+        Double viewportWidth = call.getDouble("viewportWidth");
+        if (enabled == null || width == null || height == null || viewportWidth == null
+            || !Double.isFinite(width) || !Double.isFinite(height) || !Double.isFinite(viewportWidth)
+            || width <= 0 || width > 48 || height <= 0 || height > 200 || viewportWidth <= 0) {
+            call.reject("Invalid Flow gesture region.");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            android.webkit.WebView view = getBridge().getWebView();
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                java.util.List<android.graphics.Rect> regions = new java.util.ArrayList<>();
+                if (enabled) {
+                    float scale = view.getWidth() / viewportWidth.floatValue();
+                    int edge = Math.min(view.getWidth() / 2, Math.round(width.floatValue() * scale));
+                    int band = Math.min(view.getHeight(), Math.min(Math.round(height.floatValue() * scale),
+                        Math.round(200 * getContext().getResources().getDisplayMetrics().density)));
+                    int top = (view.getHeight() - band) / 2;
+                    regions.add(new android.graphics.Rect(0, top, edge, top + band));
+                    regions.add(new android.graphics.Rect(view.getWidth() - edge, top, view.getWidth(), top + band));
+                }
+                view.setSystemGestureExclusionRects(regions);
+            }
+            call.resolve();
+        });
+    }
+
+    @PluginMethod
     public void loadBootstrap(PluginCall call) {
         try {
             FolioleCompanionBootstrapState state = new FolioleCompanionBootstrapState(

@@ -17,7 +17,8 @@ it.each([false, true])('keeps the answer visibility while editing and cancelling
   const activity = new CompanionReadingActivity('item', () => {});
   const view = render(<CompanionDraftProvider><ReadableArticleDocument isReviewItem allowContentEditing
     activity={activity} onSaveContent={save} answer={revealed ? reveal : null}
-    readableArticle={{ content: 'Question', nodeId: 'item', title: 'Item', textAnchorDecorations: [] }}
+    readableArticle={{ content: 'Question', nodeId: 'item', title: 'Item', hideTitleHeading: false,
+      persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
     readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
   </CompanionDraftProvider>);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Question' })).not.toHaveAttribute('readonly'));

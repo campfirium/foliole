@@ -1,10 +1,12 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { isReviewProfileDue } from '../store/reviewQueuePlannerTime';
 import type { FlowAction } from '../store/workspaceFlowSession';
 import { isWorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
 
+import { createCompanionFlowHistoryEntry, completedFlowReviewDay, type CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import { dismissCompanionReviewTopic, postponeCompanionReviewTopic, readCompanionReviewTopic } from './companionReadingReview';
 import { gradeCompanionReviewCard } from './companionReviewSession';
 import { persistCompanionReviewSyncObject } from './companionReviewSyncPersistence';
@@ -26,12 +28,15 @@ export type FlowMutation = {
 export async function persistFlowMutation(args: {
   action: Exclude<FlowAction, 'soon'>; snapshot: WorkspaceSnapshot;
   nodeId: string; now: string; grade?: ReviewGrade;
+  history?: CompanionFlowHistoryContext;
 }): Promise<FlowMutation> {
   if (args.action === 'grade') {
     const result = await gradeCompanionReviewCard({ ...args, grade: args.grade! });
     if (!result) throw new Error('The current item is no longer available.');
-    const saved = await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
-      nodeId: args.nodeId, reviewLog: result.reviewLog, snapshot: result.snapshot });
+    const saved = args.history ? await commitCompanionFlowHistory({ key: args.history.key,
+      entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot, history: args.history }),
+      reviewLog: result.reviewLog }) : await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
+        nodeId: args.nodeId, reviewLog: result.reviewLog, snapshot: result.snapshot });
     if (!saved) throw new Error('Could not save the review grade.');
     return { ...args, snapshot: result.snapshot, partial: false, targetConfirmed: true };
   }
@@ -39,6 +44,13 @@ export async function persistFlowMutation(args: {
     : args.action === 'later' ? postponeCompanionReviewTopic : dismissCompanionReviewTopic;
   const result = apply(args);
   if (!result) throw new Error('The current topic is no longer available.');
+  if (args.history) {
+    await commitCompanionFlowHistory({ key: args.history.key,
+      entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot,
+        relatedNodeIds: result.syncNodeIds, history: args.history }),
+      ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });
+    return { ...args, snapshot: result.snapshot, partial: false, targetConfirmed: true };
+  }
   try {
     const saved = await persistCompanionReviewSyncObject({ itemKind: 'reading', completedReading: args.action === 'read',
       nodeId: args.nodeId, nodeIds: result.syncNodeIds, snapshot: result.snapshot });
