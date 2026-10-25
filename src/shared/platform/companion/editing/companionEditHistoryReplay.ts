@@ -11,10 +11,8 @@ import { digestEditorContent } from '../../../../features/editor/model/editorCon
 import { getEditorOperationTopEntry, moveEditorOperationEntry, replaceEditorOperationEntry,
   type EditorAnnotationOperationEntry, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
 import { applyCompanionSyncNodeVersionsWithDbPort } from '../../companionSyncNodeVersions';
-import { toReviewPayload } from '../../companionSyncStateWriters';
 import { createCompanionUuid } from '../../companionUuid';
 import { writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
-import { saveIosReviewWithDb } from '../runtime/iosCompanionActiveDatabaseWrites';
 import { iosCompanionHostName } from '../runtime/iosCompanionMutationState';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
@@ -88,9 +86,5 @@ async function replayAnnotations(db: DbPort, entry: EditorAnnotationOperationEnt
   }
   const ids = await applyCompanionSyncNodeVersionsWithDbPort(db, versions, trash ? 'local_mutation' : 'local_restore');
   if (ids.length !== versions.length) throw new Error('editor_history_not_applied');
-  if (!trash) for (const annotation of annotations) {
-    if (annotation.review) await saveIosReviewWithDb(db, { node_id: annotation.nodeId,
-      review_json: JSON.stringify(toReviewPayload(annotation.review)) });
-  }
   return { ...entry, annotations };
 }

@@ -1,4 +1,6 @@
 import { INSERT_REVIEW_EVENT_SQL } from '../../../../../lib/core/database/reviewLogRecord';
+import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
+import { readStoredReviewCardWithDb } from '../../../../../lib/core/database/storedReviewCard';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib/core/sync/syncFactRowSchemas';
 import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
@@ -66,13 +68,15 @@ export function saveIosReview(args: { node_id: string; review_json: string; revi
 }
 
 export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; review_json: string; review_log_json?: string }) {
-  const payload = { ...parseObject(args.review_json), node_id: args.node_id };
-  const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => writeNodeReviewObject(tx, record));
-  if (!args.review_log_json) return result;
+  if (!args.review_log_json) {
+    const payload = { ...parseObject(args.review_json), node_id: args.node_id };
+    return applyLocalObject(tx, 'node_review', args.node_id, payload, record => writeNodeReviewObject(tx, record));
+  }
   const draft = parseObject(args.review_log_json);
   const opId = typeof draft.opId === 'string' ? draft.opId : createCompanionUuid();
-  await insertReviewLog(tx, args.node_id, opId, draft);
-  return { ...result, op_id: opId };
+  const inserted = await insertReviewLog(tx, args.node_id, opId, draft);
+  const card = inserted ? await recomputeNodeReviewWithDb(tx, args.node_id) : await readStoredReviewCardWithDb(tx, args.node_id);
+  return { object_id: args.node_id, op_id: opId, card };
 }
 
 export function saveIosActiveViewState(args: { node_id: string | null }) {
@@ -142,7 +146,14 @@ async function insertReviewLog(db: DbPort, nodeId: string, opId: string, draft: 
     grade: draft.grade, scheduler_version: draft.schedulerVersion, reviewed_at: draft.reviewedAt,
     kind: 'review', voids_op_id: null
   });
+  const [existing] = await db.query('SELECT node_id, grade, reviewed_at, scheduler_version FROM review_log WHERE op_id = ?', [opId]);
+  if (existing) {
+    if (existing.node_id !== row.node_id || existing.grade !== row.grade || existing.reviewed_at !== row.reviewed_at
+      || existing.scheduler_version !== row.scheduler_version) throw new Error('review_op_mismatch');
+    return false;
+  }
   await db.run(INSERT_REVIEW_EVENT_SQL, REVIEW_FACT_COLUMNS.map(column => row[column]));
+  return true;
 }
 
 function parseObject(value: string) { const parsed = JSON.parse(value) as unknown; return requireObject(parsed); }

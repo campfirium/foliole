@@ -41,7 +41,7 @@ export async function applySyncObjectPayloadWithDbPort(
     case 'node_reading':
       return applyNodeReadingObject(port, record, options);
     case 'node_review':
-      return applyNodeReviewObject(port, record);
+      return applyNodeReviewObject();
     case 'node_text_alternative':
       return applyNodeTextAlternativeObject(port, record);
     case 'setting':

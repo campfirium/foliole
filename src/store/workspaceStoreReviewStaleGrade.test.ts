@@ -20,7 +20,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+  vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
 });
 
 it('skips stale future FSRS cards instead of writing another grade', async () => {

@@ -3,6 +3,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
   projectDesktopFramedSyncParentRelation,
@@ -32,23 +33,14 @@ function parent(parentVersionId: string, ordinal: number) {
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
-  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY);
-    CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL);
-    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL);
-    CREATE TABLE node_sync_version_parents (
-      version_id TEXT NOT NULL, parent_version_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
-      local_note TEXT DEFAULT 'local-parent',
-      PRIMARY KEY (version_id, parent_version_id), UNIQUE (version_id, ordinal)
-    );
-    CREATE TABLE review_log (
-      id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, host_name TEXT NOT NULL,
-      node_id TEXT NOT NULL, grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL,
-      reviewed_at TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'review', voids_op_id TEXT, local_note TEXT DEFAULT 'local-review'
-    );
-    INSERT INTO nodes VALUES ('node-1');
-    INSERT INTO node_sync_versions VALUES
-      ('version-child', 'node-1'), ('version-parent-a', 'node-1'),
-      ('version-parent-b', 'node-1'), ('version-parent-c', 'node-1');`);
+  initializeDatabaseSchema(sqlite);
+  sqlite.exec(`ALTER TABLE node_sync_version_parents ADD COLUMN local_note TEXT DEFAULT 'local-parent';
+    ALTER TABLE review_log ADD COLUMN local_note TEXT DEFAULT 'local-review';
+    INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('node-1', '', 'now', 'now');`);
+  for (const id of ['version-child', 'version-parent-a', 'version-parent-b', 'version-parent-c']) {
+    sqlite.prepare(`INSERT INTO node_sync_versions(version_id, object_id, host_name, created_at, content_hash)
+      VALUES (?, 'node-1', 'device', 'now', 'hash')`).run(id);
+  }
   port = createBetterSqliteDbPort(sqlite);
 });
 

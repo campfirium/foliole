@@ -6,6 +6,7 @@ import { createCompanionDatabase, migrateCompanionDatabase } from '../../lib/cor
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { migrateCompanionReviewLog, migrateReviewLog } from '../../lib/core/database/reviewLogMigration.js';
+import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewLogApply.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -64,6 +65,15 @@ it.each(['desktop', 'companion'])('upgrades %s history without changing any exis
     expect(sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(migrated);
     expect(sqlite.prepare<[], { name: string }>('PRAGMA table_info(review_log)').all().map(row => row.name))
       .toEqual(['id', 'op_id', 'host_name', 'node_id', 'grade', 'scheduler_version', 'reviewed_at', 'kind', 'voids_op_id']);
+    for (const id of ['ordinary', 'new', 'reset', 'normal']) {
+      await applyReviewLogRecordsWithDbPort(db, [{ id: `next-${id}`, op_id: `next-${id}`, host_name: 'next',
+        node_id: id, grade: 3, scheduler_version: 'current', reviewed_at: '2026-10-25T08:00:00.000Z',
+        kind: 'review', voids_op_id: null }]);
+    }
+    expect(sqlite.prepare('SELECT node_id, reps FROM node_review ORDER BY node_id').all()).toEqual([
+      { node_id: 'new', reps: 2 }, { node_id: 'normal', reps: 3 },
+      { node_id: 'ordinary', reps: 2 }, { node_id: 'reset', reps: 1 }
+    ]);
   } finally { sqlite.close(); }
 });
 

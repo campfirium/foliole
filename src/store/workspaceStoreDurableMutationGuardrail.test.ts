@@ -57,7 +57,7 @@ function createFsrsHarness() {
 describe('workspace durable node mutation guardrails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+    vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
   });
 
   it('requires runtime sync for reading dismiss from the node menu', () => {
@@ -104,7 +104,7 @@ describe('workspace durable node mutation guardrails', () => {
 describe('workspace durable reading review mutation guardrails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+    vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
   });
 
   it('requires runtime sync for reading complete and defer actions', async () => {
@@ -151,7 +151,7 @@ describe('workspace durable reading review mutation guardrails', () => {
 describe('workspace durable reading review shelve and dismiss guardrails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+    vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
   });
 
   it('requires runtime sync for reading dismiss inside review mode', async () => {
@@ -179,7 +179,7 @@ describe('workspace durable reading review shelve and dismiss guardrails', () =>
 describe('workspace durable fsrs review mutation guardrails', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+    vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
   });
 
   it('requires runtime sync for fsrs grading mutations', async () => {

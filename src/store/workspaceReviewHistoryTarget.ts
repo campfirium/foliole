@@ -18,7 +18,11 @@ export function resolveWorkspaceReviewHistoryTarget<N extends HistoryNode>(args:
 }) {
   const { entry, mode } = args;
   const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
-  if (!isSameWorkspaceReviewSession(args.reviewSession, source.reviewSession)) return null;
+  const session = entry.type === 'review.grade'
+    ? { ...args.reviewSession, nextReviewDueAt: null } : args.reviewSession;
+  const expectedSession = entry.type === 'review.grade'
+    ? { ...source.reviewSession, nextReviewDueAt: null } : source.reviewSession;
+  if (!isSameWorkspaceReviewSession(session, expectedSession)) return null;
   const node = args.nodesById[entry.nodeId];
   if (!node || args.trashedNodeIds.includes(entry.nodeId)) return null;
   const nodesById = { ...args.nodesById };

@@ -182,7 +182,7 @@ it('rejects a reused review op id with different facts', async () => {
 it('applies mobile learning state and review event as clean desktop facts', async () => {
   insertReviewLog('seed-op', '2026-04-24T00:00:00.000Z');
 
-  await expect(applySyncObjectsAsync(createMobileLearningStateRecords())).resolves.toEqual(['node_reading:node-1', 'node_review:node-1']);
+  await expect(applySyncObjectsAsync(createMobileLearningStateRecords())).resolves.toEqual(['node_reading:node-1']);
   await expect(applySyncReviewLogAsync([createMobileReviewLog('mobile-op-2')])).resolves.toEqual(['mobile-op-2']);
 
   const driver = openDatabaseConnection().driver;
@@ -193,7 +193,7 @@ it('applies mobile learning state and review event as clean desktop facts', asyn
   expect(driver.queryOne<{ last_review_at: string; reps: number }>(
     'SELECT last_review_at, reps FROM node_review WHERE node_id = ?',
     ['node-1']
-  )).toEqual({ last_review_at: '2026-04-25T00:10:00.000Z', reps: 4 });
+  )).toEqual({ last_review_at: '2026-04-25T00:10:00.000Z', reps: 2 });
   expect(driver.queryAll<{ object_type: string; sync_dirty: number }>(
     `SELECT object_type, sync_dirty
      FROM sync_object_state
@@ -202,7 +202,7 @@ it('applies mobile learning state and review event as clean desktop facts', asyn
     ['node-1']
   )).toEqual([
     { object_type: 'node_reading', sync_dirty: 0 },
-    { object_type: 'node_review', sync_dirty: 0 }
+    { object_type: 'node_review', sync_dirty: 1 }
   ]);
   expect(driver.queryOne<{ host_name: string }>(
     'SELECT host_name FROM review_log WHERE op_id = ?',

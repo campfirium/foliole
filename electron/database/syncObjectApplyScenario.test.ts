@@ -131,11 +131,11 @@ function externalDocumentRecord(overrides: Partial<NativeSyncObjectRecord> = {})
   };
 }
 
-it('covers reading and review state apply, idempotency, stale ignore, and fresh update', async () => {
+it('applies reading updates idempotently while ignoring legacy review snapshots', async () => {
   insertNode('node-1');
   const initialRecords = [readingRecord(), reviewRecord()];
 
-  await expect(applySyncObjectsAsync(initialRecords)).resolves.toEqual(['node_reading:node-1', 'node_review:node-1']);
+  await expect(applySyncObjectsAsync(initialRecords)).resolves.toEqual(['node_reading:node-1']);
   await expect(applySyncObjectsAsync(initialRecords)).resolves.toEqual([]);
   await expect(applySyncObjectsAsync([
     readingRecord({
@@ -160,7 +160,7 @@ it('covers reading and review state apply, idempotency, stale ignore, and fresh 
       }),
       updated_at: '2026-04-25T16:00:00.000Z'
     })
-  ])).resolves.toEqual(['node_review:node-1']);
+  ])).resolves.toEqual([]);
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ next_at: string; state: string }>(
@@ -170,12 +170,12 @@ it('covers reading and review state apply, idempotency, stale ignore, and fresh 
   expect(driver.queryOne<{ due: string; lapses: number; reps: number; state: number }>(
     'SELECT due, lapses, reps, state FROM node_review WHERE node_id = ?',
     ['node-1']
-  )).toEqual({ due: '2026-04-28T16:00:00.000Z', lapses: 1, reps: 4, state: 3 });
+  )).toBeUndefined();
   expect(driver.queryOne<{ dirty: number; hash: string }>(
     `SELECT sync_dirty AS dirty, content_hash AS hash FROM sync_object_state
      WHERE object_type = 'node_review' AND object_id = ?`,
     ['node-1']
-  )).toEqual({ dirty: 0, hash: 'review-hash-2' });
+  )).toBeUndefined();
 });
 
 it('covers imported article source and external document presence transitions', async () => {

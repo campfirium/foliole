@@ -26,8 +26,6 @@ import {
 } from './nodePermanentDeleteMutations.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
-import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.js';
-import { writeNodeReviewSnapshotWithSync } from './nodeReviewSyncState.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
 import type { NodeSearchInvalidationOptions } from './nodeSearchInvalidationForMutation.js';
 import {
@@ -123,8 +121,7 @@ function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
     deleteNodeReadingHostState: driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?'),
     upsertNode: createUpsertNodeStatement(driver),
     upsertNodeReading: createUpsertNodeReadingStatement(driver),
-    upsertNodeReadingHostState: createUpsertNodeReadingHostStateStatement(driver),
-    upsertNodeReview: createUpsertNodeReviewStatement(driver)
+    upsertNodeReadingHostState: createUpsertNodeReadingHostStateStatement(driver)
   };
 }
 
@@ -174,7 +171,6 @@ export function upsertNodeSnapshot(
       upsertDeviceState: statements.upsertNodeReadingHostState.run,
       upsertReading: statements.upsertNodeReading.run
     });
-    writeNodeReviewSnapshotWithSync(driver, input, statements.upsertNodeReview.run);
     bumpUntitledSequenceByParent(driver, {
       isImageExcerpt: input.anchorLink?.kind === 'image-excerpt',
       isTitleManual: input.isTitleManual,

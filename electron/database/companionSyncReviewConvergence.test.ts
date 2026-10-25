@@ -72,25 +72,21 @@ function readReview() {
   );
 }
 
-it('keeps the latest complete review when newer arrives before older', async () => {
+it('ignores legacy review snapshots when newer arrives before older', async () => {
   const newer = createOrderedReviewPush('2026-04-30T03:00:00.000Z', 3, 'review-newer');
   const older = createOrderedReviewPush('2026-04-30T02:00:00.000Z', 2, 'review-older');
 
   await applyCompanionSyncPushAsync([newer, older]);
 
-  expect(readReview()).toEqual({
-    due: 'due:review-newer', last_review_at: '2026-04-30T03:00:00.000Z', reps: 3
-  });
+  expect(readReview()).toBeUndefined();
 });
 
-it('keeps the latest complete review when older arrives first and rejects reps zero regression', async () => {
+it('ignores legacy review snapshots in either order, including reps zero', async () => {
   const older = createOrderedReviewPush('2026-04-30T02:00:00.000Z', 2, 'review-older');
   const newer = createOrderedReviewPush('2026-04-30T03:00:00.000Z', 3, 'review-newer');
   const zero = createOrderedReviewPush(null, 0, 'review-zero');
 
   await applyCompanionSyncPushAsync([older, newer, zero]);
 
-  expect(readReview()).toEqual({
-    due: 'due:review-newer', last_review_at: '2026-04-30T03:00:00.000Z', reps: 3
-  });
+  expect(readReview()).toBeUndefined();
 });

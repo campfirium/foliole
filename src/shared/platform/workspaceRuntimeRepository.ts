@@ -95,7 +95,7 @@ export async function moveWorkspaceNodes(payload: WorkspaceMoveNodesPayload): Pr
   }
 }
 
-export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {
+export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSyncPayload) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     if (!isDesktopRuntime()) {
@@ -107,7 +107,7 @@ export async function saveWorkspaceReviewGrade(payload: WorkspaceReviewGradeSync
   }
   try {
     await drainPendingWorkspaceRelearnNode(payload.nodeId);
-    await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload);
+    return { card: await runtimeInvoke(NATIVE_COMMANDS.applyReviewGrade, payload) };
   } catch (error) {
     logReviewGradeRuntimeError(error);
     throw error;

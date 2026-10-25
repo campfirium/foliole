@@ -1,16 +1,22 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
+import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
+import type { ReviewSessionMode } from '../../../../features/review/model/reviewSessionMode';
+import { toSchedulerCard } from '../../../../features/review/model/reviewTypes';
 import { isSameReadingProfile } from '../../../../store/workspaceActionHistoryReading';
 import { getWorkspaceHistoryTopEntry, moveWorkspaceHistoryCursor } from '../../../../store/workspaceActionHistoryState';
+import { advanceFlowSession } from '../../../../store/workspaceFlowSession';
 import { createWorkspaceHistoryMutationTimestamp } from '../../../../store/workspaceHistoryTimestamp';
 import { resolveWorkspaceReviewHistoryTarget, type FlowHistoryEntry, type HistoryMode } from '../../../../store/workspaceReviewHistoryTarget';
+import { resolveEarliestReviewDueAt } from '../../../../store/workspaceReviewSessionProgress';
 import type { ReviewSessionState } from '../../../../store/workspaceStoreTypes';
 import { toReadingPayload, toReviewPayload } from '../../companionSyncStateWriters';
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
+import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
@@ -25,13 +31,23 @@ export async function loadCompanionFlowHistory(key: string) {
 }
 
 export function commitCompanionFlowHistory(args: {
-  key: string; entry: FlowHistoryEntry; reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string;
+  key: string; mode: ReviewSessionMode; entry: FlowHistoryEntry; reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string;
 }) {
   return runCompanionHistoryMutation(async db => {
     await writeEntry(db, args.entry, 'redo', args.entry.beforeContext.reviewSession,
       args.reviewLog ? { ...args.reviewLog, opId: args.entry.id } : undefined, args.completedReviewDay);
-    await appendCompanionFlowHistory(db, args.key, args.entry);
-    return true;
+    let entry = await withCurrentReview(db, args.entry, 'redo');
+    if (entry.type === 'review.grade') {
+      const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
+      if (!snapshot) throw new Error('workspace_unavailable');
+      const reviewSession = advanceFlowSession({ action: 'grade', snapshot, mode: args.mode,
+        session: entry.beforeContext.reviewSession, now: entry.mutationTimestamp });
+      entry = { ...entry, afterContext: { ...entry.afterContext,
+        activeNodeId: reviewSession.currentNodeId, reviewSession } };
+    }
+    await appendCompanionFlowHistory(db, args.key, entry);
+    return entry.type === 'review.grade' ? { card: entry.afterReview
+      ? toSchedulerCard(entry.afterReview, entry.mutationTimestamp) : null } : true;
   });
 }
 
@@ -48,13 +64,13 @@ export function replayCompanionFlowHistory(key: string, mode: HistoryMode, sessi
     if (entry.type !== 'review.grade' && entry.type !== 'topic.dismiss') throw new Error('flow_history_unavailable');
     const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
     const mutationTimestamp = createWorkspaceHistoryMutationTimestamp(entry.mutationTimestamp);
-    const context = await writeEntry(db, entry, mode,
+    await writeEntry(db, entry, mode,
       { ...session, isAnswerRevealed: source.reviewSession.isAnswerRevealed }, undefined, undefined, mutationTimestamp);
-    const updated = { ...entry, mutationTimestamp,
+    const updated = { ...await withCurrentReview(db, entry, mode), mutationTimestamp,
       ...(entry.type === 'review.grade' && mode === 'redo'
         ? { reviewOpId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, 'redo') } : {}) };
     await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, updated, mode));
-    return context.reviewSession;
+    return (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession;
   });
 }
 
@@ -82,16 +98,26 @@ async function writeEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode
   for (const [index, id] of ids.entries()) {
     const node = target.nodesById[id]!;
     if (entry.type === 'review.grade') {
-      if (!node.review) await clearCompanionHistoryLearning(db, 'node_review', id);
-      else await saveIosReviewWithDb(db, { node_id: id, review_json: JSON.stringify(toReviewPayload(node.review)),
-        ...(reviewLog ? { review_log_json: JSON.stringify(reviewLog) } : {}) });
-      if (!reviewLog) await recordReviewHistoryWithDb(db, { nodeId: id, hostName,
-        history: { mode, targetOpId: entry.reviewOpId ?? entry.id },
-        opId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, mode), updatedAt: mutationTimestamp });
+      if (reviewLog) await saveIosReviewWithDb(db, { node_id: id,
+        review_json: JSON.stringify(node.review ? toReviewPayload(node.review) : {}), review_log_json: JSON.stringify(reviewLog) });
+      else {
+        const inserted = await recordReviewHistoryWithDb(db, { nodeId: id, hostName,
+          history: { mode, targetOpId: entry.reviewOpId ?? entry.id },
+          opId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, mode), updatedAt: mutationTimestamp });
+        if (inserted) await recomputeNodeReviewWithDb(db, id);
+      }
     } else if (isSameReadingProfile(loaded[index]?.reading, node.reading)) continue;
     else if (!node.reading) await clearCompanionHistoryLearning(db, 'node_reading', id);
     else await saveIosReadingWithDb(db, { node_id: id, reading_json: JSON.stringify(toReadingPayload(node.reading)),
       ...(completedReviewDay && id === entry.nodeId ? { completedReviewDay } : {}) });
   }
   return target.context;
+}
+
+async function withCurrentReview(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode): Promise<FlowHistoryEntry> {
+  if (entry.type !== 'review.grade') return entry;
+  const node = await loadCompanionWorkspaceNodeFromDb(db, entry.nodeId, await iosCompanionHostName(db));
+  return { ...entry, ...(mode === 'undo' ? { beforeReview: node?.review ?? null } : {
+    afterReview: node?.review ?? null, afterContext: { ...entry.afterContext,
+      reviewSession: { ...entry.afterContext.reviewSession, nextReviewDueAt: resolveEarliestReviewDueAt(entry.beforeContext.reviewSession.nextReviewDueAt, node?.review?.due) } } }) };
 }

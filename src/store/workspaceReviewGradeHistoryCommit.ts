@@ -1,3 +1,4 @@
+import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import type { SharedReviewGradeResult } from '../features/review/model/sharedReviewGradeService';
 
@@ -42,7 +43,7 @@ export async function commitWorkspaceReviewGrade(args: {
   set: WorkspaceSet;
   snapshot: WorkspaceState;
 }) {
-  const gradedState = buildGradedReviewState({
+  let gradedState = buildGradedReviewState({
     snapshot: args.snapshot,
     currentNodeId: args.currentNodeId,
     nodePatch: args.result.nodePatch,
@@ -52,7 +53,7 @@ export async function commitWorkspaceReviewGrade(args: {
   if (!beginReviewGradeHistory(args.set, gradedState.historyEntry)) return false;
   let persisted = false;
   try {
-    persisted = await persistReviewGradeMutation({
+    const result = await persistReviewGradeMutation({
       currentNodeId: args.currentNodeId,
       opId: gradedState.historyEntry.id,
       grade: args.grade,
@@ -61,6 +62,8 @@ export async function commitWorkspaceReviewGrade(args: {
       cardBefore: args.result.cardBefore,
       cardAfter: args.result.cardAfter
     }, args.persistence);
+    persisted = Boolean(result);
+    if (result && typeof result !== 'boolean') gradedState = withProjection(args, gradedState, result.card);
   } catch {
     persisted = false;
   }
@@ -76,10 +79,12 @@ export async function commitWorkspaceReviewGrade(args: {
     const node = state.nodesById[args.currentNodeId];
     const applicable = node &&
       state.appActionHistory.pendingAction?.entry.id === gradedState.historyEntry.id &&
-      isSameReviewProfile(node.review, gradedState.historyEntry.beforeReview) &&
+      isSameReviewProfile(node.review ?? null, gradedState.historyEntry.beforeReview) &&
       isSameWorkspaceReviewSession(state.reviewSession, gradedState.historyEntry.beforeContext.reviewSession);
     if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
-    const settled = settleWorkspaceAction(state.appActionHistory, gradedState.historyEntry.id);
+    const settled = settleWorkspaceAction({ ...state.appActionHistory,
+      pendingAction: { ...state.appActionHistory.pendingAction!, entry: gradedState.historyEntry }
+    }, gradedState.historyEntry.id);
     applied = true;
     undoRequested = settled.undoRequested;
     return { ...gradedState.patch, appActionHistory: settled.history };
@@ -87,4 +92,12 @@ export async function commitWorkspaceReviewGrade(args: {
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
   return true;
+}
+
+function withProjection(args: Parameters<typeof commitWorkspaceReviewGrade>[0],
+  current: NonNullable<ReturnType<typeof buildGradedReviewState>>,
+  card: import('../features/review/model/reviewTypes').SchedulerCard | null) {
+  const computed = buildGradedReviewState({ snapshot: args.snapshot, currentNodeId: args.currentNodeId,
+    nodePatch: { review: card ? toNodeReviewProfile(card) : null }, now: args.now });
+  return computed ? { ...computed, historyEntry: { ...computed.historyEntry, id: current.historyEntry.id } } : current;
 }

@@ -147,8 +147,8 @@ export async function syncMoveNodesToRuntime(payload: WorkspaceMoveNodesPayload)
   return moveWorkspaceNodes(payload);
 }
 
-export async function syncReviewGradeToRuntime(payload: WorkspaceReviewGradeSyncPayload): Promise<void> {
-  await saveWorkspaceReviewGrade(payload);
+export async function syncReviewGradeToRuntime(payload: WorkspaceReviewGradeSyncPayload) {
+  return saveWorkspaceReviewGrade(payload);
 }
 
 export function syncRelearnNodeToRuntime(payload: WorkspaceRelearnNodePayload) {

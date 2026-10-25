@@ -52,6 +52,7 @@ vi.mock('./review.js', () => ({ reviewGrade: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(applyReviewGrade).mockImplementation(input => input.cardAfter);
 });
 
 it('handles transactional review grade command', async () => {
@@ -84,10 +85,10 @@ it('handles transactional review grade command', async () => {
     }
   };
 
-  await expect(handleInvokeRequest({ command: 'apply_review_grade', args })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'apply_review_grade', args })).resolves.toEqual(args.cardAfter);
   expect(applyReviewGrade).toHaveBeenCalledWith(args);
   const identified = { ...args, opId: 'review-action-id' };
-  await expect(handleInvokeRequest({ command: 'apply_review_grade', args: identified })).resolves.toBeNull();
+  await expect(handleInvokeRequest({ command: 'apply_review_grade', args: identified })).resolves.toEqual(args.cardAfter);
   expect(applyReviewGrade).toHaveBeenLastCalledWith(identified);
   for (const opId of ['', 42]) {
     await expect(handleInvokeRequest({ command: 'apply_review_grade', args: { ...args, opId } })).rejects.toThrow('opId');

@@ -1,4 +1,5 @@
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
+import type { WorkspaceNodeMetadataHistoryEntry } from './workspaceNodeMetadataHistory';
 import type { WorkspaceStructurePendingCreate } from './workspaceStructureHistoryTypes';
 
 const ACTION_HISTORY_LIMIT = 50;
@@ -81,7 +82,7 @@ export function getWorkspaceHistoryTopEntry<Entry>(history: WorkspaceActionHisto
   return stack[stack.length - 1] ?? null;
 }
 
-export function moveWorkspaceHistoryCursor<Entry>(
+export function moveWorkspaceHistoryCursor<Entry extends WorkspaceActionHistoryEntry | WorkspaceNodeMetadataHistoryEntry>(
   history: WorkspaceActionHistoryState<Entry>,
   entry: Entry,
   mode: 'redo' | 'undo'
@@ -91,13 +92,24 @@ export function moveWorkspaceHistoryCursor<Entry>(
       ...history,
       applying: null,
       redoStack: trimHistoryStack([...history.redoStack, entry]),
-      undoStack: history.undoStack.slice(0, -1)
+      undoStack: rebaseExpectedReview(history.undoStack.slice(0, -1), entry, mode)
     };
   }
   return {
     ...history,
     applying: null,
-    redoStack: history.redoStack.slice(0, -1),
+    redoStack: rebaseExpectedReview(history.redoStack.slice(0, -1), entry, mode),
     undoStack: trimHistoryStack([...history.undoStack, entry])
   };
+}
+
+function rebaseExpectedReview<Entry extends WorkspaceActionHistoryEntry | WorkspaceNodeMetadataHistoryEntry>(
+  stack: Entry[], moved: Entry, mode: 'redo' | 'undo'
+): Entry[] {
+  if (moved.type !== 'review.grade') return stack;
+  const index = stack.findLastIndex(candidate => candidate.type === 'review.grade' && candidate.nodeId === moved.nodeId);
+  if (index < 0) return stack;
+  const review = mode === 'undo' ? moved.beforeReview : moved.afterReview;
+  return stack.map((candidate, i) => i !== index ? candidate : { ...candidate,
+    ...(mode === 'undo' ? { afterReview: review } : { beforeReview: review }) });
 }

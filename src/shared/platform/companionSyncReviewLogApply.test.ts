@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncReviewLogRecord } from '../../../lib/platform/nativeSyncContract';
 
+import { installCompanionNodeSchema } from './companionSyncNodeVersionsTestSupport';
 import {
   applyCompanionSyncReviewLogWithSharedCore,
   applyCompanionSyncReviewLogWithSharedCoreOnDevice
@@ -96,18 +97,6 @@ function createFakeCapacitorConnection(database: Database.Database) {
 }
 
 function installReviewLogSchema(database: Database.Database) {
-  database.exec(`
-    CREATE TABLE nodes (id TEXT PRIMARY KEY);
-    INSERT INTO nodes (id) VALUES ('node-1');
-    CREATE TABLE review_log (
-      id TEXT PRIMARY KEY,
-      op_id TEXT NOT NULL UNIQUE,
-      host_name TEXT NOT NULL DEFAULT '',
-      node_id TEXT NOT NULL,
-      grade INTEGER NOT NULL,
-      scheduler_version TEXT NOT NULL,
-      reviewed_at TEXT NOT NULL,
-      kind TEXT NOT NULL DEFAULT 'review', voids_op_id TEXT
-    );
-  `);
+  installCompanionNodeSchema(database);
+  database.exec("INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('node-1', '', 'now', 'now')");
 }

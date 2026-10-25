@@ -147,9 +147,9 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
     }));
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {
-    applyReviewGrade(parseApplyReviewGradeArgs(args));
+    const card = applyReviewGrade(parseApplyReviewGradeArgs(args));
     void requestDesktopHighValueSync();
-    return null;
+    return card;
   }
   if (command === NATIVE_COMMANDS.relearnNode) {
     resetNodeReviewState(asString(args.nodeId, 'nodeId'));

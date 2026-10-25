@@ -5,9 +5,8 @@ import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export function saveNodeReviewState(input: NativeSaveNodeReviewStateArgs) {
-  saveNodeReviewStateWithSync(openDatabaseConnection().driver, {
+  return saveNodeReviewStateWithSync(openDatabaseConnection().driver, {
     ...input,
     hostName: loadOrCreateDesktopHostName(input.updatedAt)
   });
-  return null;
 }

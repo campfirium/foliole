@@ -1,3 +1,4 @@
+
 // @vitest-environment node
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -15,9 +16,11 @@ vi.mock('@capacitor/core', async () => {
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/desktopResourceSchemaStatements';
 import { loadWorkspaceListSnapshot } from '../../../lib/core/database/workspaceListSnapshot';
+import { createLocalReviewSchedulerAdapter } from '../../../lib/core/review/localSchedulerAdapter';
+import { createInitialSchedulerCard } from '../../../lib/core/review/types';
 import { gradeCompanionReviewCard } from '../../companion/companionReviewSession';
 import { persistCompanionReviewSyncObject } from '../../companion/companionReviewSyncPersistence';
-import { toSchedulerCard } from '../../features/review/model/reviewTypes';
+import { toNodeReviewProfile, toSchedulerCard } from '../../features/review/model/reviewTypes';
 
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase
@@ -92,7 +95,7 @@ it('restores an earlier review snapshot through the local writer without adding 
   expect(database!.prepare('SELECT * FROM review_log').all()).toHaveLength(1);
 });
 
-it.each([1, 2, 3, 4] as const)('grades persisted mobile history like desktop for grade %s', async (grade) => {
+it.each([1, 2, 3, 4] as const)('rebuilds mobile grading from its recorded history for grade %s', async (grade) => {
   const now = '2026-05-04T12:00:00.000Z';
   const desktop = desktopSnapshot();
   const mobile = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
@@ -108,7 +111,8 @@ it.each([1, 2, 3, 4] as const)('grades persisted mobile history like desktop for
   expect(database!.prepare('SELECT * FROM review_log').all()).toHaveLength(1);
   await closeIosCompanionDatabase();
   await openLibrary();
-  expect(desktopSnapshot().nodesById.card?.review).toEqual(expected?.snapshot.nodesById.card?.review);
-  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review)
-    .toEqual(expected?.snapshot.nodesById.card?.review);
+  const rebuilt = toNodeReviewProfile((await createLocalReviewSchedulerAdapter().grade({
+    card: createInitialSchedulerCard(now), grade, now })).card);
+  expect(desktopSnapshot().nodesById.card?.review).toEqual(rebuilt);
+  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(rebuilt);
 });

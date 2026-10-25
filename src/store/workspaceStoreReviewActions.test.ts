@@ -31,7 +31,7 @@ const SCHEDULED_DUE = new Date(2026, 2, 10, 4).toISOString();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+  vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
 });
 
 it('advances to next review node after show-answer and grade', async () => {

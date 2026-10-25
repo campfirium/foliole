@@ -1,4 +1,5 @@
 export const controlledSyncSqliteTests = [
+  'src/shared/platform/companion/sync/framed/reviewProjection.integration.test.ts',
   'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
   'lib/core/sync/framedSyncInventoryDigest.integration.test.ts',
   'lib/core/sync/requestSyncBucketScale.integration.test.ts',

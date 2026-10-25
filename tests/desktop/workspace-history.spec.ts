@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import { expect, test } from './harness/fixtures';
+import { roundTripReviewGrade } from './harness/reviewProjection';
 import { expectWorkspaceShell } from './harness/settings';
 import {
   capturePermanentHistoryState,
@@ -82,7 +83,7 @@ test('keeps every workspace domain in one durable native history', async ({ desk
   await enterWorkspaceHistoryFlow(desktopWindow);
 
   await clickReviewAction(desktopWindow, 'Show Answer');
-  await roundTripWorkspaceAction(desktopWindow, 'Grade Review', () => clickReviewAction(desktopWindow, 'Good'));
+  await roundTripReviewGrade(desktopWindow, () => clickReviewAction(desktopWindow, 'Good'));
   await continueWorkspaceReading(desktopWindow);
 
   const createdNodeId = await roundTripStructureCreate(desktopWindow, async () => {

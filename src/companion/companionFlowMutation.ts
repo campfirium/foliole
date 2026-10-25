@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -33,19 +34,22 @@ export async function persistFlowMutation(args: {
   if (args.action === 'grade') {
     const result = await gradeCompanionReviewCard({ ...args, grade: args.grade! });
     if (!result) throw new Error('The current item is no longer available.');
-    const saved = args.history ? await commitCompanionFlowHistory({ key: args.history.key,
+    const saved = args.history ? await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot, history: args.history }),
       reviewLog: result.reviewLog }) : await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
         nodeId: args.nodeId, reviewLog: result.reviewLog, snapshot: result.snapshot });
     if (!saved) throw new Error('Could not save the review grade.');
-    return { ...args, snapshot: result.snapshot, partial: false, targetConfirmed: true };
+    const snapshot = typeof saved === 'object' && 'card' in saved ? { ...result.snapshot,
+      nodesById: { ...result.snapshot.nodesById, [args.nodeId]: { ...result.snapshot.nodesById[args.nodeId]!,
+        review: saved.card ? toNodeReviewProfile(saved.card) : null } } } : result.snapshot;
+    return { ...args, snapshot, partial: false, targetConfirmed: true };
   }
   const apply = args.action === 'read' ? readCompanionReviewTopic
     : args.action === 'later' ? postponeCompanionReviewTopic : dismissCompanionReviewTopic;
   const result = apply(args);
   if (!result) throw new Error('The current topic is no longer available.');
   if (args.history) {
-    await commitCompanionFlowHistory({ key: args.history.key,
+    await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot,
         relatedNodeIds: result.syncNodeIds, history: args.history }),
       ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });

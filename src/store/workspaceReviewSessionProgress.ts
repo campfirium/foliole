@@ -27,7 +27,7 @@ export function calculateReviewStepElapsedMs(reviewSession: ReviewSessionState, 
   return handledMs - startMs;
 }
 
-function resolveEarliestReviewDueAt(current: string | null | undefined, candidate: string | null | undefined): string | null {
+export function resolveEarliestReviewDueAt(current: string | null | undefined, candidate: string | null | undefined): string | null {
   const candidateMs = parseTimeMs(candidate);
   if (candidateMs === null) {
     return current ?? null;

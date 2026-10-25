@@ -106,7 +106,7 @@ async function finishPending(args: CompanionSurfaceActionArgs,
 
 async function commitSoonAction(args: CompanionSurfaceActionArgs, token: Token, snapshot: WorkspaceSnapshot, now: string) {
   const history = args.flow.historyContext(token);
-  if (history && token.nodeId) await commitCompanionFlowHistory({ key: history.key,
+  if (history && token.nodeId) await commitCompanionFlowHistory({ key: history.key, mode: history.mode,
     entry: createCompanionFlowHistoryEntry({ action: 'soon', nodeId: token.nodeId, now,
       before: snapshot, after: snapshot, history }) });
   args.flow.advance(token, 'soon', snapshot, now);

@@ -1,5 +1,4 @@
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
-import type { SharedReviewGradeResult } from '../features/review/model/sharedReviewGradeService';
 
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
 import { captureWorkspaceHistoryContext } from './workspaceHistoryContext';
@@ -27,19 +26,19 @@ export async function persistReviewGradeMutation(args: {
   schedulerVersion: string;
   cardBefore: SchedulerCard;
   cardAfter: SchedulerCard;
-}, persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence): Promise<boolean> {
+}, persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence) {
   return persistence.persistReviewGrade(args);
 }
 
 export function buildGradedReviewState(args: {
   snapshot: WorkspaceState;
   currentNodeId: string;
-  nodePatch: SharedReviewGradeResult['nodePatch'];
+  nodePatch: { review: import('../features/nodes/model/nodeTypes').NodeReviewProfile | null };
   now: string;
 }) {
   const state = args.snapshot;
   const node = state.nodesById[args.currentNodeId];
-  if (!node?.review) return null;
+  if (!node) return null;
   const nextNodesById = {
     ...state.nodesById,
     [args.currentNodeId]: {
@@ -57,7 +56,7 @@ export function buildGradedReviewState(args: {
   const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
   const nextReviewSession = buildReviewSessionAfterGrade({
     continueNodeId,
-    nextDueAt: args.nodePatch.review.due,
+    nextDueAt: args.nodePatch.review?.due ?? null,
     nextNodeId,
     now: args.now,
     queueNodeIds: nextQueue.taskNodeIds,
@@ -74,7 +73,7 @@ export function buildGradedReviewState(args: {
       }),
       afterReview: args.nodePatch.review,
       beforeContext: captureWorkspaceHistoryContext(state),
-      beforeReview: node.review,
+      beforeReview: node.review ?? null,
       id: createWorkspaceActionHistoryEntryId(),
       mutationTimestamp: args.now,
       nodeId: args.currentNodeId

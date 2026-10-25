@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import { buildLiveReviewQueueOutput, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { browserLocalWorkspaceReviewPersistence } from './workspaceReviewPersistence';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createQaNode,
@@ -199,7 +200,7 @@ it('advances from the live queue after grading instead of the persisted session 
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-live', due)])
   );
   const grade = createSchedulerGradeMock();
-  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub }, browserLocalWorkspaceReviewPersistence);
 
   harness.setState({
     activeNodeId: 'qa-1',
@@ -235,7 +236,7 @@ it('does not double count a low-graded card that remains in the task window', as
     },
     reviewed_at: due
   });
-  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub });
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, { grade, preview: previewStub }, browserLocalWorkspaceReviewPersistence);
 
   actions.startReviewSession(due);
   actions.revealReviewAnswer();

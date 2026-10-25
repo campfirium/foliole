@@ -39,7 +39,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('persists initial item review without writing review_log', () => {
+it('creates an item without persisting a content-carried review snapshot', () => {
   upsertNodeSnapshot({
     nodeId: 'node-review',
     parentNodeId: null,
@@ -65,16 +65,7 @@ it('persists initial item review without writing review_log', () => {
     updatedAt: '2026-05-21T08:00:00.000Z'
   });
 
-  expect(getNodeReviewRow('node-review')).toEqual({
-    due: '2026-05-22T00:00:00.000Z',
-    last_review_at: null,
-    reps: 0,
-    state: 0
-  });
-  expect(getReviewCounts('node-review')).toEqual({ reviewCount: 1, reviewLogCount: 0 });
-  expect(getNodeReviewSyncRow('node-review')).toEqual({
-    object_id: 'node-review',
-    object_type: 'node_review',
-    sync_dirty: 1
-  });
+  expect(getNodeReviewRow('node-review')).toBeUndefined();
+  expect(getReviewCounts('node-review')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
+  expect(getNodeReviewSyncRow('node-review')).toBeUndefined();
 });

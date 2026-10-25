@@ -17,7 +17,7 @@ export interface WorkspaceReviewGradePersistencePayload {
 
 export interface WorkspaceReviewPersistenceAdapter {
   persistReadingNodes: (nodes: Node[], updatedAt?: string, completedReviewDay?: string) => Promise<boolean>;
-  persistReviewGrade: (payload: WorkspaceReviewGradePersistencePayload) => Promise<boolean>;
+  persistReviewGrade: (payload: WorkspaceReviewGradePersistencePayload) => Promise<boolean | { card: SchedulerCard | null }>;
 }
 
 async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string, completedReviewDay?: string) {
@@ -44,7 +44,7 @@ async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string, com
 }
 
 async function persistRuntimeReviewGrade(payload: WorkspaceReviewGradePersistencePayload) {
-  await syncReviewGradeToRuntime({
+  const result = await syncReviewGradeToRuntime({
     nodeId: payload.currentNodeId,
     ...(payload.opId ? { opId: payload.opId } : {}),
     grade: payload.grade,
@@ -53,7 +53,7 @@ async function persistRuntimeReviewGrade(payload: WorkspaceReviewGradePersistenc
     cardBefore: payload.cardBefore,
     cardAfter: payload.cardAfter
   });
-  return true;
+  return result ?? false;
 }
 
 export const runtimeWorkspaceReviewPersistence: WorkspaceReviewPersistenceAdapter = {

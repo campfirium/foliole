@@ -16,7 +16,7 @@ const context = z.object({ activeNodeId: z.string().nullable(), browseRootNodeId
 const common = { id: z.string(), mutationTimestamp: z.string(), nodeId: z.string(), beforeContext: context, afterContext: context };
 const flowEntry = z.discriminatedUnion('type', [
   z.object({ ...common, type: z.literal('review.grade'), title: z.literal('Grade Review'),
-    beforeReview: review.nullable(), afterReview: review, reviewOpId: z.string().optional() }).transform(value => definedProps(value)),
+    beforeReview: review.nullable(), afterReview: review.nullable(), reviewOpId: z.string().optional() }).transform(value => definedProps(value)),
   z.object({ ...common, type: z.literal('topic.dismiss'), title: z.enum([
     'Read Topic', 'Later Topic', 'Soon Topic', 'Postpone Topic', 'Dismiss Topic']),
   beforeReading: reading.nullable(), afterReading: reading.nullable(), relatedReadings: z.array(z.object({

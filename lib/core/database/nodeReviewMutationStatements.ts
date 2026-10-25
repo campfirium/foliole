@@ -1,6 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 
-const UPSERT_NODE_REVIEW_SQL = `INSERT INTO node_review (
+export const UPSERT_NODE_REVIEW_SQL = `INSERT INTO node_review (
   node_id,
   due,
   last_review_at,

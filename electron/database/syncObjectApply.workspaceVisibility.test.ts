@@ -112,12 +112,11 @@ function androidStateRecords(): NativeSyncObjectRecord[] {
   }];
 }
 
-it('makes Android-applied reading and review visible while keeping view state device-private', async () => {
+it('applies Android reading while ignoring review snapshots and keeping view state device-private', async () => {
   insertNode('node-1');
 
   await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
-    'node_reading:node-1',
-    'node_review:node-1'
+    'node_reading:node-1'
   ]);
 
   const workspaceSnapshot = loadWorkspaceSnapshot();
@@ -132,12 +131,7 @@ it('makes Android-applied reading and review visible while keeping view state de
     readingPosition: 0,
     state: 'locked'
   });
-  expect(workspaceSnapshot?.nodesById['node-1']?.review).toMatchObject({
-    lastReviewAt: '2026-04-22T08:10:00.000Z',
-    reps: 4,
-    scheduledDays: 3,
-    state: 2
-  });
+  expect(workspaceSnapshot?.nodesById['node-1']?.review).toBeNull();
 
   expect(loadReadingProgress()).toEqual({
     activeNodeId: null,
@@ -149,12 +143,11 @@ it('makes Android-applied reading and review visible while keeping view state de
     .get()).toEqual({ count: 0 });
 });
 
-it('retains Android-applied reading but prunes review for children hidden under deleted parents', async () => {
+it('retains Android reading for hidden children while ignoring incoming review snapshots', async () => {
   insertHiddenChild();
 
   await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
-    'node_reading:node-1',
-    'node_review:node-1'
+    'node_reading:node-1'
   ]);
 
   const connection = openDatabaseConnection();

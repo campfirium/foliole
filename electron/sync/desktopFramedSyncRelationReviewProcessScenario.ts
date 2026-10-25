@@ -1,4 +1,5 @@
 import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
+import { recomputeNodeReview } from '../../lib/core/database/reviewProjection.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushNodeSyncVersionWithDriver } from '../database/nodeSyncVersions.js';
@@ -30,6 +31,7 @@ function writeNode(content: string, updatedAt: string) {
 
 function insertReview(grade: number) {
   openDatabaseConnection().driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, ['t326-review-row', RELATION_REVIEW_SCENARIO.reviewOpId, 'desktop-a', RELATION_REVIEW_SCENARIO.nodeId, grade, 'fsrs-6', '2026-10-05T01:00:00.000Z']);
+  recomputeNodeReview(openDatabaseConnection().driver, RELATION_REVIEW_SCENARIO.nodeId);
 }
 
 export function seedDesktopFramedSyncRelationReviewScenario(role: Role) {
@@ -39,6 +41,7 @@ export function seedDesktopFramedSyncRelationReviewScenario(role: Role) {
       `control-${kind}`, `control-${kind}`, 'desktop-a', RELATION_REVIEW_SCENARIO.nodeId, 0, '',
       '2026-10-05T02:00:00.000Z', kind, kind === 'void' ? RELATION_REVIEW_SCENARIO.reviewOpId : null
     ]);
+    recomputeNodeReview(driver, RELATION_REVIEW_SCENARIO.nodeId);
     return;
   }
   if (role === 'review_only') { insertReview(3); return; }

@@ -21,6 +21,7 @@ import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourc
 import { seedRequestSyncScaleFixture } from './desktopRequestSyncScale.fixture.js';
 import { runActivationFixtureCommand } from './desktopSyncGroupActivation.fixture.js';
 import { beginDesktopExpiredMemberOverwrite } from './desktopSyncGroupExpiredOverwrite.js';
+import { runReviewProjectionFixture } from './reviewProjection.fixture.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -149,6 +150,7 @@ function seedRelationReview(args: Readonly<Record<string, unknown>>) {
 }
 
 async function run(command: Command) {
+  if (command.action === 'review_projection') return runReviewProjectionFixture(command.args);
   if (command.action === 'init') {
     return initializeProcessFixture();
   }

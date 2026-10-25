@@ -71,11 +71,7 @@ it('applies mobile snake_case learning payloads', async () => {
     scheduled_days: number;
     state: number;
   }>('SELECT last_review_at, scheduled_days, state FROM node_review WHERE node_id = ?', ['node-1']))
-    .toEqual({
-      last_review_at: '2026-04-22T08:10:00.000Z',
-      scheduled_days: 3,
-      state: 2
-    });
+    .toBeUndefined();
 });
 
 it('does not let an initial review payload overwrite an already reviewed card', async () => {

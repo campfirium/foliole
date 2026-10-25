@@ -9,7 +9,7 @@ export interface WorkspaceHistoryPersistenceAdapter {
   persistNodeSnapshots: (nodes: Node[]) => Promise<boolean>;
   persistReadingSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
   persistReviewSnapshot: (nodeId: string, review: NodeReviewProfile | null, updatedAt: string,
-    history?: import('../../lib/core/review/reviewEventIdentity').ReviewHistoryMutation) => Promise<boolean>;
+    history?: import('../../lib/core/review/reviewEventIdentity').ReviewHistoryMutation) => Promise<boolean | { review: NodeReviewProfile | null }>;
   persistShelveSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
 }
 

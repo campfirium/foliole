@@ -30,11 +30,11 @@ function historyEvent(rows: unknown[], input: {
 export function recordReviewHistory(driver: DatabaseDriver, input: Parameters<typeof historyEvent>[1]) {
   const params = historyEvent(driver.queryAll(HISTORY_REVIEW_SQL,
     [input.nodeId, input.history.targetOpId]), input);
-  driver.prepare(`${INSERT_REVIEW_EVENT_SQL} ON CONFLICT(op_id) DO NOTHING`).run(params);
+  return driver.prepare(`${INSERT_REVIEW_EVENT_SQL} ON CONFLICT(op_id) DO NOTHING`).run(params).changes > 0;
 }
 
 export async function recordReviewHistoryWithDb(db: DbPort, input: Parameters<typeof historyEvent>[1]) {
   const params = historyEvent(await db.query(HISTORY_REVIEW_SQL,
     [input.nodeId, input.history.targetOpId]), input);
-  await db.run(`${INSERT_REVIEW_EVENT_SQL} ON CONFLICT(op_id) DO NOTHING`, params);
+  return (await db.run(`${INSERT_REVIEW_EVENT_SQL} ON CONFLICT(op_id) DO NOTHING`, params)).changes > 0;
 }

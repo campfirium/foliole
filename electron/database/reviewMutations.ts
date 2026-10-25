@@ -11,8 +11,8 @@ import { loadOrCreateDesktopHostName } from './hostProfile.js';
 
 export type { ApplyReviewGradeInput };
 
-export function applyReviewGrade(input: ApplyReviewGradeInput): void {
-  applyReviewGradeViaDriver(openDatabaseConnection().driver, input, {
+export function applyReviewGrade(input: ApplyReviewGradeInput) {
+  return applyReviewGradeViaDriver(openDatabaseConnection().driver, input, {
     hostName: loadOrCreateDesktopHostName(input.reviewedAt),
     createId: randomUUID
   });

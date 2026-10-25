@@ -36,7 +36,7 @@ function gradeResult(due: string, reviewedAt: string, scheduledDays: number) {
 
 it('keeps the earliest next review due across graded session items', async () => {
   const due = new Date(2026, 2, 3, 8).toISOString();
-  vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+  vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
   const harness = createSetStateHarness(
     createWorkspaceFixture([createQaNode('qa-1', due), createQaNode('qa-2', due)])
   );

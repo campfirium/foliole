@@ -5,13 +5,11 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState';
-import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
+import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
-import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
@@ -21,6 +19,7 @@ import { advanceFlowSession, resumeFlowSession } from '../store/workspaceFlowSes
 import { createStartedReviewSession } from '../store/workspaceReviewReading';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
+import { seedCompanionReviewHistory } from './companionFlowHistory.testSupport';
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { persistFlowMutation } from './companionFlowMutation';
 
@@ -31,33 +30,29 @@ vi.mock('@capacitor/core', async () => {
 
 const now = '2026-10-25T08:00:00.000Z';
 const key = 'flow_history:test';
-const profile = { due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
+let profile: NodeReviewProfile = { due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
   state: 2 as const, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 };
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let session: ReviewSessionState;
 const snapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 beforeEach(async () => {
   library = await createSearchLibrary(0);
-  const records = await Promise.all(['a', 'b', 'c'].map(id => toWorkspaceNativeNodeVersion({
-    id, title: id, content: id, kind: 'item', parentNodeId: null, reveal: `Answer ${id}`, anchorLink: null,
-    isTitleManual: true, hideTitleHeading: false, reading: null, review: profile,
-    createdAt: '2026-01-01T00:00:00Z', updatedAt: now }, 'remote', `base-${id}`)));
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
-  for (const nodeId of ['a', 'b', 'c']) await saveCompanionSyncNodeReviewRecord({ nodeId, review: profile });
+  await seedCompanionReviewHistory(profile, now);
+  profile = (await snapshot()).nodesById.a!.review!;
   session = resumeFlowSession(await snapshot(), 'review-first', 'a', now);
 });
 afterEach(async () => { await library.close(); });
 
-async function grade(value: 1 | 2 | 3 | 4 = 3) {
+async function grade(value: 1 | 2 | 3 | 4 = 3, stamp = now) {
   session = { ...session, isAnswerRevealed: true };
   const result = await persistFlowMutation({ action: 'grade', grade: value, nodeId: session.currentNodeId!,
-    snapshot: await snapshot(), now, history: { key, mode: 'review-first', session } });
-  session = advanceFlowSession({ action: 'grade', snapshot: result.snapshot, session, mode: 'review-first', now });
+    snapshot: await snapshot(), now: stamp, history: { key, mode: 'review-first', session } });
+  session = advanceFlowSession({ action: 'grade', snapshot: result.snapshot, session, mode: 'review-first', now: stamp });
 }
 async function replay(mode: 'undo' | 'redo') {
   session = (await replayCompanionFlowHistory(key, mode, session)) ?? session;
 }
-const count = () => library.database.prepare("SELECT COUNT(*) AS count FROM review_log r WHERE r.kind='review' AND NOT EXISTS (SELECT 1 FROM review_log v WHERE v.kind='void' AND v.voids_op_id=r.op_id)").get();
+const count = () => library.database.prepare("SELECT COUNT(*) AS count FROM review_log r WHERE r.kind='review' AND r.reviewed_at >= '2026-10-01' AND NOT EXISTS (SELECT 1 FROM review_log v WHERE v.kind='void' AND v.voids_op_id=r.op_id)").get();
 
 it('undoes and redoes multiple grades with their cards and persisted state, without grading again', async () => {
   const initial = await snapshot();
@@ -75,8 +70,8 @@ it('undoes and redoes multiple grades with their cards and persisted state, with
   await replay('redo');
   await replay('redo');
   expect(session.currentNodeId).toBe('c');
-  expect((await snapshot()).nodesById.a?.review).toEqual(graded.nodesById.a?.review);
-  expect((await snapshot()).nodesById.b?.review).toEqual(graded.nodesById.b?.review);
+  expect((await snapshot()).nodesById.a?.review).toMatchObject({ reps: graded.nodesById.a?.review?.reps });
+  expect((await snapshot()).nodesById.b?.review).toMatchObject({ reps: graded.nodesById.b?.review?.reps });
   const reader = new Database(path.join(library.root, 'library.db'), { readonly: true });
   try { expect(reader.prepare("SELECT reps FROM node_review WHERE node_id='b'").get()).toEqual({ reps: 3 }); }
   finally { reader.close(); }
@@ -165,6 +160,7 @@ it('allows undo after revealing the next answer and restores completion through 
 
 it('restores the ungraded state of a new card without losing its redo', async () => {
   library.database.prepare("DELETE FROM node_review WHERE node_id='a'").run();
+  library.database.prepare("DELETE FROM review_log WHERE node_id='a'").run();
   session = resumeFlowSession(await snapshot(), 'review-first', 'a', now);
   await grade();
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(1);
@@ -203,7 +199,7 @@ it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading sta
   let after = before;
   const history = { key, mode: 'recommended' as const, session };
   if (action === 'soon') {
-    await commitCompanionFlowHistory({ key, entry: createCompanionFlowHistoryEntry({ action,
+    await commitCompanionFlowHistory({ key, mode: history.mode, entry: createCompanionFlowHistoryEntry({ action,
       nodeId: 'a', now, before, after, history }) });
   } else {
     after = (await persistFlowMutation({ action, nodeId: 'a', now, snapshot: before, history })).snapshot;
@@ -215,4 +211,29 @@ it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading sta
   await replay('redo');
   expect((await snapshot()).nodesById.a?.reading).toEqual(after.nodesById.a?.reading);
   expect(count()).toEqual({ count: 0 });
+});
+
+it('replays consecutive scores for the same card using the recalculated intermediate state', async () => {
+  library.database.exec("UPDATE nodes SET enable_short_term = 1 WHERE id='a'");
+  await grade(1);
+  await grade(3, '2026-10-25T09:00:00.000Z');
+  await grade(3, '2026-10-25T09:00:00.000Z');
+  expect(session.currentNodeId).toBe('a');
+  await grade(3, '2026-10-25T09:00:00.000Z');
+  for (let i = 0; i < 4; i++) await replay('undo');
+  expect((await snapshot()).nodesById.a?.review?.reps).toBe(2);
+  for (let i = 0; i < 4; i++) await replay('redo');
+  expect((await snapshot()).nodesById.a?.review?.reps).toBe(4);
+  expect(count()).toEqual({ count: 4 });
+});
+
+it('persists and replays a grade whose event sorts before an already recorded reset', async () => {
+  library.database.exec(`INSERT INTO review_log(id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind)
+    VALUES ('future-reset', 'future-reset', 'offline', 'a', 0, '', '2099-10-25T08:00:00.000Z', 'reset')`);
+  await grade();
+  expect((await loadCompanionFlowHistory(key)).undoStack.at(-1)).toMatchObject({ afterReview: null });
+  expect((await snapshot()).nodesById.a?.review).toBeNull();
+  await replay('undo');
+  await replay('redo');
+  expect((await snapshot()).nodesById.a?.review).toBeNull();
 });

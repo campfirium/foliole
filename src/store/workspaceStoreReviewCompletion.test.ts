@@ -14,7 +14,8 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./workspaceRuntimeSync')>();
   return {
     ...actual,
-    syncNodeContentToRuntimeNow: vi.fn(async () => true)
+    syncNodeContentToRuntimeNow: vi.fn(async () => true),
+    syncReviewGradeToRuntime: vi.fn(async (payload: Parameters<typeof actual.syncReviewGradeToRuntime>[0]) => ({ card: payload.cardAfter }))
   };
 });
 vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({

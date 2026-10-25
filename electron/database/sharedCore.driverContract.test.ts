@@ -8,7 +8,7 @@ import type {
   DatabaseExecuteResult,
   DatabaseStatement
 } from '../../lib/core/database/driver.js';
-import { applyReviewGrade, upsertNodeSnapshot } from '../../lib/core/database/index.js';
+import { upsertNodeSnapshot } from '../../lib/core/database/index.js';
 
 const prepareSpy = vi.fn<(sql: string) => DatabaseStatement>();
 const executeSpy = vi.fn<(sql: string, params?: DatabaseBindParams) => DatabaseExecuteResult>();
@@ -23,40 +23,6 @@ const driver: DatabaseDriver = {
     transactionSpy(execute);
     return execute(driver);
   }
-};
-
-const reviewMutationInput = {
-  nodeId: 'node-1',
-  grade: 3 as const,
-  reviewedAt: '2026-03-14T00:00:00.000Z',
-  schedulerVersion: 'ts-fsrs@4:short',
-  cardBefore: {
-    due: '2026-03-14T00:00:00.000Z',
-    last_review: null,
-    state: 0 as const,
-    stability: 0,
-    difficulty: 0,
-    elapsed_days: 0,
-    scheduled_days: 0,
-    reps: 0,
-    lapses: 0
-  },
-  cardAfter: {
-    due: '2026-03-18T00:00:00.000Z',
-    last_review: '2026-03-14T00:00:00.000Z',
-    state: 1 as const,
-    stability: 2.5,
-    difficulty: 3.1,
-    elapsed_days: 1,
-    scheduled_days: 4,
-    reps: 1,
-    lapses: 0
-  }
-};
-
-const reviewMutationContext = {
-  hostName: 'desktop-local',
-  createId: vi.fn().mockReturnValueOnce('op-1').mockReturnValueOnce('log-1')
 };
 
 const nodeSnapshotInput = {
@@ -96,8 +62,6 @@ beforeEach(() => {
   });
   vi.mocked(driver.queryAll).mockReset();
   vi.mocked(driver.queryAll).mockReturnValue([]);
-  reviewMutationContext.createId.mockReset();
-  reviewMutationContext.createId.mockReturnValueOnce('op-1').mockReturnValueOnce('log-1');
 });
 
 function createStatementRuns() {
@@ -199,74 +163,4 @@ it('writes node snapshot via driver transaction and prepared statements', () => 
   expect(driver.queryOne).toHaveBeenCalledWith('SELECT node_id FROM node_reading WHERE node_id = ?', ['node-1']);
   expectNodeSnapshotPersistence(runs);
   expectNodeSnapshotSearchSync();
-});
-
-function mockReviewStatements() {
-  const upsertReviewRun = vi.fn();
-  const insertLogRun = vi.fn();
-  prepareSpy.mockImplementation((sql) => ({
-    sql,
-    run: sql.includes('INSERT INTO node_review') ? upsertReviewRun : insertLogRun,
-    get: vi.fn(),
-    all: vi.fn()
-  }));
-  return { insertLogRun, upsertReviewRun };
-}
-
-const expectedReviewParams = [
-  'node-1',
-  '2026-03-18T00:00:00.000Z',
-  '2026-03-14T00:00:00.000Z',
-  1,
-  2.5,
-  3.1,
-  1,
-  4,
-  1,
-  0
-] as const;
-
-const expectedReviewLogParams = [
-  'log-1',
-  'op-1',
-  'desktop-local',
-  'node-1',
-  3,
-  'ts-fsrs@4:short',
-  '2026-03-14T00:00:00.000Z',
-  '2026-03-14T00:00:00.000Z',
-  0,
-  0,
-  '2026-03-18T00:00:00.000Z',
-  2.5,
-  3.1
-] as const;
-
-function expectReviewPersistence(runs: ReturnType<typeof mockReviewStatements>) {
-  expect(runs.upsertReviewRun).toHaveBeenCalledWith(expectedReviewParams);
-  expect(runs.insertLogRun).toHaveBeenCalledWith(expectedReviewLogParams);
-}
-
-function expectReviewSyncWrites() {
-  expect(executeSpy).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_object_state'), [
-    'node_review',
-    'node-1',
-    null,
-    expect.any(String),
-    'desktop-local',
-    '2026-03-14T00:00:00.000Z',
-    null,
-    1
-  ]);
-  expect(executeSpy).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sync_change_log'), expect.anything());
-}
-
-it('writes review mutation via driver contract with injected context', () => {
-  const runs = mockReviewStatements();
-
-  applyReviewGrade(driver, reviewMutationInput, reviewMutationContext);
-
-  expect(transactionSpy).toHaveBeenCalled();
-  expectReviewPersistence(runs);
-  expectReviewSyncWrites();
 });

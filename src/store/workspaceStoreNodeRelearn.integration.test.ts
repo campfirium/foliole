@@ -12,15 +12,20 @@ import { handleNodeMutationCommand } from '../../electron/ipc/storageNodeMutatio
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from '../../electron/ipc/storageReadCommands.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations.js';
+import { readStoredReviewCard } from '../../lib/core/database/storedReviewCard.js';
 import { resolveLibraryPaths } from '../../lib/platform/libraryPaths.js';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import { waitForWorkspaceRuntimeWrites } from '../shared/platform/runtimeInvoke';
 import { readPendingRelearnNodes, resetPendingDurableMutationsForTests } from '../shared/platform/workspacePendingDurableMutations';
 import { replayPendingWorkspaceDurableMutations } from '../shared/platform/workspaceRuntimeDurableRepository';
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
 
+import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { createWorkspaceNodeActionsFixture, createWorkspaceNodeActionsSetStateHarness } from './workspaceStoreNodeActions.test-support';
 import { createRelearnNodeAction } from './workspaceStoreNodeRelearnAction';
+import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
+import { createQaNode, createSetStateHarness, createWorkspaceFixture, createSchedulerGradeMock, previewStub } from './workspaceStoreReviewActions.test-support';
 
 
 const at = '2026-10-25T00:00:00.000Z';
@@ -163,4 +168,29 @@ it.each([false, true])('keeps item state when recovery intent cannot be staged w
   expect(state.getState().nodesById['node-1']).toEqual(localBefore);
   expect(persistedRelearn(source)).toEqual(before);
   expect(transport.invoke).not.toHaveBeenCalled();
+});
+
+it.each([false, true])('consumes durable grading, next due and repeated undo/redo with a new card=%s', async fresh => {
+  seedRelearn(source, 'item', false);
+  if (fresh) source.db.exec("DELETE FROM review_log; DELETE FROM node_review; DELETE FROM sync_object_state WHERE object_type='node_review'");
+  const initialReps = fresh ? 0 : 1;
+  const harness = createSetStateHarness(createWorkspaceFixture([createQaNode('node-1', at)]));
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState,
+    { grade: createSchedulerGradeMock(at), preview: previewStub });
+  const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  expect(actions.startReviewSession(at)).toBe(true); actions.revealReviewAnswer();
+  expect(await actions.gradeReviewCard(3, at)).toBe(true);
+  const card = readStoredReviewCard(source.driver, 'node-1')!;
+  expect(card.reps).toBe(initialReps + 1);
+  expect(harness.getState().nodesById['node-1']?.review).toEqual(toNodeReviewProfile(card));
+  expect(harness.getState().reviewSession.nextReviewDueAt).toBe(card.due);
+  expect(history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.review?.reps ?? 0).toBe(initialReps));
+  expect(harness.getState().nodesById['node-1']?.review).toEqual(fresh ? null : toNodeReviewProfile(readStoredReviewCard(source.driver, 'node-1')!));
+  expect(history.redoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.review?.reps).toBe(initialReps + 1));
+  expect(harness.getState().nodesById['node-1']?.review).toEqual(toNodeReviewProfile(readStoredReviewCard(source.driver, 'node-1')!));
+  expect(history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.review?.reps ?? 0).toBe(initialReps));
+  if (fresh) expect(await actions.gradeReviewCard(3, at)).toBe(true);
 });

@@ -1,4 +1,5 @@
 import type { WorkspaceListProjection } from '../core/database/workspaceListProjection.js';
+import type { SchedulerCard } from '../core/review/types.js';
 
 import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
 import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
@@ -187,7 +188,7 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   };
   [NATIVE_COMMANDS.saveNodeReviewState]: {
     args: NativeSaveNodeReviewStateArgs;
-    result: null;
+    result: SchedulerCard | null;
   };
   [NATIVE_COMMANDS.resetImportData]: {
     args: undefined;
@@ -215,7 +216,7 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   };
   [NATIVE_COMMANDS.applyReviewGrade]: {
     args: NativeApplyReviewGradeArgs;
-    result: null;
+    result: SchedulerCard | null;
   };
 };
 export type NativeCommandName = keyof NativeCommandMap;

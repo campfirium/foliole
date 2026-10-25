@@ -1,3 +1,5 @@
+import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import {
@@ -88,6 +90,7 @@ async function applyReview(tx: DbPort, row: FramedSyncReviewSource) {
     `INSERT INTO review_log (${REVIEW_COLUMNS.join(', ')}) VALUES (${REVIEW_COLUMNS.map(() => '?').join(', ')})`,
     REVIEW_COLUMNS.map((column) => row[column])
   );
+  await recomputeNodeReviewWithDb(tx, row.node_id);
 }
 
 /** Apply inside the caller's business transaction so facts and its receipt commit atomically. */

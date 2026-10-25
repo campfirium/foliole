@@ -1,0 +1,40 @@
+import { createFsrsReviewScheduler } from './fsrsScheduler.js';
+import { createReviewSchedulerParameters, getReviewSchedulerVersion, type ReviewSchedulerSettings } from './settings.js';
+import { createInitialSchedulerCard, mapGradeToRustRating, type SchedulerCard } from './types.js';
+
+export interface ReviewEvent {
+  op_id: string;
+  reviewed_at: string;
+  kind: 'review' | 'reset' | 'void';
+  grade: number;
+  voids_op_id: string | null;
+}
+
+/** Events are immutable facts; snapshots and event scheduler versions never seed this calculation. */
+export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings): SchedulerCard | null {
+  const voids = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
+  const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at) }))
+    .sort((a, b) => a.instant - b.instant
+    || (a.op_id < b.op_id ? -1 : a.op_id > b.op_id ? 1 : 0));
+  const scheduler = createFsrsReviewScheduler({ loadSettings: () => parameters,
+    getSettingsVersion: getReviewSchedulerVersion, createParameters: createReviewSchedulerParameters });
+  let card: SchedulerCard | null = null;
+  for (const event of ordered) {
+    if (event.kind === 'reset') card = null;
+    if (event.kind !== 'review' || voids.has(event.op_id)) continue;
+    const grade = event.grade;
+    if (grade !== 1 && grade !== 2 && grade !== 3 && grade !== 4) throw new Error('invalid_review_grade');
+    // Keep absolute scheduler timestamps. Local day-boundary display belongs to the consumer,
+    // otherwise identical facts produce different persisted values in different time zones.
+    card = scheduler.grade({ card: card ?? createInitialSchedulerCard(event.reviewed_at),
+      rating: mapGradeToRustRating(grade), now: event.reviewed_at }).card;
+  }
+  return card;
+}
+
+function reviewInstant(value: string) {
+  const absolute = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const instant = Date.parse(value);
+  if (!absolute || !Number.isFinite(instant)) throw new Error('invalid_review_timestamp');
+  return instant;
+}

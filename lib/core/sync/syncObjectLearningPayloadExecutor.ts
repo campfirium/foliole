@@ -86,17 +86,9 @@ async function shouldApplyNodeReading(
   return incomingKey.join('\n') > existingKey.join('\n');
 }
 
-export async function applyNodeReviewObject(port: DbPort, record: SyncObjectRecord) {
-  if (record.deleted_at) {
-    await port.run('DELETE FROM node_review WHERE node_id = ?', [record.object_id]);
-    return;
-  }
-  const payload = asObject(record);
-  const incomingReps = integer(payload.reps);
-  if (!await shouldApplyNodeReview(port, record, text(payload.last_review_at), incomingReps)) {
-    return false;
-  }
-  await writeNodeReviewObject(port, record);
+/** Review facts own the projection; incoming legacy snapshots cannot overwrite it. */
+export async function applyNodeReviewObject() {
+  return false;
 }
 
 /** Writes an accepted review record without applying remote conflict arbitration. */
@@ -117,26 +109,6 @@ export async function writeNodeReviewObject(port: DbPort, record: SyncObjectReco
       numberOrNull(payload.stability) ?? 0, numberOrNull(payload.difficulty) ?? 0, integer(payload.elapsed_days),
       integer(payload.scheduled_days), incomingReps, integer(payload.lapses)]
   );
-}
-
-async function shouldApplyNodeReview(
-  port: DbPort,
-  record: SyncObjectRecord,
-  incomingLastReviewAt: string | null,
-  incomingReps: number
-) {
-  const existing = (await port.query<{ content_hash: string | null; last_review_at: string | null; reps: number }>(
-    `SELECT r.last_review_at, r.reps, s.content_hash
-     FROM node_review r LEFT JOIN sync_object_state s
-       ON s.object_type = 'node_review' AND s.object_id = r.node_id
-     WHERE r.node_id = ?`,
-    [record.object_id]
-  ))[0];
-  if (!existing) return true;
-  if (incomingReps === 0 && existing.reps > 0) return false;
-  const incomingKey = [incomingLastReviewAt ?? '', String(incomingReps).padStart(12, '0'), record.content_hash];
-  const existingKey = [existing.last_review_at ?? '', String(existing.reps).padStart(12, '0'), existing.content_hash ?? ''];
-  return incomingKey.join('\n') > existingKey.join('\n');
 }
 
 async function applyReadingPosition(

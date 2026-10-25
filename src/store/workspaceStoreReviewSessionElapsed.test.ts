@@ -26,7 +26,7 @@ vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(syncReviewGradeToRuntime).mockResolvedValue(undefined);
+  vi.mocked(syncReviewGradeToRuntime).mockImplementation(async payload => ({ card: payload.cardAfter }));
 });
 
 it('tracks review elapsed time separately from reading elapsed time', async () => {

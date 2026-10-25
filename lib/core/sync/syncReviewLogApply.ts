@@ -1,3 +1,5 @@
+import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import { identityReviewRowSchema } from './syncFactRowSchemas.js';
 
@@ -88,6 +90,7 @@ export async function applyReviewLogRecordsWithDbPort(
         continue;
       }
       const result = await insertReviewLog(tx, record);
+      if (result.changes > 0) await recomputeNodeReviewWithDb(tx, record.node_id);
       if (result.changes > 0 || options.includeAlreadyApplied) {
         appliedOpIds.push(record.op_id);
       }

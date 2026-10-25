@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { runPreparedImport } from '../../lib/core/database/importPipeline.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+import { recomputeNodeReview } from '../../lib/core/database/reviewProjection.js';
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
@@ -90,6 +91,7 @@ it('preserves the union of both independent libraries score histories across rei
   const target = createPeer('target');
   joinPeers(source, target);
   const nodeId = seed(source);
+  for (const id of ['highlight-kept', 'highlight-missing']) recomputeNodeReview(source.driver, id);
   for (const row of source.driver.queryAll<{ id: string }>('SELECT id FROM nodes WHERE deleted_at IS NULL')) {
     flushNodeSyncVersionWithDriver(source.driver, row.id, source.name, at);
   }
@@ -97,9 +99,11 @@ it('preserves the union of both independent libraries score histories across rei
   const reviewBefore = learning(source).reviews;
   expect(learning(target).reviews).toEqual(reviewBefore);
   addLog(target, 'highlight-kept', 'offline-target');
+  recomputeNodeReview(target.driver, 'highlight-kept');
   runPreparedImport(source.driver, prepared('New kept body', ['kept']), {
     forceUpdateExistingNodeId: nodeId, resetImportedStructure: true
   });
+  expect(learning(source).reviews).toEqual(reviewBefore);
   for (const row of source.driver.queryAll<{ id: string }>('SELECT id FROM nodes WHERE deleted_at IS NULL')) {
     flushNodeSyncVersionWithDriver(source.driver, row.id, source.name, '2026-10-21T00:00:00.000Z');
   }
@@ -108,7 +112,10 @@ it('preserves the union of both independent libraries score histories across rei
     await sync(target, source);
   }
   for (const peer of [source, target]) {
-    expect(learning(peer).reviews).toEqual(reviewBefore);
+    expect(learning(peer).reviews).toEqual(learning(source).reviews);
+    expect(peer.db.prepare('SELECT node_id, reps FROM node_review ORDER BY node_id').all()).toEqual([
+      { node_id: 'highlight-kept', reps: 2 }, { node_id: 'highlight-missing', reps: 1 }
+    ]);
     const anchor = peer.db.prepare<[], { anchor_link: string }>("SELECT anchor_link FROM nodes WHERE id='highlight-kept'").get()!;
     expect(JSON.parse(anchor.anchor_link)).toMatchObject({ kind: 'cloze', locator: { from: 4, originalText: 'kept' } });
     const reopened = new Database(peer.file, { readonly: true });

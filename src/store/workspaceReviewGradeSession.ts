@@ -4,7 +4,7 @@ type ReviewSession = WorkspaceState['reviewSession'];
 
 export function buildReviewSessionAfterGrade(args: {
   continueNodeId: string | null;
-  nextDueAt: string;
+  nextDueAt: string | null;
   nextNodeId: string | null;
   now: string;
   queueNodeIds: string[];

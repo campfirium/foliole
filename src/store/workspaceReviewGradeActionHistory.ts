@@ -7,7 +7,7 @@ const GRADE_REVIEW_ACTION_TITLE = 'Grade Review';
 
 export interface WorkspaceReviewGradeHistoryEntry {
   afterContext: WorkspaceHistoryContext;
-  afterReview: NodeReviewProfile;
+  afterReview: NodeReviewProfile | null;
   beforeContext: WorkspaceHistoryContext;
   beforeReview: NodeReviewProfile | null;
   id: string;
@@ -42,7 +42,7 @@ export function isSameReviewProfile(
 
 export function createReviewGradeHistoryEntry(args: {
   afterContext: WorkspaceHistoryContext;
-  afterReview: NodeReviewProfile;
+  afterReview: NodeReviewProfile | null;
   beforeContext: WorkspaceHistoryContext;
   beforeReview: NodeReviewProfile | null;
   id: string;
@@ -51,7 +51,7 @@ export function createReviewGradeHistoryEntry(args: {
 }): WorkspaceReviewGradeHistoryEntry {
   return {
     afterContext: { ...args.afterContext, reviewSession: cloneWorkspaceReviewSession(args.afterContext.reviewSession) },
-    afterReview: cloneReviewProfile(args.afterReview)!,
+    afterReview: cloneReviewProfile(args.afterReview),
     beforeContext: { ...args.beforeContext, reviewSession: cloneWorkspaceReviewSession(args.beforeContext.reviewSession) },
     beforeReview: cloneReviewProfile(args.beforeReview),
     id: args.id,

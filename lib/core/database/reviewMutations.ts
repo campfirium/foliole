@@ -1,6 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
-import { recordNodeReviewSyncState, recordNodeReviewTombstone } from './nodeReviewSyncState.js';
 import { INSERT_REVIEW_EVENT_SQL } from './reviewLogRecord.js';
+import { recomputeNodeReview } from './reviewProjection.js';
+import { readStoredReviewCard } from './storedReviewCard.js';
 
 interface ReviewCardSnapshot {
   due: string;
@@ -29,44 +30,6 @@ export interface ReviewMutationContext {
   createId: () => string;
 }
 
-const UPSERT_NODE_REVIEW_SQL = `INSERT INTO node_review (
-  node_id,
-  due,
-  last_review_at,
-  state,
-  stability,
-  difficulty,
-  elapsed_days,
-  scheduled_days,
-  reps,
-  lapses
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(node_id) DO UPDATE SET
-  due = excluded.due,
-  last_review_at = excluded.last_review_at,
-  state = excluded.state,
-  stability = excluded.stability,
-  difficulty = excluded.difficulty,
-  elapsed_days = excluded.elapsed_days,
-  scheduled_days = excluded.scheduled_days,
-  reps = excluded.reps,
-  lapses = excluded.lapses`;
-
-function toNodeReviewParams(input: ApplyReviewGradeInput) {
-  return [
-    input.nodeId,
-    input.cardAfter.due,
-    input.reviewedAt,
-    input.cardAfter.state,
-    input.cardAfter.stability,
-    input.cardAfter.difficulty,
-    input.cardAfter.elapsed_days,
-    input.cardAfter.scheduled_days,
-    input.cardAfter.reps,
-    input.cardAfter.lapses
-  ] as const;
-}
-
 function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutationContext, opId: string, logId: string) {
   return [
     logId,
@@ -81,39 +44,24 @@ function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutation
   ] as const;
 }
 
-function toNodeReviewSyncPayload(input: ApplyReviewGradeInput) {
-  return {
-    due: input.cardAfter.due,
-    lastReviewAt: input.reviewedAt,
-    state: input.cardAfter.state,
-    stability: input.cardAfter.stability,
-    difficulty: input.cardAfter.difficulty,
-    elapsedDays: input.cardAfter.elapsed_days,
-    scheduledDays: input.cardAfter.scheduled_days,
-    reps: input.cardAfter.reps,
-    lapses: input.cardAfter.lapses
-  };
-}
-
 export function applyReviewGrade(
   driver: DatabaseDriver,
   input: ApplyReviewGradeInput,
   context: ReviewMutationContext
-): void {
-  const upsertNodeReviewStatement = driver.prepare(UPSERT_NODE_REVIEW_SQL);
+) {
   const insertReviewLogStatement = driver.prepare(INSERT_REVIEW_EVENT_SQL);
   const opId = input.opId ?? context.createId();
-  const logId = context.createId();
-
-  driver.transaction(() => {
-    upsertNodeReviewStatement.run(toNodeReviewParams(input));
+  return driver.transaction(() => {
+    const existing = driver.queryOne<{ node_id: string; grade: number; reviewed_at: string; scheduler_version: string }>(
+      'SELECT node_id, grade, reviewed_at, scheduler_version FROM review_log WHERE op_id = ?', [opId]);
+    if (existing) {
+      if (existing.node_id !== input.nodeId || existing.grade !== input.grade || existing.reviewed_at !== input.reviewedAt
+        || existing.scheduler_version !== input.schedulerVersion) throw new Error('review_op_mismatch');
+      return readStoredReviewCard(driver, input.nodeId);
+    }
+    const logId = context.createId();
     insertReviewLogStatement.run(toReviewLogParams(input, context, opId, logId));
-    recordNodeReviewSyncState(driver, input.nodeId, toNodeReviewSyncPayload(input), {
-      hostName: context.hostName,
-      logId,
-      opId,
-      reviewedAt: input.reviewedAt
-    });
+    return recomputeNodeReview(driver, input.nodeId);
   });
 }
 
@@ -123,14 +71,14 @@ export function resetNodeReviewState(
   context: { deletedAt: string; hostName: string }
 ): void {
   driver.transaction(() => {
+    const opId = `reset:${context.hostName}:${nodeId}:${context.deletedAt}`;
+    if (driver.queryOne('SELECT 1 FROM review_log WHERE op_id = ?', [opId])) return;
     driver.prepare(`UPDATE nodes SET shelved_at = NULL, updated_at = ?,
       last_modified_by_host_name = ?, sync_dirty = 1
       WHERE id = ? AND shelved_at IS NOT NULL`).run([context.deletedAt, context.hostName, nodeId]);
-    driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
-    recordNodeReviewTombstone(driver, nodeId, context);
-    const opId = `reset:${context.hostName}:${nodeId}:${context.deletedAt}`;
     driver.prepare(INSERT_REVIEW_EVENT_SQL).run([
       opId, opId, context.hostName, nodeId, 0, '', context.deletedAt, 'reset', null
     ]);
+    recomputeNodeReview(driver, nodeId);
   });
 }
