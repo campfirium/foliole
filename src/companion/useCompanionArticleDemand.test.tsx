@@ -35,6 +35,7 @@ it('loads only the displayed article and releases it when returning to a list', 
     const surface = useCompanionArticleSurface({ ...workspace, ...loader }, floating);
     return { surface, article: loader.readableArticle };
   });
+  act(() => result.current.surface.handleTabAction('recent'));
   act(() => result.current.surface.handleSelectRecentArticle('article-2'));
   await waitFor(() => expect(result.current.article?.nodeId).toBe('article-2'));
   expect(result.current.surface.readableArticle?.content).toBe('Loaded article-2');
