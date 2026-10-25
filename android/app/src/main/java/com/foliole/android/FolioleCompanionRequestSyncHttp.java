@@ -65,11 +65,6 @@ final class FolioleCompanionRequestSyncHttp {
         } catch (Exception error) { call.reject(error.getMessage(), error); }
     }
 
-    static void cancelBatch(FramedSyncPayloadBudget owner, String id) {
-        Operation operation = ACTIVE.get(id);
-        if (operation != null && operation.owner == owner) operation.cancel();
-    }
-
     static void cancelOwner(FramedSyncPayloadBudget owner) {
         for (Operation operation : ACTIVE.values()) if (operation.owner == owner) operation.cancel();
     }
@@ -100,14 +95,6 @@ final class FolioleCompanionRequestSyncHttp {
         operation.check();
         URL url = new URL(call.getString("url"));
         var timing = new FolioleRequestSyncTiming(requestId(call), url);
-        if (call.getObject("attachment_batch") != null) {
-            if (call.getObject("attachment_receive") != null) throw new IllegalArgumentException("attachment_response_mode_invalid");
-            return FolioleRequestSyncAttachmentBatchResponse.execute(call, operation.owner, operation::check, progress, input ->
-                FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
-                    call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
-                    FolioleRequestSyncHttpChunks.request(files, directory, count, operation::check, progress, timing::chunk),
-                    input::read, operation::opened, timing::phase));
-        }
         return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
             FolioleRequestSyncHttpChunks.request(files, directory, count, operation::check, progress, timing::chunk),

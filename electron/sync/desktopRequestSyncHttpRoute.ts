@@ -19,7 +19,7 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   groupKey: Uint8Array;
   signal: AbortSignal;
   onProgress?: () => void;
-  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, mode?: 'batch') => Promise<void>;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<void>;
 }) {
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {

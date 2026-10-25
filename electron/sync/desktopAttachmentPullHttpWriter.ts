@@ -1,6 +1,5 @@
 import type { ServerResponse } from 'node:http';
 
-import { pipelineAttachmentBatchFrames } from '../../lib/core/sync/attachmentBatchFrames.js';
 import { FRAMED_SYNC_CONTENT_TYPE, FRAMED_SYNC_DEVICE_ID_HEADER,
   FRAMED_SYNC_LIBRARY_EPOCH_HEADER } from '../../lib/core/sync/framedSyncHttpContract.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
@@ -12,7 +11,7 @@ import type { FramedSyncStreamBody } from './desktopFramedSyncStream.js';
 
 /** The caller retains the verified source until the writer and its frame iterator exit. */
 export async function writeDesktopAttachmentPull(input: {
-  response: ServerResponse; stream: FramedSyncStreamBody; signal: AbortSignal | undefined; batch?: boolean;
+  response: ServerResponse; stream: FramedSyncStreamBody; signal: AbortSignal | undefined;
   payloadBudget: FramedSyncPayloadBudget | undefined;
   localIdentity: Readonly<{ deviceId: string; libraryEpoch: string }>;
   onProgress: (() => void) | undefined;
@@ -32,8 +31,7 @@ export async function writeDesktopAttachmentPull(input: {
       [FRAMED_SYNC_DEVICE_ID_HEADER]: input.localIdentity.deviceId,
       [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: input.localIdentity.libraryEpoch
     });
-    const frames = input.batch ? pipelineAttachmentBatchFrames(input.stream.frames, input.payloadBudget, signal)
-      : leaseFramedSyncPayloads(input.stream.frames, input.payloadBudget, 'outbound', undefined, signal);
+    const frames = leaseFramedSyncPayloads(input.stream.frames, input.payloadBudget, 'outbound', undefined, signal);
     await writeDesktopFramedSyncHttpBody(input.response, (async function* () {
       for await (const bytes of encodeFramedSyncHttpBody({ ...input.stream, frames })) {
         signal.throwIfAborted();

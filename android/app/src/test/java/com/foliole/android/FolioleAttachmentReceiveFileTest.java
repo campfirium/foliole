@@ -2,28 +2,22 @@ package com.foliole.android;
 
 import static org.junit.Assert.*;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
-import com.foliole.android.framed.AttachmentFileStore;
 import java.nio.file.Files;
 import java.util.concurrent.*;
 import org.junit.Test;
 
 public final class FolioleAttachmentReceiveFileTest {
     @Test public void writesDirectlyAndRefusesRepeatedOffsets() throws Exception {
-        var root = Files.createTempDirectory("attachment-direct");
-        var store = new AttachmentFileStore(root.toFile());
-        String key = "a".repeat(64) + ".png";
-        var path = store.resolve(key, true).toPath();
+        var path = Files.createTempFile("attachment-direct", ".partial");
         var owner = new FramedSyncPayloadBudget("library", "generation");
         int[] closed = {0};
-        try (var writer = new FolioleAttachmentReceiveFile(store.receive(key, 0, 0, () -> {
-            if (owner.isClosed()) throw new InterruptedException("request_sync_http_cancelled");
-        }), () -> closed[0]++)) {
+        try (var writer = new FolioleAttachmentReceiveFile(path.toFile(), 0, owner, () -> closed[0]++)) {
             writer.append(0, new byte[]{1,2,3});
             assertThrows(IllegalArgumentException.class, () -> writer.append(0, new byte[]{4}));
             assertArrayEquals(new byte[]{1,2,3}, Files.readAllBytes(path));
             owner.cancel();
             assertThrows(InterruptedException.class, () -> writer.append(3, new byte[]{4}));
-        } finally { store.close(); Files.deleteIfExists(path); Files.deleteIfExists(root.resolve(".attachment-receiver.lock")); Files.delete(root); }
+        } finally { Files.delete(path); }
         assertEquals(1, closed[0]);
     }
     @Test public void aNewGenerationCannotStartBeforeTheOldOperationDrains() throws Exception {

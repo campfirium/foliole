@@ -63,14 +63,14 @@ async function replaceBatch(db: DbPort, ids: string[], needs: Need[]) {
 }
 
 /** New demand and oldest retries each receive half the slots; unused slots go to the other side. */
-export async function selectPendingAttachments(db: DbPort, limit = 64) {
+export async function selectPendingAttachments(db: DbPort) {
   const fresh = await db.query<{ storage_key: string }>(`SELECT storage_key FROM attachment_pending
-    WHERE attempted_at IS NULL ORDER BY registered_at, article_id, source, storage_key LIMIT ?`, [limit]);
+    WHERE attempted_at IS NULL ORDER BY registered_at, article_id, source, storage_key LIMIT 64`);
   const retries = await db.query<{ storage_key: string }>(`SELECT storage_key FROM attachment_pending
-    WHERE attempted_at IS NOT NULL ORDER BY attempted_at, registered_at, article_id, source, storage_key LIMIT ?`, [limit]);
-  const newCount = Math.min(fresh.length, Math.max(Math.floor(limit / 2), limit - retries.length));
+    WHERE attempted_at IS NOT NULL ORDER BY attempted_at, registered_at, article_id, source, storage_key LIMIT 64`);
+  const newCount = Math.min(fresh.length, Math.max(32, 64 - retries.length));
   const selected = [];
-  const old = retries.slice(0, limit - newCount);
+  const old = retries.slice(0, 64 - newCount);
   for (let i = 0; i < Math.max(newCount, old.length); i++) {
     if (i < newCount) selected.push(fresh[i]!.storage_key);
     if (i < old.length) selected.push(old[i]!.storage_key);

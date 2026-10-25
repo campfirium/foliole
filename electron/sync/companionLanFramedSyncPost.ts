@@ -34,7 +34,7 @@ type FramedPostArgs = {
   payloadBudget?: FramedSyncPayloadBudget | undefined;
   localIdentity: Readonly<{ deviceId: string; libraryEpoch: string }>;
   onStream: (input: Readonly<{
-    consumePull: (stream: FramedSyncStreamBody, signal?: AbortSignal, mode?: 'batch') => Promise<void>;
+    consumePull: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<void>;
     context: AuthenticatedContext;
     stream: FramedSyncStreamBody<FramedSyncWireFrame>;
   }>) => Promise<FramedSyncStreamBody | void>;
@@ -84,9 +84,9 @@ async function respondToVerifiedBody(args: FramedPostArgs, context: Authenticate
   const lane = decodeFramedSyncPreamble(first.value.preamble).contextKind === 'transfer' ? 'receipt' : 'payload';
   const handle = async (stream: FramedSyncStreamBody<FramedSyncWireFrame>) => {
     const handled = beginRequestHttpPhase(response, 'business_handler');
-    try { return await args.onStream({ context, stream, consumePull: async (reply, signal, mode) => {
+    try { return await args.onStream({ context, stream, consumePull: async (reply, signal) => {
       if (!(await units.next()).done) throw new Error('attachment_request_tail_invalid');
-      await writeDesktopAttachmentPull({ response, stream: reply, signal, batch: mode === 'batch',
+      await writeDesktopAttachmentPull({ response, stream: reply, signal,
         localIdentity: args.localIdentity, payloadBudget: args.payloadBudget, onProgress: args.onProgress });
     } }); } finally { handled(); }
   };

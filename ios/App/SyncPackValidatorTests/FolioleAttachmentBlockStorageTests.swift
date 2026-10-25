@@ -21,50 +21,6 @@ final class FolioleAttachmentBlockStorageTests: XCTestCase {
                        AttachmentBlockStorageFixture.hash(block))
     }
 
-    func testBlockedHashKeepsSamePartialExclusiveButAllowsAnotherFileToWrite() throws {
-        let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }
-        try fixture.call("append", numbers: ["offset": 0], bytes: Data(repeating: 1, count: 524288))
-        let hashing = expectation(description: "hash holds first file")
-        let finished = expectation(description: "hash exits")
-        let release = DispatchSemaphore(value: 0)
-        defer { release.signal() }
-        DispatchQueue.global().async {
-            do {
-                var checks = 0
-                _ = try fixture.storage.execute(action: "hash", key: fixture.key, partial: true, check: {
-                    checks += 1
-                    if checks == 1 { return }
-                    hashing.fulfill()
-                    _ = release.wait(timeout: .now() + 3)
-                    throw CancellationError()
-                })
-                XCTFail("Interrupted hash completed")
-            } catch { XCTAssertTrue(error is CancellationError) }
-            finished.fulfill()
-        }
-        wait(for: [hashing], timeout: 1)
-        XCTAssertThrowsError(try fixture.call("truncate", key: String(repeating: "a", count: 64) + ".png", numbers: ["length": 0]))
-        let other = String(repeating: "b", count: 64) + ".png"
-        try fixture.call("truncate", key: other, numbers: ["length": 0])
-        let writer = try fixture.storage.receive(key: other, offset: 0, check: {}) { fixture.storage.finishReceive(other) }
-        try writer.append(offset: 0, data: Data([2, 3])); try writer.close()
-        XCTAssertEqual(try Data(contentsOf: fixture.root.appendingPathComponent(".attachment-\(other.prefix(64)).partial")), Data([2, 3]))
-        release.signal()
-        wait(for: [finished], timeout: 1)
-    }
-
-    func testReadOnlyPresenceAndPartialLengthRemainAvailableDuringReceive() throws {
-        let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }
-        try fixture.call("truncate", numbers: ["length": 0])
-        let writer = try fixture.storage.receive(key: fixture.key, offset: 0, check: {}) { fixture.storage.finishReceive(fixture.key) }
-        defer { try? writer.close() }
-        try writer.append(offset: 0, data: Data([1, 2, 3]))
-        XCTAssertEqual(try fixture.call("source-stat")["present"] as? Bool, false)
-        XCTAssertEqual(try fixture.call("stat", partial: true)["length"] as? Int, 3)
-        let result = try fixture.storage.execute(action: "source-stat-batch", key: "", keys: [fixture.key])
-        XCTAssertEqual(result["presence"] as? [Bool], [false])
-    }
-
     func testInvalidAppendAndNumericRangesKeepExistingBytes() throws {
         let fixture = try AttachmentBlockStorageFixture()
         defer { fixture.close() }

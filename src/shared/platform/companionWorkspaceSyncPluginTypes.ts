@@ -1,5 +1,4 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
-import type { NativeAttachmentBatchIdentity, NativeAttachmentBatchPlugin } from '../../../lib/platform/nativeAttachmentBatchContract';
 import type { NativeCompanionFramedFilesPlugin } from '../../../lib/platform/nativeCompanionFramedFilesContract';
 import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
@@ -39,7 +38,7 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin,
-  NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin, NativeAttachmentBatchPlugin {
+  NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -61,8 +60,6 @@ export interface CompanionWorkspaceSyncPlugin
   }>;
   startDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   stopDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
-  addListener(eventName: 'attachmentBatchChanged', listener: (event: NativeAttachmentBatchIdentity) => void):
-    Promise<import('@capacitor/core').PluginListenerHandle>;
   addListener(
     eventName: 'syncGroupDiscoveryChanged',
     listener: (event: CompanionNativeDiscoveryEvent) => void

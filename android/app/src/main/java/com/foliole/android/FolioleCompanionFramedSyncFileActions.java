@@ -23,12 +23,6 @@ final class FolioleCompanionFramedSyncFileActions {
         String key = call.getString("key");
         String operation = call.getString("operation", "");
         if (operation.equals("attachment")) return FolioleAttachmentBlockFiles.access(context, owner, call);
-        try (var lifetime = owner.operation(() -> {})) {
-            if (owner.isClosed()) throw new IllegalStateException("framed_sync_file_owner_mismatch");
-            return execute(files, call, key, operation);
-        }
-    }
-    private static JSObject execute(FramedSyncFiles files, PluginCall call, String key, String operation) throws Exception {
         JSObject result = new JSObject();
         switch (operation) {
             case "read":

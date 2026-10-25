@@ -116,12 +116,6 @@ final class FolioleFramedSyncPayloadBudget: @unchecked Sendable {
         return true
     }
 
-    func withPublication(_ publish: () throws -> Void) throws {
-        lock.lock(); defer { lock.unlock() }
-        guard accepting else { throw Self.closed() }
-        try publish()
-    }
-
     func requireActive() throws {
         lock.lock(); defer { lock.unlock() }
         guard accepting else { throw Self.closed() }

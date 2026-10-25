@@ -6,8 +6,8 @@ import java.util.Set;
 final class AttachmentRequestValidation {
     static void validate(RequestAttachment value) throws FramedSyncValidationException {
         FramedSyncValueValidator.fixed(value.getRequestId(), 16, "request_id");
-        if (!Set.of("needs", "describe", "pull", "status", "push", "batch_pull").contains(value.getOperation()) ||
-            !Set.of("", "partial", "complete", "offset", "block", "end", "description", "file_end", "range_end", "batch_end", "unavailable", "restart").contains(value.getState()) ||
+        if (!Set.of("needs", "describe", "pull", "status", "push").contains(value.getOperation()) ||
+            !Set.of("", "partial", "complete", "offset", "block", "end").contains(value.getState()) ||
             value.getByteLength() < 0 || value.getByteLength() > 8589934592L ||
             value.getOffset() < 0 || value.getOffset() > 8589934592L ||
             value.getData().size() > 524288 || value.getStorageKeysCount() > 256 ||

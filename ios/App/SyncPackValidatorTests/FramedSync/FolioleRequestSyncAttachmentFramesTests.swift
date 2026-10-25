@@ -34,12 +34,10 @@ final class FolioleRequestSyncAttachmentFramesTests: XCTestCase {
         try .init(requestID: Data(repeating: 0, count: 16), storageKey: String(repeating: "a", count: 64) + ".pdftext",
                   byteLength: UInt64(blocks * 524288), offset: 0, maxBlocks: limit)
     }
-    private func read(_ bytes: Data, blocks: Int = 1, peer: String = "b", check: @escaping () throws -> Void = {},
-                      authorization: FolioleAttachmentReceiveAuthorization? = nil,
-                      consume: @escaping (UInt64, Data) throws -> Void) throws {
-        let decoder = FolioleRequestSyncAttachmentDecoder(groupKey: key, context: try context(peer),
-            permission: try authorization ?? permission(blocks), check: check, consume: consume)
-        try decoder.append(bytes); try decoder.finish()
+    private func read(_ bytes: Data, blocks: Int = 1, peer: String = "b", check: () throws -> Void = {},
+                      consume: (UInt64, Data) throws -> Void) throws {
+        try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: bytes)),
+            groupKey: key, context: context(peer), permission: permission(blocks), check: check, consume: consume)
     }
     func testWritesSixteenMiBAsBoundedAuthorizedBlocks() throws {
         var count = 0
@@ -51,7 +49,8 @@ final class FolioleRequestSyncAttachmentFramesTests: XCTestCase {
     }
     func testWritesThirtyTwoMiBWithinAnExplicitLargerWindow() throws {
         var count = 0
-        try read(wire(64), authorization: permission(64, limit: 64)) { _, _ in count += 1 }
+        try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: wire(64))),
+            groupKey: key, context: context(), permission: permission(64, limit: 64), check: {}) { _, _ in count += 1 }
         XCTAssertEqual(count, 64)
     }
     func testRejectsCorruptionContextTruncationCancellationAndOversizedWindows() throws {
@@ -71,75 +70,9 @@ final class FolioleRequestSyncAttachmentFramesTests: XCTestCase {
             try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 0, count: 16), storageKey: original, byteLength: 1048577, offset: 0, maxBlocks: 2),
             try FolioleAttachmentReceiveAuthorization(requestID: Data(repeating: 0, count: 16), storageKey: original, byteLength: 1048576, offset: 524288, maxBlocks: 2)
         ] {
-            XCTAssertThrowsError(try read(data, authorization: permission) { _, _ in XCTFail() })
+            XCTAssertThrowsError(try FolioleRequestSyncAttachmentFrames.read(stream: .init(input: InputStream(data: data)), groupKey: key,
+                context: context(), permission: permission, check: {}) { _, _ in XCTFail() })
         }
-    }
-    func testIncrementalDecoderWritesBeforeEndAndBoundsCoalescedCallbacks() throws {
-        let bytes = try wire(2)
-        let firstFrameEnd = 96 + 16 + (try FolioleFramedSyncWireHeader(decoding: Data(bytes[96..<112]))).ciphertextBytes
-        for fragment in [1, 7, 65536, bytes.count] {
-            var received = 0
-            let decoder = FolioleRequestSyncAttachmentDecoder(groupKey: key, context: try context(),
-                permission: try permission(2), check: {}) { _, _ in received += 1 }
-            for start in stride(from: 0, to: firstFrameEnd, by: fragment) {
-                try decoder.append(Data(bytes[start..<min(start + fragment, firstFrameEnd)]))
-            }
-            XCTAssertEqual(received, 1)
-            try decoder.append(Data(bytes[firstFrameEnd...]))
-            try decoder.finish()
-            XCTAssertEqual(received, 2)
-            XCTAssertLessThanOrEqual(decoder.peakBufferedBytes, 524288 + 24584 + 16)
-            XCTAssertThrowsError(try decoder.append(Data([0])))
-        }
-    }
-    func testIncrementalDecoderRejectsCorruptionBeforeWriteAndCancellationBetweenFragments() throws {
-        var bytes = try wire(1)
-        bytes[120] ^= 1
-        let decoder = FolioleRequestSyncAttachmentDecoder(groupKey: key, context: try context(),
-            permission: try permission(1), check: {}) { _, _ in XCTFail("Unauthenticated write") }
-        XCTAssertThrowsError(try decoder.append(bytes))
-        var cancelled = false
-        let interrupted = FolioleRequestSyncAttachmentDecoder(groupKey: key, context: try context(),
-            permission: try permission(1), check: { if cancelled { throw CancellationError() } }) { _, _ in XCTFail() }
-        try interrupted.append(Data(bytes.prefix(100)))
-        cancelled = true
-        XCTAssertThrowsError(try interrupted.append(Data(bytes.dropFirst(100))))
-    }
-    func testRealHTTPWritesAuthenticatedPartialBeforeResponseEnds() async throws {
-        let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }
-        try fixture.call("truncate", numbers: ["length": 0])
-        let bytes = try wire(2)
-        let firstEnd = 112 + (try FolioleFramedSyncWireHeader(decoding: Data(bytes[96..<112]))).ciphertextBytes
-        let server = try AttachmentStreamingHTTPServer(prefix: Data(bytes.prefix(firstEnd)), suffix: Data(bytes.dropFirst(firstEnd)))
-        defer { server.close() }
-        let wrote = expectation(description: "first file block written before response completes")
-        let writer = try fixture.storage.receive(key: fixture.key, offset: 0, check: {}) { fixture.storage.finishReceive(fixture.key) }
-        defer { try? writer.close() }
-        let decoder = FolioleRequestSyncAttachmentDecoder(groupKey: key, context: try context(),
-            permission: try permission(2), check: {}) { offset, data in
-                try writer.append(offset: offset, data: data)
-                if offset == 0 { wrote.fulfill() }
-            }
-        let request = fixture.directory.appendingPathComponent("request")
-        let response = fixture.directory.appendingPathComponent("response")
-        try Data([1]).write(to: request)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.connectionProxyDictionary = [:]
-        configuration.timeoutIntervalForRequest = 5
-        configuration.timeoutIntervalForResource = 5
-        let work = Task {
-            try await FolioleFramedSyncHTTPTransport.post(endpoint: server.endpoint,
-                peer: .init(groupID: "group", deviceID: "b", libraryEpoch: "b-epoch", memberAuthHeaders: [
-                    "x-device-id": "a", "x-nonce": "test", "x-signature": "test", "x-timestamp": "test"]),
-                requestBodyURL: request, responseBodyURL: response, configuration: configuration,
-                bodyConsumer: .init(append: decoder.append, finish: decoder.finish, cancel: {}))
-        }
-        await fulfillment(of: [wrote], timeout: 3)
-        XCTAssertEqual(try Data(contentsOf: fixture.partial).count, 524288)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: response.path))
-        server.finish()
-        _ = try await work.value
-        XCTAssertEqual(try Data(contentsOf: fixture.partial).count, 1048576)
     }
     func testDirectWriterRetainsItsLockUntilRealIoExits() throws {
         let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }

@@ -16,7 +16,7 @@ export interface RequestSyncObjectHeader {
   currentVersionId: string;
 }
 
-export type RequestSyncMessage = Readonly<{ payloadCase: ProtocolPayloadCase; payload: unknown; attachmentBoundary?: true }>;
+export type RequestSyncMessage = Readonly<{ payloadCase: ProtocolPayloadCase; payload: unknown }>;
 const objectMessageBytes = new WeakMap<RequestSyncMessage, Uint8Array>();
 
 /** Object digest and encryption consume the same owned, validated encoding. */

@@ -6,29 +6,26 @@ final class FolioleAttachmentBlockFiles {
     private static let mutex = NSRecursiveLock()
     private static var owners = [ObjectIdentifier: FolioleAttachmentBlockStorage]()
 
-    static func storage(_ owner: FolioleFramedSyncPayloadBudget) throws -> FolioleAttachmentBlockStorage {
+    static func access(_ owner: FolioleFramedSyncPayloadBudget, _ call: CAPPluginCall) throws -> JSObject {
         mutex.lock(); defer { mutex.unlock() }
         try owner.requireActive()
         let id = ObjectIdentifier(owner)
-        if let existing = owners[id] { return existing }
-        let files = try FolioleAttachmentBlockStorage(
-            root: FolioleAttachmentMaintenanceFiles.directory(false).resolvingSymlinksInPath(),
-            trash: { try FolioleAttachmentMaintenanceFiles.directory(true) })
-        owners[id] = files
-        owner.onAttachmentClose { close(owner) }
-        return files
-    }
-    static func access(_ owner: FolioleFramedSyncPayloadBudget, _ call: CAPPluginCall) throws -> JSObject {
-        let files = try storage(owner)
-        let operation = try owner.beginOperation {}
-        defer { owner.finishOperation(operation) }
+        let files: FolioleAttachmentBlockStorage
+        if let existing = owners[id] { files = existing }
+        else {
+            files = try FolioleAttachmentBlockStorage(
+                root: FolioleAttachmentMaintenanceFiles.directory(false).resolvingSymlinksInPath(),
+                trash: { try FolioleAttachmentMaintenanceFiles.directory(true) })
+            owners[id] = files
+            owner.onAttachmentClose { close(owner) }
+        }
         try owner.requireActive()
         if call.getString("action") == "source-stat-batch", call.getArray("keys", String.self) == nil {
             throw FolioleFramedSyncValidationError("attachment_stat_batch_invalid")
         }
         return try files.execute(action: call.getString("action") ?? "", key: call.getString("key") ?? "",
                                  partial: call.getBool("partial") ?? false, keys: call.getArray("keys", String.self) ?? [],
-                                 number: { call.getDouble($0) }, base64: call.getString("base64"), check: owner.requireActive) as! JSObject
+                                 number: { call.getDouble($0) }, base64: call.getString("base64")) as! JSObject
     }
 
     static func receive(_ owner: FolioleFramedSyncPayloadBudget, key: String, offset: UInt64,

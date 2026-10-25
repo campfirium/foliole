@@ -29,13 +29,6 @@ public final class FramedSyncPayloadBudget {
         } finally { lock.unlock(); }
         return () -> { lock.lock(); try { operations.remove(id); changed.signalAll(); } finally { lock.unlock(); } };
     }
-    public boolean publish(java.util.concurrent.Callable<Boolean> commit) throws Exception {
-        lock.lock();
-        try {
-            if (closed) throw new IllegalStateException("attachment_owner_closed");
-            return commit.call();
-        } finally { lock.unlock(); }
-    }
     private void cancelOperations() {
         Runnable[] pending;
         lock.lock(); try { pending = operations.values().toArray(new Runnable[0]); } finally { lock.unlock(); }

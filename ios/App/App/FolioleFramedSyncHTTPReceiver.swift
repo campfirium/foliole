@@ -3,9 +3,6 @@ import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private let maximumResponseBytes: Int?
-    private let bodyConsumer: FolioleFramedSyncHTTPBodyConsumer?
-    private let cancellation = FolioleFramedSyncPayloadCancellation()
-    private let sessionCancellationID = UUID()
     private var totalResponseBytes = 0
     private let owner: FolioleFramedSyncPayloadBudget?
     private let receiptSequence: Bool
@@ -22,7 +19,6 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private let expectedDeviceID: String
     private let expectedLibraryEpoch: String
     private var continuation: CheckedContinuation<URL, Error>?
-    private var failure: Error?
     private var errorBody = Data()
     private var errorStatusCode: Int?
     private var output: OutputStream?
@@ -30,8 +26,7 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
 
     init(responseURL: URL, expectedDeviceID: String, expectedLibraryEpoch: String,
          owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
-         receiptSequence: Bool = false, maximumResponseBytes: Int? = nil, onProgress: (() throws -> Void)? = nil, bodyConsumer: FolioleFramedSyncHTTPBodyConsumer? = nil) {
-        self.bodyConsumer = bodyConsumer
+         receiptSequence: Bool = false, maximumResponseBytes: Int? = nil, onProgress: (() throws -> Void)? = nil) {
         self.maximumResponseBytes = maximumResponseBytes
         self.onProgress = onProgress
         self.owner = owner; self.responseLane = responseLane; self.receiptSequence = receiptSequence
@@ -59,20 +54,18 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             delegateQueue.maxConcurrentOperationCount = 1
             let session = URLSession(configuration: configuration, delegate: self, delegateQueue: delegateQueue)
             self.session = session
-            cancellation.register(sessionCancellationID) { session.invalidateAndCancel() }
             session.uploadTask(with: request, fromFile: bodyURL).resume()
             if Task.isCancelled { session.invalidateAndCancel() }
           }
         } onCancel: {
-            self.bodyConsumer?.cancel()
-            self.cancellation.cancel()
+            self.delegateQueue.addOperation { self.session?.invalidateAndCancel() }
         }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
                     totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         do { if bytesSent > 0 { try onProgress?() } }
-        catch { failure = error; task.cancel(); return }
+        catch { task.cancel(); finish(.failure(error)); return }
         if totalBytesExpectedToSend >= 0 && totalBytesSent >= totalBytesExpectedToSend {
             outgoingLoan?.release(); outgoingLoan = nil
         }
@@ -108,39 +101,31 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
                 expectedDeviceID: expectedDeviceID,
                 expectedLibraryEpoch: expectedLibraryEpoch
             )
-            if bodyConsumer == nil {
-                guard let output = OutputStream(url: partialURL, append: false) else {
-                    throw FolioleFramedSyncValidationError("framed_sync_response_file_open_failed")
-                }
-                output.open(); self.output = output
+            guard let output = OutputStream(url: partialURL, append: false) else {
+                throw FolioleFramedSyncValidationError("framed_sync_response_file_open_failed")
             }
+            output.open()
+            self.output = output
             if let owner {
                 waitingLoan = owner.acquire(.inbound, lane: responseLane) { outcome in
                     self.delegateQueue.addOperation {
-                        if let waitingLoan = self.waitingLoan { self.cancellation.remove(waitingLoan) }
                         self.waitingLoan = nil
                         guard self.continuation != nil else {
                             if case .success(let loan) = outcome { loan.release() }
                             completionHandler(.cancel); return
                         }
                         do { self.payloadLoan = try outcome.get(); completionHandler(.allow) }
-                        catch {
-                            self.failure = self.cancellation.isCancelled ? CancellationError() : error
-                            completionHandler(.cancel); self.session?.invalidateAndCancel()
-                        }
+                        catch { completionHandler(.cancel); self.finish(.failure(error)) }
                     }
                 }
-                if let waitingLoan { cancellation.register(waitingLoan) { owner.cancel(waitingLoan) } }
             } else { completionHandler(.allow) }
         } catch {
-            failure = error
             completionHandler(.cancel)
-            session.invalidateAndCancel()
+            finish(.failure(error))
         }
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        guard failure == nil else { return }
         if errorStatusCode != nil {
             if errorBody.count + data.count <= 4 * 1024 { errorBody.append(data) }
             else { errorBody = Data(repeating: 0, count: 4 * 1024 + 1) }
@@ -168,12 +153,11 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
                     }
                 }
             }
-            if let bodyConsumer { try bodyConsumer.append(data) } else { try write(data) }
-        } catch { failure = error; dataTask.cancel() }
+            try write(data)
+        } catch { dataTask.cancel(); finish(.failure(error)) }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let failure { finish(.failure(failure)); return }
         if let error { finish(.failure(error)); return }
         if let statusCode = errorStatusCode {
             finish(.failure(FolioleFramedSyncValidationError(
@@ -186,8 +170,7 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
         do {
             output?.close()
             output = nil
-            if let bodyConsumer { try bodyConsumer.finish() }
-            else { try FileManager.default.moveItem(at: partialURL, to: responseURL) }
+            try FileManager.default.moveItem(at: partialURL, to: responseURL)
             finish(.success(responseURL))
         } catch { finish(.failure(error)) }
     }
@@ -212,7 +195,6 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private func finish(_ result: Result<URL, Error>) {
         guard let continuation else { return }
         self.continuation = nil
-        cancellation.remove(sessionCancellationID)
         outgoingLoan?.release(); outgoingLoan = nil
         if let waitingLoan { owner?.cancel(waitingLoan); self.waitingLoan = nil }
         payloadLoan?.release(); payloadLoan = nil

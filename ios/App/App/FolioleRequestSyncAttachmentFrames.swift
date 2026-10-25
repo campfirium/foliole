@@ -1,43 +1,31 @@
 import Foundation
 import FolioleFramedSyncRuntime
 
-/** Incremental HTTP sink; authentication and write completion precede the next frame. */
-final class FolioleRequestSyncAttachmentDecoder {
-    private let reader = FolioleFramedSyncIncrementalReader(maximumCiphertextBytes: 524288 + 24584 + 16)
-    private let permission: FolioleAttachmentReceiveAuthorization
-    private let key: Data
-    private let context: FolioleFramedSyncSessionContext
-    private let check: () throws -> Void
-    private let consume: (UInt64, Data) throws -> Void
-    private var sequence = 0
-    private var wireBytes = 96
-    var peakBufferedBytes: Int { reader.peakBufferedBytes }
-
-    init(groupKey: Data, context: FolioleFramedSyncSessionContext,
-         permission: FolioleAttachmentReceiveAuthorization, check: @escaping () throws -> Void,
-         consume: @escaping (UInt64, Data) throws -> Void) {
-        self.key = groupKey; self.context = context; self.permission = permission
-        self.check = check; self.consume = consume
-    }
-    func append(_ data: Data) throws {
-        try check()
-        try reader.append(data, validate: { _ = try self.context.validate($0) }) { preamble, frame in
-            try self.check()
-            self.wireBytes += 16 + frame.ciphertext.count
-            guard self.sequence < self.permission.maxBlocks + 1, self.wireBytes <= self.permission.maximumWireBytes else {
+/** Authenticates each frame and its write permission before invoking the file writer. */
+enum FolioleRequestSyncAttachmentFrames {
+    static func read(stream: FolioleFramedSyncStreamReader, groupKey: Data, context: FolioleFramedSyncSessionContext,
+                     permission: FolioleAttachmentReceiveAuthorization, check: () throws -> Void,
+                     consume: (UInt64, Data) throws -> Void) throws {
+        let preamble = try stream.nextPreamble()
+        _ = try context.validate(preamble)
+        var sequence = 0, wireBytes = 96
+        while let frame = try stream.nextFrame() {
+            try check()
+            wireBytes += 16 + frame.ciphertext.count
+            guard sequence < permission.maxBlocks + 1, wireBytes <= permission.maximumWireBytes else {
                 throw FolioleFramedSyncValidationError("attachment_response_frame_limit")
             }
-            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(groupKey: self.key, preamble: preamble,
-                frame: frame, expectedSequence: UInt64(self.sequence))
+            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(groupKey: groupKey, preamble: preamble,
+                frame: frame, expectedSequence: UInt64(sequence))
             let decoded = try FolioleFramedSyncCodec.decode(plaintext, authenticatedFrameType: frame.header.frameType.rawValue)
             guard case .requestAttachment(let attachment) = decoded.payload,
                   plaintext.count - attachment.data.count <= 24584 else {
                 throw FolioleFramedSyncValidationError("attachment_response_invalid")
             }
-            let offset = self.permission.offset
-            if try self.permission.accept(attachment) { try self.check(); try self.consume(offset, attachment.data) }
-            self.sequence += 1
+            let offset = permission.offset
+            if try permission.accept(attachment) { try check(); try consume(offset, attachment.data) }
+            sequence += 1
         }
+        try check(); try permission.finish()
     }
-    func finish() throws { try check(); try reader.finish(); try permission.finish() }
 }

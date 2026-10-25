@@ -34,7 +34,7 @@ final class FolioleAttachmentMaintenanceFiles {
         if (operation.equals("inventory")) return new JSObject().put("files", inventory(root));
         String key = call.getString("storageKey", "");
         if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("invalid_attachment_key");
-        return FolioleAttachmentBlockFiles.withRemoval(context, key, () -> {
+        return FolioleAttachmentBlockFiles.withRemoval(key, () -> {
         if (operation.equals("move")) move(context, key, trash);
         else if (operation.equals("remove-trash")) {
             File file = new File(directory(context, true), key);
@@ -58,7 +58,7 @@ final class FolioleAttachmentMaintenanceFiles {
     }
 
     static void move(Context context, String key, boolean toTrash) throws Exception {
-        FolioleAttachmentBlockFiles.withRemoval(context, key, () -> { moveUnlocked(context, key, toTrash); return null; });
+        FolioleAttachmentBlockFiles.withRemoval(key, () -> { moveUnlocked(context, key, toTrash); return null; });
     }
 
     private static void moveUnlocked(Context context, String key, boolean toTrash) throws Exception {

@@ -67,8 +67,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
       await importCompanionPdfTextArtifact(db, host, pdf, artifact);
       if ((await stat(pdf)).present) await db.write(port => completeAttachmentDemand(port, pdf));
     },
-    async needsSlice(shouldYield, limit) {
-      return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true, limit);
+    async needsSlice(shouldYield) {
+      return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true);
     },
     status: resource => completed(resource.storageKey, receiver.status(resource)),
     receiveWindow: receiveCompanionWindow(db, receiver),
