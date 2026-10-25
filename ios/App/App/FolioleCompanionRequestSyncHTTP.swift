@@ -73,6 +73,10 @@ extension FolioleCompanionSyncPlugin {
         let response = temporary.appendingPathComponent("response.body")
         try FolioleRequestSyncHTTPChunks.assemble(files: files, directory: directory, count: count, output: body)
         let permission = try FolioleRequestSyncAttachmentResponse.permission(call)
+        let receiver = try await FolioleFramedSyncPayloadWorker.run {
+            try permission.map { try FolioleRequestSyncAttachmentResponse.prepare(call, permission: $0, owner: owner, bridge: bridge) }
+        }
+        defer { receiver?.close() }
         var lastProgress = -Double.infinity
         _ = try await FolioleFramedSyncHTTPTransport.post(endpoint: url,
             peer: .init(groupID: group, deviceID: peer, libraryEpoch: epoch, memberAuthHeaders: headers),
@@ -83,20 +87,8 @@ extension FolioleCompanionSyncPlugin {
                     try FolioleRequestSyncHTTPChunks.touchRound(bridge: bridge, owner: owner,
                         peer: peer, roundID: roundID, direction: "outbound")
                 }
-            })
-        if let permission {
-            let cancellation = FolioleFramedSyncPayloadCancellation()
-            return try await withTaskCancellationHandler {
-                try Task.checkCancellation()
-                return try await FolioleFramedSyncPayloadWorker.run {
-                    try FolioleFramedSyncPayloadWorker.withCancellation(cancellation) {
-                        try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .inbound) { _ in
-                            try FolioleRequestSyncAttachmentResponse.read(call, permission: permission, input: response, owner: owner, bridge: bridge)
-                        }
-                    }
-                }
-            } onCancel: { cancellation.cancel() }
-        }
+            }, bodyConsumer: receiver?.body)
+        if let receiver { return receiver.result() }
         return try FolioleRequestSyncHTTPChunks.split(files: files, directory: directory, input: response)
     }
 

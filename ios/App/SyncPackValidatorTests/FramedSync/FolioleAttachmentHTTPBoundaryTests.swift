@@ -36,6 +36,35 @@ import XCTest
         XCTAssertFalse(FileManager.default.fileExists(atPath: response.path))
         AttachmentBoundaryProtocol.started = nil; AttachmentBoundaryProtocol.stopped = nil
     }
+    func testCancelsWhileTheInboundPayloadBudgetIsFull() async throws {
+        let (directory, request, response) = try fixture(); defer { try? FileManager.default.removeItem(at: directory) }
+        let owner = FolioleFramedSyncPayloadBudget(libraryKey: "library", generationID: "generation")
+        let held = try await FolioleFramedSyncPayloadWorker.run { try FolioleFramedSyncPayloadWorker.borrow(owner, direction: .inbound) }
+        defer { held.release() }
+        let started = expectation(description: "response awaits budget")
+        AttachmentBoundaryProtocol.started = { started.fulfill() }
+        AttachmentBoundaryProtocol.stopped = nil; AttachmentBoundaryProtocol.bytes = Data([1])
+        defer { AttachmentBoundaryProtocol.started = nil; AttachmentBoundaryProtocol.bytes = nil }
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [AttachmentBoundaryProtocol.self]
+        let finished = expectation(description: "cancelled while budget remains held")
+        let work = Task {
+            defer { finished.fulfill() }
+            do {
+                _ = try await FolioleFramedSyncHTTPTransport.post(endpoint: URL(string: "http://127.0.0.1/budget")!,
+                    peer: peer(), requestBodyURL: request, responseBodyURL: response, configuration: config, owner: owner)
+                XCTFail("Cancelled budget wait completed")
+            } catch { XCTAssertTrue(error is CancellationError || (error as? URLError)?.code == .cancelled) }
+        }
+        await fulfillment(of: [started], timeout: 2)
+        work.cancel()
+        await fulfillment(of: [finished], timeout: 2)
+        await work.value
+        XCTAssertNoThrow(try owner.requireActive())
+        held.release()
+        let next = try await FolioleFramedSyncPayloadWorker.run { try FolioleFramedSyncPayloadWorker.borrow(owner, direction: .inbound) }
+        next.release()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: response.path))
+    }
     func testRejectsActualBytesOverTheLimitWithoutTrustingContentLength() async throws {
         let (directory, request, response) = try fixture(); defer { try? FileManager.default.removeItem(at: directory) }
         AttachmentBoundaryProtocol.started = nil; AttachmentBoundaryProtocol.stopped = nil

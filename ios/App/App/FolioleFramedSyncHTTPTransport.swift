@@ -8,6 +8,12 @@ struct FolioleFramedSyncHTTPPeer {
     let memberAuthHeaders: [String: String]
 }
 
+struct FolioleFramedSyncHTTPBodyConsumer {
+    let append: (Data) throws -> Void
+    let finish: () throws -> Void
+    let cancel: () -> Void
+}
+
 enum FolioleFramedSyncHTTPTransport {
     static let contentType = "application/vnd.foliole.framed-sync"
 
@@ -19,7 +25,7 @@ enum FolioleFramedSyncHTTPTransport {
         configuration: URLSessionConfiguration = makeConfiguration(),
         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload,
         requestLoan: FolioleFramedSyncPayloadBudget.Loan? = nil, receiptSequence: Bool = false, maximumResponseBytes: Int? = nil,
-        onProgress: (() throws -> Void)? = nil
+        onProgress: (() throws -> Void)? = nil, bodyConsumer: FolioleFramedSyncHTTPBodyConsumer? = nil
     ) async throws -> URL {
         let request = try makeRequest(endpoint: endpoint, peer: peer)
         guard FileManager.default.fileExists(atPath: requestBodyURL.path) else {
@@ -32,7 +38,7 @@ enum FolioleFramedSyncHTTPTransport {
             responseURL: responseBodyURL,
             expectedDeviceID: peer.deviceID,
             expectedLibraryEpoch: peer.libraryEpoch, owner: owner, responseLane: responseLane,
-            receiptSequence: receiptSequence, maximumResponseBytes: maximumResponseBytes, onProgress: onProgress
+            receiptSequence: receiptSequence, maximumResponseBytes: maximumResponseBytes, onProgress: onProgress, bodyConsumer: bodyConsumer
         )
         let networkLoan = try await FolioleFramedSyncPayloadWorker.run {
             try owner.flatMap { requestLoan == nil ? try FolioleFramedSyncPayloadWorker.borrow($0, direction: .outbound) : nil }

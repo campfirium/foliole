@@ -4,6 +4,9 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 final class FolioleAttachmentBlockStorage {
+    private let mutex = NSRecursiveLock()
+    private var operations = 0
+    private var activeKeys = Set<String>()
     private let root: URL
     private let trash: () throws -> URL
     private var descriptor: Int32 = -1
@@ -18,8 +21,9 @@ final class FolioleAttachmentBlockStorage {
     }
 
     func close() {
+        mutex.lock(); defer { mutex.unlock() }
         closing = true
-        if !receiving.isEmpty { return }
+        if !receiving.isEmpty || operations > 0 { return }
         for handle in sources.values { try? handle.close() }
         sources.removeAll()
         if descriptor >= 0 { Darwin.close(descriptor); descriptor = -1 }
@@ -27,17 +31,22 @@ final class FolioleAttachmentBlockStorage {
 
     func receive(key: String, offset: UInt64, check: @escaping () throws -> Void,
                  finished: @escaping () -> Void) throws -> FolioleAttachmentReceiveFile {
-        guard !closing, !receiving.contains(where: { $0.prefix(64) == key.prefix(64) }), sources[key] == nil else { throw invalid("attachment_receive_busy") }
+        mutex.lock(); defer { mutex.unlock() }
+        guard !closing, !activeKeys.contains(String(key.prefix(64))), !receiving.contains(where: { $0.prefix(64) == key.prefix(64) }), sources[key] == nil else { throw invalid("attachment_receive_busy") }
         try acquire()
         let file = try FolioleAttachmentReceiveFile(path: resolve(key, partial: true), offset: offset, check: check, finished: finished)
         receiving.insert(key)
         return file
     }
     func finishReceive(_ key: String) {
+        mutex.lock(); defer { mutex.unlock() }
         receiving.remove(key)
         if closing { close() }
     }
-    func isSending(_ key: String) -> Bool { sources[key] != nil }
+    func isSending(_ key: String) -> Bool {
+        mutex.lock(); defer { mutex.unlock() }
+        return sources.keys.contains { $0.prefix(64) == key.prefix(64) }
+    }
 
     private func acquire() throws {
         if descriptor >= 0 { return }
@@ -52,12 +61,27 @@ final class FolioleAttachmentBlockStorage {
         descriptor = candidate
     }
     func execute(action: String, key: String, partial: Bool = false, keys: [String] = [],
-                 number: (String) -> Double? = { _ in nil }, base64: String? = nil) throws -> [String: Any] {
+                 number: (String) -> Double? = { _ in nil }, base64: String? = nil,
+                 check: () throws -> Void = {}) throws -> [String: Any] {
         if action == "source-stat-batch" { return try sourceStatBatch(keys) }
+        let hash = String(key.prefix(64))
+        mutex.lock()
+        guard !closing, !activeKeys.contains(hash), !receiving.contains(where: { $0.prefix(64) == hash }) else {
+            mutex.unlock(); throw invalid("attachment_receive_busy")
+        }
+        operations += 1; activeKeys.insert(hash)
+        mutex.unlock()
+        defer {
+            mutex.lock(); operations -= 1; activeKeys.remove(hash)
+            if closing { close() }
+            mutex.unlock()
+        }
+        try check()
+        if action == "hash" { return ["hash": try digest(resolve(key, partial: partial), check: check)] }
+        if action == "stat" { return try info(resolve(key, partial: partial), hash: !partial, check: check) }
+        mutex.lock(); defer { mutex.unlock() }
         if action == "acquire" { try acquire(); return [:] }
         if action.hasPrefix("source-") { return try source(action: action, key: key, number: number) }
-        if action == "stat" { return try info(resolve(key, partial: partial), hash: !partial) }
-        if action == "hash" { return ["hash": try digest(resolve(key, partial: partial))] }
         try acquire()
         return try mutate(action: action, key: key, number: number, base64: base64)
     }
@@ -67,7 +91,7 @@ final class FolioleAttachmentBlockStorage {
         }
         for key in keys { _ = try resolve(key, partial: false) }
         return ["presence": try keys.map { key in
-            try source(action: "source-stat", key: key, number: { _ in nil })["present"] as! Bool
+            try execute(action: "source-stat", key: key)["present"] as! Bool
         }]
     }
     private func mutate(action: String, key: String, number: (String) -> Double?,
@@ -124,19 +148,20 @@ final class FolioleAttachmentBlockStorage {
         guard file.resolvingSymlinksInPath().path == file.path else { throw invalid("attachment_file_unsafe") }
         return file
     }
-    private func info(_ file: URL, hash: Bool) throws -> [String: Any] {
+    private func info(_ file: URL, hash: Bool, check: () throws -> Void = {}) throws -> [String: Any] {
         guard FileManager.default.fileExists(atPath: file.path) else { return ["present": false, "length": 0, "hash": ""] }
         let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true, let length = values.fileSize else {
             throw invalid("attachment_file_unsafe")
         }
-        return ["present": true, "length": length, "hash": hash ? try digest(file) : ""]
+        return ["present": true, "length": length, "hash": hash ? try digest(file, check: check) : ""]
     }
-    private func digest(_ file: URL) throws -> String {
+    private func digest(_ file: URL, check: () throws -> Void) throws -> String {
         let handle = try FileHandle(forReadingFrom: file)
         defer { try? handle.close() }
         var hash = SHA256()
-        while let bytes = try handle.read(upToCount: 65536), !bytes.isEmpty { hash.update(data: bytes) }
+        while let bytes = try handle.read(upToCount: 65536), !bytes.isEmpty { try check(); hash.update(data: bytes) }
+        try check()
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
     private func readNumber(_ number: (String) -> Double?, _ key: String) throws -> UInt64 {
