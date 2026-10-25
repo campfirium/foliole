@@ -1,5 +1,5 @@
 import { RefreshCw } from 'lucide-react';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useContext, type ReactNode } from 'react';
 
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -20,6 +20,7 @@ import {
   AppIconButton,
   ToolbarActionGroup
 } from '../../shared/ui';
+import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 import { APP_PALETTE_COMMANDS } from '../hooks/appPaletteCommandList';
 import { localizePaletteCommandTitle } from '../hooks/appPaletteCommandLocalization';
 
@@ -166,6 +167,7 @@ function renderDocumentMenuItems(items: DocumentHeaderMenuItemConfig[], args: Do
 
 function DocumentHeaderActions(args: DocumentHeaderActionsProps): ReactNode {
   const menu = useDocumentHeaderMenuSettings();
+  const exitHere = useContext(FlowExitHereContext);
   if (args.isFolderListView || !args.showDocumentControls) {
     return null;
   }
@@ -188,6 +190,7 @@ function DocumentHeaderActions(args: DocumentHeaderActionsProps): ReactNode {
           />
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="end" sideOffset={6}>
+          {exitHere ? <AppDropdownMenuItem onSelect={exitHere}>{args.t('desktop.workspace.leaveFlowHere')}</AppDropdownMenuItem> : null}
           {renderDocumentMenuItems(menu.items, args)}
         </AppDropdownMenuContent>
       </AppDropdownMenu>

@@ -72,6 +72,7 @@ function useCompanionInteractionState(
   const {
     browseReturnNodeId,
     handleExitBrowseArticle,
+    handleExitFlowHere,
     handleExitDirectoryArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,
@@ -96,6 +97,7 @@ function useCompanionInteractionState(
     handleContinueReading: flow.continueReading,
     canContinueReading: flow.canContinueReading,
     handleExitBrowseArticle,
+    handleExitFlowHere,
     handleExitDirectoryArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,

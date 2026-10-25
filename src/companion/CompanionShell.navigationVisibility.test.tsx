@@ -118,10 +118,10 @@ it.each(['folder', 'article'])('keeps %s browsing in Flow with Resume and only a
     database_path: 'preview.db', database_ready: true, device_id: 'test', runtime_kind: 'android-capacitor' }} />);
   expect(await screen.findByText(kind === 'folder' ? 'Folder' : 'Browsing another article')).toBeVisible();
   expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Resume review', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Resume review' }));
   expect(surface.handleResumeFlow).toHaveBeenCalledOnce();
   expect(within(screen.getByRole('group', { name: 'Companion review toolbar' })).queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
   if (kind === 'article') fireEvent.click(screen.getByText('Browsing another article'));
-  fireEvent.click(await screen.findByRole('button', { name: 'Exit', exact: true }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Exit' }));
   expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
 });

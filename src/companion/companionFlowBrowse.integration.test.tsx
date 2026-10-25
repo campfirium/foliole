@@ -53,7 +53,7 @@ it('opens both item ancestors within Flow, browses other content, and resumes th
   expect(ui.result.current.surface.activeAction).toBe('review');
   expect(ui.result.current.surface.browsedFolder?.nodeId).toBe('folder');
   expect(ui.result.current.surface.isFlowBrowsing).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: '...', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: '...' }));
   await waitFor(() => expect(ui.result.current.surface.selectedBrowseNodeId).toBe('article'));
   act(() => ui.result.current.surface.handleSelectBrowseNode('other'));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('other'));
@@ -107,4 +107,30 @@ it('keeps content-link selections in Flow until the user explicitly exits', asyn
   expect(ui.result.current.surface.isFlowBrowsing).toBe(false);
   expect(ui.result.current.surface.effectiveReviewSession.currentCard?.nodeId).toBe('item');
   expect(reviewFacts()).toEqual(before);
+});
+
+it('exits Flow in place, reopens the same article and scroll, and leaves review facts unchanged', async () => {
+  const ui = renderResumeSurface(await library.snapshot());
+  await waitFor(() => expect(ui.result.current?.surface.effectiveReviewSession.currentCard?.nodeId).toBe('item'));
+  act(() => ui.result.current.surface.handleSelectBrowseNode('other'));
+  await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('other'));
+  const before = reviewFacts();
+  act(() => ui.result.current.surface.handleViewScroll(480));
+  act(() => ui.result.current.surface.handleExitFlowHere('other'));
+  await act(() => ui.result.current.surface.readingActivity.flush());
+  expect(ui.result.current.surface.activeAction).toBe('recent');
+  expect(ui.result.current.surface.selectedBrowseNodeId).toBe('other');
+  expect(ui.result.current.surface.readableArticle?.nodeId).toBe('other');
+  expect(ui.result.current.surface.isFlowBrowsing).toBe(false);
+  expect(reviewFacts()).toEqual(before);
+  ui.unmount();
+  const reopened = renderResumeSurface(await library.reopen());
+  await waitFor(() => expect(reopened.result.current?.surface.readableArticle?.nodeId).toBe('other'));
+  expect(reopened.result.current.surface.activeAction).toBe('recent');
+  expect(reopened.result.current.surface.readableArticle?.persistedNodeViewState?.scrollTop).toBe(480);
+  expect(reviewFacts()).toEqual(before);
+  act(() => reopened.result.current.surface.handleTabAction('review'));
+  await waitFor(() => expect(reopened.result.current.surface.effectiveReviewSession.currentCard?.nodeId).toBe('item'));
+  act(() => reopened.result.current.surface.handleTabAction('recent'));
+  expect(reopened.result.current.surface.selectedBrowseNodeId).toBeNull();
 });

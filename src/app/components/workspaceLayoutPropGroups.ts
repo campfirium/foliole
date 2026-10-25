@@ -111,6 +111,7 @@ export type WorkspaceLayoutReviewProps = Pick<WorkspaceLayoutFieldTypes,
   | 'onRevisitReviewTopicSoon'
   | 'onContinueReading'
   | 'onResumeReviewItem'
+  | 'onExitFlowHere'
   | 'onExitReviewMode'
   | 'onSetReviewSessionMode'
 >;

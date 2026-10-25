@@ -92,6 +92,10 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
   }
 
   return {
+    handleExitFlowHere: (nodeId: string) => {
+      args.setSelectedBrowseNodeId(nodeId);
+      args.setActiveAction('recent');
+    },
     handleExitDirectoryArticle,
     handleExitBrowseArticle,
     handleExitSearchArticle,

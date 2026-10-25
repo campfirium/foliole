@@ -234,3 +234,18 @@ it('does not mark a pure reading completion as queue-clear continuation', () => 
 
   expect(props.review.reviewSummary.canContinueReading).toBe(false);
 });
+
+it('exits Flow in place without restoring the browse list or selecting another document', () => {
+  const exitReviewSession = vi.fn();
+  const exitStudyMode = vi.fn();
+  const onOpenNotesView = vi.fn();
+  const onSelectNode = vi.fn();
+  const props = buildLayoutProps({ ...reviewGateLayoutArgs, exitReviewSession, exitStudyMode,
+    onOpenNotesView, onSelectNode } as unknown as BuildLayoutPropsArgs);
+  expect(props.review.onExitFlowHere).toBeDefined();
+  props.review.onExitFlowHere?.();
+  expect(exitReviewSession).toHaveBeenCalledOnce();
+  expect(exitStudyMode).toHaveBeenCalledOnce();
+  expect(onOpenNotesView).not.toHaveBeenCalled();
+  expect(onSelectNode).not.toHaveBeenCalled();
+});

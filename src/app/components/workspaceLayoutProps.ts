@@ -221,6 +221,7 @@ export interface WorkspaceLayoutFieldTypes {
   onRevisitReviewTopicSoon: () => Promise<boolean>;
   onContinueReading: () => void;
   onResumeReviewItem: () => void;
+  onExitFlowHere?: () => void;
   onExitReviewMode: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
   selectedTrashNodeId: string | null;

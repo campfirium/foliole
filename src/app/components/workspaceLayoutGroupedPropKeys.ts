@@ -54,7 +54,7 @@ export const REVIEW_KEYS = defineLayoutKeys<WorkspaceLayoutReviewProps>()([
   'reviewQueueVisibility', 'reviewQueueCount', 'reviewCompletedCount', 'reviewStatus', 'reviewSummary',
   'reviewSessionMode', 'onStartStudyMode', 'onToggleReviewSession', 'onRevealAnswer', 'onGradeReview',
   'onReadReviewTopic', 'onPostponeReviewTopic', 'onOpenPostponeTopicPanel', 'onDismissReviewTopic',
-  'onRevisitReviewTopicSoon', 'onContinueReading', 'onResumeReviewItem', 'onExitReviewMode',
+  'onRevisitReviewTopicSoon', 'onContinueReading', 'onResumeReviewItem', 'onExitReviewMode', 'onExitFlowHere',
   'onSetReviewSessionMode'
 ] as const);
 

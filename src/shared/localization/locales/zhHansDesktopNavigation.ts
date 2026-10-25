@@ -23,6 +23,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.restarting': '正在重启，可能需要一点时间…',
   'desktop.workspace.settings': '设置',
   'desktop.workspace.enterFlow': '进入 Flow',
+  'desktop.workspace.leaveFlowHere': '退出 Flow 并留在此处',
   'desktop.workspace.leaveFlow': '退出 Flow',
   'desktop.workspace.reviewQueueEmpty': '复习队列为空',
   'desktop.reviewQueue.emptyDialog.confirm': '知道了',

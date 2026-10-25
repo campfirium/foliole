@@ -21,6 +21,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.restarting': 'Restarting… This may take a moment.',
   'desktop.workspace.settings': 'Settings',
   'desktop.workspace.enterFlow': 'Enter Flow',
+  'desktop.workspace.leaveFlowHere': 'Exit Flow and stay here',
   'desktop.workspace.leaveFlow': 'Exit Flow',
   'desktop.workspace.reviewQueueEmpty': 'Review queue empty',
   'desktop.reviewQueue.emptyDialog.confirm': 'OK',

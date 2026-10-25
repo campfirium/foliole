@@ -1,8 +1,9 @@
 import { Highlighter, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
-import { useRef } from 'react';
+import { useContext, useRef } from 'react';
 import type { ReactNode, MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
@@ -56,6 +57,15 @@ function ReadingRestoreErrorMessage({ saved }: { saved: boolean }) {
   );
 }
 
+function ReadingExitFlowHereAction(props: { onClose(): void }) {
+  const exitHere = useContext(FlowExitHereContext);
+  const t = useTranslation();
+  if (!exitHere) return null;
+  return <ReadingActionRow icon={<X aria-hidden="true" className="h-5 w-5" />}
+    label={t('desktop.workspace.leaveFlowHere')}
+    onClick={() => { props.onClose(); exitHere(); }} />;
+}
+
 export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
@@ -73,6 +83,7 @@ export function ReadingActionsSheet(props: {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
+        <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.find')}

@@ -1,5 +1,5 @@
 import { CheckCircle2, MessageCircle, Search, XCircle } from 'lucide-react';
-import { Fragment, useState, type MouseEvent, type PointerEvent } from 'react';
+import { Fragment, useContext, useState, type MouseEvent, type PointerEvent } from 'react';
 
 import { commandMenuKey, loadEditorContextMenuOrder, webLookupMenuKey } from '../../features/settings/model/editorContextMenuOrder';
 import { loadEditorContextMenuItems } from '../../features/settings/model/editorContextMenuSettings';
@@ -11,6 +11,7 @@ import {
   type WebLookupEntry
 } from '../../shared/platform/webLookupEntries';
 import { AppButton, appFloatingStateSurfaceClassName, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
+import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 import type { SelectionCommandPayload } from '../contextCommands';
 
 import { EditorContextCommandItem, isEditorContextCommandShown } from './EditorContextCommandItems';
@@ -165,6 +166,7 @@ function WebLookupActionItems(props: {
 
 export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const t = useTranslation();
+  const exitHere = useContext(FlowExitHereContext);
   const [confirmation, setConfirmation] = useState<WebLookupConfirmationState | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
@@ -176,7 +178,7 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const ordered = loadEditorContextMenuOrder(links, commands)
     .map((key) => ({ key, link: linksByKey.get(key), command: commandsByKey.get(key) }))
     .filter((item) => item.link || item.command);
-  if (ordered.length === 0) {
+  if (ordered.length === 0 && !exitHere) {
     return null;
   }
 
@@ -208,6 +210,9 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           onContinue={() => continueWebLookup(confirmation.url)}
         />
       ) : null}
+      {!confirmation && exitHere ? <AppSelectionDropdownMenuItem onClick={() => { props.onClose(); exitHere(); }}>
+        {t('desktop.workspace.leaveFlowHere')}
+      </AppSelectionDropdownMenuItem> : null}
       {!confirmation ? ordered.map(({ key, link, command }, index) => <Fragment key={key}>
         {index > 0 && command?.separatorBefore ? <SelectionMenuSeparator /> : null}
         {link ? <WebLookupActionItems entries={[link]} onSelect={(action) => void handleWebLookupClick(action)} /> : null}

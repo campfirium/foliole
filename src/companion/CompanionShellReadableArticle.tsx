@@ -1,4 +1,5 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
@@ -102,8 +103,12 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
   const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
   if (!props.surface.readableArticle) return props.flow ? <CompanionReviewLoading header={header} footer={footer} /> : null;
   const activity = props.surface.readingActivity;
+  const nodeId = props.surface.readableArticle.nodeId;
+  const exitFlowHere = props.surface.isFlowBrowsing
+    ? () => props.surface.handleExitFlowHere(nodeId) : null;
 
   return (
+    <FlowExitHereContext.Provider value={exitFlowHere}>
     <ImmersiveReadableArticle
       key={props.surface.readableArticle.nodeId}
       searchMatch={props.searchMatch}
@@ -123,5 +128,6 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
       {...resolveNodeMutationProps(props.workspaceSync, activity, props.surface.readableArticle.nodeId)}
     />
+    </FlowExitHereContext.Provider>
   );
 }
