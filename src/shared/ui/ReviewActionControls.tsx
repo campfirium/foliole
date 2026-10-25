@@ -194,7 +194,7 @@ export function ResumeReviewAction({
   surface?: ReviewActionSurface;
 }) {
   const t = useTranslation();
-  const icon = <Route aria-hidden="true" size={16} strokeWidth={1.75} />;
+  const icon = <Route aria-hidden="true" className="opacity-70" size={16} strokeWidth={1.75} />;
 
   if (surface === 'overlay') {
     return <ReviewOverlayActionButton icon={icon} ariaLabel={t('desktop.reviewActions.resumeReview')} label={t('desktop.reviewActions.resume')} onClick={onResumeReviewItem} />;
