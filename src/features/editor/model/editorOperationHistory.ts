@@ -5,7 +5,8 @@ import type {
   EditorOperationHistoryEntry,
   EditorOperationHistoryInvalidation,
   EditorOperationHistorySession,
-  EditorOperationHistoryState
+  EditorOperationHistoryState,
+  EditorTextEditOperationEntry
 } from './editorOperationHistoryTypes';
 import { canGroupEditorTextOperations, mergeEditorTextOperations } from './editorTextOperationGrouping';
 
@@ -53,16 +54,19 @@ function trim(stack: EditorOperationHistoryEntry[], limit = DEFAULT_OPERATION_LI
   return stack.slice(Math.max(0, stack.length - limit));
 }
 
-function retainApplicableTextHistory(stack: EditorOperationHistoryEntry[], currentDigest: string) {
+function retainApplicableTextHistory(stack: EditorOperationHistoryEntry[], current: EditorTextEditOperationEntry) {
+  const sameTarget = (item: EditorOperationHistoryEntry) => item.type === 'text.edit' &&
+    item.target?.nodeId === current.target?.nodeId && item.target?.field === current.target?.field;
+  const currentDigest = current.beforeDigest;
   const matchingIndex = stack.findLastIndex((item) =>
-    item.type === 'text.edit' && item.afterDigest === currentDigest
+    item.type === 'text.edit' && sameTarget(item) && item.afterDigest === currentDigest
   );
   let expectedDigest = currentDigest;
   let continuous = matchingIndex >= 0;
-  const retained = stack.map((item) => item.type !== 'text.edit');
+  const retained = stack.map((item) => !sameTarget(item));
   for (let index = matchingIndex; index >= 0; index -= 1) {
     const item = stack[index]!;
-    if (item.type !== 'text.edit') continue;
+    if (item.type !== 'text.edit' || !sameTarget(item)) continue;
     if (!continuous || item.afterDigest !== expectedDigest) {
       continuous = false;
       continue;
@@ -80,7 +84,7 @@ export function pushEditorOperationEntry(
 ): EditorOperationHistoryState {
   const session = getEditorOperationSession(history, entry.nodeId);
   const undoStack = entry.type === 'text.edit'
-    ? retainApplicableTextHistory(session.undoStack, entry.beforeDigest)
+    ? retainApplicableTextHistory(session.undoStack, entry)
     : session.undoStack;
   const previous = undoStack.at(-1);
   const nextUndoStack = previous?.type === 'text.edit' && entry.type === 'text.edit' &&

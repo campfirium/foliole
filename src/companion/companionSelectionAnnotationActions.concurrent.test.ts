@@ -31,6 +31,21 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
   isAvailableNativeCompanionRuntime: () => true
 }));
 
+vi.mock('../shared/platform/companion/runtime/iosCompanionActiveDatabase', () => ({
+  writeIosCompanionDatabase: async (task: (db: unknown) => Promise<unknown>) => task({
+    transaction: async (action: (db: unknown) => Promise<unknown>) => action({})
+  })
+}));
+vi.mock('../shared/platform/companionSyncNodeVersions', () => ({
+  applyCompanionSyncNodeVersionsWithDbPort: (_db: unknown, records: NativeSyncNodeRecord[]) => nativeWrites.apply(records)
+}));
+vi.mock('../shared/platform/companion/editing/companionEditHistoryRecording', () => ({ recordCompanionAnnotationHistory: vi.fn() }));
+vi.mock('../shared/platform/companionSyncStateWriters', () => ({ toReviewPayload: (review: unknown) => review }));
+vi.mock('../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites', () => ({
+  saveIosReviewWithDb: (_db: unknown, args: { node_id: string; review_json: string }) =>
+    nativeWrites.saveReview({ nodeId: args.node_id, review: JSON.parse(args.review_json) })
+}));
+
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionWorkspaceSyncState: vi.fn(async () => ({
     endpoint_url: null,

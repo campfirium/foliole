@@ -1,10 +1,14 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { getTextAnchorLocators } from '../features/nodes/model/nodeTypes';
+import { readCompanionHistoryReview, recordCompanionAnnotationHistory } from '../shared/platform/companion/editing/companionEditHistoryRecording';
+import { retainCompanionEditHistoryBase } from '../shared/platform/companion/editing/companionEditHistoryRepository';
 import { assertCompanionHighlightRead, type CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
+import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
-import { applyCompanionLocalNodeVersions, applyCompanionSyncNodeVersionsWithinWriterTask } from '../shared/platform/companionSyncObjects';
+import { applyCompanionSyncNodeVersionsWithDbPort } from '../shared/platform/companionSyncNodeVersions';
+import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { toCompanionNativeNodeVersion } from './companionAnnotationNodeVersion';
@@ -33,7 +37,16 @@ async function writeExistingHighlight(args: ExistingHighlightMutation, withinWri
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   assertCompanionHighlightRead(sourceNode, args.guard);
   const appliedIds = withinWriter
-    ? await applyCompanionSyncNodeVersionsWithinWriterTask([nodeVersion], undefined, 'local_mutation')
+    ? await writeIosCompanionDatabase(db => db.transaction(async tx => {
+      const review = await readCompanionHistoryReview(tx, sourceNode.id);
+      if (node.deletedAt && sourceNode.parentNodeId && sourceNode.currentVersionId) await retainCompanionEditHistoryBase(
+        tx, sourceNode.parentNodeId, sourceNode.id, sourceNode.currentVersionId);
+      const ids = await applyCompanionSyncNodeVersionsWithDbPort(tx, [nodeVersion], 'local_mutation');
+      if (ids.includes(node.id) && node.parentNodeId) await recordCompanionAnnotationHistory(tx, {
+        documentId: node.parentNodeId, before: { ...sourceNode, review }, after: versionedNode
+      });
+      return ids;
+    }))
     : await applyCompanionLocalNodeVersions([nodeVersion]);
   if (withinWriter && !appliedIds.includes(node.id)) throw new Error('companion_annotation_not_applied');
   return {

@@ -1,4 +1,5 @@
 import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLinkCodec';
+import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
@@ -16,6 +17,7 @@ import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyn
 
 import { readCompanionContentAnchors, remapCompanionContentAnchors } from './companionContentAnchorRemap';
 import type { CompanionContentEdit, CompanionContentSource } from './companionContentEditContract';
+import { recordCompanionContentHistory } from './companionEditHistoryRecording';
 
 export async function readCompanionContentSource(nodeId: string, holdId?: string): Promise<CompanionContentSource> {
   const read = async (db: DbPort) => {
@@ -46,42 +48,49 @@ export async function releaseCompanionContentBase(nodeId: string, holdId: string
 export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   if (!isNativeCompanionNodeVersionWriteRuntime()) throw new Error('content_edit_runtime_unavailable');
   const result = await runCompanionHighValueMutationTask(() =>
-    writeIosCompanionDatabase((port) => port.transaction(async (db) => {
-      await requireEditableContentNode(db, edit.nodeId);
-      const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
-      if (!base || (base.snapshot.kind !== 'topic' && base.snapshot.kind !== 'item')) throw new Error('content_edit_base_unavailable');
-      assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
-        anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link),
-        ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) });
-      const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
-      const children = await readCompanionContentAnchors(db, edit.nodeId);
-      const hostName = await iosCompanionHostName(db);
-      const result = await applyLocalContentEdit(db, {
-        ...edit,
-        hideTitleHeading: Boolean(base.snapshot.hide_title_heading),
-        hostName,
-        title: resolveNodeDerivedTitle({ isTitleManual: Boolean(base.snapshot.is_title_manual),
-          kind: base.snapshot.kind, title: base.snapshot.title }, edit.content)
-      }, undefined, { enqueueSearchInvalidations: false });
-      if (!result.current.version_id) throw new Error('content_edit_result_unavailable');
-      if (edit.holdId) {
-        await retainLocalEditBase(db, {
-          holdId: edit.holdId, nodeId: edit.nodeId, versionId: result.submittedVersionId
-        });
-      }
-      await remapCompanionContentAnchors({ db, children, hostName, updatedAt: edit.updatedAt,
-        previousContent: previous?.body_text ?? '', nextContent: result.current.body_text ?? '' });
-      return {
-        ...(result.current.snapshot.kind === 'item' ? { reveal: result.current.snapshot.reveal ?? null } : {}),
-        content: result.current.body_text ?? '',
-        currentVersionId: result.current.version_id,
-        submittedVersionId: result.submittedVersionId
-      };
-    })), { kind: 'nodes', nodeIds: [edit.nodeId] });
+    writeIosCompanionDatabase((port) => port.transaction(db => saveCompanionContentEditWithDb(db, edit))),
+    { kind: 'nodes', nodeIds: [edit.nodeId] });
   await runCompanionSyncWriterTask(() =>
     writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32)))
     .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
   return result;
+}
+
+export async function saveCompanionContentEditWithDb(db: DbPort, edit: CompanionContentEdit, recordHistory = true) {
+  const [alreadySubmitted] = await db.query('SELECT version_id FROM node_sync_versions WHERE version_id = ?', [edit.versionId]);
+  const before = await loadCompanionWorkspaceNodeFromDb(db, edit.nodeId);
+  await requireEditableContentNode(db, edit.nodeId);
+  const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
+  if (!base || (base.snapshot.kind !== 'topic' && base.snapshot.kind !== 'item')) throw new Error('content_edit_base_unavailable');
+  assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
+    anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link),
+    ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) });
+  const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
+  const children = await readCompanionContentAnchors(db, edit.nodeId);
+  const hostName = await iosCompanionHostName(db);
+  const result = await applyLocalContentEdit(db, {
+    ...edit,
+    hideTitleHeading: Boolean(base.snapshot.hide_title_heading),
+    hostName,
+    title: resolveNodeDerivedTitle({ isTitleManual: Boolean(base.snapshot.is_title_manual),
+      kind: base.snapshot.kind, title: base.snapshot.title }, edit.content)
+  }, undefined, { enqueueSearchInvalidations: false });
+  if (!result.current.version_id) throw new Error('content_edit_result_unavailable');
+  if (edit.holdId) {
+    await retainLocalEditBase(db, {
+      holdId: edit.holdId, nodeId: edit.nodeId, versionId: result.submittedVersionId
+    });
+  }
+  await remapCompanionContentAnchors({ db, children, hostName, updatedAt: edit.updatedAt,
+    previousContent: previous?.body_text ?? '', nextContent: result.current.body_text ?? '' });
+  const after = await loadCompanionWorkspaceNodeFromDb(db, edit.nodeId);
+  if (recordHistory && !alreadySubmitted && before && after) await recordCompanionContentHistory(db, { edit, before, after });
+  return {
+    ...(result.current.snapshot.kind === 'item' ? { reveal: result.current.snapshot.reveal ?? null } : {}),
+    content: result.current.body_text ?? '',
+    currentVersionId: result.current.version_id,
+    submittedVersionId: result.submittedVersionId
+  };
 }
 
 async function requireEditableContentNode(db: DbPort, nodeId: string) {

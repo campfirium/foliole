@@ -29,7 +29,8 @@ export function canGroupEditorTextOperations(
   previous: EditorTextEditOperationEntry,
   next: EditorTextEditOperationEntry
 ) {
-  if (previous.nodeId !== next.nodeId || isIsolatedTextOperation(previous) || isIsolatedTextOperation(next)) {
+  if (previous.nodeId !== next.nodeId || previous.target?.nodeId !== next.target?.nodeId ||
+      previous.target?.field !== next.target?.field || isIsolatedTextOperation(previous) || isIsolatedTextOperation(next)) {
     return false;
   }
   if (next.userEvent === 'input.type.compose') {
@@ -48,6 +49,7 @@ export function mergeEditorTextOperations(
 ): EditorTextEditOperationEntry {
   return {
     ...previous,
+    ...(previous.target && next.target ? { target: { ...previous.target, afterVersionId: next.target.afterVersionId } } : {}),
     afterDigest: next.afterDigest,
     afterSelection: next.afterSelection,
     forwardChanges: previous.forwardChanges.compose(next.forwardChanges),

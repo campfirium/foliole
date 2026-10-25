@@ -58,6 +58,7 @@ function ChromeSpacer() {
 }
 
 function EditingChrome(props: {
+  onOpenActions(): void;
   onCancelContentEditing?: (() => void) | undefined;
   onToggleContentEditing?: (() => void) | undefined;
 }) {
@@ -70,6 +71,7 @@ function EditingChrome(props: {
           {t('companion.reading.editContent')}
         </span>
         <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} testId="companion-reading-edit-done" />
+        <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
       </div>
     </div>
   );
@@ -130,7 +132,7 @@ export function ReadingChrome(props: {
   visible?: boolean;
 }) {
   if (props.isContentEditing) {
-    return <EditingChrome onCancelContentEditing={props.onCancelContentEditing} onToggleContentEditing={props.onToggleContentEditing} />;
+    return <EditingChrome onOpenActions={props.onOpenActions} onCancelContentEditing={props.onCancelContentEditing} onToggleContentEditing={props.onToggleContentEditing} />;
   }
   const controlsVisible = props.visible !== false;
   return (

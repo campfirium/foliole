@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
+import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { buildCompanionHighlightPanelItems } from './companionHighlightPanelModel';
 import { CompanionNodeTextAlternativeSheet } from './CompanionNodeTextAlternativeSheet';
 import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
@@ -33,6 +34,7 @@ type TextAlternativeState = {
 };
 
 interface ImmersiveChromeLayerProps {
+  editHistory?: CompanionEditHistoryActionsProps;
   actionsOpen: boolean;
   canEditContent?: boolean;
   actionsAtTop?: boolean;
@@ -194,6 +196,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         readableArticle={props.readableArticle}
       />
       <ReadingActionsLayer
+        {...definedProps({ editHistory: props.editHistory })}
         actionsOpen={props.actionsOpen}
         onFindInDocument={props.onFindInDocument}
         onOpenActions={props.onOpenActions}

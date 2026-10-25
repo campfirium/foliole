@@ -6,6 +6,7 @@ export class CompanionReadingActivity {
   editing = false;
   flushPosition: (() => Promise<void>) | null = null;
   flushDraft: (() => Promise<void>) | null = null;
+  refreshDraft: ((nodeId: string, versionId: string) => Promise<void>) | null = null;
   editRound: ContentEditRound | null = null;
   private pending = new Set<Promise<unknown>>();
   private errors = new Map<string, unknown>();

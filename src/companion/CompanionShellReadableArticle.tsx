@@ -52,6 +52,11 @@ function TopicNavigationFooter({ navigation }: { navigation: CompanionReadingNav
 
 function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surface['readingActivity'], nodeId: string) {
   return {
+    ...(supportsCompanionNodeMutationSurface('topic-content-edit') ? {
+      editHistory: { documentId: nodeId, flush: () => activity.flush(),
+        adopt: async (id: string, version: string) => { await activity.refreshDraft?.(id, version); },
+        refresh: () => workspaceSync.refreshAfterMutation(undefined, nodeId) }
+    } : {}),
     ...(supportsCompanionNodeMutationSurface('existing-highlight-edit') ? {
       onAddExistingHighlightNote: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightNoteHandler>>) =>
         activity.run('note', () => createCompanionExistingHighlightNoteHandler(workspaceSync)(...args)),

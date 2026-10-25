@@ -144,7 +144,7 @@ function toReadingPayload(reading: NativeWorkspaceReadingProfile) {
   };
 }
 
-function toReviewPayload(review: NativeWorkspaceReviewProfile) {
+export function toReviewPayload(review: NativeWorkspaceReviewProfile) {
   return {
     difficulty: review.difficulty, due: review.due, elapsed_days: review.elapsedDays, lapses: review.lapses,
     last_review_at: review.lastReviewAt, reps: review.reps, scheduled_days: review.scheduledDays,

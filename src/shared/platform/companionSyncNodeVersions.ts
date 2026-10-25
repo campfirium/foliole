@@ -99,7 +99,7 @@ export async function applyCompanionSyncNodeVersionsWithSharedCore(
   return applyCompanionSyncNodeVersionsWithDbPort(createCapacitorSqliteDbPort(connection), nodes, operation);
 }
 
-async function applyCompanionSyncNodeVersionsWithDbPort(
+export async function applyCompanionSyncNodeVersionsWithDbPort(
   port: ReturnType<typeof createCapacitorSqliteDbPort>,
   nodes: NativeSyncNodeRecord[],
   operation: SyncNodeApplyOperation = 'remote_sync'

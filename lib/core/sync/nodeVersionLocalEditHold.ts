@@ -40,6 +40,7 @@ export async function retainSubmittedLocalEdit(port: DbPort, nodeId: string, bas
     SELECT (CASE WHEN instr(hold_id, ':edit:') > 0
       THEN substr(hold_id, 1, instr(hold_id, ':edit:') - 1) ELSE hold_id END) || ':edit:' || ?,
       object_id, ?, created_at FROM node_version_local_holds
-    WHERE object_id = ? AND version_id = ? AND substr(hold_id, 1, 14) <> 'sync-exchange:'`,
+    WHERE object_id = ? AND version_id = ? AND substr(hold_id, 1, 14) <> 'sync-exchange:'
+      AND substr(hold_id, 1, 14) <> 'editor_history'`,
   [versionId, versionId, nodeId, baseId]);
 }

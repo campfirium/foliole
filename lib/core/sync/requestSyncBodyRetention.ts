@@ -11,7 +11,7 @@ import { planTopicBodyRetention, TOPIC_BODY_VERSIONS_SQL, TOPIC_EDIT_BASES_SQL, 
 export async function planStoredTopicBodies(db: DbPort, nodeId: string, headId: string, limit: number) {
   return planTopicBodyRetention(await db.query<TopicBodyVersion>(TOPIC_BODY_VERSIONS_SQL, [nodeId]),
     await db.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), headId,
-    await db.query<{ version_id: string }>(TOPIC_EDIT_BASES_SQL, [nodeId]), limit);
+    await db.query<{ version_id: string; keep_body?: number }>(TOPIC_EDIT_BASES_SQL, [nodeId]), limit);
 }
 
 export async function requestSyncBodyReferences(db: DbPort, nodeId: string, headId: string) {
@@ -43,8 +43,9 @@ export async function collectRequestSyncBodiesForNodes(port: DbPort, nodeIds: re
     const topicIds = JSON.stringify(topics.map(head => head.id));
     const versions = groupByObject(await tx.query<TopicBodyVersion>(batchSql(TOPIC_BODY_VERSIONS_SQL), [topicIds]));
     const edges = groupByObject(await tx.query<ChainEdge & { object_id: string }>(BATCH_CHAIN_EDGES_SQL, [topicIds]));
-    const holds = groupByObject(await tx.query<{ object_id: string; version_id: string }>(
-      'SELECT object_id, version_id FROM node_version_local_holds WHERE object_id IN (SELECT value FROM json_each(?))', [topicIds]));
+    const holds = groupByObject(await tx.query<{ object_id: string; version_id: string; keep_body: number }>(
+      `SELECT object_id, version_id, CASE WHEN instr(hold_id, 'editor_history_body:') = 1 THEN 1 ELSE 0 END AS keep_body
+       FROM node_version_local_holds WHERE object_id IN (SELECT value FROM json_each(?))`, [topicIds]));
     for (const head of topics) {
       await releasePlannedBodies(tx, planTopicBodyRetention(versions.get(head.id) ?? [], edges.get(head.id) ?? [],
         head.current_version_id!, holds.get(head.id) ?? [], limit));

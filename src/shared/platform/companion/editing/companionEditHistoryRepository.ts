@@ -1,0 +1,66 @@
+import { ChangeSet, Text } from '@codemirror/state';
+
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
+import { digestEditorContent } from '../../../../features/editor/model/editorContentDigest';
+import { createEmptyEditorOperationHistory, type EditorOperationHistoryState, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
+import { deserializeEditorOperationHistory, serializeEditorOperationHistory } from '../../../../features/editor/model/editorOperationHistoryPersistence';
+import { readIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
+
+const HISTORY_KEY = 'editor_operation_history';
+const holdKey = (documentId: string, version: string, body: boolean) =>
+  `${body ? 'editor_history_body' : 'editor_history'}:${documentId}:${version}`;
+
+export function retainCompanionEditHistoryBase(db: DbPort, documentId: string, nodeId: string, versionId: string) {
+  return retainLocalEditBase(db, { holdId: holdKey(documentId, versionId, true), nodeId, versionId });
+}
+
+export async function readCompanionEditHistoryFromDb(db: DbPort) {
+  const [row] = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key = ?', [HISTORY_KEY]);
+  return row ? deserializeEditorOperationHistory(row.value) : createEmptyEditorOperationHistory();
+}
+
+export function loadCompanionEditHistory() {
+  return readIosCompanionDatabase(readCompanionEditHistoryFromDb);
+}
+
+function retainedVersions(history: EditorOperationHistoryState) {
+  const versions = new Map<string, { nodeId: string; versionId: string }>();
+  for (const session of Object.values(history.sessionsByNodeId)) {
+    for (const entry of [...(session?.undoStack ?? []), ...(session?.redoStack ?? [])]) {
+      if (entry.type === 'text.edit') {
+        if (entry.target) for (const version of [entry.target.beforeVersionId, entry.target.afterVersionId]) {
+          versions.set(holdKey(entry.nodeId, version, false), { nodeId: entry.target.nodeId, versionId: version });
+        }
+      } else for (const annotation of entry.annotations) {
+        for (const version of [annotation.beforeVersionId, annotation.afterVersionId]) {
+          if (version) versions.set(holdKey(entry.nodeId, version, true), { nodeId: annotation.nodeId, versionId: version });
+        }
+      }
+    }
+  }
+  return versions;
+}
+
+export async function writeCompanionEditHistory(db: DbPort,
+  before: EditorOperationHistoryState, after: EditorOperationHistoryState) {
+  const previous = retainedVersions(before);
+  const next = retainedVersions(after);
+  for (const [holdId, { nodeId, versionId }] of next) {
+    if (!previous.has(holdId)) await retainLocalEditBase(db, { holdId, nodeId, versionId });
+  }
+  for (const [holdId, { nodeId }] of previous) {
+    if (!next.has(holdId)) await releaseLocalEditBase(db, holdId, nodeId);
+  }
+  await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
+    [HISTORY_KEY, serializeEditorOperationHistory(after), new Date().toISOString()]);
+}
+
+export function syntheticTextHistory(documentId: string, before: string, after: string): EditorTextEditOperationEntry {
+  const changes = ChangeSet.of({ from: 0, to: before.length, insert: after }, before.length);
+  const selection = { mainIndex: 0, ranges: [{ anchor: 0, head: 0 }] };
+  return { nodeId: documentId, type: 'text.edit', title: 'Edit Text', timestamp: Date.now(), userEvent: 'input.replace',
+    beforeDigest: digestEditorContent(before), afterDigest: digestEditorContent(after),
+    beforeSelection: selection, afterSelection: selection, forwardChanges: changes,
+    inverseChanges: changes.invert(Text.of(before.split('\n'))) };
+}

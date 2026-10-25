@@ -6,13 +6,16 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import { recordCompanionAnnotationHistory } from '../shared/platform/companion/editing/companionEditHistoryRecording';
+import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
+import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
+import { applyCompanionSyncNodeVersionsWithDbPort } from '../shared/platform/companionSyncNodeVersions';
 import {
   applyCompanionLocalNodeVersions,
-  applyCompanionSyncNodeVersionsWithinWriterTask,
-  saveCompanionSyncNodeReviewRecordWithinWriterTask,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
+import { toReviewPayload } from '../shared/platform/companionSyncStateWriters';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -138,11 +141,17 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
     const currentState = await loadCompanionWorkspaceSyncState();
     const draft = await buildAnnotationDraft({ ...args, snapshot: currentState.workspace_snapshot });
     if (!draft) return null;
-    const appliedIds = await applyCompanionSyncNodeVersionsWithinWriterTask([draft.nodeVersion], undefined, 'local_mutation');
+    const appliedIds = await writeIosCompanionDatabase(db => db.transaction(async tx => {
+      const ids = await applyCompanionSyncNodeVersionsWithDbPort(tx, [draft.nodeVersion], 'local_mutation');
+      if (ids.includes(draft.node.id)) await recordCompanionAnnotationHistory(tx, {
+        documentId: args.payload.parentNodeId, before: null, after: draft.node
+      });
+      if (ids.includes(draft.node.id) && draft.review) await saveIosReviewWithDb(tx, {
+        node_id: draft.node.id, review_json: JSON.stringify(toReviewPayload(draft.review))
+      });
+      return ids;
+    }));
     if (!appliedIds.includes(draft.node.id)) throw new Error('companion_annotation_not_applied');
-    if (draft.review) {
-      await saveCompanionSyncNodeReviewRecordWithinWriterTask({ nodeId: draft.node.id, review: draft.review });
-    }
     return { nodeId: draft.node.id, snapshot: draft.snapshot };
   }, { kind: 'full' });
 }

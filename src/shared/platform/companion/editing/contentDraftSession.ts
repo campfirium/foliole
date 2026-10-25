@@ -3,9 +3,12 @@ import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncR
 import { createCompanionUuid } from '../../companionUuid';
 
 import type { CompanionContentAcknowledgement, CompanionContentEdit, CompanionContentSaveHandler, CompanionContentSource } from './companionContentEditContract';
+import { ContentDraftBaseHold } from './contentDraftBaseHold';
+import { ContentDraftHistory } from './contentDraftHistory';
 import { ContentSavedRefreshError } from './contentSavedRefreshError';
 
 export class ContentDraftSession {
+  private history = new ContentDraftHistory();
   value: string;
   reveal: string | null | undefined;
   error: string | null = null;
@@ -21,13 +24,14 @@ export class ContentDraftSession {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private refreshSequence = 0;
   private listeners = new Set<() => void>();
-  private holdId: string | null = null;
+  private baseHold: ContentDraftBaseHold;
   private starting: Promise<void> | null = null;
   private bufferedInput = new Set<'content' | 'reveal'>();
 
   constructor(readonly nodeId: string, private base: CompanionContentSource,
     public save: CompanionContentSaveHandler, private delay = 0) {
     this.value = base.content;
+    this.baseHold = new ContentDraftBaseHold(nodeId, () => this.save);
     this.reveal = base.reveal;
     this.ready = !save.retainHold;
   }
@@ -58,7 +62,7 @@ export class ContentDraftSession {
     try {
       const holdId = `companion:${createCompanionUuid()}`;
       const source = await this.save.readSource(this.nodeId, holdId);
-      this.holdId = holdId;
+      this.baseHold.id = holdId;
       this.base = source;
       this.value = source.content;
       this.reveal = source.reveal;
@@ -73,13 +77,11 @@ export class ContentDraftSession {
   }
 
   async dispose() {
-    if (this.dirty || this.attached || this.running || !this.holdId) return;
-    const holdId = this.holdId;
-    await this.save.releaseHold?.(this.nodeId, holdId);
-    if (this.holdId === holdId) this.holdId = null;
+    if (this.dirty || this.attached || this.running) return;
+    await this.baseHold.release();
   }
 
-  async refresh() {
+  async refresh(ownedVersionId?: string) {
     if (!this.ready) return;
     const request = ++this.refreshSequence;
     const sequence = this.sequence;
@@ -87,24 +89,24 @@ export class ContentDraftSession {
     try {
       const source = await this.save.readSource(this.nodeId);
       if (request !== this.refreshSequence || sequence !== this.sequence || this.dirty || this.running) return;
-      const nextHoldId = this.holdId && source.versionId !== this.base.versionId
-        ? await this.stageNextBase(source.versionId) : null;
+      const nextHoldId = this.baseHold.id && source.versionId !== this.base.versionId
+        ? await this.baseHold.stage(source.versionId) : null;
       if (request !== this.refreshSequence || sequence !== this.sequence || this.dirty || this.running) {
-        if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
+        if (nextHoldId) await this.baseHold.release(nextHoldId);
         return;
       }
-      if (source.versionId !== this.base.versionId) this.foreignAdoptions += 1;
+      if (source.versionId !== this.base.versionId && source.versionId !== ownedVersionId) this.foreignAdoptions += 1;
       this.base = source;
       this.value = source.content;
       this.reveal = source.reveal;
       this.publish();
-      await this.replaceHold(nextHoldId);
+      await this.baseHold.replace(nextHoldId);
     } catch {
       // A failed refresh must not replace the last known content or an unsaved draft.
     }
   }
 
-  change(value: string, references: readonly ContentImageReference[] = []) {
+  change(value: string, references: readonly ContentImageReference[] = [], entries?: Parameters<ContentDraftHistory['record']>[2]) {
     if (!this.ready) return;
     for (const reference of references) {
       if (!this.imageReferences.has(reference.storage_key)) this.imageReferences.set(reference.storage_key, reference);
@@ -116,11 +118,12 @@ export class ContentDraftSession {
     }
     this.value = value;
     this.sequence += 1;
+    this.history.record(this.sequence, 'content', entries);
     this.publish();
     this.scheduleSave();
   }
 
-  changeReveal(reveal: string | null, references: readonly ContentImageReference[] = []) {
+  changeReveal(reveal: string | null, references: readonly ContentImageReference[] = [], entries?: Parameters<ContentDraftHistory['record']>[2]) {
     if (!this.ready) return;
     this.bufferedInput.delete('reveal');
     for (const reference of references) this.imageReferences.set(reference.storage_key, reference);
@@ -130,6 +133,7 @@ export class ContentDraftSession {
     }
     this.reveal = reveal;
     this.sequence += 1;
+    this.history.record(this.sequence, 'reveal', entries);
     this.publish();
     this.scheduleSave();
   }
@@ -166,10 +170,11 @@ export class ContentDraftSession {
   private async commit() {
     const edit = this.pending ?? {
       newImageReferences: [...this.imageReferences.values()],
+      historyTransactions: this.history.through(this.sequence),
       baseContent: this.base.content,
       ...(this.reveal === undefined ? {} : { reveal: this.reveal }),
       nodeId: this.nodeId, content: this.value, baseVersionId: this.base.versionId,
-      ...(this.holdId ? { holdId: this.holdId } : {}),
+      ...(this.baseHold.id ? { holdId: this.baseHold.id } : {}),
       versionId: createOpaqueVersionRef(createCompanionUuid()),
       updatedAt: new Date().toISOString(), sequence: this.sequence
     };
@@ -195,27 +200,28 @@ export class ContentDraftSession {
       ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) };
     if (ack.currentVersionId !== ack.submittedVersionId) this.foreignAdoptions += 1;
     this.acknowledged = edit.sequence;
+    this.history.acknowledge(edit.sequence);
     this.pending = null;
     this.error = null;
     if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
       let nextHoldId: string | null = null;
       try {
-        nextHoldId = this.holdId && ack.currentVersionId !== ack.submittedVersionId
-          ? await this.stageNextBase(ack.currentVersionId) : null;
+        nextHoldId = this.baseHold.id && ack.currentVersionId !== ack.submittedVersionId
+          ? await this.baseHold.stage(ack.currentVersionId) : null;
         if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
           this.base = acknowledged;
           this.value = ack.content;
           this.reveal = acknowledged.reveal;
-          await this.replaceHold(nextHoldId);
+          await this.baseHold.replace(nextHoldId);
         }
-        else if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
+        else if (nextHoldId) await this.baseHold.release(nextHoldId);
       } catch {
         // The committed input remains protected; a later refresh may adopt the merged head.
       }
     }
     if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
-      if (!this.holdId || ack.currentVersionId === ack.submittedVersionId ||
-          this.holdId !== edit.holdId) {
+      if (!this.baseHold.id || ack.currentVersionId === ack.submittedVersionId ||
+          this.baseHold.id !== edit.holdId) {
         this.base = acknowledged;
         this.value = ack.content;
         this.reveal = acknowledged.reveal;
@@ -231,16 +237,4 @@ export class ContentDraftSession {
     if (this.refreshSaved) throw new Error('The topic was saved, but could not be refreshed.');
   }
 
-  private async stageNextBase(versionId: string) {
-    const holdId = `companion:${createCompanionUuid()}`;
-    await this.save.retainHold?.(this.nodeId, versionId, holdId);
-    return holdId;
-  }
-
-  private async replaceHold(nextHoldId: string | null) {
-    if (!nextHoldId) return;
-    const previous = this.holdId;
-    this.holdId = nextHoldId;
-    if (previous) await this.save.releaseHold?.(this.nodeId, previous);
-  }
 }

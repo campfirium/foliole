@@ -26,11 +26,13 @@ export const TOPIC_BODY_VERSIONS_SQL = `SELECT version_id, object_id, parent_ver
     FROM json_each(snapshot_json, '$.text_alternative_bodies')) AS alternative_body_hashes_json
   FROM node_sync_versions WHERE object_id = ?`;
 
-export const TOPIC_EDIT_BASES_SQL = 'SELECT version_id FROM node_version_local_holds WHERE object_id = ?';
+export const TOPIC_EDIT_BASES_SQL = `SELECT version_id,
+  CASE WHEN instr(hold_id, 'editor_history_body:') = 1 THEN 1 ELSE 0 END AS keep_body
+  FROM node_version_local_holds WHERE object_id = ?`;
 
 /** Topic history needs its graph and metadata, but only live payloads need full text. */
 export function planTopicBodyRetention(versions: TopicBodyVersion[], edges: ChainEdge[],
-  currentId: string, editBases: readonly { version_id: string }[], limit: number) {
+  currentId: string, editBases: readonly { version_id: string; keep_body?: number }[], limit: number) {
   const parents = new Map(versions.map(row => [row.version_id, [] as string[]]));
   const invalid = () => ({ removed: new Array<string>(), requiredBodyIds: new Array<string>(), skipped: 'lineage_unproven' as const });
   if (versions.some(row => row.identity_valid !== 1) ||
@@ -59,11 +61,12 @@ export function planTopicBodyRetention(versions: TopicBodyVersion[], edges: Chai
 }
 
 function preserveBaselineAlternatives(versions: TopicBodyVersion[], keep: Set<string>,
-  editBases: readonly { version_id: string }[]) {
+  editBases: readonly { version_id: string; keep_body?: number }[]) {
   const carried = new Set(versions.filter(row => keep.has(row.version_id)).flatMap(row =>
     hashes.parse(JSON.parse(row.alternative_body_hashes_json))));
   for (const base of editBases) {
     const row = versions.find(row => row.version_id === base.version_id);
+    if (row && base.keep_body === 1) keep.add(row.version_id);
     if (row && hashes.parse(JSON.parse(row.effective_alternative_hashes_json)).some(hash => !carried.has(hash))) {
       keep.add(row.version_id);
     }

@@ -56,14 +56,16 @@ export function saveIosReading(args: { node_id: string; reading_json: string; co
 }
 
 export function saveIosReview(args: { node_id: string; review_json: string; review_log_json?: string }) {
-  return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
-    const payload = { ...parseObject(args.review_json), node_id: args.node_id };
-    const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => applyNodeReviewObject(tx, record));
-    if (!args.review_log_json) return result;
-    const opId = createCompanionUuid();
-    await insertReviewLog(tx, args.node_id, opId, parseObject(args.review_log_json));
-    return { ...result, op_id: opId };
-  }));
+  return writeIosCompanionDatabase((db) => db.transaction(tx => saveIosReviewWithDb(tx, args)));
+}
+
+export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; review_json: string; review_log_json?: string }) {
+  const payload = { ...parseObject(args.review_json), node_id: args.node_id };
+  const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => applyNodeReviewObject(tx, record));
+  if (!args.review_log_json) return result;
+  const opId = createCompanionUuid();
+  await insertReviewLog(tx, args.node_id, opId, parseObject(args.review_log_json));
+  return { ...result, op_id: opId };
 }
 
 export function saveIosActiveViewState(args: { node_id: string | null }) {

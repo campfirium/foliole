@@ -5,6 +5,7 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
 import { companionReadingSurfaceClassName, companionReviewSurfaceClassName } from './companionCssCompatibility';
+import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
@@ -32,6 +33,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 interface ImmersiveReadableArticleProps {
+  editHistory?: CompanionEditHistoryActionsProps;
   navigation?: CompanionReadingNavigationControls | undefined;
   activity?: CompanionReadingActivity;
   flow?: boolean;
@@ -145,6 +147,7 @@ function ImmersiveArticleChrome(props: {
   });
   return (
     <ImmersiveChromeLayer
+      {...definedProps({ editHistory: articleProps.editHistory })}
       navigation={articleProps.navigation}
       actionsAtTop={articleProps.flow === true}
       actionsOpen={model.reading.isActionsSheetOpen}

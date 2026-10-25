@@ -6,6 +6,9 @@ export interface EditorOperationSelectionSnapshot {
 }
 
 export interface EditorAnnotationOperationSnapshot {
+  review?: import('../../../../lib/platform/nativeStorageContract').NativeWorkspaceReviewProfile | null;
+  beforeVersionId?: string;
+  afterVersionId?: string;
   anchorId?: string;
   kind: 'cloze' | 'highlight' | 'image-excerpt' | 'note';
   nodeId: string;
@@ -14,6 +17,12 @@ export interface EditorAnnotationOperationSnapshot {
 }
 
 export interface EditorTextEditOperationEntry {
+  target?: {
+    nodeId: string;
+    field: 'content' | 'reveal';
+    beforeVersionId: string;
+    afterVersionId: string;
+  };
   afterDigest: string;
   afterSelection: EditorOperationSelectionSnapshot;
   beforeDigest: string;

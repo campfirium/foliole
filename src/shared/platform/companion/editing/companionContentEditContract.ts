@@ -9,6 +9,7 @@ export interface CompanionContentSource {
 }
 
 export interface CompanionContentEdit extends LocalContentEdit {
+  historyTransactions?: readonly import('./contentDraftHistory').ContentHistoryTransactions[];
   content: string;
   holdId?: string;
   nodeId: string;

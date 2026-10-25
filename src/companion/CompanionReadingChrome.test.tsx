@@ -97,7 +97,7 @@ describe('ReadingChrome editing', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.getByText('Edit content')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'More reading actions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More reading actions' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
   });
 

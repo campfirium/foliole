@@ -1,11 +1,13 @@
 import { definedProps } from '../shared/lib/definedProps';
 
+import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { ReadingActionsSheet } from './CompanionReadingSheets';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 export function ReadingActionsLayer(props: {
+  editHistory?: CompanionEditHistoryActionsProps;
   actionsOpen: boolean;
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
@@ -23,6 +25,7 @@ export function ReadingActionsLayer(props: {
       onOpenReadingSheet={props.onOpenReadingSheet}
       open={props.actionsOpen}
       {...definedProps({
+        editHistory: props.editHistory,
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
           ? () => restoreFromTrash(props.readableArticle.nodeId)

@@ -55,17 +55,20 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
   const handleChange = useCallback((value: string, meta?: EditorContentChangeMeta) => {
     if (!args.canEdit) return;
     editRound?.capture();
-    session?.change(value, meta?.newImageReferences);
+    session?.change(value, meta?.newImageReferences, meta?.origin === 'history' ? undefined : meta?.textTransactions);
   }, [args.canEdit, editRound, session]);
   const handleRevealChange = useCallback((value: string, meta?: EditorContentChangeMeta) => {
     if (!args.canEdit) return;
     editRound?.capture();
-    session?.changeReveal(value, meta?.newImageReferences);
+    session?.changeReveal(value, meta?.newImageReferences, meta?.origin === 'history' ? undefined : meta?.textTransactions);
   }, [args.canEdit, editRound, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
   const markBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput(); }, [args.canEdit, session]);
   const markRevealBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput('reveal'); }, [args.canEdit, session]);
-  return { editRound, handleRevealChange, markRevealBufferedInput, reveal: session?.reveal ?? null,
+  const refreshAfterHistory = useCallback(async (nodeId: string, versionId: string) => {
+    if (session?.nodeId === nodeId) await session.refresh(versionId);
+  }, [session]);
+  return { editRound, refreshAfterHistory, handleRevealChange, markRevealBufferedInput, reveal: session?.reveal ?? null,
     error: session?.error ?? null, flushPendingSave, handleChange, markBufferedInput,
     ready: session?.ready ?? false,
     value: session?.value ?? args.initialContent };
