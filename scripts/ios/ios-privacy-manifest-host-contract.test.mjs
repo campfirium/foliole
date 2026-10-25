@@ -48,7 +48,7 @@ function validatePrivacyContract(manifest, sources) {
 }
 
 describe('iOS privacy manifest host contract', () => {
-  it('declares reasons for app-local UserDefaults and file metadata', () => {
+  it('declares reasons for app-local preferences, file metadata and elapsed time', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 
     expect(manifest).toContain('<key>NSPrivacyAccessedAPITypes</key>');
@@ -56,7 +56,8 @@ describe('iOS privacy manifest host contract', () => {
     expect(manifest).toContain('<string>CA92.1</string>');
     expect(manifest).toContain('<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>');
     expect(manifest).toContain('<string>C617.1</string>');
-    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(2);
+    expect(manifest).toMatch(/NSPrivacyAccessedAPICategorySystemBootTime<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>\s*<string>35F9\.1<\/string>/);
+    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(3);
     expect(manifest).not.toContain('NSPrivacyTracking');
     expect(manifest).not.toContain('NSPrivacyCollectedDataTypes');
   });
@@ -82,7 +83,8 @@ describe('iOS privacy manifest host contract', () => {
 
   it('fails when all app-owned UserDefaults usage is removed', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
-    const sources = [{ path: 'ios/App/App/AppDelegate.swift', source: 'let date = file.creationDate' }];
+    const sources = [{ path: 'ios/App/App/AppDelegate.swift',
+      source: 'let date = file.creationDate; let uptime = ProcessInfo.processInfo.systemUptime' }];
 
     expect(() => validatePrivacyContract(manifest, sources))
       .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategoryUserDefaults');
@@ -92,11 +94,11 @@ describe('iOS privacy manifest host contract', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
     const sources = [
       ...readNativeSources(path.join(root, 'ios/App/App')),
-      { path: 'ios/App/App/Injected.swift', source: 'let uptime = ProcessInfo.processInfo.systemUptime' }
+      { path: 'ios/App/App/Injected.swift', source: 'let keyboards = UITextInputMode.activeInputModes' }
     ];
 
     expect(() => validatePrivacyContract(manifest, sources))
-      .toThrow('Undeclared required-reason API categories: NSPrivacyAccessedAPICategorySystemBootTime');
+      .toThrow('Undeclared required-reason API categories: NSPrivacyAccessedAPICategoryActiveKeyboards');
   });
 
   it('fails when the manifest loses or gains an API category', () => {
@@ -105,12 +107,22 @@ describe('iOS privacy manifest host contract', () => {
     const missingCategory = manifest.replace('NSPrivacyAccessedAPICategoryUserDefaults', 'NotAPrivacyCategory');
     const addedCategory = manifest.replace(
       '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>',
-      '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>\n<string>NSPrivacyAccessedAPICategorySystemBootTime</string>'
+      '<string>NSPrivacyAccessedAPICategoryUserDefaults</string>\n<string>NSPrivacyAccessedAPICategoryDiskSpace</string>'
     );
 
     expect(() => validatePrivacyContract(missingCategory, sources))
       .toThrow('Undeclared required-reason API categories: NSPrivacyAccessedAPICategoryUserDefaults');
     expect(() => validatePrivacyContract(addedCategory, sources))
-      .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategorySystemBootTime');
+      .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategoryDiskSpace');
+  });
+
+  it('rejects a missing elapsed-time declaration while app-owned timers use uptime', () => {
+    const manifest = read('ios/App/App/PrivacyInfo.xcprivacy').replace(
+      'NSPrivacyAccessedAPICategorySystemBootTime', 'NotAPrivacyCategory'
+    );
+    const sources = readNativeSources(path.join(root, 'ios/App/App'));
+
+    expect(() => validatePrivacyContract(manifest, sources))
+      .toThrow('Undeclared required-reason API categories: NSPrivacyAccessedAPICategorySystemBootTime');
   });
 });
