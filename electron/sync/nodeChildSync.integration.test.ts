@@ -15,11 +15,11 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
+type Fixture = Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>>;
 const timestamp = '2026-10-16T02:00:00.000Z';
 const nodeId = 'child-owner';
 const records = (): NativeSyncObjectRecord[] => [
   record('node_open_state', nodeId, { node_id: nodeId, last_opened_at: timestamp }),
-  record('node_review', nodeId, { node_id: nodeId, reps: 3, last_review_at: timestamp }),
   record('node_reading', nodeId, { node_id: nodeId, state: 'active', repetition_count: 2, last_handled_at: timestamp }),
   record('topic_daily_count', `2026-10-16:${nodeId}`, { day_key: '2026-10-16', node_id: nodeId }),
   record('import_source', 'source', { latest_node_id: nodeId, source_fingerprint: 'source' }),
@@ -47,6 +47,17 @@ async function withDb<T>(path: string, work: (db: DbPort, sqlite: Database.Datab
   finally { sqlite.close(); }
 }
 
+function readReviewFacts(path: string) {
+  const sqlite = new Database(path, { readonly: true, fileMustExist: true });
+  try {
+    return {
+      events: sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all(),
+      review: sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all(),
+      metadata: sqlite.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_review'").all()
+    };
+  } finally { sqlite.close(); }
+}
+
 it('transfers every child with its node, preserves concurrent text, and relays child deletions over HTTP', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const { left, right, leftSnapshot: a, rightSnapshot: b } = fixture;
@@ -55,18 +66,29 @@ it('transfers every child with its node, preserves concurrent text, and relays c
   try {
     await left.seed({ nodeId, content: 'Original', title: 'Owner' });
     for (const child of ['child-a', 'child-b']) await left.seed({ nodeId: child, parentNodeId: nodeId, content: child, title: child });
+    await left.invoke('review_projection', { nodeId, at: timestamp, mode: 'grade', opId: 'review-first', grade: 3 });
     await withDb(a.databasePath, async db => {
       for (const state of records()) await applySyncObjectInTransaction(db, state);
       await assertGrouped(db);
     });
+    const original = readReviewFacts(a.databasePath);
+    expect(original.events).toEqual([expect.objectContaining({ op_id: 'review-first', kind: 'review' })]);
+    expect(original.metadata).toEqual([]);
     expect(await round()).toMatchObject({ complete: true });
+    expect(readReviewFacts(b.databasePath)).toEqual(original);
     await withDb(b.databasePath, async (db, sqlite) => {
       await assertGrouped(db);
-      expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').get(nodeId)).toEqual({ reps: 3 });
+      expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').get(nodeId)).toEqual({ reps: 1 });
       expect(sqlite.prepare('SELECT body_text FROM node_text_alternatives WHERE alternative_id = ?').get('alternative'))
         .toEqual({ body_text: 'Retained alternative' });
     });
-    await concurrentChanges(fixture, round);
+    const graded = await concurrentChanges(fixture, round);
+    await right.invoke('review_projection', { nodeId, at: '2026-10-16T04:00:00.000Z', mode: 'reset', opId: 'review-reset' });
+    const reset = readReviewFacts(b.databasePath);
+    expect(reset.events).toEqual(expect.arrayContaining(graded.events));
+    expect(reset.events).toHaveLength(3);
+    expect(reset.events).toContainEqual(expect.objectContaining({ kind: 'reset', grade: 0 }));
+    expect(reset.review).toEqual([]);
     await withDb(b.databasePath, async db => {
       for (const state of records().filter(state => !['topic_daily_count', 'parent_child_order'].includes(state.object_type))) {
         await applySyncObjectInTransaction(db, { ...state, content_hash: 'd'.repeat(64),
@@ -75,6 +97,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
     });
     expect(await round()).toMatchObject({ complete: true });
     for (const device of [a, b]) await withDb(device.databasePath, async (db, sqlite) => {
+      expect(readReviewFacts(device.databasePath)).toEqual(reset);
       expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
       expect(sqlite.prepare('SELECT * FROM node_open_state WHERE node_id = ?').get(nodeId)).toBeUndefined();
       expect(sqlite.prepare('SELECT * FROM import_sources WHERE source_fingerprint = ?').get('source')).toBeUndefined();
@@ -82,17 +105,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
       expect(entries.filter(entry => ['node_open_state', 'node_reading', 'node_review', 'import_source',
         'node_text_alternative'].includes(entry.objectType))).toEqual([]);
     });
-    const third = await fixture.startThird();
-    try {
-      expect(await third.process.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: a.origin,
-        peer: { deviceId: a.deviceId, libraryEpoch: `${a.deviceId}-epoch` } } })).toMatchObject({ complete: true });
-      await withDb(third.snapshot.databasePath, async (db, sqlite) => {
-        expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
-        expect(sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_type = 'import_source'").pluck().get())
-          .toBe(nodeId);
-        expect((await readFramedSyncInventory(db)).find(entry => entry.objectType === 'import_source')).toBeUndefined();
-      });
-    } finally { await third.process.close(); }
+    await relayDeletedChildren(fixture, reset);
   } finally {
     await Promise.allSettled([left.close(), right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
@@ -106,23 +119,25 @@ async function assertGrouped(db: DbPort) {
   ]);
   const entries = await readFramedSyncInventory(db);
   const owner = entries.find(entry => entry.objectType === 'node' && entry.globalId === nodeId);
+  expect(owner?.reviewFactIds).toEqual(['review-first']);
   expect(owner?.stateFactIds?.map(id => JSON.parse(id)[0]).sort()).toEqual(
-    ['import_source', 'node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'topic_daily_count']);
+    ['import_source', 'node_open_state', 'node_reading', 'node_text_alternative', 'parent_child_order', 'topic_daily_count']);
   expect(entries.filter(entry => records().some(state => state.object_type === entry.objectType)))
     .toEqual([expect.objectContaining({ objectType: 'parent_child_order', globalId: ROOT_CHILD_ORDER_ID })]);
 }
 
-async function concurrentChanges(fixture: Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>>,
+async function concurrentChanges(fixture: Fixture,
   round: () => Promise<unknown>) {
   const { left, leftSnapshot: a, rightSnapshot: b } = fixture;
   const baseVersionId = await withDb(a.databasePath, async (_db, sqlite) =>
     sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get(nodeId));
   await left.invoke('local_content_edit', { nodeId, baseVersionId, versionId: 'concurrent-text',
     content: 'Concurrent body', hostName: 'writer', updatedAt: '2026-10-16T03:00:00.000Z' });
+  await fixture.right.invoke('review_projection', { nodeId, at: '2026-10-16T03:00:00.000Z',
+    mode: 'grade', opId: 'review-second', grade: 3 });
   await withDb(b.databasePath, async db => {
     const updates = [
       record('node_open_state', nodeId, { node_id: nodeId, last_opened_at: '2026-10-16T03:00:00.000Z' }),
-      record('node_review', nodeId, { node_id: nodeId, reps: 4, last_review_at: '2026-10-16T03:00:00.000Z' }),
       record('node_reading', nodeId, { node_id: nodeId, state: 'done', repetition_count: 3,
         last_handled_at: '2026-10-16T03:00:00.000Z' }),
       record('import_source', 'source', { latest_node_id: nodeId, source_name: 'Reimported' })
@@ -133,10 +148,14 @@ async function concurrentChanges(fixture: Awaited<ReturnType<typeof createDeskto
     for (const state of updates) await applySyncObjectInTransaction(db,
       { ...state, updated_at: '2026-10-16T03:00:00.000Z' });
   });
+  const expected = readReviewFacts(b.databasePath);
+  expect(expected.events).toHaveLength(2);
+  expect(expected.metadata).toEqual([]);
   expect(await round()).toMatchObject({ complete: true });
   for (const device of [a, b]) await withDb(device.databasePath, async (_db, sqlite) => {
+    expect(readReviewFacts(device.databasePath)).toEqual(expected);
     expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
-    expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').pluck().get(nodeId)).toBe(4);
+    expect(sqlite.prepare('SELECT reps FROM node_review WHERE node_id = ?').pluck().get(nodeId)).toBe(2);
     expect(sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?').pluck().get(nodeId))
       .toBe(JSON.stringify(['child-b', 'child-a']));
     expect(sqlite.prepare("SELECT count(*) FROM parent_order_sources WHERE parent_id = ? AND author_id IN ('writer', 'other-writer')").pluck().get(nodeId)).toBe(2);
@@ -146,4 +165,21 @@ async function concurrentChanges(fixture: Awaited<ReturnType<typeof createDeskto
     expect(sqlite.prepare('SELECT source_name FROM import_sources WHERE source_fingerprint = ?').pluck().get('source'))
       .toBe('Reimported');
   });
+  return expected;
+}
+
+async function relayDeletedChildren(fixture: Fixture, expected: ReturnType<typeof readReviewFacts>) {
+  const a = fixture.leftSnapshot;
+  const third = await fixture.startThird();
+  try {
+    expect(await third.process.invoke('round', { input: { kind: 'request_reconcile', peerOrigin: a.origin,
+      peer: { deviceId: a.deviceId, libraryEpoch: `${a.deviceId}-epoch` } } })).toMatchObject({ complete: true });
+    expect(readReviewFacts(third.snapshot.databasePath)).toEqual(expected);
+    await withDb(third.snapshot.databasePath, async (db, sqlite) => {
+      expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
+      expect(sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_type = 'import_source'").pluck().get())
+        .toBe(nodeId);
+      expect((await readFramedSyncInventory(db)).find(entry => entry.objectType === 'import_source')).toBeUndefined();
+    });
+  } finally { await third.process.close(); }
 }
