@@ -1,6 +1,6 @@
+import type { StudySessionCompleteSummaryProps } from '../../features/review/components/StudySessionCompleteSummary';
 import type { CompactWorkspaceSidebars } from '../hooks/useCompactWorkspaceSidebars';
 
-import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSummary';
 import { WorkspaceCompactRightPanelActions, WorkspaceCompactSidebarBackdrop } from './WorkspaceCompactSidebarControls';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import {

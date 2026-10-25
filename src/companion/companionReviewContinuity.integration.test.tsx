@@ -213,6 +213,7 @@ it('keeps the current task and revealed answer when new content changes the cand
   await waitFor(() => expect(ui.result.current.readableArticle?.content).toBe('Updated body'));
   await act(() => ui.result.current.handleGradeReview(3));
   expect(database!.prepare('SELECT node_id FROM review_log').all()).toEqual([{ node_id: id }]);
+  expect(ui.result.current.flowSummary.reviewedItemCount).toBe(1);
 });
 
 it('defers reading with Soon without writing a reading completion and restores a legal target on reopen', async () => {

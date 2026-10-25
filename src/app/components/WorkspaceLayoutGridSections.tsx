@@ -3,6 +3,8 @@ import { memo } from 'react';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { StudySessionCompleteSummary } from '../../features/review/components/StudySessionCompleteSummary';
+import type { StudySessionCompleteSummaryProps } from '../../features/review/components/StudySessionCompleteSummary';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
@@ -11,8 +13,6 @@ import type {
 } from '../../shared/platform/externalLibraryBrowseRepository';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import { StudySessionCompleteSummary } from './StudySessionCompleteSummary';
-import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSummary';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';

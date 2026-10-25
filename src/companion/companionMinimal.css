@@ -120,7 +120,7 @@ html, body, #root, #root * { scrollbar-width: none; }
   padding-bottom: 24px;
 }
 .companion-flow-complete h2 {
-  margin: 0 0 24px;
+  margin: 0;
   color: var(--role-content-text);
   font-size: 24px;
   font-weight: 500;

@@ -1,9 +1,8 @@
 import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
+import { StudySessionCompleteSummary } from '../../features/review/components/StudySessionCompleteSummary';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-
-import { StudySessionCompleteSummary } from './StudySessionCompleteSummary';
 
 it('shows the completed review phase summary and continues reading', () => {
   renderWithLocalization(

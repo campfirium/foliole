@@ -71,6 +71,9 @@ export function useCompanionFlowSession(args: {
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
   function continueReading() { if (owner.current === current) continueCurrentFlow(latest.current, current, mode, render); }
   return { view, capture, matches, advance, resume, reveal, continueReading, canContinueReading, hasTopics,
+    summary: { completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
+      readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
+      reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
 }
 

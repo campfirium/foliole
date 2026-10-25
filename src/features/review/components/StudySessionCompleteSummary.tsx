@@ -1,7 +1,11 @@
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
-import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import type { ReactNode } from 'react';
+
+import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
+import type { ReviewSessionMode } from '../model/reviewSessionMode';
 
 export interface StudySessionCompleteSummaryProps {
+  action?: ReactNode;
+  layout?: 'desktop' | 'companion';
   completedAt: string | null;
   createdItemCount: number;
   createdTopicCount: number;
@@ -42,7 +46,7 @@ function SummaryRow({
   unit
 }: {
   count: number;
-  elapsedMs?: number;
+  elapsedMs?: number | undefined;
   label: string;
   unit: 'item' | 'topic';
 }) {
@@ -68,6 +72,8 @@ function getCompletionTitle(mode: ReviewSessionMode, t: Translate) {
 }
 
 export function StudySessionCompleteSummary({
+  action,
+  layout = 'desktop',
   createdItemCount,
   createdTopicCount,
   readingElapsedMs,
@@ -77,16 +83,18 @@ export function StudySessionCompleteSummary({
   reviewedItemCount
 }: StudySessionCompleteSummaryProps) {
   const t = useTranslation();
+  const showEmptyCounts = layout === 'companion';
+  const Heading = layout === 'companion' ? 'h2' : 'h1';
   return (
-    <div className="flex min-h-0 flex-1 items-start justify-center bg-[var(--role-content-bg)] px-8 pt-[18vh] text-foreground">
+    <div className={layout === 'companion' ? 'companion-flow-complete' : "flex min-h-0 flex-1 items-start justify-center bg-[var(--role-content-bg)] px-8 pt-[18vh] text-foreground"}>
       <div className="w-full max-w-[520px]">
-        <h1 className="text-[30px] font-medium leading-tight text-foreground/90">{getCompletionTitle(reviewSessionMode, t)}</h1>
+        <Heading className="text-[30px] font-medium leading-tight text-foreground/90">{getCompletionTitle(reviewSessionMode, t)}</Heading>
         <div className="mt-8 space-y-3">
-          {reviewedItemCount > 0 ? (
-            <SummaryRow count={reviewedItemCount} elapsedMs={reviewElapsedMs} label={t('desktop.reviewComplete.reviewed')} unit="item" />
+          {reviewedItemCount > 0 || showEmptyCounts ? (
+            <SummaryRow count={reviewedItemCount} elapsedMs={reviewedItemCount > 0 ? reviewElapsedMs : undefined} label={t('desktop.reviewComplete.reviewed')} unit="item" />
           ) : null}
-          {readTopicCount > 0 ? (
-            <SummaryRow count={readTopicCount} elapsedMs={readingElapsedMs} label={t('desktop.reviewComplete.read')} unit="topic" />
+          {readTopicCount > 0 || showEmptyCounts ? (
+            <SummaryRow count={readTopicCount} elapsedMs={readTopicCount > 0 ? readingElapsedMs : undefined} label={t('desktop.reviewComplete.read')} unit="topic" />
           ) : null}
           {createdItemCount > 0 || createdTopicCount > 0 ? (
             <div className="pt-4">
@@ -99,6 +107,7 @@ export function StudySessionCompleteSummary({
             </div>
           ) : null}
         </div>
+        {action ? <div className="mt-8 border-t border-[var(--role-content-line)] pt-6">{action}</div> : null}
       </div>
     </div>
   );

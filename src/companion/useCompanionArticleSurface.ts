@@ -173,6 +173,7 @@ export function useCompanionArticleSurface(
     onlyReviewSession: effectiveReviewSession,
     reviewSession: effectiveReviewSession,
     readingActivity,
+    flowSummary: flow.summary,
     flowError: flow.error,
     flowReady: flow.ready,
     flowHasTopics: flow.hasTopics,
