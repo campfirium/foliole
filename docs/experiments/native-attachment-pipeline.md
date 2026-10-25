@@ -32,3 +32,19 @@ checks. The sum of gaps between receive calls was 2,282 ms, with a 9 ms median.
 Some later requests were not ready when the preceding receive completed. This
 checkpoint does not establish zero waiting, a stable speedup, or cross-platform
 acceptance.
+
+
+The expanded run reused the existing acceptance library, group, coordinator,
+and two preparation slots with the original mixed input: 1,565 files totaling
+2,147,483,648 bytes. All final file hashes, lengths, and availability flags
+passed independent readback; the local pending queue was empty. The receive
+interval was 168,297 ms across 1,652 native requests. The sum of inter-request
+gaps was 22,835 ms, with a 6 ms median and a 1,318 ms maximum.
+
+The coordinator returned `backlog` after `sync_display_unavailable`, so this
+is a successful file-transfer observation rather than a passing whole-sync
+acceptance. The first independent-audit wait timed out; capturing the same audit
+later confirmed completion without another transfer. The driver now waits on
+the existing DOM phase marker instead of repeatedly parsing the full trace.
+The source patch includes the larger-input option; frozen data remains a local
+prerequisite. No production runtime behavior was activated by this checkpoint.

@@ -185,10 +185,10 @@ index 000000000..7f93bb4ff
 +}
 diff --git a/.lab/prototypes/T438/real-path/native-case.mjs b/.lab/prototypes/T438/real-path/native-case.mjs
 new file mode 100644
-index 000000000..4734657f6
+index 000000000..ee0c9fab3
 --- /dev/null
 +++ b/.lab/prototypes/T438/real-path/native-case.mjs
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,122 @@
 +/* global document */
 +import assert from 'node:assert/strict';
 +import fs from 'node:fs/promises';
@@ -208,10 +208,11 @@ index 000000000..4734657f6
 +const require = createRequire(import.meta.url);
 +const { _android } = require('playwright');
 +const label = process.argv[2];
-+if (!['baseline', 'prefetch', 'shared-queue', 'split-http', 'finalization', 'receipt-fixed-1', 'receipt-fixed-2', 'pipeline', 'pipeline-2'].includes(label)) {
++if (!['baseline', 'prefetch', 'shared-queue', 'split-http', 'finalization', 'receipt-fixed-1', 'receipt-fixed-2', 'pipeline', 'pipeline-2', 'mixed-2g'].includes(label)) {
 +  throw new Error('Expected a T438 experiment label.');
 +}
 +const root = path.resolve('.tmp/artifacts/T438/real-path');
++const mixed = label === 'mixed-2g';
 +const context = createMacosA5ExecutionContext({ action: 't234-webview-session', repoRoot: process.cwd() });
 +const paths = macosA5Paths(context);
 +const lease = acquireMacosA5DeviceLease(context, 'mutation');
@@ -229,8 +230,9 @@ index 000000000..4734657f6
 +  assert.ok(device, 'Fixed A5 is absent');
 +  const view = await device.webView({ pkg: info.appId, socketName: info.socket });
 +  page = await view.page();
-+  await page.waitForFunction(() => !document.querySelector('[data-testid="t438-run"]').disabled, undefined, { timeout: 60000 });
-+  await runExperiment(page);
++  await page.waitForFunction(() => !document.querySelector('[data-testid="t438-run"]').disabled, undefined, { timeout: mixed ? 240000 : 60000 });
++  if (process.argv.includes('--audit-only') || process.argv.includes('--capture-audit')) await verifyFiles(page);
++  else await runExperiment(page);
 +} catch (error) {
 +  const failure = { error: String(error), result: page && !page.isClosed()
 +    ? await page.getByTestId('t438-result').inputValue().catch(() => null) : null };
@@ -257,33 +259,46 @@ index 000000000..4734657f6
 +}
 +
 +async function runExperiment(page) {
-+  const reset = await action(page, 'reset');
-+  assert.equal(reset.milestones.findLast(row => row.phase.startsWith('reset-')).phase, 'reset-finished');
-+  await fs.writeFile(path.join(root, `android-${label}-reset.json`), JSON.stringify(reset));
++  if (!mixed) {
++    const reset = await action(page, 'reset');
++    assert.equal(reset.milestones.findLast(row => row.phase.startsWith('reset-')).phase, 'reset-finished');
++    await fs.writeFile(path.join(root, `android-${label}-reset.json`), JSON.stringify(reset));
++  }
 +  const triggeredAt = Date.now();
 +  await page.getByTestId('t438-run').click();
-+  await page.waitForFunction(start => JSON.parse(document.querySelector('[data-testid="t438-result"]').value)
-+    .milestones.some(row => row.at >= start && ['finished', 'failed'].includes(row.phase)), triggeredAt, { timeout: 240000 });
++  await page.waitForFunction(() => ['finished', 'failed'].includes(document.querySelector('[data-testid="t438-result"]').dataset.phase),
++    undefined, { timeout: mixed ? 900000 : 240000 });
 +  const result = JSON.parse(await page.getByTestId('t438-result').inputValue());
 +  await fs.writeFile(path.join(root, `android-native-${label}.json`), JSON.stringify({ triggeredAt, ...result }));
 +  collectTrace();
 +  assert.equal(result.milestones.findLast(row => row.phase === 'finished')?.detail.outcome, 'completed');
 +  assert.ok(result.native.some(row => row.at >= triggeredAt && row.method === 'postRequestSyncHttp' && row.attachment));
-+  const audit = await action(page, 'audit');
++  await verifyFiles(page);
++}
++
++async function verifyFiles(page) {
++  let audit;
++  if (process.argv.includes('--capture-audit')) {
++    await page.waitForFunction(() => document.querySelector('[data-testid="t438-result"]').dataset.phase.startsWith('audit-'),
++      undefined, { timeout: 240000 });
++    audit = JSON.parse(await page.getByTestId('t438-result').inputValue());
++  } else audit = await action(page, 'audit');
 +  await fs.writeFile(path.join(root, `android-native-${label}-audit.json`), JSON.stringify(audit));
 +  const proof = audit.milestones.findLast(row => row.phase.startsWith('audit-'));
 +  assert.equal(proof.phase, 'audit-passed');
-+  assert.equal(proof.detail.files.length, 196);
-+  assert.equal(proof.detail.bytes, 100073172);
-+  process.stdout.write(JSON.stringify({ label, outcome: 'completed', files: 196, bytes: proof.detail.bytes }) + '\n');
++  assert.equal(proof.detail.files.length, mixed ? 1565 : 196);
++  assert.equal(proof.detail.bytes, mixed ? 2147483648 : 100073172);
++  process.stdout.write(JSON.stringify({ label, scope: 'independent-file-audit', files: proof.detail.files.length, bytes: proof.detail.bytes }) + '\n');
 +}
 +
 +async function action(page, name) {
 +  const started = Date.now();
 +  await page.getByTestId(`t438-${name}`).click();
-+  await page.waitForFunction(({ name, started }) => JSON.parse(document.querySelector('[data-testid="t438-result"]').value)
-+    .milestones.some(row => row.at >= started && row.phase.startsWith(name + '-')), { name, started }, { timeout: 60000 });
-+  return JSON.parse(await page.getByTestId('t438-result').inputValue());
++  await page.waitForFunction(name => !document.querySelector(`[data-testid="t438-${name}"]`).disabled
++    && document.querySelector('[data-testid="t438-result"]').dataset.phase.startsWith(name + '-'), name, { timeout: mixed ? 240000 : 60000 });
++  const result = JSON.parse(await page.getByTestId('t438-result').inputValue());
++  assert.ok(result.milestones.some(row => row.at >= started && row.phase.startsWith(name + '-')));
++  return result;
 +}
 +
 +function collectTrace() {
@@ -291,7 +306,8 @@ index 000000000..4734657f6
 +    captured: (command, args, options) => {
 +      const raw = captured(command, [...args.filter(value => value !== 'Capacitor/Console:I')
 +        .map(value => value === 'FolioleSyncHttp:D' ? 'T438NativeQueue:I' : value), 'T438NativeFile:I'], options);
-+      require('node:fs').writeFileSync(path.join(root, `native-${label}.log`), raw);
++      const suffix = process.argv.includes('--audit-only') ? '-audit' : '';
++      require('node:fs').writeFileSync(path.join(root, `native-${label}${suffix}.log`), raw);
 +      return raw;
 +    }, paths, serial: '87a33a4b' });
 +}
@@ -669,16 +685,16 @@ index 000000000..ab7d8ba46
 +}
 diff --git a/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs b/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs
 new file mode 100644
-index 000000000..cf57b8ac8
+index 000000000..b80efca25
 --- /dev/null
 +++ b/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs
-@@ -0,0 +1,138 @@
+@@ -0,0 +1,169 @@
 +/* global AbortController */
 +import assert from 'node:assert/strict';
 +import { getEventListeners } from 'node:events';
 +import test from 'node:test';
 +
-+import { waitForNativeDispatch } from './native-prepared-window.ts';
++import { prepareNativeWindow, pullPreparedNativeWindows, waitForNativeDispatch } from './native-prepared-window.ts';
 +import { runNativePreparedPulls } from './native-request-prefetch.ts';
 +
 +function gate() {
@@ -686,6 +702,37 @@ index 000000000..cf57b8ac8
 +  const promise = new Promise(done => { resolve = done; });
 +  return { promise, resolve };
 +}
++
++test('a large file sends all four bounded windows and closes every prepared request', async () => {
++  const resource = { storageKey: 'a'.repeat(64) + '.epub', byteLength: 64 * 1024 * 1024 };
++  const prepared = [], sent = [], closed = [];
++  let offset = 0;
++  const exchange = {
++    async prepareAttachment(query) {
++      prepared.push(query.offset);
++      let closing;
++      return {
++        async send() {
++          assert.equal(query.offset, offset);
++          sent.push(query.offset);
++          offset += 16 * 1024 * 1024;
++          return { offset, blocks: 32, pending: offset !== resource.byteLength };
++        },
++        async close() { return closing ??= Promise.resolve().then(() => closed.push(query.offset)); }
++      };
++    }
++  };
++  const host = { async receiveWindow(_resource, _offset, execute) { return execute(); } };
++  const window = await prepareNativeWindow(exchange, resource, 0);
++  const result = await pullPreparedNativeWindows(host, exchange, {
++    resource, initial: { kind: 'partial', offset: 0 }, window
++  }, () => false);
++  assert.deepEqual(result, { complete: true, blocks: 128 });
++  assert.equal(offset, resource.byteLength);
++  assert.deepEqual(sent, [0, 16, 32, 48].map(n => n * 1024 * 1024));
++  assert.deepEqual(prepared, sent);
++  assert.deepEqual(closed, sent);
++});
 +
 +test('the first two items prepare together and prepared items send consecutively in order', async () => {
 +  const keys = ['a', 'b', 'c', 'd'];
@@ -930,10 +977,10 @@ index 000000000..7e96e164b
 +}
 diff --git a/.lab/prototypes/T438/real-path/source-shell.mjs b/.lab/prototypes/T438/real-path/source-shell.mjs
 new file mode 100644
-index 000000000..b0a707511
+index 000000000..6cb1ba6f3
 --- /dev/null
 +++ b/.lab/prototypes/T438/real-path/source-shell.mjs
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,82 @@
 +import console from 'node:console';
 +import { createHash, randomUUID } from 'node:crypto';
 +import { mkdirSync } from 'node:fs';
@@ -945,10 +992,12 @@ index 000000000..b0a707511
 +import { app } from 'electron';
 +
 +import { withResourceGate } from '../../../../scripts/lib/resource-gate.mjs';
++import { extendSourceInput } from './extend-source-input.mjs';
 +
 +const repo = process.cwd();
 +const root = path.join(repo, '.tmp/artifacts/T438/real-path');
-+const runtime = path.join(root, 'android-baseline-rSHj1F/dist/electron');
++const mixed = process.argv.includes('--mixed-2g');
++const runtime = mixed ? path.join(repo, 'dist/electron') : path.join(root, 'android-baseline-rSHj1F/dist/electron');
 +const load = relative => import(pathToFileURL(path.join(runtime, relative)).href);
 +if (process.env.FOLIOLE_LIBRARY_HOME !== '/Users/roamer/Documents/Foliole Dev') throw new Error('test_library_required');
 +console.error('T438 source module loaded', { ready: app.isReady() });
@@ -969,10 +1018,11 @@ index 000000000..b0a707511
 +    initializeDatabase(undefined, { deferSearchIndex: true });
 +    markDatabaseReady();
 +    const invoke = (command, args = {}) => handleInvokeRequest({ command, args });
-+    const input = JSON.parse(await fs.readFile(path.join(root, 'performance-volume-100mb.json'), 'utf8'));
++    const input = JSON.parse(await fs.readFile(path.join(root, mixed ? 'mixed-2g-input.json' : 'performance-volume-100mb.json'), 'utf8'));
++    const readyFile = path.join(root, mixed ? 'mixed-existing-source-ready.json' : 'source-shell-ready.json');
 +    const stamp = new Date().toISOString();
 +    const reuse = process.argv.includes('--reuse-input');
-+    const nodeId = reuse ? JSON.parse(await fs.readFile(path.join(root, 'source-shell-ready.json'), 'utf8')).nodeId
++    const nodeId = reuse ? JSON.parse(await fs.readFile(readyFile, 'utf8')).nodeId
 +      : `t438-native-${randomUUID()}`;
 +    if (!reuse) {
 +    const snapshot = await invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
@@ -980,6 +1030,9 @@ index 000000000..b0a707511
 +      isTitleManual: true, content: '', reveal: null, anchorLink: null, position: snapshot.nodeOrder.length,
 +      nodeOrder: [...snapshot.nodeOrder, nodeId], createdAt: stamp, updatedAt: stamp };
 +    const created = await invoke('create_topic', payload);
++    if (mixed) {
++      await extendSourceInput({ load, input, nodeId, root });
++    } else {
 +    const references = [];
 +    for (const file of input.files) {
 +      const bytes = await fs.readFile(file.file);
@@ -996,10 +1049,11 @@ index 000000000..b0a707511
 +      baseVersionId: created.nodes.find(node => node.nodeId === nodeId).currentVersionId,
 +      versionId: randomUUID(), newImageReferences: references } });
 +    }
++    }
 +    const deviceId = await runWithDatabaseConnectionOwner(() => loadOrCreateDesktopDeviceId());
 +    const server = await ensureLanWorkspaceSyncServer({ appVersion: '0.7.16', deviceId });
 +    if (server.state !== 'running' || server.port !== 38645) throw new Error('production_source_not_listening');
-+    await fs.writeFile(path.join(root, 'source-shell-ready.json'), JSON.stringify({ nodeId, server,
++    await fs.writeFile(readyFile, JSON.stringify({ nodeId, server,
 +      files: input.files.map(({ key, bytes }) => ({ key, bytes })), productWindows: 0, at: Date.now() }, null, 2));
 +    console.log('T438 source ready without product windows');
 +    await new Promise(resolve => { process.once('SIGINT', resolve); process.once('SIGTERM', resolve); });
@@ -1011,10 +1065,10 @@ index 000000000..b0a707511
 +}).catch(error => { console.error(error); app.exit(1); });
 diff --git a/.lab/prototypes/T438/real-path/stage-android.mjs b/.lab/prototypes/T438/real-path/stage-android.mjs
 new file mode 100644
-index 000000000..442802c35
+index 000000000..d21f3c170
 --- /dev/null
 +++ b/.lab/prototypes/T438/real-path/stage-android.mjs
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,87 @@
 +import { createHash } from 'node:crypto';
 +import { execFileSync } from 'node:child_process';
 +import { promises as fs } from 'node:fs';
@@ -1057,12 +1111,14 @@ index 000000000..442802c35
 +await fs.symlink(path.join(repo, controller, 'leases'), path.join(root, controller, 'leases'));
 +const overrides = [];
 +if (process.argv.includes('--shell')) {
-+  for (const [name, target] of [['android-shell', 'main.tsx'], ['native-observation', 'native-observation.ts'],
++  const entry = 'android-shell';
++  for (const [name, target] of [[entry, 'main.tsx'], ['native-observation', 'native-observation.ts'],
 +    ['native-audit', 'native-audit.ts'], ['shell-result-phase', 'shell-result-phase.ts']]) {
 +    const original = await fs.readFile(path.join(repo, '.lab/prototypes/T438/real-path', `${name}.ts`), 'utf8');
 +    let source = original.replaceAll('../../../../src/', '../').replaceAll('../../../../lib/', '../../lib/');
-+    if (name === 'android-shell') {
-+      const input = JSON.parse(await fs.readFile(path.join(parent, 'performance-volume-100mb.json'), 'utf8'));
++    if (name === entry) {
++      const inputName = process.argv.includes('--mixed-2g') ? 'mixed-2g-input.json' : 'performance-volume-100mb.json';
++      const input = JSON.parse(await fs.readFile(path.join(parent, inputName), 'utf8'));
 +      source = source.replace('const expected: { key: string; bytes: number }[] = [];',
 +        `const expected: { key: string; bytes: number }[] = ${JSON.stringify(input.files.map(({ key, bytes }) => ({ key, bytes })))};`);
 +    }
@@ -1348,4 +1404,48 @@ index 000000000..903bb8748
 +            file.write(bytes);
 +            android.util.Log.i("T438NativeFile", "key=" + traceKey + " action=append phase=finish at=" + System.currentTimeMillis() + " bytes=" + bytes.length);`);
 +  await write(receivePath, receive);
++}
+diff --git a/.lab/prototypes/T438/real-path/extend-source-input.mjs b/.lab/prototypes/T438/real-path/extend-source-input.mjs
+new file mode 100644
+index 000000000..79da56a58
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/extend-source-input.mjs
+@@ -0,0 +1,38 @@
++import fs from 'node:fs/promises';
++import path from 'node:path';
++
++export async function extendSourceInput({ load, input, nodeId, root }) {
++  const { publishImmutableAttachment } = await load('attachments/publishImmutableAttachment.js');
++  const { resolveRuntimeDataPaths } = await load('database/runtimeDataPaths.js');
++  const { openDatabaseConnection, runWithDatabaseConnectionOwner } = await load('database/connection.js');
++  const { flushNodeSyncVersion } = await load('database/nodeSyncVersions.js');
++  const assets = resolveRuntimeDataPaths().assetsDir;
++  for (const file of input.files) {
++    await publishImmutableAttachment(path.join(assets, file.key), file.key.slice(0, 64),
++      temporary => fs.copyFile(file.file, temporary));
++  }
++  const references = input.files.map(file => ({ storage_key: file.key, role: 'reference', original_name: path.basename(file.file) }));
++  await runWithDatabaseConnectionOwner(() => {
++    const { driver } = openDatabaseConnection();
++    driver.transaction(() => {
++      driver.execute('UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = ?', [JSON.stringify(references), nodeId]);
++      flushNodeSyncVersion(nodeId);
++    });
++  });
++  const { default: Database } = await import('better-sqlite3');
++  const previous = new Database(path.join(root, '..', 'renewal-full-20261025/library/Data/foliole.db'), { readonly: true });
++  try {
++    for (const file of input.files.filter(file => file.key.endsWith('.pdf'))) {
++      const id = file.key.slice(0, 64);
++      const pages = previous.prepare('SELECT page, text, page_width, page_height FROM pdf_page_text WHERE attachment_id = ?').all(id);
++      await runWithDatabaseConnectionOwner(() => {
++        const { sqlite } = openDatabaseConnection();
++        sqlite.transaction(() => {
++          sqlite.prepare("INSERT OR IGNORE INTO pdf_index_state(attachment_id,status,indexed_at,version,attempt) VALUES (?,'ready','now',1,1)").run(id);
++          const insert = sqlite.prepare('INSERT OR IGNORE INTO pdf_page_text(attachment_id,page,text,page_width,page_height) VALUES (?,?,?,?,?)');
++          for (const page of pages) insert.run(id, page.page, page.text, page.page_width, page.page_height);
++        })();
++      });
++    }
++  } finally { previous.close(); }
 +}
