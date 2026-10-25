@@ -103,7 +103,7 @@ function failReadingWrite(nodeId: string) {
     WHEN NEW.node_id = '${nodeId}' BEGIN SELECT RAISE(ABORT, 'reading storage failure'); END`);
 }
 
-it('shows committed partial reading state and does not repeat the dismissed item after failure or reopen', async () => {
+it('rolls back both reading records after a related write fails and retries after reopening', async () => {
   const initial = await loadCompanionWorkspaceSyncState();
   const ui = renderSurface(initial);
   await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
@@ -111,22 +111,26 @@ it('shows committed partial reading state and does not repeat the dismissed item
   failReadingWrite('last');
   await act(() => ui.result.current.handleDismissReviewTopic());
   const stored = await loadCompanionWorkspaceSyncState();
-  expect(stored.workspace_snapshot?.nodesById.first?.reading?.state).toBe('dismissed');
+  expect(stored.workspace_snapshot?.nodesById.first?.reading?.state).toBe('active');
   expect(stored.workspace_snapshot?.nodesById.last?.reading?.state).toBe('locked');
   expect(ui.result.current.readingError).toBeTruthy();
   expect(ui.result.current.state.workspace_snapshot).toEqual(stored.workspace_snapshot);
   const rows = database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
-  database!.exec('DROP TRIGGER fail_reading');
   await act(() => ui.result.current.handleDismissReviewTopic());
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);
+  database!.exec('DROP TRIGGER fail_reading');
   ui.unmount();
   await closeIosCompanionDatabase();
   await openLibrary();
   const reopened = await loadCompanionWorkspaceSyncState();
-  expect(reopened.workspace_snapshot?.nodesById.first?.reading?.state).toBe('dismissed');
+  expect(reopened.workspace_snapshot?.nodesById.first?.reading?.state).toBe('active');
   expect(reopened.workspace_snapshot?.nodesById.last?.reading?.state).toBe('locked');
   const reopenedUi = renderSurface(reopened);
-  expect(reopenedUi.result.current.session.currentCard).toBeNull();
+  await waitFor(() => expect(reopenedUi.result.current.session.currentCard?.nodeId).toBe('first'));
+  await act(() => reopenedUi.result.current.handleDismissReviewTopic());
+  expect(reopenedUi.result.current.readingError).toBeNull();
+  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.first?.reading?.state).toBe('dismissed');
+  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.last?.reading?.state).toBe('active');
   reopenedUi.unmount();
 });
 
@@ -145,10 +149,9 @@ it('allows retry after the first write fails without advancing either topic', as
   ui.unmount();
 });
 
-it.each(['partial', 'complete'] as const)('recovers a failed refresh after %s saving before accepting another action', async (outcome) => {
+it('recovers a failed refresh after a committed save without repeating the mutation', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
   await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
-  if (outcome === 'partial') failReadingWrite('last');
   const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation');
   refresh.mockResolvedValueOnce(ui.result.current.state.workspace_snapshot);
   refresh.mockRejectedValueOnce(new Error('Read unavailable'));
@@ -156,14 +159,12 @@ it.each(['partial', 'complete'] as const)('recovers a failed refresh after %s sa
   expect(ui.result.current.readingError).toBeTruthy();
   expect(ui.result.current.session.currentCard?.nodeId).toBe('first');
   const rows = database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
-  if (outcome === 'partial') database!.exec('DROP TRIGGER fail_reading');
   refresh.mockRejectedValueOnce(new Error('Read still unavailable'));
   await act(() => ui.result.current.handleReadReviewTopic());
   expect(ui.result.current.readingError).toBeTruthy();
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);
   await act(() => ui.result.current.handleReadReviewTopic());
-  if (outcome === 'complete') expect(ui.result.current.readingError).toBeNull();
-  else expect(ui.result.current.readingError).toBeTruthy();
+  expect(ui.result.current.readingError).toBeNull();
   expect(ui.result.current.session.currentCard?.nodeId).not.toBe('first');
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);
   expect(ui.result.current.state.workspace_snapshot).toEqual((await loadCompanionWorkspaceSyncState()).workspace_snapshot);
