@@ -3,11 +3,12 @@ import type { PersistedImportRecord, PreparedImportHighlightRecord, PreparedImpo
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
-import { replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
+import { readExistingChildHighlights, replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
 
 export function persistImportedHighlightNodes(input: {
   anchoredContent: string;
   driver: DatabaseDriver;
+  existingHighlightChildren: ReturnType<typeof readExistingChildHighlights>;
   duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
   importedAt: string;
   nodeId: string;
@@ -23,9 +24,16 @@ export function persistImportedHighlightNodes(input: {
   if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar' || input.resetImportedStructure) {
     replaceImportedHighlightNodes({
       driver: input.driver,
+      existingChildren: input.existingHighlightChildren,
       ...(input.budgetFailures ? { budgetFailures: input.budgetFailures } : {}),
       ...(input.rejectedHighlights ? { rejectedHighlights: input.rejectedHighlights } : {}),
-      highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
+      highlights: [
+        ...input.matchedAnchoredHighlights,
+        ...(input.prepared.unmatchedHighlights ?? []),
+        ...(input.prepared.matchedHighlights ?? []).filter(highlight => !input.matchedAnchoredHighlights.some(
+          anchored => highlight.nodeId ? anchored.nodeId === highlight.nodeId : anchored.content === highlight.content
+        ))
+      ],
       importedAt: input.importedAt,
       ...(input.prepareDeletionVersions ? { prepareDeletionVersions: input.prepareDeletionVersions } : {}),
       parentNodeId: input.nodeId,

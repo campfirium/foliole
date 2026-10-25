@@ -80,7 +80,7 @@ it('transfers learning deletion facts without a live node entity', async () => {
   expect(target.db.prepare("SELECT id FROM nodes WHERE id = 'removed-node'").get()).toBeUndefined();
 });
 
-it('keeps deletion facts for discarded imported highlights and does not tombstone replacement identities', () => {
+it('retains imported highlights and learning facts when the new source omits them', () => {
   const peer = createPeer('source');
   edit(peer, 'body');
   peer.db.exec("UPDATE nodes SET is_title_manual = 0");
@@ -97,9 +97,9 @@ it('keeps deletion facts for discarded imported highlights and does not tombston
   replaceImportedHighlightNodes({ driver: peer.driver, highlights: [], importedAt: '2026-10-01',
     parentNodeId: 'parent', parentContent: '',
     prepareDeletionVersions: (ids, at) => prepareImportedNodeDeletionVersions(peer.driver, ids, at) });
-  expect(peer.db.prepare("SELECT node_id FROM node_sync_tombstones WHERE node_id='topic'").pluck().get()).toBe('topic');
-  expect(peer.db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id='topic' AND deleted_at IS NULL")
-    .pluck().get()).toBe(0);
+  expect(peer.db.prepare("SELECT node_id FROM node_sync_tombstones WHERE node_id='topic'").get()).toBeUndefined();
+  expect(peer.db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id='topic' AND object_type IN ('node_reading','node_review') AND deleted_at IS NULL")
+    .pluck().get()).toBe(2);
 });
 
 it('does not create a node tombstone for a highlight identity rebuilt by the same import', () => {

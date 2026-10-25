@@ -41,7 +41,7 @@ export async function prepareReadwiseSourceResync(
   const document = {
     ...prepared,
     annotations: await runWithDatabaseConnectionOwner(() => (
-      mergeRetainedReadwiseAnnotations(target, prepared.annotations)
+      mergeRetainedReadwiseAnnotations(target, prepared.annotations, { unlocateMissing: true })
     ))
   };
   if (document.category !== 'epub') return { cover: null, document, images: null };

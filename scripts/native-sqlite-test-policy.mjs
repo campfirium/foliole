@@ -1,6 +1,7 @@
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  'electron/database/importReimportLearning.integration.test.ts',
   'lib/core/database/companionSnapshotReadwiseSources.test.ts',
   'lib/core/database/companionTopicSearchDefinitions.test.ts',
   'electron/database/sqlStatementMeter.test.ts',

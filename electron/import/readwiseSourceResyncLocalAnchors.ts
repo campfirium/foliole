@@ -1,6 +1,7 @@
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { findUniqueAvailableImportedBodyOccurrence } from '../../lib/core/database/importHighlightBodyMatching.js';
+import { placeUnlocatedChildHighlightsLast } from '../../lib/core/database/importPipelineHighlightNodes.js';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -49,6 +50,7 @@ export function relocateReadwiseSourceLocalAnchors(input: {
       [anchorLink, input.importedAt, row.id]
     );
   }
+  placeUnlocatedChildHighlightsLast(driver, input.rootNodeId);
 }
 
 export function captureReadwiseSourceLocalAnchors(

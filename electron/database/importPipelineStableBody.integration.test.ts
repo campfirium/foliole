@@ -66,8 +66,8 @@ it.each(['default', 'body_with_highlight_sidecar'] as const)('preserves new, dup
   assertOwnedBody(first.nodeId, next.content);
   const { driver } = openDatabaseConnection();
   const children = driver.queryAll<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ?', [first.nodeId]);
-  expect(children).toHaveLength(1);
-  const child = children[0];
+  expect(children).toHaveLength(2);
+  const child = children.find(row => loadNodeBodyResolution(driver, row.id)?.content === 'Prefix');
   if (!child) throw new Error('import_child_missing');
   expect(loadNodeBodyResolution(driver, child.id)).toMatchObject({ content: 'Prefix' });
   expect(recordPreparedImportFailure(next, 'source_read_failed'))

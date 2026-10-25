@@ -9,6 +9,7 @@ import {
   type ImportSourceRow,
   resolveExistingImportTarget
 } from './importPipelineExistingTarget.js';
+import { readExistingChildHighlights } from './importPipelineHighlightNodes.js';
 import { persistImportedHighlightNodes } from './importPipelineHighlightPersistence.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import { establishImportedNodeIdentity } from './importPipelineProvenance.js';
@@ -148,6 +149,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
       resultStatus: 'degraded'
     }, budgetFailures));
   }
+  const existingHighlightChildren = existingNode ? readExistingChildHighlights(driver, existingNode.id) : [];
   const anchoredImport = resolveAnchoredImport(prepared, options);
   const nodeId = resolvePreparedNodeId({
     anchoredContent: anchoredImport.content,
@@ -161,6 +163,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
   persistImportedHighlightNodes({
     anchoredContent: anchoredImport.content,
     driver,
+    existingHighlightChildren,
     duplicateSemantic,
     importedAt: baseRecord.importedAt,
     ...(options.prepareDeletionVersions ? { prepareDeletionVersions: options.prepareDeletionVersions } : {}),

@@ -56,13 +56,21 @@ async function seedReaderFixture(app: ElectronApplication) {
       const result = materialization.materializeReadwiseApiDocument({
         config: settings.createDefaultReadwiseReaderConfig(), connectionRef, destination: 'inbox', importedAt,
         document: {
-          annotations: [], body: '# Source\n\nInitial body from Readwise.', category: 'article',
+          annotations: [{ content: 'Initial excerpt', contentHash: 'excerpt', kind: 'highlight',
+            locatorText: 'Initial body from Readwise.', parentRemoteId: 't185-source', remoteId: 't392-excerpt', updatedAt: importedAt }], body: '# Source\n\nInitial body from Readwise.', category: 'article',
           coverImageUrl: null, degradedReason: null, id: 't185-source',
           metadata: { author: null, category: 'article', readerUrl: null, sourceUrl: null, title: 'T185 Source' },
           title: 'T185 Source', unmatchedAnnotationCount: 0, updatedAt: importedAt
         }
       });
       if (result.status !== 'imported') throw new Error(`seed_failed:${JSON.stringify(result)}`);
+      const driver = connection.openDatabaseConnection().driver;
+      const excerpt = driver.queryOne("SELECT id FROM nodes WHERE content='Initial excerpt'");
+      if (!excerpt) throw new Error('seed_excerpt_missing');
+      driver.execute("INSERT INTO node_review (node_id,due,reps) VALUES (?,'2026-11-01',4)", [excerpt.id]);
+      driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
+        due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
+        VALUES ('t392-log','t392-op','test',?,3,'test',?,'2026-09-13','2026-11-01',1,2,3,4)`, [excerpt.id, importedAt]);
     });
   });
 }
@@ -99,6 +107,9 @@ async function inspect(app: ElectronApplication) {
         FROM import_sources WHERE remote_document_id='t185-source'`);
       if (!source) return null;
       return {
+        excerpt: driver.queryOne(`SELECT n.id,n.content,n.deleted_at,n.anchor_link,r.due,r.reps
+          FROM nodes n LEFT JOIN node_review r ON r.node_id=n.id WHERE n.content='Initial excerpt'`),
+        logs: driver.queryAll("SELECT * FROM review_log WHERE op_id='t392-op'"),
         body: body.loadNodeBodyResolution(driver, source.nodeId)?.content,
         directFetchCount: runtime.__T185_DIRECT_FETCH_COUNT__ ?? 0,
         nodeId: source.nodeId,
@@ -114,6 +125,20 @@ async function openResyncMenu(session: T178AcceptanceSession, nodeId: string) {
   const item = session.firstWindow.getByRole('menuitem', { name: /^(Resync from Readwise|从 Readwise 重新同步)$/ });
   await expect(item).toBeVisible();
   return item;
+}
+
+async function expectRetainedExcerpt(session: T178AcceptanceSession, before: Awaited<ReturnType<typeof inspect>>) {
+  const after = await inspect(session.electronApp);
+  expect(after?.excerpt).toMatchObject({ id: before?.excerpt.id, content: 'Initial excerpt', deleted_at: null,
+    due: '2026-11-01', reps: 4 });
+  expect(after?.excerpt.anchor_link ?? '').not.toContain('locator');
+  expect(after?.logs).toEqual(before?.logs);
+  const topics = session.firstWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
+  await topics.getByRole('button', { name: /^(Expand all topics|展开全部主题)$/ }).click();
+  const excerpt = topics.locator(`[role="treeitem"][data-node-id="${before!.excerpt.id}"]`);
+  await expect(excerpt).toBeVisible();
+  await excerpt.click();
+  await expect(session.firstWindow.locator('.prompt-editor-host')).toContainText('Initial excerpt');
 }
 
 test('cancels safely and repeatedly resyncs one Reader source in place', async ({ browserName }, testInfo) => {
@@ -164,6 +189,7 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
     await expect.poll(() => inspect(session!.electronApp)).toMatchObject({
       body: expect.stringContaining('Third body'), directFetchCount: 2, nodeId: before!.nodeId
     });
+    await expectRetainedExcerpt(session, before);
     const completed = path.join(ARTIFACT_DIR, `completed-${process.platform}.png`);
     await session.firstWindow.screenshot({ path: completed });
     await testInfo.attach('t185-1-completed', { contentType: 'image/png', path: completed });

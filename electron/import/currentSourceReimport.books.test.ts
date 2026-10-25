@@ -197,7 +197,7 @@ it('forces Books re-import to rebuild from source instead of cached inventory', 
   expect(readNodeContent(nodeId)).not.toContain('stale cached quote');
 });
 
-it('resets an already imported Books node before rebuilding its placeholder', async () => {
+it('rebuilds a Books placeholder while retaining excerpts and learning from retired chapters', async () => {
   await prepareBooksSource();
   await runReadwiseReaderImport();
 
@@ -211,11 +211,31 @@ it('resets an already imported Books node before rebuilding its placeholder', as
     )
     .run('book-child-1', nodeId, 'Imported chapter', 'Imported chapter body', '2026-05-22T00:00:00.000Z', '2026-05-22T00:00:00.000Z');
 
-  await expect(reimportCurrentTopicSource(nodeId)).resolves.toMatchObject({
-    node_id: nodeId,
-    status: 'reimported'
-  });
-  expect(readActiveChildNodeIds(nodeId)).toEqual([]);
+  const { driver } = openDatabaseConnection();
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,content,anchor_link,created_at,updated_at)
+    VALUES ('saved-excerpt','book-child-1','item','My excerpt','My edited answer',?,?,?)`,
+  [JSON.stringify({ id: 'saved-anchor', kind: 'cloze', locator: { from: 0, to: 8, originalText: 'old text' } }),
+    '2026-05-22', '2026-05-22']);
+  driver.execute("INSERT INTO node_review (node_id,due,reps) VALUES ('saved-excerpt','2026-11-01',4)");
+  driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
+    due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
+    VALUES ('saved-log','saved-op','test','saved-excerpt',3,'test','2026-05-22','2026-05-22','2026-11-01',1,2,3,4)`);
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,content,is_title_manual,created_at,updated_at)
+    VALUES ('unlocated-excerpt','book-child-1','topic','Unlocated','Saved quote',0,'2026-05-22','2026-05-22')`);
+  const before = driver.queryAll('SELECT * FROM review_log');
+  for (let i = 0; i < 2; i += 1) {
+    await expect(reimportCurrentTopicSource(nodeId)).resolves.toMatchObject({ node_id: nodeId, status: 'reimported' });
+    expect(driver.queryOne('SELECT content,anchor_link,deleted_at FROM nodes WHERE id=?', ['saved-excerpt']))
+      .toEqual({ content: 'My edited answer', anchor_link: JSON.stringify({ id: 'saved-anchor', kind: 'cloze' }), deleted_at: null });
+    expect(driver.queryOne('SELECT due,reps FROM node_review WHERE node_id=?', ['saved-excerpt']))
+      .toEqual({ due: '2026-11-01', reps: 4 });
+    expect(driver.queryAll('SELECT * FROM review_log')).toEqual(before);
+  }
+  const group = driver.queryOne<{ parent_id: string }>('SELECT parent_id FROM nodes WHERE id=?', ['saved-excerpt'])!;
+  expect(driver.queryOne('SELECT title,parent_id FROM nodes WHERE id=?', [group.parent_id]))
+    .toEqual({ title: '※', parent_id: nodeId });
+  expect(readActiveChildNodeIds(nodeId)).toEqual([group.parent_id]);
+  expect(readActiveChildNodeIds(group.parent_id)).toEqual(['saved-excerpt', 'unlocated-excerpt']);
   expect(readNodeContent(nodeId)).toContain('Full text of this document omitted because this document is an EPUB');
   expect(readNodeContent(nodeId)).toContain('book quote');
 });

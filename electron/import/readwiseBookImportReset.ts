@@ -10,6 +10,7 @@ import {
   createReadwiseBookNotFoundResetResult
 } from './readwiseBookImportResetResults.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
+import { preserveReadwiseBookExcerpts } from './readwiseBookReimportPreservation.js';
 import { isRemovedReadwiseBookNode } from './readwiseBookRemovedSourceState.js';
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 import type { ReadwiseBooksInventory } from './readwiseBooksInventory.js';
@@ -128,7 +129,9 @@ function rebuildPlaceholderNode(book: ReadwiseBookInventoryItem, nodeId: string)
 
 function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventoryItem) {
   const updatedAt = new Date().toISOString();
-  const descendantNodeIds = listDescendantNodeIds(activeNode.id);
+  const preservedIds = preserveReadwiseBookExcerpts({ bookKey: book.bookKey, driver: openDatabaseConnection().driver,
+    importedAt: updatedAt, rootNodeId: activeNode.id });
+  const descendantNodeIds = listDescendantNodeIds(activeNode.id).filter(id => !preservedIds.has(id));
   if (descendantNodeIds.length > 0) {
     deleteNodesPermanently({
       nodeIds: descendantNodeIds,
@@ -196,7 +199,9 @@ async function resetReadwiseBookImportTarget(
     };
   }
 
-  const { descendantNodeIds, placeholderContent, resetBook, updatedAt } = resetImportedTree(activeNode, book);
+  const { descendantNodeIds, placeholderContent, resetBook, updatedAt } = openDatabaseConnection().driver.transaction(
+    () => resetImportedTree(activeNode, book)
+  );
 
   savePersistedReadwiseBookMovedToTop(
     {

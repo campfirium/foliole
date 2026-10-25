@@ -1,16 +1,15 @@
 import type { PreparedImportHighlightRecord } from '../import/contract.js';
 
+import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import { bodyPartPrefix } from './bodyPartitionIdentity.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { findUniqueAvailableImportedBodyOccurrence } from './importHighlightBodyMatching.js';
 import { filterImportHighlightsWithinBudget } from './importHighlightTextBudget.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
-import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
-import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
 import { loadDerivedNodeOrder } from './parentChildOrder.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
-import { collectTextBodyBlobCandidates } from './textBodyBlobCollection.js';
 
 interface ExistingChildHighlightRow {
   [column: string]: unknown;
@@ -46,42 +45,20 @@ function isGeneratedImportedChild(row: ExistingChildHighlightRow) {
   return isImportedAnchorLink(row.anchor_link) || (!row.anchor_link && row.is_title_manual === 0);
 }
 
-function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: string[], deletedAt: string,
-  replacementIds: Set<string>, prepareDeletionVersions?: (nodeIds: string[], deletedAt: string) => void) {
-  if (nodeIds.length === 0) {
-    return;
+function detachMissingHighlights(driver: DatabaseDriver, rows: ExistingChildHighlightRow[], importedAt: string) {
+  for (const row of rows) {
+    const anchor = parseStoredAnchorLink(row.anchor_link);
+    driver.execute(
+      `UPDATE nodes SET anchor_link = ?, image_regions = NULL, updated_at = ?, sync_dirty = 1 WHERE id = ?`,
+      [anchor ? JSON.stringify({ id: anchor.id, kind: anchor.kind, origin: 'imported' }) : null, importedAt, row.id]
+    );
   }
-  const bodyHashes = driver.queryAll<{ body_blob_hash: string }>(
-    `SELECT body_blob_hash FROM nodes WHERE id IN (SELECT value FROM json_each(?))
-     AND body_blob_hash IS NOT NULL`, [JSON.stringify(nodeIds)]).map((row) => row.body_blob_hash);
-  const deleteReviewLog = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
-  const deleteNodeReview = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
-  const deleteNodeReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingHostState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
-  const deleteNodeViewState = driver.prepare('DELETE FROM node_view_state WHERE node_id = ?');
-  const deleteNode = driver.prepare('DELETE FROM nodes WHERE id = ?');
-  const discardedIds = nodeIds.filter((nodeId) => !replacementIds.has(nodeId));
-  if (prepareDeletionVersions) {
-    prepareDeletionVersions(discardedIds, deletedAt);
-    writeNodeSyncTombstonesForPermanentDelete(driver, discardedIds, deletedAt);
-  }
-  nodeIds.forEach((nodeId) => {
-    recordNodeRelatedStateDeletion(driver, nodeId, deletedAt);
-    if (!replacementIds.has(nodeId)) retireUnversionedDeletedNodeState(driver, nodeId);
-    deleteReviewLog.run([nodeId]);
-    deleteNodeReview.run([nodeId]);
-    deleteNodeReading.run([nodeId]);
-    deleteNodeReadingHostState.run([nodeId]);
-    deleteNodeViewState.run([nodeId]);
-  });
-  [...nodeIds].reverse().forEach((nodeId) => deleteNode.run([nodeId]));
-  collectTextBodyBlobCandidates(driver, bodyHashes);
-  rewriteExistingNodeOrder(driver, loadDerivedNodeOrder(driver));
 }
 
 export function replaceImportedHighlightNodes(input: {
   driver: DatabaseDriver;
-  highlights: AnchoredImportedHighlightRecord[];
+  existingChildren?: ExistingChildHighlightRow[];
+  highlights: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord>;
   importedAt: string;
   parentNodeId: string;
   parentContent: string;
@@ -89,28 +66,27 @@ export function replaceImportedHighlightNodes(input: {
   budgetFailures?: string[];
   rejectedHighlights?: PreparedImportHighlightRecord[];
 }) {
-  const existingChildren = readExistingChildHighlights(input.driver, input.parentNodeId).filter(isGeneratedImportedChild);
+  const children = input.existingChildren ?? readExistingChildHighlights(input.driver, input.parentNodeId);
+  relocateLocalTextHighlights(input, children.filter(row => !isGeneratedImportedChild(row)));
+  const existingChildren = children.filter(isGeneratedImportedChild);
   const bounded = filterImportHighlightsWithinBudget(input.highlights, input.parentContent, input.budgetFailures);
-  const rejected = [...bounded.rejected, ...(input.rejectedHighlights ?? [])];
-  const rejectedIds = new Set(rejected.flatMap(highlight => highlight.nodeId ? [highlight.nodeId] : []));
-  const preserveUnknown = rejected.some(highlight => !highlight.nodeId);
-  const replaceable = existingChildren.filter(row => !preserveUnknown && !rejectedIds.has(row.id));
+  const usedIds = new Set(bounded.highlights.flatMap(highlight => highlight.nodeId ? [highlight.nodeId] : []));
   const highlights = bounded.highlights.map(highlight => {
-    if (!preserveUnknown || highlight.nodeId) return highlight;
-    const matches = existingChildren.filter(row => row.content === highlight.content);
-    return matches.length === 1 ? { ...highlight, nodeId: matches[0]!.id } : highlight;
+    if (highlight.nodeId) return highlight;
+    const matches = existingChildren.filter(row => {
+      if (usedIds.has(row.id)) return false;
+      const locator = parseStoredAnchorLink(row.anchor_link)?.locator;
+      const sourceText = locator && 'originalText' in locator ? locator.originalText : row.content;
+      return sourceText === (highlight.locatorText ?? highlight.content);
+    });
+    if (matches.length !== 1) return highlight;
+    usedIds.add(matches[0]!.id);
+    return { ...highlight, nodeId: matches[0]!.id };
   });
-  deleteGeneratedImportedChildNodes(input.driver, replaceable.map((row) => row.id), input.importedAt,
-    new Set(highlights.flatMap((highlight) => highlight.nodeId ? [highlight.nodeId] : [])),
-    input.prepareDeletionVersions);
-  enqueueWorkspaceSearchInvalidationForNodeIds(
-    input.driver,
-    existingChildren.map((row) => row.id)
-  );
-  if (highlights.length === 0) {
-    return 0;
-  }
-  return insertImportedHighlightNodes({
+  const missing = existingChildren.filter(row => !usedIds.has(row.id));
+  detachMissingHighlights(input.driver, missing, input.importedAt);
+  enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, existingChildren.map(row => row.id));
+  const count = insertImportedHighlightNodes({
     driver: input.driver,
     highlights,
     ...(input.budgetFailures ? { budgetFailures: input.budgetFailures } : {}),
@@ -118,4 +94,35 @@ export function replaceImportedHighlightNodes(input: {
     parentNodeId: input.parentNodeId,
     parentContent: input.parentContent
   });
+  placeUnlocatedChildHighlightsLast(input.driver, input.parentNodeId, highlights
+    .filter(highlight => !('from' in highlight) || typeof highlight.from !== 'number')
+    .flatMap(highlight => highlight.nodeId ? [highlight.nodeId] : []));
+  return count;
+}
+
+export function placeUnlocatedChildHighlightsLast(driver: DatabaseDriver, parentNodeId: string, additionalIds: string[] = []) {
+  const unlocatedIds = new Set([...additionalIds, ...readExistingChildHighlights(driver, parentNodeId)
+    .filter(row => row.anchor_link ? !parseStoredAnchorLink(row.anchor_link)?.locator : row.is_title_manual === 0)
+    .map(row => row.id)]);
+  const order = loadDerivedNodeOrder(driver);
+  rewriteExistingNodeOrder(driver, [...order.filter(id => !unlocatedIds.has(id)),
+    ...order.filter(id => unlocatedIds.has(id))]);
+}
+
+function relocateLocalTextHighlights(
+  input: Pick<Parameters<typeof replaceImportedHighlightNodes>[0], 'driver' | 'parentContent' | 'importedAt'>,
+  rows: ExistingChildHighlightRow[]
+) {
+  for (const row of rows) {
+    const anchor = parseStoredAnchorLink(row.anchor_link);
+    const locator = anchor?.locator;
+    if (!anchor || !locator || !('originalText' in locator) || typeof locator.originalText !== 'string') continue;
+    const range = findUniqueAvailableImportedBodyOccurrence(input.parentContent, locator.originalText, []);
+    const nextAnchor = range ? { ...anchor, locator: { ...range, originalText: locator.originalText } }
+      : { id: anchor.id, kind: anchor.kind };
+    input.driver.execute(`UPDATE nodes SET anchor_link=?,updated_at=?,sync_dirty=1 WHERE id=?`,
+      [JSON.stringify(nextAnchor), input.importedAt, row.id]);
+    if (!range) input.driver.execute('UPDATE nodes SET image_regions=NULL WHERE id=?', [row.id]);
+    enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [row.id]);
+  }
 }

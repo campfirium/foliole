@@ -6,6 +6,7 @@ export { toImportedAnchorLink } from '../import/importGeneratedHighlightText.js'
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 import { isNodeTitleTruncated } from '../nodes/nodeTitleBudget.js';
 
+import { parseStoredAnchorLink } from './anchorLinkCodec.js';
 import type { DatabaseDriver } from './driver.js';
 import { parseImageSources, serializeImageSources, type ImageSources } from './imageSources.js';
 import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
@@ -87,7 +88,7 @@ function insertImportedHighlight(
   const imageRegions = toImportedImageRegions(input.parentContent, highlight);
   const existing = highlight.nodeId ? reuseImportedHighlightNode({
     anchorLink: toImportedAnchorLink(highlight), driver: input.driver, imageRegions,
-    importedAt: input.importedAt, nodeId, parentNodeId: input.parentNodeId
+    importedAt: input.importedAt, nodeId, parentContent: input.parentContent, parentNodeId: input.parentNodeId
   }) : 'missing';
   if (existing === 'blocked') return null;
   if (existing === 'reused') return nodeId;
@@ -120,16 +121,29 @@ function reuseImportedHighlightNode(input: {
   importedAt: string;
   nodeId: string;
   parentNodeId: string;
+  parentContent: string;
 }): 'blocked' | 'missing' | 'reused' {
-  const row = input.driver.queryOne<{ deleted_at: string | null }>(
-    'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
+  const row = input.driver.queryOne<{ deleted_at: string | null; anchor_link: string | null }>(
+    'SELECT deleted_at, anchor_link FROM nodes WHERE id = ?', [input.nodeId]
   );
   if (!row) return 'missing';
   if (row.deleted_at && row.deleted_at !== input.importedAt) return 'blocked';
+  const previousAnchor = parseStoredAnchorLink(row.anchor_link);
+  const nextAnchor = parseStoredAnchorLink(input.anchorLink);
+  const anchorLink = previousAnchor ? JSON.stringify({
+    id: previousAnchor.id, kind: previousAnchor.kind, origin: 'imported',
+    ...(nextAnchor?.locator ? { locator: nextAnchor.locator } : {})
+  }) : input.anchorLink;
+  const locator = nextAnchor?.locator;
+  const regions = previousAnchor && locator && 'from' in locator
+    && typeof locator.from === 'number' && typeof locator.to === 'number'
+    ? deriveImportedHighlightImageRegions({ anchorId: previousAnchor.id, content: input.parentContent,
+      locators: [{ from: locator.from, to: locator.to }] }) : null;
+  const imageRegions = previousAnchor ? (regions ? JSON.stringify(regions) : null) : input.imageRegions;
   input.driver.execute(
-    `UPDATE nodes SET parent_id = ?, anchor_link = ?, image_regions = ?, deleted_at = NULL, updated_at = ?
+    `UPDATE nodes SET parent_id = ?, anchor_link = ?, image_regions = ?, deleted_at = NULL, updated_at = ?, sync_dirty = 1
      WHERE id = ?`,
-    [input.parentNodeId, input.anchorLink, input.imageRegions, input.importedAt, input.nodeId]
+    [input.parentNodeId, anchorLink, imageRegions, input.importedAt, input.nodeId]
   );
   return 'reused';
 }

@@ -22,7 +22,8 @@ function originalText(anchorLink: string | null, content: string) {
 
 export function mergeRetainedReadwiseAnnotations(
   target: ReadwiseOriginalEpubTarget,
-  remote: PreparedReadwiseApiAnnotation[]
+  remote: PreparedReadwiseApiAnnotation[],
+  options: { unlocateMissing?: boolean } = {}
 ) {
   const source = loadReadwiseApiImportSource(target.connectionRef, target.documentId);
   if (!source) throw new Error('original_epub_target_missing');
@@ -41,7 +42,7 @@ export function mergeRetainedReadwiseAnnotations(
       content: row.content,
       contentHash: state.contentHash || createHash('sha256').update(row.content).digest('hex'),
       kind: state.kind,
-      locatorText: originalText(row.anchor_link, row.content),
+      locatorText: options.unlocateMissing ? null : originalText(row.anchor_link, row.content),
       parentRemoteId: state.parentRemoteId,
       remoteId: state.remoteId,
       updatedAt: state.sourceUpdatedAt

@@ -107,7 +107,7 @@ function readKeepImportNodeId() {
     .get('draft-readwise-source-401', 'entry.md') as { last_node_id: string };
 }
 
-it('rebuilds readwise article content and replaces imported child highlights', async () => {
+it('rebuilds readwise article content while retaining previous imported and manual excerpts', async () => {
   await prepareReadwiseArticleFixture();
 
   const connection = openDatabaseConnection();
@@ -144,7 +144,10 @@ it('rebuilds readwise article content and replaces imported child highlights', a
     .all(first.last_node_id);
 
   expect(node.content).toBe('# Entry\n\n## Entry\n\nSource body.');
-  expect(importedChildren).toEqual([
+  expect(importedChildren).toHaveLength(5);
+  expect(importedChildren).toEqual(expect.arrayContaining([
+    expect.objectContaining({ content: 'stale', anchor_link: expect.not.stringContaining('locator') }),
+    expect.objectContaining({ content: 'stale generated', anchor_link: null }),
     expect.objectContaining({
       anchor_link: null,
       content: 'manual note',
@@ -155,7 +158,7 @@ it('rebuilds readwise article content and replaces imported child highlights', a
       content: 'Source body.',
       title: 'Source body.'
     })
-  ]);
+  ]));
 });
 
 function insertImportedChild(parentNodeId: string, nodeId: string, anchorLink: string) {
