@@ -49,8 +49,8 @@ export function CompanionFlowEdgeGestures(props: {
     props.onApply(gesture.mode);
   }
   if (!props.enabled) return null;
-  if (unavailable) return <p role="alert" className="fixed bottom-20 left-6 right-6 z-20 text-sm text-error">{t('companion.reading.gestureError')}</p>;
-  return <div className="pointer-events-none fixed inset-0 z-20">
+  if (unavailable) return <p role="alert" className="fixed bottom-20 left-6 right-6 z-surface-overlay text-sm text-error">{t('companion.reading.gestureError')}</p>;
+  return <div className="pointer-events-none fixed inset-0 z-surface-overlay">
     {(['redo', 'undo'] as const).map(mode => <button key={mode} type="button" data-testid={`flow-edge-${mode}`}
       aria-label={t(mode === 'undo' ? 'desktop.command.undo' : 'desktop.command.redo')}
       disabled={mode === 'undo' ? !props.canUndo : !props.canRedo}
