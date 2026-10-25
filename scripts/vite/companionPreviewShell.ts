@@ -1,5 +1,6 @@
 import { capturePreviewRestoreTarget } from './companionPreviewReadiness';
 import { captureCompanionPreview } from './companionPreviewSnapshot';
+import { fitCompanionPreviewViewport } from './companionPreviewViewport';
 
 export interface CompanionPreviewShell {
   beforeReload(source: Window): Promise<void>;
@@ -31,8 +32,11 @@ function createShellElements(document: Document) {
   retry.textContent = 'Retry';
   retry.hidden = true;
   overlay.append(status, retry);
-  document.body.append(frame, frozen, overlay);
-  return { frame, frozen, overlay, status, retry };
+  const viewport = document.createElement('div');
+  viewport.className = 'preview-viewport';
+  document.body.append(viewport);
+  viewport.append(frame, frozen, overlay);
+  return { frame, frozen, overlay, status, retry, viewport };
 }
 
 type ShellElements = ReturnType<typeof createShellElements>;
@@ -132,13 +136,14 @@ class PreviewTransition implements CompanionPreviewShell {
 
 export function mountCompanionPreviewShell(document: Document, timeoutMs = 30_000) {
   const elements = createShellElements(document);
+  const stopFitting = fitCompanionPreviewViewport(elements.viewport);
   const shell = new PreviewTransition(elements, timeoutMs);
   elements.retry.addEventListener('click', () => void shell.retry());
   document.defaultView!.__foliolePreviewShell = shell;
   const url = new URL(document.URL);
   url.searchParams.set('__foliole_preview_frame', '1');
   elements.frame.src = url.href;
-  return { ...elements, shell, dispose: () => shell.dispose() };
+  return { ...elements, shell, dispose: () => { shell.dispose(); stopFitting(); } };
 }
 
 if (typeof document !== 'undefined' && document.body.dataset.companionPreviewShell === 'true')
