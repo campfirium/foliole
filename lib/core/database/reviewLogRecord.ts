@@ -24,7 +24,7 @@ function historyEvent(rows: unknown[], input: {
   return input.history.mode === 'undo'
     ? [input.opId, input.opId, input.hostName, input.nodeId, 0, '', input.updatedAt, 'void', target.op_id]
     : [input.opId, input.opId, input.hostName, input.nodeId, target.grade,
-      target.scheduler_version, target.reviewed_at, 'review', null];
+      target.scheduler_version, input.updatedAt, 'review', null];
 }
 
 export function recordReviewHistory(driver: DatabaseDriver, input: Parameters<typeof historyEvent>[1]) {

@@ -63,7 +63,7 @@ it('records grade, exact-target undo, redo and reset without deleting history or
     replay(p, 'redo', 'grade');
     const redone = identityReviewRowSchema.parse(p.sqlite.prepare("SELECT * FROM review_log WHERE kind='review' AND op_id != 'grade'").get()).op_id;
     expect(effective(p)).toEqual([redone]);
-    expect(readReviewCalendarHistory(driver, { from: at, to: later }, 0).days[0]?.items).toBe(1);
+    expect(readReviewCalendarHistory(driver, { from: later, to: '2026-10-04T08:00:00.000Z' }, 0).days[0]?.items).toBe(1);
     replay(p, 'undo', redone, '2026-10-04T08:00:00.000Z');
     grade(p, 'replacement');
     resetNodeReviewState(driver, 'topic', { hostName: p.id, deletedAt: '2026-10-05T08:00:00.000Z' });
@@ -107,5 +107,25 @@ it('converges facts through production request sync when void precedes its targe
     await send(a, b); await send(b, a); a.reopen(); b.reopen();
     expect(rows(a)).toEqual(rows(b)); expect(effective(a)).toHaveLength(1);
     expect(effective(b)).toEqual(effective(a));
+  } finally { await f.close(); }
+});
+
+
+it('timestamps redo after a reset so the restored score cannot be hidden behind an older reset', async () => {
+  const f = await restoreFixture(); const p = f.peer('local');
+  try {
+    await seed(p); grade(p);
+    replay(p, 'undo', 'grade');
+    resetNodeReviewState(createBetterSqlite3Driver(p.sqlite), 'topic', { hostName: p.id, deletedAt: later });
+    const redoneAt = '2026-10-04T08:00:00.000Z';
+    replay(p, 'redo', 'grade', redoneAt);
+    const timeline = p.sqlite.prepare("SELECT kind, reviewed_at FROM review_log WHERE kind IN ('review','reset') ORDER BY reviewed_at, op_id").all();
+    expect(timeline).toEqual([
+      { kind: 'review', reviewed_at: at }, { kind: 'reset', reviewed_at: later },
+      { kind: 'review', reviewed_at: redoneAt }
+    ]);
+    const history = readReviewCalendarHistory(createBetterSqlite3Driver(p.sqlite),
+      { from: at, to: '2026-10-05T08:00:00.000Z' }, 0);
+    expect(history.days).toEqual([{ day: '2026-10-04', items: 1, topics: null }]);
   } finally { await f.close(); }
 });
