@@ -36,15 +36,15 @@ function remaining() {
   return tables.map((table) => sqlite.prepare(`SELECT node_id FROM ${table} ORDER BY node_id`).all());
 }
 
-it('preserves reading progress in Trash while removing hidden review scheduling', async () => {
+it('preserves complete reading and review caches for trashed nodes and their hidden children', async () => {
   node('root', null);
   node('visible', 'root');
   node('deleted', 'root', true);
   node('hidden', 'deleted');
   for (const id of ['visible', 'deleted', 'hidden']) learning(id);
+  const before = tables.map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY node_id`).all());
   await pruneLearningRowsWithoutVisibleNodes(createBetterSqliteDbPort(sqlite));
-  const retainedReading = [{ node_id: 'deleted' }, { node_id: 'hidden' }, { node_id: 'visible' }];
-  expect(remaining()).toEqual([retainedReading, retainedReading, [{ node_id: 'visible' }]]);
+  expect(tables.map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY node_id`).all())).toEqual(before);
 });
 
 it('retires orphaned reading and review state after the node no longer exists', async () => {

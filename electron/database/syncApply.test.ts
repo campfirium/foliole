@@ -194,10 +194,12 @@ it('fast-forwards remote node versions when the local version is an ancestor', a
   expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });
 
-it('prunes review rows but preserves reading progress under deleted parents', async () => {
+it('preserves complete reading and review caches under deleted parents', async () => {
   insertDeletedParentWithLiveChildLearning();
   const beforeReading = openDatabaseConnection().sqlite
     .prepare('SELECT * FROM node_reading WHERE node_id = ?').get('node-1');
+  const beforeReview = openDatabaseConnection().sqlite
+    .prepare('SELECT * FROM node_review WHERE node_id = ?').get('node-1');
   seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop-child#1');
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop-child#1';
@@ -206,9 +208,16 @@ it('prunes review rows but preserves reading progress under deleted parents', as
 
   await expect(applySyncNodesAsync([record])).resolves.toEqual(['node-1']);
 
-  const connection = openDatabaseConnection();
-  expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-1')).toBeUndefined();
-  expect(connection.sqlite.prepare('SELECT * FROM node_reading WHERE node_id = ?').get('node-1')).toEqual(beforeReading);
+  const versions = openDatabaseConnection().sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  for (let reopen = 0; reopen < 2; reopen++) {
+    if (reopen > 0) await applySyncNodesAsync([record]);
+    const connection = openDatabaseConnection();
+    expect(connection.sqlite.prepare('SELECT * FROM node_review WHERE node_id = ?').get('node-1')).toEqual(beforeReview);
+    expect(connection.sqlite.prepare('SELECT * FROM node_reading WHERE node_id = ?').get('node-1')).toEqual(beforeReading);
+    expect(connection.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('node-1')).toBe('phone#1');
+    expect(connection.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(versions);
+    closeDatabaseConnection();
+  }
 });
 
 it('stores divergent remote node versions without reviving the legacy conflict queue', async () => {
