@@ -64,6 +64,9 @@ final class FolioleAttachmentBlockStorage {
                  number: (String) -> Double? = { _ in nil }, base64: String? = nil,
                  check: () throws -> Void = {}) throws -> [String: Any] {
         if action == "source-stat-batch" { return try sourceStatBatch(keys) }
+        if action == "source-stat" || (action == "stat" && partial) {
+            return try inspect(action: action, key: key, partial: partial, check: check)
+        }
         let hash = String(key.prefix(64))
         mutex.lock()
         guard !closing, !activeKeys.contains(hash), !receiving.contains(where: { $0.prefix(64) == hash }) else {
@@ -84,6 +87,13 @@ final class FolioleAttachmentBlockStorage {
         if action.hasPrefix("source-") { return try source(action: action, key: key, number: number) }
         try acquire()
         return try mutate(action: action, key: key, number: number, base64: base64)
+    }
+    private func inspect(action: String, key: String, partial: Bool, check: () throws -> Void) throws -> [String: Any] {
+        mutex.lock(); defer { mutex.unlock() }
+        guard !closing else { throw invalid("attachment_receive_busy") }
+        try check()
+        if action == "stat" { return try info(resolve(key, partial: partial), hash: false) }
+        return try source(action: action, key: key, number: { _ in nil })
     }
     private func sourceStatBatch(_ keys: [String]) throws -> [String: Any] {
         guard keys.count <= 64, keys.reduce(0, { $0 + $1.utf8.count }) <= 16384 else {

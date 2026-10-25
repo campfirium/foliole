@@ -53,6 +53,18 @@ final class FolioleAttachmentBlockStorageTests: XCTestCase {
         wait(for: [finished], timeout: 1)
     }
 
+    func testReadOnlyPresenceAndPartialLengthRemainAvailableDuringReceive() throws {
+        let fixture = try AttachmentBlockStorageFixture(); defer { fixture.close() }
+        try fixture.call("truncate", numbers: ["length": 0])
+        let writer = try fixture.storage.receive(key: fixture.key, offset: 0, check: {}) { fixture.storage.finishReceive(fixture.key) }
+        defer { try? writer.close() }
+        try writer.append(offset: 0, data: Data([1, 2, 3]))
+        XCTAssertEqual(try fixture.call("source-stat")["present"] as? Bool, false)
+        XCTAssertEqual(try fixture.call("stat", partial: true)["length"] as? Int, 3)
+        let result = try fixture.storage.execute(action: "source-stat-batch", key: "", keys: [fixture.key])
+        XCTAssertEqual(result["presence"] as? [Bool], [false])
+    }
+
     func testInvalidAppendAndNumericRangesKeepExistingBytes() throws {
         let fixture = try AttachmentBlockStorageFixture()
         defer { fixture.close() }
