@@ -15,7 +15,6 @@ export function canRenderCompanionDirectoryArticle(args: {
   const isTrashSelection = args.directorySelection.kind === 'trash' || args.directorySelection.kind === 'trashFolder';
   const snapshot = args.workspaceSync.state.workspace_snapshot;
   return Boolean(
-    args.surface.readableArticle &&
     selectedNodeId &&
     !args.surface.browsedFolder &&
     (!isTrashSelection || (snapshot && isCanonicalTrashedNodeId(snapshot, selectedNodeId)))

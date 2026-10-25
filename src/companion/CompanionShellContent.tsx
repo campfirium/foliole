@@ -67,7 +67,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
       </>
     );
   }
-  if (props.surface.readableArticle && props.surface.selectedBrowseNodeId) {
+  if (props.surface.selectedBrowseNodeId) {
     return (
       <CompanionShellReadableArticle
         navigation={props.navigation}

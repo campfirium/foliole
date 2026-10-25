@@ -83,8 +83,7 @@ async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
   useCompanionArticleSurface.mockReturnValue(surface);
 
   const { CompanionShell } = await import('./CompanionShell');
-  renderWithLocalization(
-    <CompanionShell
+  const shell = () => <CompanionShell
       bootstrapState={{
         booted_at: '2026-04-22T09:05:00.000Z',
         database_path: 'foliole-companion-preview.db',
@@ -92,10 +91,10 @@ async function renderBreadcrumbShell(surface = createItemReviewSurface()) {
         device_id: 'android-test-device',
         runtime_kind: 'android-capacitor'
       }}
-    />
-  );
+    />;
+  const view = renderWithLocalization(shell());
 
-  return { surface };
+  return { surface, container: view.container, refresh: () => view.rerender(shell()) };
 }
 
 describe('CompanionShell review breadcrumb', () => {
@@ -127,4 +126,32 @@ describe('CompanionShell review breadcrumb', () => {
 
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-2');
   });
+});
+
+it.each(['review', 'recent'])('keeps navigation hidden while a breadcrumb article loads in %s', async (activeAction) => {
+  const surface = { ...createItemReviewSurface(), activeAction: 'review', isFlowBrowsing: true,
+    selectedBrowseNodeId: 'topic-2' };
+  const { refresh, container } = await renderBreadcrumbShell(surface);
+  expect(container.querySelector('header')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Topi' }));
+  expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
+  useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction, isFlowBrowsing: activeAction === 'review',
+    selectedBrowseNodeId: 'topic-1', readableArticle: null });
+  refresh();
+  expect(container.querySelector('header')).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toBeInTheDocument();
+
+  useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction, isFlowBrowsing: activeAction === 'review', selectedBrowseNodeId: 'topic-1',
+    readableArticle: { ...surface.readableArticle, nodeId: 'topic-1', content: 'Parent article body' } });
+  refresh();
+  expect(container.querySelector('header')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('companion-reading-exit')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Prompt body'));
+  expect(screen.getByTestId('companion-reading-exit')).toBeInTheDocument();
+
+  useCompanionArticleSurface.mockReturnValue({ ...surface, selectedBrowseNodeId: 'folder-1', readableArticle: null,
+    browsedFolder: { nodeId: 'folder-1', title: 'Inbox', items: [] } });
+  refresh();
+  expect(screen.getByRole('heading', { name: 'Inbox' })).toBeInTheDocument();
 });

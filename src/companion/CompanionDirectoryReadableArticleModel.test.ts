@@ -5,13 +5,13 @@ import {
   resolveCompanionDirectoryArticleExit
 } from './CompanionDirectoryReadableArticleModel';
 
-function createArgs(selectedBrowseNodeId: string, trashedNodeIds: string[]) {
+function createArgs(selectedBrowseNodeId: string, trashedNodeIds: string[], loading = false) {
   const nodeIds = Array.from(new Set([selectedBrowseNodeId, ...trashedNodeIds]));
   return {
     directorySelection: { kind: 'trash' as const },
     surface: {
       browsedFolder: null,
-      readableArticle: { nodeId: selectedBrowseNodeId },
+      readableArticle: loading ? null : { nodeId: selectedBrowseNodeId },
       selectedBrowseNodeId
     },
     workspaceSync: {
@@ -29,6 +29,11 @@ function createArgs(selectedBrowseNodeId: string, trashedNodeIds: string[]) {
 describe('canRenderCompanionDirectoryArticle', () => {
   it('does not let a stale normal topic replace the trash list', () => {
     expect(canRenderCompanionDirectoryArticle(createArgs('topic-1', ['trashed-topic']))).toBe(false);
+  });
+
+  it('keeps a selected trash article open while its body loads', () => {
+    expect(canRenderCompanionDirectoryArticle(createArgs('trashed-topic', ['trashed-topic'], true))).toBe(true);
+    expect(canRenderCompanionDirectoryArticle(createArgs('topic-1', ['trashed-topic'], true))).toBe(false);
   });
 
   it('allows a selected trash topic to open from trash', () => {

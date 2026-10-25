@@ -88,7 +88,6 @@ function renderCompanionMainContent(model: CompanionShellModel) {
 function isReadableArticleImmersive(model: CompanionShellModel) {
   return Boolean(model.searchExternalDocument || model.searchPdfResult) || ((model.surface.activeAction === 'recent' || model.surface.isFlowBrowsing)
     && (!model.isBrowseDirectoryOpen || canRenderCompanionDirectoryArticle(model))
-    && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
     && !model.surface.browsedFolder);
 }

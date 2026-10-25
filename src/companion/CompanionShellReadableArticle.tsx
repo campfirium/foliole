@@ -106,7 +106,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
     !props.flow && props.surface.readableArticle && canContinueToNext(props.surface.readableArticle) ? props.navigation : undefined);
   const header = props.flow || props.surface.isFlowBrowsing ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null;
   const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
-  if (!props.surface.readableArticle) return props.flow ? <CompanionReviewLoading header={header} footer={footer} /> : null;
+  if (!props.surface.readableArticle) return <CompanionReviewLoading header={header} footer={footer} />;
   const activity = props.surface.readingActivity;
   const nodeId = props.surface.readableArticle.nodeId;
   const exitFlowHere = props.surface.isFlowBrowsing
