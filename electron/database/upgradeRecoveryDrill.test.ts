@@ -50,6 +50,9 @@ it('restores production backup into a new isolated library and retains semantic 
   const sourceAsset = path.join(libraryRoot, 'Documents', 'Foliole', 'Assets', assetName);
   await fs.mkdir(path.dirname(sourceAsset), { recursive: true });
   await fs.writeFile(sourceAsset, assetBytes);
+  const before = { review: loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-qa']?.review,
+    facts: openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id'),
+    cache: openDatabaseConnection().driver.queryAll('SELECT * FROM node_review ORDER BY node_id') };
   const backup = await createApplicationDatabaseBackup();
   closeDatabaseConnection();
   await waitForManagedSafetySnapshotSettlements();
@@ -58,29 +61,31 @@ it('restores production backup into a new isolated library and retains semantic 
   await expect(fs.access(libraryRoot)).rejects.toMatchObject({ code: 'ENOENT' });
   initializeDatabase();
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
-  assertRestoredFacts();
+  assertRestoredFacts(before);
   closeDatabaseConnection();
   initializeDatabase();
-  assertRestoredFacts();
+  assertRestoredFacts(before);
   await expect(fs.readFile(sourceAsset)).resolves.toEqual(assetBytes);
   await expect(fs.access(path.join(libraryRoot, 'Documents', 'Foliole', 'Assets', assetName)))
     .rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-function assertRestoredFacts() {
+function assertRestoredFacts(before: { review: unknown; facts: unknown[]; cache: unknown[] }) {
   const snapshot = loadWorkspaceSnapshot({ includeBody: true });
   expect(snapshot?.nodesById['node-root']).toMatchObject({ content: '# root' });
   expect(snapshot?.nodesById['drill-child']).toMatchObject({
     content: childContent, parentNodeId: 'node-root', kind: 'topic'
   });
   expect(snapshot?.nodesById['node-qa']).toMatchObject({
-    content: 'Prompt [...]', reveal: 'Answer', review: { reps: 1, stability: 2.7 }
+    content: 'Prompt [...]', reveal: 'Answer', review: before.review
   });
   expect(snapshot?.trashedNodeIds).toContain('node-trash');
   expect(loadJsonSetting('search_aliases_document')).toEqual({ terms: ['protected'] });
   const sqlite = openDatabaseConnection().sqlite;
   expect(sqlite.prepare("SELECT COUNT(*) AS count FROM review_log WHERE node_id = 'node-qa'").get())
     .toEqual({ count: 1 });
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id')).toEqual(before.facts);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_review ORDER BY node_id')).toEqual(before.cache);
   expect(sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
   expect(sqlite.pragma('foreign_key_check')).toEqual([]);
 }

@@ -25,7 +25,6 @@ import {
 import {
   assertResourceRestoreAfterColdOpen,
   applyFollowupReviewGrade,
-  createRestoredWorkspaceSnapshot,
   mutateWorkspaceAfterBackup,
   seedBackupBaseline,
   seedNode
@@ -119,6 +118,9 @@ it('restores the application sqlite state from an online backup snapshot', async
 
 it('restores review history, node lifecycle state, and backup truth after later CRUD drift', async () => {
   seedBackupBaseline();
+  const before = loadWorkspaceSnapshot({ includeBody: true });
+  const facts = openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id');
+  const reviews = openDatabaseConnection().driver.queryAll('SELECT * FROM node_review ORDER BY node_id');
 
   const backup = await createApplicationDatabaseBackup();
 
@@ -126,20 +128,9 @@ it('restores review history, node lifecycle state, and backup truth after later 
 
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
 
-  const restored = createRestoredWorkspaceSnapshot();
-  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual({
-    ...restored,
-    nodesById: Object.fromEntries(Object.entries(restored.nodesById).map(([nodeId, node]) => [nodeId, {
-      ...node,
-      position: { 'node-root': 0, 'node-qa': 1, 'node-trash': 2 }[nodeId],
-      authorText: null,
-      imageSources: {},
-      resourceReferences: [],
-      importContentFingerprint: null,
-      importSourceFingerprint: null,
-      readwiseRemoteLifecycle: null
-    }]))
-  });
+  expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual(before);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id')).toEqual(facts);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_review ORDER BY node_id')).toEqual(reviews);
   expect(selectReviewLogCount('node-qa')).toBe(1);
   expect(selectNodeCount('node-later')).toBe(0);
 
