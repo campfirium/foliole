@@ -34,7 +34,6 @@ export function CompanionTopBar(props: {
   rightAction?: TopBarAction;
   rightSlot?: ReactNode;
   statusSlot?: ReactNode;
-  subtitle?: string;
   title?: string;
   visible: boolean;
 }) {
@@ -57,7 +56,6 @@ export function CompanionTopBar(props: {
           {props.rightSlot ?? (props.rightAction ? <TopBarIconButton {...props.rightAction} /> : null)}
         </div>
       </div>
-      {props.subtitle ? <p className="pb-1 text-center text-xs text-companion-text-secondary" role="status">{props.subtitle}</p> : null}
     </header>
   );
 }

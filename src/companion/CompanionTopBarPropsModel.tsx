@@ -7,7 +7,6 @@ import type {
 import { definedProps } from '../shared/lib/definedProps';
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
 
-import { COMPANION_SORT_LABEL_KEYS } from './companionBrowseSortLabels';
 import { CompanionBrowseTopActions } from './CompanionBrowseTopActions';
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -119,7 +118,6 @@ function resolveBrowseTopBar(args: {
   }
   return {
     title: args.folderTitle ?? args.t('companion.browse.title'),
-    ...(!args.folderTitle ? { subtitle: args.t(COMPANION_SORT_LABEL_KEYS[args.browseSortKey]) } : {}),
     leftAction: { icon: Library, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };

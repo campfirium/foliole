@@ -36,15 +36,13 @@ function topicOrder(ui: Awaited<ReturnType<typeof openBrowse>>) {
   return ui.result.current.surface.recentArticles.map(topic => topic.nodeId);
 }
 
-it('enters Browse unchanged, then alternates actual topic order and visible sort feedback', async () => {
+it('enters Browse unchanged, then alternates actual topic order', async () => {
   const ui = await openBrowse();
   expect(topicOrder(ui)).toEqual(['new', 'article']);
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(topicOrder(ui)).toEqual(['article', 'new']);
-  expect(ui.result.current.actions.topBarProps).toMatchObject({ subtitle: 'Last opened' });
   act(() => ui.result.current.actions.handleNavigationAction('recent'));
   expect(topicOrder(ui)).toEqual(['new', 'article']);
-  expect(ui.result.current.actions.topBarProps).toMatchObject({ subtitle: 'Date modified' });
 });
 
 it('persists the selected order through a real database close and reopen', async () => {
