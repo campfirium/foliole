@@ -161,6 +161,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
   });
   const { editorState, onEditorReady, onAnswerEditorReady } = useCompanionEditorDraftFlush(draft, canEdit, props.onEditorReady);
   const syncMissingAttachmentResource = useReadableDocumentActivity(props, editorState);
+  const canEditAnswer = canEdit && props.isReviewItem === true && props.answer != null;
 
   if (pdfAttachmentId && pdfReading.isViewingOriginal) {
     return renderOriginalPdf(
@@ -193,8 +194,8 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
           scrollContainer: props.scrollContainer
         })}
       />
-      <CompanionItemAnswer answer={canEdit && props.isReviewItem ? editorState.reveal : props.answer ?? null}
-        editing={canEdit && props.isReviewItem === true} nodeId={props.readableArticle.nodeId}
+      <CompanionItemAnswer answer={canEditAnswer ? editorState.reveal : props.answer ?? null}
+        editing={canEditAnswer} nodeId={props.readableArticle.nodeId}
         style={typographyStyle(props.readingTypographySettings)} onMissingResource={syncMissingAttachmentResource}
         onChange={editorState.handleRevealChange} onEditorReady={onAnswerEditorReady}
         onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />
