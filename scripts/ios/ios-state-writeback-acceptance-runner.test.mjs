@@ -12,8 +12,8 @@ import { parseStateWritebackSnapshot, readStateWritebackSnapshot,
 const reading = { interval_duration_ms: 60000, interval_growth_factor: 1.5,
   last_handled_at: '2026-07-21T00:01:00.000Z', next_at: '2026-07-21T00:02:00.000Z',
   priority: 2, repetition_count: 3, state: 'active' };
-const review = { difficulty: 5.2, due: '2026-07-28T00:01:00.000Z', elapsed_days: 3, lapses: 1,
-  last_review_at: '2026-07-21T00:01:00.000Z', reps: 4, scheduled_days: 7, stability: 8.5, state: 2 };
+const review = { difficulty: 2.11810397, due: '2026-07-24T00:01:00.000Z', elapsed_days: 0, lapses: 0,
+  last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 3, stability: 2.3065, state: 2 };
 const log = { op_id: 'review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
 
      };
@@ -34,6 +34,14 @@ function observations() {
 it('accepts persisted shared facts and stable phone-private state without any transport counters', () => {
   expect(verifyStateWritebackAcceptance(first, second, snapshot(), snapshot(), observations()))
     .toMatchObject({ first_snapshot: { local_reading_position: 42, local_scroll_top: 42 } });
+});
+
+it('rejects an old review snapshot that does not match the single effective review event', () => {
+  const evidence = observations();
+  Object.assign(evidence.state_writeback.persisted.review, { difficulty: 5.2, due: '2026-07-28T00:01:00.000Z',
+    elapsed_days: 3, lapses: 1, reps: 4, scheduled_days: 7, stability: 8.5 });
+  expect(() => verifyStateWritebackAcceptance(first, second, snapshot(), snapshot(), evidence))
+    .toThrow('evidence is incomplete');
 });
 
 it.each(['reading', 'review', 'review_log', 'private-setting-leak', 'wrong-op', 'duplicate-op'])(
