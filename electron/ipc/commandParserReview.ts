@@ -37,10 +37,18 @@ function parseSchedulerCard(value: unknown, field: string): NativeSchedulerCard 
   };
 }
 
+function parseDesiredRetention(value: unknown, field: string) {
+  const retention = asFiniteNumber(value, field);
+  if (retention < 0.01 || retention > 0.99) throw new Error(`invalid argument: ${field}`);
+  return retention;
+}
+
 function parseReviewRequest(value: unknown, field: string) {
   const request = asObject(value, field);
   return {
     card: parseSchedulerCard(request.card, `${field}.card`),
+    ...(request.desiredRetention === undefined ? {}
+      : { desiredRetention: parseDesiredRetention(request.desiredRetention, `${field}.desiredRetention`) }),
     ...(request.enableShortTerm === undefined
       ? {}
       : { enableShortTerm: asBoolean(request.enableShortTerm, `${field}.enableShortTerm`) }),

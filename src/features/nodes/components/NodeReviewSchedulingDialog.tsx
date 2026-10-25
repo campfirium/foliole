@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { normalizePushQueuePriority } from '../../review/model/unifiedPushQueueRules';
 import {
+  resolveNodeDesiredRetentionSetting,
   resolveNodePrioritySetting,
   resolveNodeShortTermSetting,
   type ResolvedNodeSetting
@@ -10,6 +11,7 @@ import type { WorkspaceListNode, WorkspaceListNodesById } from '../model/workspa
 
 import { useTranslation, type Translate } from '@/shared/localization/LocalizationProvider';
 import {
+  appSurfaceControlClassName,
   AppDialog,
   AppDialogContent,
   AppDialogOverlay,
@@ -94,19 +96,26 @@ function useNodeReviewSchedulingDraft(args: {
   priority: ResolvedNodeSetting<number>;
   shortTerm: ResolvedNodeSetting<boolean>;
 }) {
+  const [retentionDraft, setRetentionDraft] = useState<number | null>(args.node.desiredRetention ?? null);
+  const [isRetentionDirty, setIsRetentionDirty] = useState(false);
   const [priorityDraft, setPriorityDraft] = useState(args.priority.value);
   const [shortTermDraft, setShortTermDraft] = useState(args.shortTerm.value);
   const [isPriorityDirty, setIsPriorityDirty] = useState(false);
   const [isShortTermDirty, setIsShortTermDirty] = useState(false);
 
   useEffect(() => {
+    setRetentionDraft(args.node.desiredRetention ?? null);
+    setIsRetentionDirty(false);
     setPriorityDraft(args.priority.value);
     setShortTermDraft(args.shortTerm.value);
     setIsPriorityDirty(false);
     setIsShortTermDirty(false);
-  }, [args.node.id, args.priority.value, args.shortTerm.value]);
+  }, [args.node.id, args.node.desiredRetention, args.priority.value, args.shortTerm.value]);
 
   return {
+    retentionDraft,
+    isRetentionDirty,
+    setRetentionDraft: (value: number | null) => { setRetentionDraft(value); setIsRetentionDirty(true); },
     isPriorityDirty,
     isShortTermDirty,
     priorityDraft,
@@ -126,11 +135,25 @@ type NodeReviewSchedulingDraft = ReturnType<typeof useNodeReviewSchedulingDraft>
 
 function ReviewSchedulingRows(props: {
   draft: NodeReviewSchedulingDraft;
+  retention: ResolvedNodeSetting<number>;
   node: WorkspaceListNode;
   t: Translate;
 }) {
   return (
     <SettingsSection ariaLabel={props.t('desktop.nodeReview.optionsPanel')} className="mb-0 pb-5">
+      <SettingsRow title={props.t('desktop.nodeReview.desiredRetention')}>
+        <SettingsControlSlot>
+          <select aria-label={props.t('desktop.nodeReview.desiredRetention.aria')}
+            className={appSurfaceControlClassName()}
+            onChange={event => props.draft.setRetentionDraft(event.target.value === 'inherit' ? null : Number(event.target.value))}
+            value={props.draft.retentionDraft ?? 'inherit'}>
+            <option value="inherit">{props.t('desktop.nodeReview.inherit')} ({Math.round(props.retention.value * 100)}%)</option>
+            {Array.from({ length: 99 }, (_, index) => (index + 1) / 100).map(value => (
+              <option key={value} value={value}>{Math.round(value * 100)}%</option>
+            ))}
+          </select>
+        </SettingsControlSlot>
+      </SettingsRow>
       <SettingsRow description={renderPriorityDescription(props.node, props.t)} title={props.t('desktop.nodeReview.priority')}>
         <PriorityControl ariaLabel={props.t('desktop.nodeReview.priority.aria')} onChange={props.draft.setPriorityDraft} value={props.draft.priorityDraft} />
       </SettingsRow>
@@ -143,9 +166,11 @@ function ReviewSchedulingRows(props: {
 
 export function NodeReviewSchedulingDialog(props: {
   defaultPriority: number;
+  defaultDesiredRetention: number;
   node: WorkspaceListNode | null;
   nodesById: WorkspaceListNodesById;
   onClose: () => void;
+  onDesiredRetentionChange: (nodeId: string, desiredRetention: number | null) => void;
   onPriorityChange: (nodeId: string, priority: number | null) => void;
   onShortTermChange: (nodeId: string, enableShortTerm: boolean | null) => void;
 }) {
@@ -156,10 +181,13 @@ export function NodeReviewSchedulingDialog(props: {
   const t = useTranslation();
   const nodeId = node.id;
   const shortTerm = resolveNodeShortTermSetting(nodeId, props.nodesById);
+  const retention = resolveNodeDesiredRetentionSetting(nodeId, { ...props.nodesById,
+    [nodeId]: { ...node, desiredRetention: null } }, props.defaultDesiredRetention);
   const priority = resolveNodePrioritySetting(nodeId, props.nodesById, normalizePushQueuePriority(props.defaultPriority));
   const draft = useNodeReviewSchedulingDraft({ node, priority, shortTerm });
 
   function commitAndClose() {
+    if (draft.isRetentionDirty) props.onDesiredRetentionChange(nodeId, draft.retentionDraft);
     if (draft.isPriorityDirty) {
       props.onPriorityChange(nodeId, draft.priorityDraft);
     }
@@ -177,7 +205,7 @@ export function NodeReviewSchedulingDialog(props: {
           <div className="px-5 pb-2 pt-5">
             <AppDialogTitle className="text-base font-semibold">{t('desktop.nodeReview.title')}</AppDialogTitle>
           </div>
-          <ReviewSchedulingRows draft={draft} node={node} t={t} />
+          <ReviewSchedulingRows draft={draft} node={node} retention={retention} t={t} />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>

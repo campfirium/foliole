@@ -22,6 +22,7 @@ export function createNativeReviewSchedulerAdapter(invoke: NativeInvoke): Review
       const result = await invokeReviewGrade(invoke, {
         request: {
           card: input.card,
+          ...(input.desiredRetention === undefined ? {} : { desiredRetention: input.desiredRetention }),
           ...(input.enableShortTerm === undefined ? {} : { enableShortTerm: input.enableShortTerm }),
           rating: mapGradeToRustRating(input.grade),
           now: input.now
@@ -37,6 +38,7 @@ export function createNativeReviewSchedulerAdapter(invoke: NativeInvoke): Review
       const result = await invokeReviewPreview(invoke, {
         request: {
           card: input.card,
+          ...(input.desiredRetention === undefined ? {} : { desiredRetention: input.desiredRetention }),
           ...(input.enableShortTerm === undefined ? {} : { enableShortTerm: input.enableShortTerm }),
           now: input.now
         }

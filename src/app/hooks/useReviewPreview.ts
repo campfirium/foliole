@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { normalizeScheduledCardDue } from '../../../lib/core/review/reviewDayBoundary.js';
-import { resolveNodeShortTermSetting } from '../../features/nodes/model/nodeReviewSettings';
+import { resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting } from '../../features/nodes/model/nodeReviewSettings';
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { createReviewSchedulerAdapter } from '../../features/review/model/reviewSchedulerFactory';
 import { toSchedulerCard, type SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -9,7 +9,7 @@ import { getCurrentReviewSchedulerSettings } from '../../features/settings/model
 
 interface UseReviewPreviewArgs {
   currentNodeId: string | null;
-  nodesById: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
+  nodesById: Record<string, { desiredRetention?: number | null; enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
   isAnswerRevealed: boolean;
   isReviewSchedulerSettingsReady: boolean;
   isStudyMode: boolean;
@@ -64,6 +64,10 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     ? resolveNodeShortTermSetting(args.currentNodeId, args.nodesById).value
     : false;
 
+  const desiredRetention = args.currentNodeId
+    ? resolveNodeDesiredRetentionSetting(args.currentNodeId, args.nodesById, getCurrentReviewSchedulerSettings().desiredRetention).value
+    : getCurrentReviewSchedulerSettings().desiredRetention;
+
   useEffect(() => {
     if (!args.isReviewSchedulerSettingsReady || !args.isStudyMode || !args.isAnswerRevealed || !args.currentNodeId) {
       requestKeyRef.current = '';
@@ -73,7 +77,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
 
     const now = new Date().toISOString();
     const card = toSchedulerCard(args.reviewProfile, now);
-    const requestKey = `${args.currentNodeId}:${args.previewSeed}:${enableShortTerm ? 'st1' : 'st0'}:${cardSignature}`;
+    const requestKey = `${args.currentNodeId}:${args.previewSeed}:${desiredRetention}:${enableShortTerm ? 'st1' : 'st0'}:${cardSignature}`;
     if (requestKeyRef.current === requestKey) {
       return;
     }
@@ -82,7 +86,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
 
     let isActive = true;
     void scheduler
-      .preview({ card, enableShortTerm, now })
+      .preview({ card, desiredRetention, enableShortTerm, now })
       .then((result) => {
         if (isActive) {
           setPreview(normalizePreviewDue(result, getCurrentReviewSchedulerSettings().newDayStartsAtHour));
@@ -97,7 +101,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     return () => {
       isActive = false;
     };
-  }, [args.currentNodeId, args.isAnswerRevealed, args.isReviewSchedulerSettingsReady, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, enableShortTerm, scheduler]);
+  }, [args.currentNodeId, args.isAnswerRevealed, args.isReviewSchedulerSettingsReady, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, desiredRetention, enableShortTerm, scheduler]);
 
   return preview;
 }

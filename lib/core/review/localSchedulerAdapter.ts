@@ -28,6 +28,7 @@ export function createLocalReviewSchedulerAdapter(options: LocalReviewSchedulerA
     grade: async (input): Promise<SchedulerGradeResult> => {
       return scheduler.grade({
         card: input.card,
+        ...(input.desiredRetention === undefined ? {} : { desiredRetention: input.desiredRetention }),
         ...(input.enableShortTerm === undefined ? {} : { enableShortTerm: input.enableShortTerm }),
         rating: mapGradeToRustRating(input.grade),
         now: input.now

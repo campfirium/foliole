@@ -16,6 +16,7 @@ export function useWorkspaceTopicTreeActions() {
     shelveNode: useWorkspaceStore((state) => state.shelveNode),
     unshelveNode: useWorkspaceStore((state) => state.unshelveNode),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
+    updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
     updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };

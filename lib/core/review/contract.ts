@@ -68,9 +68,16 @@ export function assertSchedulerCard(value: unknown, field = 'card'): asserts val
   assertNonNegativeInteger(value.lapses, `${field}.lapses`);
 }
 
+function assertOptionalRetention(value: unknown) {
+  if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0.01 || value > 0.99)) {
+    throw new Error('Invalid scheduler field "desiredRetention": expected 0.01 to 0.99');
+  }
+}
+
 export function assertSchedulerGradeInput(input: SchedulerGradeInput): void {
   assertSchedulerCard(input.card, 'card');
   assertOptionalBoolean(input.enableShortTerm, 'enableShortTerm');
+  assertOptionalRetention(input.desiredRetention);
   assertTimestamp(input.now, 'now');
   if (input.grade !== 1 && input.grade !== 2 && input.grade !== 3 && input.grade !== 4) {
     throw new Error('Invalid scheduler field "grade": expected 1 | 2 | 3 | 4');
@@ -88,6 +95,7 @@ export function assertSchedulerGradeResult(value: unknown): asserts value is Sch
 export function assertSchedulerPreviewInput(input: SchedulerPreviewInput): void {
   assertSchedulerCard(input.card, 'card');
   assertOptionalBoolean(input.enableShortTerm, 'enableShortTerm');
+  assertOptionalRetention(input.desiredRetention);
   assertTimestamp(input.now, 'now');
 }
 

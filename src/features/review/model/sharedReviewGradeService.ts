@@ -1,4 +1,4 @@
-import { resolveNodeShortTermSetting } from '../../../../lib/core/review/nodeSettings.js';
+import { resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting } from '../../../../lib/core/review/nodeSettings.js';
 import { normalizeScheduledCardDue } from '../../../../lib/core/review/reviewDayBoundary.js';
 import type { SchedulerGradeInput } from '../../../../lib/core/review/types.js';
 import type { NodeReviewProfile } from '../../nodes/model/nodeTypes';
@@ -13,10 +13,11 @@ import {
 } from './reviewTypes';
 
 export type ReviewSchedulerVersionResolver = (
-  overrides: Pick<SchedulerGradeInput, 'enableShortTerm'>
+  overrides: Pick<SchedulerGradeInput, 'desiredRetention' | 'enableShortTerm'>
 ) => string;
 
 type ReviewGradeNode = ReviewItemNodeLike & {
+  desiredRetention?: number | null;
   enableShortTerm?: boolean | null;
   id: string;
   parentNodeId: string | null;
@@ -57,9 +58,11 @@ export async function gradeSharedFsrsReviewNode(args: {
   }
   const cardBefore = toSchedulerCard(node.review, args.now);
   const enableShortTerm = resolveNodeShortTermSetting(args.nodeId, args.nodesById).value;
+  const retention = resolveNodeDesiredRetentionSetting(args.nodeId, args.nodesById);
+  const overrides = { enableShortTerm, ...(retention.source === 'default' ? {} : { desiredRetention: retention.value }) };
   const gradeResult = await args.scheduler.grade({
     card: cardBefore,
-    enableShortTerm,
+    ...overrides,
     grade: args.grade,
     now: args.now
   });
@@ -69,7 +72,7 @@ export async function gradeSharedFsrsReviewNode(args: {
     reviewedAt,
     newDayStartsAtHour: args.newDayStartsAtHour
   });
-  const schedulerVersion = args.getSchedulerVersion({ enableShortTerm });
+  const schedulerVersion = args.getSchedulerVersion(overrides);
   const nextReviewProfile = toNodeReviewProfile(cardAfter);
   return {
     cardAfter,

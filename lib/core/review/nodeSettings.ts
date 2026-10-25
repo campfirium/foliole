@@ -1,3 +1,5 @@
+import { clampDesiredRetention, DEFAULT_REVIEW_SCHEDULER_SETTINGS } from './settings.js';
+
 export type NodeSettingSource = 'explicit' | 'inherited' | 'default';
 
 export interface ResolvedNodeSetting<T> {
@@ -62,4 +64,21 @@ export function resolveNodeShortTermSetting<TNode extends ReviewSettingNode>(
     pickValue: (node) => node.enableShortTerm,
     normalize: (value) => value === true
   });
+}
+
+export function normalizeNodeDesiredRetention(
+  value: unknown,
+  fallback = DEFAULT_REVIEW_SCHEDULER_SETTINGS.desiredRetention
+) {
+  return typeof value === 'number' && Number.isFinite(value) ? clampDesiredRetention(value) : fallback;
+}
+
+export function resolveNodeDesiredRetentionSetting<TNode extends {
+  parentNodeId: string | null;
+  desiredRetention?: number | null;
+}>(nodeId: string, nodesById: Record<string, TNode | undefined>,
+  fallback = DEFAULT_REVIEW_SCHEDULER_SETTINGS.desiredRetention): ResolvedNodeSetting<number> {
+  return resolveNodeSetting({ fallback, nodeId, nodesById,
+    pickValue: node => node.desiredRetention,
+    normalize: normalizeNodeDesiredRetention });
 }

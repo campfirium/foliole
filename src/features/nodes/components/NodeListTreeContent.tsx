@@ -58,6 +58,7 @@ interface NodeListTreeContentProps {
   showVirtualCreateAction?: boolean;
   state: NodeListState;
   trashedNodeIds: string[];
+  updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
   updateNodeTitle: (nodeId: string, title: string) => Promise<boolean>;
@@ -68,11 +69,7 @@ interface NodeListTreeContentProps {
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const { filteredActiveRows, searchQuery, setSearchQuery } = useNodeListSearchRows({
-    activeRows: props.activeRows,
-    isTrashViewOpen: props.isTrashViewOpen,
-    isVirtualViewOpen: props.isVirtualViewOpen,
-    nodeOrder: props.nodeOrder,
-    nodesById: props.nodesById,
+    ...props,
     noteRowsAll: props.state.noteRowsAll,
     trashedNodeIds: props.trashedNodeIds
   });
@@ -116,10 +113,12 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
       />
       <NodeListTreeMenu {...props} onOpenReviewScheduling={setReviewSchedulingNodeId} />
       <NodeReviewSchedulingDialog
+        defaultDesiredRetention={getCurrentReviewSchedulerSettings().desiredRetention}
         defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}
         node={reviewSchedulingNodeId ? (props.nodesById[reviewSchedulingNodeId] ?? null) : null}
         nodesById={props.nodesById}
         onClose={() => setReviewSchedulingNodeId(null)}
+        onDesiredRetentionChange={props.updateNodeDesiredRetention}
         onPriorityChange={props.updateNodePriority}
         onShortTermChange={props.updateNodeShortTerm}
       />

@@ -94,6 +94,7 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     state: args.model.state,
     trashedNodeIds: args.model.trashedNodeIds,
     updateNodePriority: args.model.updateNodePriority,
+    updateNodeDesiredRetention: args.model.updateNodeDesiredRetention,
     updateNodeShortTerm: args.model.updateNodeShortTerm,
     updateNodeTitle: args.model.updateNodeTitle,
     unshelveNode: args.model.unshelveNode,

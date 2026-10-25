@@ -55,6 +55,7 @@ function useNodeWorkspaceActions() {
     trashedNodeIds: useWorkspaceStore((state) => state.trashedNodeIds),
     unshelveNode: useWorkspaceStore((state) => state.unshelveNode),
     updateNodePriority: useWorkspaceStore((state) => state.updateNodePriority),
+    updateNodeDesiredRetention: useWorkspaceStore((state) => state.updateNodeDesiredRetention),
     updateNodeShortTerm: useWorkspaceStore((state) => state.updateNodeShortTerm),
     updateNodeTitle: useWorkspaceStore((state) => state.updateNodeTitle)
   };
@@ -184,6 +185,7 @@ function buildNodeListTreeModelResult(
     trashedNodeIds: workspace.trashedNodeIds,
     trashTreeBuildDurationMs: treeData.trashTreeBuildDurationMs,
     updateNodePriority: workspace.updateNodePriority,
+    updateNodeDesiredRetention: workspace.updateNodeDesiredRetention,
     updateNodeShortTerm: workspace.updateNodeShortTerm,
     updateNodeTitle: workspace.updateNodeTitle,
     unshelveNode: workspace.unshelveNode,

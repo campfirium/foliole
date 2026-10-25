@@ -16,7 +16,7 @@ interface HookProps {
   isAnswerRevealed: boolean;
   isReviewSchedulerSettingsReady?: boolean;
   isStudyMode: boolean;
-  nodesById?: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
+  nodesById?: Record<string, { desiredRetention?: number | null; enableShortTerm?: boolean | null; parentNodeId: string | null } | undefined>;
   previewSeed: string;
   reviewProfile: NodeReviewProfile | null;
 }
@@ -203,4 +203,17 @@ it('requests a fresh preview when scheduler setting signature changes', async ()
   await waitFor(() => {
     expect(screen.getByTestId('preview-good-days')).toHaveTextContent('12');
   });
+});
+
+it('refreshes the preview when inherited retention changes without changing the card', async () => {
+  const preview = vi.fn<ReviewSchedulerAdapter['preview']>().mockResolvedValue(createPreviewResult(3));
+  vi.mocked(createReviewSchedulerAdapter).mockReturnValue(createAdapter(preview));
+  const view = (desiredRetention: number) => <PreviewProbe currentNodeId="node-1" isAnswerRevealed isStudyMode
+    previewSeed="same" reviewProfile={BASE_PROFILE} nodesById={{
+      'node-1': { parentNodeId: 'parent' }, parent: { parentNodeId: null, desiredRetention }
+    }} />;
+  const rendered = render(view(0.8));
+  await waitFor(() => expect(preview).toHaveBeenLastCalledWith(expect.objectContaining({ desiredRetention: 0.8 })));
+  rendered.rerender(view(0.99));
+  await waitFor(() => expect(preview).toHaveBeenLastCalledWith(expect.objectContaining({ desiredRetention: 0.99 })));
 });

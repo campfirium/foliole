@@ -14,6 +14,7 @@ export interface SchedulerCard {
 }
 
 export interface SchedulerGradeInput {
+  desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
   grade: ReviewGrade;
@@ -21,6 +22,7 @@ export interface SchedulerGradeInput {
 }
 
 export interface SchedulerPreviewInput {
+  desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
   now: string;

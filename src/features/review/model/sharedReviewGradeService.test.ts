@@ -1,5 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
+import { createLocalReviewSchedulerAdapter } from '../../../../lib/core/review/localSchedulerAdapter';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion } from '../../../../lib/core/review/settings';
+
 import type { ReviewSchedulerAdapter } from './reviewTypes';
 import { gradeSharedFsrsReviewNode } from './sharedReviewGradeService';
 
@@ -161,4 +164,17 @@ it('uses the configured new day start for day-based due dates', async () => {
   });
 
   expect(new Date(result?.nextReviewProfile.due ?? '').getHours()).toBe(6);
+});
+
+it('uses inherited retention for local grading and records its actual parameter version', async () => {
+  const scheduler = createLocalReviewSchedulerAdapter();
+  const results = await Promise.all([0.8, 0.99].map(desiredRetention => gradeSharedFsrsReviewNode({
+    getSchedulerVersion: overrides => getReviewSchedulerVersion(DEFAULT_REVIEW_SCHEDULER_SETTINGS, overrides),
+    grade: 3, newDayStartsAtHour: 4, nodeId: 'item-1',
+    nodesById: { 'folder-1': { ...createFolderNode(), desiredRetention }, 'item-1': createReviewedItemNode() },
+    now: '2026-04-22T08:10:00.000Z', scheduler
+  })));
+  expect(results[0]?.schedulerVersion).toContain('dr=0.80');
+  expect(results[1]?.schedulerVersion).toContain('dr=0.99');
+  expect(Date.parse(results[0]!.cardAfter.due)).toBeGreaterThan(Date.parse(results[1]!.cardAfter.due));
 });

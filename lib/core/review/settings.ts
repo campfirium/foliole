@@ -35,6 +35,7 @@ export interface ReviewSchedulerSettingsSavePatch {
 }
 
 export interface ReviewSchedulerRuntimeOverrides {
+  desiredRetention?: number;
   enableShortTerm?: boolean;
 }
 
@@ -62,7 +63,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function clampDesiredRetention(value: unknown) {
+export function clampDesiredRetention(value: unknown) {
   if (!isFiniteNumber(value)) {
     return DEFAULT_REVIEW_SCHEDULER_SETTINGS.desiredRetention;
   }
@@ -154,7 +155,7 @@ export function createReviewSchedulerParameters(
 ) {
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return generatorParameters({
-    request_retention: settings.desiredRetention,
+    request_retention: clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention),
     maximum_interval: settings.maximumIntervalDays,
     enable_fuzz: true,
     enable_short_term: enableShortTerm
@@ -184,7 +185,7 @@ export function getReviewSchedulerVersion(
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return [
     settings.algorithm,
-    `dr=${settings.desiredRetention.toFixed(2)}`,
+    `dr=${clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention).toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
     `ds=${settings.newDayStartsAtHour}`,
     `st=${enableShortTerm ? '1' : '0'}`,

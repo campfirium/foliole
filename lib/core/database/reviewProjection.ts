@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { resolveNodeShortTermSetting } from '../review/nodeSettings.js';
+import { resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting } from '../review/nodeSettings.js';
 import { recomputeReview } from '../review/recomputeReview.js';
 import { normalizeReviewSchedulerSettings } from '../review/settings.js';
 import type { SchedulerCard } from '../review/types.js';
@@ -14,22 +14,23 @@ const EVENTS = `SELECT ${REVIEW_FACT_COLUMNS.join(', ')} FROM review_log WHERE n
 const SETTINGS = `SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'
   AND scope = 'user_space' ORDER BY updated_at DESC, content_hash DESC LIMIT 1`;
 const ANCESTORS = `WITH RECURSIVE ancestors AS (
-  SELECT id, parent_id, enable_short_term FROM nodes WHERE id = ?
-  UNION SELECT n.id, n.parent_id, n.enable_short_term FROM nodes n JOIN ancestors a ON n.id = a.parent_id
+  SELECT id, parent_id, desired_retention, enable_short_term FROM nodes WHERE id = ?
+  UNION SELECT n.id, n.parent_id, n.desired_retention, n.enable_short_term FROM nodes n JOIN ancestors a ON n.id = a.parent_id
 ) SELECT * FROM ancestors`;
 const settingRow = z.object({ value_json: z.string() });
-const nodeRow = z.object({ id: z.string(), parent_id: z.string().nullable(), enable_short_term: z.number().nullable() });
+const nodeRow = z.object({ id: z.string(), parent_id: z.string().nullable(), desired_retention: z.number().nullable(), enable_short_term: z.number().nullable() });
 
-/** Node-scoped parameter boundary. Retention and weights remain the existing global settings. */
+/** Node-scoped parameter boundary. Retention inherits from the nearest explicit ancestor; weights remain global. */
 function parametersForNode(nodeId: string, settings: unknown[], ancestors: unknown[]) {
   const row = settings[0];
   const global = normalizeReviewSchedulerSettings(row ? JSON.parse(settingRow.parse(row).value_json) : null);
   const nodesById = Object.fromEntries(ancestors.map(value => {
     const node = nodeRow.parse(value);
-    return [node.id, { parentNodeId: node.parent_id, enableShortTerm: node.enable_short_term === null
+    return [node.id, { parentNodeId: node.parent_id, desiredRetention: node.desired_retention, enableShortTerm: node.enable_short_term === null
       ? null : node.enable_short_term === 1 }];
   }));
-  return { ...global, enableShortTerm: resolveNodeShortTermSetting(nodeId, nodesById).value };
+  return { ...global, desiredRetention: resolveNodeDesiredRetentionSetting(nodeId, nodesById, global.desiredRetention).value,
+    enableShortTerm: resolveNodeShortTermSetting(nodeId, nodesById).value };
 }
 
 function values(nodeId: string, card: SchedulerCard) {

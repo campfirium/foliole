@@ -5,6 +5,7 @@ import type { SchedulerCard, SchedulerGradeResult, SchedulerPreviewResult } from
 export type SchedulerRating = 'Again' | 'Hard' | 'Good' | 'Easy';
 
 export interface FsrsGradeRequest {
+  desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
   rating: SchedulerRating;
@@ -12,12 +13,14 @@ export interface FsrsGradeRequest {
 }
 
 export interface FsrsPreviewRequest {
+  desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
   now: string;
 }
 
 export interface FsrsSchedulerRuntimeOverrides {
+  desiredRetention?: number;
   enableShortTerm?: boolean;
 }
 
@@ -95,8 +98,11 @@ function toSchedulerResult(item: {
 export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource<TSettings>) {
   let schedulerCache: { key: string; scheduler: FSRS } | null = null;
 
-  function createRuntimeOverrides(request: { enableShortTerm?: boolean }): FsrsSchedulerRuntimeOverrides | undefined {
-    return request.enableShortTerm === undefined ? undefined : { enableShortTerm: request.enableShortTerm };
+  function createRuntimeOverrides(request: FsrsSchedulerRuntimeOverrides): FsrsSchedulerRuntimeOverrides {
+    return {
+      ...(request.desiredRetention === undefined ? {} : { desiredRetention: request.desiredRetention }),
+      ...(request.enableShortTerm === undefined ? {} : { enableShortTerm: request.enableShortTerm })
+    };
   }
 
   function getScheduler(overrides?: FsrsSchedulerRuntimeOverrides) {

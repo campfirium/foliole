@@ -31,10 +31,11 @@ describe('createDesktopReviewSchedulerAdapter', () => {
       reviewed_at: '2026-02-26T00:00:00.000Z'
     });
     const adapter = createDesktopReviewSchedulerAdapter(invoke);
-    const result = await adapter.grade(BASE_INPUT);
+    const result = await adapter.grade({ ...BASE_INPUT, desiredRetention: 0.99 });
     expect(invoke).toHaveBeenCalledWith('review_grade', {
       request: {
         card: BASE_INPUT.card,
+        desiredRetention: 0.99,
         rating: 'Good',
         now: BASE_INPUT.now
       }
@@ -75,10 +76,11 @@ describe('createDesktopReviewSchedulerAdapter preview', () => {
       Easy: { card: { ...BASE_INPUT.card, due: '2026-03-05T00:00:00.000Z' }, reviewed_at: BASE_INPUT.now }
     });
     const adapter = createDesktopReviewSchedulerAdapter(invoke);
-    const result = await adapter.preview({ card: BASE_INPUT.card, now: BASE_INPUT.now });
+    const result = await adapter.preview({ card: BASE_INPUT.card, desiredRetention: 0.8, now: BASE_INPUT.now });
     expect(invoke).toHaveBeenCalledWith('review_preview', {
       request: {
         card: BASE_INPUT.card,
+        desiredRetention: 0.8,
         now: BASE_INPUT.now
       }
     });

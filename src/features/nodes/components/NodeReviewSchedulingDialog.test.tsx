@@ -45,6 +45,7 @@ vi.mock('@/shared/ui', () => ({
   SettingsSection: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SETTINGS_RANGE_WIDTH_CLASS_NAME: 'range',
   SETTINGS_VALUE_WIDTH_CLASS_NAME: 'value',
+  appSurfaceControlClassName: () => '',
   settingsControlValueClassName: () => '',
   settingsRangeClassName: () => '',
   settingsSwitchClassName: () => '',
@@ -76,10 +77,12 @@ it('commits priority changes when the dialog closes', () => {
 
   renderWithLocalization(
     <NodeReviewSchedulingDialog
+      defaultDesiredRetention={0.9}
       defaultPriority={5}
       node={node}
       nodesById={{ [node.id]: node }}
       onClose={onClose}
+      onDesiredRetentionChange={() => undefined}
       onPriorityChange={onPriorityChange}
       onShortTermChange={onShortTermChange}
     />
@@ -95,4 +98,29 @@ it('commits priority changes when the dialog closes', () => {
   expect(onPriorityChange).toHaveBeenCalledWith('node-1', 7);
   expect(onShortTermChange).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledOnce();
+});
+
+it('saves an explicit retention and can restore inheritance without changing priority', () => {
+  const node = createNode({ parentNodeId: 'parent', desiredRetention: 0.99 });
+  const parent = createNode({ id: 'parent', desiredRetention: 0.8 });
+  const onDesiredRetentionChange = vi.fn();
+  const onPriorityChange = vi.fn();
+  const view = () => <NodeReviewSchedulingDialog defaultDesiredRetention={0.9} defaultPriority={5}
+    node={node} nodesById={{ [node.id]: node, parent }} onClose={() => undefined}
+    onDesiredRetentionChange={onDesiredRetentionChange} onPriorityChange={onPriorityChange}
+    onShortTermChange={() => undefined} />;
+  const rendered = renderWithLocalization(view());
+  const control = screen.getByRole('combobox', { name: 'Review desired retention' });
+  expect(control).toHaveValue('0.99');
+  expect(screen.getByRole('option', { name: 'Inherit resolved value (80%)' })).toBeInTheDocument();
+  fireEvent.change(control, { target: { value: '0.85' } });
+  expect(onDesiredRetentionChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('Close'));
+  expect(onDesiredRetentionChange).toHaveBeenLastCalledWith('node-1', 0.85);
+  node.desiredRetention = 0.85;
+  rendered.rerender(view());
+  fireEvent.change(control, { target: { value: 'inherit' } });
+  fireEvent.click(screen.getByText('Close'));
+  expect(onDesiredRetentionChange).toHaveBeenLastCalledWith('node-1', null);
+  expect(onPriorityChange).not.toHaveBeenCalled();
 });

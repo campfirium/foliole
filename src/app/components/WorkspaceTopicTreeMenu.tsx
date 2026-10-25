@@ -84,10 +84,12 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         unshelveNode={props.actions.unshelveNode}
       />
       <NodeReviewSchedulingDialog
+        defaultDesiredRetention={getCurrentReviewSchedulerSettings().desiredRetention}
         defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}
         node={reviewSchedulingNodeId ? (props.nodesById[reviewSchedulingNodeId] ?? null) : null}
         nodesById={props.nodesById}
         onClose={() => setReviewSchedulingNodeId(null)}
+        onDesiredRetentionChange={props.actions.updateNodeDesiredRetention}
         onPriorityChange={props.actions.updateNodePriority}
         onShortTermChange={props.actions.updateNodeShortTerm}
       />
