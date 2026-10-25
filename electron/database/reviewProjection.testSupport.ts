@@ -19,14 +19,14 @@ export async function seedReviewPeer(peer: RestorePeer) {
   const node = textBranch('original', 'Question', undefined, firstAt);
   await applySyncNodesWithDbPort(peer.db, [{ ...node, snapshot: { ...node.snapshot, kind: 'item' } }], { enqueueSearchInvalidations: false });
 }
-export function score(peer: RestorePeer, opId: string, at: string, grade: 1 | 2 | 3 | 4 = 3) {
+export function score(peer: Pick<RestorePeer, 'id' | 'sqlite'>, opId: string, at: string, grade: 1 | 2 | 3 | 4 = 3, nodeId = 'topic') {
   const driver = createBetterSqlite3Driver(peer.sqlite);
-  const cardBefore = readStoredReviewCard(driver, 'topic') ?? createInitialSchedulerCard(at);
+  const cardBefore = readStoredReviewCard(driver, nodeId) ?? createInitialSchedulerCard(at);
   const cardAfter = createFsrsReviewScheduler({ loadSettings: () => DEFAULT_REVIEW_SCHEDULER_SETTINGS,
     getSettingsVersion: getReviewSchedulerVersion, createParameters: createReviewSchedulerParameters })
     .grade({ card: cardBefore, rating: mapGradeToRustRating(grade), now: at }).card;
   return applyReviewGrade(driver, {
-    nodeId: 'topic', opId, grade, reviewedAt: at, schedulerVersion: 'untrusted-snapshot-version',
+    nodeId, opId, grade, reviewedAt: at, schedulerVersion: 'untrusted-snapshot-version',
     cardBefore, cardAfter
   }, { hostName: peer.id, createId: () => `${opId}-log` });
 }

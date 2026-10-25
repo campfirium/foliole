@@ -3,11 +3,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { score } from '../../electron/database/reviewProjection.testSupport';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
-import { saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionFlowHistorySurface, CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
@@ -27,14 +27,21 @@ let initial: WorkspaceSnapshot;
 let failRefresh = 0;
 let historyKey = '';
 const stored = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
-const before = { due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
-  state: 2 as const, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 };
+let before: unknown;
+let baselineFacts: unknown[];
+const facts = () => library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all();
 beforeEach(async () => {
   failRefresh = 0;
   library = await createSearchLibrary(0);
   const insert = library.database.prepare("INSERT INTO nodes (id,title,kind,content,reveal,created_at,updated_at) VALUES (?,?,'item',?,'Answer','2026-01-01','2026-01-01')");
-  for (const id of ['a', 'b']) { insert.run(id, id, id); await saveCompanionSyncNodeReviewRecord({ nodeId: id, review: before }); }
+  for (const id of ['a', 'b']) {
+    insert.run(id, id, id);
+    score({ sqlite: library.database, id: 'fixture' }, `${id}-first`, '2026-09-01T00:00:00.000Z', 3, id);
+    score({ sqlite: library.database, id: 'fixture' }, `${id}-second`, '2026-09-08T00:00:00.000Z', 3, id);
+  }
   initial = await stored();
+  before = initial.nodesById.a?.review;
+  baselineFacts = facts();
   Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value: () => {} });
 });
 afterEach(async () => { cleanup(); await library.close(); });
@@ -88,7 +95,9 @@ it('connects both edge directions to the real grading, history and SQLite paths'
   swipe('redo');
   await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('b'));
   expect((await stored()).nodesById.a?.review?.reps).toBe(3);
-  expect(library.database.prepare('SELECT COUNT(*) AS n FROM review_log').get()).toEqual({ n: 1 });
+  expect(facts()).toEqual(expect.arrayContaining(baselineFacts));
+  expect(facts()).toHaveLength(7);
+  expect(library.database.prepare("SELECT * FROM review_log WHERE kind = 'void'").all()).toHaveLength(1);
 });
 
 it('retries only refresh after a committed undo, without undoing another action', async () => {
