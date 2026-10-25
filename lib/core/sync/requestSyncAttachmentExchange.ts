@@ -1,6 +1,7 @@
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
+import { runPreparedAttachmentPulls } from './requestSyncAttachmentPreparationQueue.js';
 import { attachmentRequest, pullRequestSyncAttachmentWindows, singleAttachmentRequest as single } from './requestSyncAttachmentPull.js';
 import { pushRequestSyncAttachmentWindows } from './requestSyncAttachmentPush.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
@@ -58,6 +59,8 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
   let textPending = 0;
   const stages = [
     { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
+      if (exchange.prepareAttachment) return runPreparedAttachmentPulls({ host, exchange, keys: local.keys,
+        failed, pendingKeys, shouldYield, attempt });
       let attempted = false;
       for (const key of local.keys) {
         if (failed.has(key) || (attempted && shouldYield())) { pendingKeys.add(key); continue; }

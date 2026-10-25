@@ -15,12 +15,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService signingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService attachmentReceiveExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService syncFileExecutor = Executors.newSingleThreadExecutor();
     final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
     private boolean lifecycleActive = true;
 
     @PluginMethod public void postRequestSyncHttp(PluginCall call) {
-        FolioleCompanionRequestSyncHttp.post(getContext(), call, framedSendExecutor);
+        FolioleCompanionRequestSyncHttp.post(getContext(), call,
+            call.getObject("attachment_receive") == null ? framedSendExecutor : attachmentReceiveExecutor);
     }
 
     @PluginMethod public void cancelRequestSyncHttp(PluginCall call) {
@@ -237,6 +239,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         fileExecutor.shutdown();
         signingExecutor.shutdown();
         framedSendExecutor.shutdown();
+        attachmentReceiveExecutor.shutdown();
         syncFileExecutor.shutdown();
     }
 

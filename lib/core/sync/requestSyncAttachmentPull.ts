@@ -2,6 +2,7 @@ import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentB
 import { AttachmentReceivePaused } from './attachmentBlockTransfer.js';
 import { ATTACHMENT_WINDOW_BLOCKS, attachmentMessage, attachmentRequestSchema, assertAttachmentResponse,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
+import { pullPreparedAttachmentWindows } from './requestSyncAttachmentPrepared.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import { withControlRequest, type RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 import { readRequestSyncWire } from './requestSyncWire.js';
@@ -94,13 +95,26 @@ async function pullWindow(host: RequestSyncAttachmentHost, exchange: RequestSync
   return { blocks, wireBlocks, receivedOffset };
 }
 
-/** Describe once, then pull consecutive windows until the file completes or data work needs the peer. */
-export async function pullRequestSyncAttachmentWindows(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
+export async function prepareRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   storageKey: string, shouldYield: () => boolean) {
   const resource = await describe(exchange, storageKey, shouldYield);
-  if (!resource) return { complete: false, blocks: 0, verificationPending: true };
+  if (!resource) return null;
   const initial = await host.status(resource);
+  const window = initial.kind === 'complete' || !exchange.prepareAttachment ? undefined
+    : await exchange.prepareAttachment(attachmentRequestSchema.parse({ ...resource,
+      requestId: crypto.getRandomValues(new Uint8Array(16)), operation: 'pull', offset: initial.offset, maxBlocks: ATTACHMENT_WINDOW_BLOCKS }));
+  return { resource, initial, window };
+}
+
+/** Describe once, then pull consecutive windows until the file completes or data work needs the peer. */
+export async function pullRequestSyncAttachmentWindows(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
+  storageKey: string, shouldYield: () => boolean,
+  prepared?: Awaited<ReturnType<typeof prepareRequestSyncAttachment>>, onDispatch: (hasNext: boolean) => void = () => {}) {
+  const ready = prepared === undefined ? await prepareRequestSyncAttachment(host, exchange, storageKey, shouldYield) : prepared;
+  if (!ready) return { complete: false, blocks: 0, verificationPending: true };
+  const { resource, initial } = ready;
   if (initial.kind === 'complete') return { complete: true, blocks: 0 };
+  if (ready.window) return pullPreparedAttachmentWindows(host, exchange, ready, shouldYield, onDispatch);
   let blocks = 0;
   let offset = initial.offset;
   while (true) {

@@ -14,7 +14,13 @@ import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
+export interface PreparedAttachmentRequest {
+  send(): Promise<AttachmentReceiveWindow>;
+  close(): Promise<void>;
+}
+
 export interface RequestSyncExchange {
+  prepareAttachment?(query: AttachmentRequest): Promise<PreparedAttachmentRequest>;
   /** Native execution validates and writes one authorized range; shared code owns publication. */
   receiveAttachment?(query: AttachmentRequest): Promise<AttachmentReceiveWindow>;
   context: RequestSyncAuthenticatedContext;

@@ -99,7 +99,7 @@ export async function attachmentHttpServer(dropResponseAt: number, delayMs = 0) 
     };
     if (delayMs) setTimeout(forward, delayMs); else forward();
   });
-  return { url: await listen(relay), attachmentRequests: () => attachmentRequests, async close() {
+  return { url: await listen(relay), productionUrl: origin, attachmentRequests: () => attachmentRequests, async close() {
     await new Promise<void>(resolve => relay.close(() => resolve()));
     await new Promise<void>(resolve => production.close(() => resolve()));
   } };

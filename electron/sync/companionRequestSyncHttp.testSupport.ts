@@ -13,8 +13,8 @@ type AttachmentFixture = {
 };
 
 /** Substitute the OS file/HTTP boundary while retaining the production JS request path. */
-export async function postCompanionRequestFixture(files: FramedSyncFilePort, input: NativeRequestSyncHttpRequest,
-  attachment?: AttachmentFixture) {
+export async function postCompanionRequestFixture(files: Pick<FramedSyncFilePort, 'read' | 'write'>, input: NativeRequestSyncHttpRequest,
+  attachment?: AttachmentFixture, signal?: AbortSignal) {
   const chunks: Uint8Array[] = [];
   for (let index = 0; index < input.request_chunk_count; index++) {
     const chunk = await files.read(`${input.directory}/http-out-${index}`);
@@ -22,7 +22,7 @@ export async function postCompanionRequestFixture(files: FramedSyncFilePort, inp
     chunks.push(chunk);
   }
   const response = await fetch(input.url, { method: 'POST', body: Buffer.concat(chunks),
-    headers: { ...input.headers, 'Content-Type': FRAMED_SYNC_CONTENT_TYPE } });
+    ...(signal ? { signal } : {}), headers: { ...input.headers, 'Content-Type': FRAMED_SYNC_CONTENT_TYPE } });
   if (!response.ok) {
     const body = await response.text();
     // Match native transports' explicit round-contention error codes.
@@ -41,7 +41,7 @@ export async function postCompanionRequestFixture(files: FramedSyncFilePort, inp
   return spoolResponse(files, input.directory, new Uint8Array(await response.arrayBuffer()));
 }
 
-async function spoolResponse(files: FramedSyncFilePort, directory: string, bytes: Uint8Array) {
+async function spoolResponse(files: Pick<FramedSyncFilePort, 'write'>, directory: string, bytes: Uint8Array) {
   const size = 512 * 1024;
   for (let offset = 0; offset < bytes.length; offset += size) {
     await files.write(`${directory}/http-in-${offset / size}`, bytes.subarray(offset, offset + size));
