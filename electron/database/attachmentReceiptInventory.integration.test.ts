@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
@@ -19,6 +19,8 @@ import { openDesktopAttachmentBlockReceiver } from '../sync/desktopAttachmentBlo
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { textBranch } from './topicTextState.testSupport.js';
+
+beforeAll(async () => { await fs.mkdir(path.resolve('.tmp/artifacts'), { recursive: true }); });
 
 it.each([false, true])('receives a listed attachment without rebuilding node inventories, companion=%s', async companion => {
   const root = await fs.mkdtemp(path.resolve('.tmp/artifacts/attachment-receipt-'));

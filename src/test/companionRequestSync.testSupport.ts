@@ -149,7 +149,10 @@ function configureAttachmentReads(stateRoot: string) {
       }))) };
     const partial = path.join(assets, `.${input.key.slice(0, 64)}.partial`);
     if (input.action === 'truncate') {
-      const file = await fs.open(partial, 'a');
+      const file = await fs.open(partial, 'r+').catch(error => {
+        if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
+        return fs.open(partial, 'wx+');
+      });
       try { await file.truncate(input.length ?? 0); } finally { await file.close(); }
       return {};
     }

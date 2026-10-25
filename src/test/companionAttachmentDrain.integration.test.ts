@@ -13,6 +13,24 @@ import { createCompanionRequestFixture, native } from './companionRequestSync.te
 const BLOCKS = 48;
 const REQUEST_DELAY_MS = 50;
 
+it('retains the committed partial prefix when an interrupted attachment is truncated and resumed', async () => {
+  const host = await createCompanionRequestFixture();
+  const bytes = Buffer.from('committed prefix and resumed suffix');
+  const key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
+  const assets = path.join(host.fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets');
+  try {
+    await mkdir(assets, { recursive: true });
+    await native.accessFile({ action: 'truncate', key, length: 0 });
+    await native.accessFile({ action: 'append', key, offset: 0, base64: bytes.toString('base64') });
+    await native.accessFile({ action: 'truncate', key, length: 16 });
+    const partial = path.join(assets, `.${key.slice(0, 64)}.partial`);
+    expect(await readFile(partial)).toEqual(bytes.subarray(0, 16));
+    await native.accessFile({ action: 'append', key, offset: 16, base64: bytes.subarray(16).toString('base64') });
+    expect(await readFile(partial)).toEqual(bytes);
+    expect(await native.accessFile({ action: 'hash', key })).toEqual({ hash: key.slice(0, 64) });
+  } finally { await host.close(); }
+});
+
 it.each([
   { direction: 'pull', source: 'right', target: 'left' },
   { direction: 'push', source: 'left', target: 'right' }
