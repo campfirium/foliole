@@ -1,16 +1,18 @@
-import { Suspense, type CSSProperties, useCallback, useEffect, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useRef } from 'react';
 
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { CompanionItemAnswer } from './CompanionItemAnswer';
 import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
 } from './CompanionPdfReadingEntry';
 import { CompanionPersistedPdfDocument } from './CompanionPersistedPdfDocument';
+import { typographyStyle } from './companionReadableTypographyStyle';
 import type { CompanionReadingActivity } from './companionReadingActivity';
-import { readingFontCssFamily } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionEditorDraftFlush } from './useCompanionEditorDraftFlush';
@@ -24,40 +26,6 @@ import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyn
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
-const FONT_SIZE_VALUES: Record<CompanionReadingTypographySettings['fontSize'], string> = {
-  default: '1.0625rem',
-  large: '1.1875rem',
-  small: '0.9375rem',
-  xlarge: '1.3125rem'
-};
-
-const LINE_HEIGHT_VALUES: Record<CompanionReadingTypographySettings['lineHeight'], string> = {
-  compact: '1.45',
-  default: '1.62',
-  relaxed: '1.78'
-};
-
-const PARAGRAPH_SPACING = '0.35em';
-
-function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily']) {
-  if (value === 'serif') return 'Georgia, "Times New Roman", serif';
-  if (value === 'sans') return 'var(--font-family-sans)';
-  if (value.startsWith('system:')) return `"${value.slice(7)}", var(--font-family-sans)`;
-  return `"${readingFontCssFamily(value.slice(7))}", var(--font-family-sans)`;
-}
-
-function typographyStyle(settings: CompanionReadingTypographySettings): CSSProperties {
-  return {
-    '--content-panel-font-family': readingFontFamily(settings.fontFamily),
-    '--content-panel-font-size': FONT_SIZE_VALUES[settings.fontSize],
-    '--content-panel-line-height': LINE_HEIGHT_VALUES[settings.lineHeight],
-    '--content-panel-paragraph-spacing': PARAGRAPH_SPACING,
-    '--document-content-inline-padding': '0px',
-    '--content-panel-text-color': settings.contrast === 'high'
-      ? 'var(--color-text-primary)'
-      : 'color-mix(in srgb, var(--color-text-primary) 92%, var(--color-text-secondary))'
-  } as CSSProperties;
-}
 
 function toEditorViewState(article: ReadableArticle): EditorViewState | undefined {
   const persistedState = article.persistedNodeViewState;
@@ -118,6 +86,7 @@ function useReadableArticleEditorState(props: {
 
 function ReadableArticleTextDocument(props: {
   canEdit: boolean;
+  isReviewItem?: boolean;
   layout?: 'article' | 'review';
   editorState: ReturnType<typeof useCompanionTopicEditAutosave>;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -128,6 +97,7 @@ function ReadableArticleTextDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   syncMissingAttachmentResource(attachmentId: string): Promise<void>;
 }) {
+  const t = useTranslation();
   return (
     <div
       data-reading-contrast={props.readingTypographySettings.contrast}
@@ -136,7 +106,9 @@ function ReadableArticleTextDocument(props: {
       data-reading-line-height={props.readingTypographySettings.lineHeight}
       style={typographyStyle(props.readingTypographySettings)}
     >
+      {props.canEdit && props.isReviewItem ? <h2 className="mb-2 text-sm text-companion-text-secondary">{t('companion.review.question')}</h2> : null}
       <CompanionArticleDocument
+        {...(props.isReviewItem ? { ariaLabel: t('companion.review.question') } : {})}
         key={props.canEdit ? `${props.readableArticle.nodeId}:editing` : `${props.readableArticle.nodeId}:reading`}
         content={props.editorState.value}
         layout={props.layout ?? 'article'}
@@ -163,6 +135,7 @@ function ReadableArticleTextDocument(props: {
 type ReadableArticleDocumentProps = {
   activity?: CompanionReadingActivity;
   answer?: string | null;
+  isReviewItem?: boolean;
   allowContentEditing?: boolean;
   layout?: 'article' | 'review';
   onAttachmentResourceSynced?: () => void;
@@ -187,7 +160,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       onSaveContent: props.onSaveContent
     })
   });
-  const { editorState, onEditorReady } = useCompanionEditorDraftFlush(draft, canEdit, props.onEditorReady);
+  const { editorState, onEditorReady, onAnswerEditorReady } = useCompanionEditorDraftFlush(draft, canEdit, props.onEditorReady);
   const syncMissingAttachmentResource = useReadableDocumentActivity(props, editorState);
 
   if (pdfAttachmentId && pdfReading.isViewingOriginal) {
@@ -208,6 +181,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       ) : null}
       <ReadableArticleTextDocument
         canEdit={canEdit}
+        isReviewItem={props.isReviewItem === true}
         layout={props.layout ?? 'article'}
         editorState={editorState}
         onEditorReady={onEditorReady}
@@ -220,8 +194,11 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
           scrollContainer: props.scrollContainer
         })}
       />
-      <ReadableArticleAnswer answer={props.answer ?? null} article={props.readableArticle}
-        settings={props.readingTypographySettings} onMissingResource={syncMissingAttachmentResource} />
+      <CompanionItemAnswer answer={canEdit && props.isReviewItem ? editorState.reveal : props.answer ?? null}
+        editing={canEdit && props.isReviewItem === true} nodeId={props.readableArticle.nodeId}
+        style={typographyStyle(props.readingTypographySettings)} onMissingResource={syncMissingAttachmentResource}
+        onChange={editorState.handleRevealChange} onEditorReady={onAnswerEditorReady}
+        onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>
   );
@@ -246,13 +223,4 @@ function useReadableDocumentActivity(props: Parameters<typeof ReadableArticleDoc
     if (result.status === 'cached') props.onAttachmentResourceSynced?.();
   }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
 
-}
-
-function ReadableArticleAnswer(props: { answer: string | null; article: ReadableArticle;
-  settings: CompanionReadingTypographySettings; onMissingResource: (id: string) => Promise<void> }) {
-  if (!props.answer) return null;
-  return <div style={typographyStyle(props.settings)} className="border-t border-companion-divider pt-5">
-    <CompanionArticleDocument content={props.answer} nodeId={props.article.nodeId + '::answer'}
-      layout="review" scrollContainer="outer" onMissingAttachmentResource={props.onMissingResource} />
-  </div>;
 }

@@ -110,6 +110,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       activity={activity}
       flow={props.flow === true}
       header={header}
+      isReviewItem={props.workspaceSync.state.workspace_snapshot?.nodesById[props.surface.readableArticle.nodeId]?.kind === 'item'}
       answer={props.flow && props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null}
       footer={footer}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}

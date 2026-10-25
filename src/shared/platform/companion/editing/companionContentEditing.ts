@@ -23,7 +23,8 @@ export async function readCompanionContentSource(nodeId: string, holdId?: string
     const current = await loadCurrentSyncNodeRecord(db, nodeId, false);
     if (!current?.version_id || current.snapshot.deleted_at) throw new Error('content_edit_node_unavailable');
     if (holdId) await retainLocalEditBase(db, { holdId, nodeId, versionId: current.version_id });
-    return { content: current.body_text ?? '', imageReferences: contentImageReferences(current), versionId: current.version_id };
+    return { ...(current.snapshot.kind === 'item' ? { reveal: current.snapshot.reveal ?? null } : {}),
+      content: current.body_text ?? '', imageReferences: contentImageReferences(current), versionId: current.version_id };
   };
   return holdId
     ? runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction(read)))
@@ -50,7 +51,8 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
       const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
       if (!base || (base.snapshot.kind !== 'topic' && base.snapshot.kind !== 'item')) throw new Error('content_edit_base_unavailable');
       assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
-        anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link) });
+        anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link),
+        ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) });
       const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
       const children = await readCompanionContentAnchors(db, edit.nodeId);
       const hostName = await iosCompanionHostName(db);
@@ -70,6 +72,7 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
       await remapCompanionContentAnchors({ db, children, hostName, updatedAt: edit.updatedAt,
         previousContent: previous?.body_text ?? '', nextContent: result.current.body_text ?? '' });
       return {
+        ...(result.current.snapshot.kind === 'item' ? { reveal: result.current.snapshot.reveal ?? null } : {}),
         content: result.current.body_text ?? '',
         currentVersionId: result.current.version_id,
         submittedVersionId: result.submittedVersionId

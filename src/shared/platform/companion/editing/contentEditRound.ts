@@ -3,10 +3,15 @@ import type { ContentImageReference } from '../../../../../lib/core/sync/localCo
 
 import type { ContentDraftSession } from './contentDraftSession';
 
+function imageKeys(content: string, reveal: string | null | undefined) {
+  return collectArticleImageStorageKeys(content + '\n' + (reveal ?? ''));
+}
+
 export type ContentEditRevertResult = 'unchanged' | 'reverted' | 'blocked';
 
 interface RoundEntry {
   content: string;
+  reveal: string | null | undefined;
   foreignAdoptions: number;
   imageReferences: ContentImageReference[] | null;
 }
@@ -28,9 +33,9 @@ export class ContentEditRound {
   /** Captures the entry once the session is ready, before the first change of the round. */
   capture() {
     if (!this.armed || this.entry || !this.session.ready) return;
-    const entry: RoundEntry = { content: this.session.value, foreignAdoptions: this.session.foreignAdoptions, imageReferences: null };
+    const entry: RoundEntry = { content: this.session.value, reveal: this.session.reveal, foreignAdoptions: this.session.foreignAdoptions, imageReferences: null };
     this.entry = entry;
-    if (!collectArticleImageStorageKeys(entry.content).length) {
+    if (!imageKeys(entry.content, entry.reveal).length) {
       entry.imageReferences = [];
       return;
     }
@@ -46,25 +51,26 @@ export class ContentEditRound {
   }
 
   hasChanges() {
-    return Boolean(this.entry) && this.session.value !== this.entry!.content;
+    return Boolean(this.entry) && (this.session.value !== this.entry!.content || this.session.reveal !== this.entry!.reveal);
   }
 
   async revert(): Promise<ContentEditRevertResult> {
     await this.session.flush();
     await this.images;
     const entry = this.entry;
-    if (!entry || this.session.value === entry.content) return 'unchanged';
+    if (!entry || (this.session.value === entry.content && this.session.reveal === entry.reveal)) return 'unchanged';
     if (this.session.foreignAdoptions !== entry.foreignAdoptions) return 'blocked';
     const restored = this.restoredImages(entry);
     if (!restored) return 'blocked';
     this.session.change(entry.content, restored);
+    if (entry.reveal !== undefined) this.session.changeReveal(entry.reveal);
     await this.session.flush();
     return 'reverted';
   }
 
   private restoredImages(entry: RoundEntry) {
-    const current = new Set(collectArticleImageStorageKeys(this.session.value));
-    const missing = collectArticleImageStorageKeys(entry.content).filter((key) => !current.has(key));
+    const current = new Set(imageKeys(this.session.value, this.session.reveal));
+    const missing = imageKeys(entry.content, entry.reveal).filter((key) => !current.has(key));
     if (!missing.length) return [];
     return entry.imageReferences?.filter((reference) => missing.includes(reference.storage_key)) ?? null;
   }

@@ -36,6 +36,7 @@ interface ImmersiveReadableArticleProps {
   activity?: CompanionReadingActivity;
   flow?: boolean;
   answer?: string | null;
+  isReviewItem?: boolean;
   footer?: ReactNode;
   header?: ReactNode;
   searchMatch?: CompanionSearchMatch | null | undefined;
@@ -203,7 +204,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         readingRestoreCommandId={model.reading.readingRestoreCommandId}
         readingSelection={model.reading.readingSelection}
         {...definedProps({
-          activity: props.activity, answer: props.answer,
+          activity: props.activity, answer: props.answer, isReviewItem: props.isReviewItem,
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
           onSaveArticleContent: props.onSaveArticleContent,
           syncEndpointUrl: props.syncEndpointUrl

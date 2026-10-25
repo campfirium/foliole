@@ -5,8 +5,8 @@ import type { CompanionContentAcknowledgement, CompanionContentEdit, CompanionCo
 export function createContentSaveMock(initial: CompanionContentSource = { content: 'Original body', versionId: 'base' }) {
   let source = initial;
   const save = vi.fn(async (_nodeId: string, content: string, edit?: CompanionContentEdit): Promise<CompanionContentAcknowledgement> => {
-    source = { content, versionId: edit?.versionId ?? 'saved' };
-    return { content, currentVersionId: source.versionId, submittedVersionId: source.versionId };
+    source = { ...(edit?.reveal === undefined ? {} : { reveal: edit.reveal }), content, versionId: edit?.versionId ?? 'saved' };
+    return { ...(source.reveal === undefined ? {} : { reveal: source.reveal }), content, currentVersionId: source.versionId, submittedVersionId: source.versionId };
   });
   return Object.assign(save, {
     readSource: vi.fn(async () => source),

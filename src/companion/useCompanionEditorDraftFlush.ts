@@ -11,6 +11,8 @@ export function useCompanionEditorDraftFlush(
   onReady?: (editor: EditorAdapter | null) => void
 ) {
   const editor = useRef<EditorAdapter | null>(null);
+  const answerEditor = useRef<EditorAdapter | null>(null);
+  const onAnswerEditorReady = useCallback((value: EditorAdapter | null) => { answerEditor.current = value; }, []);
   const onEditorReady = useCallback((value: EditorAdapter | null) => {
     editor.current = value;
     onReady?.(value);
@@ -20,7 +22,11 @@ export function useCompanionEditorDraftFlush(
       editor.current.flushContentChanges?.();
       state.handleChange(editor.current.getContent());
     }
+    if (canEdit && answerEditor.current) {
+      answerEditor.current.flushContentChanges?.();
+      state.handleRevealChange(answerEditor.current.getContent());
+    }
     await state.flushPendingSave();
-  }, [canEdit, state.handleChange, state.flushPendingSave]);
-  return { editorState: { ...state, flushPendingSave }, onEditorReady };
+  }, [canEdit, state.handleChange, state.handleRevealChange, state.flushPendingSave]);
+  return { editorState: { ...state, flushPendingSave }, onEditorReady, onAnswerEditorReady };
 }

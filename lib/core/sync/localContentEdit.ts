@@ -17,6 +17,7 @@ import { mergedTopicTextBodies } from './topicTextBodies.js';
 import { normalizeTextAlternatives } from './topicTextState.js';
 
 export interface LocalContentEdit {
+  reveal?: string | null;
   newImageReferences?: readonly ContentImageReference[];
   baseContent?: string;
   baseVersionId: string;
@@ -62,9 +63,9 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
       }
     }
     const sameBody = input.content === base.body_text || hashTextBody(input.content) === base.snapshot.body_blob_hash;
-    if (!stored && sameBody && added.length === 0) return { current, submittedVersionId: base.version_id! };
-    const record = createEditRecord(base, input, stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added));
-    record.snapshot.image_sources = stored?.snapshot.image_sources ?? localContentEditImageSources(current, input.content, added);
+    if (!stored && sameBody && (input.reveal === undefined || input.reveal === base.snapshot.reveal) && added.length === 0) return { current, submittedVersionId: base.version_id! };
+    const record = createEditRecord(base, input, stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added, input.reveal));
+    record.snapshot.image_sources = stored?.snapshot.image_sources ?? localContentEditImageSources(current, input.content + '\n' + (record.snapshot.reveal ?? ''), added);
     record.content_hash = hashText(JSON.stringify(record.snapshot));
     record.alternative_bodies = mergedTopicTextBodies(record.snapshot.text_alternatives ?? [], [base, current]);
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
@@ -82,12 +83,14 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
 function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & {
   content: string; hideTitleHeading: boolean; hostName: string; title: string; updatedAt: string;
 }, resources?: string): NativeSyncNodeRecord {
+  const reveal = input.reveal === undefined ? base.snapshot.reveal : input.reveal;
   const snapshot = {
     ...base.snapshot,
     ...(resources === undefined ? {} : { resource_references: resources, attachments: projectNodeResourceLinks(resources) }),
-    image_sources: localContentEditImageSources(base, input.content, parseNewImageReferences(input.newImageReferences)),
+    image_sources: localContentEditImageSources(base, input.content + '\n' + (reveal ?? ''), parseNewImageReferences(input.newImageReferences)),
     body_blob_hash: null,
     content: input.content,
+    ...(input.reveal === undefined ? {} : { reveal: input.reveal }),
     hide_title_heading: input.hideTitleHeading,
     title: input.title,
     updated_at: input.updatedAt,
@@ -117,6 +120,7 @@ function matchesEdit(stored: NativeSyncNodeRecord, record: NativeSyncNodeRecord)
     && stored.object_id === record.object_id
     && stored.host_name === record.host_name
     && (stored.body_text === record.body_text || stored.snapshot.body_blob_hash === hashTextBody(record.body_text!))
+    && stored.snapshot.reveal === record.snapshot.reveal
     && stored.snapshot.title === record.snapshot.title
     && stored.snapshot.hide_title_heading === record.snapshot.hide_title_heading
     && stored.updated_at === record.updated_at;

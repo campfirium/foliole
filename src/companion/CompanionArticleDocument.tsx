@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type {
   EditorMissingAttachmentResourceHandler,
   EditorAdapter,
+  EditorContentChangeMeta,
   EditorSelection,
   EditorTextAnchorDecoration,
   EditorViewportMode
@@ -18,12 +19,13 @@ import { definedProps } from '@/shared/lib/definedProps';
 
 export function CompanionArticleDocument(props: {
   content: string;
+  ariaLabel?: string;
   hideTitleHeading?: boolean;
   layout?: 'article' | 'review';
   nodeId: string;
   nodeViewState?: EditorViewState;
   onBlurCapture?: () => void;
-  onChange?: (content: string) => void;
+  onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
   onDocumentInput?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
@@ -46,12 +48,12 @@ export function CompanionArticleDocument(props: {
       style={{ '--document-content-inline-padding': '0px' } as CSSProperties}
     >
       <MarkdownEditor
-        ariaLabel="Topic body"
+        ariaLabel={props.ariaLabel ?? 'Topic body'}
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"
         hideScrollbar
         nodeId={props.nodeId}
-        onChange={(content) => props.onChange?.(content)}
+        onChange={(content, meta) => props.onChange?.(content, meta)}
         readOnly={!props.onChange}
         readOnlyInteractionMode={!props.onChange ? 'document' : 'editor'}
         value={props.content}

@@ -37,18 +37,19 @@ export function contentEditImageInputHash(value: unknown) {
 }
 
 export function localContentEditResources(base: NativeSyncNodeRecord, current: NativeSyncNodeRecord,
-  content: string, added: readonly NodeResourceReference[]) {
-  const submitted = new Set(collectArticleImageStorageKeys(content));
+  content: string, added: readonly NodeResourceReference[], reveal: string | null = base.snapshot.reveal ?? null) {
+  const submitted = new Set(collectArticleImageStorageKeys(content + '\n' + (reveal ?? '')));
   if (base.body_text === null && parseNodeResourceReferences(base.snapshot.resource_references).some(reference => reference.role === 'image')) {
     throw new Error('content_edit_base_content_unavailable');
   }
-  const removed = new Set(collectArticleImageStorageKeys(base.body_text ?? base.snapshot.content ?? '')
+  const removed = new Set(collectArticleImageStorageKeys((base.body_text ?? base.snapshot.content ?? '') + '\n' + (base.snapshot.reveal ?? ''))
     .filter(key => !submitted.has(key)));
   const currentHash = current.snapshot.body_blob_hash ?? (typeof current.body_text === 'string' ? hashTextBody(current.body_text) : null);
   const baseHash = base.snapshot.body_blob_hash ?? (typeof base.body_text === 'string' ? hashTextBody(base.body_text) : null);
   const concurrentBodies = currentHash !== baseHash
     && typeof current.body_text === 'string' ? [{ text: current.body_text }] : [];
-  const protectedKeys = new Set([...base.alternative_bodies ?? [], ...current.alternative_bodies ?? [], ...concurrentBodies]
+  const concurrentAnswers = current.snapshot.reveal !== base.snapshot.reveal ? [{ text: current.snapshot.reveal ?? '' }] : [];
+  const protectedKeys = new Set([...concurrentAnswers, ...base.alternative_bodies ?? [], ...current.alternative_bodies ?? [], ...concurrentBodies]
     .flatMap(body => collectArticleImageStorageKeys(body.text)));
   const references = parseNodeResourceReferences(current.snapshot.resource_references)
     .filter(reference => reference.role !== 'image' || !removed.has(reference.storage_key) || protectedKeys.has(reference.storage_key));

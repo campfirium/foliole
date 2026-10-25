@@ -2,11 +2,12 @@ import type { ContentImageReference } from '../../../../../lib/core/sync/localCo
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
 import { createCompanionUuid } from '../../companionUuid';
 
-import type { CompanionContentEdit, CompanionContentSaveHandler, CompanionContentSource } from './companionContentEditContract';
+import type { CompanionContentAcknowledgement, CompanionContentEdit, CompanionContentSaveHandler, CompanionContentSource } from './companionContentEditContract';
 import { ContentSavedRefreshError } from './contentSavedRefreshError';
 
 export class ContentDraftSession {
   value: string;
+  reveal: string | null | undefined;
   error: string | null = null;
   ready: boolean;
   /** Counts content adopted from versions this session did not submit. */
@@ -22,20 +23,21 @@ export class ContentDraftSession {
   private listeners = new Set<() => void>();
   private holdId: string | null = null;
   private starting: Promise<void> | null = null;
-  private bufferedInput = false;
+  private bufferedInput = new Set<'content' | 'reveal'>();
 
   constructor(readonly nodeId: string, private base: CompanionContentSource,
     public save: CompanionContentSaveHandler, private delay = 0) {
     this.value = base.content;
+    this.reveal = base.reveal;
     this.ready = !save.retainHold;
   }
 
-  get dirty() { return this.bufferedInput || this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
+  get dirty() { return this.bufferedInput.size > 0 || this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
   get attached() { return this.listeners.size > 0; }
 
-  markBufferedInput() {
+  markBufferedInput(field: 'content' | 'reveal' = 'content') {
     if (!this.ready) return;
-    this.bufferedInput = true;
+    this.bufferedInput.add(field);
     this.clearTimer();
   }
 
@@ -59,6 +61,7 @@ export class ContentDraftSession {
       this.holdId = holdId;
       this.base = source;
       this.value = source.content;
+      this.reveal = source.reveal;
       this.error = null;
       this.ready = true;
       this.publish();
@@ -93,6 +96,7 @@ export class ContentDraftSession {
       if (source.versionId !== this.base.versionId) this.foreignAdoptions += 1;
       this.base = source;
       this.value = source.content;
+      this.reveal = source.reveal;
       this.publish();
       await this.replaceHold(nextHoldId);
     } catch {
@@ -105,12 +109,26 @@ export class ContentDraftSession {
     for (const reference of references) {
       if (!this.imageReferences.has(reference.storage_key)) this.imageReferences.set(reference.storage_key, reference);
     }
-    this.bufferedInput = false;
+    this.bufferedInput.delete('content');
     if (value === this.value) {
       if (this.dirty) this.scheduleSave();
       return;
     }
     this.value = value;
+    this.sequence += 1;
+    this.publish();
+    this.scheduleSave();
+  }
+
+  changeReveal(reveal: string | null, references: readonly ContentImageReference[] = []) {
+    if (!this.ready) return;
+    this.bufferedInput.delete('reveal');
+    for (const reference of references) this.imageReferences.set(reference.storage_key, reference);
+    if (reveal === this.reveal) {
+      if (this.dirty) this.scheduleSave();
+      return;
+    }
+    this.reveal = reveal;
     this.sequence += 1;
     this.publish();
     this.scheduleSave();
@@ -138,7 +156,7 @@ export class ContentDraftSession {
     }
     const target = this.sequence;
     while (this.acknowledged < target) {
-      if (!explicit && this.bufferedInput) return;
+      if (!explicit && this.bufferedInput.size > 0) return;
       if (!this.running) this.running = this.commit().finally(() => { this.running = null; });
       await this.running;
     }
@@ -149,6 +167,7 @@ export class ContentDraftSession {
     const edit = this.pending ?? {
       newImageReferences: [...this.imageReferences.values()],
       baseContent: this.base.content,
+      ...(this.reveal === undefined ? {} : { reveal: this.reveal }),
       nodeId: this.nodeId, content: this.value, baseVersionId: this.base.versionId,
       ...(this.holdId ? { holdId: this.holdId } : {}),
       versionId: createOpaqueVersionRef(createCompanionUuid()),
@@ -161,44 +180,55 @@ export class ContentDraftSession {
         this.refreshSaved = error.refresh;
         return error.acknowledgement;
       });
-      if (ack.currentVersionId !== ack.submittedVersionId) this.foreignAdoptions += 1;
-      this.acknowledged = edit.sequence;
-      this.pending = null;
-      this.error = null;
-      if (this.sequence === edit.sequence && !this.bufferedInput) {
-        let nextHoldId: string | null = null;
-        try {
-          nextHoldId = this.holdId && ack.currentVersionId !== ack.submittedVersionId
-            ? await this.stageNextBase(ack.currentVersionId) : null;
-          if (this.sequence === edit.sequence && !this.bufferedInput) {
-            this.base = { content: ack.content, versionId: ack.currentVersionId };
-            this.value = ack.content;
-            await this.replaceHold(nextHoldId);
-          }
-          else if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
-        } catch {
-          // The committed input remains protected; a later refresh may adopt the merged head.
-        }
-      }
-      if (this.sequence === edit.sequence && !this.bufferedInput) {
-        if (!this.holdId || ack.currentVersionId === ack.submittedVersionId ||
-            this.holdId !== edit.holdId) {
-          this.base = { content: ack.content, versionId: ack.currentVersionId };
-          this.value = ack.content;
-        } else {
-          this.base = { content: edit.content, versionId: ack.submittedVersionId };
-          this.value = edit.content;
-        }
-      } else {
-        this.base = { content: edit.content, versionId: ack.submittedVersionId };
-      }
-      this.publish();
-      if (this.refreshSaved) throw new Error('The topic was saved, but could not be refreshed.');
+      await this.acknowledge(edit, ack);
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Could not save this topic.';
       this.publish();
       throw error;
     }
+  }
+
+  private async acknowledge(edit: CompanionContentEdit & { sequence: number }, ack: CompanionContentAcknowledgement) {
+    const acknowledged = { content: ack.content, versionId: ack.currentVersionId,
+      ...(edit.reveal === undefined ? {} : { reveal: ack.reveal === undefined ? edit.reveal : ack.reveal }) };
+    const submitted = { content: edit.content, versionId: ack.submittedVersionId,
+      ...(edit.reveal === undefined ? {} : { reveal: edit.reveal }) };
+    if (ack.currentVersionId !== ack.submittedVersionId) this.foreignAdoptions += 1;
+    this.acknowledged = edit.sequence;
+    this.pending = null;
+    this.error = null;
+    if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
+      let nextHoldId: string | null = null;
+      try {
+        nextHoldId = this.holdId && ack.currentVersionId !== ack.submittedVersionId
+          ? await this.stageNextBase(ack.currentVersionId) : null;
+        if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
+          this.base = acknowledged;
+          this.value = ack.content;
+          this.reveal = acknowledged.reveal;
+          await this.replaceHold(nextHoldId);
+        }
+        else if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
+      } catch {
+        // The committed input remains protected; a later refresh may adopt the merged head.
+      }
+    }
+    if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
+      if (!this.holdId || ack.currentVersionId === ack.submittedVersionId ||
+          this.holdId !== edit.holdId) {
+        this.base = acknowledged;
+        this.value = ack.content;
+        this.reveal = acknowledged.reveal;
+      } else {
+        this.base = submitted;
+        this.value = edit.content;
+        this.reveal = submitted.reveal;
+      }
+    } else {
+      this.base = submitted;
+    }
+    this.publish();
+    if (this.refreshSaved) throw new Error('The topic was saved, but could not be refreshed.');
   }
 
   private async stageNextBase(versionId: string) {

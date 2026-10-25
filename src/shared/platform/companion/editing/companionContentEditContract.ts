@@ -2,6 +2,7 @@ import type { LocalContentEdit } from '../../../../../lib/core/sync/localContent
 import type { ContentImageReference } from '../../../../../lib/core/sync/localContentEditResources';
 
 export interface CompanionContentSource {
+  reveal?: string | null;
   content: string;
   imageReferences?: ContentImageReference[];
   versionId: string;
@@ -15,6 +16,7 @@ export interface CompanionContentEdit extends LocalContentEdit {
 }
 
 export interface CompanionContentAcknowledgement {
+  reveal?: string | null;
   content: string;
   currentVersionId: string;
   submittedVersionId: string;

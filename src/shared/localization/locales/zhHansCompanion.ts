@@ -56,6 +56,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.browse.header.count': '{count} 个可读',
   'companion.browse.header.subtitle': '这台设备上最近同步、可阅读的主题。',
   'companion.browse.title': '浏览',
+  'companion.review.question': '问题',
   'companion.review.answer': '答案',
   'companion.review.answerUnavailable': '答案还没有同步到这台设备。',
   'companion.review.breadcrumb': '复习面包屑',

@@ -11,6 +11,7 @@ export function ImmersiveArticleContent(props: {
   onAttachmentResourceSynced?: () => void;
   activity?: CompanionReadingActivity;
   answer?: string | null;
+  isReviewItem?: boolean;
   isContentEditing: boolean;
   layout?: 'article' | 'review';
   onEditorReady(adapter: EditorAdapter | null): void;
@@ -33,7 +34,7 @@ export function ImmersiveArticleContent(props: {
         readingSelection={props.readingSelection}
         scrollContainer="outer"
         {...definedProps({
-          activity: props.activity, answer: props.answer,
+          activity: props.activity, answer: props.answer, isReviewItem: props.isReviewItem,
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
           onSaveContent: props.onSaveArticleContent,
           syncEndpointUrl: props.syncEndpointUrl

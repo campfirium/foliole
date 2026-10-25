@@ -54,6 +54,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.browse.header.count': '{count} ready',
   'companion.browse.header.subtitle': 'Recent synced topics with readable body text on this device.',
   'companion.browse.title': 'Browse',
+  'companion.review.question': 'Question',
   'companion.review.answer': 'Answer',
   'companion.review.answerUnavailable': 'Answer not synced to this device yet.',
   'companion.review.breadcrumb': 'Review breadcrumb',

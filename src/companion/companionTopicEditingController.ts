@@ -22,7 +22,7 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
     if (isAvailableNativeCompanionRuntime()) return readCompanionContentSource(nodeId, holdId);
     const node = previewSnapshot?.nodesById[nodeId];
     if (!node?.currentVersionId) throw new Error('Topic edit requires a synced base version.');
-    return { content: node.content, versionId: node.currentVersionId };
+    return { ...(node.kind === 'item' ? { reveal: node.reveal ?? null } : {}), content: node.content, versionId: node.currentVersionId };
   };
   const save: CompanionContentSaveHandler = Object.assign(async (nodeId: string, content: string, edit?: CompanionContentEdit) => {
     requireCurrentScope();
@@ -38,13 +38,15 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
     }
     const result = await persistCompanionTopicContent({
       content, deviceId: workspaceSync.bootstrapState.device_id, nodeId,
+      ...(edit?.reveal === undefined ? {} : { reveal: edit.reveal }),
       snapshot: previewSnapshot
     });
     if (!result) throw new Error('This topic cannot be edited on this device.');
     previewSnapshot = result.snapshot;
     await workspaceSync.refreshAfterMutation(result.snapshot);
     const currentVersionId = result.snapshot.nodesById[nodeId]!.currentVersionId!;
-    return { content, currentVersionId, submittedVersionId: currentVersionId };
+    return { ...(result.snapshot.nodesById[nodeId]?.kind === 'item' ? { reveal: result.snapshot.nodesById[nodeId]?.reveal ?? null } : {}),
+      content, currentVersionId, submittedVersionId: currentVersionId };
   }, {
     readSource,
     retainHold: async (nodeId: string, versionId: string, holdId: string) => {

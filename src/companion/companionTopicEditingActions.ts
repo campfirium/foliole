@@ -11,6 +11,7 @@ import {
 
 interface PersistCompanionTopicContentArgs {
   content: string;
+  reveal?: string | null;
   deviceId: string;
   nodeId: string;
   snapshot: WorkspaceSnapshot | null;
@@ -88,7 +89,7 @@ export async function persistCompanionTopicContent(args: PersistCompanionTopicCo
   if (!node?.currentVersionId) {
     throw new Error('Topic edit requires a synced base version.');
   }
-  if (args.content === node.content) {
+  if (args.content === node.content && (args.reveal === undefined || args.reveal === node.reveal)) {
     return {
       nodeId: node.id,
       snapshot: args.snapshot
@@ -99,6 +100,7 @@ export async function persistCompanionTopicContent(args: PersistCompanionTopicCo
     ...node!,
     bodyBlobHash: null,
     content: args.content,
+    ...(args.reveal === undefined ? {} : { reveal: args.reveal }),
     updatedAt: timestamp
   };
   const parentVersioned = await toVersionedNode({ deviceId: args.deviceId, node: updatedNode });

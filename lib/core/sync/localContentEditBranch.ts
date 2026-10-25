@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from './syncNodeConvergence.js';
 
@@ -18,6 +19,10 @@ export async function applyLocalContentEditBranch(db: DbPort, record: NativeSync
   const result = await applyEditorSyncNodeRecord(db, record, options);
   if (result.blockedIds.length || result.tombstoneBlockedIds.length) throw new Error('content_edit_blocked');
   if (!result.conflictNodes.length) return;
+  if (record.snapshot.kind === 'item') {
+    await resolveItemConflict(db, result.conflictNodes);
+    return;
+  }
   if (record.snapshot.kind !== 'topic') throw new Error('content_edit_conflict_requires_topic');
   await resolveTopicConflict(db, result.conflictNodes);
 }
