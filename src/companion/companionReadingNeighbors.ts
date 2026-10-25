@@ -25,15 +25,23 @@ export function resolveCompanionReadingNeighbors(args: {
   const items = folderId
     ? resolveCompanionFolderViewByNodeId(snapshot, folderId, args.sort.sortKey, args.sort.sortDirection)?.items ?? []
     : args.isBrowseDirectoryOpen ? [] : args.surface.recentArticles;
-  const ids = enabled && snapshot ? items.filter(item =>
-    isCanonicalVisibleNodeId(snapshot, item.nodeId) && snapshot.nodesById[item.nodeId]?.kind === 'topic' &&
-    !resolveCompanionFolderViewByNodeId(snapshot, item.nodeId)
-  ).map(item => item.nodeId) : [];
-  const index = args.surface.selectedBrowseNodeId ? ids.indexOf(args.surface.selectedBrowseNodeId) : -1;
+  const index = args.surface.selectedBrowseNodeId
+    ? items.findIndex(item => item.nodeId === args.surface.selectedBrowseNodeId) : -1;
+  const isReadable = (nodeId: string) => Boolean(snapshot && isCanonicalVisibleNodeId(snapshot, nodeId) &&
+    snapshot.nodesById[nodeId]?.kind === 'topic' && !resolveCompanionFolderViewByNodeId(snapshot, nodeId));
+  const current = items[index];
+  function adjacent(direction: -1 | 1) {
+    if (!enabled || !current || !isReadable(current.nodeId)) return null;
+    for (let cursor = index + direction; cursor >= 0 && cursor < items.length; cursor += direction) {
+      const item = items[cursor];
+      if (item && isReadable(item.nodeId)) return item.nodeId;
+    }
+    return null;
+  }
   return {
     enabled,
     key: args.isBrowseDirectoryOpen ? JSON.stringify(selection) : `browse:${folderId ?? ''}`,
-    previous: index >= 0 ? ids[index - 1] ?? null : null,
-    next: index >= 0 ? ids[index + 1] ?? null : null
+    previous: adjacent(-1),
+    next: adjacent(1)
   };
 }
