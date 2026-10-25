@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -167,9 +167,9 @@ function ReadingActionsControls(props: { canEditContent?: boolean; onToggleConte
 function ReadingNavigationControls({ navigation }: { navigation: CompanionReadingNavigationControls }) {
   const t = useTranslation();
   return <div className="mr-auto flex items-center">
-    <ReadingChromeButton icon={ArrowLeft} label={t('companion.reading.previousTopic')}
+    <ReadingChromeButton icon={ArrowUp} label={t('companion.reading.previousTopic')}
       disabled={navigation.disabled || !navigation.previous} onClick={navigation.previous} />
-    <ReadingChromeButton icon={ArrowRight} label={t('companion.reading.nextTopic')}
+    <ReadingChromeButton icon={ArrowDown} label={t('companion.reading.nextTopic')}
       disabled={navigation.disabled || !navigation.next} onClick={navigation.next} />
   </div>;
 }
