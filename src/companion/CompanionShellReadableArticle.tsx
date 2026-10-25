@@ -5,6 +5,7 @@ import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
+import { CompanionReviewLoading } from './CompanionReviewLoading';
 import type { CompanionSearchMatch } from './companionSearchMatch';
 import {
   createCompanionExistingHighlightDeleteHandler,
@@ -70,12 +71,35 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
   };
 }
 
+function FlowFooter({ surface }: { surface: Surface }) {
+  return (
+    <CompanionBottomReviewBar
+      hasAnswer={Boolean(surface.effectiveReviewSession.currentCard?.hasAnswer)}
+      disabled={surface.isSubmittingGrade || surface.isSubmittingReadingAction || surface.readingActivity.editing ||
+        (!surface.readableArticle || Boolean(surface.readableArticle.bodyStatus && surface.readableArticle.bodyStatus !== 'ready'))}
+      isAnswerRevealed={surface.isAnswerRevealed}
+      itemKind={surface.effectiveReviewSession.currentCard?.itemKind ?? 'reading'}
+      onReadReviewTopic={surface.handleReadReviewTopic}
+      onPostponeReviewTopic={surface.handlePostponeReviewTopic}
+      onDismissReviewTopic={surface.handleDismissReviewTopic}
+      onSoonReviewTopic={surface.handleSoonReviewTopic}
+      onGrade={surface.handleGradeReview}
+      onRevealAnswer={surface.handleRevealAnswer}
+      reviewCardKey={surface.effectiveReviewSession.currentCard?.nodeId ?? null}
+      statusLabel={surface.readingError ?? surface.reviewError ?? surface.flowError}
+      visible={!surface.readingActivity.editing}
+    />
+  );
+}
+
 export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
     props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null : null);
   const navigation = useCompanionReadingNavigation(props.surface.readingActivity,
     !props.flow && props.surface.readableArticle && canContinueToNext(props.surface.readableArticle) ? props.navigation : undefined);
-  if (!props.surface.readableArticle) return null;
+  const header = props.flow ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null;
+  const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
+  if (!props.surface.readableArticle) return props.flow ? <CompanionReviewLoading header={header} footer={footer} /> : null;
   const activity = props.surface.readingActivity;
 
   return (
@@ -85,24 +109,9 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       navigation={navigation}
       activity={activity}
       flow={props.flow === true}
-      header={props.flow ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null}
+      header={header}
       answer={props.flow && props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null}
-      footer={props.flow ? <CompanionBottomReviewBar
-        hasAnswer={Boolean(props.surface.effectiveReviewSession.currentCard?.hasAnswer)}
-        disabled={props.surface.isSubmittingGrade || props.surface.isSubmittingReadingAction || activity.editing ||
-          Boolean(props.surface.readableArticle.bodyStatus && props.surface.readableArticle.bodyStatus !== 'ready')}
-        isAnswerRevealed={props.surface.isAnswerRevealed}
-        itemKind={props.surface.effectiveReviewSession.currentCard?.itemKind ?? 'reading'}
-        onReadReviewTopic={props.surface.handleReadReviewTopic}
-        onPostponeReviewTopic={props.surface.handlePostponeReviewTopic}
-        onDismissReviewTopic={props.surface.handleDismissReviewTopic}
-        onSoonReviewTopic={props.surface.handleSoonReviewTopic}
-        onGrade={props.surface.handleGradeReview}
-        onRevealAnswer={props.surface.handleRevealAnswer}
-        reviewCardKey={props.surface.effectiveReviewSession.currentCard?.nodeId ?? null}
-        statusLabel={props.surface.readingError ?? props.surface.reviewError ?? props.surface.flowError}
-        visible={!activity.editing}
-      /> : <TopicNavigationFooter navigation={navigation} />}
+      footer={footer}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.onExit}
       onScrollTopChange={props.surface.handleViewScroll}

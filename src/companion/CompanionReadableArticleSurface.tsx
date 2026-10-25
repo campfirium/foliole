@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
-import { companionMobileRailClassName, companionReviewBottomInsetClassName } from './companionCssCompatibility';
+import { companionReadingSurfaceClassName, companionReviewSurfaceClassName } from './companionCssCompatibility';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
@@ -113,7 +113,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
-  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${props.flow ? `companion-review-surface ${companionReviewBottomInsetClassName}` : chromeReservedSpacing} text-foreground`;
+  const surfaceClassName = props.flow ? companionReviewSurfaceClassName : `${companionReadingSurfaceClassName} ${chromeReservedSpacing}`;
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
   const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
     reading.setIsActionsSheetOpen(false);

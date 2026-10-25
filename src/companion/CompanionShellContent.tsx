@@ -5,7 +5,6 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 
-import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionFolderArticleList } from './CompanionFolderArticleList';
@@ -167,12 +166,10 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   }
   if (props.surface.activeAction === 'review') {
     if (props.surface.flowReady === false) return <CompanionWorkspaceSyncLoading />;
-    if (props.surface.effectiveReviewSession.currentCard && props.surface.readableArticle) {
+    if (props.surface.effectiveReviewSession.currentCard) {
       return <CompanionShellReadableArticle surface={props.surface} workspaceSync={props.workspaceSync}
         onExit={() => props.isOnlyReviewOpen ? props.onBackDirectorySelection() : props.surface.handleTabAction('recent')} flow />;
     }
-    if (props.surface.effectiveReviewSession.currentCard) return <CompanionArticleBodyStatusFallback
-      bodyStatus="fetching" title={props.surface.effectiveReviewSession.currentCard.title} />;
     if (props.isOnlyReviewOpen) return <CompanionOnlyReviewContent hasSnapshot={props.hasSnapshot}
       isAnswerRevealed={props.surface.isAnswerRevealed} reviewSession={props.surface.onlyReviewSession} />;
     return <CompanionReviewFallback error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}

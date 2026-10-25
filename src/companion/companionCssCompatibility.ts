@@ -10,3 +10,6 @@ export const companionViewportHeightClassName = 'h-screen h-dvh';
 export const companionArticleMinHeightClassName = 'min-h-[calc(100vh-9rem)] min-h-[calc(100dvh-9rem)]';
 export const companionMainBottomInsetClassName = 'pb-16 [padding-bottom:4.5rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(4.5rem+env(safe-area-inset-bottom))]';
 export const companionReviewBottomInsetClassName = 'pb-32 [padding-bottom:8rem] supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(8rem+env(safe-area-inset-bottom))]';
+
+export const companionReadingSurfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} text-foreground`;
+export const companionReviewSurfaceClassName = `${companionReadingSurfaceClassName} companion-review-surface ${companionReviewBottomInsetClassName}`;

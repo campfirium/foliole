@@ -25,25 +25,29 @@ afterEach(() => {
 });
 
 function createSnapshot(): WorkspaceSnapshot {
+  const topic: WorkspaceSnapshot['nodesById'][string] = {
+    anchorLink: null,
+    content: '# Readable article',
+    createdAt: '2026-04-22T08:00:00.000Z',
+    hideTitleHeading: false,
+    id: 'topic-1',
+    isTitleManual: false,
+    kind: 'topic',
+    parentNodeId: 'folder-1',
+    reading: null,
+    reveal: null,
+    review: null,
+    title: 'Readable article',
+    updatedAt: '2026-04-22T09:00:00.000Z'
+  };
   return {
     activeNodeId: 'topic-1',
     nodeOrder: ['topic-1'],
     nodesById: {
-      'topic-1': {
-        anchorLink: null,
-        content: '# Readable article',
-        createdAt: '2026-04-22T08:00:00.000Z',
-        hideTitleHeading: false,
-        id: 'topic-1',
-        isTitleManual: false,
-        kind: 'topic',
-        parentNodeId: null,
-        reading: null,
-        reveal: null,
-        review: null,
-        title: 'Readable article',
-        updatedAt: '2026-04-22T09:00:00.000Z'
-      }
+      'folder-1': { ...topic, id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library' },
+      'topic-1': topic,
+      'item-1': { ...topic, id: 'item-1', kind: 'item', parentNodeId: 'topic-1',
+        content: 'Question prompt', title: 'Card one', reveal: 'Answer' }
     },
     trashedNodeIds: [],
     untitledSequenceByParent: {}
@@ -248,6 +252,9 @@ it.each([readingReviewCard, fsrsReviewCard])('keeps the page toolbar hidden thro
   expect(screen.queryByRole('heading', { name: 'Flow' })).not.toBeInTheDocument();
   expect(screen.queryByTestId('companion-reading-exit')).not.toBeInTheDocument();
   expect(screen.getByText('Loading topic body.')).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: 'Review breadcrumb' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: card.title })).not.toBeInTheDocument();
+  expect(screen.getByLabelText(card.itemKind === 'fsrs' ? 'Good' : 'Read')).toBeDisabled();
 
   loading.pending = false;
   refresh();
