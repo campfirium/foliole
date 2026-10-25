@@ -56,6 +56,18 @@ it('keeps a failed update blocked and rejects automatic reloads until a manual r
   expect(preview.frozen.hidden).toBe(false);
 });
 
+it('keeps a decorative system status bar above the content during updates and failures', async () => {
+  const source = openPreview();
+  const statusBar = () => preview.viewport.querySelector('.preview-status-bar');
+  expect(statusBar()?.textContent).toContain('9:41');
+  expect(statusBar()?.getAttribute('aria-hidden')).toBe('true');
+  await preview.shell.beforeReload(source);
+  expect(statusBar()?.textContent).toContain('9:41');
+  preview.shell.failed(source, 'Compilation failed');
+  expect(statusBar()?.textContent).toContain('9:41');
+  expect(preview.retry.hidden).toBe(false);
+});
+
 it('reports startup timeout and preserves the last good picture across consecutive updates', async () => {
   vi.useFakeTimers();
   const source = openPreview();

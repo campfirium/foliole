@@ -8,6 +8,9 @@ export function companionPreviewShellHtml(projectRoot: string) {
 html,body{margin:0;width:100%;height:100%;font:14px system-ui;color-scheme:light dark}
 body{overflow:hidden}
 .preview-viewport{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--preview-scale));transform-origin:center}
+.preview-status-bar{position:absolute;inset:0 0 auto;height:var(--preview-status-bar-height);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 28px;background:Canvas;color:CanvasText;font:600 15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.3px;user-select:none;pointer-events:none}
+.preview-status-icons{display:flex;align-items:center;gap:6px}
+.preview-content{position:absolute;left:0;right:0;top:var(--preview-status-bar-height);height:var(--preview-content-height)}
 iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 [hidden]{display:none!important}
 .preview-update{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;gap:12px;padding:16px;box-sizing:border-box;z-index:2}

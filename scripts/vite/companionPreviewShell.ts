@@ -1,5 +1,6 @@
 import { capturePreviewRestoreTarget } from './companionPreviewReadiness';
 import { captureCompanionPreview } from './companionPreviewSnapshot';
+import { createCompanionPreviewStatusBar } from './companionPreviewStatusBar';
 import { fitCompanionPreviewViewport } from './companionPreviewViewport';
 
 export interface CompanionPreviewShell {
@@ -34,8 +35,11 @@ function createShellElements(document: Document) {
   overlay.append(status, retry);
   const viewport = document.createElement('div');
   viewport.className = 'preview-viewport';
+  const content = document.createElement('div');
+  content.className = 'preview-content';
+  content.append(frame, frozen, overlay);
   document.body.append(viewport);
-  viewport.append(frame, frozen, overlay);
+  viewport.append(createCompanionPreviewStatusBar(document), content);
   return { frame, frozen, overlay, status, retry, viewport };
 }
 

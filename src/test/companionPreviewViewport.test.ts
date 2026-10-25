@@ -12,7 +12,7 @@ function resize(width: number, height: number) {
   window.dispatchEvent(new Event('resize'));
 }
 
-it('keeps a 375 by 812 layout and fits it proportionally inside narrow and short viewports without enlarging it', () => {
+it('keeps 375 by 812 content plus the status bar fully visible in narrow and short viewports without enlarging them', () => {
   resize(1200, 1000);
   const viewport = document.createElement('div');
   document.body.append(viewport);
@@ -22,12 +22,13 @@ it('keeps a 375 by 812 layout and fits it proportionally inside narrow and short
   resize(300, 900);
   expect(scale()).toBeCloseTo(300 / 375);
   resize(1200, 600);
-  expect(scale()).toBeCloseTo(600 / 812);
+  expect(scale()).toBeCloseTo(600 / 856);
   resize(200, 400);
-  expect(scale()).toBeCloseTo(400 / 812);
+  expect(scale()).toBeCloseTo(400 / 856);
   expect(viewport.style.width).toBe('375px');
-  expect(viewport.style.height).toBe('812px');
-  resize(375, 812);
+  expect(viewport.style.getPropertyValue('--preview-content-height')).toBe('812px');
+  expect(viewport.style.height).toBe('856px');
+  resize(375, 856);
   expect(scale()).toBe(1);
 });
 
