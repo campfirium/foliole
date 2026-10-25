@@ -63,7 +63,7 @@ function EditingChrome(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
+    <div className={`companion-reading-top-chrome fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
       <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
         <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onCancelContentEditing} testId="companion-reading-edit-cancel" />
         <span className="min-w-0 flex-1 text-center text-[17px] font-normal text-foreground">
@@ -85,7 +85,7 @@ function ReadingTopChrome(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
+    <div className={`companion-reading-top-chrome fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
       <div className="relative mx-auto flex max-w-[760px] items-center">
         {props.controlsVisible ? (
           <>
