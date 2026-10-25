@@ -106,7 +106,6 @@ function ReadableArticleTextDocument(props: {
       data-reading-line-height={props.readingTypographySettings.lineHeight}
       style={typographyStyle(props.readingTypographySettings)}
     >
-      {props.canEdit && props.isReviewItem ? <h2 className="mb-2 text-sm text-companion-text-secondary">{t('companion.review.question')}</h2> : null}
       <CompanionArticleDocument
         {...(props.isReviewItem ? { ariaLabel: t('companion.review.question') } : {})}
         key={props.canEdit ? `${props.readableArticle.nodeId}:editing` : `${props.readableArticle.nodeId}:reading`}

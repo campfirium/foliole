@@ -22,6 +22,8 @@ it.each([null, 'Answer'])('edits both fields before revealing the answer and can
   const answer = await screen.findByRole('textbox', { name: 'Answer' });
   const question = screen.getByRole('textbox', { name: 'Question' });
   await waitFor(() => expect(answer).toHaveValue(reveal ?? ''));
+  expect(screen.queryByText('Question', { selector: ':not(textarea)' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Answer', { selector: ':not(textarea)' })).not.toBeInTheDocument();
   activity.editRound?.begin();
   fireEvent.change(question, { target: { value: 'Edited question' } });
   fireEvent.change(answer, { target: { value: 'Edited answer' } });
