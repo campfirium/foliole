@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -7,9 +5,11 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
+
 export function useCompanionBrowseSortState() {
-  const [browseSortKey, setBrowseSortKey] = useState(DEFAULT_FOLDER_LIST_SORT_KEY);
-  const [browseSortDirection, setBrowseSortDirection] = useState(DEFAULT_FOLDER_LIST_SORT_DIRECTION);
+  const [browseSortKey, setBrowseSortKey] = useCompanionNavigationField('browseSortKey', DEFAULT_FOLDER_LIST_SORT_KEY);
+  const [browseSortDirection, setBrowseSortDirection] = useCompanionNavigationField('browseSortDirection', DEFAULT_FOLDER_LIST_SORT_DIRECTION);
   const updateBrowseSortKey = (sortKey: FolderListSortKey) => {
     setBrowseSortKey(sortKey);
     setBrowseSortDirection(resolveDefaultFolderListSortDirection());

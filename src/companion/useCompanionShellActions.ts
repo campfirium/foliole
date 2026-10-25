@@ -56,11 +56,18 @@ function useCompanionSecondaryDestinations(args: {
 
 function handlePrimaryNavigationAction(args: {
   action: CompanionTabAction;
+  browseSortKey: ReturnType<typeof useCompanionBrowseSortState>['browseSortKey'];
+  isBrowseDirectoryOpen: boolean;
+  setBrowseSortKey: ReturnType<typeof useCompanionBrowseSortState>['setBrowseSortKey'];
   setIsBrowseDirectoryOpen(open: boolean): void;
   setIsOnlyReviewOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
+  if (args.action === 'recent' && args.surface.activeAction === 'recent'
+    && !args.isBrowseDirectoryOpen && !args.surface.selectedBrowseNodeId && !args.surface.isFlowBrowsing) {
+    args.setBrowseSortKey(args.browseSortKey === 'dateLastOpened' ? 'dateSaved' : 'dateLastOpened');
+  }
   args.surface.handleTabAction(args.action);
   if (args.action === 'recent') args.setIsBrowseDirectoryOpen(false);
   if (args.action === 'review') args.setIsOnlyReviewOpen(false);
@@ -115,6 +122,9 @@ export function useCompanionShellActions(args: {
   return {
     handleNavigationAction: (action: CompanionTabAction) => handlePrimaryNavigationAction({
       action,
+      browseSortKey: args.browseSortKey,
+      isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
+      setBrowseSortKey: args.setBrowseSortKey,
       setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
       setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
       setSettingsPage: args.setSettingsPage,

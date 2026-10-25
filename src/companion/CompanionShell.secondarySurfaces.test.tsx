@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { createCompanionSearchResultsFixture } from './companionSearchTestFixtures';
 
 const useCompanionWorkspaceSync = vi.fn();
@@ -104,6 +105,7 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     readableArticle: null as null | Record<string, unknown>,
     recentArticles: [],
     readingError: null,
+    readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
     reviewError: null,
     effectiveReviewSession: reviewSession,
     onlyReviewSession,
@@ -190,7 +192,9 @@ describe('CompanionShell secondary surfaces', () => {
   });
 
   it('opens Only Review as an FSRS-only empty state without mixed cards', { meta: { calibratedMs: 15000 } }, async () => {
-    await renderShellWithSurface(createSurface('review'));
+    const surface = createSurface('review');
+    surface.effectiveReviewSession = { ...surface.reviewSession, currentCard: null };
+    await renderShellWithSurface(surface);
 
     const topOnlyReviewButton = screen.getAllByRole('button', { name: 'Only Review' }).at(0);
     if (!topOnlyReviewButton) throw new Error('missing top Only Review button');

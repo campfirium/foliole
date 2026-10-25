@@ -21,6 +21,13 @@ function expectStatusSlotInBackRow() {
 }
 
 describe('CompanionTopBar', () => {
+  it('shows and announces the current Browse sort after it changes', () => {
+    const ui = render(<CompanionTopBar title="Browse" subtitle="Date modified" visible />);
+    expect(screen.getByRole('status')).toHaveTextContent('Date modified');
+    ui.rerender(<CompanionTopBar title="Browse" subtitle="Last opened" visible />);
+    expect(screen.getByRole('status')).toHaveTextContent('Last opened');
+  });
+
   it('keeps a single borderless toolbar', () => {
     const { container } = render(<CompanionTopBar title="Browse" visible />);
     const header = container.querySelector('header');

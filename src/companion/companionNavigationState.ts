@@ -15,6 +15,8 @@ const directorySelection = z.discriminatedUnion('kind', [
 ]);
 
 const navigationSchema = z.object({
+  browseSortKey: z.enum(['dateDeleted', 'dateImported', 'dateLastOpened', 'dateSaved', 'manual', 'name']).default('dateSaved'),
+  browseSortDirection: z.enum(['asc', 'desc']).default('desc'),
   activeAction: z.enum(['review', 'recent', 'search', 'more']),
   selectedBrowseNodeId: z.string().nullable(),
   browseReturnNodeId: z.string().nullable(),
@@ -36,6 +38,7 @@ export type CompanionNavigationState = z.infer<typeof navigationSchema>;
 
 export function initialCompanionNavigation(hasWorkspace: boolean): CompanionNavigationState {
   return {
+    browseSortKey: 'dateSaved', browseSortDirection: 'desc',
     activeAction: hasWorkspace ? 'review' : 'more', selectedBrowseNodeId: null, browseReturnNodeId: null,
     isBrowseDirectoryOpen: false, isOnlyReviewOpen: false, directorySelection: { kind: 'root' },
     settingsPage: 'list', searchTopicNodeId: null, searchQuery: '',
