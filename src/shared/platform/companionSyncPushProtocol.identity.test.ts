@@ -5,7 +5,7 @@ import { computeSyncContentHash } from '../../../lib/core/database/syncState';
 
 import {
   nodeReadingSyncAdapter,
-  nodeReviewSyncAdapter,
+  nodeTextAlternativeSyncAdapter,
   settingSyncAdapter,
   viewStateSyncAdapter,
   type SyncableStateObjectRow
@@ -56,15 +56,15 @@ function createNodeReadingRow(overrides: Partial<SyncableStateObjectRow> = {}): 
   };
 }
 
-function createNodeReviewRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
+function createNodeTextAlternativeRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
   return {
     base_content_hash: 'desktop-review-base',
     content_hash: 'android-review-next',
     deleted_at: null,
     last_modified_by_host_name: 'android-device',
     object_id: 'node-1',
-    object_type: 'node_review',
-    payload_json: '{"reps":2}',
+    object_type: 'node_text_alternative',
+    payload_json: '{"body_text":"Alternative"}',
     state_seq: 17,
     updated_at: '2026-04-30T01:09:00.000Z',
     ...overrides
@@ -86,7 +86,7 @@ describe('companion sync push identity validation', () => {
     const settingRow = createSettingRow({ object_id: 'device:android:phone:device-1:app_settings' });
     const viewStateRow = createViewStateRow({ object_id: 'session_resume:android:phone:device-1:active_node' });
     const readingRow = createNodeReadingRow();
-    const reviewRow = createNodeReviewRow();
+    const alternativeRow = createNodeTextAlternativeRow();
 
     expect(settingSyncAdapter.buildPushPayload(settingRow)).toMatchObject({
       base: { baseContentHash: 'desktop-setting-base', kind: 'content_hash' },
@@ -102,9 +102,9 @@ describe('companion sync push identity validation', () => {
       identity: { objectId: 'node-1', objectType: 'node_reading', scope: 'workspace' },
       payloadJson: '{"reading_position":42,"state":"active"}'
     });
-    expect(nodeReviewSyncAdapter.buildPushPayload(reviewRow)).toMatchObject({
-      identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
-      payloadJson: '{"reps":2}'
+    expect(nodeTextAlternativeSyncAdapter.buildPushPayload(alternativeRow)).toMatchObject({
+      identity: { objectId: 'node-1', objectType: 'node_text_alternative', scope: 'workspace' },
+      payloadJson: '{"body_text":"Alternative"}'
     });
   });
 

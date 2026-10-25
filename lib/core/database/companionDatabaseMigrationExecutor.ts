@@ -47,6 +47,7 @@ import { retireCompanionNodePositions } from './nodePositionRetirementMigration.
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { migrateCompanionPdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { migrateCompanionReviewLog } from './reviewLogMigration.js';
+import { retireCompanionReviewStateSync } from './reviewStateSyncRetirement.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
@@ -133,16 +134,17 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 93 && targetVersion >= 93) await migrateCompanionAttachmentDemands(db);
   if (currentVersion < 94 && targetVersion >= 94) await migrateCompanionMissingCurrentVersionInventory(db);
   if (currentVersion < 95 && targetVersion >= 95) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
-  await migrateCompanionInventoryVersions(db, currentVersion, targetVersion);
-  if (currentVersion < 99 && targetVersion >= 99) await migrateCompanionReviewLog(db);
+  await migrateCompanionLatestVersions(db, currentVersion, targetVersion);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
 
-async function migrateCompanionInventoryVersions(db: DbPort, currentVersion: number, targetVersion: number) {
+async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number, targetVersion: number) {
   if (currentVersion < 96 && targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
   if (currentVersion < 97 && targetVersion >= 97) await migrateCompanionFramedSyncInventoryLookups(db);
   if (currentVersion < 98 && targetVersion >= 98) await retireCompanionAttachmentInventory(db);
+  if (currentVersion < 99 && targetVersion >= 99) await migrateCompanionReviewLog(db);
+  if (currentVersion < 100 && targetVersion >= 100) await retireCompanionReviewStateSync(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

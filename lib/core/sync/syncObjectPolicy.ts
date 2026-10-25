@@ -14,7 +14,7 @@ export type SyncPolicyCategory =
 
 export interface SyncObjectPolicy {
   category: SyncPolicyCategory;
-  conflict: 'append_only_idempotent' | 'max_counter' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww' | 'review_merge';
+  conflict: 'append_only_idempotent' | 'max_counter' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww';
   scope: SyncScope;
   key: string;
   objectType: string | null;
@@ -44,7 +44,6 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('node_reading', 'node_reading', 'reading', 'workspace', 'lww', ['node_reading'], true),
   policy('node_reading.reading_position', 'node_reading', 'reading', 'host', 'host_private', ['node_reading_host_state'], true, 'diagnostic'),
   policy('node_reading_host_state', null, 'reading', 'host', 'host_private', ['node_reading_host_state'], true, 'diagnostic'),
-  policy('node_review', 'node_review', 'review', 'workspace', 'review_merge', ['node_review'], true),
   policy('node_text_alternative', 'node_text_alternative', 'content', 'workspace', 'lww', ['node_text_alternatives'], true),
   policy('review_log', null, 'review', 'event', 'append_only_idempotent', ['review_log'], true),
   policy('foreground_source', 'foreground_source', 'activity', 'workspace', 'max_counter',

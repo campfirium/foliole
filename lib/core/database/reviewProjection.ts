@@ -9,7 +9,6 @@ import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRo
 
 import type { DatabaseDriver } from './driver.js';
 import { createUpsertNodeReviewStatement, UPSERT_NODE_REVIEW_SQL } from './nodeReviewMutationStatements.js';
-import { recordReviewProjection, recordReviewProjectionWithDb } from './reviewProjectionSyncState.js';
 
 const EVENTS = `SELECT ${REVIEW_FACT_COLUMNS.join(', ')} FROM review_log WHERE node_id = ?`;
 const SETTINGS = `SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'
@@ -43,7 +42,6 @@ export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
   const card = recomputeReview(events, parametersForNode(nodeId, driver.queryAll(SETTINGS), driver.queryAll(ANCESTORS, [nodeId])));
   if (card) createUpsertNodeReviewStatement(driver).run(values(nodeId, card));
   else driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
-  recordReviewProjection(driver, nodeId, card, events);
   return card;
 }
 
@@ -53,6 +51,5 @@ export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string) {
   const card = recomputeReview(events, parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])));
   if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
   else await db.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
-  await recordReviewProjectionWithDb(db, nodeId, card, events);
   return card;
 }

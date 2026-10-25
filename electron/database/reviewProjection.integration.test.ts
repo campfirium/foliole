@@ -13,6 +13,7 @@ import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewL
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 import { firstAt, secondAt, seedReviewPeer, score, reset, history, reviewState, reviewFacts, sendReviews } from './reviewProjection.testSupport.js';
+import { legacyReviewFact } from './reviewStateSyncRetirement.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 it.each(['relay', 'offline', 'late-history'])('converges all durable card fields through production requests: %s', async mode => {
@@ -59,13 +60,12 @@ it('ignores a later empty snapshot with duplicate facts and does not recalculate
     const card = score(b, 'offline', secondAt);
     expect(card?.reps).toBe(1);
     const before = reviewState(b); const facts = reviewFacts(b);
-    const key = (peer: typeof a) => String(peer.sqlite.prepare(`SELECT updated_at || char(10) || content_hash
-      FROM sync_object_state WHERE object_type='node_review' AND object_id='topic'`).pluck().get());
-    expect(key(a) > key(b)).toBe(true); // The legacy outer ordering accepts this old empty snapshot.
+
 
     b.sqlite.prepare(`INSERT INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
       VALUES ('review_scheduler_settings', 'user_space', 'macos', 'desktop', '*', '{"desiredRetention":0.99}', 'hash', 'now')`).run();
-    await sendReviews(a, b); b.reopen(); await sendReviews(a, b);
+    await sendReviews(a, b, true, [legacyReviewFact('topic', true)]); b.reopen();
+    await sendReviews(a, b, true, [legacyReviewFact('topic', false)]);
     expect(reviewFacts(b)).toEqual(facts); expect(reviewState(b)).toEqual(before);
     await sendReviews(b, a); a.reopen();
     expect(reviewState(a)).toEqual(before);

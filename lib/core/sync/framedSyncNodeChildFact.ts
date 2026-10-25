@@ -9,7 +9,7 @@ import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact,
   selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
-const childIdentity = z.tuple([z.enum(NODE_CHILD_STATE_TYPES), z.string().min(1), z.string().regex(/^[a-f0-9]{64}$/u)]);
+const childIdentity = z.tuple([z.enum([...NODE_CHILD_STATE_TYPES, 'node_review']), z.string().min(1), z.string().regex(/^[a-f0-9]{64}$/u)]);
 
 export function parseFramedSyncNodeChildIdentity(factId: string) {
   const [objectType, globalId, hash] = childIdentity.parse(JSON.parse(factId));

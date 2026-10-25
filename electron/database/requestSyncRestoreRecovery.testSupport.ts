@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
@@ -74,9 +75,10 @@ export function context(progress: SyncGroupOverwriteProgress) {
 }
 
 export async function transfer(source: RestorePeer, target: RestorePeer, progress: SyncGroupOverwriteProgress,
-  difference: FramedSyncInventoryDifference, enqueueSearchInvalidations = true) {
+  difference: FramedSyncInventoryDifference, enqueueSearchInvalidations = true, extraFacts: CanonicalFact[] = []) {
   await withRequestSyncFiles(source.host.files, async request => {
     const selected = await writeRequestSyncSnapshot(source.db, { ...difference, direction: 'local_to_remote' }, request);
+    for (const fact of extraFacts) await request.writeFact(fact);
     await applyRequestSyncObject(target.db, { context: context(progress),
       peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
         library_epoch: progress.providerLibraryEpoch, proof_revision: 0, source_proof_revisions: {},

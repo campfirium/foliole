@@ -35,11 +35,6 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at,
     'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state
   ) AS payload_json FROM node_reading WHERE node_id = ?`,
-  node_review: `SELECT json_object(
-    'node_id', node_id, 'due', due, 'last_review_at', last_review_at, 'state', state,
-    'stability', stability, 'difficulty', difficulty, 'elapsed_days', elapsed_days,
-    'scheduled_days', scheduled_days, 'reps', reps, 'lapses', lapses
-  ) AS payload_json FROM node_review WHERE node_id = ?`,
   node_text_alternative: `SELECT json_object(
     'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,
     'body_text', body_text, 'source_host_name', source_host_name, 'created_at', created_at,

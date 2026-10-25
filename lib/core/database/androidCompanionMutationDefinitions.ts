@@ -24,11 +24,6 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     ') VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   syncNodeReadingHostStateUpsert:
     'INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at) VALUES (?, ?, ?, ?)',
-  syncNodeReviewDelete: 'DELETE FROM node_review WHERE node_id = ?',
-  syncNodeReviewUpsert:
-    'INSERT OR REPLACE INTO node_review (' +
-    'node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncSettingRecordUpsert:
     'INSERT OR REPLACE INTO setting_records (' +
     'key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at' +
@@ -181,9 +176,7 @@ export const ANDROID_COMPANION_SYNC_APPLY_MUTATION_RULES = {
     readingDeleteMutationName: 'syncNodeReadingDelete',
     readingDeviceStateDeleteMutationName: 'syncNodeReadingHostStateDelete',
     readingDeviceStateUpsertMutationName: 'syncNodeReadingHostStateUpsert',
-    readingUpsertMutationName: 'syncNodeReadingUpsert',
-    reviewDeleteMutationName: 'syncNodeReviewDelete',
-    reviewUpsertMutationName: 'syncNodeReviewUpsert'
+    readingUpsertMutationName: 'syncNodeReadingUpsert'
   },
   openState: {
     deleteMutationName: 'syncNodeOpenStateDelete',

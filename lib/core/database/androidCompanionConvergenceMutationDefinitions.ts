@@ -22,6 +22,6 @@ export const ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS = {
   nodeRekeyViewState: 'UPDATE node_view_state SET node_id = ? WHERE node_id = ?',
   nodeRekeySyncState:
     "UPDATE sync_object_state SET object_id = ? WHERE object_id = ? AND object_type IN " +
-    "('node', 'node_open_state', 'node_reading', 'node_review')",
+    "('node', 'node_open_state', 'node_reading')",
   nodeRekeyDeleteSource: 'DELETE FROM nodes WHERE id = ?'
 };

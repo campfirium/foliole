@@ -450,20 +450,6 @@
         "recovery": "saved"
       },
       {
-        "category": "review",
-        "conflict": "review_merge",
-        "scope": "workspace",
-        "key": "node_review",
-        "objectType": "node_review",
-        "pushIssue": "review_required",
-        "storage": [
-          "node_review"
-        ],
-        "userVisible": true,
-        "ownership": "workspace",
-        "recovery": "saved"
-      },
-      {
         "category": "content",
         "conflict": "lww",
         "scope": "workspace",
@@ -598,7 +584,6 @@
       "import_source",
       "node",
       "node_reading",
-      "node_review",
       "node_text_alternative",
       "parent_child_order",
       "setting",

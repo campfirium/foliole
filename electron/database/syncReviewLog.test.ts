@@ -201,8 +201,7 @@ it('applies mobile learning state and review event as clean desktop facts', asyn
      ORDER BY object_type ASC`,
     ['node-1']
   )).toEqual([
-    { object_type: 'node_reading', sync_dirty: 0 },
-    { object_type: 'node_review', sync_dirty: 1 }
+    { object_type: 'node_reading', sync_dirty: 0 }
   ]);
   expect(driver.queryOne<{ host_name: string }>(
     'SELECT host_name FROM review_log WHERE op_id = ?',

@@ -11,19 +11,6 @@ const NODE_READING_COLUMNS = [
   { key: 'state', source: 'state', type: 'string' }
 ];
 
-const NODE_REVIEW_COLUMNS = [
-  { key: 'node_id', source: 'node_id', type: 'string' },
-  { key: 'due', source: 'due', type: 'string' },
-  { key: 'last_review_at', source: 'last_review_at', type: 'string' },
-  { key: 'state', source: 'state', type: 'long' },
-  { key: 'stability', source: 'stability', type: 'double' },
-  { key: 'difficulty', source: 'difficulty', type: 'double' },
-  { key: 'elapsed_days', source: 'elapsed_days', type: 'long' },
-  { key: 'scheduled_days', source: 'scheduled_days', type: 'long' },
-  { key: 'reps', source: 'reps', type: 'long' },
-  { key: 'lapses', source: 'lapses', type: 'long' }
-];
-
 export const ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadNodeReading: {
     columns: NODE_READING_COLUMNS,
@@ -57,46 +44,5 @@ export const ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS = {
       `${VISIBLE_NODES_CTE_SQL} ` +
       'SELECT node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state ' +
       'FROM node_reading INNER JOIN visible_nodes visible ON visible.id = node_reading.node_id WHERE node_id = ? LIMIT 1'
-  },
-  syncPayloadNodeReview: {
-    columns: NODE_REVIEW_COLUMNS,
-    resultKey: 'payloads',
-    syncPayload: {
-      argMode: 'object_id',
-      defaultDifficulty: 0,
-      defaultElapsedDays: 0,
-      defaultLapses: 0,
-      defaultReps: 0,
-      defaultScheduledDays: 0,
-      defaultStability: 0,
-      defaultState: 0,
-      difficultyPayloadKey: 'difficulty',
-      duePayloadKey: 'due',
-      elapsedDaysPayloadKey: 'elapsed_days',
-      inputPayloadKey: 'review_json',
-      lapsesPayloadKey: 'lapses',
-      lastReviewAtPayloadKey: 'last_review_at',
-      nodeIdPayloadKey: 'node_id',
-      objectType: 'node_review',
-      recordDeletedAtKey: 'deleted_at',
-      recordUpdatedAtKey: 'updated_at',
-      repsPayloadKey: 'reps',
-      reviewLogInputPayloadKey: 'review_log_json',
-      reviewLogCardAfterInputKey: 'cardAfter',
-      reviewLogCardBeforeInputKey: 'cardBefore',
-      reviewLogDifficultyInputKey: 'difficulty',
-      reviewLogDueInputKey: 'due',
-      reviewLogGradeInputKey: 'grade',
-      reviewLogReviewedAtInputKey: 'reviewedAt',
-      reviewLogSchedulerVersionInputKey: 'schedulerVersion',
-      reviewLogStabilityInputKey: 'stability',
-      scheduledDaysPayloadKey: 'scheduled_days',
-      stabilityPayloadKey: 'stability',
-      statePayloadKey: 'state'
-    },
-    sql:
-      `${VISIBLE_NODES_CTE_SQL} ` +
-      'SELECT node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses ' +
-      'FROM node_review INNER JOIN visible_nodes visible ON visible.id = node_review.node_id WHERE node_id = ? LIMIT 1'
   }
 };

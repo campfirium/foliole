@@ -15,6 +15,7 @@ import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
 import { migrateReviewLog } from './reviewLogMigration.js';
+import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 
@@ -43,5 +44,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   /** Reinstalls the inventory triggers without the ones on `nodes`. */
   { version: 170, migrate: migrateFramedSyncInventoryLookups },
   { version: 171, migrate: retireAttachmentInventory },
-  { version: 172, migrate: migrateReviewLog }
+  { version: 172, migrate: migrateReviewLog },
+  { version: 173, migrate: retireReviewStateSync }
 ];

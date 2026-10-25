@@ -70,7 +70,9 @@ export function saveIosReview(args: { node_id: string; review_json: string; revi
 export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; review_json: string; review_log_json?: string }) {
   if (!args.review_log_json) {
     const payload = { ...parseObject(args.review_json), node_id: args.node_id };
-    return applyLocalObject(tx, 'node_review', args.node_id, payload, record => writeNodeReviewObject(tx, record));
+    await writeNodeReviewObject(tx, { object_type: 'node_review', object_id: args.node_id,
+      payload_json: JSON.stringify(payload), deleted_at: null, updated_at: new Date().toISOString(), content_hash: '' });
+    return { object_id: args.node_id };
   }
   const draft = parseObject(args.review_log_json);
   const opId = typeof draft.opId === 'string' ? draft.opId : createCompanionUuid();

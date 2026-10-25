@@ -4,7 +4,6 @@ import type { DatabaseBindParams, DatabaseDriver } from './driver.js';
 import { recordReviewHistory } from './reviewLogRecord.js';
 import { recomputeNodeReview } from './reviewProjection.js';
 import { readStoredReviewCard } from './storedReviewCard.js';
-import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export interface NodeReviewSyncPayload {
   due: string;
@@ -18,18 +17,6 @@ export interface NodeReviewSyncPayload {
   lapses: number;
 }
 
-export interface NodeReviewSyncContext {
-  hostName: string;
-  logId: string;
-  opId: string;
-  reviewedAt: string;
-}
-
-export interface NodeReviewResetContext {
-  hostName: string;
-  deletedAt: string;
-}
-
 export interface WriteNodeReviewSyncInput {
   nodeId: string;
   hostName?: string;
@@ -38,65 +25,7 @@ export interface WriteNodeReviewSyncInput {
   history?: ReviewHistoryMutation;
 }
 
-function toNodeReviewHash(nodeId: string, payload: NodeReviewSyncPayload) {
-  return computeSyncContentHash('node_review', {
-    difficulty: payload.difficulty,
-    due: payload.due,
-    elapsed_days: payload.elapsedDays,
-    lapses: payload.lapses,
-    last_review_at: payload.lastReviewAt,
-    node_id: nodeId,
-    reps: payload.reps,
-    scheduled_days: payload.scheduledDays,
-    stability: payload.stability,
-    state: payload.state
-  });
-}
-
-function toNodeReviewTombstoneHash(nodeId: string, deletedAt: string) {
-  return computeSyncContentHash('node_review', {
-    deleted_at: deletedAt,
-    node_id: nodeId,
-    object_type: 'node_review'
-  });
-}
-
-export function recordNodeReviewSyncState(
-  driver: DatabaseDriver,
-  nodeId: string,
-  payload: NodeReviewSyncPayload,
-  context: NodeReviewSyncContext
-) {
-  const contentHash = toNodeReviewHash(nodeId, payload);
-  upsertSyncObjectState(driver, {
-    objectType: 'node_review',
-    objectId: nodeId,
-    contentHash,
-    lastModifiedByHostName: context.hostName,
-    updatedAt: context.reviewedAt,
-    syncDirty: true
-  });
-}
-
-export function recordNodeReviewTombstone(
-  driver: DatabaseDriver,
-  nodeId: string,
-  context: NodeReviewResetContext
-) {
-  const contentHash = toNodeReviewTombstoneHash(nodeId, context.deletedAt);
-  upsertSyncObjectState(driver, {
-    objectType: 'node_review',
-    objectId: nodeId,
-    contentHash,
-    deletedAt: context.deletedAt,
-    lastModifiedByHostName: context.hostName,
-    updatedAt: context.deletedAt,
-    syncDirty: true
-  });
-}
-
-export function writeNodeReviewSnapshotWithSync(
-  driver: DatabaseDriver,
+function writeNodeReviewSnapshot(
   input: WriteNodeReviewSyncInput,
   upsertReview: (params?: DatabaseBindParams) => void
 ) {
@@ -115,14 +44,6 @@ export function writeNodeReviewSnapshotWithSync(
     input.review.reps,
     input.review.lapses
   ]);
-  if (input.hostName) {
-    recordNodeReviewSyncState(driver, input.nodeId, input.review, {
-      hostName: input.hostName,
-      logId: '',
-      opId: '',
-      reviewedAt: input.updatedAt
-    });
-  }
 }
 
 export function saveNodeReviewStateWithSync(driver: DatabaseDriver, input: WriteNodeReviewSyncInput) {
@@ -130,11 +51,9 @@ export function saveNodeReviewStateWithSync(driver: DatabaseDriver, input: Write
     node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   return driver.transaction(() => {
-    if (!input.history && input.review) writeNodeReviewSnapshotWithSync(driver, input, upsertReview.run);
+    if (!input.history && input.review) writeNodeReviewSnapshot(input, upsertReview.run);
     else if (!input.history) {
       driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([input.nodeId]);
-      if (input.hostName) recordNodeReviewTombstone(driver, input.nodeId,
-        { hostName: input.hostName, deletedAt: input.updatedAt });
     }
     const inserted = input.history && input.hostName && recordReviewHistory(driver, {
       nodeId: input.nodeId, history: input.history, hostName: input.hostName,

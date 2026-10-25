@@ -36,7 +36,7 @@ function seedNode(peer: RestorePeer, id: string, title: string, content: string,
 async function sendNode(source: RestorePeer, target: RestorePeer, id: string) {
   const local = await readRequestSyncInventorySnapshot(source.db);
   const differences = compareFramedSyncInventories({ local, remote: [] })
-    .filter(value => ['node', 'node_review'].includes(value.objectType) && value.globalId === id);
+    .filter(value => value.objectType === 'node' && value.globalId === id);
   expect(differences.some(value => value.objectType === 'node')).toBe(true);
   for (const difference of differences) await transfer(source, target, {
     groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
@@ -48,10 +48,7 @@ function expectReview(peer: RestorePeer) {
     reps, scheduled_days, stability, state FROM node_review WHERE node_id = 'node-1'`).get()).toEqual(review);
   expect(peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual([reviewLog]);
   expect(peer.sqlite.prepare(`SELECT object_type, object_id, last_modified_by_host_name, content_hash
-    FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'`).get()).toEqual({
-    object_type: 'node_review', object_id: 'node-1', last_modified_by_host_name: 'android-device',
-    content_hash: computeSyncContentHash('node_review', review)
-  });
+    FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'`).get()).toBeUndefined();
   expect(peer.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'node-1'").pluck().get())
     .toBe('desktop#node-1');
 }

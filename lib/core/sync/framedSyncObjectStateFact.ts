@@ -42,7 +42,7 @@ export async function selectFramedSyncObjectStateFact(
 }
 
 export function restoreFramedSyncObjectStateFact(fact: CanonicalFact): NativeSyncObjectRecord & { current_version_id: string | null } {
-  const objectType = assertType(fact.objectType, fact.globalId);
+  const objectType = fact.objectType === 'node_review' ? 'node_review' : assertType(fact.objectType, fact.globalId);
   const fields = new Map(fact.body.map((field) => [field.name, field.value]));
   if (fact.kind !== 1 || fields.size !== 5 || fact.body.length !== 5) {
     throw new Error('framed_sync_object_state_fact_invalid');

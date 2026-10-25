@@ -63,7 +63,6 @@ it('downloads hidden body bytes after visible resources so an active member can 
 
 it('keeps Android companion learning payload queries scoped to visible node ancestry', () => {
   expectVisibleNodes(ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql);
-  expectVisibleNodes(ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql);
 });
 
 it('executes Android companion visible-node queries without surfacing hidden descendants', () => {
@@ -77,8 +76,6 @@ it('executes Android companion visible-node queries without surfacing hidden des
     expect.objectContaining({ id: 'visible-root', next_at: null, due: null })
   ]));
   expect(database.prepare(ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql).all('hidden-child'))
-    .toEqual([]);
-  expect(database.prepare(ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReview.sql).all('hidden-child'))
     .toEqual([]);
 });
 

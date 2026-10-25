@@ -75,7 +75,7 @@ it('restores current reading and review facts with fresh mutation timestamps and
     reading_sync_updated_at: UNDO_MUTATION_AT,
     review_due: BUSINESS_BEFORE,
     review_log_count: 1,
-    review_sync_updated_at: UNDO_MUTATION_AT
+    review_sync_updated_at: null
   });
 
   saveNodeReadingState({ nodeId: NODE_ID, reading: afterReading, updatedAt: REDO_MUTATION_AT });
@@ -87,7 +87,7 @@ it('restores current reading and review facts with fresh mutation timestamps and
     reading_sync_updated_at: REDO_MUTATION_AT,
     review_due: afterReview.due,
     review_log_count: 1,
-    review_sync_updated_at: REDO_MUTATION_AT
+    review_sync_updated_at: null
   });
 });
 
@@ -109,7 +109,7 @@ function readCurrentFacts() {
     JOIN node_review review ON review.node_id = nr.node_id
     JOIN sync_object_state reading_sync
       ON reading_sync.object_type = 'node_reading' AND reading_sync.object_id = nr.node_id
-    JOIN sync_object_state review_sync
+    LEFT JOIN sync_object_state review_sync
       ON review_sync.object_type = 'node_review' AND review_sync.object_id = nr.node_id
     WHERE nr.node_id = ?
   `).get(NODE_ID, NODE_ID) as Record<string, unknown>;

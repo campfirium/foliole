@@ -147,25 +147,18 @@ it('writes node_review and review_log in one grading mutation', () => {
   });
 });
 
-it('writes sync state for review grading without generic change log rows', () => {
+it('keeps grading local state out of the sync queue', () => {
   seedQaNode();
   applyReviewGrade(GRADE_INPUT);
 
   const state = selectSyncObjectState();
   const change = selectReviewChangeLogRow();
 
-  expect(state).toMatchObject({
-    object_type: 'node_review',
-    object_id: NODE_ID,
-    updated_at: '2026-03-06T00:00:00.000Z',
-    deleted_at: null,
-    sync_dirty: 1
-  });
-  expect(String(state?.last_modified_by_host_name)).not.toBe('');
+  expect(state).toBeUndefined();
   expect(change.count).toBe(0);
 });
 
-it('tombstones review sync state when review state is reset', () => {
+it('resets local review state without creating a sync tombstone', () => {
   seedQaNode();
   applyReviewGrade(GRADE_INPUT);
   resetNodeReviewState(NODE_ID);
@@ -173,11 +166,6 @@ it('tombstones review sync state when review state is reset', () => {
   const state = selectSyncObjectState();
 
   expect(selectReviewRow()).toBeUndefined();
-  expect(state).toMatchObject({
-    object_type: 'node_review',
-    object_id: NODE_ID,
-    sync_dirty: 1
-  });
-  expect(typeof state?.deleted_at).toBe('string');
+  expect(state).toBeUndefined();
   expect(selectReviewChangeLogRow().count).toBe(0);
 });

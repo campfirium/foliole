@@ -1,5 +1,5 @@
 export const NODE_CHILD_STATE_TYPES = [
-  'node_reading', 'node_review', 'node_open_state', 'parent_child_order',
+  'node_reading', 'node_open_state', 'parent_child_order',
   'node_text_alternative', 'topic_daily_count', 'import_source'
 ] as const;
 
@@ -7,7 +7,7 @@ export const NODE_CHILD_STATE_TYPES_SQL = NODE_CHILD_STATE_TYPES.map(type => `'$
 
 export function nodeChildOwnerSql(state: string) {
   return `CASE
-    WHEN ${state}.object_type IN ('node_reading', 'node_review', 'node_open_state', 'parent_child_order')
+    WHEN ${state}.object_type IN ('node_reading', 'node_open_state', 'parent_child_order')
       THEN ${state}.object_id
     WHEN ${state}.object_type = 'topic_daily_count' THEN substr(${state}.object_id, 12)
     ELSE (SELECT node_id FROM sync_node_child_owners owner
@@ -16,7 +16,7 @@ export function nodeChildOwnerSql(state: string) {
 
 /** Which business row backs each node child state (and import sources), by its object id. */
 export const NODE_CHILD_PAYLOAD_SOURCES = [
-  ['node_reading', 'node_reading', 'node_id'], ['node_review', 'node_review', 'node_id'],
+  ['node_reading', 'node_reading', 'node_id'],
   ['node_open_state', 'node_open_state', 'node_id'], ['parent_child_order', 'parent_order_sources', 'parent_id'],
   ['node_text_alternative', 'node_text_alternatives', 'alternative_id'],
   ['topic_daily_count', 'topic_daily_count_entries', 'id'], ['import_source', 'import_sources', 'source_fingerprint']
@@ -34,7 +34,7 @@ export function nodeChildFactIdsSql(nodeId: string) {
     SELECT json_array(child.object_type, child.object_id, child.content_hash) || '' AS fact_id
     FROM (
       SELECT * FROM sync_object_state WHERE object_type IN
-        ('node_reading', 'node_review', 'node_open_state', 'parent_child_order') AND object_id = ${nodeId}
+        ('node_reading', 'node_open_state', 'parent_child_order') AND object_id = ${nodeId}
       UNION ALL SELECT * FROM sync_object_state WHERE object_type = 'topic_daily_count'
         AND substr(object_id, 12) = +${nodeId}
       UNION ALL SELECT indirect.* FROM sync_node_child_owners owner JOIN sync_object_state indirect

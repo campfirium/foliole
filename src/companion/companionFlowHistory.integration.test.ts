@@ -4,7 +4,6 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { computeSyncContentHash } from '../../lib/core/database/syncState';
 import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -166,11 +165,8 @@ it('restores the ungraded state of a new card without losing its redo', async ()
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(1);
   await replay('undo');
   expect((await snapshot()).nodesById.a?.review).toBeNull();
-  const tombstone = library.database.prepare<[], { content_hash: string; deleted_at: string }>("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type='node_review' AND object_id='a'")
-    .get()!;
-  expect(tombstone.content_hash).toBe(computeSyncContentHash('node_review', {
-    deleted_at: tombstone.deleted_at, node_id: 'a', object_type: 'node_review'
-  }));
+  expect(library.database.prepare("SELECT * FROM sync_object_state WHERE object_type='node_review' AND object_id='a'")
+    .get()).toBeUndefined();
   await replay('redo');
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(1);
   expect(count()).toEqual({ count: 1 });

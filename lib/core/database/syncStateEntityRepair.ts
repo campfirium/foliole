@@ -6,7 +6,6 @@ import { tableExists } from './numberedMigrationHelpers.js';
 const ENTITIES = [
   ['node', 'nodes', 'id'],
   ['node_reading', 'node_reading', 'node_id'],
-  ['node_review', 'node_review', 'node_id'],
   ['import_source', 'import_sources', 'source_fingerprint']
 ] as const;
 

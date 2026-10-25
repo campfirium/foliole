@@ -83,7 +83,7 @@ function nodeVersionTriggers() {
 export function createFramedSyncInventoryTriggers() {
   return [
     ...nodeVersionTriggers(),
-    ...['node_reading', 'node_review', 'node_open_state'].flatMap(table =>
+    ...['node_reading', 'node_open_state'].flatMap(table =>
       triggers(table, ref => framedSyncNodeInventorySql(`${ref}.node_id`))),
     ...triggers('parent_order_sources', ref => framedSyncNodeInventorySql(`${ref}.parent_id`)),
     ...triggers('topic_daily_count_entries', ref => framedSyncNodeInventorySql(`${ref}.node_id`)),
@@ -115,8 +115,8 @@ export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers(
  * The inventory projection reads no column of `nodes`, so these only rewrote unchanged rows and dropped their
  * cached digests on every node write.
  */
-const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['insert', 'update', 'delete']
-  .map(action => `trg_framed_inventory_nodes_${action}`);
+const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['nodes', 'node_review'].flatMap(table =>
+  ['insert', 'update', 'delete'].map(action => `trg_framed_inventory_${table}_${action}`));
 
 export const RETIRED_RESOURCE_AVAILABILITY_TRIGGERS = ['insert', 'update', 'delete']
   .map(action => `trg_framed_inventory_framed_sync_resource_availability_${action}`);

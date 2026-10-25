@@ -13,9 +13,9 @@ describe('sync object push issue policy', () => {
     expect(SYNC_POLICY_REVIEW_REQUIRED_PUSH_ISSUE_TYPES).not.toContain('node_open_state');
   });
 
-  it('keeps review-state conflicts behind explicit review', () => {
+  it('does not classify retired review-state snapshots as push issues', () => {
     expect(isBlockingAckForDirtyRetry({
       object_type: 'node_review', status: 'conflict'
-    })).toBe(true);
+    })).toBe(false);
   });
 });

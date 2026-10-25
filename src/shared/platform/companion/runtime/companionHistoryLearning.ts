@@ -1,6 +1,6 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
+import { writeNodeReadingObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { isSameReadingProfile } from '../../../../store/workspaceActionHistoryReading';
 import type { WorkspaceRelatedReading } from '../../../../store/workspaceNodeMetadataHistory';
 import { toReadingPayload } from '../../companionSyncStateWriters';
@@ -20,13 +20,12 @@ export async function writeCompanionHistoryReadings(db: DbPort, changes: Workspa
   }
 }
 
-export async function clearCompanionHistoryLearning(db: DbPort, objectType: 'node_reading' | 'node_review', nodeId: string) {
+export async function clearCompanionHistoryLearning(db: DbPort, objectType: 'node_reading', nodeId: string) {
   const now = new Date().toISOString();
   const contentHash = await iosCompanionContentHash({ deleted_at: now, node_id: nodeId, object_type: objectType });
   const record = { object_type: objectType, object_id: nodeId, content_hash: contentHash,
     payload_json: '{}', deleted_at: now, updated_at: now };
-  if (objectType === 'node_review') await writeNodeReviewObject(db, record);
-  else await writeNodeReadingObject(db, record);
+  await writeNodeReadingObject(db, record);
   await markIosCompanionMutation({ db, objectType, objectId: nodeId, updatedAt: now,
     hostName: await iosCompanionHostName(db), contentHash });
   await db.run('UPDATE sync_object_state SET deleted_at = ? WHERE object_type = ? AND object_id = ?', [now, objectType, nodeId]);

@@ -84,6 +84,7 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
 }
 
 async function readAppliedStateHash(db: DbPort, input: RequestSyncObjectInput) {
+  if (input.objectType === 'node_review') return undefined;
   const standaloneChild = NODE_CHILD_STATE_TYPES.some(type => type === input.objectType)
     && !(input.objectType === 'parent_child_order' && input.globalId === ROOT_CHILD_ORDER_ID);
   if (standaloneChild) {

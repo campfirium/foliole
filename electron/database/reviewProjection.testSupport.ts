@@ -4,6 +4,7 @@ import { readStoredReviewCard } from '../../lib/core/database/storedReviewCard.j
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings.js';
 import { createInitialSchedulerCard, mapGradeToRustRating } from '../../lib/core/review/types.js';
+import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -39,10 +40,10 @@ export function history(peer: RestorePeer, mode: 'undo' | 'redo', target: string
 }
 export const reviewState = (peer: RestorePeer) => peer.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
 export const reviewFacts = (peer: RestorePeer) => peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-export async function sendReviews(source: RestorePeer, target: RestorePeer, enqueueSearchInvalidations = true) {
+export async function sendReviews(source: RestorePeer, target: RestorePeer, enqueueSearchInvalidations = true, extraFacts: CanonicalFact[] = []) {
   const difference = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(source.db), remote: [] })
     .find(value => value.globalId === 'topic' && value.objectType === 'node');
   if (!difference) throw new Error('missing_test_inventory');
   await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
-    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference, enqueueSearchInvalidations);
+    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference, enqueueSearchInvalidations, extraFacts);
 }

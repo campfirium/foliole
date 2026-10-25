@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   nodeReadingSyncAdapter,
-  nodeReviewSyncAdapter,
+  nodeTextAlternativeSyncAdapter,
   reviewLogSyncAdapter,
   settingSyncAdapter,
   type SyncPushAck,
@@ -10,15 +10,15 @@ import {
   type SyncableStateObjectRow
 } from './companionSyncPushProtocol';
 
-function createNodeReviewRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
+function createNodeTextAlternativeRow(overrides: Partial<SyncableStateObjectRow> = {}): SyncableStateObjectRow {
   return {
     base_content_hash: 'desktop-base',
     content_hash: 'android-next',
     deleted_at: null,
     last_modified_by_host_name: 'android-device',
     object_id: 'node-1',
-    object_type: 'node_review',
-    payload_json: '{"reps":2}',
+    object_type: 'node_text_alternative',
+    payload_json: '{"body_text":"Alternative"}',
     state_seq: 12,
     updated_at: '2026-04-30T01:00:00.000Z',
     ...overrides
@@ -72,25 +72,25 @@ function createSettingRow(overrides: Partial<SyncableStateObjectRow> = {}): Sync
 
 function createAck(row: SyncableStateObjectRow, overrides: Partial<SyncPushAck> = {}): SyncPushAck {
   return {
-    clientOpId: `node_review:${row.object_id}:${row.state_seq}`,
-    identity: nodeReviewSyncAdapter.identity(row),
+    clientOpId: `node_text_alternative:${row.object_id}:${row.state_seq}`,
+    identity: nodeTextAlternativeSyncAdapter.identity(row),
     stateSeq: row.state_seq,
     status: 'accepted',
     ...overrides
   };
 }
 
-function testBuildsNodeReviewPayload() {
-  const row = createNodeReviewRow();
+function testBuildsAlternativePayload() {
+  const row = createNodeTextAlternativeRow();
 
-  expect(nodeReviewSyncAdapter.buildPushPayload(row)).toEqual({
+  expect(nodeTextAlternativeSyncAdapter.buildPushPayload(row)).toEqual({
     authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
-    clientOpId: 'node_review:node-1:12',
+    clientOpId: 'node_text_alternative:node-1:12',
     contentHash: 'android-next',
     deletedAt: null,
-    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
-    payloadJson: '{"reps":2}',
+    identity: { objectId: 'node-1', objectType: 'node_text_alternative', scope: 'workspace' },
+    payloadJson: '{"body_text":"Alternative"}',
     updatedAt: '2026-04-30T01:00:00.000Z'
   });
 }
@@ -125,41 +125,41 @@ function testBuildsSettingPayload() {
 }
 
 function testUsesNullBaseForCreateAttempts() {
-  const row = createNodeReviewRow({ base_content_hash: null });
+  const row = createNodeTextAlternativeRow({ base_content_hash: null });
 
-  expect(nodeReviewSyncAdapter.baseReference(row)).toEqual({
+  expect(nodeTextAlternativeSyncAdapter.baseReference(row)).toEqual({
     baseContentHash: null,
     kind: 'content_hash'
   });
 }
 
 function testBlocksPullApplyForDirtyStateRows() {
-  const payload = createNodeReviewRow({ state_seq: 20 });
-  const dirtyLocal = createNodeReviewRow({ local_status: 'dirty', state_seq: 12 });
+  const payload = createNodeTextAlternativeRow({ state_seq: 20 });
+  const dirtyLocal = createNodeTextAlternativeRow({ local_status: 'dirty', state_seq: 12 });
 
-  expect(nodeReviewSyncAdapter.applyPullPayload(payload, dirtyLocal)).toEqual({
-    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+  expect(nodeTextAlternativeSyncAdapter.applyPullPayload(payload, dirtyLocal)).toEqual({
+    identity: { objectId: 'node-1', objectType: 'node_text_alternative', scope: 'workspace' },
     status: 'blocked_by_dirty'
   });
 }
 
 function testAppliesPullWhenLocalStateIsClean() {
-  const payload = createNodeReviewRow({ state_seq: 20 });
-  const cleanLocal = createNodeReviewRow({ state_seq: 12 });
+  const payload = createNodeTextAlternativeRow({ state_seq: 20 });
+  const cleanLocal = createNodeTextAlternativeRow({ state_seq: 12 });
 
-  expect(nodeReviewSyncAdapter.applyPullPayload(payload, cleanLocal)).toEqual({
-    identity: { objectId: 'node-1', objectType: 'node_review', scope: 'workspace' },
+  expect(nodeTextAlternativeSyncAdapter.applyPullPayload(payload, cleanLocal)).toEqual({
+    identity: { objectId: 'node-1', objectType: 'node_text_alternative', scope: 'workspace' },
     status: 'applied'
   });
 }
 
 function testConfirmsNodeReviewByAckStateSeq() {
-  const row = createNodeReviewRow();
+  const row = createNodeTextAlternativeRow();
   const ack = createAck(row, { stateSeq: 12 });
 
-  expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 11 }), ack)).toBe(false);
-  expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 12 }), ack)).toBe(true);
-  expect(nodeReviewSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 13 }), ack)).toBe(true);
+  expect(nodeTextAlternativeSyncAdapter.isConfirmedBy(createNodeTextAlternativeRow({ state_seq: 11 }), ack)).toBe(false);
+  expect(nodeTextAlternativeSyncAdapter.isConfirmedBy(createNodeTextAlternativeRow({ state_seq: 12 }), ack)).toBe(true);
+  expect(nodeTextAlternativeSyncAdapter.isConfirmedBy(createNodeTextAlternativeRow({ state_seq: 13 }), ack)).toBe(true);
 }
 
 function testConfirmsNodeReadingByAckStateSeq() {
@@ -173,13 +173,13 @@ function testConfirmsNodeReadingByAckStateSeq() {
 
   expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReadingRow({ state_seq: 12 }), ack)).toBe(false);
   expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReadingRow({ state_seq: 13 }), ack)).toBe(true);
-  expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeReviewRow({ state_seq: 13 }), ack)).toBe(false);
+  expect(nodeReadingSyncAdapter.isConfirmedBy(createNodeTextAlternativeRow({ state_seq: 13 }), ack)).toBe(false);
 }
 
 function testDoesNotConfirmConflict() {
-  const row = createNodeReviewRow();
+  const row = createNodeTextAlternativeRow();
 
-  expect(nodeReviewSyncAdapter.isConfirmedBy(row, createAck(row, {
+  expect(nodeTextAlternativeSyncAdapter.isConfirmedBy(row, createAck(row, {
     stateSeq: row.state_seq,
     status: 'conflict'
   }))).toBe(false);
@@ -208,15 +208,15 @@ function testConfirmsReviewLogByOpId() {
 }
 
 describe('companion sync push protocol adapters', () => {
-  it('builds a node_review push payload with content-hash base reference', testBuildsNodeReviewPayload);
+  it('builds a node_text_alternative push payload with content-hash base reference', testBuildsAlternativePayload);
   it('builds a node_reading push payload with content-hash base reference', testBuildsNodeReadingPayload);
   it('builds a setting push payload scoped by the setting identity tuple', testBuildsSettingPayload);
   it('uses a null base reference for state object create attempts', testUsesNullBaseForCreateAttempts);
   it('blocks state pull payloads when local dirty state exists', testBlocksPullApplyForDirtyStateRows);
   it('applies state pull payloads when the local state is clean', testAppliesPullWhenLocalStateIsClean);
-  it('confirms node_review dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReviewByAckStateSeq);
+  it('confirms node_text_alternative dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReviewByAckStateSeq);
   it('confirms node_reading dirty only after pulled state reaches the ack state_seq', testConfirmsNodeReadingByAckStateSeq);
-  it('does not confirm node_review conflicts', testDoesNotConfirmConflict);
+  it('does not confirm node_text_alternative conflicts', testDoesNotConfirmConflict);
   it('builds review_log append-only payloads keyed by op_id', testBuildsReviewLogPayload);
   it('confirms review_log accepted and already-applied acks by op_id', testConfirmsReviewLogByOpId);
 });

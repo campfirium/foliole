@@ -1604,95 +1604,6 @@
       },
       "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state FROM node_reading INNER JOIN visible_nodes visible ON visible.id = node_reading.node_id WHERE node_id = ? LIMIT 1"
     },
-    "syncPayloadNodeReview": {
-      "columns": [
-        {
-          "key": "node_id",
-          "source": "node_id",
-          "type": "string"
-        },
-        {
-          "key": "due",
-          "source": "due",
-          "type": "string"
-        },
-        {
-          "key": "last_review_at",
-          "source": "last_review_at",
-          "type": "string"
-        },
-        {
-          "key": "state",
-          "source": "state",
-          "type": "long"
-        },
-        {
-          "key": "stability",
-          "source": "stability",
-          "type": "double"
-        },
-        {
-          "key": "difficulty",
-          "source": "difficulty",
-          "type": "double"
-        },
-        {
-          "key": "elapsed_days",
-          "source": "elapsed_days",
-          "type": "long"
-        },
-        {
-          "key": "scheduled_days",
-          "source": "scheduled_days",
-          "type": "long"
-        },
-        {
-          "key": "reps",
-          "source": "reps",
-          "type": "long"
-        },
-        {
-          "key": "lapses",
-          "source": "lapses",
-          "type": "long"
-        }
-      ],
-      "resultKey": "payloads",
-      "syncPayload": {
-        "argMode": "object_id",
-        "defaultDifficulty": 0,
-        "defaultElapsedDays": 0,
-        "defaultLapses": 0,
-        "defaultReps": 0,
-        "defaultScheduledDays": 0,
-        "defaultStability": 0,
-        "defaultState": 0,
-        "difficultyPayloadKey": "difficulty",
-        "duePayloadKey": "due",
-        "elapsedDaysPayloadKey": "elapsed_days",
-        "inputPayloadKey": "review_json",
-        "lapsesPayloadKey": "lapses",
-        "lastReviewAtPayloadKey": "last_review_at",
-        "nodeIdPayloadKey": "node_id",
-        "objectType": "node_review",
-        "recordDeletedAtKey": "deleted_at",
-        "recordUpdatedAtKey": "updated_at",
-        "repsPayloadKey": "reps",
-        "reviewLogInputPayloadKey": "review_log_json",
-        "reviewLogCardAfterInputKey": "cardAfter",
-        "reviewLogCardBeforeInputKey": "cardBefore",
-        "reviewLogDifficultyInputKey": "difficulty",
-        "reviewLogDueInputKey": "due",
-        "reviewLogGradeInputKey": "grade",
-        "reviewLogReviewedAtInputKey": "reviewedAt",
-        "reviewLogSchedulerVersionInputKey": "schedulerVersion",
-        "reviewLogStabilityInputKey": "stability",
-        "scheduledDaysPayloadKey": "scheduled_days",
-        "stabilityPayloadKey": "stability",
-        "statePayloadKey": "state"
-      },
-      "sql": "WITH RECURSIVE visible_nodes(id) AS (\n  SELECT id\n  FROM nodes\n  WHERE parent_id IS NULL\n    AND deleted_at IS NULL\n  UNION ALL\n  SELECT child.id\n  FROM nodes child\n  INNER JOIN visible_nodes parent\n    ON parent.id = child.parent_id\n  WHERE child.deleted_at IS NULL\n) SELECT node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses FROM node_review INNER JOIN visible_nodes visible ON visible.id = node_review.node_id WHERE node_id = ? LIMIT 1"
-    },
     "syncPayloadNodeOpenState": {
       "syncPayload": {
         "argMode": "object_id",
@@ -1907,7 +1818,7 @@
     },
     "diagnosticSyncStateMetrics": {
       "resultKey": "metrics",
-      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'conflict_count' AS metric, COUNT(*) AS value FROM node_sync_conflicts UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE status = 'accepted' UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')",
+      "sql": "SELECT 'max_state_seq' AS metric, COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state UNION ALL SELECT 'conflict_count' AS metric, COUNT(*) AS value FROM node_sync_conflicts UNION ALL SELECT 'local_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' UNION ALL SELECT 'ready_dirty_count' AS metric, COUNT(*) AS value FROM sync_object_state state WHERE state.sync_dirty = 1 AND state.object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) UNION ALL SELECT 'pending_ack_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE status = 'accepted' UNION ALL SELECT 'push_issue_count' AS metric, COUNT(*) AS value FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')",
       "columns": [
         {
           "key": "metric",
@@ -1923,7 +1834,7 @@
     },
     "diagnosticSyncStateCounts": {
       "resultKey": "counts",
-      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE status = 'accepted' GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder') GROUP BY object_type) issues ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' GROUP BY state.object_type ORDER BY state.object_type ASC",
+      "sql": "SELECT state.object_type, COUNT(*) AS count, SUM(CASE WHEN state.sync_dirty = 1 THEN 1 ELSE 0 END) AS dirty_count, MIN(state.state_seq) AS min_state_seq, MAX(state.state_seq) AS max_state_seq, COALESCE(pending.count, 0) AS pending_ack_count, COALESCE(issues.count, 0) AS push_issue_count, SUM(CASE WHEN state.sync_dirty = 1 AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = state.object_type AND ack.object_id = state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) THEN 1 ELSE 0 END) AS ready_dirty_count FROM sync_object_state state LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE status = 'accepted' GROUP BY object_type) pending ON pending.object_type = state.object_type LEFT JOIN (SELECT object_type, COUNT(*) AS count FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder') GROUP BY object_type) issues ON issues.object_type = state.object_type WHERE state.object_type <> 'view_state' GROUP BY state.object_type ORDER BY state.object_type ASC",
       "columns": [
         {
           "key": "object_type",
@@ -1969,7 +1880,7 @@
     },
     "diagnosticDirtyObjects": {
       "resultKey": "objects",
-      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) ORDER BY state_seq DESC LIMIT 50",
+      "sql": "SELECT object_type, object_id, content_hash, state_seq, updated_at, base_content_hash FROM sync_object_state WHERE sync_dirty = 1 AND object_type <> 'view_state' AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts ack WHERE ack.object_type = sync_object_state.object_type AND ack.object_id = sync_object_state.object_id AND (ack.status = 'accepted' OR (ack.status IN ('conflict', 'rejected') AND ack.object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder')))) ORDER BY state_seq DESC LIMIT 50",
       "columns": [
         {
           "key": "object_type",
@@ -2041,7 +1952,7 @@
     },
     "diagnosticPushIssues": {
       "resultKey": "acks",
-      "sql": "SELECT operation_id AS client_op_id, object_type, object_id, remote_position AS state_seq, status, updated_at AS acked_at FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder') ORDER BY updated_at ASC LIMIT 50",
+      "sql": "SELECT operation_id AS client_op_id, object_type, object_id, remote_position AS state_seq, status, updated_at AS acked_at FROM sync_delivery_receipts WHERE status IN ('conflict', 'rejected') AND object_type IN ('external_document', 'external_folder', 'foreground_source', 'import_source', 'node', 'node_reading', 'node_text_alternative', 'parent_child_order', 'setting', 'topic_daily_count', 'watched_folder') ORDER BY updated_at ASC LIMIT 50",
       "columns": [
         {
           "key": "client_op_id",
@@ -2958,11 +2869,6 @@
         "argMode": "object_id",
         "objectType": "node_reading",
         "queryName": "syncPayloadNodeReading"
-      },
-      {
-        "argMode": "object_id",
-        "objectType": "node_review",
-        "queryName": "syncPayloadNodeReview"
       },
       {
         "argMode": "object_id",

@@ -47,6 +47,14 @@ it.each(['relay', 'offline', 'late-history', 'reset-before', 'reset-after', 'und
         await mutate(f.left, 'undo', reviewHistoryOpId('first', t4, 'redo'), '2026-10-07T08:00:00.000Z');
         await f.left.synchronize(f.rightSnapshot.origin, nodeId);
       }
+      for (const file of [f.leftSnapshot.databasePath, f.rightSnapshot.databasePath]) {
+        const db = new Database(file, { readonly: true });
+        try {
+          expect(db.prepare("SELECT * FROM sync_object_state WHERE object_type='node_review'").all()).toEqual([]);
+          expect(db.prepare("SELECT states_json FROM framed_sync_inventory WHERE object_type='node'").all())
+            .not.toEqual(expect.arrayContaining([expect.objectContaining({ states_json: expect.stringContaining('node_review') })]));
+        } finally { db.close(); }
+      }
       const before = state(f.leftSnapshot.databasePath);
       expect(state(f.rightSnapshot.databasePath)).toEqual(before);
       const expectedReps = scenario === 'reset-before' || scenario === 'undo-redo' ? 1 : scenario === 'late-history' ? 3 : 2;
