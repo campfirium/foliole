@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { mkdirSync, mkdtempSync, realpathSync } from 'node:fs';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,16 +20,12 @@ export async function resetCompanionPreviewReviews({ root = repoRoot } = {}) {
   }
   const db = new Database(databaseFile, { fileMustExist: true });
   try {
-    const backupRoot = path.join(root, '.tmp', 'artifacts', 'companion-preview-reset');
-    mkdirSync(backupRoot, { recursive: true });
-    const backupFile = path.join(mkdtempSync(path.join(backupRoot, 'backup-')), 'preview.db');
-    await db.backup(backupFile);
     const result = db.transaction(() => {
       const logs = db.prepare(`DELETE FROM review_log WHERE node_id IN (${ITEM_IDS})`).run().changes;
       const states = db.prepare(`DELETE FROM node_review WHERE node_id IN (${ITEM_IDS})`).run().changes;
       return { logs, states };
     }).immediate();
-    return { ...result, backupFile };
+    return result;
   } finally {
     db.close();
   }
@@ -40,7 +36,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if (process.argv.length > 2) throw new Error('This command takes no arguments.');
     const result = await resetCompanionPreviewReviews();
     console.log(`Reset ${result.states} item review states and deleted ${result.logs} review logs.`);
-    console.log(`Backup: ${result.backupFile}`);
     console.log('Reload all companion preview pages before continuing to review.');
   } catch (error) {
     console.error(error.message);

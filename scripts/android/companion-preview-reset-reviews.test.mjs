@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -64,11 +64,7 @@ it('makes reviewed items available after reopening without changing content or t
   const reading = db.prepare('SELECT * FROM node_reading').all();
   const result = await resetCompanionPreviewReviews({ root });
   expect(result).toMatchObject({ states: 1, logs: 1 });
-  const backup = new Database(result.backupFile, { readonly: true });
-  try {
-    expect(itemQueue(backup)).toEqual([]);
-    expect(backup.prepare('SELECT count(*) FROM review_log').pluck().get()).toBe(2);
-  } finally { backup.close(); }
+  expect(existsSync(path.join(root, '.tmp'))).toBe(false);
   db.close();
   db = new Database(file);
   expect(itemQueue(db)).toEqual(['item']);
