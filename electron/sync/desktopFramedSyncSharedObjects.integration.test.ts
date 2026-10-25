@@ -5,11 +5,12 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { pruneLearningRowsWithoutVisibleNodes } from '../../lib/core/sync/syncNodeVisibilityPruning.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
@@ -28,9 +29,6 @@ const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload:
     query: "SELECT source_name FROM import_sources WHERE source_fingerprint = 'source'", expected: 'Original.md' },
   { type: 'node_open_state', id: 'topic', payload: { node_id: 'topic', last_opened_at: now },
     query: "SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'", expected: now },
-  { type: 'node_review', id: 'topic', payload: { node_id: 'topic', difficulty: 3.4, due: now,
-    elapsed_days: 1, lapses: 0, last_review_at: now, reps: 4, scheduled_days: 3, stability: 2.8, state: 2 },
-    query: "SELECT reps FROM node_review WHERE node_id = 'topic'", expected: 4 },
   { type: 'node_text_alternative', id: 'alternative', payload: { alternative_id: 'alternative', node_id: 'topic',
     source_host_name: 'original-host', body_text: 'Original alternative body', created_at: now, updated_at: now, status: 'available' },
     query: "SELECT body_text FROM node_text_alternatives WHERE alternative_id = 'alternative'", expected: 'Original alternative body' },
@@ -82,6 +80,53 @@ function readCurrentNodes(databasePath: string) {
   } finally { database.close(); }
 }
 
+function readReviewFacts(databasePath: string) {
+  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
+  try {
+    return {
+      events: database.prepare("SELECT * FROM review_log WHERE node_id = 'topic' ORDER BY op_id").all(),
+      review: database.prepare("SELECT * FROM node_review WHERE node_id = 'topic'").all(),
+      metadata: database.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_review'").all()
+    };
+  } finally { database.close(); }
+}
+
+it('persists real review facts and their projection through normal HTTP rounds, replay and both restarts',
+  { meta: { calibratedMs: 60_000 } }, async () => {
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
+    try {
+      await fixture.left.seed({ content: 'Question', nodeId: 'topic', kind: 'item', title: 'Review' });
+      await fixture.left.invoke('review_projection', { nodeId: 'topic', at: now,
+        mode: 'grade', opId: 'review-first', grade: 3 });
+      const expected = readReviewFacts(fixture.leftSnapshot.databasePath);
+      expect(expected.events).toEqual([expect.objectContaining({ op_id: 'review-first', kind: 'review', grade: 3 })]);
+      expect(expected.review).toEqual([expect.objectContaining({ reps: 1 })]);
+      expect(expected.metadata).toEqual([]);
+      for (let replay = 0; replay < 2; replay++) {
+        expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
+        expect(readReviewFacts(fixture.leftSnapshot.databasePath)).toEqual(expected);
+        expect(readReviewFacts(fixture.rightSnapshot.databasePath)).toEqual(expected);
+      }
+      const left = await fixture.restartLeft();
+      const right = await fixture.restartRight();
+      expect(readReviewFacts(left.snapshot.databasePath)).toEqual(expected);
+      expect(readReviewFacts(right.snapshot.databasePath)).toEqual(expected);
+      expect(await reconnectFixturePeer(fixture.left, right.snapshot)).toMatchObject({ complete: true });
+      expect(await reconnectFixturePeer(fixture.right, left.snapshot)).toMatchObject({ complete: true });
+      for (const peer of [fixture.left, fixture.right]) {
+        const inventory = await readFixtureInventory(peer);
+        expect(inventory).not.toContainEqual(expect.objectContaining({ objectType: 'node_review' }));
+        expect(inventory.find(entry => entry.objectType === 'node' && entry.globalId === 'topic')?.stateFactIds)
+          .not.toEqual(expect.arrayContaining([expect.stringContaining('"node_review"')]));
+      }
+      expect(readReviewFacts(left.snapshot.databasePath)).toEqual(expected);
+      expect(readReviewFacts(right.snapshot.databasePath)).toEqual(expected);
+    } finally {
+      await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+      await fs.rm(fixture.root, { force: true, recursive: true });
+    }
+  });
+
 it('keeps a retired dirty review out of inventory and transfers unrelated live state', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
@@ -90,15 +135,14 @@ it('keeps a retired dirty review out of inventory and transfers unrelated live s
     const source = new Database(fixture.leftSnapshot.databasePath);
     try {
       const db = createBetterSqliteDbPort(source);
-      const sample = cases.find(item => item.type === 'node_review')!;
-      const payload = { ...sample.payload, node_id: 'retired-topic' };
-      await applySyncObjectInTransaction(db, { object_type: 'node_review', object_id: 'retired-topic',
-        content_hash: computeSyncContentHash('node_review', payload), deleted_at: null,
-        payload_json: JSON.stringify(payload), updated_at: now });
-      source.prepare("UPDATE sync_object_state SET sync_dirty = 1 WHERE object_type = 'node_review'").run();
+      source.prepare(`INSERT INTO node_review (node_id, due, last_review_at, state, stability, difficulty,
+        elapsed_days, scheduled_days, reps, lapses) VALUES ('retired-topic', ?, ?, 2, 2.8, 3.4, 1, 3, 4, 0)`).run(now, now);
+      upsertSyncObjectState(createBetterSqlite3Driver(source), { objectType: 'node_review', objectId: 'retired-topic',
+        contentHash: 'a'.repeat(64), lastModifiedByHostName: 'original-host', updatedAt: now, syncDirty: true });
+      const review = source.prepare("SELECT * FROM node_review WHERE node_id = 'retired-topic'").get();
       source.prepare("UPDATE nodes SET deleted_at = ? WHERE id = 'retired-topic'").run(now);
       await pruneLearningRowsWithoutVisibleNodes(db);
-      expect(source.prepare("SELECT node_id FROM node_review WHERE node_id = 'retired-topic'").get()).toBeUndefined();
+      expect(source.prepare("SELECT * FROM node_review WHERE node_id = 'retired-topic'").get()).toEqual(review);
       expect(source.prepare("SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_review'").pluck().get()).toBe(1);
       await applySyncObjectInTransaction(db, { object_type: 'node_open_state', object_id: 'topic',
         content_hash: computeSyncContentHash('node_open_state', { node_id: 'topic', last_opened_at: now }),
@@ -111,6 +155,8 @@ it('keeps a retired dirty review out of inventory and transfers unrelated live s
     try {
       expect(target.prepare("SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'").pluck().get()).toBe(now);
       expect(target.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe('Live body');
+      expect(target.prepare("SELECT * FROM sync_object_state WHERE object_type = 'node_review'").all()).toEqual([]);
+      expect(target.prepare("SELECT * FROM node_review WHERE node_id = 'retired-topic'").all()).toEqual([]);
     } finally { target.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
