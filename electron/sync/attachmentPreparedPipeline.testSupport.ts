@@ -54,8 +54,8 @@ export async function pipelineFixture(createExchange: (host: RequestSyncDatabase
         'SELECT available FROM framed_sync_resource_availability ORDER BY hash').pluck().all() };
     } finally { persisted.close(); }
   }
-  const orderedHost = () => ({ ...local.host, async needsSlice(shouldYield: () => boolean) {
-    const demand = await local.host.needsSlice(shouldYield);
+  const orderedHost = () => ({ ...local.host, async needsSlice(shouldYield: () => boolean, excluded?: readonly string[]) {
+    const demand = await local.host.needsSlice(shouldYield, excluded);
     return { ...demand, keys: items.map(item => item.key).filter(key => demand.keys.includes(key)) };
   } });
   return { directory, get local() { return local; }, get host() { return orderedHost(); }, items, exchange,

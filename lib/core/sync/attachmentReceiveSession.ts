@@ -46,6 +46,7 @@ export function createAttachmentReceiveSession(files: AttachmentBlockFiles, opti
     },
     async settled(key) {
       const result = await completed.get(key);
+      completed.delete(key);
       if (result?.kind === 'failed') throw result.error;
     },
     async close() {

@@ -32,12 +32,13 @@ export async function readRequestSyncAttachmentNeeds(host: Pick<RequestSyncDatab
 }
 
 export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSyncDatabaseHost, 'readSnapshot' | 'write'>,
-  inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false) {
+  inspect: (storageKeys: string[]) => Promise<boolean[]>, shouldYield: () => boolean, requirePdfText = false, excluded?: readonly string[]) {
   if (!await host.readSnapshot(hasAttachmentDemand)) return { keys: [], pdfTextKeys: [], pending: false };
-  await parseChangedAttachmentArticles(host, shouldYield);
+  // A continuation reads only the existing durable queue; new edits keep their next data-round turn.
+  if (!excluded) await parseChangedAttachmentArticles(host, shouldYield);
   const parsingPending = await host.readSnapshot(async db =>
     (await db.query('SELECT 1 FROM attachment_parse_queue LIMIT 1')).length > 0);
-  const keys = await host.readSnapshot(selectPendingAttachments);
+  const keys = await host.readSnapshot(db => selectPendingAttachments(db, excluded));
   if (!keys.length) return { keys: [], pdfTextKeys: [], pending: await host.readSnapshot(hasAttachmentDemand), parsingPending };
   const pdfTextKeys = requirePdfText ? await host.readSnapshot(db => missingPdfTextArtifacts(db, keys)) : [];
   const missing = await inspectAttachmentNeeds(host, keys, inspect);
@@ -53,7 +54,7 @@ export async function readRequestSyncAttachmentNeedsSlice(host: Pick<RequestSync
   const pending = await host.readSnapshot(async db => {
     const [queued] = await db.query('SELECT 1 FROM attachment_parse_queue LIMIT 1');
     const [remaining] = await db.query(`SELECT 1 FROM attachment_pending
-      WHERE storage_key NOT IN (${keys.map(() => '?').join(',')}) LIMIT 1`, keys);
+      WHERE storage_key NOT IN (SELECT value FROM json_each(?)) LIMIT 1`, [JSON.stringify([...(excluded ?? []), ...keys])]);
     return Boolean(queued || remaining);
   });
   return { keys: missing, pdfTextKeys, pending, parsingPending };

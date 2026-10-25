@@ -56,3 +56,39 @@ it('makes bounded parsing progress even when the time budget is exhausted', asyn
     expect(f.pending()).toEqual([imageKey(0), imageKey(1), imageKey(2)]);
   } finally { f.sqlite.close(); }
 });
+
+it('continues fair bounded demand after deletions without reselecting active, failed or duplicate references', async () => {
+  const f = demandFixture();
+  try {
+    const seed = f.sqlite.prepare('INSERT INTO attachment_pending VALUES (?, ?, ?, ?, ?)');
+    for (let i = 0; i < 180; i++) seed.run(`article-${i}`, imageKey(i), 'body', '2000', i < 90 ? null : '2001');
+    seed.run('duplicate', imageKey(0), 'mount', '2000', null);
+    const seen = new Set<string>();
+    let round = 0;
+    while (true) {
+      const demand = await slice(f.host, async keys => keys.map(() => false), () => false, false, [...seen]);
+      if (!demand.keys.length) break;
+      expect(demand.keys.length).toBeLessThanOrEqual(64);
+      expect(demand.keys.every(key => !seen.has(key))).toBe(true);
+      if (round++ === 0) {
+        expect(demand.keys.filter(key => Number.parseInt(key.slice(0, 64), 16) < 90).length).toBe(32);
+        expect(demand.keys.filter(key => Number.parseInt(key.slice(0, 64), 16) >= 90).length).toBe(32);
+      }
+      demand.keys.forEach((key, index) => {
+        seen.add(key);
+        // Completed rows disappear; in-flight and failed rows remain durable and excluded.
+        if (index % 3 === 0) f.sqlite.prepare('DELETE FROM attachment_pending WHERE storage_key = ?').run(key);
+      });
+    }
+    expect(seen.size).toBe(180);
+    expect(round).toBe(3);
+    expect(f.pending().length).toBeGreaterThan(0);
+    f.insert('late-edit', imageBody(imageKey(1000)));
+    const continued = await slice(f.host, async keys => keys.map(() => false), () => false, false, [...seen]);
+    expect(continued.keys).toEqual([]);
+    expect(f.queued()).toEqual(['late-edit']);
+    await slice(f.host, async keys => keys.map(() => false), () => false);
+    expect(f.queued()).toEqual([]);
+    expect((await slice(f.host, async keys => keys.map(() => false), () => false, false, [...seen])).keys).toContain(imageKey(1000));
+  } finally { f.sqlite.close(); }
+});

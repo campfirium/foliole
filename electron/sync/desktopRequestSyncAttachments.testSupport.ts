@@ -65,8 +65,8 @@ export async function attachmentHttpSource(keys: string[], root: string, reopen 
       await completeAttachmentDemand(tx, resource.storageKey);
     }))),
     attempted: key => database.write(port => recordAttachmentDemandAttempt(port, key)),
-    async needsSlice(shouldYield) {
-      return readRequestSyncAttachmentNeedsSlice(database, inspect, shouldYield);
+    async needsSlice(shouldYield, excluded) {
+      return readRequestSyncAttachmentNeedsSlice(database, inspect, shouldYield, false, excluded);
     },
     needs: () => readRequestSyncAttachmentNeeds(database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(assetsDir, key)))) };
   return { host, database, assetsDir, sqlite, databasePath, async close() { await receiver.close(); sqlite.close(); } };

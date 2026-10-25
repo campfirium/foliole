@@ -66,9 +66,9 @@ export async function createDesktopRequestSyncAttachmentHost(host: RequestSyncDa
     async withFile(key, consume, options) { await checkLibrary(); return source.withFile(key, consume, options); },
     async status(resource) { return completed(resource.storageKey, (await receiver()).status(resource)); },
     async receive(resource, offset, bytes) { return completed(resource.storageKey, (await receiver()).receive(resource, offset, bytes)); },
-    async needsSlice(shouldYield) {
+    async needsSlice(shouldYield, excluded) {
       await checkLibrary();
-      return readRequestSyncAttachmentNeedsSlice(host, inspect, shouldYield);
+      return readRequestSyncAttachmentNeedsSlice(host, inspect, shouldYield, false, excluded);
     },
     async needs() {
       await checkLibrary();

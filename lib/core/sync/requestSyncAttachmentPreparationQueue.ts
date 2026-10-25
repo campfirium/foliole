@@ -2,6 +2,7 @@ import { AttachmentReceivePaused } from './attachmentBlockTransfer.js';
 import type { AttachmentReceiveSession } from './attachmentReceiveSession.js';
 import { prepareRequestSyncAttachment, pullRequestSyncAttachmentWindows } from './requestSyncAttachmentPull.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
+import { createAttachmentSegments, type AttachmentDemandSlice } from './requestSyncAttachmentSegments.js';
 import type { RequestSyncExchange } from './requestSyncDatabaseExchange.js';
 
 type Preparation = Awaited<ReturnType<typeof prepareRequestSyncAttachment>>;
@@ -11,6 +12,8 @@ type Outcome = Awaited<ReturnType<typeof pullRequestSyncAttachmentWindows>>;
 
 type PullInput = {
   host: RequestSyncAttachmentHost; exchange: RequestSyncExchange; keys: string[];
+  nextSlice?(excluded: readonly string[]): Promise<AttachmentDemandSlice>;
+  prepareSlice?(slice: AttachmentDemandSlice, host: RequestSyncAttachmentHost): Promise<void>;
   failed: Set<string>; pendingKeys: Set<string>; shouldYield(): boolean;
   attempt(key: string, execute: () => Promise<Outcome>): Promise<void>;
 };
@@ -21,35 +24,47 @@ export async function runPreparedAttachmentPulls(input: PullInput) {
     ...(input.exchange.signal ? { signal: input.exchange.signal } : {}), shouldYield: input.shouldYield
   });
   const host = session ? { ...input.host, receiveWindow: session.receiveWindow } : input.host;
-  const finishing: Promise<{ error: unknown } | undefined>[] = [];
+  const finishing = new Set<Promise<{ error: unknown } | undefined>>();
+  const segments = createAttachmentSegments(input.keys, input.nextSlice);
   const queue: Entry[] = [];
-  let cursor = 0, attempted = false;
+  let attempted = false;
   const fill = (capacity = 2) => {
-    while (queue.length < capacity && cursor < input.keys.length) {
+    while (queue.length < capacity && segments.hasKeys()) {
       if ((attempted || queue.length > 0) && input.shouldYield()) break;
-      const key = input.keys[cursor++]!;
+      const key = segments.take()!;
       if (input.failed.has(key)) { input.pendingKeys.add(key); continue; }
       queue.push({ key, result: prepareRequestSyncAttachment(input.host, input.exchange, key, input.shouldYield)
         .then(value => ({ kind: 'ready', value }), (error: unknown) => ({ kind: 'failed', error })) });
     }
   };
-  try {
+  const replenish = async () => {
     fill();
+    while (!input.shouldYield() && !segments.hasKeys()) {
+      const next = await segments.advance();
+      if (!next || input.shouldYield()) break;
+      await input.prepareSlice?.(next, settledHost(input.host, session));
+      fill();
+    }
+  };
+  try {
+    await replenish();
     while (queue.length && (!attempted || !input.shouldYield())) {
       const current = queue.shift()!;
       attempted = true;
       try {
         const { receipt, finished } = beginPull(input, host, current, hasNext => fill(hasNext ? 1 : 2), session);
-        finishing.push(finished);
+        finishing.add(finished);
+        void finished.then(outcome => { if (!outcome) finishing.delete(finished); });
         await receipt;
       } finally { await dispose(current); }
-      fill();
+      await replenish();
     }
   } finally {
     for (const entry of queue) input.pendingKeys.add(entry.key);
-    for (const key of input.keys.slice(cursor)) input.pendingKeys.add(key);
-    await drain(queue, finishing, session);
+    try { await segments.close(key => input.pendingKeys.add(key)); }
+    finally { await drain(queue, finishing, session); }
   }
+  input.exchange.signal?.throwIfAborted();
 }
 
 async function dispose(entry: Entry) {
@@ -79,10 +94,19 @@ function beginPull(input: PullInput, host: RequestSyncAttachmentHost, current: E
   return { receipt, finished: operation.then(() => undefined, (error: unknown) => ({ error })) };
 }
 
-async function drain(queue: Entry[], finishing: Promise<{ error: unknown } | undefined>[], session?: AttachmentReceiveSession) {
+async function drain(queue: Entry[], finishing: Set<Promise<{ error: unknown } | undefined>>, session?: AttachmentReceiveSession) {
   let outcomes;
   try { await Promise.all(queue.map(dispose)); }
   finally { outcomes = await Promise.all(finishing); await session?.close(); }
   const failure = outcomes.find(outcome => outcome !== undefined);
   if (failure) throw failure.error;
+}
+
+function settledHost(host: RequestSyncAttachmentHost, session?: AttachmentReceiveSession): RequestSyncAttachmentHost {
+  if (!session) return host;
+  return { ...host, async receiveWindow(resource, offset, execute) {
+    const result = await session.receiveWindow(resource, offset, execute);
+    await session.settled(resource.storageKey);
+    return result;
+  } };
 }

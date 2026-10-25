@@ -15,7 +15,7 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
   attempted?(storageKey: string): Promise<void>;
   derivePdfText?(pdfKey: string, version: number): Promise<string | null>;
   importPdfText?(pdfKey: string, artifactKey: string): Promise<void>;
-  needsSlice(shouldYield: () => boolean): Promise<{ keys: string[]; pending: boolean; parsingPending?: boolean; pdfTextKeys?: string[] }>;
+  needsSlice(shouldYield: () => boolean, excluded?: readonly string[]): Promise<{ keys: string[]; pending: boolean; parsingPending?: boolean; pdfTextKeys?: string[] }>;
 }
 
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {

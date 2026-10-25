@@ -56,11 +56,18 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
   pendingScan ||= local.pending;
   parsingPending ||= local.parsingPending ?? false;
   const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report, failed);
-  let textPending = 0;
+  const text = createAttachmentTextProgress(host, exchange, shouldYield, report, result);
   const stages = [
     { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
       if (exchange.prepareAttachment) return runPreparedAttachmentPulls({ host, exchange, keys: local.keys,
-        failed, pendingKeys, shouldYield, attempt });
+        failed, pendingKeys, shouldYield, attempt, ...(local.pending ? {
+          nextSlice: async (excluded: readonly string[]) => {
+            if (shouldYield()) return { keys: [], pending: true };
+            const next = await host.needsSlice(shouldYield, excluded);
+            return { ...next, keys: prioritizeRetryPairs(next.keys, retryFirst) };
+          },
+          prepareSlice: (slice, receiver) => text.run(prioritizeRetryPairs(slice.pdfTextKeys ?? [], retryFirst), receiver)
+        } : {}) });
       let attempted = false;
       for (const key of local.keys) {
         if (failed.has(key) || (attempted && shouldYield())) { pendingKeys.add(key); continue; }
@@ -68,15 +75,8 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
         await attempt(key, () => pullRequestSyncAttachmentWindows(host, exchange, key, shouldYield));
       }
     } },
-    { name: 'text' as const, defer: () => { textPending = local.pdfTextKeys?.length ?? 0; }, run: async () => {
-      const text = await exchangePdfTextArtifacts({ host, ...(exchange.signal ? { signal: exchange.signal } : {}),
-        keys: local.pdfTextKeys ?? [], shouldYield, report,
-        describe: storageKey => single(exchange, { operation: 'describe', storageKey, derive: 'pdf_text',
-          extractorVersion: PDF_TEXT_EXTRACTOR_VERSION }),
-        pull: key => pullRequestSyncAttachmentWindows(host, exchange, key, shouldYield) });
-      result.blocks += text.blocks;
-      result.transferred += text.transferred;
-      textPending = text.pending;
+    { name: 'text' as const, defer: () => { text.pending += local.pdfTextKeys?.length ?? 0; }, run: async () => {
+      await text.run(local.pdfTextKeys);
     } },
     { name: 'push' as const, defer: () => { remoteNeeds.forEach(key => pendingKeys.add(key)); }, run: async () => {
       let attempted = false;
@@ -90,8 +90,8 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
   await runRequestSyncAttachmentStages(exchange.context, stages.filter(stage =>
     stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
       : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
-  if (!pendingScan && !pendingKeys.size && !textPending) retryFirstRounds.delete(roundKey);
-  return { ...result, pending: pendingScan ? null : pendingKeys.size + textPending, verifying: verificationPending(),
+  if (!pendingScan && !pendingKeys.size && !text.pending) retryFirstRounds.delete(roundKey);
+  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending, verifying: verificationPending(),
     yielded: parsingPending || verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
 
@@ -117,6 +117,25 @@ function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: Req
     }
   };
   return { result, pendingKeys, attempt, verificationPending: () => verifying };
+}
+
+function createAttachmentTextProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
+  shouldYield: () => boolean, report: (key: string, error: unknown) => void,
+  result: ReturnType<typeof createAttachmentProgress>['result']) {
+  const progress = { pending: 0, async run(keys: string[], receiver = host) {
+    const textExchange = { ...exchange };
+    // Continuation text shares the serial send slot with the two already queued preparations.
+    if (receiver !== host) delete textExchange.prepareAttachment;
+    const text = await exchangePdfTextArtifacts({ host: receiver, ...(exchange.signal ? { signal: exchange.signal } : {}),
+      keys, shouldYield, report,
+      describe: storageKey => single(exchange, { operation: 'describe', storageKey, derive: 'pdf_text',
+        extractorVersion: PDF_TEXT_EXTRACTOR_VERSION }),
+      pull: key => pullRequestSyncAttachmentWindows(receiver, textExchange, key, shouldYield) });
+    result.blocks += text.blocks;
+    result.transferred += text.transferred;
+    progress.pending += text.pending;
+  } };
+  return progress;
 }
 
 // Interleaved new/retry pairs alternate their first chance when a data round leaves only one attempt.
