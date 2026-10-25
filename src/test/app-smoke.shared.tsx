@@ -12,7 +12,6 @@ import { resetWorkspaceNodeDocumentPrefetchForTest } from '../store/workspaceNod
 import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
 import { mockEditorState } from './app-smoke-editor-mock';
-import { createSmokeRuntimeInvoke } from './app-smoke-runtime-mock';
 
 export { mockEditorState } from './app-smoke-editor-mock';
 
@@ -32,10 +31,13 @@ const smokeBridgeMocks = vi.hoisted(() => ({
   }))
 }));
 
-vi.mock('../shared/platform/runtimeInvoke', () => ({
-  isRuntimeInvokeAvailable: vi.fn(() => Boolean(window.electronAPI?.invoke)),
-  getRuntimeInvoke: vi.fn(() => window.electronAPI?.invoke ?? createSmokeRuntimeInvoke())
-}));
+vi.mock('../shared/platform/runtimeInvoke', async () => {
+  const { createSmokeRuntimeInvoke } = await import('./app-smoke-runtime-mock');
+  return {
+    isRuntimeInvokeAvailable: vi.fn(() => Boolean(window.electronAPI?.invoke)),
+    getRuntimeInvoke: vi.fn(() => window.electronAPI?.invoke ?? createSmokeRuntimeInvoke())
+  };
+});
 
 export const loadRuntimeNodeBacklinksMock = smokeBridgeMocks.loadRuntimeNodeBacklinks;
 export const loadRuntimePdfImportsInventoryMock = smokeBridgeMocks.loadRuntimePdfImportsInventory;
