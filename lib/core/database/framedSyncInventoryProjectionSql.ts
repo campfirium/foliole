@@ -61,11 +61,6 @@ export function framedSyncNodeInventorySql(id: string) {
           FROM node_sync_versions version,
             json_each(COALESCE(json_extract(version.snapshot_json, '$.text_alternative_bodies'), '[]')) body
           WHERE version.version_id = ${framedSyncResourceVersionSql('state')}
-        UNION SELECT resource.value AS hash FROM framed_sync_version_summary version,
-          json_each(version.resource_hashes_json) resource
-          WHERE version.version_id = ${framedSyncResourceVersionSql('state')}
-            AND EXISTS (SELECT 1 FROM framed_sync_resource_availability availability
-              WHERE availability.hash = resource.value AND availability.available = 1)
         ORDER BY hash)), '[]')
     FROM sync_object_state state WHERE state.object_type = 'node' AND state.object_id IN (${id})
       AND state.object_id != 'special-virtual-root'

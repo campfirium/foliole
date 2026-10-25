@@ -37,7 +37,8 @@ function deferred() {
 
 function businessState(db: Database.Database) {
   return Object.fromEntries(['nodes', 'node_sync_versions', 'node_sync_version_parents',
-    'sync_object_state', 'content_blobs', 'node_version_local_source_revisions'].map(table => [table,
+    'sync_object_state', 'content_blobs', 'node_version_local_source_revisions', 'framed_sync_inventory',
+    'framed_sync_node_digest'].map(table => [table,
     db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
 }
 

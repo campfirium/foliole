@@ -8,6 +8,7 @@ import {
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
 import { migrateCompanionAttachmentDemands } from './attachmentDemandSchema.js';
+import { retireCompanionAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
 import { retireCompanionAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { retireCompanionAttachmentRegistry } from './companionAttachmentRegistryRetirement.js';
 import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
@@ -131,10 +132,15 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 93 && targetVersion >= 93) await migrateCompanionAttachmentDemands(db);
   if (currentVersion < 94 && targetVersion >= 94) await migrateCompanionMissingCurrentVersionInventory(db);
   if (currentVersion < 95 && targetVersion >= 95) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
-  if (currentVersion < 96 && targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
-  if (currentVersion < 97 && targetVersion >= 97) await migrateCompanionFramedSyncInventoryLookups(db);
+  await migrateCompanionInventoryVersions(db, currentVersion, targetVersion);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
+}
+
+async function migrateCompanionInventoryVersions(db: DbPort, currentVersion: number, targetVersion: number) {
+  if (currentVersion < 96 && targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
+  if (currentVersion < 97 && targetVersion >= 97) await migrateCompanionFramedSyncInventoryLookups(db);
+  if (currentVersion < 98 && targetVersion >= 98) await retireCompanionAttachmentInventory(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

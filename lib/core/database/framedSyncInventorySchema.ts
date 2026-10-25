@@ -1,6 +1,5 @@
 import {
   framedSyncNodeInventorySql,
-  framedSyncResourceVersionSql,
   framedSyncTombstoneSummarySql,
   framedSyncVersionSummarySql
 } from './framedSyncInventoryProjectionSql.js';
@@ -107,12 +106,6 @@ export function createFramedSyncInventoryTriggers() {
     INSERT OR REPLACE INTO framed_sync_fact_summary (kind, fact_id, object_id)
       SELECT 4, op_id, node_id FROM review_log WHERE op_id = ${ref}.op_id;
     ${framedSyncNodeInventorySql(`${ref}.node_id`)}`),
-    ...triggers('framed_sync_resource_availability', (ref) => `
-    ${framedSyncNodeInventorySql(`SELECT state.object_id FROM sync_object_state state
-      JOIN framed_sync_version_summary version ON version.version_id = ${framedSyncResourceVersionSql('state')},
-      json_each(version.resource_hashes_json) resource
-      WHERE state.object_type = 'node' AND resource.value = ${ref}.hash`)}
-  `)
   ];
 }
 
@@ -125,6 +118,9 @@ export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers(
 const RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS = ['insert', 'update', 'delete']
   .map(action => `trg_framed_inventory_nodes_${action}`);
 
+export const RETIRED_RESOURCE_AVAILABILITY_TRIGGERS = ['insert', 'update', 'delete']
+  .map(action => `trg_framed_inventory_framed_sync_resource_availability_${action}`);
+
 /** Drops every current and retired inventory trigger, so a rebuild never leaves an older definition behind. */
 export function dropFramedSyncInventoryTriggers() {
   const current = FRAMED_SYNC_INVENTORY_TRIGGERS.map(sql => {
@@ -132,7 +128,8 @@ export function dropFramedSyncInventoryTriggers() {
     if (!name) throw new Error('framed_sync_inventory_trigger_name_invalid');
     return name;
   });
-  return [...current, ...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS].map(name => `DROP TRIGGER IF EXISTS ${name}`);
+  return [...current, ...RETIRED_FRAMED_SYNC_INVENTORY_TRIGGERS, ...RETIRED_RESOURCE_AVAILABILITY_TRIGGERS]
+    .map(name => `DROP TRIGGER IF EXISTS ${name}`);
 }
 
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [

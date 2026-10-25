@@ -63,7 +63,8 @@ it('initializes resource presence once during a real companion upgrade and prese
     await bootstrapCompanionDatabase(db, upgrade);
     const after = await readFramedSyncInventory(db);
     expect(after.find((entry) => entry.globalId === 'topic' && entry.objectType === 'node')!.resourceHashes
-      .map((value) => Buffer.from(value).toString('hex'))).toContain(hash);
+      .map((value) => Buffer.from(value).toString('hex'))).not.toContain(hash);
+    expect(sqlite.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash = ?').pluck().get(hash)).toBe(1);
     expect((await bootstrapCompanionDatabase(db, upgrade)).created).toBe(false);
     expect(inventories).toBe(1);
     const reopened = new Database(file, { readonly: true });

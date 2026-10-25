@@ -101,8 +101,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Versions 96 and 97 reinstall framed sync inventory triggers through the shared executor only.
-      Math.max(97, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Later inventory migrations run through the shared executor only.
+      Math.max(98, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });

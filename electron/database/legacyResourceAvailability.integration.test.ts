@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS as legacyTriggers } from '../../lib/core/database/preNodeChildInventorySchema.js';
 
 import { recordResourceAvailabilityInBulk } from './legacyResourceAvailability.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
@@ -40,7 +41,7 @@ function resources(peer: Peer) {
   return { availability: peer.db.prepare('SELECT * FROM framed_sync_resource_availability ORDER BY hash').all(), rows };
 }
 
-it('produces the same inventory as one triggered availability write per file hash', () => {
+it('seeds the same file presence as individual writes without adding attachments to node inventories', () => {
   const triggered = library('triggered');
   const bulk = library('bulk');
   const files = [hash('a'), hash('b'), hash('d')];
@@ -49,16 +50,27 @@ it('produces the same inventory as one triggered availability write per file has
   })();
   bulk.db.transaction(() => recordResourceAvailabilityInBulk(bulk.db, files))();
   const expected = resources(triggered);
-  expect(expected.rows).toContainEqual({ object_id: 'first', resources_json: expect.stringContaining(hash('b')) });
+  expect(expected.availability).toContainEqual({ hash: hash('b'), available: 1 });
+  expect(expected.rows).toContainEqual({ object_id: 'first', resources_json: expect.not.stringContaining(hash('b')) });
   expect(resources(bulk)).toEqual(expected);
 });
 
-it('keeps later availability writes refreshing the inventory', () => {
+it('keeps later file presence changes independent of node inventories', () => {
   const peer = library('later');
   peer.db.transaction(() => recordResourceAvailabilityInBulk(peer.db, [hash('a')]))();
   const read = () => String((peer.db.prepare(`SELECT resources_json FROM framed_sync_inventory
     WHERE object_type = 'node' AND object_id = 'missing'`).get() as { resources_json: string }).resources_json);
   expect(JSON.parse(read())).not.toContain(hash('c'));
   peer.db.prepare(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL).run(hash('c'), 1);
-  expect(JSON.parse(read())).toContain(hash('c'));
+  expect(JSON.parse(read())).not.toContain(hash('c'));
+  expect(peer.db.prepare('SELECT available FROM framed_sync_resource_availability WHERE hash = ?').pluck().get(hash('c'))).toBe(1);
+});
+
+it('retires old resource refresh triggers before seeding a legacy upgrade', () => {
+  const peer = library('legacy-triggers');
+  for (const sql of legacyTriggers.filter(sql => sql.includes('ON framed_sync_resource_availability'))) peer.db.exec(sql);
+  const before = resources(peer).rows;
+  peer.db.transaction(() => recordResourceAvailabilityInBulk(peer.db, [hash('a'), hash('b')]))();
+  expect(resources(peer).rows).toEqual(before);
+  expect(resources(peer).availability).toContainEqual({ hash: hash('a'), available: 1 });
 });

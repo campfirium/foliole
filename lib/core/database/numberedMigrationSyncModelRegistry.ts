@@ -1,4 +1,5 @@
 import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
+import { retireAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateExternalFolderDisplayPaths } from './externalFolderDisplayPathMigration.js';
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
@@ -39,5 +40,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 168, migrate: migrateFramedSyncInventoryLookups },
   { version: 169, migrate: migrateParentChildOrderMembers },
   /** Reinstalls the inventory triggers without the ones on `nodes`. */
-  { version: 170, migrate: migrateFramedSyncInventoryLookups }
+  { version: 170, migrate: migrateFramedSyncInventoryLookups },
+  { version: 171, migrate: retireAttachmentInventory }
 ];
