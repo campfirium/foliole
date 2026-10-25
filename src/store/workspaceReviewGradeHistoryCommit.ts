@@ -54,6 +54,7 @@ export async function commitWorkspaceReviewGrade(args: {
   try {
     persisted = await persistReviewGradeMutation({
       currentNodeId: args.currentNodeId,
+      opId: gradedState.historyEntry.id,
       grade: args.grade,
       reviewedAt: args.result.reviewedAt,
       schedulerVersion: args.result.schedulerVersion,

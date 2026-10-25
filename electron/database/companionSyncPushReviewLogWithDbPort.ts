@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import { identityReviewRowSchema } from '../../lib/core/sync/syncFactRowSchemas.js';
 import type { NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import type {
@@ -28,7 +29,8 @@ function parseReviewLog(item: CompanionSyncPushPayload): NativeSyncReviewLogReco
   try {
     const payload = JSON.parse(item.payloadJson) as unknown;
     if (!isRecord(payload) || payload.op_id !== item.identity.objectId) return null;
-    return payload as unknown as NativeSyncReviewLogRecord;
+    const parsed = identityReviewRowSchema.safeParse(payload);
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
@@ -42,19 +44,15 @@ function reviewLogMatches(existing: ReviewLogDbRow, next: NativeSyncReviewLogRec
     && existing.grade === next.grade
     && existing.scheduler_version === next.scheduler_version
     && existing.reviewed_at === next.reviewed_at
-    && existing.due_before === next.due_before
-    && existing.stability_before === next.stability_before
-    && existing.difficulty_before === next.difficulty_before
-    && existing.due_after === next.due_after
-    && existing.stability_after === next.stability_after
-    && existing.difficulty_after === next.difficulty_after;
+    && existing.kind === next.kind
+    && existing.voids_op_id === next.voids_op_id;
 }
 
 async function selectReviewLogWithDbPort(port: DbPort, opId: string) {
   return (await port.query<ReviewLogDbRow>(
     `SELECT
        id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
+       kind, voids_op_id
      FROM review_log
      WHERE op_id = ?`,
     [opId]
@@ -65,8 +63,8 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
   return port.run(
     `INSERT INTO review_log (
        id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       kind, voids_op_id
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.id,
       record.op_id,
@@ -75,12 +73,8 @@ function insertReviewLogWithDbPort(port: DbPort, record: NativeSyncReviewLogReco
       record.grade,
       record.scheduler_version,
       record.reviewed_at,
-      record.due_before,
-      record.stability_before,
-      record.difficulty_before,
-      record.due_after,
-      record.stability_after,
-      record.difficulty_after
+      record.kind,
+      record.voids_op_id
     ]
   );
 }

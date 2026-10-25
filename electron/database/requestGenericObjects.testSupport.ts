@@ -101,13 +101,8 @@ export function insertNodeReviewSyncState() {
     ['node-review-1', '2026-04-28T00:00:00.000Z', '2026-04-27T00:05:00.000Z', 2, 3, 4, 1, 1, 2, 0]
   );
   driver.execute(
-    `INSERT INTO review_log (
-       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ['log-1', 'op-1', 'android-test', 'node-review-1', 3, 'ts-fsrs@4',
-      '2026-04-27T00:05:00.000Z', '2026-04-27T00:00:00.000Z', 1, 2,
-      '2026-04-28T00:00:00.000Z', 3, 4]
+    `INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ['log-1', 'op-1', 'android-test', 'node-review-1', 3, 'ts-fsrs@4', '2026-04-27T00:05:00.000Z']
   );
   driver.execute(
     `INSERT INTO sync_object_state (

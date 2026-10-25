@@ -5,7 +5,7 @@ const objectQuery = (table, fields) => `SELECT json_object(${jsonFields(fields)}
 export const IOS_STATE_WRITEBACK_FACT_QUERIES = {
   reading: objectQuery('node_reading', 'interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state'),
   review: objectQuery('node_review', 'difficulty, due, elapsed_days, lapses, last_review_at, reps, scheduled_days, stability, state'),
-  review_log: `SELECT json_group_array(json_object(${jsonFields('op_id, grade, scheduler_version, reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after')})) AS json
+  review_log: `SELECT json_group_array(json_object(${jsonFields('op_id, grade, scheduler_version, reviewed_at, kind, voids_op_id')})) AS json
     FROM (SELECT * FROM review_log WHERE ${node} ORDER BY op_id)`
 };
 

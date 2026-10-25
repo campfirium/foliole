@@ -91,9 +91,9 @@ it('writes shared learning facts through state HTTP without transmitting phone s
       next_at: '2026-07-21T00:02:00.000Z', priority: 2, repetition_count: 3, state: 'active' },
     review: { difficulty: 5.2, due: '2026-07-28T00:01:00.000Z', elapsed_days: 3, lapses: 1,
       last_review_at: '2026-07-21T00:01:00.000Z', reps: 4, scheduled_days: 7, stability: 8.5, state: 2 },
-    review_log: [{ op_id: 'phone-review-op', grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
-      due_before: '2026-07-21T00:01:00.000Z', stability_before: 4.2, difficulty_before: 6.1,
-      due_after: '2026-07-28T00:01:00.000Z', stability_after: 8.5, difficulty_after: 5.2 }],
+    review_log: [{ op_id: 'phone-review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+
+         }],
     phone_private_setting_count: 0
   };
   expect(stateObservations.persisted).toEqual(expected);
@@ -125,9 +125,8 @@ async function writePhoneState({ phone, db }) {
     reps: 4, scheduledDays: 7, stability: 8.5, state: 2
   } });
   await applyReviewLogRecordsWithDbPort(db, [{ id: 'phone-review-id', op_id: 'phone-review-op', host_name: 'Phone',
-    node_id: 'ios-state-node', grade: 3, scheduler_version: 'fsrs-6', reviewed_at: updatedAt,
-    due_before: updatedAt, stability_before: 4.2, difficulty_before: 6.1,
-    due_after: '2026-07-28T00:01:00.000Z', stability_after: 8.5, difficulty_after: 5.2
+    node_id: 'ios-state-node', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: updatedAt,
+
   }], { requireExistingNode: true });
   const privateSetting = { scope: 'host', platform: 'ios', form_factor: 'phone', host_name: 'Phone',
     key: 'handoff_reminder_settings', value_json: '{"enabled":true}' };

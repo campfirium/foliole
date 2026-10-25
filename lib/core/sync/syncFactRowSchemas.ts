@@ -13,11 +13,12 @@ export const identityParentRowSchema = z.object({
 
 export const identityReviewRowSchema = z.object({
   id: z.string(), op_id: z.string().min(1), host_name: z.string(), node_id: z.string().min(1),
-  grade: z.number(), scheduler_version: z.string(), reviewed_at: z.string(), due_before: z.string().nullable(),
-  stability_before: z.number().nullable(), difficulty_before: z.number().nullable(), due_after: z.string(),
-  stability_after: z.number(), difficulty_after: z.number()
-}).strict();
+  grade: z.number().int().min(0).max(4), scheduler_version: z.string(), reviewed_at: z.string(),
+  kind: z.enum(['review', 'reset', 'void']), voids_op_id: z.string().min(1).nullable()
+}).strict().refine(row => row.kind === 'review'
+  ? row.grade >= 1 && row.voids_op_id === null
+  : row.grade === 0 && (row.kind === 'void' ? row.voids_op_id !== null : row.voids_op_id === null),
+'Invalid review event');
 
 export const REVIEW_FACT_COLUMNS = ['id', 'op_id', 'host_name', 'node_id', 'grade',
-  'scheduler_version', 'reviewed_at', 'due_before', 'stability_before', 'difficulty_before',
-  'due_after', 'stability_after', 'difficulty_after'] as const;
+  'scheduler_version', 'reviewed_at', 'kind', 'voids_op_id'] as const;

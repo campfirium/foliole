@@ -217,9 +217,7 @@ it('rebuilds a Books placeholder while retaining excerpts and learning from reti
   [JSON.stringify({ id: 'saved-anchor', kind: 'cloze', locator: { from: 0, to: 8, originalText: 'old text' } }),
     '2026-05-22', '2026-05-22']);
   driver.execute("INSERT INTO node_review (node_id,due,reps) VALUES ('saved-excerpt','2026-11-01',4)");
-  driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
-    due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
-    VALUES ('saved-log','saved-op','test','saved-excerpt',3,'test','2026-05-22','2026-05-22','2026-11-01',1,2,3,4)`);
+  driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES ('saved-log', 'saved-op', 'test', 'saved-excerpt', 3, 'test', '2026-05-22')`);
   driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,content,is_title_manual,created_at,updated_at)
     VALUES ('unlocated-excerpt','book-child-1','topic','Unlocated','Saved quote',0,'2026-05-22','2026-05-22')`);
   const before = driver.queryAll('SELECT * FROM review_log');

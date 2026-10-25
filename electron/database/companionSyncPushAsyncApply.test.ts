@@ -85,18 +85,14 @@ function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
     identity: { objectId: opId, objectType: 'review_log', scope: 'workspace' },
     payloadJson: JSON.stringify({
       host_name: 'android-device',
-      difficulty_after: 3,
-      difficulty_before: 2,
-      due_after: '2026-05-01T00:00:00.000Z',
-      due_before: '2026-04-30T00:00:00.000Z',
+
       grade: 3,
       id: `review-${opId}`,
       node_id: 'node-1',
       op_id: opId,
       reviewed_at: '2026-04-30T01:00:00.000Z',
-      scheduler_version: 'ts-fsrs@4',
-      stability_after: 4,
-      stability_before: 3
+      kind: 'review', voids_op_id: null, scheduler_version: 'ts-fsrs@4',
+
     })
   };
 }

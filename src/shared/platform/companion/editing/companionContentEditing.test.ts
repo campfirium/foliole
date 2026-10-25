@@ -193,7 +193,6 @@ it('rejects an input whose parent was moved to trash before the writer ran', asy
     .toEqual({ content: baseline });
 });
 
-
 it('opens editable content promptly with ten thousand visible topics', { meta: { calibratedMs: 15000 } }, async () => {
   const add = database.prepare(`INSERT INTO nodes
     (id, parent_id, kind, title, content, created_at, updated_at)
@@ -227,15 +226,12 @@ it('rejects an oversized annotation edit before changing database facts', async 
   expect(database.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(versions);
 });
 
-
 it.each(['android', 'ios'])('%s saves an item body across reopen without changing its answer or review state', async platform => {
   state.platform = platform;
   await insert(node({ id: 'item', kind: 'item', content: 'Question', reveal: 'Answer' }), 'item-base');
   database.prepare("INSERT INTO node_review (node_id, due, state, reps, stability) VALUES ('item', ?, 2, 4, 3)")
     .run(now);
-  database.exec(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version,
-    reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after)
-    VALUES ('log', 'op', 'mobile', 'item', 3, 'fsrs', 'now', 'before', 1, 2, 'after', 3, 4)`);
+  database.exec(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES ('log', 'op', 'mobile', 'item', 3, 'fsrs', 'now')`);
   const review = database.prepare("SELECT * FROM node_review WHERE node_id = 'item'").get();
   const logs = database.prepare('SELECT * FROM review_log').all();
   const source = await readCompanionContentSource('item', 'item-editor');

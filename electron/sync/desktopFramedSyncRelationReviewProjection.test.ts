@@ -19,11 +19,10 @@ const parent = {
 
 function review(overrides: Partial<DesktopFramedSyncReviewSource> = {}): DesktopFramedSyncReviewSource {
   return {
-    difficulty_after: 3.125, difficulty_before: 2.5,
-    due_after: '2026-10-08T01:00:00.000Z', due_before: '2026-10-06T01:00:00.000Z',
+
     grade: 3, host_name: 'device-a', id: 'review-row-1', node_id: 'node-1',
     op_id: 'review-op-1', reviewed_at: '2026-10-05T01:00:00.000Z',
-    scheduler_version: 'fsrs-6', stability_after: 4.75, stability_before: 3.5,
+    kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6',
     ...overrides
   };
 }
@@ -41,7 +40,7 @@ it('round-trips the exact parent edge and binds its canonical identity', () => {
   expect(() => canonicalManifestBytes({ blobs: [], facts: [fact] })).not.toThrow();
 });
 
-it('round-trips every immutable review column without floating-point loss', () => {
+it('round-trips every immutable review field, including control events', () => {
   const source = review();
   const fact = projectDesktopFramedSyncReview(source);
 
@@ -49,8 +48,12 @@ it('round-trips every immutable review column without floating-point loss', () =
     blobs: [], factId: 'review-op-1', globalId: 'node-1', kind: 4, objectType: 'node'
   });
   expect(restoreDesktopFramedSyncReview(fact)).toEqual(source);
-  expect(fact.body.find((entry) => entry.name === 'stability_after')?.value)
-    .toEqual({ kind: 'string', value: '4.75' });
+  expect(fact.body.find((entry) => entry.name === 'voids_op_id')?.value)
+    .toEqual({ kind: 'null' });
+  for (const event of [review({ kind: 'reset', grade: 0 }),
+    review({ kind: 'void', grade: 0, voids_op_id: 'target' })]) {
+    expect(restoreDesktopFramedSyncReview(projectDesktopFramedSyncReview(event))).toEqual(event);
+  }
   expect(() => canonicalManifestBytes({ blobs: [], facts: [fact] })).not.toThrow();
 });
 

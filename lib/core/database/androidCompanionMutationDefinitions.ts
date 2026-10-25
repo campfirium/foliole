@@ -9,9 +9,8 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
   ...ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS,
   syncReviewLogInsert:
     'INSERT OR IGNORE INTO review_log (' +
-    'id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, ' +
-    'difficulty_before, due_after, stability_after, difficulty_after' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind, voids_op_id' +
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
   syncNodeOpenStateDelete: 'DELETE FROM node_open_state WHERE node_id = ?',
   syncNodeOpenStateUpsert:
     'INSERT INTO node_open_state (node_id, last_opened_at) VALUES (?, ?) ' +
@@ -49,12 +48,12 @@ export const ANDROID_COMPANION_MUTATION_DEFINITIONS = {
     'document_id, folder_id, relative_path, file_name, extension, source_size_bytes, source_modified_at, ' +
     'source_modified_ms, content_hash, title, opening_text, body_blob_hash, content, indexed_at, is_present, ' +
     'reference_kind, reference_json, missing_at, created_at, updated_at' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   textBodyBlobManifestInsert:
     'INSERT OR IGNORE INTO content_blobs (' +
     'hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes, original_sha256, ' +
     'stored_sha256, availability, created_at, cached_at, last_verified_at' +
-    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
   textBodyBlobDataInsert: 'INSERT OR IGNORE INTO content_blob_data (hash, data) VALUES (?, ?)',
   nodeAttachmentDeleteByNode: 'DELETE FROM node_attachments WHERE node_id = ?',
   nodeAttachmentUpsert: 'INSERT OR REPLACE INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',

@@ -21,12 +21,8 @@ export function loadSyncReviewLogSince(cursor: { opId: string; reviewedAt: strin
        grade,
        scheduler_version,
        reviewed_at,
-       due_before,
-       stability_before,
-       difficulty_before,
-       due_after,
-       stability_after,
-       difficulty_after
+       kind,
+       voids_op_id
      FROM review_log
      WHERE ${cursor ? '(reviewed_at > ? OR (reviewed_at = ? AND op_id > ?))' : '1 = 1'}
      ORDER BY reviewed_at ASC, op_id ASC

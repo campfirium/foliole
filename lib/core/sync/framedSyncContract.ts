@@ -1,4 +1,4 @@
-export const FRAMED_SYNC_PROTOCOL_VERSION = 26;
+export const FRAMED_SYNC_PROTOCOL_VERSION = 27;
 
 export const FRAMED_SYNC_LIMITS = Object.freeze({
   blobChunkBytes: 512 * 1024,
@@ -41,8 +41,8 @@ export const FRAMED_SYNC_PREAMBLE = Object.freeze({
 } as const);
 
 export const FRAMED_SYNC_KDF = Object.freeze({
-  sessionInfo: 'Foliole framed sync v26 session',
-  transferInfo: 'Foliole framed sync v26 transfer'
+  sessionInfo: 'Foliole framed sync v27 session',
+  transferInfo: 'Foliole framed sync v27 transfer'
 } as const);
 
 export const FRAMED_SYNC_FRAME_TYPES = Object.freeze({

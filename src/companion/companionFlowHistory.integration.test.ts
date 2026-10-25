@@ -24,7 +24,6 @@ import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { persistFlowMutation } from './companionFlowMutation';
 
-
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
@@ -58,7 +57,7 @@ async function grade(value: 1 | 2 | 3 | 4 = 3) {
 async function replay(mode: 'undo' | 'redo') {
   session = (await replayCompanionFlowHistory(key, mode, session)) ?? session;
 }
-const count = () => library.database.prepare('SELECT COUNT(*) AS count FROM review_log').get();
+const count = () => library.database.prepare("SELECT COUNT(*) AS count FROM review_log r WHERE r.kind='review' AND NOT EXISTS (SELECT 1 FROM review_log v WHERE v.kind='void' AND v.voids_op_id=r.op_id)").get();
 
 it('undoes and redoes multiple grades with their cards and persisted state, without grading again', async () => {
   const initial = await snapshot();
@@ -84,6 +83,17 @@ it('undoes and redoes multiple grades with their cards and persisted state, with
   expect(count()).toEqual({ count: 2 });
 });
 
+it('keeps persisted redo identities through subsequent undo/redo cycles', async () => {
+  await grade();
+  await replay('undo');
+  await replay('redo');
+  await replay('undo');
+  expect(count()).toEqual({ count: 0 });
+  await replay('redo');
+  await replay('undo');
+  expect(count()).toEqual({ count: 0 });
+});
+
 it('clears the redo branch after a replacement grade and restores from the original review state', async () => {
   await grade(4);
   await grade(3);
@@ -94,7 +104,7 @@ it('clears the redo branch after a replacement grade and restores from the origi
   expect(await replayCompanionFlowHistory(key, 'redo', session)).toBeNull();
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(profile.reps + 1);
   expect((await snapshot()).nodesById.b?.review).toEqual(profile);
-  expect(count()).toEqual({ count: 3 });
+  expect(count()).toEqual({ count: 1 });
 });
 
 it('rolls back the grade and log if its history cannot be saved', async () => {

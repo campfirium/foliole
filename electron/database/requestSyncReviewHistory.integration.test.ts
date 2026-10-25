@@ -12,9 +12,9 @@ import { textBranch } from './topicTextState.testSupport.js';
 function review(index: number, host = 'source'): ReviewLogRecordInput {
   const identity = String(index).padStart(4, '0');
   return { id: `review-${identity}`, op_id: `op-${identity}`, host_name: host, node_id: 'topic', grade: 3,
-    scheduler_version: 'fsrs', reviewed_at: '2026-09-30T00:00:00.000Z', due_before: '2026-10-01T00:00:00.000Z',
-    stability_before: 1, difficulty_before: 2, due_after: '2026-10-02T00:00:00.000Z',
-    stability_after: 3, difficulty_after: 4 };
+    kind: 'review', voids_op_id: null, scheduler_version: 'fsrs', reviewed_at: '2026-09-30T00:00:00.000Z',
+
+      };
 }
 
 function rows(peer: RestorePeer) {

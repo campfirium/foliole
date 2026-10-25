@@ -1,4 +1,6 @@
+import { INSERT_REVIEW_EVENT_SQL } from '../../../../../lib/core/database/reviewLogRecord';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib/core/sync/syncFactRowSchemas';
 import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 import { createCompanionUuid } from '../../companionUuid';
@@ -67,8 +69,9 @@ export async function saveIosReviewWithDb(tx: DbPort, args: { node_id: string; r
   const payload = { ...parseObject(args.review_json), node_id: args.node_id };
   const result = await applyLocalObject(tx, 'node_review', args.node_id, payload, (record) => writeNodeReviewObject(tx, record));
   if (!args.review_log_json) return result;
-  const opId = createCompanionUuid();
-  await insertReviewLog(tx, args.node_id, opId, parseObject(args.review_log_json));
+  const draft = parseObject(args.review_log_json);
+  const opId = typeof draft.opId === 'string' ? draft.opId : createCompanionUuid();
+  await insertReviewLog(tx, args.node_id, opId, draft);
   return { ...result, op_id: opId };
 }
 
@@ -134,11 +137,12 @@ async function mark(db: DbPort, objectType: string, objectId: string, contentHas
 }
 
 async function insertReviewLog(db: DbPort, nodeId: string, opId: string, draft: Record<string, unknown>) {
-  const before = requireObject(draft.cardBefore); const after = requireObject(draft.cardAfter);
-  await db.run(
-    'INSERT OR IGNORE INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [createCompanionUuid(), opId, await iosCompanionHostName(db), nodeId, Number(draft.grade), String(draft.schedulerVersion), String(draft.reviewedAt), String(before.due), Number(before.stability), Number(before.difficulty), String(after.due), Number(after.stability), Number(after.difficulty)]
-  );
+  const row = identityReviewRowSchema.parse({
+    id: createCompanionUuid(), op_id: opId, host_name: await iosCompanionHostName(db), node_id: nodeId,
+    grade: draft.grade, scheduler_version: draft.schedulerVersion, reviewed_at: draft.reviewedAt,
+    kind: 'review', voids_op_id: null
+  });
+  await db.run(INSERT_REVIEW_EVENT_SQL, REVIEW_FACT_COLUMNS.map(column => row[column]));
 }
 
 function parseObject(value: string) { const parsed = JSON.parse(value) as unknown; return requireObject(parsed); }

@@ -146,3 +146,26 @@ it('transfers only a review without body frames and preserves all node facts acr
   expect(reviews(restarted.snapshot.databasePath)).toEqual(reviews(fixture.leftSnapshot.databasePath));
   expect(received.framedSync).toEqual(before.framedSync);
 });
+
+
+it('retains review, void and reset facts across real process sync, replay and receiver restart', async () => {
+  const fixture = await setup();
+  await fixture.left.seedRelationReview('sender');
+  await fixture.right.seedRelationReview('receiver');
+  await fixture.left.invoke('seed_relation_review', { role: 'control_events' });
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-relation-review');
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-relation-review');
+  const restarted = await fixture.restartRight();
+  processes.push(restarted.process);
+  const read = (file: string) => {
+    const db = new Database(file, { readonly: true, fileMustExist: true });
+    try {
+      return { facts: db.prepare('SELECT * FROM review_log ORDER BY op_id').all(),
+        valid: db.prepare("SELECT r.op_id FROM review_log r WHERE r.kind='review' AND NOT EXISTS (SELECT 1 FROM review_log v WHERE v.kind='void' AND v.voids_op_id=r.op_id)").all() };
+    } finally { db.close(); }
+  };
+  const received = read(restarted.snapshot.databasePath);
+  expect(received).toEqual(read(fixture.leftSnapshot.databasePath));
+  expect(received.facts).toHaveLength(3);
+  expect(received.valid).toEqual([]);
+});

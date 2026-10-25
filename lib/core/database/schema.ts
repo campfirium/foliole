@@ -87,12 +87,8 @@ export const reviewLog = sqliteTable('review_log', {
   grade: integer('grade').notNull(),
   schedulerVersion: text('scheduler_version').notNull(),
   reviewedAt: text('reviewed_at').notNull(),
-  dueBefore: text('due_before').notNull(),
-  stabilityBefore: real('stability_before').notNull(),
-  difficultyBefore: real('difficulty_before').notNull(),
-  dueAfter: text('due_after').notNull(),
-  stabilityAfter: real('stability_after').notNull(),
-  difficultyAfter: real('difficulty_after').notNull()
+  kind: text('kind', { enum: ['review', 'reset', 'void'] }).notNull().default('review'),
+  voidsOpId: text('voids_op_id')
 });
 
 export const workspaceMeta = sqliteTable('workspace_meta', {

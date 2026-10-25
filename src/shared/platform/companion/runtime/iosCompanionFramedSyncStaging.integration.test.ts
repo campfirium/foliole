@@ -100,9 +100,9 @@ describe('iOS active companion sync schema retirement', () => {
 function installUnbackedPublication(sqlite: Database.Database) {
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   const fact = projectFramedSyncReview({ id: 'review', op_id: 'temporary-review', host_name: 'iPhone',
-    node_id: 'kept-node', grade: 3, scheduler_version: 'v1', reviewed_at: '2026-10-01',
-    due_before: '2026-10-01', stability_before: 1, difficulty_before: 2,
-    due_after: '2026-10-02', stability_after: 3, difficulty_after: 4 });
+    node_id: 'kept-node', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'v1', reviewed_at: '2026-10-01',
+
+       });
   sqlite.prepare(`INSERT INTO framed_sync_outbound_publications
     (transfer_id, content_id, manifest_hash, canonical_manifest, manifest_json, protocol_version,
      group_id, sender_device_id, sender_library_epoch, receiver_device_id, receiver_library_epoch,

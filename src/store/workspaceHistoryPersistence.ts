@@ -8,7 +8,8 @@ import { hasWorkspaceNodeMutationRuntime, syncNodeContentToRuntimeNow } from './
 export interface WorkspaceHistoryPersistenceAdapter {
   persistNodeSnapshots: (nodes: Node[]) => Promise<boolean>;
   persistReadingSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
-  persistReviewSnapshot: (nodeId: string, review: NodeReviewProfile, updatedAt: string) => Promise<boolean>;
+  persistReviewSnapshot: (nodeId: string, review: NodeReviewProfile | null, updatedAt: string,
+    history?: import('../../lib/core/review/reviewEventIdentity').ReviewHistoryMutation) => Promise<boolean>;
   persistShelveSnapshots: (nodes: Node[], updatedAt: string) => Promise<boolean>;
 }
 
@@ -33,8 +34,8 @@ const runtimePersistence: WorkspaceHistoryPersistenceAdapter = {
   persistNodeSnapshots,
   persistReadingSnapshots: (nodes, updatedAt) =>
     runtimeWorkspaceReviewPersistence.persistReadingNodes(nodes, updatedAt),
-  persistReviewSnapshot: (nodeId, review, updatedAt) =>
-    saveNodeReviewStateToRuntime({ nodeId, review, updatedAt }),
+  persistReviewSnapshot: (nodeId, review, updatedAt, history) =>
+    saveNodeReviewStateToRuntime({ nodeId, review, updatedAt, ...(history ? { history } : {}) }),
   persistShelveSnapshots: async (nodes, updatedAt) => {
     const [rootNode, ...readingNodes] = nodes;
     if (!rootNode) return false;

@@ -97,8 +97,8 @@ it.each([{ count: 24, known: 23, retired: true }, { count: 130, known: 128, reti
 function review(index: number): ReviewLogRecordInput {
   const suffix = String(index).padStart(4, '0');
   return { id: `review-${suffix}`, op_id: `op-${suffix}`, host_name: 'source', node_id: 'topic', grade: 3,
-    scheduler_version: 'ts-fsrs@4', reviewed_at: '2026-10-01T00:00:00.000Z', due_before: 'before',
-    stability_before: 1, difficulty_before: 2, due_after: 'after', stability_after: 3, difficulty_after: 4 };
+    kind: 'review', voids_op_id: null, scheduler_version: 'ts-fsrs@4', reviewed_at: '2026-10-01T00:00:00.000Z',
+         };
 }
 
 it('requests only op-0259 from 260 review events and preserves every immutable field across replay and reopen', async () => {
@@ -163,7 +163,6 @@ it('discovers and persists an open-state change after 2050 already known version
     expect(await differences(source, target)).toEqual([]);
   } finally { await fixture.close(); }
 });
-
 
 it('restores a receiver body reclaimed after inventory comparison through the frozen request difference', async () => {
   const fixture = await restoreFixture();

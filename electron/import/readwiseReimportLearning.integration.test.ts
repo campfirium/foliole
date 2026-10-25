@@ -59,9 +59,7 @@ function seed(category: 'article' | 'epub') {
     writeNodeBody({ driver, nodeId: id, content: `User content ${id}`, title: 'My title', updatedAt: at });
     driver.execute("UPDATE nodes SET title=?,kind=?,reveal=?,is_title_manual=1,anchor_link=json_set(anchor_link,'$.kind','cloze') WHERE id=?", ['My title', 'item', 'My answer', id]);
     driver.execute('INSERT INTO node_review (node_id,due,reps,stability,difficulty) VALUES (?,?,3,12,4)', [id, '2026-11-01']);
-    driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
-      due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
-      VALUES (?,?, 'test',?,3,'test',?,'2026-10-20','2026-11-01',1,12,3,4)`, [`log-${id}`, `op-${id}`, id, at]);
+    driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, 'test', ?, 3, 'test', ?)`, [`log-${id}`, `op-${id}`, id, at]);
   }
   return { connectionRef, ids, rootId: source.latest_node_id };
 }

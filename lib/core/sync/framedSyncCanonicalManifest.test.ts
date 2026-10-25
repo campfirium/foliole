@@ -67,7 +67,7 @@ describe('framed sync canonical identities', () => {
     expect(hex(first)).toBe('d2dca32bfb3f929303143a893241d87c1ed85088c1ca6db8e3230a47b7d9c13c');
     expect(second).toEqual(first);
     const golden = JSON.parse(await readFile(
-      path.resolve('lib/core/sync/fixtures/framed-sync-v26-golden.json'), 'utf8'
+      path.resolve('lib/core/sync/fixtures/framed-sync-v27-golden.json'), 'utf8'
     )) as { canonical: { manifest_base64: string } };
     expect(Buffer.from(canonicalManifestBytes(manifest())).toString('base64'))
       .toBe(golden.canonical.manifest_base64);
@@ -82,7 +82,7 @@ describe('framed sync canonical identities', () => {
     };
     const first = await canonicalTransferId(base, contentId);
     const otherReceiver = await canonicalTransferId({ ...base, receiverDeviceId: 'device-c' }, contentId);
-    expect(hex(first)).toBe('2743b1c22953f8a1103a510003b20731fe9d5b200b094c98c54c8b74b843ecd1');
+    expect(hex(first)).toBe('387bc7314ad42daa44417d5f20cd5abf05709f9a18b8ce90b71109f3029dbd34');
     expect(otherReceiver).not.toEqual(first);
   });
 
@@ -159,9 +159,9 @@ describe('framed sync limits and golden corpus', () => {
   });
 
   it('keeps the shared protobuf corpus versioned and bounded', async () => {
-    const raw = await readFile(path.resolve('lib/core/sync/fixtures/framed-sync-v26-golden.json'), 'utf8');
+    const raw = await readFile(path.resolve('lib/core/sync/fixtures/framed-sync-v27-golden.json'), 'utf8');
     const corpus: unknown = JSON.parse(raw);
-    expect(corpus).toMatchObject({ corpus_version: 1, protocol_version: 26 });
+    expect(corpus).toMatchObject({ corpus_version: 1, protocol_version: 27 });
     if (!corpus || typeof corpus !== 'object' || !('messages' in corpus) || !Array.isArray(corpus.messages)) {
       throw new Error('golden_corpus_invalid');
     }

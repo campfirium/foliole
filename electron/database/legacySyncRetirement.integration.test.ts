@@ -134,9 +134,9 @@ it.each(['missing', 'changed', 'matching'])('checks the %s business copy of a pu
   const host = textDevice(); hosts.push(host);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   const fact = projectFramedSyncReview({ id: 'review', op_id: 'original-review', host_name: 'Mac',
-    node_id: 'topic', grade: 3, scheduler_version: 'v1', reviewed_at: '2026-10-01',
-    due_before: '2026-10-01', stability_before: 1, difficulty_before: 2,
-    due_after: '2026-10-02', stability_after: 3, difficulty_after: 4 });
+    node_id: 'topic', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'v1', reviewed_at: '2026-10-01',
+
+       });
   if (copy !== 'missing') {
     await host.receive([textBranch('review-node', 'Review body')]);
     const original = restoreFramedSyncReview(fact);
@@ -197,7 +197,7 @@ async function publication(host: ReturnType<typeof textDevice>, record: ReturnTy
 
 async function publishManifest(host: ReturnType<typeof textDevice>, manifest: CanonicalManifest, byteLength: number) {
   const contentId = await canonicalContentId(manifest);
-  const context = { protocolVersion: 26, groupId: 'group', senderDeviceId: 'a', senderLibraryEpoch: 'a-epoch',
+  const context = { protocolVersion: 27, groupId: 'group', senderDeviceId: 'a', senderLibraryEpoch: 'a-epoch',
     receiverDeviceId: 'b', receiverLibraryEpoch: 'b-epoch' };
   const transferId = canonicalTransferIdSync(context, contentId);
   host.sqlite.prepare(`INSERT INTO framed_sync_outbound_publications

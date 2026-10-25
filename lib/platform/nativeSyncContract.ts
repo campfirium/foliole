@@ -69,22 +69,19 @@ export interface NativeSyncChangeCursor {
 }
 
 export interface NativeSyncReviewLogRecord {
-  difficulty_after: number;
-  difficulty_before: number;
-  due_after: string;
-  due_before: string;
   grade: number;
   id: string;
   node_id: string;
   op_id: string;
   reviewed_at: string;
   scheduler_version: string;
-  stability_after: number;
-  stability_before: number;
   host_name: string;
+  kind: 'review' | 'reset' | 'void';
+  voids_op_id: string | null;
 }
 
 export interface NativeSyncReviewLogDraft {
+  opId?: string;
   cardAfter: {
     due: string;
     stability: number;

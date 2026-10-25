@@ -30,9 +30,9 @@ it('preserves the exact one-MiB version and two review-only operations across re
     await transfer(source, target, progress, initial);
     const reviewedAt = '2026-10-05T02:00:00.000Z';
     const facts = ['review-only-1', 'review-only-2'].map(op => projectFramedSyncReview({
-      difficulty_after: 3.75, difficulty_before: 2.25, due_after: reviewedAt, due_before: reviewedAt,
+
       grade: 3, host_name: 'source', id: `row-${op}`, node_id: 'topic', op_id: op,
-      reviewed_at: reviewedAt, scheduler_version: 'fsrs-6', stability_after: 4.5, stability_before: 2.5 }));
+      reviewed_at: reviewedAt, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6',   }));
     await applyFramedFactSources(source.db, [async function* () { yield* facts; }], {
       loadBody: async () => { throw new Error('review_body_not_expected'); } });
     const difference = { ...(await differences()).find(value => value.globalId === 'topic')!,

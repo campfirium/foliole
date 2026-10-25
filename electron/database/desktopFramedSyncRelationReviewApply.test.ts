@@ -17,11 +17,10 @@ let sqlite: Database.Database;
 let port: DbPort;
 
 const baseReview: DesktopFramedSyncReviewSource = {
-  difficulty_after: 3.75, difficulty_before: 2.25,
-  due_after: '2026-10-08T01:00:00Z', due_before: '2026-10-06T01:00:00Z',
+
   grade: 3, host_name: 'device-a', id: 'review-row-1', node_id: 'node-1',
   op_id: 'review-op-1', reviewed_at: '2026-10-05T01:00:00Z',
-  scheduler_version: 'fsrs-6', stability_after: 4.5, stability_before: 2.5
+  kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6',
 };
 
 function parent(parentVersionId: string, ordinal: number) {
@@ -44,9 +43,7 @@ beforeEach(() => {
     CREATE TABLE review_log (
       id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, host_name TEXT NOT NULL,
       node_id TEXT NOT NULL, grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL,
-      reviewed_at TEXT NOT NULL, due_before TEXT NOT NULL, stability_before REAL NOT NULL,
-      difficulty_before REAL NOT NULL, due_after TEXT NOT NULL, stability_after REAL NOT NULL,
-      difficulty_after REAL NOT NULL, local_note TEXT DEFAULT 'local-review'
+      reviewed_at TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'review', voids_op_id TEXT, local_note TEXT DEFAULT 'local-review'
     );
     INSERT INTO nodes VALUES ('node-1');
     INSERT INTO node_sync_versions VALUES
@@ -95,10 +92,9 @@ it('requires every shared review field to match for an op replay', async () => {
   const variants: DesktopFramedSyncReviewSource[] = [
     { ...baseReview, id: 'other-id' }, { ...baseReview, host_name: 'device-b' },
     { ...baseReview, node_id: 'node-2' }, { ...baseReview, grade: 4 },
-    { ...baseReview, scheduler_version: 'fsrs-7' }, { ...baseReview, reviewed_at: 'later' },
-    { ...baseReview, due_before: 'earlier' }, { ...baseReview, stability_before: 2.75 },
-    { ...baseReview, difficulty_before: 2.5 }, { ...baseReview, due_after: 'later' },
-    { ...baseReview, stability_after: 4.75 }, { ...baseReview, difficulty_after: 4 }
+    { ...baseReview, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-7' }, { ...baseReview, reviewed_at: 'later' },
+    { ...baseReview, kind: 'reset', grade: 0 },
+    { ...baseReview, kind: 'void', grade: 0, voids_op_id: 'another-op' }
   ];
   for (const variant of variants) {
     await expect(apply([projectDesktopFramedSyncReview(variant)]))

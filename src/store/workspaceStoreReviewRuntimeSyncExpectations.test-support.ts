@@ -35,5 +35,5 @@ function expectedReviewRuntimeSync(reviewedAt: string, scheduledDue: string) {
 
 export function expectReviewRuntimeSyncCalled(reviewedAt: string, scheduledDue: string) {
   expect(syncReviewGradeToRuntime).toHaveBeenCalledTimes(1);
-  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith(expectedReviewRuntimeSync(reviewedAt, scheduledDue));
+  expect(syncReviewGradeToRuntime).toHaveBeenCalledWith({ ...expectedReviewRuntimeSync(reviewedAt, scheduledDue), opId: expect.any(String) });
 }

@@ -78,7 +78,6 @@ it('reads an unchanged production library without loading body, resource JSON or
   expect(statements.join('\n')).not.toMatch(/\b(body_text|snapshot_json|resource_references|node_sync_versions|node_sync_version_parents|review_log)\b/u);
 });
 
-
 it('discovers independently applied parent and review facts and changes the complete Node hash', async () => {
   const peer = createPeer('independent-writer');
   const first = edit(peer, 'first');
@@ -89,9 +88,9 @@ it('discovers independently applied parent and review facts and changes the comp
   const relation = projectDesktopFramedSyncParentRelation({ object_id: 'topic', ordinal: 1,
     version_id: head, parent_version_id: first });
   const review = projectDesktopFramedSyncReview({ id: 'review-row', op_id: 'independent-review', node_id: 'topic',
-    host_name: peer.name, grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-10-06',
-    due_before: '2026-10-05', due_after: '2026-10-07', stability_before: 2, stability_after: 3,
-    difficulty_before: 2, difficulty_after: 3 });
+    host_name: peer.name, grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-10-06',
+
+      });
   await peer.port.transaction((tx) => applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, [relation, review]));
   const after = await read();
   expect(after.sharedStateHash).not.toEqual(before.sharedStateHash);

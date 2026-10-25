@@ -1,3 +1,4 @@
+import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushNodeSyncVersionWithDriver } from '../database/nodeSyncVersions.js';
@@ -9,7 +10,7 @@ export const RELATION_REVIEW_SCENARIO = Object.freeze({
   reviewOpId: 't326-review-op'
 });
 
-type Role = 'receiver' | 'receiver_conflict' | 'sender' | 'review_only';
+type Role = 'receiver' | 'receiver_conflict' | 'sender' | 'review_only' | 'control_events';
 
 function writeNode(content: string, updatedAt: string) {
   upsertNodeSnapshot({
@@ -28,17 +29,18 @@ function writeNode(content: string, updatedAt: string) {
 }
 
 function insertReview(grade: number) {
-  openDatabaseConnection().driver.execute(`INSERT INTO review_log (
-    id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-    due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-    't326-review-row', RELATION_REVIEW_SCENARIO.reviewOpId, 'desktop-a',
-    RELATION_REVIEW_SCENARIO.nodeId, grade, 'fsrs-6', '2026-10-05T01:00:00.000Z',
-    '2026-10-06T00:00:00.000Z', 2.5, 2.25, '2026-10-08T00:00:00.000Z', 4.5, 3.75
-  ]);
+  openDatabaseConnection().driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, ['t326-review-row', RELATION_REVIEW_SCENARIO.reviewOpId, 'desktop-a', RELATION_REVIEW_SCENARIO.nodeId, grade, 'fsrs-6', '2026-10-05T01:00:00.000Z']);
 }
 
 export function seedDesktopFramedSyncRelationReviewScenario(role: Role) {
+  if (role === 'control_events') {
+    const driver = openDatabaseConnection().driver;
+    for (const kind of ['void', 'reset'] as const) driver.execute(INSERT_REVIEW_EVENT_SQL, [
+      `control-${kind}`, `control-${kind}`, 'desktop-a', RELATION_REVIEW_SCENARIO.nodeId, 0, '',
+      '2026-10-05T02:00:00.000Z', kind, kind === 'void' ? RELATION_REVIEW_SCENARIO.reviewOpId : null
+    ]);
+    return;
+  }
   if (role === 'review_only') { insertReview(3); return; }
   const driver = openDatabaseConnection().driver;
   writeNode('Shared base body', '2026-10-05T00:00:00.000Z');

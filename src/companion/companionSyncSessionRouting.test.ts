@@ -11,11 +11,10 @@ vi.mock('../shared/platform/companion/network/companionDesktopSession.js', () =>
   waitForCompanionDesktopChanges: vi.fn()
 }));
 
-
 const desktop = { deviceId: 'mac', endpointUrl: 'http://mac:38641', platform: 'darwin',
-  groupId: 'group', protocolVersion: 26 };
+  groupId: 'group', protocolVersion: 27 };
 const phone = { deviceId: 'phone', endpointUrl: 'http://phone:38641', platform: 'ios-capacitor',
-  groupId: 'group', protocolVersion: 26 };
+  groupId: 'group', protocolVersion: 27 };
 const args = () => ({ cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
   setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState() });
 
@@ -132,7 +131,6 @@ it('finishes the initial desktop foreground round while discovered mobile transf
   }
 });
 
-
 it('acknowledges committed data even when the attachment result remains partial', async () => {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementation(async (_endpoint, options) => {
     await options.onDatabaseConfirmed('2026-10-16T01:00:00Z');
@@ -143,7 +141,6 @@ it('acknowledges committed data even when the attachment result remains partial'
   await tryForegroundAutoSync(args());
   expect(sessions.complete).toHaveBeenCalledOnce();
 });
-
 
 it('does not mistake an in-flight mobile transfer for a requested desktop round', async () => {
   let release!: () => void;

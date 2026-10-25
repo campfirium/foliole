@@ -48,12 +48,8 @@ function insertReviewLog(opId: string, reviewedAt: string) {
     ['node-1', 'item', 'Node 1', '', '2026-04-25T00:00:00.000Z', '2026-04-25T00:00:00.000Z']
   );
   openDatabaseConnection().driver.execute(
-    `INSERT INTO review_log (
-       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [`log-${opId}`, opId, 'desktop', 'node-1', 3, 'test', reviewedAt,
-      '2026-04-24T00:00:00.000Z', 1, 2, '2026-04-25T00:00:00.000Z', 3, 4]
+    `INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [`log-${opId}`, opId, 'desktop', 'node-1', 3, 'test', reviewedAt]
   );
 }
 
@@ -97,18 +93,14 @@ function createMobileLearningStateRecords(): NativeSyncObjectRecord[] {
 function createMobileReviewLog(opId: string): NativeSyncReviewLogRecord {
   return {
     host_name: 'android-test',
-    difficulty_after: 3.4,
-    difficulty_before: 4.2,
-    due_after: '2026-04-26T00:00:00.000Z',
-    due_before: '2026-04-25T00:00:00.000Z',
+
     grade: 3,
     id: `log-${opId}`,
     node_id: 'node-1',
     op_id: opId,
     reviewed_at: '2026-04-25T00:10:00.000Z',
-    scheduler_version: 'ts-fsrs@4',
-    stability_after: 2.8,
-    stability_before: 2.1
+    kind: 'review' as const, voids_op_id: null, scheduler_version: 'ts-fsrs@4',
+
   };
 }
 
@@ -148,18 +140,14 @@ it('applies mobile review state and review log without duplicating op ids', asyn
 
   const mobileReview = {
     host_name: 'android-test',
-    difficulty_after: 3.4,
-    difficulty_before: 4.2,
-    due_after: '2026-04-26T00:00:00.000Z',
-    due_before: '2026-04-25T00:00:00.000Z',
+
     grade: 3,
     id: 'mobile-log-1',
     node_id: 'node-1',
     op_id: 'mobile-op-1',
     reviewed_at: '2026-04-25T00:10:00.000Z',
-    scheduler_version: 'ts-fsrs@4',
-    stability_after: 2.8,
-    stability_before: 2.1
+    kind: 'review' as const, voids_op_id: null, scheduler_version: 'ts-fsrs@4',
+
   };
 
   await expect(applySyncReviewLogAsync([mobileReview, mobileReview])).resolves.toEqual(['mobile-op-1']);

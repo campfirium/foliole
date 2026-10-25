@@ -6,6 +6,7 @@ import { WorkspacePartialPersistenceError } from './workspacePersistenceFailure'
 import { syncReviewGradeToRuntime } from './workspaceRuntimeSync';
 
 export interface WorkspaceReviewGradePersistencePayload {
+  opId?: string;
   currentNodeId: string;
   grade: ReviewGrade;
   reviewedAt: string;
@@ -45,6 +46,7 @@ async function persistRuntimeReadingNodes(nodes: Node[], updatedAt?: string, com
 async function persistRuntimeReviewGrade(payload: WorkspaceReviewGradePersistencePayload) {
   await syncReviewGradeToRuntime({
     nodeId: payload.currentNodeId,
+    ...(payload.opId ? { opId: payload.opId } : {}),
     grade: payload.grade,
     reviewedAt: payload.reviewedAt,
     schedulerVersion: payload.schedulerVersion,

@@ -41,10 +41,7 @@ describe('shared companion Host handling', () => {
       INSERT INTO sync_group_local_state VALUES (1,'group','fixture-device','active','2026-08-01');
       INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES
         ('node-1','Preserved','content','2026-08-01','2026-08-01');
-      INSERT INTO review_log (
-        id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,due_before,
-        stability_before,difficulty_before,due_after,stability_after,difficulty_after
-      ) VALUES ('r','op','fixture-device','node-1',3,'v1','2026-08-01','2026-08-01',1,1,'2026-08-02',2,2);
+      INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES ('r', 'op', 'fixture-device', 'node-1', 3, 'v1', '2026-08-01');
       INSERT INTO sync_object_state
         (object_type,object_id,state_seq,content_hash,last_modified_by_host_name,updated_at,sync_dirty) VALUES
         ('view_state','host:ios:phone:fixture-device:node:node-1',1,'view-hash','fixture-device','2026-08-01',0),

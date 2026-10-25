@@ -205,6 +205,7 @@ export interface NativeNodeAnchorLocatorUpdateArgs {
 }
 
 export interface NativeApplyReviewGradeArgs {
+  opId?: string;
   nodeId: string;
   grade: 1 | 2 | 3 | 4;
   reviewedAt: string;

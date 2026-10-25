@@ -46,6 +46,7 @@ import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { migrateCompanionPdfTextArtifacts } from './pdfTextArtifactMigration.js';
+import { migrateCompanionReviewLog } from './reviewLogMigration.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
@@ -133,6 +134,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 94 && targetVersion >= 94) await migrateCompanionMissingCurrentVersionInventory(db);
   if (currentVersion < 95 && targetVersion >= 95) await db.run(INVALIDATE_ALL_SYNC_DIGESTS);
   await migrateCompanionInventoryVersions(db, currentVersion, targetVersion);
+  if (currentVersion < 99 && targetVersion >= 99) await migrateCompanionReviewLog(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

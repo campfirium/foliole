@@ -43,18 +43,14 @@ function createNodeReadingRow(overrides: Partial<SyncableStateObjectRow> = {}): 
 function createReviewLogRow(overrides: Partial<SyncableReviewLogRow> = {}): SyncableReviewLogRow {
   return {
     host_name: 'android-device',
-    difficulty_after: 2,
-    difficulty_before: 1,
-    due_after: '2026-05-01T00:00:00.000Z',
-    due_before: '2026-04-30T00:00:00.000Z',
+
     grade: 3,
     id: 'review-1',
     node_id: 'node-1',
     op_id: 'op-1',
     reviewed_at: '2026-04-30T01:00:00.000Z',
-    scheduler_version: 'ts-fsrs@4',
-    stability_after: 3,
-    stability_before: 2,
+    kind: 'review', voids_op_id: null, scheduler_version: 'ts-fsrs@4',
+
     ...overrides
   };
 }

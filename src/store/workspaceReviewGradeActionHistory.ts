@@ -12,6 +12,7 @@ export interface WorkspaceReviewGradeHistoryEntry {
   beforeReview: NodeReviewProfile | null;
   id: string;
   mutationTimestamp: string;
+  reviewOpId?: string;
   nodeId: string;
   title: typeof GRADE_REVIEW_ACTION_TITLE;
   type: 'review.grade';

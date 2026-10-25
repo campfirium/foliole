@@ -32,10 +32,7 @@ export function appendThreePeerVersion24(driver: DatabaseDriver) {
 
 export function addThreePeerReview(driver: DatabaseDriver, index: number, seq: number) {
   const time = `2026-09-30T00:0${index}:00Z`;
-  driver.execute(`INSERT INTO review_log
-    (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-      due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after)
-    VALUES (?, ?, 'A', 'node-1', 3, 'ts-fsrs@4', ?, 'before', 1, 2, 'after', 3, 4)`,
+  driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, 'A', 'node-1', 3, 'ts-fsrs@4', ?)`,
   [`log-${index}`, `op-${index}`, time]);
   driver.execute(`INSERT INTO node_review
     (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses)

@@ -41,17 +41,13 @@ export function createNodeRecord(): NativeSyncNodeRecord {
 export function createReviewRecord(): NativeSyncReviewLogRecord {
   return {
     host_name: 'desktop',
-    difficulty_after: 3,
-    difficulty_before: 2,
-    due_after: '2026-04-26T00:00:00.000Z',
-    due_before: '2026-04-25T00:00:00.000Z',
+
     grade: 3,
     id: 'review-1',
     node_id: 'node-1',
     op_id: 'op-1',
     reviewed_at: '2026-04-25T00:04:00.000Z',
-    scheduler_version: 'test',
-    stability_after: 4,
-    stability_before: 1
+    kind: 'review', voids_op_id: null, scheduler_version: 'test',
+
   };
 }

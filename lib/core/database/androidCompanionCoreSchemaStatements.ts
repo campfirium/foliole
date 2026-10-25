@@ -77,12 +77,8 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     grade INTEGER NOT NULL,
     scheduler_version TEXT NOT NULL,
     reviewed_at TEXT NOT NULL,
-    due_before TEXT NOT NULL,
-    stability_before REAL NOT NULL,
-    difficulty_before REAL NOT NULL,
-    due_after TEXT NOT NULL,
-    stability_after REAL NOT NULL,
-    difficulty_after REAL NOT NULL
+    kind TEXT NOT NULL DEFAULT 'review' CHECK(kind IN ('review', 'reset', 'void')),
+    voids_op_id TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS node_sync_versions (
     version_id TEXT PRIMARY KEY,

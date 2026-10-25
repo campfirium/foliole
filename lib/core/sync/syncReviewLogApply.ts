@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from './dbPort.js';
+import { identityReviewRowSchema } from './syncFactRowSchemas.js';
 
 export interface ApplyReviewLogRecordsOptions {
   includeAlreadyApplied?: boolean;
@@ -6,19 +7,15 @@ export interface ApplyReviewLogRecordsOptions {
 }
 
 export interface ReviewLogRecordInput {
-  difficulty_after: number;
-  difficulty_before: number;
-  due_after: string;
-  due_before: string;
   grade: number;
   id: string;
   node_id: string;
   op_id: string;
   reviewed_at: string;
   scheduler_version: string;
-  stability_after: number;
-  stability_before: number;
   host_name: string;
+  kind: 'review' | 'reset' | 'void';
+  voids_op_id: string | null;
 }
 
 export interface SyncReviewLogRecord extends DbRow, ReviewLogRecordInput {}
@@ -32,8 +29,8 @@ function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
   return port.run(
     `INSERT INTO review_log (` +
     `id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, ` +
-    `due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after` +
-    `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
+    `kind, voids_op_id` +
+    `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(op_id) DO NOTHING`,
     [
       record.id,
@@ -43,12 +40,8 @@ function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
       record.grade,
       record.scheduler_version,
       record.reviewed_at,
-      record.due_before,
-      record.stability_before,
-      record.difficulty_before,
-      record.due_after,
-      record.stability_after,
-      record.difficulty_after
+      record.kind,
+      record.voids_op_id
     ]
   );
 }
@@ -56,7 +49,7 @@ function insertReviewLog(port: DbPort, record: ReviewLogRecordInput) {
 async function existingReviewLog(port: DbPort, opId: string) {
   const [record] = await port.query<SyncReviewLogRecord>(
     `SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
+       kind, voids_op_id
      FROM review_log WHERE op_id = ? LIMIT 1`,
     [opId]
   );
@@ -71,12 +64,8 @@ function sameReviewLog(left: ReviewLogRecordInput, right: ReviewLogRecordInput) 
     && left.grade === right.grade
     && left.scheduler_version === right.scheduler_version
     && left.reviewed_at === right.reviewed_at
-    && left.due_before === right.due_before
-    && left.stability_before === right.stability_before
-    && left.difficulty_before === right.difficulty_before
-    && left.due_after === right.due_after
-    && left.stability_after === right.stability_after
-    && left.difficulty_after === right.difficulty_after;
+    && left.kind === right.kind
+    && left.voids_op_id === right.voids_op_id;
 }
 
 export async function applyReviewLogRecordsWithDbPort(
@@ -86,8 +75,9 @@ export async function applyReviewLogRecordsWithDbPort(
 ) {
   return await port.transaction(async (tx) => {
     const appliedOpIds: string[] = [];
-    for (const record of records) {
-      if (!record.op_id.trim()) continue;
+    for (const source of records) {
+      if (!source.op_id.trim()) continue;
+      const record = identityReviewRowSchema.parse(source);
       if (options.requireExistingNode && !await nodeExists(tx, record.node_id)) continue;
       const existing = await existingReviewLog(tx, record.op_id);
       if (existing) {

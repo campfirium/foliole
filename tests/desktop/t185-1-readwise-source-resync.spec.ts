@@ -71,9 +71,7 @@ async function seedReaderFixture(app: ElectronApplication, category: 'article' |
       const excerpt = driver.queryOne("SELECT id FROM nodes WHERE content='Initial body from Readwise.' AND anchor_link IS NOT NULL");
       if (!excerpt) throw new Error('seed_excerpt_missing');
       driver.execute("INSERT INTO node_review (node_id,due,reps) VALUES (?,'2026-11-01',4)", [excerpt.id]);
-      driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
-        due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
-        VALUES ('t392-log','t392-op','test',?,3,'test',?,'2026-09-13','2026-11-01',1,2,3,4)`, [excerpt.id, importedAt]);
+      driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES ('t392-log', 't392-op', 'test', ?, 3, 'test', ?)`, [excerpt.id, importedAt]);
     });
   }, category);
 }

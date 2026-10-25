@@ -111,10 +111,7 @@ function seedQueryPlanRows(sqlite: ReturnType<typeof openDatabaseConnection>['sq
     `INSERT INTO node_reading (node_id, last_handled_at, next_at, state) VALUES (?, ?, ?, ?)`
   );
   const insertLog = sqlite.prepare(
-    `INSERT INTO review_log (
-      id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-      due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-    ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@5.4.0 using FSRS-6.0', ?, ?, 1, 1, ?, 2, 2)`
+    `INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@5.4.0 using FSRS-6.0', ?)`
   );
 
   for (let index = 0; index < 60; index += 1) {
@@ -132,6 +129,6 @@ function seedQueryPlanRows(sqlite: ReturnType<typeof openDatabaseConnection>['sq
     );
     insertReview.run(nodeId, timestamp);
     insertReading.run(nodeId, timestamp, timestamp, index % 2 === 0 ? 'active' : 'paused');
-    insertLog.run(`log-${index}`, `op-${index}`, index % 2 === 0 ? 'desktop' : 'android', nodeId, timestamp, timestamp, timestamp);
+    insertLog.run(`log-${index}`, `op-${index}`, index % 2 === 0 ? 'desktop' : 'android', nodeId, timestamp);
   }
 }

@@ -29,9 +29,9 @@ async function richNode(peer: RestorePeer, id: string) {
   head.object_id = id; head.snapshot.id = id;
   await applySyncNodesWithDbPort(peer.db, [base, head]);
   await applyReviewLogRecordsWithDbPort(peer.db, [{ id: `${id}-review`, op_id: `${id}-review-op`,
-    host_name: 'sender', node_id: id, grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-10-09T01:00:00.000Z',
-    due_before: '2026-10-09T00:00:00.000Z', stability_before: 2.5, difficulty_before: 2.25,
-    due_after: '2026-10-10T00:00:00.000Z', stability_after: 4.5, difficulty_after: 3.75 }]);
+    host_name: 'sender', node_id: id, grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-10-09T01:00:00.000Z',
+
+       }]);
   saveNodeReadingStateWithSync(createBetterSqlite3Driver(peer.sqlite), { nodeId: id, hostName: 'sender',
     updatedAt: '2026-10-09T01:00:00.000Z', reading: { intervalDurationMs: 1000, intervalGrowthFactor: 2,
       lastHandledAt: '2026-10-09', nextAt: '2026-10-10', priority: 1, readingPosition: 0,

@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 import { recordNodeReviewSyncState, recordNodeReviewTombstone } from './nodeReviewSyncState.js';
+import { INSERT_REVIEW_EVENT_SQL } from './reviewLogRecord.js';
 
 interface ReviewCardSnapshot {
   due: string;
@@ -14,6 +15,7 @@ interface ReviewCardSnapshot {
 }
 
 export interface ApplyReviewGradeInput {
+  opId?: string;
   nodeId: string;
   grade: 1 | 2 | 3 | 4;
   reviewedAt: string;
@@ -50,22 +52,6 @@ ON CONFLICT(node_id) DO UPDATE SET
   reps = excluded.reps,
   lapses = excluded.lapses`;
 
-const INSERT_REVIEW_LOG_SQL = `INSERT INTO review_log (
-  id,
-  op_id,
-  host_name,
-  node_id,
-  grade,
-  scheduler_version,
-  reviewed_at,
-  due_before,
-  stability_before,
-  difficulty_before,
-  due_after,
-  stability_after,
-  difficulty_after
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
 function toNodeReviewParams(input: ApplyReviewGradeInput) {
   return [
     input.nodeId,
@@ -90,12 +76,8 @@ function toReviewLogParams(input: ApplyReviewGradeInput, context: ReviewMutation
     input.grade,
     input.schedulerVersion,
     input.reviewedAt,
-    input.cardBefore.due,
-    input.cardBefore.stability,
-    input.cardBefore.difficulty,
-    input.cardAfter.due,
-    input.cardAfter.stability,
-    input.cardAfter.difficulty
+    'review',
+    null
   ] as const;
 }
 
@@ -119,8 +101,8 @@ export function applyReviewGrade(
   context: ReviewMutationContext
 ): void {
   const upsertNodeReviewStatement = driver.prepare(UPSERT_NODE_REVIEW_SQL);
-  const insertReviewLogStatement = driver.prepare(INSERT_REVIEW_LOG_SQL);
-  const opId = context.createId();
+  const insertReviewLogStatement = driver.prepare(INSERT_REVIEW_EVENT_SQL);
+  const opId = input.opId ?? context.createId();
   const logId = context.createId();
 
   driver.transaction(() => {
@@ -138,10 +120,14 @@ export function applyReviewGrade(
 export function resetNodeReviewState(
   driver: DatabaseDriver,
   nodeId: string,
-  context?: { deletedAt: string; hostName: string }
+  context: { deletedAt: string; hostName: string }
 ): void {
-  driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
-  if (context) {
+  driver.transaction(() => {
+    driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
     recordNodeReviewTombstone(driver, nodeId, context);
-  }
+    const opId = `reset:${context.hostName}:${nodeId}:${context.deletedAt}`;
+    driver.prepare(INSERT_REVIEW_EVENT_SQL).run([
+      opId, opId, context.hostName, nodeId, 0, '', context.deletedAt, 'reset', null
+    ]);
+  });
 }

@@ -17,16 +17,7 @@ const parentSourceSchema = identityParentRowSchema.extend({
   ordinal: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
 }).strict();
 
-const reviewSourceSchema = identityReviewRowSchema.extend({
-  difficulty_after: z.number().finite(),
-  difficulty_before: z.number().finite(),
-  due_before: z.string(),
-  grade: z.number().int().min(Number.MIN_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
-  host_name: z.string().min(1),
-  id: z.string().min(1),
-  stability_after: z.number().finite(),
-  stability_before: z.number().finite()
-}).strict();
+const reviewSourceSchema = identityReviewRowSchema;
 
 export type FramedSyncParentRelationSource = z.infer<typeof parentSourceSchema>;
 export type FramedSyncReviewSource = z.infer<typeof reviewSourceSchema>;
@@ -36,11 +27,6 @@ const FACT = Object.freeze({ parentKind: 3, reviewKind: 4, objectType: 'node' })
 const field = (name: string, value: CanonicalValue): CanonicalField => ({ name, value });
 const text = (value: string): CanonicalValue => ({ kind: 'string', value });
 const signed = (value: number): CanonicalValue => ({ kind: 'signed', value: BigInt(value) });
-
-function numberText(value: number) {
-  if (!Number.isFinite(value)) throw new Error('framed_sync_review_number_invalid');
-  return String(value);
-}
 
 function factHash(fact: CanonicalFact) {
   const canonical = canonicalManifestBytes({
@@ -81,15 +67,6 @@ function readInteger(value: CanonicalValue) {
     throw new Error('framed_sync_relation_review_integer_invalid');
   }
   return Number(value.value);
-}
-
-function readNumberText(value: CanonicalValue) {
-  const source = readText(value);
-  const parsed = Number(source);
-  if (!Number.isFinite(parsed) || String(parsed) !== source) {
-    throw new Error('framed_sync_review_number_invalid');
-  }
-  return parsed;
 }
 
 function assertFact(fact: CanonicalFact, kind: number, factId: string) {
@@ -165,15 +142,12 @@ export function projectFramedSyncReview(source: unknown): CanonicalFact {
   const fact = withSharedStateHash({
     blobs: [],
     body: [
-      field('difficulty_after', text(numberText(row.difficulty_after))),
-      field('difficulty_before', text(numberText(row.difficulty_before))),
-      field('due_after', text(row.due_after)), field('due_before', text(row.due_before)),
+      field('kind', text(row.kind)),
+      field('voids_op_id', row.voids_op_id === null ? { kind: 'null' } : text(row.voids_op_id)),
       field('grade', signed(row.grade)), field('host_name', text(row.host_name)),
       field('id', text(row.id)), field('node_id', text(row.node_id)),
       field('op_id', text(row.op_id)), field('reviewed_at', text(row.reviewed_at)),
-      field('scheduler_version', text(row.scheduler_version)),
-      field('stability_after', text(numberText(row.stability_after))),
-      field('stability_before', text(numberText(row.stability_before)))
+      field('scheduler_version', text(row.scheduler_version))
     ],
     factId: row.op_id, globalId: row.node_id, kind: FACT.reviewKind,
     objectType: FACT.objectType, sharedStateHash: EMPTY_HASH
@@ -182,25 +156,19 @@ export function projectFramedSyncReview(source: unknown): CanonicalFact {
   return fact;
 }
 
-const REVIEW_FIELDS = [
-  'difficulty_after', 'difficulty_before', 'due_after', 'due_before', 'grade', 'host_name',
-  'id', 'node_id', 'op_id', 'reviewed_at', 'scheduler_version', 'stability_after',
-  'stability_before'
-] as const;
+const REVIEW_FIELDS = ['grade', 'host_name', 'id', 'node_id', 'op_id', 'reviewed_at',
+  'scheduler_version', 'kind', 'voids_op_id'] as const;
 
 export function restoreFramedSyncReview(fact: CanonicalFact) {
   const fields = fieldsByName(fact, REVIEW_FIELDS, 'framed_sync_review_shape_invalid');
   const get = (name: typeof REVIEW_FIELDS[number]) => required(fields, name);
   const row = reviewSourceSchema.parse({
-    difficulty_after: readNumberText(get('difficulty_after')),
-    difficulty_before: readNumberText(get('difficulty_before')),
-    due_after: readText(get('due_after')), due_before: readText(get('due_before')),
+    kind: readText(get('kind')),
+    voids_op_id: get('voids_op_id').kind === 'null' ? null : readText(get('voids_op_id')),
     grade: readInteger(get('grade')), host_name: readText(get('host_name')),
     id: readText(get('id')), node_id: readText(get('node_id')),
     op_id: readText(get('op_id')), reviewed_at: readText(get('reviewed_at')),
-    scheduler_version: readText(get('scheduler_version')),
-    stability_after: readNumberText(get('stability_after')),
-    stability_before: readNumberText(get('stability_before'))
+    scheduler_version: readText(get('scheduler_version'))
   });
   assertFact(fact, FACT.reviewKind, row.op_id);
   if (row.node_id !== fact.globalId) throw new Error('framed_sync_review_identity_invalid');

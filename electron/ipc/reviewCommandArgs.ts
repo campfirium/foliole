@@ -47,8 +47,11 @@ function asReviewCardSnapshot(value: unknown, field: string): ApplyReviewGradeIn
 }
 
 export function parseApplyReviewGradeArgs(args: Record<string, unknown>): ApplyReviewGradeInput {
+  const opId = args.opId === undefined ? undefined : asString(args.opId, 'opId');
+  if (opId !== undefined && !opId.trim()) throw new Error('invalid argument: opId');
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
+    ...(opId === undefined ? {} : { opId }),
     grade: asIntegerInRange(args.grade, 'grade', 1, 4) as 1 | 2 | 3 | 4,
     reviewedAt: asString(args.reviewedAt, 'reviewedAt'),
     schedulerVersion: asString(args.schedulerVersion, 'schedulerVersion'),

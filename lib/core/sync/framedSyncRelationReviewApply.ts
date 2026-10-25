@@ -15,8 +15,7 @@ type DecodedFact =
 
 const REVIEW_COLUMNS = [
   'id', 'op_id', 'host_name', 'node_id', 'grade', 'scheduler_version', 'reviewed_at',
-  'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after',
-  'difficulty_after'
+  'kind', 'voids_op_id'
 ] as const satisfies readonly (keyof FramedSyncReviewSource)[];
 
 function decodeFact(fact: CanonicalFact): DecodedFact {

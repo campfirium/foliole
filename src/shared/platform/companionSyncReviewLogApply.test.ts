@@ -53,19 +53,16 @@ it('opens the Android companion database before applying review log', async () =
 
 function reviewLogRecord(): NativeSyncReviewLogRecord {
   return {
-    difficulty_after: 3.6,
-    difficulty_before: 3.2,
+
     host_name: 'desktop',
-    due_after: '2026-05-08T01:00:00.000Z',
-    due_before: '2026-05-05T01:00:00.000Z',
+
     grade: 3,
     id: 'review-id-1',
     node_id: 'node-1',
     op_id: 'review-op-1',
     reviewed_at: '2026-05-04T01:00:00.000Z',
-    scheduler_version: 'ts-fsrs@4',
-    stability_after: 4.2,
-    stability_before: 2.1
+    kind: 'review', voids_op_id: null, scheduler_version: 'ts-fsrs@4',
+
   };
 }
 
@@ -110,12 +107,7 @@ function installReviewLogSchema(database: Database.Database) {
       grade INTEGER NOT NULL,
       scheduler_version TEXT NOT NULL,
       reviewed_at TEXT NOT NULL,
-      due_before TEXT,
-      stability_before REAL,
-      difficulty_before REAL,
-      due_after TEXT,
-      stability_after REAL,
-      difficulty_after REAL
+      kind TEXT NOT NULL DEFAULT 'review', voids_op_id TEXT
     );
   `);
 }

@@ -82,7 +82,7 @@ async function sendReviewOnly(host: Awaited<ReturnType<typeof createCompanionReq
   const database = await currentCompanionRequestSyncDatabaseHost();
   const exchange = createCompanionRequestSyncExchange(database, {
     endpointUrl: fixture.rightSnapshot.origin, groupKey: new Uint8Array(32).fill(7),
-    context: { groupId: 't326-group', protocolVersion: 26,
+    context: { groupId: 't326-group', protocolVersion: 27,
       initiatorDeviceId: fixture.leftSnapshot.deviceId,
       initiatorLibraryEpoch: `${fixture.leftSnapshot.deviceId}-epoch`,
       responderDeviceId: fixture.rightSnapshot.deviceId,

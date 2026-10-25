@@ -39,17 +39,14 @@ beforeEach(() => {
     CREATE TABLE review_log (
       id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, host_name TEXT NOT NULL,
       node_id TEXT NOT NULL, grade INTEGER NOT NULL, scheduler_version TEXT NOT NULL,
-      reviewed_at TEXT NOT NULL, due_before TEXT NOT NULL, stability_before REAL NOT NULL,
-      difficulty_before REAL NOT NULL, due_after TEXT NOT NULL, stability_after REAL NOT NULL,
-      difficulty_after REAL NOT NULL, local_path TEXT, observed_at TEXT
+      reviewed_at TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'review', voids_op_id TEXT, local_path TEXT, observed_at TEXT
     );
     INSERT INTO node_sync_versions VALUES ('version-child', 'node-1');
     INSERT INTO node_sync_version_parents VALUES
       ('version-child', 'version-parent', 0, '/Users/local/private.md', '2026-10-05T02:00:00Z');
     INSERT INTO review_log VALUES (
       'review-row-1', 'review-op-1', 'device-a', 'node-1', 3, 'fsrs-6',
-      '2026-10-05T01:00:00Z', '2026-10-06T01:00:00Z', 2.5, 2.25,
-      '2026-10-08T01:00:00Z', 4.5, 3.75,
+      '2026-10-05T01:00:00Z', 'review', NULL,
       '/Users/local/review.json', '2026-10-05T02:00:00Z'
     );`);
   port = createBetterSqliteDbPort(sqlite);
@@ -63,8 +60,7 @@ async function readFacts(tx: DbPort) {
     JOIN node_sync_versions version ON version.version_id = parent.version_id
     WHERE version.object_id = 'node-1' ORDER BY parent.version_id, parent.ordinal`);
   const reviews = await tx.query(`SELECT id, op_id, host_name, node_id, grade,
-    scheduler_version, reviewed_at, due_before, stability_before, difficulty_before,
-    due_after, stability_after, difficulty_after FROM review_log
+    scheduler_version, reviewed_at, kind, voids_op_id FROM review_log
     WHERE node_id = 'node-1' ORDER BY op_id`);
   return [
     ...parents.map(projectDesktopFramedSyncParentRelation),
@@ -113,7 +109,7 @@ it('selects the exact relation and review from SQLite and ignores local-only col
     parent_version_id: 'version-parent', version_id: 'version-child'
   });
   expect(restoreDesktopFramedSyncReview(result.facts[1]!)).toMatchObject({
-    grade: 3, node_id: 'node-1', op_id: 'review-op-1', stability_after: 4.5
+    grade: 3, node_id: 'node-1', op_id: 'review-op-1',
   });
   expect(await port.transaction(readEntry)).toEqual(local);
 });

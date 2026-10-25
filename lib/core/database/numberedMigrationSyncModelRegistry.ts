@@ -14,6 +14,7 @@ import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
+import { migrateReviewLog } from './reviewLogMigration.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 
@@ -41,5 +42,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 169, migrate: migrateParentChildOrderMembers },
   /** Reinstalls the inventory triggers without the ones on `nodes`. */
   { version: 170, migrate: migrateFramedSyncInventoryLookups },
-  { version: 171, migrate: retireAttachmentInventory }
+  { version: 171, migrate: retireAttachmentInventory },
+  { version: 172, migrate: migrateReviewLog }
 ];

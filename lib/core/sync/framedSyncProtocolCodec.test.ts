@@ -119,12 +119,12 @@ describe('framed sync production protobuf codec', () => {
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: Array.from({ length: FRAMED_SYNC_LIMITS.maxProtocolCapabilities + 1 },
         (_, index) => ({ name: `cap-${index}`, version: 1 })),
-      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 26,
+      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 27,
       sessionId: bytes(1, 16)
     })).toThrow('protocol_repeated_limit_exceeded');
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: [], deviceId: 'x'.repeat(FRAMED_SYNC_LIMITS.maxProtocolStringBytes + 1),
-      groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 26, sessionId: bytes(1, 16)
+      groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 27, sessionId: bytes(1, 16)
     })).toThrow('protocol_string_limit_exceeded');
   });
 });
@@ -148,17 +148,17 @@ describe('framed sync production protobuf codec boundaries', () => {
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: Array.from({ length: FRAMED_SYNC_LIMITS.maxProtocolCapabilities },
         (_, index) => ({ name: `cap-${index}`, version: 1 })),
-      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 26,
+      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 27,
       sessionId: bytes(1, 16)
     })).not.toThrow();
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: [{ name: 'same', version: 1 }, { name: 'same', version: 2 }],
-      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 26,
+      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 27,
       sessionId: bytes(1, 16)
     })).toThrow('capability_duplicate');
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: [], deviceId: '\ud800', groupId: 'group-a', libraryEpoch: 'epoch-a',
-      protocolVersion: 26, sessionId: bytes(1, 16)
+      protocolVersion: 27, sessionId: bytes(1, 16)
     })).toThrow('protocol_unicode_invalid');
     expect(() => encodeValidatedProtocolMessage('fact', fact({
       body: { fields: [{ name: 'nested', value: nestedValue(FRAMED_SYNC_LIMITS.maxCanonicalDepth + 1) }] }

@@ -95,7 +95,7 @@ function selectReviewLogRow() {
   const connection = openDatabaseConnection();
   return connection.sqlite
     .prepare(
-      `SELECT node_id, grade, scheduler_version, reviewed_at, due_before, due_after, stability_before, stability_after
+      `SELECT node_id, grade, scheduler_version, reviewed_at, kind, voids_op_id
        FROM review_log WHERE node_id = ? LIMIT 1`
     )
     .get(NODE_ID) as Record<string, unknown>;
@@ -141,12 +141,9 @@ it('writes node_review and review_log in one grading mutation', () => {
   expect(logRow).toMatchObject({
     node_id: NODE_ID,
     grade: 3,
-    scheduler_version: 'ts-fsrs@4:short',
+    kind: 'review', voids_op_id: null, scheduler_version: 'ts-fsrs@4:short',
     reviewed_at: '2026-03-06T00:00:00.000Z',
-    due_before: '2026-03-06T00:00:00.000Z',
-    due_after: '2026-03-10T00:00:00.000Z',
-    stability_before: 0,
-    stability_after: 2.5
+
   });
 });
 

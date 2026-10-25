@@ -44,9 +44,7 @@ function seed(peer: ReturnType<typeof createPeer>) {
 }
 
 function addLog(peer: ReturnType<typeof createPeer>, nodeId: string, opId: string) {
-  peer.driver.execute(`INSERT INTO review_log
-    (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
-    VALUES (?,?,?,?,3,'test',?,'2026-10-20','2026-11-01',1,12,4,4)`, [`log-${opId}`, opId, peer.name, nodeId, at]);
+  peer.driver.execute(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, 3, 'test', ?)`, [`log-${opId}`, opId, peer.name, nodeId, at]);
 }
 
 function learning(peer: ReturnType<typeof createPeer>) {

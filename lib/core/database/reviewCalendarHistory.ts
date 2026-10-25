@@ -2,6 +2,7 @@ import type { NativeReviewCalendarHistory, NativeReviewCalendarHistoryArgs } fro
 import { reviewCalendarDayKey } from '../review/reviewCalendarDates.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { EFFECTIVE_REVIEW_PREDICATE } from './reviewLogRecord.js';
 
 export function readReviewCalendarHistory(driver: DatabaseDriver, args: NativeReviewCalendarHistoryArgs,
   newDayStartsAtHour: number): NativeReviewCalendarHistory {
@@ -14,7 +15,7 @@ export function readReviewCalendarHistory(driver: DatabaseDriver, args: NativeRe
   const items = new Map<string, Set<string>>();
   for (const row of driver.queryAll<{ node_id: string; reviewed_at: string }>(
     `SELECT r.node_id, r.reviewed_at FROM review_log r JOIN nodes n ON n.id = r.node_id
-      WHERE julianday(r.reviewed_at) >= julianday(?) AND julianday(r.reviewed_at) < julianday(?) AND n.kind = 'item'`, [args.from, args.to]
+      WHERE julianday(r.reviewed_at) >= julianday(?) AND julianday(r.reviewed_at) < julianday(?) AND n.kind = 'item' AND ${EFFECTIVE_REVIEW_PREDICATE}`, [args.from, args.to]
   )) {
     const day = reviewCalendarDayKey(new Date(row.reviewed_at), newDayStartsAtHour);
     const ids = items.get(day) ?? new Set<string>();

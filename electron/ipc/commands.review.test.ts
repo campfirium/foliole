@@ -86,4 +86,20 @@ it('handles transactional review grade command', async () => {
 
   await expect(handleInvokeRequest({ command: 'apply_review_grade', args })).resolves.toBeNull();
   expect(applyReviewGrade).toHaveBeenCalledWith(args);
+  const identified = { ...args, opId: 'review-action-id' };
+  await expect(handleInvokeRequest({ command: 'apply_review_grade', args: identified })).resolves.toBeNull();
+  expect(applyReviewGrade).toHaveBeenLastCalledWith(identified);
+  for (const opId of ['', 42]) {
+    await expect(handleInvokeRequest({ command: 'apply_review_grade', args: { ...args, opId } })).rejects.toThrow('opId');
+  }
+  expect(applyReviewGrade).toHaveBeenCalledTimes(2);
+});
+
+
+it('rejects malformed undo targets before attempting a review snapshot write', async () => {
+  for (const history of [{ mode: 'undo', targetOpId: '' }, { mode: 'other', targetOpId: 'grade' }]) {
+    await expect(handleInvokeRequest({ command: 'save_node_review_state', args: {
+      nodeId: 'card', review: null, updatedAt: '2026-10-25T08:00:00.000Z', history
+    } })).rejects.toThrow();
+  }
 });

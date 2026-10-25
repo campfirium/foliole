@@ -14,9 +14,9 @@ const reading = { interval_duration_ms: 60000, interval_growth_factor: 1.5,
   priority: 2, repetition_count: 3, state: 'active' };
 const review = { difficulty: 5.2, due: '2026-07-28T00:01:00.000Z', elapsed_days: 3, lapses: 1,
   last_review_at: '2026-07-21T00:01:00.000Z', reps: 4, scheduled_days: 7, stability: 8.5, state: 2 };
-const log = { op_id: 'review-op', grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
-  due_before: '2026-07-21T00:01:00.000Z', stability_before: 4.2, difficulty_before: 6.1,
-  due_after: '2026-07-28T00:01:00.000Z', stability_after: 8.5, difficulty_after: 5.2 };
+const log = { op_id: 'review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+
+     };
 const first = { phase: 'applied', status: 'passed' };
 const second = { phase: 'reapplied', status: 'passed' };
 

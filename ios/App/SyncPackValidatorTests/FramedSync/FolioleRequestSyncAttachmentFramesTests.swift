@@ -11,7 +11,7 @@ final class FolioleRequestSyncAttachmentFramesTests: XCTestCase {
     }
     private func wire(_ blocks: Int) throws -> Data {
         let session = Data(repeating: 1, count: 16)
-        var encoded = Data("FOLSYNC2".utf8) + Data([0, 96, 0, 26, 1, 0, 0, 0])
+        var encoded = Data("FOLSYNC2".utf8) + Data([0, 96, 0, UInt8(FolioleFramedSyncLimits.protocolVersion), 1, 0, 0, 0])
         encoded.append(try context().deriveContextID(sessionID: session))
         encoded.append(session); encoded.append(Data(repeating: 0, count: 32))
         let preamble = try FolioleFramedSyncPreamble(decoding: encoded)

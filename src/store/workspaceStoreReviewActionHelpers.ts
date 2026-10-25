@@ -20,6 +20,7 @@ import {
 } from './workspaceTopicDismissActionHistory';
 
 export async function persistReviewGradeMutation(args: {
+  opId?: string;
   currentNodeId: string;
   grade: ReviewGrade;
   reviewedAt: string;

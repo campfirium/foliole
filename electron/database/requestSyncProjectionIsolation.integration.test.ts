@@ -48,8 +48,8 @@ function history(peer: RestorePeer) {
 
 function review(index: number): ReviewLogRecordInput {
   return { id: `review-${index}`, op_id: `op-${index}`, host_name: 'source', node_id: index === 7 ? 'unrelated' : 'topic',
-    grade: 3, scheduler_version: 'scheduler', reviewed_at: '2026-10-01', due_before: 'before',
-    stability_before: 1, difficulty_before: 2, due_after: 'after', stability_after: 3, difficulty_after: 4 };
+    grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'scheduler', reviewed_at: '2026-10-01',
+         };
 }
 
 it('keeps another article and its immutable review facts outside the requested snapshot and receiver', async () => {

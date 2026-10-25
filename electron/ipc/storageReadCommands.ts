@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { loadWorkspaceListProjection } from '../../lib/core/database/workspaceListProjection.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { foregroundTimeHistoryArgsSchema } from '../../lib/platform/nativeForegroundTimeContract.js';
@@ -138,6 +140,9 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
     return completeHighValueWrite(saveNodeReviewState({
       nodeId: asString(args.nodeId, 'nodeId'),
       review: args.review as Parameters<typeof saveNodeReviewState>[0]['review'],
+      ...(args.history === undefined ? {} : { history: z.object({
+        mode: z.enum(['undo', 'redo']), targetOpId: z.string().min(1)
+      }).strict().parse(args.history) }),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     }));
   }

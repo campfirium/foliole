@@ -78,12 +78,8 @@ function insertLibraryFacts(peer: Peer, suffix: 'a' | 'b') {
      ) VALUES (?, ?, ?, 2, 2, 3, 1, 1, 1, 0)`
   ).run(nodeId, createdAt, createdAt);
   db.prepare(
-    `INSERT INTO review_log (
-       id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at,
-       due_before, stability_before, difficulty_before, due_after, stability_after, difficulty_after
-     ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@4', ?, ?, 1, 2, ?, 2, 3)`
-  ).run(`log-${suffix}`, `op-${suffix}`, `${suffix}-device`, nodeId,
-    createdAt, createdAt, createdAt);
+    `INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@4', ?)`
+  ).run(`log-${suffix}`, `op-${suffix}`, `${suffix}-device`, nodeId, createdAt);
   insertStates(peer, suffix, nodeId, createdAt);
 }
 

@@ -43,9 +43,9 @@ function sharedFactsPassed(facts) {
       lapses: 1, last_review_at: '2026-07-21T00:01:00.000Z', reps: 4, scheduled_days: 7, stability: 8.5, state: 2 }) &&
     facts?.review_log?.length === 1 && typeof facts.review_log[0].op_id === 'string' &&
     facts.review_log[0].op_id.length > 0 && matches(facts.review_log[0], {
-      grade: 3, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
-      due_before: '2026-07-21T00:01:00.000Z', stability_before: 4.2, difficulty_before: 6.1,
-      due_after: '2026-07-28T00:01:00.000Z', stability_after: 8.5, difficulty_after: 5.2 });
+      grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+
+         });
 }
 
 export function verifyStateWritebackAcceptance(first, second, firstSnapshot, secondSnapshot, observations) {

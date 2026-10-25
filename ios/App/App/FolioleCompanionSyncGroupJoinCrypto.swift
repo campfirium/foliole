@@ -90,7 +90,8 @@ struct FolioleFramedSyncSessionContext {
     }
 
     func deriveContextID(sessionID: Data) -> Data {
-        var bytes = Self.domain + Data([0, 0, 26])
+        let version = FolioleFramedSyncLimits.protocolVersion
+        var bytes = Self.domain + Data([0, UInt8(version >> 8), UInt8(version & 0xff)])
         [groupID, initiatorDeviceID, initiatorLibraryEpoch,
          responderDeviceID, responderLibraryEpoch].forEach { bytes.appendLengthPrefixed($0) }
         bytes.append(sessionID)
@@ -157,7 +158,7 @@ enum FolioleFramedSyncFrameCrypto {
             throw FolioleFramedSyncValidationError("group_key_must_be_32_bytes")
         }
         let label = preamble.contextKind == 1
-            ? "Foliole framed sync v26 session" : "Foliole framed sync v26 transfer"
+            ? "Foliole framed sync v27 session" : "Foliole framed sync v27 transfer"
         return HKDF<SHA256>.deriveKey(
             inputKeyMaterial: SymmetricKey(data: groupKey), salt: preamble.identifier,
             info: Data(label.utf8) + Data([0]) + preamble.contextID, outputByteCount: 32

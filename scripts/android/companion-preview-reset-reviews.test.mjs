@@ -35,8 +35,8 @@ beforeEach(async () => {
   for (const id of ['item', 'topic']) {
     db.prepare(`INSERT INTO node_review (node_id, due, state, reps)
       VALUES (?, '2030-01-01T00:00:00.000Z', 2, 5)`).run(id);
-    db.prepare(`INSERT INTO review_log VALUES (?, ?, 'Preview', ?, 3, 'fsrs', ?, ?, 2, 3, ?, 4, 5)`)
-      .run(id, id, id, now, now, '2030-01-01T00:00:00.000Z');
+    db.prepare(`INSERT INTO review_log VALUES (?, ?, 'Preview', ?, 3, 'fsrs', ?, 'review', NULL)`)
+      .run(id, id, id, now);
   }
   db.prepare(`INSERT INTO node_reading (node_id, last_handled_at, next_at, repetition_count)
     VALUES ('topic', ?, '2030-01-01T00:00:00.000Z', 4)`).run(now);
