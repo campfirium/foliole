@@ -67,7 +67,10 @@ if (isIosBridgeAcceptance) {
     });
   });
 } else {
-  ReactDOM.createRoot(rootElement).render(
+  const renderer = ReactDOM.createRoot(rootElement);
+  if (import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined)
+    window.__foliolePreviewUnmount = () => renderer.unmount();
+  renderer.render(
     <React.StrictMode>
       <StartupErrorBoundary moduleLabel="Companion renderer">
         <CompanionApp />

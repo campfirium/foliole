@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { normalizePath, type EnvironmentModuleNode, type HtmlTagDescriptor, type Plugin } from 'vite';
 
+import { companionPreviewShellHtml } from './companionPreviewShellHtml';
 import { createCompanionPreviewSqliteHost } from './companionPreviewSqliteHost';
 
 export const COMPANION_PREVIEW_DATABASE_ENV = 'FOLIOLE_COMPANION_PREVIEW_DB';
@@ -135,6 +136,13 @@ export function companionPreviewServerPlugin(projectRoot: string, env: NodeJS.Pr
           const { payload, status } = await handleCompanionPreviewSqlite(host, body);
           send(response, status, payload);
         });
+      });
+      server.middlewares.use((request, response, next) => {
+        const url = new URL(request.url ?? '/', 'http://localhost');
+        if (!['/', '/index.html'].includes(url.pathname) || url.searchParams.has('__foliole_preview_frame')
+          || url.searchParams.has('html-proxy')) return next();
+        response.setHeader('Content-Type', 'text/html; charset=utf-8');
+        response.end(companionPreviewShellHtml(projectRoot));
       });
     }
   };

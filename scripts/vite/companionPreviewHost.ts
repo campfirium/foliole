@@ -1,4 +1,7 @@
+import { createCompanionPreviewDocument } from './companionPreviewDocument';
 import { createCompanionPreviewShareInboxPlugin, createCompanionPreviewSyncPlugin } from './companionPreviewHostPlugins';
+import { observeCompanionPreviewReadiness } from './companionPreviewReadiness';
+import type {} from './companionPreviewShell';
 
 // Dev-only stand-in for the native Capacitor bridge. The companion Vite dev server injects
 // this module ahead of the app, so `@capacitor/core` finds a custom platform and plugin headers
@@ -24,20 +27,11 @@ const SQLITE_METHODS = ['closeAllConnections', 'addSQLiteSuffix', 'addUpgradeSta
   'isTableExists', 'isTransactionActive', 'loadExtension', 'moveDatabasesAndAddSuffix', 'open', 'query',
   'rollbackTransaction', 'run', 'saveToLocalDisk', 'saveToStore', 'setEncryptionSecret', 'setSyncDate'];
 
-async function callPreviewSqlite(session: string, method: string, options: unknown) {
-  const response = await fetch(COMPANION_PREVIEW_SQLITE_ENDPOINT, {
-    body: JSON.stringify({ method, options, session }), headers: { 'Content-Type': 'application/json' }, method: 'POST'
-  });
-  if (!response.ok) throw new Error(`Companion preview database is unavailable (${response.status}).`);
-  const reply = await response.json() as { code?: string; message?: string; ok: boolean; result?: unknown };
-  if (reply.ok) return reply.result;
-  throw Object.assign(new Error(reply.message ?? 'Companion preview database failed.'), reply.code ? { code: reply.code } : {});
-}
-
-export function createCompanionPreviewPlugins(hostName: string, session = crypto.randomUUID()): PreviewPlugins {
+export function createCompanionPreviewPlugins(hostName: string, session = crypto.randomUUID(),
+  call = createCompanionPreviewDocument(session).call): PreviewPlugins {
   return {
     CapacitorSQLite: Object.fromEntries(SQLITE_METHODS.map((method) =>
-      [method, (options: unknown) => callPreviewSqlite(session, method, options)])),
+      [method, (options: unknown) => call(method, options)])),
     // A copied device library keeps its own host name, so opening it does not move host-owned state.
     FolioleCompanionBootstrap: {
       loadBootstrap: async () => ({ booted_at: new Date().toISOString(), database_path: null,
@@ -71,18 +65,46 @@ export function createCompanionPreviewBridge(plugins: PreviewPlugins) {
 }
 
 declare global {
-  interface Window { __FOLIOLE_COMPANION_PREVIEW_HOST__?: string }
+  interface Window {
+    __FOLIOLE_COMPANION_PREVIEW_HOST__?: string;
+    __foliolePreviewFlush?: () => Promise<void>;
+  }
 }
 
 export function installCompanionPreviewHost(target: object, hostName: string) {
-  const session = crypto.randomUUID();
+  const connection = createCompanionPreviewDocument();
+  const { session } = connection;
   Object.assign(target, {
-    Capacitor: createCompanionPreviewBridge(createCompanionPreviewPlugins(hostName, session)),
+    Capacitor: createCompanionPreviewBridge(createCompanionPreviewPlugins(hostName, session, connection.call)),
     CapacitorCustomPlatform: { name: COMPANION_PREVIEW_PLATFORM, plugins: {} }
   });
   if (typeof window !== 'undefined' && target === window) {
+    let exiting = false;
+    window.__foliolePreviewClose = async () => {
+      exiting = true;
+      await window.__foliolePreviewFlush?.();
+      await connection.close();
+    };
+    observeCompanionPreviewReadiness(window, () => window.parent.__foliolePreviewShell?.ready(window));
+    import.meta.hot?.on('vite:beforeFullReload', async () => {
+      const shell = window.parent.__foliolePreviewShell;
+      if (!shell) return;
+      await shell.beforeReload(window);
+      try { await window.__foliolePreviewClose?.(); }
+      catch (error) {
+        shell.failed(window, error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    });
+    import.meta.hot?.on('vite:error', ({ err }) => window.parent.__foliolePreviewShell?.failed(window, err.message));
+    window.addEventListener('error', (event) => {
+      if (!exiting) window.parent.__foliolePreviewShell?.failed(window, event.message);
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      if (!exiting) window.parent.__foliolePreviewShell?.failed(window, String(event.reason));
+    });
     window.addEventListener('pagehide', (event) => {
-      if (event.persisted) return;
+      if (!event.isTrusted || event.persisted) return;
       navigator.sendBeacon(COMPANION_PREVIEW_SQLITE_ENDPOINT,
         JSON.stringify({ method: 'closeAllConnections', options: {}, session }));
     });

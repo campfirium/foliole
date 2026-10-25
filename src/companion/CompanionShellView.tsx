@@ -8,6 +8,7 @@ import {
 } from './companionCssCompatibility';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionListViewportProvider } from './CompanionListViewport';
+import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
 import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
@@ -103,6 +104,14 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   return (
     <>
+      {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
+        <CompanionPreviewLifecycle activity={model.surface.readingActivity}
+          destination={JSON.stringify([model.surface.activeAction, model.settingsPage, model.activeSecondaryDestinationId,
+            model.directorySelection, model.isBrowseDirectoryOpen, model.isOnlyReviewOpen,
+            model.searchExternalDocument?.document_id, model.searchPdfResult?.attachment_id, model.isSearchArticleOpen])}
+          ready={model.workspaceSync.isWorkspaceSyncStateReady
+            && (model.surface.activeAction !== 'review' || model.surface.flowReady)} />
+      ) : null}
       <main className={`${companionViewportHeightClassName} bg-companion-base text-foreground`}>
         <div
           className={`${companionViewportHeightClassName} overflow-y-auto`}
