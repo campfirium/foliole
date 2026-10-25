@@ -32,6 +32,14 @@ describe('companion system link entry', () => {
     expect(state.handleExitSearchPdf).toHaveBeenCalled();
     expect(state.surface.handleSelectRecentArticle).toHaveBeenCalledWith('article-2');
   });
+  it('opens links while preserving an active Flow session', async () => {
+    const state = model();
+    state.surface.activeAction = 'review';
+    render(<CompanionNodeLinkRuntime model={state}><div>Flow</div></CompanionNodeLinkRuntime>);
+    await act(async () => { mocks.receive!(url); });
+    expect(state.handleNavigationAction).not.toHaveBeenCalled();
+    expect(state.surface.handleSelectRecentArticle).toHaveBeenCalledWith('article-2');
+  });
   it('keeps Capture draft open until the user leaves it', async () => {
     const state = model();
     state.isCaptureSheetOpen = true;

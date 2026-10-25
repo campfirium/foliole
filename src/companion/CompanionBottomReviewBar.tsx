@@ -1,8 +1,8 @@
-import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { FsrsRevealAction, ReadingReviewActions, ReviewActionBar, ReviewGradeActions } from '../shared/ui';
+import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 
-import { companionFlexRowGap2ClassName, companionMobileRailClassName } from './companionCssCompatibility';
+import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 import type { BottomBarGrade } from './CompanionFloatingBars';
+import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
 
 const actionGroupClassName = `w-full ${companionFlexRowGap2ClassName}`;
 
@@ -21,49 +21,40 @@ export function CompanionBottomReviewBar(props: {
   statusLabel?: string | null;
   visible: boolean;
 }) {
-  const t = useTranslation();
   if (!props.visible) {
     return null;
   }
   const canGradeFsrs = props.itemKind === 'fsrs' && props.hasAnswer && props.isAnswerRevealed;
 
   return (
-    <footer className={`fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))]`}>
-      <div className="mx-auto w-full max-w-[760px]">
-        <ReviewActionBar
-          ariaLabel={t('companion.review.toolbar')}
-          className="h-auto border-0 bg-transparent px-0"
-          key={props.reviewCardKey}
-          mode="study"
-          primary={
-            props.itemKind === 'reading' ? (
-              <ReadingReviewActions
-                isSubmitting={Boolean(props.disabled)}
-                {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
-                actionButtonClassName="min-w-0 flex-1 border-border px-2"
-                groupClassName={actionGroupClassName}
-                onReadReviewTopic={props.onReadReviewTopic}
-                onPostponeReviewTopic={props.onPostponeReviewTopic}
-                onDismissReviewTopic={props.onDismissReviewTopic}
-              />
-            ) : !canGradeFsrs ? (
-              <FsrsRevealAction disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
-            ) : (
-              <ReviewGradeActions
-                buttonClassName="min-w-0 flex-1 px-3"
-                buttonVariant="default"
-                errorMessage={null}
-                groupClassName={actionGroupClassName}
-                isSubmitting={Boolean(props.disabled)}
-                submitGrade={async (grade) => props.onGrade(grade as BottomBarGrade)}
-              />
-            )
-          }
-          reviewInputMode="hotkeys"
-          reviewItemKind={props.itemKind}
-          secondary={props.statusLabel ?? null}
-        />
-      </div>
-    </footer>
+    <CompanionReviewActionFooter
+      reviewCardKey={props.reviewCardKey}
+      reviewItemKind={props.itemKind}
+      statusLabel={props.statusLabel ?? null}
+      primary={
+        props.itemKind === 'reading' ? (
+          <ReadingReviewActions
+            isSubmitting={Boolean(props.disabled)}
+            {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
+            actionButtonClassName="min-w-0 flex-1 border-border px-2"
+            groupClassName={actionGroupClassName}
+            onReadReviewTopic={props.onReadReviewTopic}
+            onPostponeReviewTopic={props.onPostponeReviewTopic}
+            onDismissReviewTopic={props.onDismissReviewTopic}
+          />
+        ) : !canGradeFsrs ? (
+          <FsrsRevealAction disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
+        ) : (
+          <ReviewGradeActions
+            buttonClassName="min-w-0 flex-1 px-3"
+            buttonVariant="default"
+            errorMessage={null}
+            groupClassName={actionGroupClassName}
+            isSubmitting={Boolean(props.disabled)}
+            submitGrade={async (grade) => props.onGrade(grade as BottomBarGrade)}
+          />
+        )
+      }
+    />
   );
 }

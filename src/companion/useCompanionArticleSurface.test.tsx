@@ -91,10 +91,11 @@ describe('useCompanionArticleSurface', () => {
 });
 
 describe('useCompanionArticleSurface browsing', () => {
-  it('switches recent article selections into browse mode', () => {
+  it('opens recent article selections in ordinary browse mode', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
 
     act(() => {
+      result.current.handleTabAction('recent');
       result.current.handleSelectRecentArticle('article-2');
     });
 
@@ -135,7 +136,10 @@ describe('useCompanionArticleSurface browsing', () => {
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
     await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-    act(() => { result.current.handleSelectRecentArticle('article-2'); });
+    act(() => {
+      result.current.handleTabAction('recent');
+      result.current.handleSelectRecentArticle('article-2');
+    });
     await waitFor(() => expect(result.current.readableArticle).toMatchObject({
       nodeId: 'article-2', content: body, bodyStatus: 'ready'
     }));

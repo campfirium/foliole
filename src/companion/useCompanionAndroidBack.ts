@@ -36,7 +36,7 @@ export function handleCompanionAndroidBack(model: CompanionShellModel): void {
   if (model.surface.isFlowBrowsing) return model.surface.handleExitBrowseArticle();
   if (model.surface.activeAction === 'review') {
     if (model.isOnlyReviewOpen) return model.handleNavigationAction('review');
-    return model.handleNavigationAction('recent');
+    return;
   }
   if (model.surface.activeAction === 'recent' && model.surface.selectedBrowseNodeId) {
     return model.surface.handleExitBrowseArticle();

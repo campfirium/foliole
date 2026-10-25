@@ -59,7 +59,7 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
     args.setSelectedBrowseNodeId(nodeId);
     loadArticle(args, nodeId);
     markOpened(args, nodeId);
-    args.setActiveAction('recent');
+    if (args.activeAction !== 'review') args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
 

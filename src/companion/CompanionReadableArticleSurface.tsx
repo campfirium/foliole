@@ -48,6 +48,7 @@ interface ImmersiveReadableArticleProps {
   ) => Promise<string | null> | string | null;
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onBack?: () => void;
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSaveArticleContent?: CompanionContentSaveHandler;
@@ -106,7 +107,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     selectionOpen: Boolean(toolbar.selectionToolbar),
     closeSelection: toolbar.clearSelectionAndCloseToolbar,
     finishEditing: toggleContentEditing,
-    exit: props.onExit
+    exit: props.onBack ?? props.onExit
   });
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);

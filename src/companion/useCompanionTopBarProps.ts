@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -59,8 +61,7 @@ export function useCompanionTopBarProps(args: {
 
   if (args.surface.isFlowBrowsing) return {
     title: args.surface.browsedFolder?.title ?? 'Flow',
-    backLabel: t('companion.back'),
-    onBack: args.surface.handleExitBrowseArticle
+    leftAction: { icon: X, label: t('companion.review.exit'), onClick: () => args.surface.handleTabAction('recent') }
   };
 
   return resolveCompanionTopBarProps(

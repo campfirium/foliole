@@ -139,10 +139,8 @@ export function useCompanionArticleSurface(
     active: activeAction === 'review', onlyReview: options.isOnlyReviewOpen === true,
     libraryScope: browseState.snapshot?.libraryScope ?? workspaceSync.bootstrapState.database_path ?? 'preview'
   });
-  const isFlowBrowsing = activeAction === 'review' && browseState.selectedBrowseNodeId !== null;
-  const articleAction = isFlowBrowsing ? 'recent' : activeAction;
-  const { currentArticle, readingActivity } = useCompanionDemandArticle(workspaceSync, browseState,
-    articleAction, flow.view.currentCard?.nodeId ?? null);
+  const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
+    workspaceSync, browseState, activeAction, flow.view.currentCard?.nodeId ?? null);
   const effectiveReviewSession = useMemo(
     () => hydrateCompanionReviewSession(flow.view, currentArticle),
     [flow.view, currentArticle]
@@ -189,8 +187,11 @@ export function useCompanionArticleSurface(
 }
 
 function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
-  browse: ReturnType<typeof useCompanionBrowseState>, activeAction: CompanionTabAction,
+  browse: ReturnType<typeof useCompanionBrowseState>, tabAction: CompanionTabAction,
   reviewNodeId: string | null) {
+  const isFlowBrowsing = tabAction === 'review' && browse.selectedBrowseNodeId !== null
+    && browse.selectedBrowseNodeId !== reviewNodeId;
+  const activeAction = isFlowBrowsing ? 'recent' : tabAction;
   const demandNodeId = activeAction === 'review' ? reviewNodeId
     : activeAction === 'recent' && !browse.browsedFolder ? browse.selectedBrowseNodeId : null;
   const readingActivity = useReadingActivity(demandNodeId, browse.snapshot?.libraryScope);
@@ -199,7 +200,8 @@ function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
     void Promise.resolve(workspaceSync.openReadableArticle(readyDemandNodeId)).catch(() => undefined);
   }, [readyDemandNodeId, workspaceSync.openReadableArticle]);
   const candidate = activeAction === 'review' ? workspaceSync.readableArticle : browse.readableArticle;
-  return { currentArticle: candidate?.nodeId === readyDemandNodeId ? candidate : null, readingActivity };
+  return { currentArticle: candidate?.nodeId === readyDemandNodeId ? candidate : null,
+    readingActivity, articleAction: activeAction, isFlowBrowsing };
 }
 
 function useReadingActivity(nodeId: string | null, libraryScope: string | undefined) {

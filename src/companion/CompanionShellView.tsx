@@ -129,8 +129,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         </div>
       </main>
       {model.surface.isFlowBrowsing && !model.surface.readingActivity.editing ? (
-        <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow}
-          onExit={() => model.surface.handleTabAction('recent')} />
+        <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow} />
       ) : null}
       <CompanionShellOverlays
         captureDraftScope={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}

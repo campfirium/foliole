@@ -115,7 +115,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       answer={props.flow && props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null}
       footer={footer}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
-      onExit={props.onExit}
+      onExit={props.flow || props.surface.isFlowBrowsing ? () => props.surface.handleTabAction('recent') : props.onExit}
+      onBack={props.flow ? props.surface.handleResumeFlow : props.onExit}
       onScrollTopChange={props.surface.handleViewScroll}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}

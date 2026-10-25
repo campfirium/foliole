@@ -17,9 +17,11 @@ export function buildReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, c
     return [];
   }
 
+  const currentNode = snapshot.nodesById[currentNodeId];
   return buildBreadcrumbDisplayPath(currentNodeId, snapshot.nodesById).map((item) => ({
     id: item.id,
-    label: resolveNodeDisplayTitle(locale, item.id, item.title),
+    label: currentNode?.kind === 'item' && item.id === currentNode.parentNodeId
+      ? '...' : compactBreadcrumbTitle(resolveNodeDisplayTitle(locale, item.id, snapshot.nodesById[item.id]?.title ?? item.title)),
     targetNodeId: item.targetNodeId
   }));
 }
@@ -27,4 +29,9 @@ export function buildReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, c
 export function useReviewBreadcrumbItems(snapshot: WorkspaceSnapshot | null, currentNodeId: string | null) {
   const { locale } = useLocalization();
   return useMemo(() => buildReviewBreadcrumbItems(snapshot, currentNodeId, locale), [currentNodeId, locale, snapshot]);
+}
+
+function compactBreadcrumbTitle(title: string) {
+  const firstWord = title.trim().split(/\s+/)[0] ?? '';
+  return Array.from(firstWord).slice(0, 4).join('');
 }

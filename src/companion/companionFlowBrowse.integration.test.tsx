@@ -49,11 +49,11 @@ it('opens both item ancestors within Flow, browses other content, and resumes th
   const before = reviewFacts();
   renderWithLocalization(<ReviewBreadcrumb items={buildReviewBreadcrumbItems(snapshot, 'item')}
     onSelectItem={nodeId => ui.result.current.surface.handleSelectBrowseNode(nodeId)} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Folder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Fold' }));
   expect(ui.result.current.surface.activeAction).toBe('review');
   expect(ui.result.current.surface.browsedFolder?.nodeId).toBe('folder');
   expect(ui.result.current.surface.isFlowBrowsing).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Article', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: '...', exact: true }));
   await waitFor(() => expect(ui.result.current.surface.selectedBrowseNodeId).toBe('article'));
   act(() => ui.result.current.surface.handleSelectBrowseNode('other'));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('other'));
@@ -94,4 +94,17 @@ it('reopens Flow browsing and resumes its original card without changing review 
   act(() => reopened.result.current.surface.handleTabAction('recent'));
   expect(reopened.result.current.surface.activeAction).toBe('recent');
   expect(reopened.result.current.surface.isFlowBrowsing).toBe(false);
+});
+
+it('keeps content-link selections in Flow until the user explicitly exits', async () => {
+  const ui = renderResumeSurface(await library.snapshot());
+  await waitFor(() => expect(ui.result.current?.surface.effectiveReviewSession.currentCard?.nodeId).toBe('item'));
+  const before = reviewFacts();
+  act(() => ui.result.current.surface.handleSelectRecentArticle('other'));
+  expect(ui.result.current.surface.activeAction).toBe('review');
+  expect(ui.result.current.surface.isFlowBrowsing).toBe(true);
+  act(() => ui.result.current.surface.handleSelectBrowseNode('item'));
+  expect(ui.result.current.surface.isFlowBrowsing).toBe(false);
+  expect(ui.result.current.surface.effectiveReviewSession.currentCard?.nodeId).toBe('item');
+  expect(reviewFacts()).toEqual(before);
 });

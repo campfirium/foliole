@@ -13,7 +13,7 @@ export function CompanionNodeLinkRuntime({ model, children }: { model: Companion
       !model.surface.isSubmittingGrade && !model.surface.isSubmittingReadingAction,
     snapshot: model.workspaceSync.state.workspace_snapshot,
     open: (nodeId) => {
-      model.handleNavigationAction('recent');
+      if (model.surface.activeAction !== 'review') model.handleNavigationAction('recent');
       model.handleExitSearchExternalDocument();
       model.handleExitSearchPdf();
       model.surface.handleSelectRecentArticle(nodeId);

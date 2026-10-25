@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
+
+import { CompanionReadingActivity } from './companionReadingActivity';
 
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
@@ -11,6 +13,9 @@ const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
 vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
+vi.mock('@/features/editor/components/MarkdownEditor', () => ({
+  MarkdownEditor: () => <article>Browsing another article</article>
+}));
 
 function mockWorkspaceSync() {
   useCompanionWorkspaceSync.mockReturnValue({
@@ -39,7 +44,7 @@ function mockBrowseSurface() {
   const surface = {
     activeAction: 'recent',
     isFlowBrowsing: false,
-    readingActivity: { editing: false },
+    readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
     handleResumeFlow: vi.fn(),
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
@@ -101,18 +106,22 @@ describe('CompanionShell navigation visibility', () => {
   });
 });
 
-it('keeps Flow browsing free of bottom tabs and offers Resume and Exit', async () => {
+it.each(['folder', 'article'])('keeps %s browsing in Flow with Resume and only a top exit', async kind => {
   mockWorkspaceSync();
   const surface = mockBrowseSurface();
   useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction: 'review', isFlowBrowsing: true,
-    selectedBrowseNodeId: 'folder', browsedFolder: { nodeId: 'folder', title: 'Folder', items: [] } });
+    selectedBrowseNodeId: kind === 'folder' ? 'folder' : 'topic-1',
+    browsedFolder: kind === 'folder' ? { nodeId: 'folder', title: 'Folder', items: [] } : null,
+    readableArticle: kind === 'article' ? { nodeId: 'topic-1', content: 'Browsing another article', title: 'Article', textAnchorDecorations: [] } : null });
   const { CompanionShell } = await import('./CompanionShell');
   renderWithLocalization(<CompanionShell bootstrapState={{ booted_at: '2026-10-25T00:00:00Z',
     database_path: 'preview.db', database_ready: true, device_id: 'test', runtime_kind: 'android-capacitor' }} />);
-  expect(screen.getByText('Folder')).toBeVisible();
+  expect(await screen.findByText(kind === 'folder' ? 'Folder' : 'Browsing another article')).toBeVisible();
   expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Resume', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Resume review', exact: true }));
   expect(surface.handleResumeFlow).toHaveBeenCalledOnce();
-  fireEvent.click(screen.getByRole('button', { name: 'Exit', exact: true }));
+  expect(within(screen.getByRole('group', { name: 'Companion review toolbar' })).queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
+  if (kind === 'article') fireEvent.click(screen.getByText('Browsing another article'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Exit', exact: true }));
   expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
 });

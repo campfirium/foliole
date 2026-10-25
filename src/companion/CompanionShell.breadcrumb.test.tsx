@@ -102,15 +102,15 @@ describe('CompanionShell review breadcrumb', () => {
   it('stops at the article topic under the folder instead of showing the nested review topic title', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     await renderBreadcrumbShell();
 
-    expect(screen.getByText('Inbox')).toBeInTheDocument();
-    expect(screen.getByText('Topic node title')).toBeInTheDocument();
+    expect(screen.getByText('Inbo')).toBeInTheDocument();
+    expect(screen.getByText('Topi')).toBeInTheDocument();
     expect(screen.queryByText('Inner review topic')).not.toBeInTheDocument();
   });
 
   it('routes folder breadcrumbs to the folder browse surface target', async () => {
     const { surface } = await renderBreadcrumbShell();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Inbox' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inbo' }));
 
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('folder-1');
   });
@@ -123,7 +123,7 @@ describe('CompanionShell review breadcrumb', () => {
     };
     await renderBreadcrumbShell(surface);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Inner review topic' }));
+    fireEvent.click(screen.getByRole('button', { name: '...' }));
 
     expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-2');
   });

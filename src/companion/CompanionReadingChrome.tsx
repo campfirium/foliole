@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -90,7 +90,7 @@ function ReadingTopChrome(props: {
         {props.controlsVisible ? (
           <>
             <div className="flex items-center">
-              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
+              <ReadingChromeButton icon={props.actions ? X : ChevronLeft} label={t(props.actions ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
             </div>
             {!props.actions ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">

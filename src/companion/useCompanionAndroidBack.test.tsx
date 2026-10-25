@@ -67,14 +67,14 @@ describe('Android system Back navigation', () => {
     expect(host.exitApp).not.toHaveBeenCalled();
   });
 
-  it('returns Only Review to Flow, then Flow to Recent', async () => {
+  it('returns Only Review to Flow and keeps system Back inside Flow', async () => {
     const state = model('review');
     state.isOnlyReviewOpen = true;
     await pressBack(state);
     expect(state.handleNavigationAction).toHaveBeenCalledWith('review');
     state.isOnlyReviewOpen = false;
     act(() => host.listener?.());
-    expect(state.handleNavigationAction).toHaveBeenCalledWith('recent');
+    expect(state.handleNavigationAction).not.toHaveBeenCalledWith('recent');
     expect(host.exitApp).not.toHaveBeenCalled();
   });
 
