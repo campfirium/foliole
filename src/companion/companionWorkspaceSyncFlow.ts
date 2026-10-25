@@ -195,6 +195,6 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
     }
     return combineForegroundSyncOutcomes(outcomes);
   } finally {
-    if (!args.cancelled() && !loadActiveCompanionSyncRun()) args.setStatus('idle');
+    if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
   }
 }

@@ -125,6 +125,20 @@ async function testSurfacesMissingAnchorBeforeSyncStarts() {
 describe('tryForegroundAutoSync failures', () => {
   beforeEach(resetCompanionWorkspaceSyncFlowMocks);
 
+  it('returns the public sync control to idle after a canceled run releases ownership', async () => {
+    let cancelled = false;
+    syncObjectsMock.syncCompanionObjectsFromDesktop.mockImplementationOnce(async () => {
+      cancelled = true;
+      throw new Error('sync_session_cancelled');
+    });
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    const setStatus = vi.fn();
+    await tryForegroundAutoSync({ cancelled: () => cancelled, setError: vi.fn(), setState: vi.fn(),
+      setSyncProgress: vi.fn(), setStatus, state: createSyncState() });
+    expect(cancelled).toBe(true);
+    expect(setStatus).toHaveBeenLastCalledWith('idle');
+  });
+
   it('surfaces unreachable desktop as a foreground error prompt', testKeepsUnreachableDesktopQuiet);
 
   it('records structure apply failure causes in sync activity', testRecordsStructureApplyFailureCause);
