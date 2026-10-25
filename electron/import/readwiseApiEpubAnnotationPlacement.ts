@@ -56,6 +56,9 @@ export function placeReadwiseApiEpubAnnotations(input: {
       },
       rootNodeId: input.rootNodeId
     };
+    if (annotation.placement === 'independent') return {
+      highlight: { ...placementInput.highlight, locatorText: null }, parentId: input.rootNodeId
+    };
     return input.relocationPolicy === 'unique'
       ? placeUniqueHighlight(placementInput)
       : placeReadwiseApiEpubHighlight(placementInput);

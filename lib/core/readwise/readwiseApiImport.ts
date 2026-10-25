@@ -23,6 +23,7 @@ export interface PreparedReadwiseApiAnnotation {
   createdAt?: string | null;
   kind: 'highlight' | 'note';
   locatorText: string | null;
+  placement?: 'independent';
   parentRemoteId: string | null;
   remoteId: string;
   updatedAt: string | null;

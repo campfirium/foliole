@@ -121,3 +121,15 @@ it('preserves edited content and identity when placement is repeated', () => {
     'SELECT title,is_title_manual FROM nodes WHERE id=?', [rejected.id]
   )).toEqual({ is_title_manual: 1, title: 'Local title' });
 });
+
+it.each(['first', 'unique'] as const)('still locates a new excerpt without locator text (%s)', relocationPolicy => {
+  const body = seedBook();
+  placeReadwiseApiEpubAnnotations({
+    annotations: [{ content: 'Exact excerpt.', contentHash: 'new', kind: 'highlight', locatorText: null,
+      parentRemoteId: 'document-1', remoteId: 'new-without-locator', updatedAt: 'now' }],
+    annotationStates: [], bodies: [{ content: body, id: 'chapter' }], connectionRef: 'connection',
+    documentId: 'document-1', importedAt: 'now', relocationPolicy, rootNodeId: 'book'
+  });
+  expect(highlights()).toEqual([expect.objectContaining({ parent_title: 'Chapter',
+    content: 'Exact excerpt.', anchor_link: expect.stringContaining('locator') })]);
+});

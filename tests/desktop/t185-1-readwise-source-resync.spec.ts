@@ -14,8 +14,8 @@ import {
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t185-1');
 
-async function installFixture(app: ElectronApplication) {
-  await app.evaluate(({ clipboard }) => {
+async function installFixture(app: ElectronApplication, category: 'article' | 'epub') {
+  await app.evaluate(({ clipboard }, sourceCategory) => {
     const runtime = globalThis as typeof globalThis & {
       __T185_DIRECT_FETCH_COUNT__?: number;
       __T185_SOURCE_BODY__?: string;
@@ -31,17 +31,18 @@ async function installFixture(app: ElectronApplication) {
       return Response.json({
         nextPageCursor: null,
         results: [{
-          category: 'article', html_content: runtime.__T185_SOURCE_BODY__, id: 't185-source',
+          category: sourceCategory, html_content: sourceCategory === 'epub'
+            ? `<h1 data-rw-epub-toc="chapter">Chapter</h1>${runtime.__T185_SOURCE_BODY__}` : runtime.__T185_SOURCE_BODY__, id: 't185-source',
           title: 'T185 Source', updated_at: '2026-09-13T00:00:00.000Z'
         }]
       });
     };
     clipboard.writeText('t185-token');
-  });
+  }, category);
 }
 
-async function seedReaderFixture(app: ElectronApplication) {
-  await app.evaluate(async () => {
+async function seedReaderFixture(app: ElectronApplication, category: 'article' | 'epub') {
+  await app.evaluate(async (_electron, sourceCategory) => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
@@ -56,23 +57,25 @@ async function seedReaderFixture(app: ElectronApplication) {
       const result = materialization.materializeReadwiseApiDocument({
         config: settings.createDefaultReadwiseReaderConfig(), connectionRef, destination: 'inbox', importedAt,
         document: {
-          annotations: [{ content: 'Initial excerpt', contentHash: 'excerpt', kind: 'highlight',
-            locatorText: 'Initial body from Readwise.', parentRemoteId: 't185-source', remoteId: 't392-excerpt', updatedAt: importedAt }], body: '# Source\n\nInitial body from Readwise.', category: 'article',
+          annotations: [{ content: 'Initial body from Readwise.', contentHash: 'excerpt', kind: 'highlight',
+            locatorText: 'Initial body from Readwise.', parentRemoteId: 't185-source', remoteId: 't392-excerpt', updatedAt: importedAt }], body: '# Source\n\nInitial body from Readwise.', category: sourceCategory,
+          ...(sourceCategory === 'epub' ? { epubStructure: { degradedReason: null, imageCount: 0, markerCount: 1,
+            rootBody: '', sections: [{ content: 'Initial body from Readwise.', headingLevel: 1, markerKey: 'old-chapter', title: 'Old chapter' }] } } : {}),
           coverImageUrl: null, degradedReason: null, id: 't185-source',
-          metadata: { author: null, category: 'article', readerUrl: null, sourceUrl: null, title: 'T185 Source' },
+          metadata: { author: null, category: sourceCategory, readerUrl: null, sourceUrl: null, title: 'T185 Source' },
           title: 'T185 Source', unmatchedAnnotationCount: 0, updatedAt: importedAt
         }
       });
       if (result.status !== 'imported') throw new Error(`seed_failed:${JSON.stringify(result)}`);
       const driver = connection.openDatabaseConnection().driver;
-      const excerpt = driver.queryOne("SELECT id FROM nodes WHERE content='Initial excerpt'");
+      const excerpt = driver.queryOne("SELECT id FROM nodes WHERE content='Initial body from Readwise.' AND anchor_link IS NOT NULL");
       if (!excerpt) throw new Error('seed_excerpt_missing');
       driver.execute("INSERT INTO node_review (node_id,due,reps) VALUES (?,'2026-11-01',4)", [excerpt.id]);
       driver.execute(`INSERT INTO review_log (id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,
         due_before,due_after,stability_before,stability_after,difficulty_before,difficulty_after)
         VALUES ('t392-log','t392-op','test',?,3,'test',?,'2026-09-13','2026-11-01',1,2,3,4)`, [excerpt.id, importedAt]);
     });
-  });
+  }, category);
 }
 
 async function connectAndSeedApiMode(session: T178AcceptanceSession) {
@@ -100,17 +103,18 @@ async function inspect(app: ElectronApplication) {
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-    const body = require(pathApi.join(process.cwd(), 'dist/lib/core/database/nodeBodyResolution.js'));
+    const body = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiEpubMaterialization.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const driver = connection.openDatabaseConnection().driver;
       const source = driver.queryOne(`SELECT latest_node_id nodeId, remote_import_state_json state
         FROM import_sources WHERE remote_document_id='t185-source'`);
       if (!source) return null;
       return {
-        excerpt: driver.queryOne(`SELECT n.id,n.content,n.deleted_at,n.anchor_link,r.due,r.reps
-          FROM nodes n LEFT JOIN node_review r ON r.node_id=n.id WHERE n.content='Initial excerpt'`),
+        excerpt: driver.queryOne(`SELECT n.id,n.content,n.deleted_at,n.anchor_link,r.due,r.reps,p.title parentTitle
+          FROM nodes n LEFT JOIN node_review r ON r.node_id=n.id JOIN nodes p ON p.id=n.parent_id
+          WHERE n.content='Initial body from Readwise.' AND n.anchor_link IS NOT NULL`),
         logs: driver.queryAll("SELECT * FROM review_log WHERE op_id='t392-op'"),
-        body: body.loadNodeBodyResolution(driver, source.nodeId)?.content,
+        body: body.readReadwiseApiEpubBookBodies(source.nodeId).map((entry: { content: string }) => entry.content).join('\n'),
         directFetchCount: runtime.__T185_DIRECT_FETCH_COUNT__ ?? 0,
         nodeId: source.nodeId,
         state: JSON.parse(source.state)
@@ -127,21 +131,23 @@ async function openResyncMenu(session: T178AcceptanceSession, nodeId: string) {
   return item;
 }
 
-async function expectRetainedExcerpt(session: T178AcceptanceSession, before: Awaited<ReturnType<typeof inspect>>) {
+async function expectRetainedExcerpt(session: T178AcceptanceSession, before: Awaited<ReturnType<typeof inspect>>, category: 'article' | 'epub') {
   const after = await inspect(session.electronApp);
-  expect(after?.excerpt).toMatchObject({ id: before?.excerpt.id, content: 'Initial excerpt', deleted_at: null,
+  expect(after?.excerpt).toMatchObject({ id: before?.excerpt.id, content: 'Initial body from Readwise.', deleted_at: null,
     due: '2026-11-01', reps: 4 });
   expect(after?.excerpt.anchor_link ?? '').not.toContain('locator');
   expect(after?.logs).toEqual(before?.logs);
+  if (category === 'epub') expect(after?.excerpt.parentTitle).toBe('※');
   const topics = session.firstWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
   await topics.getByRole('button', { name: /^(Expand all topics|展开全部主题)$/ }).click();
   const excerpt = topics.locator(`[role="treeitem"][data-node-id="${before!.excerpt.id}"]`);
   await expect(excerpt).toBeVisible();
   await excerpt.click();
-  await expect(session.firstWindow.locator('.prompt-editor-host')).toContainText('Initial excerpt');
+  await expect(session.firstWindow.locator('.prompt-editor-host')).toContainText('Initial body from Readwise.');
 }
 
-test('cancels safely and repeatedly resyncs one Reader source in place', async ({ browserName }, testInfo) => {
+for (const category of ['article', 'epub'] as const) {
+test(`cancels safely and repeatedly resyncs one Reader ${category} source in place`, async ({ browserName }, testInfo) => {
   void browserName;
   test.info().annotations.push({ type: 'calibrated-ms', description: String(120_000) });
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-t185-1-'));
@@ -149,17 +155,17 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
   try {
     session = await createT178ApiAcceptanceSession(stateRoot);
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
-    await installFixture(session.electronApp);
+    await installFixture(session.electronApp, category);
     await expectWorkspaceShell(session.firstWindow);
     await connectAndSeedApiMode(session);
     await session.firstWindow.locator('[role="presentation"][aria-label="Settings"], [role="presentation"][aria-label="设置"]')
       .click({ position: { x: 5, y: 5 } });
-    await seedReaderFixture(session.electronApp);
+    await seedReaderFixture(session.electronApp, category);
     await session.firstWindow.reload();
     await expectWorkspaceShell(session.firstWindow);
     const before = await inspect(session.electronApp);
     expect(before?.body).toContain('Initial body');
-    await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Second body from Readwise.</p>');
+    await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Second body from Readwise. Initial body from Readwise.</p>');
 
     await (await openResyncMenu(session, before!.nodeId)).click();
     await expect(session.firstWindow.getByRole('dialog')).toContainText(/Resync from Readwise|从 Readwise 重新同步/u);
@@ -170,7 +176,7 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
 
     await (await openResyncMenu(session, before!.nodeId)).click();
     await mkdir(ARTIFACT_DIR, { recursive: true });
-    const confirmation = path.join(ARTIFACT_DIR, `confirmation-${process.platform}.png`);
+    const confirmation = path.join(ARTIFACT_DIR, `confirmation-${process.platform}-${category}.png`);
     await session.firstWindow.screenshot({ path: confirmation });
     await testInfo.attach('t185-1-confirmation', { contentType: 'image/png', path: confirmation });
     await session.firstWindow.getByRole('button', { name: /^(Resync|重新同步)$/ }).click();
@@ -183,14 +189,14 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
     await expect(session.firstWindow.getByText(/^(Resynced from Readwise\.|已从 Readwise 重新同步。)$/)).toBeVisible();
     await expect(session.firstWindow.getByText(/^(Resynced from Readwise\.|已从 Readwise 重新同步。)$/)).toBeHidden({ timeout: 4500 });
 
-    await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Third body from Readwise.</p>');
+    await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Third body from Readwise. Initial body from Readwise.</p>');
     await (await openResyncMenu(session, before!.nodeId)).click();
     await session.firstWindow.getByRole('button', { name: /^(Resync|重新同步)$/ }).click();
     await expect.poll(() => inspect(session!.electronApp)).toMatchObject({
       body: expect.stringContaining('Third body'), directFetchCount: 2, nodeId: before!.nodeId
     });
-    await expectRetainedExcerpt(session, before);
-    const completed = path.join(ARTIFACT_DIR, `completed-${process.platform}.png`);
+    await expectRetainedExcerpt(session, before, category);
+    const completed = path.join(ARTIFACT_DIR, `completed-${process.platform}-${category}.png`);
     await session.firstWindow.screenshot({ path: completed });
     await testInfo.attach('t185-1-completed', { contentType: 'image/png', path: completed });
   } finally {
@@ -198,3 +204,4 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
     await rm(stateRoot, { force: true, recursive: true });
   }
 });
+}

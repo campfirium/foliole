@@ -110,3 +110,29 @@ it.each(['article', 'epub'] as const)('preserves %s user excerpts and learning w
     expect(driver.queryAll('PRAGMA foreign_key_check')).toEqual([]);
   }
 });
+
+it.each([
+  { category: 'epub', edited: false }, { category: 'epub', edited: true },
+  { category: 'article', edited: false }, { category: 'article', edited: true }
+] satisfies Array<{ category: 'article' | 'epub'; edited: boolean }>)('keeps an omitted $category excerpt independent when its source text remains (edited=$edited)', ({ category, edited }) => {
+  const seeded = seed(category);
+  const driver = openDatabaseConnection().driver;
+  if (!edited) writeNodeBody({ driver, nodeId: seeded.ids[1]!, content: 'omitted', title: 'My title', updatedAt: at });
+  const before = preserved();
+  for (let i = 0; i < 2; i += 1) {
+    const target = loadReadwiseSourceResyncTarget(seeded.rootId)!;
+    const next = document(category, 'Updated kept omitted new', ['kept', 'new'], 'new-chapter');
+    next.annotations = mergeRetainedReadwiseAnnotations(target, next.annotations, { unlocateMissing: true });
+    commitReadwiseSourceResync({ candidate: { cover: null, document: next, images: null },
+      expectedSnapshot: captureReadwiseSourceResyncSnapshot(target), importedAt: `2026-10-2${i + 3}T00:00:00.000Z`, target });
+    expect(preserved()).toEqual(before);
+    const omitted = driver.queryOne<{ anchor_link: string | null; parent_id: string }>(
+      'SELECT anchor_link,parent_id FROM nodes WHERE id=?', [seeded.ids[1]!])!;
+    expect(omitted.anchor_link ?? '').not.toContain('locator');
+    if (category === 'epub') expect(driver.queryOne('SELECT title,parent_id FROM nodes WHERE id=?', [omitted.parent_id]))
+      .toEqual({ title: '※', parent_id: seeded.rootId });
+    else expect(omitted.parent_id).toBe(seeded.rootId);
+    const kept = driver.queryOne<{ anchor_link: string }>('SELECT anchor_link FROM nodes WHERE id=?', [seeded.ids[0]!])!;
+    expect(JSON.parse(kept.anchor_link)).toMatchObject({ locator: { originalText: 'kept' } });
+  }
+});

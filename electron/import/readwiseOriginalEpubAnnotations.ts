@@ -38,7 +38,7 @@ export function mergeRetainedReadwiseAnnotations(
     if (!stored) continue;
     const row = { ...stored, content: requireResolvedNodeBody(stored).content };
     if (!row.content.trim()) continue;
-    byRemoteId.set(state.remoteId, {
+    const retained: PreparedReadwiseApiAnnotation = {
       content: row.content,
       contentHash: state.contentHash || createHash('sha256').update(row.content).digest('hex'),
       kind: state.kind,
@@ -46,7 +46,9 @@ export function mergeRetainedReadwiseAnnotations(
       parentRemoteId: state.parentRemoteId,
       remoteId: state.remoteId,
       updatedAt: state.sourceUpdatedAt
-    });
+    };
+    if (options.unlocateMissing) retained.placement = 'independent';
+    byRemoteId.set(state.remoteId, retained);
   }
   return [...byRemoteId.values()];
 }
