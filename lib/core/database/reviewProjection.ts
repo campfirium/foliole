@@ -8,6 +8,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../sync/syncFactRowSchemas.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { ungradedInitialReviewCard } from './initialReviewSchedule.js';
 import { createUpsertNodeReviewStatement, UPSERT_NODE_REVIEW_SQL } from './nodeReviewMutationStatements.js';
 
 const EVENTS = `SELECT ${REVIEW_FACT_COLUMNS.join(', ')} FROM review_log WHERE node_id = ?`;
@@ -40,7 +41,9 @@ function values(nodeId: string, card: SchedulerCard) {
 
 export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
   const events = driver.queryAll(EVENTS, [nodeId]).map(row => identityReviewRowSchema.parse(row));
-  const card = recomputeReview(events, parametersForNode(nodeId, driver.queryAll(SETTINGS), driver.queryAll(ANCESTORS, [nodeId])));
+  const initial = driver.queryOne<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
+  const card = recomputeReview(events, parametersForNode(nodeId, driver.queryAll(SETTINGS), driver.queryAll(ANCESTORS, [nodeId])))
+    ?? ungradedInitialReviewCard(initial?.initial_review_due, events);
   if (card) createUpsertNodeReviewStatement(driver).run(values(nodeId, card));
   else driver.prepare('DELETE FROM node_review WHERE node_id = ?').run([nodeId]);
   return card;
@@ -49,7 +52,9 @@ export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
 /** Caller owns the application transaction, including the fact insert and this projection. */
 export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string) {
   const events = (await db.query(EVENTS, [nodeId])).map(row => identityReviewRowSchema.parse(row));
-  const card = recomputeReview(events, parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])));
+  const [initial] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
+  const card = recomputeReview(events, parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])))
+    ?? ungradedInitialReviewCard(initial?.initial_review_due, events);
   if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
   else await db.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
   return card;

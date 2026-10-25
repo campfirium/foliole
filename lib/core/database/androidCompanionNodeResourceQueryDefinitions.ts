@@ -131,7 +131,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
     resultKey: 'nodes',
     sql:
       `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
-      'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
+      'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.initial_review_due, n.manual_child_order, n.title, n.is_title_manual, ' +
       "n.hide_title_heading, '' AS content, n.opening_text, " +
       "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END AS body_status, " +
       "CASE WHEN LENGTH(TRIM(COALESCE(n.content, ''))) > 0 THEN 1 ELSE 0 END AS has_content, " +

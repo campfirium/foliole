@@ -102,6 +102,7 @@ function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
        n.enable_short_term,
        n.sequential_reading_enabled,
        n.shelved_at,
+       n.initial_review_due,
        n.manual_child_order,
        n.title,
        n.is_title_manual,

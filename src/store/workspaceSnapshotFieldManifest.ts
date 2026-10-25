@@ -9,6 +9,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'enableShortTerm',
   'sequentialReadingEnabled',
   'shelvedAt',
+  'initialReviewDue',
   'manualChildOrder',
   'specialKind',
   'title',

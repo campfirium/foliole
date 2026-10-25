@@ -6,6 +6,7 @@ import type { NodeSyncHashInput } from './nodeSyncPayload.js';
 /** The existing tombstone identity projects these fields independently of body storage. */
 export function nodeSyncSnapshotHashMetadata(snapshot: NativeSyncNodeRecord['snapshot']): Omit<NodeSyncHashInput, 'content'> {
   return {
+    initialReviewDue: snapshot.initial_review_due ?? null,
     anchorLink: snapshot.anchor_link, anchorResolutionStatus: snapshot.anchor_resolution_status ?? null,
     anchorSourceVersionId: snapshot.anchor_source_version_id ?? null,
     attachments: snapshot.attachments.map((item) => ({ attachmentId: item.attachment_id, role: item.role })),

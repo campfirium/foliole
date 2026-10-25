@@ -38,6 +38,7 @@ import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigrat
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
+import { migrateCompanionInitialReviewSchedule } from './initialReviewScheduleMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
 import { migrateCompanionMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
@@ -145,6 +146,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 98 && targetVersion >= 98) await retireCompanionAttachmentInventory(db);
   if (currentVersion < 99 && targetVersion >= 99) await migrateCompanionReviewLog(db);
   if (currentVersion < 100 && targetVersion >= 100) await retireCompanionReviewStateSync(db);
+  if (currentVersion < 101 && targetVersion >= 101) await migrateCompanionInitialReviewSchedule(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

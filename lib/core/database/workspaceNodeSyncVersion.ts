@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { createOpaqueVersionRef } from '../sync/opaqueSyncRefs.js';
 
+import { initialReviewDue } from './initialReviewSchedule.js';
 import { buildCanonicalNodeSyncPayload } from './nodeSyncPayload.js';
 import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 
@@ -10,6 +11,7 @@ function serialize(value: unknown) {
 
 export function canonicalWorkspaceNodePayload(node: WorkspaceNodeSnapshot) {
   return buildCanonicalNodeSyncPayload({
+    initialReviewDue: node.initialReviewDue ?? (!node.currentVersionId && node.kind === 'item' ? initialReviewDue(node.review) : null),
     anchorLink: serialize(node.anchorLink),
     attachments: (node.attachments ?? []).map((attachment) => ({
       attachmentId: attachment.attachmentId,

@@ -19,3 +19,13 @@ it('still compares the title of a version whose body was only retired from histo
   expect(isSyncNodeSnapshotIdentical(JSON.stringify(retired), { ...retired, title: 'Contradictory title' })).toBe(false);
   expect(isSyncNodeSnapshotIdentical(JSON.stringify(retired), retired)).toBe(true);
 });
+
+it('rejects adding, removing or changing the first schedule of an existing version', () => {
+  const scheduled = { ...stored, initial_review_due: '2026-11-01T00:00:00.000Z' };
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(scheduled), scheduled)).toBe(true);
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(stored), scheduled)).toBe(false);
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(scheduled), stored)).toBe(false);
+  expect(isSyncNodeSnapshotIdentical(JSON.stringify(scheduled), {
+    ...scheduled, initial_review_due: '2026-11-02T00:00:00.000Z'
+  })).toBe(false);
+});

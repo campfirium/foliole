@@ -13,6 +13,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     enable_short_term INTEGER,
     sequential_reading_enabled INTEGER,
     shelved_at TEXT,
+    initial_review_due TEXT,
     manual_child_order TEXT,
     title TEXT NOT NULL,
     is_title_manual INTEGER NOT NULL DEFAULT 0,

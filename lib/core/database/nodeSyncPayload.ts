@@ -9,6 +9,7 @@ export interface NodeSyncAttachmentRef {
 }
 
 export interface NodeSyncHashInput {
+  initialReviewDue?: string | null;
   textAlternatives?: readonly TopicTextAlternative[];
   anchorLink: string | null;
   anchorResolutionStatus?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
@@ -65,6 +66,7 @@ function normalizeAttachments(attachments: NodeSyncAttachmentRef[]) {
 export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
   const provenance = normalizeNodeImportProvenance(input);
   return {
+    ...(input.initialReviewDue ? { initial_review_due: input.initialReviewDue } : {}),
     ...(input.textAlternatives?.length ? { text_alternatives: [...input.textAlternatives] } : {}),
     anchor_link: normalizeNullableText(input.anchorLink),
     anchor_resolution_status: normalizeNullableText(input.anchorResolutionStatus ?? null),

@@ -114,6 +114,7 @@ export interface NativeSyncNodeRecord {
   parent_version_id: string | null;
   parent_version_ids?: string[];
   snapshot: {
+    initial_review_due?: string;
     text_alternatives?: Array<{
       id: string; body_blob_hash: string; source_host_name: string;
       created_at: string; expires_at: string;

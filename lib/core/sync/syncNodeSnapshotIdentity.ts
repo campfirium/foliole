@@ -5,7 +5,8 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
 
 const snapshotObject = z.record(z.string(), z.unknown());
-const fields = FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields.filter(name => name !== 'body_blob_hash');
+const fields = [...FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields, ...FRAMED_SYNC_NODE_VERSION_FACT.optionalSnapshotFields]
+  .filter(name => name !== 'body_blob_hash');
 
 /** Taken from the text; a permanent deletion clears them together with it. */
 const TEXT_DERIVED_FIELDS = new Set(['opening_text', 'title']);

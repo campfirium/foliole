@@ -14,7 +14,8 @@ import {
   assertNodeVersionFactShape,
   framedSyncMainBodyBlob,
   isFramedSyncNodeIdentityFact,
-  FRAMED_SYNC_NODE_VERSION_FACT
+  FRAMED_SYNC_NODE_VERSION_FACT,
+  nodeVersionSnapshotFields
 } from './framedSyncNodeFactContract.js';
 import { readNodeRetention } from './framedSyncNodeRetentionValue.js';
 import { restoreTopicTextBodyBlobs } from './topicTextFramedBodies.js';
@@ -74,13 +75,14 @@ function readAnchorResolution(value: CanonicalValue) {
 
 function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
   if (value.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
-  const values = fieldsByName(value.value, FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields,
+  const values = fieldsByName(value.value, nodeVersionSnapshotFields(value.value),
     'node_version_fact_snapshot_shape_invalid');
   const get = (name: string) => requiredValue(values, name);
   const attachments = get('attachments');
   if (attachments.kind !== 'list') throw new Error('node_version_fact_attachments_invalid');
   const resourceReferences = readString(get('resource_references'), true);
   return {
+    ...(values.has('initial_review_due') ? { initial_review_due: readString(get('initial_review_due'))! } : {}),
     anchor_link: readString(get('anchor_link'), true),
     anchor_resolution_status: readAnchorResolution(get('anchor_resolution_status')),
     anchor_source_version_id: readString(get('anchor_source_version_id'), true),

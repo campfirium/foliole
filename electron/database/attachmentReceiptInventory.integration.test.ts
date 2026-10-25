@@ -7,12 +7,14 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS as legacyTriggers } from '../../lib/core/database/preNodeChildInventorySchema.js';
 import { completeAttachmentDemand } from '../../lib/core/sync/attachmentDemandQueue.js';
 import { flushRequestSyncInventoryDigests } from '../../lib/core/sync/framedSyncInventoryDigest.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { openDesktopAttachmentBlockReceiver } from '../sync/desktopAttachmentBlockFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -93,7 +95,7 @@ it.each([false, true])('upgrades the old presence triggers without changing pend
     expect(sqlite.prepare('SELECT storage_key FROM attachment_pending').pluck().all()).toEqual([key]);
     expect(sqlite.prepare('SELECT * FROM framed_sync_inventory ORDER BY object_id').all()).toEqual(inventory);
     expect(sqlite.prepare('SELECT * FROM framed_sync_node_digest ORDER BY object_id').all()).toEqual(digests);
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(companion ? 98 : 171);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(companion ? COMPANION_DATABASE_VERSION : DATABASE_SCHEMA_VERSION);
   } finally {
     sqlite.close();
     await fs.rm(root, { recursive: true, force: true });

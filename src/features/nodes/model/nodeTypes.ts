@@ -113,6 +113,7 @@ export interface Node {
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
   shelvedAt?: string | null;
+  initialReviewDue?: string | null;
   specialKind?: NodeSpecialKind;
   title: string;
   isTitleManual?: boolean;

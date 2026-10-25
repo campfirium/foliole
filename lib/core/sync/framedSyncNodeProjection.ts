@@ -45,6 +45,7 @@ const field = (name: string, value: CanonicalValue): CanonicalField => ({ name, 
 
 function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: string | null) {
   return [
+    ...(snapshot.initial_review_due ? [field('initial_review_due', scalarValue(snapshot.initial_review_due))] : []),
     field('anchor_link', scalarValue(snapshot.anchor_link)),
     field('anchor_resolution_status', scalarValue(snapshot.anchor_resolution_status)),
     field('anchor_source_version_id', scalarValue(snapshot.anchor_source_version_id)),

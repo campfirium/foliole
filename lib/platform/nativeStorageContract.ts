@@ -41,6 +41,7 @@ export interface NativeWorkspaceNodeSnapshot {
   enableShortTerm?: boolean | null;
   sequentialReadingEnabled?: boolean | null;
   shelvedAt?: string | null;
+  initialReviewDue?: string | null;
   manualChildOrder?: string[] | null;
   collections?: string[];
   title: string;

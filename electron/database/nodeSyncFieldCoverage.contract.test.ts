@@ -14,6 +14,7 @@ const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_host
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
 const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
 const RETIRED_NODE_ORDER_COLUMNS = ['position'];
+const NODE_CREATION_ONLY_COLUMNS = ['initial_review_due'];
 const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'anchor_link',
   'anchor_resolution_status',
@@ -30,6 +31,7 @@ const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'id',
   'image_regions',
   'image_sources',
+  'initial_review_due',
   'import_content_fingerprint',
   'import_source_fingerprint',
   'is_title_manual',
@@ -57,7 +59,8 @@ it('keeps node sync field coverage explicit across schema, hash, snapshot, and a
   expect(androidColumns).toEqual(desktopColumns);
   expectComparableFields(canonicalHashFields(), expectedHashPayloadFields(desktopColumns));
   expectComparableFields(desktopSnapshotFields(), expectedSnapshotFields(desktopColumns));
-  expectComparableFields(remoteNodeUpsertColumns(), withoutFields(desktopColumns, RETIRED_NODE_ORDER_COLUMNS));
+  expectComparableFields(remoteNodeUpsertColumns(), withoutFields(desktopColumns,
+    [...RETIRED_NODE_ORDER_COLUMNS, ...NODE_CREATION_ONLY_COLUMNS]));
   expectComparableFields(wireSnapshotFields(), expectedSnapshotFields(desktopColumns));
   expectDerivedBodyResourceIdentityCoverage();
 });
@@ -102,6 +105,7 @@ function canonicalHashFields() {
 
 function desktopSnapshotFields() {
   return [
+    'initial_review_due',
     'anchor_link',
     'anchor_resolution_status',
     'anchor_source_version_id',
@@ -190,6 +194,7 @@ function extractInsertColumns(sql: string, table: string) {
 
 function nodeSyncInput(): NodeSyncHashInput {
   return {
+    initialReviewDue: '2026-07-10T00:00:00.000Z',
     anchorLink: null,
     attachments: [],
     resourceReferences: [],

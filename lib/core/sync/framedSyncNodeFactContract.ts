@@ -21,6 +21,7 @@ export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyTextTransport: 'required BLOB_ROLE_NODE_BODY unless body_retired declares identity-only history',
   factKind: 2,
   factObjectType: 'node',
+  optionalSnapshotFields: ['initial_review_due'],
   globalIdSource: 'NativeSyncNodeRecord.object_id',
   snapshotFields: [
     'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'attachments',
@@ -33,6 +34,11 @@ export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   ],
   versionIdSource: 'NativeSyncNodeRecord.version_id'
 } as const);
+
+export function nodeVersionSnapshotFields(fields: readonly CanonicalField[]) {
+  return [...FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields,
+    ...FRAMED_SYNC_NODE_VERSION_FACT.optionalSnapshotFields.filter(name => fields.some(field => field.name === name))];
+}
 
 function exactFields(fields: readonly CanonicalField[], expected: readonly string[], error: string) {
   const values = new Map(fields.map((field) => [field.name, field.value]));
@@ -88,10 +94,11 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
   if (value.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
   const fields = exactFields(
     value.value,
-    FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields,
+    nodeVersionSnapshotFields(value.value),
     'node_version_fact_snapshot_shape_invalid'
   );
   const get = (name: string) => required(fields, name);
+  if (fields.has('initial_review_due')) z.iso.datetime({ offset: true }).parse(stringValue(get('initial_review_due')));
   for (const name of [
     'anchor_link', 'anchor_source_version_id', 'deleted_at', 'image_regions', 'image_sources',
     'import_content_fingerprint', 'import_source_fingerprint', 'manual_child_order',

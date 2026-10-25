@@ -6,6 +6,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { serializeImageSources } from './imageSources.js';
+import { initializeCreatedReviewSchedule } from './initialReviewSchedule.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -164,6 +165,7 @@ export function upsertNodeSnapshot(
       'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
     const bodyBlobHash = hashTextBody(input.content);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
+    if (!previousTitle && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
     ensureNodeParentMembership(driver, input.nodeId);
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,

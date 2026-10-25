@@ -19,6 +19,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   enable_short_term: number | null;
   sequential_reading_enabled: number | null;
   shelved_at: string | null;
+  initial_review_due: string | null;
   manual_child_order: string | null;
   hide_title_heading: number;
   id: string;
@@ -42,7 +43,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
 export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<NodeSyncVersionSourceRow>(
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
-       sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
+       sequential_reading_enabled, shelved_at, initial_review_due, manual_child_order, title, is_title_manual,
        hide_title_heading, content, nodes.body_blob_hash,
        opening_text, virtual_filter, reveal,
        anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_content_fingerprint, import_source_fingerprint,
@@ -59,6 +60,7 @@ export function buildNodeSyncSnapshotFromDriver(
   nodeId: string
 ) {
   return {
+    ...(row.initial_review_due ? { initial_review_due: row.initial_review_due } : {}),
     text_alternatives: normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at),
     anchor_link: row.anchor_link,
     anchor_resolution_status: row.anchor_resolution_status,
@@ -98,6 +100,7 @@ export function computeNodeSyncVersionHashFromDriver(
   nodeId: string
 ) {
   return computeNodeSyncHash({
+    initialReviewDue: row.initial_review_due,
     textAlternatives: normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at),
     anchorLink: row.anchor_link,
     anchorResolutionStatus: row.anchor_resolution_status,

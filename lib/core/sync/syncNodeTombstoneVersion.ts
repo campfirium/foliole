@@ -8,7 +8,7 @@ import { nodeSyncSnapshotHashMetadata } from '../database/nodeSyncSnapshotMetada
 import { FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
 
 export function matchingTombstoneVersionSql(version: string, tomb: string) {
-  const fields = FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields.filter((field) =>
+  const fields = [...FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields, ...FRAMED_SYNC_NODE_VERSION_FACT.optionalSnapshotFields].filter((field) =>
     !['body_blob_hash', 'position'].includes(field));
   return `${version}.version_id = ${tomb}.version_id AND ${version}.object_id = ${tomb}.node_id
     AND ${version}.content_hash = ${tomb}.content_hash

@@ -9,6 +9,7 @@ export const nodes = sqliteTable('nodes', {
   enableShortTerm: integer('enable_short_term', { mode: 'boolean' }),
   sequentialReadingEnabled: integer('sequential_reading_enabled', { mode: 'boolean' }),
   shelvedAt: text('shelved_at'),
+  initialReviewDue: text('initial_review_due'),
   manualChildOrder: text('manual_child_order'),
   title: text('title').notNull(),
   isTitleManual: integer('is_title_manual', { mode: 'boolean' }).notNull().default(false),

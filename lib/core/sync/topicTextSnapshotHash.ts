@@ -6,6 +6,7 @@ import { hashText } from './syncNodeResolution.js';
 
 export function topicTextSnapshotHash(snapshot: NativeSyncNodeRecord['snapshot']) {
   return hashText(JSON.stringify(buildCanonicalNodeSyncPayload({
+    initialReviewDue: snapshot.initial_review_due ?? null,
     textAlternatives: snapshot.text_alternatives ?? [],
     anchorLink: snapshot.anchor_link,
     anchorResolutionStatus: snapshot.anchor_resolution_status ?? null,

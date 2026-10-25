@@ -1,10 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { test } from './harness/fixtures';
-import { openSettingsDialog } from './harness/settings';
+import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 const FIELD_NAME = /^(New item load balancing|新检测项负载均衡)$/;
 const REVIEW_CATEGORY = /^(Review|复习)$/;
@@ -37,4 +39,40 @@ test('persists the new item balancing window across renderer reload', async ({ d
   await restored.scrollIntoViewIfNeeded();
   await mkdir(path.resolve('.tmp/artifacts/new-item-load-balancing'), { recursive: true });
   await reopened.screenshot({ path: path.resolve('.tmp/artifacts/new-item-load-balancing/settings.png') });
+});
+
+async function firstReviewDates(page: Page) {
+  return page.evaluate(async () => {
+    const snapshot = await window.electronAPI.invoke('load_workspace_snapshot');
+    return ['initial-schedule-a', 'initial-schedule-b'].map(id => snapshot?.nodesById[id]?.review?.due ?? null);
+  });
+}
+
+test('keeps allocated first review dates after renderer reload and application restart', async ({ desktopSession, desktopWindow }) => {
+  const expected = await desktopWindow.evaluate(async () => {
+    const now = new Date().toISOString();
+    const dates = [1, 3].map(days => new Date(Date.now() + days * 86400000).toISOString());
+    for (const [index, id] of ['initial-schedule-a', 'initial-schedule-b'].entries()) {
+      const snapshot = await window.electronAPI.invoke('load_workspace_snapshot');
+      await window.electronAPI.invoke('create_item', {
+        nodeId: id, kind: 'item', parentNodeId: 'special-inbox', title: 'First schedule', content: 'Question',
+        reveal: 'Answer', isTitleManual: true, anchorLink: null, position: null, createdAt: now, updatedAt: now,
+        review: { due: dates[index]!, lastReviewAt: null, state: 0, stability: 0, difficulty: 0,
+          elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 },
+        nodeOrder: [...(snapshot?.nodeOrder ?? []), id]
+      });
+    }
+    return dates;
+  });
+  expect(await firstReviewDates(desktopWindow)).toEqual(expected);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  expect(await firstReviewDates(desktopWindow)).toEqual(expected);
+  const stateRoot = desktopSession.target.runtimeStateRoot;
+  await desktopSession.electronApp.close();
+  const reopened = await launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } });
+  try {
+    await expectWorkspaceShell(reopened.firstWindow);
+    expect(await firstReviewDates(reopened.firstWindow)).toEqual(expected);
+  } finally { await reopened.close(); }
 });
