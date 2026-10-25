@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 
-import { createServer, type ViteDevServer } from 'vite';
+import { createServer, normalizePath, type ViteDevServer } from 'vite';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { companionPreviewServerPlugin } from '../../scripts/vite/companionPreviewServer';
@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 it('reloads the document for bootstrap dependencies but keeps UI updates hot', async () => {
-  root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'companion-preview-hmr-')));
+  root = realpathSync.native(mkdtempSync(path.join(os.tmpdir(), 'companion-preview-hmr-')));
   const owner = path.join(root, 'src/shared/platform/owner.ts');
   const bootstrap = path.join(root, 'src/shared/platform/companionBootstrap.ts');
   mkdirSync(path.dirname(owner), { recursive: true });
@@ -27,9 +27,13 @@ it('reloads the document for bootstrap dependencies but keeps UI updates hot', a
   writeFileSync(path.join(root, 'style.css'), 'body { color: black; }');
   server = await createServer({ configFile: false, root, server: { middlewareMode: true, watch: null },
     plugins: [companionPreviewServerPlugin(root, { FOLIOLE_COMPANION_PREVIEW_DB: path.join(root, 'preview.db') })] });
+  expect((await server.environments.client.pluginContainer.resolveId('/main.js'))?.id)
+    .toBe(normalizePath(realpathSync.native(path.join(root, 'main.js'))));
   for (const url of ['/main.js', '/src/shared/platform/companionBootstrap.ts', '/src/shared/platform/owner.ts', '/ui.js', '/style.css']) {
     await server.transformRequest(url);
   }
+  expect((await server.environments.client.moduleGraph.getModuleByUrl('/src/shared/platform/companionBootstrap.ts'))?.file)
+    .toBe(normalizePath(bootstrap));
   const send = vi.spyOn(server.environments.client.hot, 'send');
   server.watcher.emit('change', owner);
   await vi.waitFor(() => expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: 'full-reload' })));
@@ -45,7 +49,7 @@ it('reloads the document for bootstrap dependencies but keeps UI updates hot', a
 });
 
 it('serves the stable shell while leaving the inner HTML and Vite inline modules executable', async () => {
-  root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'companion-preview-shell-')));
+  root = realpathSync.native(mkdtempSync(path.join(os.tmpdir(), 'companion-preview-shell-')));
   writeFileSync(path.join(root, 'index.html'), '<main>Reading</main><script type="module">document.body.dataset.executed = "yes";</script>');
   server = await createServer({ configFile: false, root, server: { host: '127.0.0.1', port: 0, watch: null },
     plugins: [companionPreviewServerPlugin(root, { FOLIOLE_COMPANION_PREVIEW_DB: path.join(root, 'preview.db') })] });

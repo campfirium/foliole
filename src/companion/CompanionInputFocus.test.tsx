@@ -60,11 +60,12 @@ it('keeps the selection note textarea keyboard focus visible', () => {
   expect(editor).toHaveFocus();
 });
 
-it('keeps the companion search input on the shared focus-visible class', () => {
+it('keeps the companion search input focus visible through its accent underline', () => {
   renderWithLocalization(<CompanionSearchContent />);
 
   const search = screen.getByRole('searchbox', { name: 'Search topics' });
   expect(search).toBeEnabled();
-  expectInputFocusVisible(search);
-  expect(search.className).toContain('focus-visible:border-border-strong');
+  expect(search.className).toContain('focus-visible:outline-none');
+  expect(search.className).toContain('focus-visible:ring-0');
+  expect(search.className).toContain('focus-visible:border-companion-accent');
 });

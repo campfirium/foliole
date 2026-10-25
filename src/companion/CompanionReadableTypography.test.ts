@@ -11,6 +11,7 @@ describe('companion readable typography', () => {
   it('keeps Android reading typography local to companion surfaces', () => {
     const companionFiles = [
       'src/companion/CompanionReadableArticleDocument.tsx',
+      'src/companion/companionReadableTypographyStyle.ts',
       'src/companion/CompanionReadingTypographyControls.tsx',
       'src/companion/useCompanionReadingTypographySettings.ts'
     ];

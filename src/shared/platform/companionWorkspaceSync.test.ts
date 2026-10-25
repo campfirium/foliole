@@ -205,7 +205,6 @@ function registerReadableArticleTest() {
       bodyStatus: 'ready',
       content: 'Readable from local snapshot',
       currentVersionId: null,
-      contentPaddingTop: 'calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))',
       hideTitleHeading: false,
       nodeId: 'node-1',
       persistedNodeViewState: null,
