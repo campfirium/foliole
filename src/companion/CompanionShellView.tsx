@@ -7,6 +7,7 @@ import {
   companionViewportHeightClassName
 } from './companionCssCompatibility';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
+import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
 import { CompanionListViewportProvider } from './CompanionListViewport';
 import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
 import type { CompanionShellModel } from './CompanionShell';
@@ -85,7 +86,7 @@ function renderCompanionMainContent(model: CompanionShellModel) {
 }
 
 function isReadableArticleImmersive(model: CompanionShellModel) {
-  return Boolean(model.searchExternalDocument || model.searchPdfResult) || (model.surface.activeAction === 'recent'
+  return Boolean(model.searchExternalDocument || model.searchPdfResult) || ((model.surface.activeAction === 'recent' || model.surface.isFlowBrowsing)
     && (!model.isBrowseDirectoryOpen || canRenderCompanionDirectoryArticle(model))
     && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
@@ -93,7 +94,7 @@ function isReadableArticleImmersive(model: CompanionShellModel) {
 }
 
 function hasImmersiveReadingContent(model: CompanionShellModel): boolean {
-  return isReadableArticleImmersive(model) || Boolean(model.surface.activeAction === 'review'
+  return isReadableArticleImmersive(model) || Boolean(model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing
     && model.surface.effectiveReviewSession.currentCard);
 }
 
@@ -127,6 +128,10 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           </CompanionListViewportProvider>
         </div>
       </main>
+      {model.surface.isFlowBrowsing && !model.surface.readingActivity.editing ? (
+        <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow}
+          onExit={() => model.surface.handleTabAction('recent')} />
+      ) : null}
       <CompanionShellOverlays
         captureDraftScope={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
         activeSecondaryDestinationId={model.activeSecondaryDestinationId}

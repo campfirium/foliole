@@ -12,13 +12,14 @@ export function ReviewBreadcrumb(props: { items: CompanionReviewBreadcrumbItem[]
 
   return (
     <nav aria-label={t('companion.review.breadcrumb')}>
-      <div className="line-clamp-1 text-[12px] leading-5 text-companion-text-secondary">
+      <div className="overflow-x-auto whitespace-nowrap text-[12px] leading-5 text-companion-text-secondary">
         {props.items.map((item, index) => (
           <Fragment key={item.id}>
             <button
               aria-current={item.isCurrent ? 'page' : undefined}
-              className="inline rounded-sm border-0 bg-transparent p-0 text-left text-[12px] leading-5 text-companion-text-secondary hover:text-foreground aria-[current=page]:cursor-default"
+              className="inline-block max-w-[18ch] min-h-9 truncate align-middle rounded-sm border-0 bg-transparent px-1 text-left text-[12px] leading-5 text-companion-text-secondary hover:text-foreground aria-[current=page]:cursor-default"
               onClick={() => props.onSelectItem?.(item.targetNodeId)}
+              title={item.label}
               type="button"
             >
               {item.label}

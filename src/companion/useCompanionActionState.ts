@@ -9,6 +9,7 @@ type FloatingBarVisibilityApi = ReturnType<typeof useFloatingBarVisibility>;
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 type CompanionActionStateArgs = {
+  activeAction: CompanionTabAction;
   browseReturnNodeId: string | null;
   browsedFolderNodeId: string | null;
   floatingBar: FloatingBarVisibilityApi;
@@ -42,6 +43,10 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
     args.setActiveAction(action);
     args.setReviewError(null);
     args.setReadingError(null);
+    if (action === 'review') {
+      args.setBrowseReturnNodeId(null);
+      args.setSelectedBrowseNodeId(null);
+    }
     if (action === 'recent') {
       args.setBrowseReturnNodeId(null);
       args.setSelectedBrowseNodeId(null);
@@ -63,7 +68,7 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
     args.setSelectedBrowseNodeId(nodeId);
     loadArticle(args, nodeId);
     markOpened(args, nodeId);
-    args.setActiveAction('recent');
+    if (args.activeAction !== 'review') args.setActiveAction('recent');
     args.floatingBar.revealBar();
   }
 
@@ -72,7 +77,7 @@ export function useCompanionActionState(args: CompanionActionStateArgs) {
       handleSelectBrowseNode(args.browseReturnNodeId);
       return;
     }
-    handleTabAction('recent');
+    handleTabAction(args.activeAction === 'review' ? 'review' : 'recent');
   }
 
   function handleExitSearchArticle() {

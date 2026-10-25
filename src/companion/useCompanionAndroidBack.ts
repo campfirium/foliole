@@ -33,6 +33,7 @@ export function handleCompanionAndroidBack(model: CompanionShellModel): void {
   if (model.surface.activeAction === 'more' && model.settingsPage !== 'list' && hasBack(model.topBarProps)) {
     return model.topBarProps.onBack();
   }
+  if (model.surface.isFlowBrowsing) return model.surface.handleExitBrowseArticle();
   if (model.surface.activeAction === 'review') {
     if (model.isOnlyReviewOpen) return model.handleNavigationAction('review');
     return model.handleNavigationAction('recent');

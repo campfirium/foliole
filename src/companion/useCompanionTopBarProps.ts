@@ -57,6 +57,12 @@ export function useCompanionTopBarProps(args: {
   };
   const browseSync = resolveBrowseSyncProps(args.workspaceSync, t);
 
+  if (args.surface.isFlowBrowsing) return {
+    title: args.surface.browsedFolder?.title ?? 'Flow',
+    backLabel: t('companion.back'),
+    onBack: args.surface.handleExitBrowseArticle
+  };
+
   return resolveCompanionTopBarProps(
     t,
     args.surface,

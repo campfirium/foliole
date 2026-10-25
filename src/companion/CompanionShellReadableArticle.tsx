@@ -94,10 +94,11 @@ function FlowFooter({ surface }: { surface: Surface }) {
 
 export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
-    props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null : null);
+    props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null
+      : props.surface.isFlowBrowsing ? props.surface.selectedBrowseNodeId : null);
   const navigation = useCompanionReadingNavigation(props.surface.readingActivity,
     !props.flow && props.surface.readableArticle && canContinueToNext(props.surface.readableArticle) ? props.navigation : undefined);
-  const header = props.flow ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null;
+  const header = props.flow || props.surface.isFlowBrowsing ? <ReviewBreadcrumb items={breadcrumbItems} onSelectItem={props.surface.handleSelectBrowseNode} /> : null;
   const footer = props.flow ? <FlowFooter surface={props.surface} /> : <TopicNavigationFooter navigation={navigation} />;
   if (!props.surface.readableArticle) return props.flow ? <CompanionReviewLoading header={header} footer={footer} /> : null;
   const activity = props.surface.readingActivity;
@@ -108,7 +109,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       searchMatch={props.searchMatch}
       navigation={navigation}
       activity={activity}
-      flow={props.flow === true}
+      flow={props.flow === true || props.surface.isFlowBrowsing}
       header={header}
       isReviewItem={props.workspaceSync.state.workspace_snapshot?.nodesById[props.surface.readableArticle.nodeId]?.kind === 'item'}
       answer={props.flow && props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null}

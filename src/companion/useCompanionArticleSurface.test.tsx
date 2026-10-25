@@ -202,7 +202,8 @@ describe('useCompanionArticleSurface browse state', () => {
       result.current.handleSelectBrowseNode('folder-1');
     });
 
-    expect(result.current.activeAction).toBe('recent');
+    expect(result.current.activeAction).toBe('review');
+    expect(result.current.isFlowBrowsing).toBe(true);
     expect(result.current.browsedFolder?.nodeId).toBe('folder-1');
     expect(result.current.readableArticle).toBeNull();
   });

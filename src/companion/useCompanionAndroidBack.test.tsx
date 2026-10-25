@@ -34,7 +34,7 @@ function model(action: 'recent' | 'review' | 'more' | 'search') {
     searchPdfResult: null,
     setDirectorySelection: vi.fn(),
     settingsPage: 'list',
-    surface: { activeAction: action, handleExitBrowseArticle, handleTabAction, selectedBrowseNodeId: null as string | null },
+    surface: { isFlowBrowsing: false, activeAction: action, handleExitBrowseArticle, handleTabAction, selectedBrowseNodeId: null as string | null },
     topBarProps: {}
   };
   return result;
@@ -54,6 +54,16 @@ describe('Android system Back navigation', () => {
     state.surface.selectedBrowseNodeId = 'topic-1';
     await pressBack(state);
     expect(state.surface.handleExitBrowseArticle).toHaveBeenCalledOnce();
+    expect(host.exitApp).not.toHaveBeenCalled();
+  });
+
+  it('returns from Flow browsing without exiting Flow or the app', async () => {
+    const state = model('review');
+    state.surface.isFlowBrowsing = true;
+    state.surface.selectedBrowseNodeId = 'topic-1';
+    await pressBack(state);
+    expect(state.surface.handleExitBrowseArticle).toHaveBeenCalledOnce();
+    expect(state.handleNavigationAction).not.toHaveBeenCalled();
     expect(host.exitApp).not.toHaveBeenCalled();
   });
 

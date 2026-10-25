@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
@@ -34,8 +36,11 @@ function mockBrowseSurface() {
     scheduledFsrsCount: 0,
     scheduledReadingCount: 0
   };
-  useCompanionArticleSurface.mockReturnValue({
+  const surface = {
     activeAction: 'recent',
+    isFlowBrowsing: false,
+    readingActivity: { editing: false },
+    handleResumeFlow: vi.fn(),
     browsedFolder: null,
     handleReadReviewTopic: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),
@@ -61,7 +66,9 @@ function mockBrowseSurface() {
       scheduledReadingCount: 0
     },
     selectedBrowseNodeId: null
-  });
+  };
+  useCompanionArticleSurface.mockReturnValue(surface);
+  return surface;
 }
 
 describe('CompanionShell navigation visibility', () => {
@@ -92,4 +99,20 @@ describe('CompanionShell navigation visibility', () => {
 
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
   });
+});
+
+it('keeps Flow browsing free of bottom tabs and offers Resume and Exit', async () => {
+  mockWorkspaceSync();
+  const surface = mockBrowseSurface();
+  useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction: 'review', isFlowBrowsing: true,
+    selectedBrowseNodeId: 'folder', browsedFolder: { nodeId: 'folder', title: 'Folder', items: [] } });
+  const { CompanionShell } = await import('./CompanionShell');
+  renderWithLocalization(<CompanionShell bootstrapState={{ booted_at: '2026-10-25T00:00:00Z',
+    database_path: 'preview.db', database_ready: true, device_id: 'test', runtime_kind: 'android-capacitor' }} />);
+  expect(screen.getByText('Folder')).toBeVisible();
+  expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Resume', exact: true }));
+  expect(surface.handleResumeFlow).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Exit', exact: true }));
+  expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
 });

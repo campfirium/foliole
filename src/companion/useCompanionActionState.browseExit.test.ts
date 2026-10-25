@@ -15,6 +15,7 @@ function createActionState(args?: {
   const workspaceSync = { refreshAfterMutation: vi.fn(), state: { workspace_snapshot: null } };
 
   const actions = useCompanionActionState({
+    activeAction: 'recent',
     browseReturnNodeId: args?.browseReturnNodeId ?? null,
     browsedFolderNodeId: args?.browsedFolderNodeId ?? null,
     floatingBar,

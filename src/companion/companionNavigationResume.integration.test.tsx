@@ -35,6 +35,7 @@ afterEach(async () => { cleanup(); await library.close(); });
 it('reopens the browsed article and its actual persisted scroll without advancing reading or review', async () => {
   const first = renderResumeSurface(await library.snapshot());
   await waitFor(() => expect(first.result.current).not.toBeNull());
+  act(() => first.result.current.surface.handleTabAction('recent'));
   act(() => first.result.current.surface.handleSelectBrowseNode('article'));
   await waitFor(() => expect(first.result.current.surface.readableArticle?.nodeId).toBe('article'));
   act(() => first.result.current.surface.handleViewScroll(640));
@@ -197,6 +198,7 @@ it('persists external text and PDF positions locally without duplicating article
 it('drains the pending reading position and page context at an explicit save boundary', async () => {
   const ui = renderResumeSurface(await library.snapshot());
   await waitFor(() => expect(ui.result.current).not.toBeNull());
+  act(() => ui.result.current.surface.handleTabAction('recent'));
   act(() => ui.result.current.surface.handleSelectBrowseNode('article'));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article'));
   act(() => ui.result.current.surface.handleViewScroll(999));

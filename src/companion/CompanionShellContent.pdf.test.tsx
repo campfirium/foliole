@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { renderCompanionShellContent } from './CompanionShellContent';
 
 vi.mock('./CompanionArticleDocument', () => ({
@@ -38,6 +39,7 @@ vi.mock('@/shared/platform/companionSyncObjects', () => syncObjectMock);
 function createPdfReadableSurface() {
   return {
     activeAction: 'recent',
+    readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
     browsedFolder: null,
     handleSelectBrowseNode: vi.fn(),
     handleSelectRecentArticle: vi.fn(),

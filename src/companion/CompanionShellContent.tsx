@@ -161,7 +161,7 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   if (props.surface.activeAction === 'more') {
     return renderCompanionSettingsContent(props);
   }
-  if (props.surface.activeAction === 'recent') {
+  if (props.surface.activeAction === 'recent' || props.surface.isFlowBrowsing) {
     return renderRecentContent(props);
   }
   if (props.surface.activeAction === 'review') {
