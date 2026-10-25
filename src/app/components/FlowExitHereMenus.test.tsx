@@ -22,7 +22,7 @@ it('offers exit in place in the desktop right-click menu', () => {
   renderWithLocalization(<FlowExitHereContext.Provider value={exit}>
     <WebLookupSelectionMenu left={20} top={20} onClose={close} />
   </FlowExitHereContext.Provider>);
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Exit Flow and stay here' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Exit Flow' }));
   expect(close).toHaveBeenCalledOnce();
   expect(exit).toHaveBeenCalledOnce();
 });
@@ -31,11 +31,11 @@ it('offers the same action in the desktop document overflow', async () => {
   const exit = vi.fn();
   renderWithLocalization(<FlowExitHereContext.Provider value={exit}><Header /></FlowExitHereContext.Provider>);
   await act(async () => fireEvent.keyDown(screen.getByRole('button', { name: 'More editor options' }), { key: 'ArrowDown' }));
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Exit Flow and stay here' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Exit Flow' }));
   expect(exit).toHaveBeenCalledOnce();
 });
 
 it('hides the action outside Flow', () => {
   renderWithLocalization(<WebLookupSelectionMenu left={20} top={20} onClose={vi.fn()} />);
-  expect(screen.queryByRole('menuitem', { name: 'Exit Flow and stay here' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Exit Flow' })).not.toBeInTheDocument();
 });
