@@ -1,0 +1,1351 @@
+diff --git a/.lab/prototypes/T438/real-path/android-shell.ts b/.lab/prototypes/T438/real-path/android-shell.ts
+new file mode 100644
+index 000000000..bbd747450
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/android-shell.ts
+@@ -0,0 +1,86 @@
++import { runCompanionSyncCoordinator } from '../../../../src/companion/companionSyncCoordinator';
++import { getIosCompanionDatabaseOwner } from '../../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
++import { ensureCompanionSyncGroupDataOwner } from '../../../../src/shared/platform/companion/sync/syncGroupProviderDataOwner';
++import { loadCompanionBootstrapState } from '../../../../src/shared/platform/companionBootstrap';
++import { loadCompanionWorkspaceSyncState } from '../../../../src/shared/platform/companionWorkspaceSync';
++
++import { auditNativeFiles, resetNativeExperimentCopies } from './native-audit';
++import { observeNativeCalls } from './native-observation';
++import { shellResultPhase } from './shell-result-phase';
++
++// This entry replaces only the product UI in a copied build. All work stays in production modules.
++const root = document.getElementById('root');
++if (!root) throw new Error('shell_root_missing');
++const result = document.createElement('textarea');
++result.dataset.testid = 't438-result';
++result.rows = 20;
++result.cols = 45;
++result.readOnly = true;
++const start = document.createElement('button');
++const audit = document.createElement('button');
++const reset = document.createElement('button');
++reset.textContent = 'Reset experiment copies';
++reset.dataset.testid = 't438-reset';
++reset.disabled = true;
++audit.textContent = 'Verify received files';
++audit.dataset.testid = 't438-audit';
++audit.disabled = true;
++const expected: { key: string; bytes: number }[] = [];
++start.textContent = 'Run production sync';
++start.dataset.testid = 't438-run';
++start.disabled = true;
++root.replaceChildren(start, audit, reset, result);
++const observation = observeNativeCalls();
++Reflect.set(globalThis, '__t438PreparationEvents', []);
++const milestones: { phase: string; at: number; detail?: unknown }[] = [];
++function publish(phase: string, detail?: unknown) {
++  milestones.push({ phase, at: Date.now(), detail });
++  phase = shellResultPhase(result.dataset.phase, phase);
++  result.value = JSON.stringify({ phase, milestones, native: observation.events,
++    preparation: Reflect.get(globalThis, '__t438PreparationEvents') });
++  result.dataset.phase = phase;
++}
++let state: Awaited<ReturnType<typeof loadCompanionWorkspaceSyncState>>;
++async function bootstrap() {
++  publish('booting');
++  const bootstrapState = await loadCompanionBootstrapState();
++  if (bootstrapState.runtime_kind !== 'android-capacitor') throw new Error('android_native_required');
++  await ensureCompanionSyncGroupDataOwner();
++  state = await loadCompanionWorkspaceSyncState();
++  publish('ready', { runtime: bootstrapState.runtime_kind, endpoint: state.endpoint_url });
++  start.disabled = false;
++  audit.disabled = false;
++  reset.disabled = false;
++}
++reset.onclick = async () => {
++  reset.disabled = true;
++  try { publish('reset-finished', await resetNativeExperimentCopies(expected)); }
++  catch (error) { publish('reset-failed', String(error)); }
++  finally { reset.disabled = false; }
++};
++audit.onclick = async () => {
++  audit.disabled = true;
++  try { publish('audit-passed', await auditNativeFiles(expected)); }
++  catch (error) { publish('audit-failed', String(error)); }
++  finally { audit.disabled = false; }
++};
++start.onclick = async () => {
++  start.disabled = true;
++  publish('running');
++  try {
++    const outcome = await runCompanionSyncCoordinator({
++      state, cancelled: () => false, triggerReason: 'manual',
++      setState: update => { state = typeof update === 'function' ? update(state) : update; },
++      setError: error => { if (error) publish('sync-error', error); },
++      setStatus: status => publish('status', status),
++      setSyncProgress: progress => { if (progress) publish('progress', progress); }
++    });
++    const proof = await getIosCompanionDatabaseOwner().readSnapshot(async db => ({
++      pending: await db.query('SELECT COUNT(*) AS count FROM attachment_pending'),
++      available: await db.query('SELECT COUNT(*) AS count FROM framed_sync_resource_availability WHERE available = 1')
++    }));
++    publish('finished', { outcome, proof });
++  } catch (error) { publish('failed', String(error)); }
++  finally { start.disabled = false; }
++};
++void bootstrap().catch(error => publish('failed', String(error)));
+diff --git a/.lab/prototypes/T438/real-path/companion-prepared-receive.ts b/.lab/prototypes/T438/real-path/companion-prepared-receive.ts
+new file mode 100644
+index 000000000..19b4e718b
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/companion-prepared-receive.ts
+@@ -0,0 +1,44 @@
++import type { AttachmentRequest } from '../../../../lib/core/sync/requestSyncAttachmentContract.js';
++import type { RequestSyncFilePort } from '../../../../lib/core/sync/requestSyncFiles.js';
++import { companionReceiveAttachment } from '../../../../src/shared/platform/companion/sync/framed/companionAttachmentHttp.js';
++
++import type { PreparedNativeWindow } from './native-prepared-window.js';
++
++export async function prepareCompanionReceive(files: RequestSyncFilePort,
++  input: Parameters<typeof companionReceiveAttachment>[1], query: AttachmentRequest): Promise<PreparedNativeWindow> {
++  const controller = new AbortController();
++  const cancel = () => controller.abort(input.signal?.reason);
++  if (input.signal?.aborted) cancel(); else input.signal?.addEventListener('abort', cancel, { once: true });
++  const ready = gate(), dispatch = gate();
++  let sent = false;
++  const operation = companionReceiveAttachment(files, { ...input, signal: controller.signal,
++    preparationGate: { ready: ready.resolve, dispatch: dispatch.promise } })(query);
++  const settled = operation.then(() => undefined, (error: unknown) => error);
++  try {
++    await Promise.race([ready.promise, settled.then(error => { throw error ?? new Error('native_prepare_exited_before_dispatch'); })]);
++  } catch (error) {
++    input.signal?.removeEventListener('abort', cancel);
++    throw error;
++  }
++  record('native-request-ready', query.storageKey, query.offset);
++  let closing: Promise<void> | undefined;
++  return {
++    send() { sent = true; record('native-request-dispatched', query.storageKey, query.offset); dispatch.resolve(); return operation; },
++    close() { return closing ??= (async () => {
++      if (!sent) controller.abort(new Error('unused_native_preparation_closed'));
++      await settled;
++      input.signal?.removeEventListener('abort', cancel);
++      record('native-request-closed', query.storageKey, query.offset);
++    })(); }
++  };
++}
++
++function gate() {
++  let resolve = () => {};
++  const promise = new Promise<void>(done => { resolve = done; });
++  return { resolve, promise };
++}
++function record(event: string, key: string, offset: number) {
++  const events: unknown = Reflect.get(globalThis, '__t438PreparationEvents');
++  if (Array.isArray(events)) events.push({ event, key, offset, at: Date.now() });
++}
+diff --git a/.lab/prototypes/T438/real-path/native-audit.ts b/.lab/prototypes/T438/real-path/native-audit.ts
+new file mode 100644
+index 000000000..7f93bb4ff
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-audit.ts
+@@ -0,0 +1,37 @@
++import { z } from 'zod';
++
++import { requeueMissingAttachmentArticles } from '../../../../lib/core/sync/attachmentDemandQueue';
++import { companionFramedFileOwner } from '../../../../src/shared/platform/companion/runtime/companionFramedPayloadBudget';
++import { getIosCompanionDatabaseOwner } from '../../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
++import { runCompanionSyncWriterTask } from '../../../../src/shared/platform/companionSyncWriterQueue';
++import { FolioleCompanionSync } from '../../../../src/shared/platform/companionWorkspaceRuntimeRepository';
++
++export async function auditNativeFiles(files: { key: string; bytes: number }[]) {
++  const database = getIosCompanionDatabaseOwner();
++  const identity = companionFramedFileOwner(database);
++  const result = [];
++  for (const file of files) {
++    const stat = z.object({ present: z.boolean(), length: z.number() }).parse(
++      await FolioleCompanionSync.accessFramedSyncFile({ ...identity, operation: 'attachment', key: file.key, partial: false, action: 'stat' }));
++    const hash = z.object({ hash: z.string() }).parse(
++      await FolioleCompanionSync.accessFramedSyncFile({ ...identity, operation: 'attachment', key: file.key, partial: false, action: 'hash' }));
++    const rows = await database.readSnapshot(db => db.query<{ available: number }>(
++      'SELECT available FROM framed_sync_resource_availability WHERE hash = ?', [file.key.slice(0, 64)]));
++    result.push({ key: file.key, bytes: stat.length, ready: stat.present && stat.length === file.bytes
++      && hash.hash === file.key.slice(0, 64) && rows[0]?.available === 1 });
++  }
++  if (result.some(file => !file.ready)) throw new Error('native_file_audit_failed');
++  return { files: result, bytes: result.reduce((sum, file) => sum + file.bytes, 0) };
++}
++
++// Fixed experiment input only; originals remain on the source. This is outside transfer timing.
++export async function resetNativeExperimentCopies(files: { key: string; bytes: number }[]) {
++  await auditNativeFiles(files);
++  for (const file of files) {
++    await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'move', storageKey: file.key, trash: true });
++    await FolioleCompanionSync.maintainAttachmentFiles({ operation: 'remove-trash', storageKey: file.key });
++  }
++  const database = getIosCompanionDatabaseOwner();
++  await runCompanionSyncWriterTask(() => database.runWriter(db => requeueMissingAttachmentArticles(db, files.map(file => file.key))));
++  return { removedExperimentCopies: files.length };
++}
+diff --git a/.lab/prototypes/T438/real-path/native-case.mjs b/.lab/prototypes/T438/real-path/native-case.mjs
+new file mode 100644
+index 000000000..4734657f6
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-case.mjs
+@@ -0,0 +1,106 @@
++/* global document */
++import assert from 'node:assert/strict';
++import fs from 'node:fs/promises';
++import { createRequire } from 'node:module';
++import path from 'node:path';
++import process from 'node:process';
++
++import { createMacosA5ExecutionContext } from '../../../../scripts/android/macos-a5-execution-context.mjs';
++import { assertFixedA5 } from '../../../../scripts/android/macos-a5-dev.mjs';
++import { captured, checked } from '../../../../scripts/android/macos-a5-process.mjs';
++import { acquireMacosA5DeviceLease, releaseMacosA5DeviceLease } from '../../../../scripts/android/macos-a5-run-lease.mjs';
++import { shouldStopAdbServer } from '../../../../scripts/android/macos-a5-run-cleanup.mjs';
++import { macosA5Paths } from '../../../../scripts/android/macos-a5-runtime-paths.mjs';
++import { readA5SyncLogs } from '../../../../scripts/android/macos-a5-sync-logs.mjs';
++import { runT234WebViewSession } from '../../../../scripts/android/macos-a5-t234-webview-session.mjs';
++
++const require = createRequire(import.meta.url);
++const { _android } = require('playwright');
++const label = process.argv[2];
++if (!['baseline', 'prefetch', 'shared-queue', 'split-http', 'finalization', 'receipt-fixed-1', 'receipt-fixed-2', 'pipeline', 'pipeline-2'].includes(label)) {
++  throw new Error('Expected a T438 experiment label.');
++}
++const root = path.resolve('.tmp/artifacts/T438/real-path');
++const context = createMacosA5ExecutionContext({ action: 't234-webview-session', repoRoot: process.cwd() });
++const paths = macosA5Paths(context);
++const lease = acquireMacosA5DeviceLease(context, 'mutation');
++let device, finish, session, page;
++try {
++  let ready, rejectReady;
++  const hold = new Promise(resolve => { finish = resolve; });
++  const readyWait = new Promise((resolve, reject) => { ready = resolve; rejectReady = reject; });
++  session = runT234WebViewSession({ assertFixed: () => assertFixedA5(paths), buildIdentity: () => context.runId,
++    captured, checked: preserveUnownedApplications, paths, serial: '87a33a4b', waitForEnd: () => { ready(); return hold; }
++  }).catch(error => { rejectReady(error); throw error; });
++  await readyWait;
++  const info = JSON.parse(await fs.readFile(path.join(paths.artifactsRoot, 'a5-t234-webview-session', context.runId, 'session.json'), 'utf8'));
++  device = (await _android.devices({ omitDriverInstall: true })).find(item => item.serial() === '87a33a4b');
++  assert.ok(device, 'Fixed A5 is absent');
++  const view = await device.webView({ pkg: info.appId, socketName: info.socket });
++  page = await view.page();
++  await page.waitForFunction(() => !document.querySelector('[data-testid="t438-run"]').disabled, undefined, { timeout: 60000 });
++  await runExperiment(page);
++} catch (error) {
++  const failure = { error: String(error), result: page && !page.isClosed()
++    ? await page.getByTestId('t438-result').inputValue().catch(() => null) : null };
++  await fs.writeFile(path.join(root, `android-${label}-failure.json`), JSON.stringify(failure));
++  try { collectTrace(); } catch { /* Preserve the primary experiment failure. */ }
++  throw error;
++} finally {
++  try { await device?.close(); }
++  finally {
++    finish?.();
++    try { await session; }
++    finally {
++      releaseMacosA5DeviceLease(lease);
++      if (shouldStopAdbServer()) checked(paths.adb, ['kill-server']);
++    }
++  }
++}
++
++function preserveUnownedApplications(command, args, options) {
++  if (args.includes('com.campfirium.foliole.android/com.foliole.android.MainActivity')) return;
++  // This session uses omitDriverInstall and owns no driver package to uninstall.
++  if (args.some(value => value === 'com.microsoft.playwright.androiddriver' || value === 'com.microsoft.playwright.androiddriver.test')) return;
++  return checked(command, args, options);
++}
++
++async function runExperiment(page) {
++  const reset = await action(page, 'reset');
++  assert.equal(reset.milestones.findLast(row => row.phase.startsWith('reset-')).phase, 'reset-finished');
++  await fs.writeFile(path.join(root, `android-${label}-reset.json`), JSON.stringify(reset));
++  const triggeredAt = Date.now();
++  await page.getByTestId('t438-run').click();
++  await page.waitForFunction(start => JSON.parse(document.querySelector('[data-testid="t438-result"]').value)
++    .milestones.some(row => row.at >= start && ['finished', 'failed'].includes(row.phase)), triggeredAt, { timeout: 240000 });
++  const result = JSON.parse(await page.getByTestId('t438-result').inputValue());
++  await fs.writeFile(path.join(root, `android-native-${label}.json`), JSON.stringify({ triggeredAt, ...result }));
++  collectTrace();
++  assert.equal(result.milestones.findLast(row => row.phase === 'finished')?.detail.outcome, 'completed');
++  assert.ok(result.native.some(row => row.at >= triggeredAt && row.method === 'postRequestSyncHttp' && row.attachment));
++  const audit = await action(page, 'audit');
++  await fs.writeFile(path.join(root, `android-native-${label}-audit.json`), JSON.stringify(audit));
++  const proof = audit.milestones.findLast(row => row.phase.startsWith('audit-'));
++  assert.equal(proof.phase, 'audit-passed');
++  assert.equal(proof.detail.files.length, 196);
++  assert.equal(proof.detail.bytes, 100073172);
++  process.stdout.write(JSON.stringify({ label, outcome: 'completed', files: 196, bytes: proof.detail.bytes }) + '\n');
++}
++
++async function action(page, name) {
++  const started = Date.now();
++  await page.getByTestId(`t438-${name}`).click();
++  await page.waitForFunction(({ name, started }) => JSON.parse(document.querySelector('[data-testid="t438-result"]').value)
++    .milestones.some(row => row.at >= started && row.phase.startsWith(name + '-')), { name, started }, { timeout: 60000 });
++  return JSON.parse(await page.getByTestId('t438-result').inputValue());
++}
++
++function collectTrace() {
++  readA5SyncLogs({ assertFixed: () => assertFixedA5(paths), buildIdentity: () => context.runId,
++    captured: (command, args, options) => {
++      const raw = captured(command, [...args.filter(value => value !== 'Capacitor/Console:I')
++        .map(value => value === 'FolioleSyncHttp:D' ? 'T438NativeQueue:I' : value), 'T438NativeFile:I'], options);
++      require('node:fs').writeFileSync(path.join(root, `native-${label}.log`), raw);
++      return raw;
++    }, paths, serial: '87a33a4b' });
++}
+diff --git a/.lab/prototypes/T438/real-path/native-finalization.ts b/.lab/prototypes/T438/real-path/native-finalization.ts
+new file mode 100644
+index 000000000..334192419
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-finalization.ts
+@@ -0,0 +1,115 @@
++import { recordFramedSyncResourceAvailability } from '../../../../lib/core/database/framedSyncResourceAvailability.js';
++import { ATTACHMENT_BLOCK_BYTES, type AttachmentBlockFiles, type AttachmentBlockResource as Resource } from '../../../../lib/core/sync/attachmentBlockReceiver.js';
++import { completeAttachmentDemand } from '../../../../lib/core/sync/attachmentDemandQueue.js';
++import type { RequestSyncAttachmentHost } from '../../../../lib/core/sync/requestSyncAttachmentResponse.js';
++import type { RequestSyncExchange } from '../../../../lib/core/sync/requestSyncDatabaseExchange.js';
++import type { RequestSyncDatabaseHost } from '../../../../lib/core/sync/requestSyncObjectEndpoint.js';
++
++export type NativeStagingHost = RequestSyncAttachmentHost & {
++  staging?(): Promise<{ files: AttachmentBlockFiles; database: RequestSyncDatabaseHost; notify(key: string): void }>;
++};
++export type NativeSignalExchange = RequestSyncExchange & { withSignal?(signal: AbortSignal): RequestSyncExchange };
++type State = { offset: number; phase: 'writing' | 'finalizing' | 'complete'; release(): void; lease: Promise<void>; done?: Promise<void> };
++type Context = { files: AttachmentBlockFiles; database: RequestSyncDatabaseHost; signal: AbortSignal; notify(key: string): void;
++  states: Map<string, State>; tasks: Set<Promise<void>>; failure: unknown; abort(error: unknown): void };
++
++export async function createNativeFinalization(host: NativeStagingHost, parent?: AbortSignal) {
++  if (!host.staging) throw new Error('native_staging_port_required');
++  const controller = new AbortController();
++  const cancel = () => controller.abort(parent?.reason);
++  if (parent?.aborted) cancel(); else parent?.addEventListener('abort', cancel, { once: true });
++  const context: Context = { ...await host.staging(), signal: controller.signal, states: new Map(), tasks: new Set(),
++    failure: undefined, abort: error => controller.abort(error) };
++  const wrapped: RequestSyncAttachmentHost = { ...host,
++    status: resource => status(context, host, resource),
++    async needsSlice(shouldYield) {
++      const slice = await host.needsSlice(shouldYield);
++      return { ...slice, keys: slice.keys.filter(key => !context.states.has(key) || context.states.get(key)?.phase === 'writing') };
++    },
++    receiveWindow: (resource, offset, execute) => receiveWindow(context, resource, offset, execute)
++  };
++  return { host: wrapped, signal: controller.signal, async close(error?: unknown) {
++    if (error) controller.abort(error);
++    await Promise.all(context.tasks);
++    for (const state of context.states.values()) state.release();
++    await Promise.all([...context.states.values()].map(state => state.lease));
++    parent?.removeEventListener('abort', cancel);
++    if (context.failure) throw context.failure;
++  } };
++}
++
++async function status(context: Context, host: RequestSyncAttachmentHost, resource: Resource) {
++  const existing = context.states.get(resource.storageKey);
++  if (existing) {
++    await existing.done;
++    context.signal.throwIfAborted();
++    return { kind: existing.phase === 'complete' ? 'complete' as const : 'partial' as const, offset: existing.offset };
++  }
++  context.signal.throwIfAborted();
++  const current = await host.status(resource);
++  if (current.kind === 'complete') return current;
++  const held = gate(), acquired = gate();
++  const hash = resource.storageKey.slice(0, 64);
++  const lease = context.files.exclusive(hash, async () => { acquired.resolve(); await held.promise; });
++  await Promise.race([acquired.promise, lease]);
++  if (await context.files.partialLength(hash) !== current.offset) {
++    held.resolve(); await lease; throw new Error('native_pipeline_partial_changed');
++  }
++  context.states.set(resource.storageKey, { offset: current.offset, phase: 'writing', release: held.resolve, lease });
++  return current;
++}
++
++async function receiveWindow(context: Context, resource: Resource, offset: number,
++  execute: Parameters<NonNullable<RequestSyncAttachmentHost['receiveWindow']>>[2]) {
++  while (context.tasks.size >= 2) { record('finalize-backpressure', resource.storageKey); await Promise.race(context.tasks); }
++  context.signal.throwIfAborted();
++  const state = context.states.get(resource.storageKey);
++  if (!state || state.phase !== 'writing' || state.offset !== offset) throw new Error('native_pipeline_owner_changed');
++  const result = await execute();
++  const expected = Math.min(resource.byteLength, offset + result.blocks * ATTACHMENT_BLOCK_BYTES);
++  if (!Number.isInteger(result.blocks) || result.blocks < 0 || result.blocks > 64 || result.offset !== expected ||
++    (!result.blocks && !result.pending && result.offset !== resource.byteLength) ||
++    await context.files.partialLength(resource.storageKey.slice(0, 64)) !== result.offset) throw new Error('attachment_window_result_invalid');
++  state.offset = result.offset;
++  if (result.offset === resource.byteLength) seal(context, state, resource);
++  return result;
++}
++
++function seal(context: Context, state: State, resource: Resource) {
++  state.phase = 'finalizing';
++  record('file-sealed', resource.storageKey);
++  const task = finish(context, resource).then(() => { state.phase = 'complete'; }, (error: unknown) => {
++    context.failure ??= error; context.abort(error);
++  }).finally(() => { state.release(); context.tasks.delete(task); });
++  state.done = task;
++  context.tasks.add(task);
++}
++
++async function finish(context: Context, resource: Resource) {
++  const hash = resource.storageKey.slice(0, 64);
++  context.signal.throwIfAborted();
++  record('hash-start', resource.storageKey);
++  if (!await context.files.verifyPartial(hash)) {
++    await context.files.discardPartial(hash); throw new Error('attachment_checksum_mismatch');
++  }
++  record('hash-finish', resource.storageKey);
++  context.signal.throwIfAborted();
++  await context.files.publish(resource);
++  context.signal.throwIfAborted();
++  await context.database.write(db => db.transaction(async tx => {
++    await recordFramedSyncResourceAvailability(tx, [hash], true);
++    await completeAttachmentDemand(tx, resource.storageKey);
++  }));
++  context.notify(resource.storageKey);
++  record('sqlite-committed', resource.storageKey);
++}
++
++function gate() {
++  let resolve = () => {};
++  const promise = new Promise<void>(done => { resolve = done; });
++  return { resolve, promise };
++}
++function record(event: string, key: string) {
++  const events: unknown = Reflect.get(globalThis, '__t438PreparationEvents');
++  if (Array.isArray(events)) events.push({ event, key, at: Date.now() });
++}
+diff --git a/.lab/prototypes/T438/real-path/native-http-preparation.test.ts b/.lab/prototypes/T438/real-path/native-http-preparation.test.ts
+new file mode 100644
+index 000000000..a915cb647
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-http-preparation.test.ts
+@@ -0,0 +1,73 @@
++// @vitest-environment node
++import { sha256 } from '@noble/hashes/sha2.js';
++import { bytesToHex } from '@noble/hashes/utils.js';
++import { beforeEach, expect, it, vi } from 'vitest';
++
++import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../lib/core/sync/framedSyncContract.js';
++import { attachmentRequestSchema } from '../../../../lib/core/sync/requestSyncAttachmentContract.js';
++import type { NativeRequestSyncHttpRequest } from '../../../../lib/platform/nativeRequestSyncHttpContract.js';
++
++const native = vi.hoisted(() => ({ post: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
++vi.mock('../../../../src/shared/platform/companionWorkspaceRuntimeRepository.js', () => ({ FolioleCompanionSync: {
++  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel
++} }));
++vi.mock('../../../../src/shared/platform/companion/runtime/companionFramedPayloadBudget.js', () => ({
++  companionFramedFileOwner: () => ({ library_key: 'library', generation_id: 'generation' })
++}));
++vi.mock('../../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js', () => ({
++  getIosCompanionDatabaseOwner: () => ({})
++}));
++
++import { prepareCompanionReceive } from './companion-prepared-receive.js';
++
++beforeEach(() => {
++  vi.resetAllMocks();
++  native.sign.mockResolvedValue({ headers: { 'X-Signature': 'native-signature' } });
++});
++
++it.each(['send', 'unused', 'cancelled', 'aged'])('prepares the authenticated native request without posting it: %s', async mode => {
++  const values = new Map<string, Uint8Array>();
++  const files = {
++    read: async (key: string) => values.get(key) ?? null,
++    write: async (key: string, bytes: Uint8Array) => { values.set(key, bytes.slice()); },
++    remove: async (key: string) => { for (const name of values.keys()) if (name.startsWith(key)) values.delete(name); }
++  };
++  const signal = new AbortController();
++  const query = attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16).fill(3),
++    storageKey: `${'a'.repeat(64)}.png`, byteLength: 321 });
++  native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
++    const body = Buffer.concat(Array.from({ length: request.request_chunk_count }, (_, index) =>
++      Buffer.from(values.get(`${request.directory}/http-out-${index}`)!)));
++    expect(native.sign.mock.calls[0]![0].body_hash).toBe(bytesToHex(sha256(body)));
++    expect(request.headers['X-Signature']).toBe('native-signature');
++    expect(request.attachment_receive?.storage_key).toBe(query.storageKey);
++    return { response_chunk_count: 0, response_byte_length: 0,
++      attachment_receive: { offset: query.byteLength, blocks: 1, pending: false } };
++  });
++  const prepared = await prepareCompanionReceive(files, { signal: signal.signal, groupKey: new Uint8Array(32).fill(7),
++    context: { protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: 'group', initiatorDeviceId: 'local',
++      initiatorLibraryEpoch: 'local-epoch', responderDeviceId: 'peer', responderLibraryEpoch: 'peer-epoch' },
++    endpointUrl: 'http://127.0.0.1:1' }, query);
++  expect(native.sign).toHaveBeenCalledOnce();
++  expect(native.post).not.toHaveBeenCalled();
++  expect(values.size).toBeGreaterThan(0);
++  if (mode === 'aged') {
++    const now = Date.now();
++    vi.spyOn(Date, 'now').mockReturnValue(now + 31_000);
++    try {
++      await prepared.send();
++      expect(native.sign).toHaveBeenCalledTimes(2);
++      expect(native.sign.mock.calls[1]![0].nonce).not.toBe(native.sign.mock.calls[0]![0].nonce);
++      expect(native.sign.mock.calls[1]![0].body_hash).toBe(native.sign.mock.calls[0]![0].body_hash);
++    } finally { vi.restoreAllMocks(); }
++  }
++  if (mode === 'send') await expect(prepared.send()).resolves.toEqual({ offset: 321, blocks: 1, pending: false });
++  if (mode === 'cancelled') {
++    signal.abort(new Error('cancelled'));
++    await expect(prepared.send()).rejects.toThrow('cancelled');
++  }
++  await prepared.close();
++  await prepared.close();
++  expect(native.post).toHaveBeenCalledTimes(mode === 'send' || mode === 'aged' ? 1 : 0);
++  expect(values.size).toBe(0);
++});
+diff --git a/.lab/prototypes/T438/real-path/native-observation.ts b/.lab/prototypes/T438/real-path/native-observation.ts
+new file mode 100644
+index 000000000..b1072308f
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-observation.ts
+@@ -0,0 +1,27 @@
++import { Capacitor } from '@capacitor/core';
++
++export function observeNativeCalls() {
++  const original: unknown = Reflect.get(Capacitor, 'nativePromise');
++  if (typeof original !== 'function') throw new Error('native_promise_bridge_missing');
++  const events: { id: number; phase: string; at: number; plugin: string; method: string;
++    action?: string; attachment?: boolean; error?: string }[] = [];
++  let next = 0;
++  Reflect.set(Capacitor, 'nativePromise', async function(plugin: string, method: string, options: unknown) {
++    const observed = plugin === 'FolioleCompanionSync' || plugin === 'CapacitorSQLite';
++    if (!observed) return original.call(Capacitor, plugin, method, options);
++    const detail = options && typeof options === 'object' ? options : {};
++    const action = 'action' in detail && typeof detail.action === 'string' ? detail.action : undefined;
++    const record = { id: ++next, plugin, method, ...(action ? { action } : {}),
++      ...(method === 'postRequestSyncHttp' ? { attachment: 'attachment_receive' in detail } : {}) };
++    events.push({ ...record, phase: 'start', at: Date.now() });
++    try {
++      const result: unknown = await original.call(Capacitor, plugin, method, options);
++      events.push({ ...record, phase: 'finish', at: Date.now() });
++      return result;
++    } catch (error) {
++      events.push({ ...record, phase: 'error', at: Date.now(), error: String(error) });
++      throw error;
++    }
++  });
++  return { events, restore: () => Reflect.set(Capacitor, 'nativePromise', original) };
++}
+diff --git a/.lab/prototypes/T438/real-path/native-prefetch.ts b/.lab/prototypes/T438/real-path/native-prefetch.ts
+new file mode 100644
+index 000000000..d65578f9d
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-prefetch.ts
+@@ -0,0 +1,52 @@
++import type { AttachmentBlockResource } from '../../../../lib/core/sync/attachmentBlockReceiver.js';
++import type { pullRequestSyncAttachmentWindows } from '../../../../lib/core/sync/requestSyncAttachmentPull.js';
++import type { RequestSyncAttachmentHost } from '../../../../lib/core/sync/requestSyncAttachmentResponse.js';
++
++type Prepared = { resource: AttachmentBlockResource; initial: Awaited<ReturnType<RequestSyncAttachmentHost['status']>> } | null;
++type Outcome = Awaited<ReturnType<typeof pullRequestSyncAttachmentWindows>>;
++type Settled = { kind: 'ready'; value: Prepared } | { kind: 'failed'; error: unknown };
++type Input = {
++  keys: string[]; failed: Set<string>; pendingKeys: Set<string>; shouldYield(): boolean;
++  prepare(key: string): Promise<Prepared>;
++  pull(key: string, prepared: Promise<Prepared>): Promise<Outcome>;
++  attempt(key: string, execute: () => Promise<Outcome>): Promise<void>;
++};
++
++// Only preparation moves. Transfer and finalization remain in the native production pull.
++export async function runNativePreparedPulls(input: Input) {
++  let prepared: { key: string; result: Promise<Settled> } | undefined;
++  let attempted = false;
++  const prepare = (key: string) => {
++    record('prepare-start', key);
++    const result: Promise<Settled> = input.prepare(key).then(value => {
++      record('prepare-ready', key);
++      return { kind: 'ready', value };
++    }, (error: unknown) => ({ kind: 'failed', error }));
++    return { key, result };
++  };
++  try {
++    for (const [index, key] of input.keys.entries()) {
++      if (input.failed.has(key) || (attempted && input.shouldYield())) {
++        input.pendingKeys.add(key);
++        continue;
++      }
++      attempted = true;
++      const current = prepared?.key === key ? prepared : prepare(key);
++      prepared = undefined;
++      await input.attempt(key, async () => {
++        const ready = await current.result;
++        if (ready.kind === 'failed') throw ready.error;
++        const next = input.keys[index + 1];
++        if (next && !input.failed.has(next) && !input.shouldYield()) prepared = prepare(next);
++        record('pull-start', key);
++        try { return await input.pull(key, Promise.resolve(ready.value)); }
++        finally { record('pull-finish', key); }
++      });
++    }
++  } finally { await prepared?.result; }
++}
++
++function record(event: string, key: string) {
++  const events: unknown = Reflect.get(globalThis, '__t438PreparationEvents');
++  if (Array.isArray(events)) events.push({ event, key, at: Date.now() });
++}
+diff --git a/.lab/prototypes/T438/real-path/native-prepared-window.ts b/.lab/prototypes/T438/real-path/native-prepared-window.ts
+new file mode 100644
+index 000000000..ab7d8ba46
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-prepared-window.ts
+@@ -0,0 +1,75 @@
++import { ATTACHMENT_BLOCK_BYTES, type AttachmentBlockResource } from '../../../../lib/core/sync/attachmentBlockReceiver.js';
++import { AttachmentReceivePaused, type AttachmentReceiveWindow } from '../../../../lib/core/sync/attachmentBlockTransfer.js';
++import { ATTACHMENT_WINDOW_BLOCKS, attachmentRequestSchema, type AttachmentRequest } from '../../../../lib/core/sync/requestSyncAttachmentContract.js';
++import type { RequestSyncAttachmentHost } from '../../../../lib/core/sync/requestSyncAttachmentResponse.js';
++import type { RequestSyncExchange } from '../../../../lib/core/sync/requestSyncDatabaseExchange.js';
++
++export type PreparedNativeWindow = { send(): Promise<AttachmentReceiveWindow>; close(): Promise<void> };
++export type NativePreparedExchange = RequestSyncExchange & { prepareAttachment?(query: AttachmentRequest): Promise<PreparedNativeWindow> };
++export type NativePreparation = { resource: AttachmentBlockResource;
++  initial: Awaited<ReturnType<RequestSyncAttachmentHost['status']>>; window?: PreparedNativeWindow } | null;
++type Settled = { kind: 'ready'; window: PreparedNativeWindow } | { kind: 'failed'; error: unknown };
++export type DispatchGate = { ready(): void; dispatch: Promise<void> };
++
++export function prepareNativeWindow(exchange: NativePreparedExchange, resource: AttachmentBlockResource, offset: number) {
++  if (!exchange.prepareAttachment) throw new Error('native_request_preparation_required');
++  return exchange.prepareAttachment(attachmentRequestSchema.parse({ ...resource,
++    requestId: crypto.getRandomValues(new Uint8Array(16)), operation: 'pull', offset, maxBlocks: ATTACHMENT_WINDOW_BLOCKS }));
++}
++
++export async function pullPreparedNativeWindows(host: RequestSyncAttachmentHost, exchange: NativePreparedExchange,
++  ready: NonNullable<NativePreparation>, shouldYield: () => boolean) {
++  if (!host.receiveWindow) throw new Error('attachment_window_receiver_missing');
++  const resource = ready.resource;
++  let offset = ready.initial.offset, blocks = 0;
++  let current = ready.window;
++  let next: Promise<Settled> | undefined;
++  try {
++    while (true) {
++      current ??= await prepareNativeWindow(exchange, resource, offset);
++      const active = current;
++      const planned = Math.min(resource.byteLength, offset + ATTACHMENT_WINDOW_BLOCKS * ATTACHMENT_BLOCK_BYTES);
++      let result;
++      try {
++        result = await host.receiveWindow(resource, offset, () => {
++          const operation = active.send();
++          if (planned < resource.byteLength && !shouldYield()) next = settle(prepareNativeWindow(exchange, resource, planned));
++          return operation;
++        });
++      } catch (error) {
++        if (!(error instanceof AttachmentReceivePaused)) throw error;
++        await host.status(resource);
++        return { complete: false, blocks };
++      } finally { await active.close(); current = undefined; }
++      blocks += result.blocks;
++      offset = result.offset;
++      if (offset === resource.byteLength) return { complete: true, blocks };
++      if (!result.blocks) return { complete: false, blocks, verificationPending: true };
++      if (shouldYield()) return { complete: false, blocks };
++      if (next && offset === planned) {
++        const prepared = await next; next = undefined;
++        if (prepared.kind === 'failed') throw prepared.error;
++        current = prepared.window;
++      } else { await closeSettled(next); next = undefined; }
++    }
++  } finally { await current?.close(); await closeSettled(next); }
++}
++
++function settle(promise: Promise<PreparedNativeWindow>): Promise<Settled> {
++  return promise.then(window => ({ kind: 'ready', window }), (error: unknown) => ({ kind: 'failed', error }));
++}
++async function closeSettled(promise?: Promise<Settled>) {
++  const result = await promise;
++  if (result?.kind === 'ready') await result.window.close();
++}
++
++export async function waitForNativeDispatch(gate: DispatchGate, signal?: AbortSignal) {
++  signal?.throwIfAborted();
++  let rejectAbort: (reason: unknown) => void = () => {};
++  const aborted = new Promise<void>((_resolve, reject) => { rejectAbort = reject; });
++  const abort = () => rejectAbort(signal?.reason);
++  signal?.addEventListener('abort', abort, { once: true });
++  gate.ready();
++  try { await Promise.race([gate.dispatch, aborted]); signal?.throwIfAborted(); }
++  finally { signal?.removeEventListener('abort', abort); }
++}
+diff --git a/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs b/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs
+new file mode 100644
+index 000000000..cf57b8ac8
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-request-prefetch.test.mjs
+@@ -0,0 +1,138 @@
++/* global AbortController */
++import assert from 'node:assert/strict';
++import { getEventListeners } from 'node:events';
++import test from 'node:test';
++
++import { waitForNativeDispatch } from './native-prepared-window.ts';
++import { runNativePreparedPulls } from './native-request-prefetch.ts';
++
++function gate() {
++  let resolve;
++  const promise = new Promise(done => { resolve = done; });
++  return { promise, resolve };
++}
++
++test('the first two items prepare together and prepared items send consecutively in order', async () => {
++  const keys = ['a', 'b', 'c', 'd'];
++  const preparations = new Map(keys.map(key => [key, gate()]));
++  const transmissions = new Map(keys.map(key => [key, gate()]));
++  const dispatched = new Map(keys.map(key => [key, gate()]));
++  const started = [], sent = [], closed = [];
++  let active = 0;
++  const operation = runNativePreparedPulls({ keys, failed: new Set(), pendingKeys: new Set(), shouldYield: () => false,
++    async prepare(key) {
++      started.push(key);
++      await preparations.get(key).promise;
++      return { resource: { storageKey: key, byteLength: 1 }, initial: { kind: 'partial', offset: 0 },
++        window: { async send() {}, async close() { closed.push(key); } } };
++    },
++    async pull(key, prepared) {
++      await prepared;
++      assert.equal(active++, 0, 'only one transfer may own the send path');
++      sent.push(key);
++      dispatched.get(key).resolve();
++      await transmissions.get(key).promise;
++      active--;
++      return { complete: true, blocks: 1 };
++    },
++    async attempt(_key, execute) { await execute(); }
++  });
++  try {
++    assert.deepEqual(started, ['a', 'b'], 'second preparation must start while the first is still preparing');
++    preparations.get('b').resolve();
++    assert.deepEqual(sent, []);
++    preparations.get('a').resolve();
++    await dispatched.get('a').promise;
++    assert.deepEqual(started, ['a', 'b', 'c'], 'two preparation slots continue working while one item sends');
++    preparations.get('c').resolve();
++    transmissions.get('a').resolve();
++    await dispatched.get('b').promise;
++    assert.deepEqual(started, ['a', 'b', 'c', 'd']);
++    preparations.get('d').resolve();
++    transmissions.get('b').resolve();
++    await dispatched.get('c').promise;
++    transmissions.get('c').resolve();
++    await dispatched.get('d').promise;
++    assert.deepEqual(sent, keys);
++  } finally {
++    for (const item of preparations.values()) item.resolve();
++    for (const item of transmissions.values()) item.resolve();
++    await operation;
++  }
++  assert.deepEqual(closed, keys);
++});
++
++test('preparation is ready without sending until the dispatch is granted', async () => {
++  const dispatch = gate();
++  const events = [];
++  const pending = waitForNativeDispatch({ ready: () => events.push('ready'), dispatch: dispatch.promise })
++    .then(() => events.push('sent'));
++  await Promise.resolve();
++  assert.deepEqual(events, ['ready']);
++  dispatch.resolve();
++  await pending;
++  assert.deepEqual(events, ['ready', 'sent']);
++});
++
++test('canceling an unsent request releases the dispatch wait and listener', async () => {
++  const controller = new AbortController();
++  const pending = waitForNativeDispatch({ ready() {}, dispatch: gate().promise }, controller.signal);
++  controller.abort(new Error('cancelled'));
++  await assert.rejects(pending, /cancelled/u);
++  assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
++});
++
++test('a request cancelled before preparation cannot become ready', async () => {
++  const controller = new AbortController();
++  controller.abort(new Error('cancelled'));
++  await assert.rejects(waitForNativeDispatch({ ready() { assert.fail('ready after cancellation'); },
++    dispatch: gate().promise }, controller.signal), /cancelled/u);
++});
++
++test('yielding after a file closes the unused lookahead and keeps it pending', async () => {
++  let yielded = false;
++  const closed = [], pending = new Set(), pulled = [];
++  await runNativePreparedPulls({ keys: ['a', 'b', 'c'], failed: new Set(), pendingKeys: pending, shouldYield: () => yielded,
++    async prepare(key) { return { resource: { storageKey: key, byteLength: 1 }, initial: { kind: 'partial', offset: 0 },
++      window: { async send() { assert.fail('transport is owned by pull'); }, async close() { closed.push(key); } } }; },
++    async pull(key) { pulled.push(key); yielded = true; return { complete: true, blocks: 1 }; },
++    async attempt(_key, execute) { await execute(); } });
++  assert.deepEqual(pulled, ['a']);
++  assert.deepEqual(closed.sort(), ['a', 'b', 'c']);
++  assert.deepEqual([...pending], ['b', 'c']);
++});
++
++test('the next demand slice prepares before the previous slice finishes sending', async () => {
++  const entered = gate(), release = gate();
++  const started = [], sent = [];
++  let calls = 0;
++  const operation = runNativePreparedPulls({ keys: ['a', 'b'], failed: new Set(), pendingKeys: new Set(),
++    shouldYield: () => false,
++    async nextKeys() { calls++; return calls === 1 ? ['a', 'b', 'c', 'd'] : []; },
++    async prepare(key) {
++      started.push(key);
++      return { resource: { storageKey: key, byteLength: 1 }, initial: { kind: 'partial', offset: 0 } };
++    },
++    async pull(key) {
++      sent.push(key);
++      if (key === 'b') { entered.resolve(); await release.promise; }
++      return { complete: true, blocks: 1 };
++    },
++    async attempt(_key, execute) { await execute(); }
++  });
++  try {
++    await entered.promise;
++    assert.deepEqual(started, ['a', 'b', 'c', 'd']);
++    assert.deepEqual(sent, ['a', 'b']);
++  } finally { release.resolve(); await operation; }
++  assert.deepEqual(sent, ['a', 'b', 'c', 'd']);
++});
++
++test('a rejected attempt closes its prepared request without dispatching it', async () => {
++  let closed = 0;
++  await runNativePreparedPulls({ keys: ['a'], failed: new Set(), pendingKeys: new Set(), shouldYield: () => false,
++    async prepare() { return { resource: { storageKey: 'a', byteLength: 1 }, initial: { kind: 'partial', offset: 0 },
++      window: { async send() { assert.fail('unexpected dispatch'); }, async close() { closed++; } } }; },
++    async pull() { assert.fail('attempt never entered'); }, async attempt() {} });
++  assert.equal(closed, 1);
++});
+diff --git a/.lab/prototypes/T438/real-path/native-request-prefetch.ts b/.lab/prototypes/T438/real-path/native-request-prefetch.ts
+new file mode 100644
+index 000000000..e39f334c9
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/native-request-prefetch.ts
+@@ -0,0 +1,101 @@
++import type { pullRequestSyncAttachmentWindows } from '../../../../lib/core/sync/requestSyncAttachmentPull.js';
++
++import type { NativePreparation } from './native-prepared-window.js';
++
++type Settled = { kind: 'ready'; value: NativePreparation } | { kind: 'failed'; error: unknown };
++type Outcome = Awaited<ReturnType<typeof pullRequestSyncAttachmentWindows>>;
++type Prepared = { key: string; result: Promise<Settled> };
++type Input = {
++  keys: string[]; failed: Set<string>; pendingKeys: Set<string>; shouldYield(): boolean;
++  nextKeys?(): Promise<string[]>;
++  prepare(key: string): Promise<NativePreparation>;
++  pull(key: string, prepared: Promise<NativePreparation>): Promise<Outcome>;
++  attempt(key: string, execute: () => Promise<Outcome>): Promise<void>;
++};
++
++export async function runNativePreparedPulls(input: Input) {
++  const queue: Prepared[] = [];
++  const source = demandSource(input.keys, input.nextKeys);
++  let attempted = false;
++  const prepare = (key: string): Prepared => {
++    record('prepare-start', key);
++    return { key, result: input.prepare(key).then(value => {
++      record('prepare-ready', key);
++      return { kind: 'ready', value };
++    }, (error: unknown) => ({ kind: 'failed', error })) };
++  };
++  const fill = () => {
++    while (queue.length < 2) {
++      if ((attempted || queue.length > 0) && input.shouldYield()) break;
++      const key = source.take();
++      if (key === undefined) break;
++      if (input.failed.has(key)) { input.pendingKeys.add(key); continue; }
++      queue.push(prepare(key));
++    }
++  };
++  try {
++    fill();
++    while (!attempted || !input.shouldYield()) {
++      if (!queue.length) {
++        if (!await source.extend()) break;
++        fill();
++        if (!queue.length) break;
++      }
++      const current = queue.shift()!;
++      attempted = true;
++      try {
++        await input.attempt(current.key, async () => {
++          const ready = await current.result;
++          if (ready.kind === 'failed') throw ready.error;
++          fill();
++          return input.pull(current.key, Promise.resolve(ready.value));
++        });
++      } finally { await dispose(current); }
++      fill();
++    }
++    for (const pending of queue) input.pendingKeys.add(pending.key);
++    for (const key of source.remaining()) input.pendingKeys.add(key);
++  } finally { await Promise.all([source.close(), ...queue.map(dispose)]); }
++}
++
++async function dispose(prepared?: Prepared) {
++  const ready = await prepared?.result;
++  if (ready?.kind === 'ready') await ready.value?.window?.close();
++}
++
++type Page = { kind: 'ready'; keys: string[] } | { kind: 'failed'; error: unknown };
++
++function demandSource(initial: string[], load?: () => Promise<string[]>) {
++  const keys = [...new Set(initial)], seen = new Set(keys);
++  let cursor = 0, exhausted = !load;
++  let page: Page | undefined, loading: Promise<void> | undefined;
++  const merge = () => {
++    if (!page) return;
++    const result = page;
++    page = undefined; loading = undefined;
++    if (result.kind === 'failed') throw result.error;
++    const fresh = result.keys.filter(key => !seen.has(key));
++    for (const key of fresh) { seen.add(key); keys.push(key); }
++    if (!fresh.length) exhausted = true;
++  };
++  return {
++    take() {
++      merge();
++      if (cursor >= keys.length) return undefined;
++      const key = keys[cursor++];
++      if (!exhausted && !loading && load && keys.length - cursor <= 2) {
++        loading = load().then(value => { page = { kind: 'ready', keys: value }; },
++          (error: unknown) => { page = { kind: 'failed', error }; });
++      }
++      return key;
++    },
++    async extend() { await loading; merge(); return cursor < keys.length; },
++    async close() { await loading; },
++    remaining: () => keys.slice(cursor)
++  };
++}
++
++function record(event: string, key: string) {
++  const events: unknown = Reflect.get(globalThis, '__t438PreparationEvents');
++  if (Array.isArray(events)) events.push({ event, key, at: Date.now() });
++}
+diff --git a/.lab/prototypes/T438/real-path/shell-result-phase.ts b/.lab/prototypes/T438/real-path/shell-result-phase.ts
+new file mode 100644
+index 000000000..7e96e164b
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/shell-result-phase.ts
+@@ -0,0 +1,4 @@
++export function shellResultPhase(previous: string | undefined, next: string) {
++  if (next === 'status' && previous && /^(finished|failed|audit-|reset-)/u.test(previous)) return previous;
++  return next;
++}
+diff --git a/.lab/prototypes/T438/real-path/source-shell.mjs b/.lab/prototypes/T438/real-path/source-shell.mjs
+new file mode 100644
+index 000000000..b0a707511
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/source-shell.mjs
+@@ -0,0 +1,75 @@
++import console from 'node:console';
++import { createHash, randomUUID } from 'node:crypto';
++import { mkdirSync } from 'node:fs';
++import fs from 'node:fs/promises';
++import path from 'node:path';
++import process from 'node:process';
++import { pathToFileURL } from 'node:url';
++
++import { app } from 'electron';
++
++import { withResourceGate } from '../../../../scripts/lib/resource-gate.mjs';
++
++const repo = process.cwd();
++const root = path.join(repo, '.tmp/artifacts/T438/real-path');
++const runtime = path.join(root, 'android-baseline-rSHj1F/dist/electron');
++const load = relative => import(pathToFileURL(path.join(runtime, relative)).href);
++if (process.env.FOLIOLE_LIBRARY_HOME !== '/Users/roamer/Documents/Foliole Dev') throw new Error('test_library_required');
++console.error('T438 source module loaded', { ready: app.isReady() });
++mkdirSync(path.join(root, 'source-user-data'), { recursive: true });
++app.setPath('userData', path.join(root, 'source-user-data'));
++app.setName('T438 source shell');
++console.error('T438 source awaiting Electron ready');
++void app.whenReady().then(async () => {
++console.error('T438 source Electron ready');
++await withResourceGate({ repoRoot: repo, className: 'preview', commandLabel: 'T438 headless production source',
++  fn: async () => {
++    const { initializeDatabase } = await load('database/migrate.js');
++    const { markDatabaseReady } = await load('database/databaseReadiness.js');
++    const { runWithDatabaseConnectionOwner, closeDatabaseConnection } = await load('database/connection.js');
++    const { loadOrCreateDesktopDeviceId } = await load('database/deviceIdentity.js');
++    const { ensureLanWorkspaceSyncServer, stopLanWorkspaceSyncServer } = await load('sync/lanWorkspaceSyncServer.js');
++    const { handleInvokeRequest } = await load('ipc/commands.js');
++    initializeDatabase(undefined, { deferSearchIndex: true });
++    markDatabaseReady();
++    const invoke = (command, args = {}) => handleInvokeRequest({ command, args });
++    const input = JSON.parse(await fs.readFile(path.join(root, 'performance-volume-100mb.json'), 'utf8'));
++    const stamp = new Date().toISOString();
++    const reuse = process.argv.includes('--reuse-input');
++    const nodeId = reuse ? JSON.parse(await fs.readFile(path.join(root, 'source-shell-ready.json'), 'utf8')).nodeId
++      : `t438-native-${randomUUID()}`;
++    if (!reuse) {
++    const snapshot = await invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
++    const payload = { nodeId, parentNodeId: 'special-inbox', kind: 'topic', title: 'T438 native receive prototype',
++      isTitleManual: true, content: '', reveal: null, anchorLink: null, position: snapshot.nodeOrder.length,
++      nodeOrder: [...snapshot.nodeOrder, nodeId], createdAt: stamp, updatedAt: stamp };
++    const created = await invoke('create_topic', payload);
++    const references = [];
++    for (const file of input.files) {
++      const bytes = await fs.readFile(file.file);
++      if (bytes.length !== file.bytes || createHash('sha256').update(bytes).digest('hex') !== file.key.slice(0, 64)) {
++        throw new Error('input_bytes_changed');
++      }
++      const imported = await invoke('import_clipboard_image_attachment', { nodeId, bytesBase64: bytes.toString('base64'),
++        mimeType: 'image/png', originalName: path.basename(file.file) });
++      if (imported.status !== 'imported' || imported.storage_key !== file.key) throw new Error('production_import_failed');
++      references.push({ storage_key: imported.storage_key, original_name: imported.original_name, role: 'image' });
++    }
++    payload.content = input.files.map(file => `![T438](asset://${file.key})`).join('\n\n');
++    await invoke('update_node_content_with_anchors', { parent: payload, affectedAnchors: [], edit: {
++      baseVersionId: created.nodes.find(node => node.nodeId === nodeId).currentVersionId,
++      versionId: randomUUID(), newImageReferences: references } });
++    }
++    const deviceId = await runWithDatabaseConnectionOwner(() => loadOrCreateDesktopDeviceId());
++    const server = await ensureLanWorkspaceSyncServer({ appVersion: '0.7.16', deviceId });
++    if (server.state !== 'running' || server.port !== 38645) throw new Error('production_source_not_listening');
++    await fs.writeFile(path.join(root, 'source-shell-ready.json'), JSON.stringify({ nodeId, server,
++      files: input.files.map(({ key, bytes }) => ({ key, bytes })), productWindows: 0, at: Date.now() }, null, 2));
++    console.log('T438 source ready without product windows');
++    await new Promise(resolve => { process.once('SIGINT', resolve); process.once('SIGTERM', resolve); });
++    await stopLanWorkspaceSyncServer();
++    await runWithDatabaseConnectionOwner(() => closeDatabaseConnection());
++  }
++});
++app.quit();
++}).catch(error => { console.error(error); app.exit(1); });
+diff --git a/.lab/prototypes/T438/real-path/stage-android.mjs b/.lab/prototypes/T438/real-path/stage-android.mjs
+new file mode 100644
+index 000000000..442802c35
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/stage-android.mjs
+@@ -0,0 +1,85 @@
++import { createHash } from 'node:crypto';
++import { execFileSync } from 'node:child_process';
++import { promises as fs } from 'node:fs';
++import path from 'node:path';
++import process from 'node:process';
++
++import { stageNativePrefetch } from './stage-native-prefetch.mjs';
++import { stageNativeTrace } from './stage-native-trace.mjs';
++import { stageNativeFinalization } from './stage-native-finalization.mjs';
++import { stageNativeRequests } from './stage-native-requests.mjs';
++
++// Freeze the current Android production path without writing into the checkout.
++const repo = process.cwd();
++const fromIndex = process.argv.indexOf('--from');
++const sourceRoot = fromIndex < 0 ? repo : path.resolve(process.argv[fromIndex + 1]);
++const previous = fromIndex < 0 ? null : JSON.parse(await fs.readFile(path.join(sourceRoot, 'experiment-manifest.json'), 'utf8'));
++const separate = process.argv.includes('--separate-app');
++const parent = path.join(repo, '.tmp/artifacts/T438/real-path');
++await fs.mkdir(parent, { recursive: true });
++const root = await fs.mkdtemp(path.join(parent, 'android-baseline-'));
++const listing = previous ? previous.sources.map(source => source.path).join('\0') : execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard',
++  '--', 'src', 'lib', 'scripts', 'electron', 'android', 'assets', 'public',
++  'package.json', 'package-lock.json', 'capacitor.config.ts', 'vite*.ts', 'tsconfig*.json',
++  'tailwind.config.js', 'postcss.config.js'],
++{ cwd: repo, maxBuffer: 16 * 1024 * 1024 }).toString();
++const sources = [];
++for (const relative of [...new Set(listing.split('\0').filter(Boolean))].sort()) {
++  const source = path.join(sourceRoot, relative);
++  const content = await fs.readFile(source);
++  const output = path.join(root, relative);
++  await fs.mkdir(path.dirname(output), { recursive: true });
++  await fs.copyFile(source, output);
++  await fs.chmod(output, (await fs.stat(source)).mode);
++  sources.push({ path: relative, sha256: createHash('sha256').update(content).digest('hex') });
++}
++await fs.symlink(path.join(repo, 'node_modules'), path.join(root, 'node_modules'));
++// Reuse the existing fixed-device exclusion if this capsule is later authorized for deploy.
++const controller = '.lab/internal/macos-a5-controller';
++await fs.mkdir(path.join(root, controller), { recursive: true });
++await fs.symlink(path.join(repo, controller, 'leases'), path.join(root, controller, 'leases'));
++const overrides = [];
++if (process.argv.includes('--shell')) {
++  for (const [name, target] of [['android-shell', 'main.tsx'], ['native-observation', 'native-observation.ts'],
++    ['native-audit', 'native-audit.ts'], ['shell-result-phase', 'shell-result-phase.ts']]) {
++    const original = await fs.readFile(path.join(repo, '.lab/prototypes/T438/real-path', `${name}.ts`), 'utf8');
++    let source = original.replaceAll('../../../../src/', '../').replaceAll('../../../../lib/', '../../lib/');
++    if (name === 'android-shell') {
++      const input = JSON.parse(await fs.readFile(path.join(parent, 'performance-volume-100mb.json'), 'utf8'));
++      source = source.replace('const expected: { key: string; bytes: number }[] = [];',
++        `const expected: { key: string; bytes: number }[] = ${JSON.stringify(input.files.map(({ key, bytes }) => ({ key, bytes })))};`);
++    }
++    const relative = `src/companion/${target}`;
++    await fs.writeFile(path.join(root, relative), source);
++    overrides.push({ path: relative, sha256: createHash('sha256').update(source).digest('hex') });
++  }
++}
++const manifest = {
++  mode: 'android-production-baseline', root, repo,
++  revision: previous?.revision ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo }).toString().trim(),
++  workspaceStatus: previous?.workspaceStatus ?? execFileSync('git', ['status', '--short'], { cwd: repo }).toString(),
++  sources, overrides,
++  applicationId: separate ? 'com.campfirium.foliole.android.t438' : 'com.campfirium.foliole.android.acceptance',
++  syncPort: separate ? 38646 : 38644, sourceRoot,
++  dependencyRoot: path.join(repo, 'node_modules'),
++  boundary: 'Build input only. No device installation, launch, pairing or sync has run.'
++};
++if (process.argv.includes('--prefetch')) {
++  manifest.mode = 'android-shell-native-prefetch';
++  manifest.overrides.push(...await stageNativePrefetch(repo, root));
++}
++if (process.argv.includes('--native-trace') || process.argv.includes('--split-http')) {
++  manifest.overrides.push(...await stageNativeTrace(root, process.argv.includes('--split-http')));
++  if (process.argv.includes('--split-http')) manifest.mode += '-split-http';
++}
++if (process.argv.includes('--finalization')) {
++  manifest.overrides.push(...await stageNativeFinalization(repo, root));
++  manifest.mode += '-finalization';
++}
++if (process.argv.includes('--prepared-requests')) {
++  manifest.overrides.push(...await stageNativeRequests(repo, root));
++  manifest.mode += '-prepared-requests';
++}
++await fs.writeFile(path.join(root, 'experiment-manifest.json'), JSON.stringify(manifest, null, 2));
++await fs.writeFile(path.join(parent, 'latest-android-baseline.json'), JSON.stringify({ root }, null, 2));
++process.stdout.write(`${root}\n`);
+diff --git a/.lab/prototypes/T438/real-path/stage-native-finalization.mjs b/.lab/prototypes/T438/real-path/stage-native-finalization.mjs
+new file mode 100644
+index 000000000..170a01bbe
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/stage-native-finalization.mjs
+@@ -0,0 +1,47 @@
++import { createHash } from 'node:crypto';
++import fs from 'node:fs/promises';
++import path from 'node:path';
++
++export async function stageNativeFinalization(repo, root) {
++  const changed = [];
++  const core = 'lib/core/sync/';
++  const framed = 'src/shared/platform/companion/sync/framed/';
++  async function write(relative, source) {
++    await fs.writeFile(path.join(root, relative), source);
++    changed.push({ path: relative, sha256: createHash('sha256').update(source).digest('hex') });
++  }
++  const helper = await fs.readFile(path.join(repo, '.lab/prototypes/T438/real-path/native-finalization.ts'), 'utf8');
++  await write(core + 't438NativeFinalization.ts', helper.replaceAll('../../../../lib/core/', '../'));
++  let host = await fs.readFile(path.join(root, framed + 'companionAttachmentBlockFiles.ts'), 'utf8');
++  if (!host.includes('  const receiver = createAttachmentBlockReceiver({') || !host.includes('  });\n  const inspect')) {
++    throw new Error('native_file_port_entry_changed');
++  }
++  host = "import type { NativeStagingHost } from '../../../../../../lib/core/sync/t438NativeFinalization.js';\n" + host;
++  host = host.replace('type AttachmentBlockResult }', 'type AttachmentBlockResult, type AttachmentBlockFiles }');
++  host = host.replace('  const receiver = createAttachmentBlockReceiver({', '  const blockFiles: AttachmentBlockFiles = {');
++  host = host.replace('  });\n  const inspect', '  };\n  const receiver = createAttachmentBlockReceiver(blockFiles);\n  const inspect');
++  host = host.replace('const host: RequestSyncAttachmentHost = {',
++    'const host: NativeStagingHost = {\n    staging: async () => ({ files: blockFiles, database: db, notify: notifyAttachmentResourceAvailable }),');
++  await write(framed + 'companionAttachmentBlockFiles.ts', host);
++  let exchange = await fs.readFile(path.join(root, framed + 'companionRequestSyncExchange.ts'), 'utf8');
++  exchange = "import type { NativeSignalExchange } from '../../../../../../lib/core/sync/t438NativeFinalization.js';\n" + exchange;
++  exchange = exchange.replace('): RequestSyncExchange {', '): NativeSignalExchange {');
++  exchange = exchange.replace('return { ...input,', 'return { withSignal: signal => createCompanionRequestSyncExchange(host, { ...input, signal }), ...input,');
++  exchange = exchange.replace("import type { RequestSyncExchange } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';\n", '');
++  await write(framed + 'companionRequestSyncExchange.ts', exchange);
++  let run = await fs.readFile(path.join(root, core + 'requestSyncAttachmentExchange.ts'), 'utf8');
++  run = run.replace('export async function exchangeRequestSyncAttachments(', 'async function runNativeExchangeBody(');
++  run = "import { createNativeFinalization, type NativeStagingHost, type NativeSignalExchange } from './t438NativeFinalization.js';\n" + run;
++  run += `\nexport async function exchangeRequestSyncAttachments(host: NativeStagingHost, exchange: NativeSignalExchange,
++  report: (key: string, error: unknown) => void, shouldYield = attachmentDataYield()) {
++  if (!exchange.receiveAttachment) return runNativeExchangeBody(host, exchange, report, shouldYield);
++  if (!exchange.withSignal) throw new Error('native_pipeline_signal_binding_required');
++  const pipeline = await createNativeFinalization(host, exchange.signal);
++  let failure: unknown;
++  try { return await runNativeExchangeBody(pipeline.host, exchange.withSignal(pipeline.signal), report, shouldYield); }
++  catch (error) { failure = error; throw error; }
++  finally { await pipeline.close(failure); }
++}\n`;
++  await write(core + 'requestSyncAttachmentExchange.ts', run);
++  return changed;
++}
+diff --git a/.lab/prototypes/T438/real-path/stage-native-prefetch.mjs b/.lab/prototypes/T438/real-path/stage-native-prefetch.mjs
+new file mode 100644
+index 000000000..a631b92a5
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/stage-native-prefetch.mjs
+@@ -0,0 +1,44 @@
++import { createHash } from 'node:crypto';
++import fs from 'node:fs/promises';
++import path from 'node:path';
++
++export async function stageNativePrefetch(repo, root) {
++  const changed = [];
++  async function write(relative, source) {
++    await fs.writeFile(path.join(root, relative), source);
++    changed.push({ path: relative, sha256: createHash('sha256').update(source).digest('hex') });
++  }
++  const core = 'lib/core/sync/';
++  const helper = await fs.readFile(path.join(repo, '.lab/prototypes/T438/real-path/native-prefetch.ts'), 'utf8');
++  await write(core + 't438NativePrefetch.ts', helper.replaceAll('../../../../lib/core/sync/', './'));
++  let pull = await fs.readFile(path.join(root, core + 'requestSyncAttachmentPull.ts'), 'utf8');
++  const signature = '  storageKey: string, shouldYield: () => boolean) {';
++  const original = `  const resource = await describe(exchange, storageKey, shouldYield);
++  if (!resource) return { complete: false, blocks: 0, verificationPending: true };
++  const initial = await host.status(resource);`;
++  if (!pull.includes(signature) || !pull.includes(original)) throw new Error('native_pull_entry_changed');
++  pull = pull.replace(signature, `  storageKey: string, shouldYield: () => boolean,
++  prepared = prepareRequestSyncAttachment(host, exchange, storageKey, shouldYield)) {`);
++  pull = pull.replace(original, `  const ready = await prepared;
++  if (!ready) return { complete: false, blocks: 0, verificationPending: true };
++  const { resource, initial } = ready;`);
++  pull += `\nexport async function prepareRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
++  key: string, shouldYield: () => boolean) {
++  const resource = await describe(exchange, key, shouldYield);
++  return resource ? { resource, initial: await host.status(resource) } : null;
++}\n`;
++  await write(core + 'requestSyncAttachmentPull.ts', pull);
++  let exchange = await fs.readFile(path.join(root, core + 'requestSyncAttachmentExchange.ts'), 'utf8');
++  if (!exchange.includes('      let attempted = false;')) throw new Error('native_exchange_entry_changed');
++  exchange = "import { runNativePreparedPulls } from './t438NativePrefetch.js';\n" + exchange;
++  exchange = exchange.replace('import { attachmentRequest, pullRequestSyncAttachmentWindows,',
++    'import { attachmentRequest, prepareRequestSyncAttachment, pullRequestSyncAttachmentWindows,');
++  exchange = exchange.replace('      let attempted = false;', `      if (exchange.receiveAttachment) return runNativePreparedPulls({ keys: local.keys, failed, pendingKeys,
++        shouldYield, attempt,
++        prepare: key => prepareRequestSyncAttachment(host, exchange, key, shouldYield),
++        pull: (key, prepared) => pullRequestSyncAttachmentWindows(host, exchange, key, shouldYield, prepared)
++      });
++      let attempted = false;`);
++  await write(core + 'requestSyncAttachmentExchange.ts', exchange);
++  return changed;
++}
+diff --git a/.lab/prototypes/T438/real-path/stage-native-requests.mjs b/.lab/prototypes/T438/real-path/stage-native-requests.mjs
+new file mode 100644
+index 000000000..8473a6bd0
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/stage-native-requests.mjs
+@@ -0,0 +1,69 @@
++import { createHash } from 'node:crypto';
++import fs from 'node:fs/promises';
++import path from 'node:path';
++
++export async function stageNativeRequests(repo, root) {
++  const changed = [];
++  const core = 'lib/core/sync/';
++  const framed = 'src/shared/platform/companion/sync/framed/';
++  const prototype = path.join(repo, '.lab/prototypes/T438/real-path');
++  async function write(relative, source) {
++    await fs.writeFile(path.join(root, relative), source);
++    changed.push({ path: relative, sha256: createHash('sha256').update(source).digest('hex') });
++  }
++  const window = await fs.readFile(path.join(prototype, 'native-prepared-window.ts'), 'utf8');
++  await write(core + 't438NativePreparedWindow.ts', window.replaceAll('../../../../lib/core/sync/', './'));
++  let prefetch = await fs.readFile(path.join(prototype, 'native-request-prefetch.ts'), 'utf8');
++  prefetch = prefetch.replaceAll('./native-prepared-window.js', './t438NativePreparedWindow.js')
++    .replaceAll('../../../../lib/core/sync/', './');
++  await write(core + 't438NativePrefetch.ts', prefetch);
++  let run = await fs.readFile(path.join(root, core + 'requestSyncAttachmentExchange.ts'), 'utf8');
++  run = run.replace('        shouldYield, attempt,',
++    '        shouldYield, attempt, nextKeys: async () => shouldYield() ? [] : (await host.needsSlice(shouldYield)).keys,');
++  await write(core + 'requestSyncAttachmentExchange.ts', run);
++  let receiver = await fs.readFile(path.join(prototype, 'companion-prepared-receive.ts'), 'utf8');
++  receiver = receiver.replaceAll('../../../../lib/core/', '../../../../../../lib/core/')
++    .replaceAll('../../../../src/shared/platform/companion/sync/framed/', './')
++    .replaceAll('./native-prepared-window.js', '../../../../../../lib/core/sync/t438NativePreparedWindow.js');
++  await write(framed + 't438PreparedReceive.ts', receiver);
++  await wireHttp(root, framed, core, write);
++  let exchange = await fs.readFile(path.join(root, framed + 'companionRequestSyncExchange.ts'), 'utf8');
++  exchange = "import { prepareCompanionReceive } from './t438PreparedReceive.js';\n" + exchange;
++  exchange = exchange.replace('return { withSignal:', 'return { prepareAttachment: query => prepareCompanionReceive(host.files, input, query), withSignal:');
++  exchange = exchange.replace('): NativeSignalExchange {', '): NativeSignalExchange & NativePreparedExchange {');
++  exchange = `import type { NativePreparedExchange } from '../../../../../../lib/core/sync/t438NativePreparedWindow.js';\n` + exchange;
++  await write(framed + 'companionRequestSyncExchange.ts', exchange);
++  let pull = await fs.readFile(path.join(root, core + 'requestSyncAttachmentPull.ts'), 'utf8');
++  pull = "import { prepareNativeWindow, pullPreparedNativeWindows, type NativePreparedExchange, type NativePreparation } from './t438NativePreparedWindow.js';\n" + pull;
++  pull = pull.replace('  const { resource, initial } = ready;', `  const { resource, initial } = ready;
++  if (ready.window) return pullPreparedNativeWindows(host, exchange, ready, shouldYield);`);
++  pull = pull.replace('prepareRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,',
++    'prepareRequestSyncAttachment(host: RequestSyncAttachmentHost, exchange: NativePreparedExchange,');
++  pull = pull.replace('  key: string, shouldYield: () => boolean) {',
++    '  key: string, shouldYield: () => boolean): Promise<NativePreparation> {');
++  pull = pull.replace('  return resource ? { resource, initial: await host.status(resource) } : null;', `  if (!resource) return null;
++  const initial = await host.status(resource);
++  const window = initial.kind === 'complete' ? undefined : await prepareNativeWindow(exchange, resource, initial.offset);
++  return { resource, initial, ...(window ? { window } : {}) };`);
++  await write(core + 'requestSyncAttachmentPull.ts', pull);
++  return changed;
++}
++
++async function wireHttp(root, framed, core, write) {
++  let http = await fs.readFile(path.join(root, framed + 'companionRequestSyncHttp.ts'), 'utf8');
++  http = `import { waitForNativeDispatch, type DispatchGate } from '../../../../../../${core}t438NativePreparedWindow.js';\n` + http;
++  http = http.replace('  endpointUrl: string;', '  preparationGate?: DispatchGate;\n  endpointUrl: string;');
++  const dispatch = '    const operation = FolioleCompanionSync.postRequestSyncHttp(request);';
++  if (!http.includes(dispatch)) throw new Error('native_dispatch_entry_changed');
++  http = http.replace('    const signature = await FolioleCompanionSync.signCompanionSyncRequest({',
++    '    const signedAt = Date.now();\n    const sign = () => FolioleCompanionSync.signCompanionSyncRequest({');
++  http = http.replace('    const request: NativeRequestSyncHttpRequest =',
++    '    const signature = await sign();\n    const request: NativeRequestSyncHttpRequest =');
++  http = http.replace(dispatch, `    if (input.preparationGate) await waitForNativeDispatch(input.preparationGate, input.signal);
++    if (Date.now() - signedAt >= 30_000) {
++      Object.assign(request.headers, (await sign()).headers);
++      input.signal?.throwIfAborted();
++    }
++${dispatch}`);
++  await write(framed + 'companionRequestSyncHttp.ts', http);
++}
+diff --git a/.lab/prototypes/T438/real-path/stage-native-trace.mjs b/.lab/prototypes/T438/real-path/stage-native-trace.mjs
+new file mode 100644
+index 000000000..903bb8748
+--- /dev/null
++++ b/.lab/prototypes/T438/real-path/stage-native-trace.mjs
+@@ -0,0 +1,65 @@
++import { createHash } from 'node:crypto';
++import fs from 'node:fs/promises';
++import path from 'node:path';
++
++export async function stageNativeTrace(root, split) {
++  const changed = [];
++  async function write(relative, source) {
++    await fs.writeFile(path.join(root, relative), source);
++    changed.push({ path: relative, sha256: createHash('sha256').update(source).digest('hex') });
++  }
++  const java = 'android/app/src/main/java/com/foliole/android/';
++  const relative = java + 'FolioleCompanionRequestSyncHttp.java';
++  let source = await fs.readFile(path.join(root, relative), 'utf8');
++  const begin = '            try { executor.execute(() -> {\n';
++  const end = '                finally { ACTIVE.remove(id, operation); }\n            });';
++  if (!source.includes(begin) || !source.includes(end)) throw new Error('native_http_executor_entry_changed');
++  source = source.replace(begin, `            String role = call.getObject("attachment_receive") == null ? "control" : "receive";
++            android.util.Log.i("T438NativeQueue", "id=" + id + " role=" + role + " phase=queued at=" + System.currentTimeMillis());
++            try { executor.execute(() -> {
++                android.util.Log.i("T438NativeQueue", "id=" + id + " role=" + role + " phase=start at=" + System.currentTimeMillis());
++`);
++  source = source.replace(end, `                finally {
++                    android.util.Log.i("T438NativeQueue", "id=" + id + " role=" + role + " phase=finish at=" + System.currentTimeMillis());
++                    ACTIVE.remove(id, operation);
++                }
++            });`);
++  await write(relative, source);
++  await traceFiles(root, java, write);
++  if (split) {
++    const plugin = java + 'FolioleCompanionSyncPlugin.java';
++    let code = await fs.readFile(path.join(root, plugin), 'utf8');
++    const declaration = '    private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();';
++    const call = 'FolioleCompanionRequestSyncHttp.post(getContext(), call, framedSendExecutor);';
++    if (!code.includes(declaration) || !code.includes(call)) throw new Error('native_plugin_executor_entry_changed');
++    code = code.replace(declaration, declaration + '\n    private final ExecutorService attachmentReceiveExecutor = Executors.newSingleThreadExecutor();');
++    code = code.replace(call, 'FolioleCompanionRequestSyncHttp.post(getContext(), call,\n            call.getObject("attachment_receive") == null ? framedSendExecutor : attachmentReceiveExecutor);');
++    code = code.replace('framedSendExecutor.shutdown();', 'framedSendExecutor.shutdown();\n        attachmentReceiveExecutor.shutdown();');
++    await write(plugin, code);
++  }
++  return changed;
++}
++
++async function traceFiles(root, java, write) {
++  const blockPath = java + 'FolioleAttachmentBlockFiles.java';
++  let blocks = await fs.readFile(path.join(root, blockPath), 'utf8');
++  const entry = '    private JSObject execute(PluginCall call) throws Exception {';
++  if (!blocks.includes(entry)) throw new Error('native_file_trace_entry_changed');
++  blocks = blocks.replace(entry, `    private JSObject execute(PluginCall call) throws Exception {
++        String action = call.getString("action", ""), key = call.getString("key", "");
++        if (!action.equals("hash") && !action.equals("publish")) return executeObserved(call);
++        android.util.Log.i("T438NativeFile", "key=" + key + " action=" + action + " phase=start at=" + System.currentTimeMillis());
++        try { return executeObserved(call); }
++        finally { android.util.Log.i("T438NativeFile", "key=" + key + " action=" + action + " phase=finish at=" + System.currentTimeMillis()); }
++    }
++    private JSObject executeObserved(PluginCall call) throws Exception {`);
++  await write(blockPath, blocks);
++  const receivePath = java + 'FolioleAttachmentReceiveFile.java';
++  let receive = await fs.readFile(path.join(root, receivePath), 'utf8');
++  receive = receive.replace('    private final RandomAccessFile file;', '    private final RandomAccessFile file;\n    private final String traceKey;');
++  receive = receive.replace('        this.owner = owner;', '        this.traceKey = path.getName();\n        this.owner = owner;');
++  receive = receive.replace('            file.write(bytes);', `            android.util.Log.i("T438NativeFile", "key=" + traceKey + " action=append phase=start at=" + System.currentTimeMillis());
++            file.write(bytes);
++            android.util.Log.i("T438NativeFile", "key=" + traceKey + " action=append phase=finish at=" + System.currentTimeMillis() + " bytes=" + bytes.length);`);
++  await write(receivePath, receive);
++}
