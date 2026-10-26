@@ -17,7 +17,7 @@ describe('sync object policy', () => {
       'node_reading',
       'node_reading.reading_position',
       'node_reading_host_state',
-      'node_review',
+      'node_text_alternative',
       'review_log',
       'setting.workspace',
       'setting.host',
@@ -29,10 +29,17 @@ describe('sync object policy', () => {
   it('keeps Host-private state out of review-required push issues', () => {
     expect(SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES).toContain('view_state');
     expect(SYNC_POLICY_DEVICE_PRIVATE_OBJECT_TYPES).not.toContain('view_state');
-    expect(SYNC_POLICY_REVIEW_REQUIRED_PUSH_ISSUE_TYPES).toContain('node_review');
+    expect(SYNC_POLICY_REVIEW_REQUIRED_PUSH_ISSUE_TYPES).toContain('node_text_alternative');
     expect(isReviewRequiredPushIssueObjectType('view_state')).toBe(false);
     expect(isBlockingAckForDirtyRetry({ object_type: 'view_state', status: 'conflict' })).toBe(false);
     expect(isBlockingAckForDirtyRetry({ object_type: 'view_state', status: 'accepted' })).toBe(true);
-    expect(isBlockingAckForDirtyRetry({ object_type: 'node_review', status: 'conflict' })).toBe(true);
+    expect(isBlockingAckForDirtyRetry({ object_type: 'node_text_alternative', status: 'conflict' })).toBe(true);
+  });
+
+  it('keeps retired review snapshots out of outbound policies and push issues', () => {
+    expect(SYNC_OBJECT_POLICIES.some((item) => item.key === 'node_review' || item.objectType === 'node_review')).toBe(false);
+    expect(SYNC_POLICY_REVIEW_REQUIRED_PUSH_ISSUE_TYPES).not.toContain('node_review');
+    expect(isReviewRequiredPushIssueObjectType('node_review')).toBe(false);
+    expect(isBlockingAckForDirtyRetry({ object_type: 'node_review', status: 'conflict' })).toBe(false);
   });
 });
