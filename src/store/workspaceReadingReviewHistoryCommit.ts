@@ -6,7 +6,7 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
-import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { applyReadingSnapshot, applyRelatedReadingSnapshots, areRelatedReadingsValid, isSameReadingProfile } from './workspaceActionHistoryReading';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
@@ -15,7 +15,7 @@ import {
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
 import type { WorkspaceState } from './workspaceStore';
-import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
+import { resolveTopicReadingHistoryApply, type WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
@@ -36,6 +36,39 @@ export function persistReadingReviewNodes(
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ) {
   return persistence.persistReadingNodes(nodes);
+}
+
+function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReviewPatchResult) {
+  const entry = result.historyEntry;
+  const node = state.nodesById[entry.nodeId];
+  const apply = resolveTopicReadingHistoryApply(entry, 'redo');
+  const affectedIds = [entry.nodeId, ...apply.relatedReadings.map(({ nodeId }) => nodeId)];
+  const applicable = node && state.appActionHistory.pendingAction?.entry.id === entry.id &&
+    !affectedIds.some(id => state.trashedNodeIds.includes(id)) &&
+    isSameReadingProfile(node.reading, entry.beforeReading) &&
+    areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
+    isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession);
+  if (!applicable) return null;
+  const nodesById = { ...state.nodesById, [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
+  applyRelatedReadingSnapshots({ nextNodesById: nodesById, readings: apply.relatedReadings });
+  const settled = settleWorkspaceAction(state.appActionHistory, entry.id);
+  return {
+    patch: { ...result.patch, nodesById, appActionHistory: settled.history },
+    undoRequested: settled.undoRequested
+  };
+}
+
+function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPatchResult) {
+  let applied = false;
+  let undoRequested = false;
+  set((state) => {
+    const committed = applyCommittedReadingPatch(state, result);
+    if (!committed) return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    applied = true;
+    undoRequested = committed.undoRequested;
+    return committed.patch;
+  });
+  return { applied, undoRequested };
 }
 
 export async function persistAndApplyReadingReviewPatch(args: {
@@ -76,20 +109,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
       }));
       return false;
     }
-    let applied = false;
-    let undoRequested = false;
-    args.set((state) => {
-      const node = state.nodesById[args.currentNodeId];
-      const pending = state.appActionHistory.pendingAction;
-      const applicable = node && pending?.entry.id === result.historyEntry.id &&
-        isSameReadingProfile(node.reading, result.historyEntry.beforeReading) &&
-        isSameWorkspaceReviewSession(state.reviewSession, result.historyEntry.beforeContext.reviewSession);
-      if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
-      const settled = settleWorkspaceAction(state.appActionHistory, result.historyEntry.id);
-      applied = true;
-      undoRequested = settled.undoRequested;
-      return { ...result.patch, appActionHistory: settled.history };
-    });
+    const { applied, undoRequested } = settleCommittedReadingPatch(args.set, result);
     if (!applied) return false;
     if (undoRequested) args.get().undoWorkspaceAction(result.historyEntry.id);
     const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
