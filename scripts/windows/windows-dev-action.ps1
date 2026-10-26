@@ -94,6 +94,14 @@ try {
     } elseif ($Action -eq "internal-open") {
       & $systemNode $internalOpenRunner
       $runnerExit = $LASTEXITCODE
+    } elseif ($Action -eq "test-database-cleanup") {
+      Push-Location $repoRoot
+      try {
+        & $systemNode (Join-Path $PSScriptRoot "windows-test-database-diagnostic.mjs")
+        $runnerExit = $LASTEXITCODE
+      } finally {
+        Pop-Location
+      }
     } elseif ($Action -eq "remote-preflight") {
       Push-Location $repoRoot
       try {

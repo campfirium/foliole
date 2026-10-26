@@ -8,6 +8,7 @@ import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithD
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver.js';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport.js';
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport.js';
+import { observeWorkspaceTestDatabaseLifecycle } from '../../electron/database/workspaceTestDatabaseLifecycle.testSupport.js';
 import { handleDailyFlowCommand } from '../../electron/ipc/dailyFlowCommands.js';
 import { handleNodeMutationCommand } from '../../electron/ipc/storageNodeMutationCommands.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from '../../electron/ipc/storageReadCommands.js';
@@ -83,7 +84,9 @@ vi.mock('../../electron/ipc/workspaceContentChangedEvents.js', () => ({ notifyWo
 
 let source: ReturnType<typeof createPeer>;
 let target: ReturnType<typeof createPeer>;
-beforeEach(async () => {
+let snapshotConnections = () => undefined as void;
+beforeEach(async context => {
+  snapshotConnections = observeWorkspaceTestDatabaseLifecycle(context.task.name);
   await startLibraries();
   source = createPeer('source');
   target = createPeer('target');
@@ -106,9 +109,13 @@ beforeEach(async () => {
 afterEach(async () => {
   await waitForWorkspaceRuntimeWrites();
   await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
-  vi.restoreAllMocks();
   delete window.electronAPI;
-  await closeLibraries();
+  snapshotConnections();
+  try {
+    await closeLibraries();
+  } finally {
+    vi.restoreAllMocks();
+  }
   vi.unstubAllEnvs();
 });
 

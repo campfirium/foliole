@@ -3,6 +3,7 @@
 
 import { extractSqliteDiagnosticMode } from './windows-dev-action-contract.mjs';
 import { copyWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
+import { runWindowsTestDatabaseDiagnosticControl } from './windows-test-database-diagnostic-control.mjs';
 import { prepareWindowsInternalRuntime } from './windows-internal-runtime-transfer.mjs';
 
 import { spawn } from 'node:child_process';
@@ -137,6 +138,11 @@ export async function runWindowsDevControl({
       ...remotePreflight });
   }
   const { action, diagnosticMode, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
+  if (action === 'test-database-cleanup') return runWindowsTestDatabaseDiagnosticControl({
+    env, executeGit, executeScp, executeSsh, fsApi, host, prepareRuntime: prepareInternalRuntime,
+    pushSpec: windowsDevPushSpec, repoRoot, stdout,
+    scpSpec: (h, r, l) => windowsDevScpSpec(h, r, l, env, os.homedir(), fsApi),
+    sshSpec: (h, a) => windowsDevSshSpec(h, a, env, os.homedir(), fsApi) });
   const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
     targetHost, remote, local, env, os.homedir(), fsApi);
   const buildSshSpec = (targetHost, targetAction) => windowsDevSshSpec(
