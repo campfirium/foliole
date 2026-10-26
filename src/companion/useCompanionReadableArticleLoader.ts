@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type MutableRefObject 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { loadPreparedCompanionArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
-import { companionReadingDemandKey, CompanionReadingSnapshotChanged } from '../shared/platform/companion/reading/companionReadingDemand';
+import { companionReadingDemandKey, CompanionReadingSnapshotChanged, hasCompanionReadingDemand } from '../shared/platform/companion/reading/companionReadingDemand';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
@@ -30,7 +30,7 @@ function useArticleInvalidation(snapshot: WorkspaceSnapshot | null,
     latestSnapshot.current = snapshot;
     const visible = displayed.current;
     if (visible && (visible.libraryScope !== snapshot?.libraryScope ||
-      !companionReadingDemandKey(snapshot, visible.nodeId))) release();
+      !hasCompanionReadingDemand(snapshot, visible.nodeId))) release();
     const request = current.current;
     if (request && request.key !== companionReadingDemandKey(snapshot, request.nodeId)) {
       current.current = null;
@@ -125,6 +125,6 @@ export function useCompanionReadableArticleLoader(
   const visible = displayed.current;
   const readableArticle = visible?.scope === getCompanionReadingScope() &&
     visible.libraryScope === snapshot?.libraryScope &&
-    companionReadingDemandKey(snapshot, visible.nodeId) ? visible.article : null;
+    hasCompanionReadingDemand(snapshot, visible.nodeId) ? visible.article : null;
   return { openReadableArticle, readableArticle };
 }

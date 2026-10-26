@@ -121,6 +121,20 @@ describe('current article invalidation', () => {
 describe('displayed article lifetime', () => {
   beforeEach(() => { loadArticle.mockReset(); });
 
+  it('keeps a displayed body across unrelated renders without visiting other node annotations', async () => {
+    loadArticle.mockResolvedValue({ nodeId: 'topic-1', content: 'body' });
+    const { result, rerender, snapshot, setArticle } = setup();
+    await act(async () => { await result.current('topic-1'); });
+    let unrelated = 0;
+    Object.defineProperty(snapshot.nodesById['topic-2'], 'parentNodeId', {
+      get: () => { unrelated += 1; return null; }
+    });
+    rerender({ value: snapshot });
+    expect(setArticle).toHaveBeenLastCalledWith({ nodeId: 'topic-1', content: 'body' });
+    expect(loadArticle).toHaveBeenCalledTimes(1);
+    expect(unrelated).toBe(0);
+  });
+
   it('keeps the displayed article mounted while its saved version is refreshed', async () => {
     const initial = { nodeId: 'topic-1', content: 'original body' };
     const replacement = deferred();

@@ -9,6 +9,11 @@ function contentFacts(node: Node) {
     node.deletedAt, node.attachments, node.imageRegions, node.imageSources];
 }
 
+export function hasCompanionReadingDemand(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
+  return Boolean(snapshot && nodeId && (isCanonicalVisibleNodeId(snapshot, nodeId)
+    || isCanonicalTrashedNodeId(snapshot, nodeId)));
+}
+
 export function companionReadingDemandKey(snapshot: WorkspaceSnapshot | null, nodeId: string | null) {
   if (!snapshot || !nodeId || !snapshot.nodesById[nodeId]) return null;
   const visible = isCanonicalVisibleNodeId(snapshot, nodeId);
