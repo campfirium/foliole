@@ -69,6 +69,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionQueueClear.integration.test.tsx',
   'src/companion/companionEditHistoryHttp.integration.test.ts',
   'src/companion/companionFlowHistory.integration.test.ts',
+  'src/companion/companionFlowRefresh.integration.test.ts',
   'src/companion/companionWorkspaceHistoryPersistence.integration.test.ts',
   'src/companion/companionCaptureRecovery.integration.test.tsx',
   'src/shared/platform/companionReviewSnapshot.integration.test.ts',

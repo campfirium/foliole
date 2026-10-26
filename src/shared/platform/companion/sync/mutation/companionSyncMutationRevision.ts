@@ -63,7 +63,8 @@ export async function runCompanionSyncOptionalMutationTask<T>(task: () => Promis
   return result;
 }
 
-export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>, scope: WorkspaceRefreshScope) {
+export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T>,
+  scope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope)) {
   const session = getCompanionReadingScope();
   const queuedAt = performance.now();
   let startedAt = queuedAt;
@@ -71,7 +72,7 @@ export async function runCompanionHighValueMutationTask<T>(task: () => Promise<T
   // Committed: the next line asks attachment work to yield, so this also marks the yield request.
   traceCompanionSyncEvent('local_edit', 'completed', { queuedMs: Math.round(startedAt - queuedAt),
     writeMs: Math.round(performance.now() - startedAt) });
-  if (session === getCompanionReadingScope()) publishCompanionHighValueMutation(scope);
+  if (session === getCompanionReadingScope()) publishCompanionHighValueMutation(typeof scope === 'function' ? scope(result) : scope);
   return result;
 }
 

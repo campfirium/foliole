@@ -1,6 +1,7 @@
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
+import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -18,7 +19,7 @@ import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory } from './companionFlowHistoryStore';
+import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
 import { readIosCompanionDatabase } from './iosCompanionActiveDatabase';
@@ -48,18 +49,18 @@ export function commitCompanionFlowHistory(args: {
     await appendCompanionFlowHistory(db, args.key, entry);
     return entry.type === 'review.grade' ? { card: entry.afterReview
       ? toSchedulerCard(entry.afterReview, entry.mutationTimestamp) : null } : true;
-  });
+  }, flowHistoryRefreshScope(args.entry));
 }
 
-export function replayCompanionFlowHistory(key: string, mode: HistoryMode, session: ReviewSessionState) {
-  return runCompanionHistoryMutation(async db => {
+export async function replayCompanionFlowHistory(key: string, mode: HistoryMode, session: ReviewSessionState) {
+  const result = await runCompanionHistoryMutation(async db => {
     const history = await readCompanionFlowHistory(db, key);
     const entry = getWorkspaceHistoryTopEntry(history, mode);
     if (!entry) return null;
     if (entry.type === 'nodes.change') {
       await replayCompanionNodeHistoryWithDb(db, entry, mode);
       await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, entry, mode));
-      return (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session;
+      return { session: (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, entry };
     }
     if (entry.type !== 'review.grade' && entry.type !== 'topic.dismiss') throw new Error('flow_history_unavailable');
     const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
@@ -70,11 +71,22 @@ export function replayCompanionFlowHistory(key: string, mode: HistoryMode, sessi
       ...(entry.type === 'review.grade' && mode === 'redo'
         ? { reviewOpId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, 'redo') } : {}) };
     await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, updated, mode));
-    return (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession;
-  });
+    return { session: (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, entry: updated };
+  }, result => result ? flowHistoryRefreshScope(result.entry) : { kind: 'nodes', nodeIds: [] });
+  return result?.session ?? null;
 }
 
-export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>) {
+function flowHistoryRefreshScope(entry: CompanionWorkspaceHistoryEntry): WorkspaceRefreshScope {
+  if (entry.type === 'nodes.change') return { kind: 'full' };
+  if (entry.type === 'review.grade') return { kind: 'nodes', nodeIds: [], reviewNodeIds: [entry.nodeId] };
+  const readings = [{ nodeId: entry.nodeId, beforeReading: entry.beforeReading, afterReading: entry.afterReading },
+    ...(entry.relatedReadings ?? [])];
+  return { kind: 'nodes', nodeIds: [], readingNodeIds: readings
+    .filter(reading => !isSameReadingProfile(reading.beforeReading, reading.afterReading)).map(reading => reading.nodeId) };
+}
+
+export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
+  refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope) = { kind: 'full' }) {
   const owner = getIosCompanionDatabaseOwner();
   const scope = getCompanionReadingScope();
   return runCompanionHighValueMutationTask(() => {
@@ -82,7 +94,7 @@ export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>)
       throw new Error('flow_history_context_changed');
     }
     return owner.runWriter(db => db.transaction(task));
-  }, { kind: 'full' });
+  }, refreshScope);
 }
 
 async function writeEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode,
