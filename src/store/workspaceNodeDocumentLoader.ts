@@ -1,3 +1,4 @@
+import { DocumentLoadRequests } from '../shared/lib/documents/documentPreparation';
 import {
   hasWorkspaceRuntimeRepository,
   loadWorkspaceNodeDocumentFromRuntime
@@ -19,7 +20,7 @@ export interface WorkspaceNodeDocumentLoadOptions {
   preloadedDocument?: WorkspaceNodeDocument | null;
 }
 
-const pendingNodeDocumentLoadById = new Map<string, Promise<WorkspaceNodeDocument | null>>();
+const pendingNodeDocumentLoadById = new DocumentLoadRequests<WorkspaceNodeDocument>();
 
 interface WorkspaceNodeDocumentLoadBaseline {
   cachedDocument: WorkspaceNodeDocument | null;
@@ -78,20 +79,10 @@ async function loadWorkspaceNodeDocumentFromPendingRuntime(
   nodeId: string,
   onLoadStarted?: () => void
 ) {
-  const pendingLoad = pendingNodeDocumentLoadById.get(nodeId);
-  if (pendingLoad) {
-    return pendingLoad;
-  }
-  onLoadStarted?.();
-  const loadPromise = loadWorkspaceNodeDocumentFromRuntime(nodeId);
-  pendingNodeDocumentLoadById.set(nodeId, loadPromise);
-  try {
-    return await loadPromise;
-  } finally {
-    if (pendingNodeDocumentLoadById.get(nodeId) === loadPromise) {
-      pendingNodeDocumentLoadById.delete(nodeId);
-    }
-  }
+  return pendingNodeDocumentLoadById.load(nodeId, () => {
+    onLoadStarted?.();
+    return loadWorkspaceNodeDocumentFromRuntime(nodeId);
+  });
 }
 
 function isCachedDocumentCurrent(nodeId: string, document: WorkspaceNodeDocument) {

@@ -21,6 +21,7 @@ import { canContinueReadingInFlowWindow, continueReviewSessionReading } from '..
 import { saveCompanionDailyNavigation } from './companionDailyNavigation';
 import { createCompanionFlowControls } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
+import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
@@ -66,6 +67,8 @@ export function useCompanionFlowSession(args: {
   }, [args.snapshot]);
   const session = current.session;
   const view = flowView(args.snapshot, current);
+  useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
+    session.currentNodeId, session.queueNodeIds);
   const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
   const hasTopics = Boolean(args.snapshot && selectCanonicalVisibleNodeIds(args.snapshot).some((id) => {
     const kind = args.snapshot?.nodesById[id]?.kind;

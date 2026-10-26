@@ -1,4 +1,6 @@
 export const controlledSyncSqliteTests = [
+  'src/shared/platform/companion/reading/companionArticlePreparation.integration.test.ts',
+  'src/companion/companionFlowPrefetch.integration.test.tsx',
   'src/store/workspaceDailyEligibility.integration.test.ts',
   'src/store/workspaceDailyExceptions.sync.integration.test.ts',
   'src/companion/companionHistoryDelta.integration.test.ts',

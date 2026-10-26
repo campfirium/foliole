@@ -2,10 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type MutableRefObject 
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
+import { loadPreparedCompanionArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
 import { companionReadingDemandKey, CompanionReadingSnapshotChanged } from '../shared/platform/companion/reading/companionReadingDemand';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
-import { loadCompanionReadableArticle } from '../shared/platform/companionWorkspaceSync';
 
 type Article = CompanionReadableArticle | null;
 interface Request {
@@ -102,7 +102,7 @@ export function useCompanionReadableArticleLoader(
     const isCurrent = () => mounted.current && current.current === request &&
       scope === getCompanionReadingScope() && key === companionReadingDemandKey(latestSnapshot.current, nodeId);
     request.promise = Promise.resolve().then(() => isCurrent()
-      ? loadCompanionReadableArticle(snapshot, nodeId, isCurrent) : null
+      ? snapshot ? loadPreparedCompanionArticle(snapshot, nodeId, isCurrent) : null : null
     ).then((article) => {
       if (!isCurrent()) return null;
       request.article = article;
