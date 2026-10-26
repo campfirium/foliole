@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 import { beforeAll, expect, it, vi } from 'vitest';
 
-import { readReviewTrainingInput, readReviewTrainingPlan } from '../../lib/core/database/reviewTrainingInput.js';
+import { readReviewTrainingInput, readReviewTrainingPlan, readReviewTrainingPlanWithDb } from '../../lib/core/database/reviewTrainingInput.js';
 import { readNodeReviewWeights, readReviewModels } from '../../lib/core/database/reviewTrainingModels.js';
 import { readStoredReviewCard } from '../../lib/core/database/storedReviewCard.js';
 import { recomputeReview } from '../../lib/core/review/recomputeReview.js';
@@ -26,6 +26,27 @@ beforeAll(async () => {
   const wasm = await import('fsrs-browser/fsrs_browser.js');
   wasm.initSync({ module: readFileSync('node_modules/fsrs-browser/fsrs_browser_bg.wasm') });
   train = (await import('../../src/features/review/model/trainFolderReviewModel.js')).trainFolderReviewModel;
+});
+
+it('reports the latest recorded training scope after restart even when the candidate was not enabled', async () => {
+  const fixture = await restoreFixture(); const peer = fixture.peer('source');
+  try {
+    let driver = await seedTrainingPeer(peer);
+    expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject({ lastTrainedAt: null, lastTrainedFolderId: null });
+    const model = train(readReviewTrainingInput(driver, 'folder', 'scope'));
+    const global = { ...model, folderId: null, trainedAt: '2026-10-26T06:30:00.000Z' };
+    const folder = { ...model, enabled: false, candidate: model.baseline, trainedAt: '2026-10-27T06:30:00.000Z' };
+    for (const entry of [folder, global]) writeSettingRecord(driver, {
+      key: reviewModelKey(entry.folderId), valueJson: JSON.stringify(entry), updatedAt: entry.trainedAt
+    });
+    peer.reopen(); driver = createBetterSqlite3Driver(peer.sqlite);
+    const expected = { lastTrainedAt: folder.trainedAt, lastTrainedFolderId: 'folder' };
+    expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject(expected);
+    expect(await readReviewTrainingPlanWithDb(peer.db, 'scope')).toMatchObject(expected);
+    const latest = { ...global, trainedAt: '2026-10-28T06:30:00.000Z' };
+    writeSettingRecord(driver, { key: reviewModelKey(null), valueJson: JSON.stringify(latest), updatedAt: latest.trainedAt });
+    expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject({ lastTrainedAt: latest.trainedAt, lastTrainedFolderId: null });
+  } finally { await fixture.close(); }
 });
 
 it('trains on folder facts, syncs parameters, and uses them for the next durable grade after restart', async () => {

@@ -5,6 +5,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 export interface ReviewTrainingPlan {
   folders: Array<{ folderId: string | null; reviewCount: number }>;
   lastTrainedAt: string | null;
+  lastTrainedFolderId: string | null;
   libraryScope: string;
 }
 

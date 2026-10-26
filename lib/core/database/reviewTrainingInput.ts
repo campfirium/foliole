@@ -54,7 +54,10 @@ function createPlan(nodes: ReviewTrainingNode[], models: ReviewTrainingModel[], 
     count - (models.find(model => model.folderId === id)?.reviewCount ?? 0) >= REVIEW_TRAINING_STEP
   ).sort(([a], [b]) => depth(a) - depth(b) || (a ?? '').localeCompare(b ?? ''))
     .map(([folderId, reviewCount]) => ({ folderId, reviewCount }));
-  return { folders, libraryScope, lastTrainedAt: models.map(model => model.trainedAt).sort().at(-1) ?? null };
+  const latest = [...models].sort((a, b) => b.trainedAt.localeCompare(a.trainedAt)
+    || (a.folderId ?? '').localeCompare(b.folderId ?? ''))[0];
+  return { folders, libraryScope, lastTrainedAt: latest?.trainedAt ?? null,
+    lastTrainedFolderId: latest?.folderId ?? null };
 }
 
 export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string | null,

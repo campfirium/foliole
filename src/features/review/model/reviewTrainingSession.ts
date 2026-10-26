@@ -3,7 +3,8 @@ import { loadReviewTrainingInput, loadReviewTrainingPlan, saveReviewTrainingMode
 import { runReviewTrainingWorker } from './reviewTrainingWorkerClient';
 
 const isForeground = () => document.visibilityState !== 'hidden';
-let state = { running: false, studyActive: false, lastTrainedAt: null as string | null, error: false, revision: 0 };
+let state = { running: false, studyActive: false, lastTrainedAt: null as string | null,
+  lastTrainedFolderId: null as string | null, error: false, revision: 0 };
 const listeners = new Set<() => void>();
 function update(patch: Partial<typeof state>) {
   state = { ...state, ...patch };
@@ -19,7 +20,7 @@ export function refreshReviewTrainingParameters() { update({ revision: state.rev
 
 export async function refreshReviewTrainingStatus() {
   const plan = await loadReviewTrainingPlan();
-  update({ lastTrainedAt: plan.lastTrainedAt });
+  update({ lastTrainedAt: plan.lastTrainedAt, lastTrainedFolderId: plan.lastTrainedFolderId });
   return plan;
 }
 
@@ -37,7 +38,7 @@ export async function optimizeReadyReviewFolders(shouldStart = () => true, signa
       const model = await runReviewTrainingWorker(input, signal);
       if (signal?.aborted) break;
       await saveReviewTrainingModel(model, plan.libraryScope);
-      update({ lastTrainedAt: model.trainedAt, revision: state.revision + 1 });
+      update({ lastTrainedAt: model.trainedAt, lastTrainedFolderId: model.folderId, revision: state.revision + 1 });
     }
   } catch (error) {
     if (!signal?.aborted) update({ error: true });

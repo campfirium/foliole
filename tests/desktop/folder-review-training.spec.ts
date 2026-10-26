@@ -67,7 +67,7 @@ function readTrainedGrade(app: ElectronApplication) {
   });
 }
 
-for (const automatic of [false, true]) test(`${automatic ? 'automatically optimizes idle' : 'manually optimizes'} folder history and uses parameters on the next grade`, async ({ desktopApp, desktopWindow: page }) => {
+test('automatically trains folder history, reports it without controls, and uses parameters on the next grade', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -76,10 +76,9 @@ for (const automatic of [false, true]) test(`${automatic ? 'automatically optimi
   await seedTrainingWorkspace(page, desktopApp);
   const before = await readTrainingState(desktopApp);
   const settings = await openSettingsCategory(page, 'Review');
-  if (!automatic) await settings.getByRole('button', { name: 'Optimize now', exact: true }).click();
-  await expect(settings.getByText(/^Last optimization:/)).toBeVisible({ timeout: 60000 });
-  await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toBeEnabled();
-  await page.screenshot({ path: path.resolve(`.tmp/artifacts/T394/folder-review-${automatic ? 'idle' : 'manual'}-optimization.png`) });
+  await expect(settings.getByText(/^Recent training: Training folder/)).toBeVisible({ timeout: 60000 });
+  await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/T505/folder-review-idle-training.png') });
   const optimized = await readTrainingState(desktopApp);
   expect(optimized.states).toEqual(before.states);
   expect(optimized.models).toHaveLength(2);
@@ -89,8 +88,12 @@ for (const automatic of [false, true]) test(`${automatic ? 'automatically optimi
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();
   await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
   await page.getByRole('button', { name: /^Good$/ }).click();
-  await expect.poll(() => readTrainedGrade(desktopApp)).not.toBeNull();
-  const check = await readTrainedGrade(desktopApp);
+  const observed = { grade: null as Awaited<ReturnType<typeof readTrainedGrade>> };
+  await expect.poll(async () => {
+    observed.grade = await readTrainedGrade(desktopApp);
+    return observed.grade;
+  }).not.toBeNull();
+  const check = observed.grade;
   expect(check).not.toBeNull();
   expect(check!.actual).toEqual({ stability: check!.expected.stability, difficulty: check!.expected.difficulty,
     scheduled_days: check!.expected.scheduled_days });
