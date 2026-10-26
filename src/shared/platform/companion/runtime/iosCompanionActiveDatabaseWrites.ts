@@ -19,22 +19,26 @@ import {
 export function saveIosSetting(args: {
   form_factor?: string; key: string; platform?: string; scope?: string; value_json: string;
 }) {
-  return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
-    const hostName = args.scope === 'user_space' ? '*' : await iosCompanionHostName(tx);
-    const formFactor = args.form_factor ?? 'phone';
-    const platform = args.platform ?? getIosCompanionDatabaseOwner().platform ?? 'ios';
-    const scope = args.scope ?? 'host';
-    const objectId = [scope, platform, formFactor, hostName, args.key].join(':');
-    const payload = { host_name: hostName, form_factor: formFactor, key: args.key, platform, scope, value_json: args.value_json };
-    const contentHash = await iosCompanionContentHash(payload);
-    const now = new Date().toISOString();
-    await tx.run(
-      'INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [args.key, scope, platform, formFactor, hostName, args.value_json, contentHash, now]
-    );
-    await mark(tx, 'setting', objectId, contentHash, now);
-    return { content_hash: contentHash, object_id: objectId };
-  }));
+  return writeIosCompanionDatabase(db => db.transaction(tx => saveIosSettingWithDb(tx, args)));
+}
+
+export async function saveIosSettingWithDb(tx: DbPort, args: {
+  form_factor?: string; key: string; platform?: string; scope?: string; value_json: string;
+}) {
+  const hostName = args.scope === 'user_space' ? '*' : await iosCompanionHostName(tx);
+  const formFactor = args.form_factor ?? 'phone';
+  const platform = args.platform ?? getIosCompanionDatabaseOwner().platform ?? 'ios';
+  const scope = args.scope ?? 'host';
+  const objectId = [scope, platform, formFactor, hostName, args.key].join(':');
+  const payload = { host_name: hostName, form_factor: formFactor, key: args.key, platform, scope, value_json: args.value_json };
+  const contentHash = await iosCompanionContentHash(payload);
+  const now = new Date().toISOString();
+  await tx.run(
+    'INSERT OR REPLACE INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [args.key, scope, platform, formFactor, hostName, args.value_json, contentHash, now]
+  );
+  await mark(tx, 'setting', objectId, contentHash, now);
+  return { content_hash: contentHash, object_id: objectId };
 }
 
 export function saveIosOpenState(args: { last_opened_at: string; node_id: string }) {

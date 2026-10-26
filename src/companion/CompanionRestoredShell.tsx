@@ -18,6 +18,7 @@ import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
+import { useCompanionReviewTraining } from './useCompanionReviewTraining';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
 import { useSortedArticleSurface } from './useCompanionShellReading';
@@ -205,6 +206,8 @@ export function CompanionRestoredShell(props: {
 }) {
   const model = useCompanionShellModel(props.workspaceSync);
   useCompanionAndroidBack(model);
+  useCompanionReviewTraining(props.bootstrapState.database_ready && model.workspaceSync.isWorkspaceSyncStateReady,
+    model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing, model.workspaceSync.state.workspace_snapshot);
 
   return (
     <CompanionCustomCssProvider

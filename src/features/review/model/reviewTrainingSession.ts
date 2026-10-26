@@ -1,4 +1,4 @@
-import { loadReviewTrainingInput, loadReviewTrainingPlan, saveReviewTrainingModel } from '../../../shared/platform/runtime/reviewTrainingRuntimeRepository';
+import { loadReviewTrainingInput, loadReviewTrainingPlan, saveReviewTrainingModel } from '../../../shared/platform/desktop/reviewTrainingRuntimeRepository';
 
 import { runReviewTrainingWorker } from './reviewTrainingWorkerClient';
 
@@ -35,6 +35,7 @@ export async function optimizeReadyReviewFolders(shouldStart = () => true, signa
       if (!canStart()) break;
       // Fixed input and a fresh Worker per folder release wasm memory between training runs.
       const model = await runReviewTrainingWorker(input, signal);
+      if (signal?.aborted) break;
       await saveReviewTrainingModel(model, plan.libraryScope);
       update({ lastTrainedAt: model.trainedAt, revision: state.revision + 1 });
     }

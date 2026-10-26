@@ -1,19 +1,23 @@
 import type { ReviewTrainingPlan } from '../../platform/nativeReviewTrainingContract.js';
 import { resolveNodeShortTermSetting } from '../review/nodeSettings.js';
 import { REVIEW_TRAINING_STEP, resolveReviewWeights, type ReviewTrainingInput,
-  type ReviewTrainingNode } from '../review/trainingModel.js';
+  type ReviewTrainingModel, type ReviewTrainingNode } from '../review/trainingModel.js';
+import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { isSpecialRootNode } from './nodeMutationSpecialRoots.js';
 import { EFFECTIVE_REVIEW_PREDICATE } from './reviewLogRecord.js';
-import { readReviewModels, REVIEW_TRAINING_NODES_SQL } from './reviewTrainingModels.js';
+import { parseReviewModels, readReviewModels, REVIEW_MODELS_SQL, REVIEW_TRAINING_NODES_SQL } from './reviewTrainingModels.js';
 
-function trainingCounts(driver: DatabaseDriver, nodes: ReviewTrainingNode[]) {
+const COUNTS_SQL = `SELECT r.node_id, COUNT(*) AS count FROM review_log r WHERE ${EFFECTIVE_REVIEW_PREDICATE} GROUP BY r.node_id`;
+const SETTINGS_SQL = 'SELECT id, parent_id AS parentNodeId, enable_short_term AS enableShortTerm FROM nodes WHERE deleted_at IS NULL';
+type CountRow = { node_id: string; count: number };
+type SettingNode = { id: string; parentNodeId: string | null; enableShortTerm: number | null };
+
+function trainingCounts(rows: CountRow[], nodes: ReviewTrainingNode[]) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const counts = new Map<string | null, number>([[null, 0]]);
-  for (const row of driver.queryAll<{ node_id: string; count: number }>(
-    `SELECT r.node_id, COUNT(*) AS count FROM review_log r WHERE ${EFFECTIVE_REVIEW_PREDICATE} GROUP BY r.node_id`
-  )) {
+  for (const row of rows) {
     if (!byId.has(row.node_id)) continue;
     const chain: ReviewTrainingNode[] = [];
     const seen = new Set<string>();
@@ -35,7 +39,11 @@ function trainingCounts(driver: DatabaseDriver, nodes: ReviewTrainingNode[]) {
 export function readReviewTrainingPlan(driver: DatabaseDriver, libraryScope: string): ReviewTrainingPlan {
   const nodes = driver.queryAll<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
   const models = readReviewModels(driver);
-  const counts = trainingCounts(driver, nodes);
+  return createPlan(nodes, models, driver.queryAll<CountRow>(COUNTS_SQL), libraryScope);
+}
+
+function createPlan(nodes: ReviewTrainingNode[], models: ReviewTrainingModel[], rows: CountRow[], libraryScope: string) {
+  const counts = trainingCounts(rows, nodes);
   const byId = new Map(nodes.map(node => [node.id, node]));
   const depth = (id: string | null) => {
     const seen = new Set<string>();
@@ -58,19 +66,44 @@ export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string
   if (folderId !== null && (!folder || folder.kind !== 'folder' || isSpecialRootNode(folderId))) {
     throw new Error('review_training_folder_invalid');
   }
-  const events = driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(
-    `WITH RECURSIVE subtree(id) AS (
+  return createInput(group, nodes, readReviewModels(driver),
+    driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(eventsSql(folderId), folderId === null ? [] : [folderId]),
+    driver.queryAll<SettingNode>(SETTINGS_SQL), libraryScope);
+}
+
+function eventsSql(folderId: string | null) {
+  return `WITH RECURSIVE subtree(id) AS (
       SELECT id FROM nodes WHERE deleted_at IS NULL AND ${folderId === null ? 'parent_id IS NULL' : 'id = ?'}
       UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE n.deleted_at IS NULL
     ) SELECT r.node_id AS nodeId, r.op_id AS opId, r.reviewed_at AS reviewedAt, r.grade, r.kind
       FROM review_log r JOIN subtree s ON s.id = r.node_id
       WHERE r.kind = 'reset' OR (${EFFECTIVE_REVIEW_PREDICATE})
-      ORDER BY julianday(r.reviewed_at), r.op_id`, folderId === null ? [] : [folderId]
-  );
-  const settingNodes = Object.fromEntries(driver.queryAll<{ id: string; parentNodeId: string | null; enableShortTerm: number | null }>(
-    'SELECT id, parent_id AS parentNodeId, enable_short_term AS enableShortTerm FROM nodes WHERE deleted_at IS NULL'
-  ).map(node => [node.id, { ...node, enableShortTerm: node.enableShortTerm === null ? null : node.enableShortTerm === 1 }]));
+      ORDER BY julianday(r.reviewed_at), r.op_id`;
+}
+
+function createInput(group: { folderId: string | null; reviewCount: number }, nodes: ReviewTrainingNode[],
+  models: ReviewTrainingModel[], events: ReviewTrainingInput['events'], settings: SettingNode[], libraryScope: string): ReviewTrainingInput {
+  const { folderId } = group;
+  const settingNodes = Object.fromEntries(settings.map(node =>
+    [node.id, { ...node, enableShortTerm: node.enableShortTerm === null ? null : node.enableShortTerm === 1 }]));
   return { ...group, libraryScope, events,
-    baselineWeights: folderId === null ? null : resolveReviewWeights(folderId, nodes, readReviewModels(driver), false) ?? null,
+    baselineWeights: folderId === null ? null : resolveReviewWeights(folderId, nodes, models, false) ?? null,
     enableShortTerm: folderId === null ? false : resolveNodeShortTermSetting(folderId, settingNodes).value };
+}
+
+export async function readReviewTrainingPlanWithDb(db: DbPort, libraryScope: string) {
+  const nodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
+  const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+  return createPlan(nodes, models, await db.query<CountRow>(COUNTS_SQL), libraryScope);
+}
+
+export async function readReviewTrainingInputWithDb(db: DbPort, folderId: string | null, libraryScope: string) {
+  const plan = await readReviewTrainingPlanWithDb(db, libraryScope);
+  const group = plan.folders.find(folder => folder.folderId === folderId);
+  if (!group) throw new Error('review_training_threshold_not_reached');
+  const nodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
+  const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+  const events = await db.query<ReviewTrainingInput['events'][number] & Record<string, unknown>>(
+    eventsSql(folderId), folderId === null ? [] : [folderId]);
+  return createInput(group, nodes, models, events, await db.query<SettingNode>(SETTINGS_SQL), libraryScope);
 }

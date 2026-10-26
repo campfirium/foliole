@@ -4,7 +4,7 @@ import { startReviewTrainingIdle, REVIEW_TRAINING_IDLE_MS } from './reviewTraini
 import { getReviewTrainingSession, optimizeReadyReviewFolders, setReviewTrainingStudyActive } from './reviewTrainingSession';
 
 const runtime = vi.hoisted(() => ({ plan: vi.fn(), input: vi.fn(), save: vi.fn(), worker: vi.fn() }));
-vi.mock('../../../shared/platform/runtime/reviewTrainingRuntimeRepository', () => ({
+vi.mock('../../../shared/platform/desktop/reviewTrainingRuntimeRepository', () => ({
   loadReviewTrainingPlan: runtime.plan, loadReviewTrainingInput: runtime.input, saveReviewTrainingModel: runtime.save
 }));
 vi.mock('./reviewTrainingWorkerClient', () => ({ runReviewTrainingWorker: runtime.worker }));

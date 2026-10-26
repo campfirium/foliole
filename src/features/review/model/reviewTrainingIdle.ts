@@ -3,18 +3,18 @@ import { getReviewTrainingSession, optimizeReadyReviewFolders, subscribeReviewTr
 export const REVIEW_TRAINING_IDLE_MS = 30_000;
 
 /** One check per idle opportunity; data changes wake it without a database polling loop. */
-export function startReviewTrainingIdle() {
+export function startReviewTrainingIdle(isActive = () => true) {
   const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending = true;
   let idle = false;
   let previous = getReviewTrainingSession();
   const clear = () => { clearTimeout(timer); timer = undefined; };
-  const canStart = () => !abort.signal.aborted && idle && document.visibilityState !== 'hidden';
+  const canStart = () => !abort.signal.aborted && idle && isActive() && document.visibilityState !== 'hidden';
   const schedule = () => {
     clear();
     const session = getReviewTrainingSession();
-    if (abort.signal.aborted || !pending || session.studyActive || session.running || document.visibilityState === 'hidden') return;
+    if (abort.signal.aborted || !pending || !isActive() || session.studyActive || session.running || document.visibilityState === 'hidden') return;
     timer = setTimeout(() => {
       timer = undefined;
       idle = true;
@@ -37,6 +37,7 @@ export function startReviewTrainingIdle() {
   schedule();
   return {
     wake,
+    resetIdle: activity,
     dispose: () => {
       abort.abort(); clear(); unsubscribe();
       for (const event of events) window.removeEventListener(event, activity);
