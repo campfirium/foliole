@@ -1,6 +1,5 @@
 import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLinkCodec';
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
-import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
 import { contentImageReferences } from '../../../../../lib/core/sync/localContentEditResources';
@@ -94,7 +93,15 @@ export async function saveCompanionContentEditWithDb(db: DbPort, edit: Companion
 }
 
 async function requireEditableContentNode(db: DbPort, nodeId: string) {
-  const [visible] = await db.query(`${VISIBLE_NODES_CTE_SQL}
-    SELECT n.id FROM nodes n JOIN visible_nodes v ON v.id = n.id WHERE n.id = ? AND n.kind IN ('topic', 'item')`, [nodeId]);
+  const [visible] = await db.query(`WITH RECURSIVE target AS (
+    SELECT id, parent_id, deleted_at, kind FROM nodes WHERE id = ?
+  ), lineage(id, parent_id, deleted_at) AS (
+    SELECT id, parent_id, deleted_at FROM target
+    UNION
+    SELECT parent.id, parent.parent_id, parent.deleted_at FROM nodes parent
+      JOIN lineage child ON parent.id = child.parent_id
+  ) SELECT id FROM target WHERE kind IN ('topic', 'item')
+    AND NOT EXISTS (SELECT 1 FROM lineage WHERE deleted_at IS NOT NULL)
+    AND EXISTS (SELECT 1 FROM lineage WHERE parent_id IS NULL)`, [nodeId]);
   if (!visible) throw new Error('This content cannot be edited on this device.');
 }
