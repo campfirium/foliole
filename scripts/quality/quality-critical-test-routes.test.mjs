@@ -84,8 +84,7 @@ const RELEASE_WORKFLOW_CONTRACTS = [
 
 const HOSTED_QUALITY_HANDOFF_CONTRACTS = [
   'scripts/github-actions-handoff-policy.test.mjs',
-  'scripts/github-desktop-handoff-events.test.mjs',
-  'scripts/hosted-quality-repair-controller-template.test.mjs'
+  'scripts/github-desktop-handoff-events.test.mjs'
 ];
 
 describe('quality critical test routes', () => {
@@ -163,10 +162,8 @@ describe('quality critical test routes', () => {
     ], existing)).toEqual(RELEASE_WORKFLOW_CONTRACTS);
   });
 
-  it('routes hosted-quality monitor and controller changes to their shared contract set', () => {
+  it('routes hosted-quality handoff behavior changes to their shared contract set', () => {
     expect(resolveCriticalTestFiles([
-      '.agents/skills/foliole-hosted-quality-repair/SKILL.md',
-      '.codex/monitors/templates/github-actions.md',
       'scripts/github-actions-handoff-policy.mjs'
     ], existing)).toEqual(HOSTED_QUALITY_HANDOFF_CONTRACTS);
   });

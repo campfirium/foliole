@@ -12,11 +12,14 @@ export function resolveRepositoryRoot(moduleUrl = import.meta.url) {
 }
 
 const REPO_ROOT = resolveRepositoryRoot();
-const MONITOR_DIR = path.join(REPO_ROOT, '.codex', 'monitors');
+const CODEX_HOME = process.env.CODEX_HOME || path.join(os.homedir(), '.codex');
+const personalMonitorDir = (codexHome) => path.join(
+  codexHome, 'local-tools', 'desktop-handoff', 'projects', 'foliole', 'monitors'
+);
+const MONITOR_DIR = personalMonitorDir(CODEX_HOME);
 const STATE_FILE = path.join(REPO_ROOT, '.tmp', 'github-desktop-handoff-monitor', 'state.json');
 const SUBMIT_EVENT = path.join(
-  os.homedir(),
-  '.codex',
+  CODEX_HOME,
   'skills',
   'codex-desktop-handoff',
   'scripts',
@@ -40,8 +43,8 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function renderTemplate(templatePath, data) {
-  const template = fs.readFileSync(path.join(REPO_ROOT, templatePath), 'utf8');
+export function renderTemplate(templatePath, data, monitorDir = MONITOR_DIR) {
+  const template = fs.readFileSync(path.resolve(monitorDir, templatePath), 'utf8');
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => String(data[key] ?? ''));
 }
 
@@ -50,7 +53,7 @@ export function bindMonitorWorkspace(config, workspace) {
 }
 
 export function loadConfigs(options = {}) {
-  const monitorDir = options.monitorDir ?? MONITOR_DIR;
+  const monitorDir = options.monitorDir ?? personalMonitorDir(options.codexHome ?? CODEX_HOME);
   const readConfig = options.readConfig ?? readJson;
   const workspace = options.workspace ?? REPO_ROOT;
   return {

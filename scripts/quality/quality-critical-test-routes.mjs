@@ -72,8 +72,7 @@ const RELEASE_WORKFLOW_CONTRACT_TESTS = [
 
 const HOSTED_QUALITY_HANDOFF_CONTRACT_TESTS = [
   'scripts/github-actions-handoff-policy.test.mjs',
-  'scripts/github-desktop-handoff-events.test.mjs',
-  'scripts/hosted-quality-repair-controller-template.test.mjs'
+  'scripts/github-desktop-handoff-events.test.mjs'
 ];
 
 export const CRITICAL_TEST_ROUTES = [
@@ -165,8 +164,6 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.agents\/skills\/foliole-hosted-quality-repair\/(?:SKILL\.md|agents\/openai\.yaml)$/u,
-      /^\.codex\/monitors\/templates\/github-actions\.md$/u,
       /^scripts\/(?:github-actions-handoff-policy|github-desktop-handoff-events)\.mjs$/u
     ],
     tests: HOSTED_QUALITY_HANDOFF_CONTRACT_TESTS

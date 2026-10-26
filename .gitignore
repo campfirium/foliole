@@ -1,5 +1,6 @@
 .lab/
 .claude/
+.agents/
 .codex
 .DS_Store
 AGENTS.local.md

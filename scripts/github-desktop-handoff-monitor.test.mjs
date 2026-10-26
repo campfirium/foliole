@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
@@ -8,6 +11,7 @@ import {
   bindMonitorWorkspace,
   loadConfigs,
   resolveRepositoryRoot,
+  renderTemplate,
   submitMonitorEvents
 } from './github-desktop-handoff-monitor.mjs';
 
@@ -111,5 +115,44 @@ describe('github desktop handoff monitor workspace binding', () => {
       submit: () => ({ ok: true })
     });
     expect(state.prs).toEqual({ 42: '42:local' });
+  });
+});
+
+
+describe('personal GitHub monitor configuration', () => {
+  it('loads personal declarations with their current switches and binds the checkout', () => {
+    const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'handoff-config-'));
+    const monitorDir = path.join(codexHome, 'local-tools', 'desktop-handoff', 'projects', 'foliole', 'monitors');
+    try {
+      fs.mkdirSync(path.join(monitorDir, 'templates'), { recursive: true });
+      fs.writeFileSync(path.join(monitorDir, 'templates/github-actions.md'), 'Run {{runId}} in {{workspace}}');
+      fs.writeFileSync(path.join(monitorDir, 'github-actions.json'), JSON.stringify({
+        enabled: true, template: 'templates/github-actions.md', pollIntervalSeconds: 60
+      }));
+      fs.writeFileSync(path.join(monitorDir, 'github-issues.json'), JSON.stringify({ enabled: false }));
+
+      const configs = loadConfigs({ codexHome, workspace: '/current/checkout' });
+
+      expect(configs.actions).toEqual({
+        enabled: true,
+        template: 'templates/github-actions.md',
+        pollIntervalSeconds: 60,
+        workspace: '/current/checkout'
+      });
+      expect(configs.issues).toEqual({ enabled: false, workspace: '/current/checkout' });
+      expect(configs.prs).toBeNull();
+      expect(renderTemplate(configs.actions.template, {
+        runId: '123', workspace: configs.actions.workspace
+      }, monitorDir)).toBe('Run 123 in /current/checkout');
+
+      const status = JSON.parse(execFileSync(process.execPath, [
+        path.join(process.cwd(), 'scripts/github-desktop-handoff-monitor.mjs'), 'status'
+      ], { cwd: codexHome, env: { ...process.env, CODEX_HOME: codexHome }, encoding: 'utf8' }));
+      expect(status.configs.actions.enabled).toBe(true);
+      expect(status.configs.actions.workspace).toBe(process.cwd());
+      expect(status.configs.issues.enabled).toBe(false);
+    } finally {
+      fs.rmSync(codexHome, { recursive: true, force: true });
+    }
   });
 });
