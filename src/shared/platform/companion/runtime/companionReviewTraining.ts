@@ -40,6 +40,7 @@ export function loadCompanionReviewTrainingInput(folderId: string | null, librar
 export function saveCompanionReviewTrainingModel(value: ReviewTrainingModel, libraryScope: string) {
   const owner = getIosCompanionDatabaseOwner();
   const model = { ...reviewTrainingModelSchema.parse(value), trainedAt: new Date().toISOString() };
+  if (model.folderId === null) throw new Error('review_training_folder_invalid');
   return runCompanionHighValueMutationTask(() => owner.runWriter(db => db.transaction(async tx => {
     assertOwner(owner, libraryScope);
     if (model.folderId !== null) {

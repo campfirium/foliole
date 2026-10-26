@@ -78,11 +78,11 @@ test('automatically trains folder history, reports it without controls, and uses
   const settings = await openSettingsCategory(page, 'Review');
   await expect(settings.getByText(/^Recent training: Training folder/)).toBeVisible({ timeout: 60000 });
   await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toHaveCount(0);
-  await page.screenshot({ path: path.resolve('.tmp/artifacts/T505/folder-review-idle-training.png') });
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/T508/folder-review-idle-training.png') });
   const optimized = await readTrainingState(desktopApp);
   expect(optimized.states).toEqual(before.states);
-  expect(optimized.models).toHaveLength(2);
-  expect(optimized.models.find((model: { folderId: string | null }) => model.folderId === null).enabled).toBe(true);
+  expect(optimized.models).toHaveLength(1);
+  expect(optimized.models.find((model: { folderId: string | null }) => model.folderId === 'folder').enabled).toBe(true);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();

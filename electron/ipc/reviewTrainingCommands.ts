@@ -23,12 +23,14 @@ export function handleReviewTrainingCommand(command: string, args: Record<string
   if (command === NATIVE_COMMANDS.loadReviewTrainingInput) {
     const input = identity.parse(args);
     assertLibrary(input.libraryScope);
+    if (input.folderId === null) throw new Error('review_training_folder_invalid');
     return readReviewTrainingInput(openDatabaseConnection().driver, input.folderId, input.libraryScope);
   }
   if (command === NATIVE_COMMANDS.saveReviewTrainingModel) {
     const input = save.parse(args);
     assertLibrary(input.libraryScope);
     const model = { ...input.model, trainedAt: new Date().toISOString() };
+    if (model.folderId === null) throw new Error('review_training_folder_invalid');
     const driver = openDatabaseConnection().driver;
     driver.transaction(() => {
       if (model.folderId !== null) {

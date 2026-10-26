@@ -16,7 +16,7 @@ type SettingNode = { id: string; parentNodeId: string | null; enableShortTerm: n
 
 function trainingCounts(rows: CountRow[], nodes: ReviewTrainingNode[]) {
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const counts = new Map<string | null, number>([[null, 0]]);
+  const counts = new Map<string, number>();
   for (const row of rows) {
     if (!byId.has(row.node_id)) continue;
     const chain: ReviewTrainingNode[] = [];
@@ -28,7 +28,6 @@ function trainingCounts(rows: CountRow[], nodes: ReviewTrainingNode[]) {
       node = node.parentId ? byId.get(node.parentId) : undefined;
     }
     if (chain.at(-1)?.parentId) continue;
-    counts.set(null, counts.get(null)! + row.count);
     for (const ancestor of chain) if (ancestor.kind === 'folder' && !isSpecialRootNode(ancestor.id)) {
       counts.set(ancestor.id, (counts.get(ancestor.id) ?? 0) + row.count);
     }
@@ -62,21 +61,22 @@ function createPlan(nodes: ReviewTrainingNode[], models: ReviewTrainingModel[], 
 
 export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string | null,
   libraryScope: string): ReviewTrainingInput {
+  if (folderId === null) throw new Error('review_training_folder_invalid');
   const group = readReviewTrainingPlan(driver, libraryScope).folders.find(folder => folder.folderId === folderId);
   if (!group) throw new Error('review_training_threshold_not_reached');
   const nodes = driver.queryAll<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
-  const folder = folderId === null ? null : nodes.find(node => node.id === folderId);
-  if (folderId !== null && (!folder || folder.kind !== 'folder' || isSpecialRootNode(folderId))) {
+  const folder = nodes.find(node => node.id === folderId);
+  if (!folder || folder.kind !== 'folder' || isSpecialRootNode(folderId)) {
     throw new Error('review_training_folder_invalid');
   }
   return createInput(group, nodes, readReviewModels(driver),
-    driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(eventsSql(folderId), folderId === null ? [] : [folderId]),
+    driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(eventsSql(), [folderId]),
     driver.queryAll<SettingNode>(SETTINGS_SQL), libraryScope);
 }
 
-function eventsSql(folderId: string | null) {
+function eventsSql() {
   return `WITH RECURSIVE subtree(id) AS (
-      SELECT id FROM nodes WHERE deleted_at IS NULL AND ${folderId === null ? 'parent_id IS NULL' : 'id = ?'}
+      SELECT id FROM nodes WHERE deleted_at IS NULL AND id = ?
       UNION SELECT n.id FROM nodes n JOIN subtree s ON n.parent_id = s.id WHERE n.deleted_at IS NULL
     ) SELECT r.node_id AS nodeId, r.op_id AS opId, r.reviewed_at AS reviewedAt, r.grade, r.kind
       FROM review_log r JOIN subtree s ON s.id = r.node_id
@@ -84,14 +84,14 @@ function eventsSql(folderId: string | null) {
       ORDER BY julianday(r.reviewed_at), r.op_id`;
 }
 
-function createInput(group: { folderId: string | null; reviewCount: number }, nodes: ReviewTrainingNode[],
+function createInput(group: { folderId: string; reviewCount: number }, nodes: ReviewTrainingNode[],
   models: ReviewTrainingModel[], events: ReviewTrainingInput['events'], settings: SettingNode[], libraryScope: string): ReviewTrainingInput {
   const { folderId } = group;
   const settingNodes = Object.fromEntries(settings.map(node =>
     [node.id, { ...node, enableShortTerm: node.enableShortTerm === null ? null : node.enableShortTerm === 1 }]));
   return { ...group, libraryScope, events,
-    baselineWeights: folderId === null ? null : resolveReviewWeights(folderId, nodes, models, false) ?? null,
-    enableShortTerm: folderId === null ? false : resolveNodeShortTermSetting(folderId, settingNodes).value };
+    baselineWeights: resolveReviewWeights(folderId, nodes, models, false) ?? null,
+    enableShortTerm: resolveNodeShortTermSetting(folderId, settingNodes).value };
 }
 
 export async function readReviewTrainingPlanWithDb(db: DbPort, libraryScope: string) {
@@ -101,12 +101,13 @@ export async function readReviewTrainingPlanWithDb(db: DbPort, libraryScope: str
 }
 
 export async function readReviewTrainingInputWithDb(db: DbPort, folderId: string | null, libraryScope: string) {
+  if (folderId === null) throw new Error('review_training_folder_invalid');
   const plan = await readReviewTrainingPlanWithDb(db, libraryScope);
   const group = plan.folders.find(folder => folder.folderId === folderId);
   if (!group) throw new Error('review_training_threshold_not_reached');
   const nodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
   const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
   const events = await db.query<ReviewTrainingInput['events'][number] & Record<string, unknown>>(
-    eventsSql(folderId), folderId === null ? [] : [folderId]);
+    eventsSql(), [folderId]);
   return createInput(group, nodes, models, events, await db.query<SettingNode>(SETTINGS_SQL), libraryScope);
 }

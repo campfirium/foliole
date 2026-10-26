@@ -165,14 +165,15 @@ it('resolves inheritance and current folder ownership on every request without r
   expect((await adapter.grade(input)).card).toEqual(expected());
   const global = mobileReviewModel(null);
   await receiveMobileReviewModel(global);
-  expect((await adapter.grade(input)).card).toEqual(expected(global.weights));
+  await closeIosCompanionDatabase(); await openLibrary();
+  expect((await adapter.grade(input)).card).toEqual(expected());
   database!.exec("INSERT INTO nodes (id, parent_id, kind, title, created_at, updated_at) VALUES ('child', 'inbox', 'folder', 'Child', 'now', 'now'); UPDATE nodes SET parent_id='child' WHERE id='card'");
   const parent = mobileReviewModel('inbox'); parent.weights[2] = 24;
   await receiveMobileReviewModel(parent);
   await receiveMobileReviewModel({ ...mobileReviewModel('child'), enabled: false });
   expect((await adapter.grade(input)).card).toEqual(expected(parent.weights));
   database!.exec("UPDATE nodes SET parent_id=NULL WHERE id='card'");
-  expect((await adapter.grade(input)).card).toEqual(expected(global.weights));
+  expect((await adapter.grade(input)).card).toEqual(expected());
 });
 
 it('fails closed when the companion database is unavailable', async () => {

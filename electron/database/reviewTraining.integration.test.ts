@@ -45,7 +45,7 @@ it('reports the latest recorded training scope after restart even when the candi
     expect(await readReviewTrainingPlanWithDb(peer.db, 'scope')).toMatchObject(expected);
     const latest = { ...global, trainedAt: '2026-10-28T06:30:00.000Z' };
     writeSettingRecord(driver, { key: reviewModelKey(null), valueJson: JSON.stringify(latest), updatedAt: latest.trainedAt });
-    expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject({ lastTrainedAt: latest.trainedAt, lastTrainedFolderId: null });
+    expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject(expected);
   } finally { await fixture.close(); }
 });
 
@@ -90,7 +90,7 @@ it('counts valid synced facts once and keeps resets in history without counting 
   const fixture = await restoreFixture(); const peer = fixture.peer('source');
   try {
     const driver = await seedTrainingPeer(peer, 1024);
-    expect(readReviewTrainingPlan(driver, 'scope').folders.map(folder => folder.folderId)).toEqual([null, 'folder']);
+    expect(readReviewTrainingPlan(driver, 'scope').folders.map(folder => folder.folderId)).toEqual(['folder']);
     peer.sqlite.exec(`INSERT INTO review_log(id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind, voids_op_id)
       VALUES ('reset', 'reset', 'fixture', 'topic', 0, '', '2025-02-01T08:00:00Z', 'reset', NULL),
         ('void', 'void', 'fixture', 'topic', 0, '', '2025-03-01T08:00:00Z', 'void', 'sample-0')`);

@@ -3,7 +3,7 @@ import type { ReviewTrainingInput, ReviewTrainingModel } from '../core/review/tr
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 export interface ReviewTrainingPlan {
-  folders: Array<{ folderId: string | null; reviewCount: number }>;
+  folders: Array<{ folderId: string; reviewCount: number }>;
   lastTrainedAt: string | null;
   lastTrainedFolderId: string | null;
   libraryScope: string;

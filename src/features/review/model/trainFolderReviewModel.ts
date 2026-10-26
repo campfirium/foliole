@@ -6,6 +6,7 @@ import { REVIEW_TRAINING_ENGINE, type ReviewTrainingInput, type ReviewTrainingMo
 
 /** Caller initializes wasm once in its single-thread Worker. */
 export function trainFolderReviewModel(input: ReviewTrainingInput): ReviewTrainingModel {
+  if (input.folderId === null) throw new Error('review_training_folder_invalid');
   const histories = prepareTrainingHistory(input.events);
   const cutoff = reviewTrainingCutoff(input.events);
   const baseWeights = input.baselineWeights ?? Array.from(DEFAULT_PARAMETERS());

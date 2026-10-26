@@ -84,20 +84,17 @@ it.each(['android', 'ios'] as const)('trains from %s owner facts, saves canonica
   const driver = createBetterSqlite3Driver(sqlite!);
   const before = sqlite!.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   const plan = await loadReviewTrainingPlan();
-  expect(plan.folders.map(row => row.folderId)).toEqual([null, 'folder']);
+  expect(plan.folders.map(row => row.folderId)).toEqual(['folder']);
   expect(plan.folders).toEqual(readReviewTrainingPlan(driver, plan.libraryScope).folders);
-  const globalInput = await loadReviewTrainingInput(null, plan.libraryScope);
-  expect(globalInput).toEqual(readReviewTrainingInput(driver, null, plan.libraryScope));
-  const global = train(globalInput); expect(global.enabled).toBe(true);
-  await saveReviewTrainingModel(global, plan.libraryScope);
   const folderInput = await loadReviewTrainingInput('folder', plan.libraryScope);
-  expect(folderInput.baselineWeights).toEqual(global.weights);
+  const model = train(folderInput); expect(model.enabled).toBe(true);
+  expect(folderInput.baselineWeights).toBeNull();
   expect(folderInput).toEqual(readReviewTrainingInput(driver, 'folder', plan.libraryScope));
   await saveReviewTrainingModel(train(folderInput), plan.libraryScope);
   expect((await loadReviewTrainingPlan()).folders).toEqual([]);
   expect(sqlite!.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(before);
   expect(sqlite!.prepare("SELECT object_id, sync_dirty FROM sync_object_state WHERE object_type='setting' ORDER BY object_id").all())
-    .toEqual([reviewModelKey('folder'), reviewModelKey(null)].sort().map(key => ({ object_id: `user_space:windows:desktop:*:${key}`, sync_dirty: 1 })));
+    .toEqual([reviewModelKey('folder')].sort().map(key => ({ object_id: `user_space:windows:desktop:*:${key}`, sync_dirty: 1 })));
   await closeIosCompanionDatabase(); await open(platform);
   const events = sqlite!.prepare("SELECT * FROM review_log WHERE node_id='topic'").all().map(row => identityReviewRowSchema.parse(row));
   const now = '2026-10-26T12:00:00.000Z';
@@ -113,7 +110,7 @@ it.each(['android', 'ios'] as const)('trains from %s owner facts, saves canonica
   expect(expected).not.toEqual(recomputeReview(allEvents, DEFAULT_REVIEW_SCHEDULER_SETTINGS));
   expect(result.card.stability).toBe(expected.stability);
   const staleScope = plan.libraryScope;
-  await expect(saveReviewTrainingModel(global, staleScope)).rejects.toThrow('review_training_library_changed');
+  await expect(saveReviewTrainingModel(model, staleScope)).rejects.toThrow('review_training_library_changed');
   await expect(loadReviewTrainingInput('folder', staleScope)).rejects.toThrow('review_training_library_changed');
 });
 
@@ -134,10 +131,10 @@ it('exports a phone-trained model through production request/framed sync into an
         VALUES ('group',?,?,?,?,'android','active','now','now')`, [id, id, `/${id}`, id]);
     });
     const plan = await loadReviewTrainingPlan();
-    await saveReviewTrainingModel(train(await loadReviewTrainingInput(null, plan.libraryScope)), plan.libraryScope);
+    await saveReviewTrainingModel(train(await loadReviewTrainingInput('folder', plan.libraryScope)), plan.libraryScope);
     const before = desktop.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
     const difference = compareFramedSyncInventories({ local: await readIosCompanionDatabase(readRequestSyncInventorySnapshot), remote: [] })
-      .find(row => row.objectType === 'setting' && row.globalId.endsWith(`:${reviewModelKey(null)}`))!;
+      .find(row => row.objectType === 'setting' && row.globalId.endsWith(`:${reviewModelKey('folder')}`))!;
     await withRequestSyncFiles(desktop.host.files, async request => {
       await readIosCompanionDatabase(db => writeRequestSyncSnapshot(db, { ...difference, direction: 'local_to_remote' }, request));
       await desktop.db.transaction(tx => applyRequestSyncObject(tx, {
@@ -159,17 +156,20 @@ it('exports a phone-trained model through production request/framed sync into an
 it('honors the same effective-fact threshold and rejects invalid saves without changing models', async () => {
   root = mkdtempSync(path.join(os.tmpdir(), 'mobile-training-threshold-')); await open('android'); seed();
   sqlite!.prepare("DELETE FROM review_log WHERE CAST(substr(op_id,8) AS INTEGER) >= 1024").run();
-  let plan = await loadReviewTrainingPlan(); expect(plan.folders).toHaveLength(2);
+  let plan = await loadReviewTrainingPlan(); expect(plan.folders).toHaveLength(1);
   sqlite!.exec(`INSERT INTO review_log(id,op_id,host_name,node_id,grade,scheduler_version,reviewed_at,kind,voids_op_id)
     VALUES ('void','void','fixture','topic',0,'','2026-10-26T08:00:00Z','void','sample-0'),
     ('reset','reset','fixture','topic',0,'','2026-10-26T08:00:00Z','reset',NULL)`);
   expect((await loadReviewTrainingPlan()).folders).toEqual([]);
-  await expect(loadReviewTrainingInput(null, plan.libraryScope)).rejects.toThrow('review_training_threshold_not_reached');
+  await expect(loadReviewTrainingInput('folder', plan.libraryScope)).rejects.toThrow('review_training_threshold_not_reached');
   sqlite!.prepare("DELETE FROM review_log WHERE op_id='void'").run(); plan = await loadReviewTrainingPlan();
-  const input = await loadReviewTrainingInput(null, plan.libraryScope);
+  const input = await loadReviewTrainingInput('folder', plan.libraryScope);
   expect(input.reviewCount).toBe(1024); expect(input.events.some(row => row.kind === 'reset')).toBe(true);
   const model = train(input);
-  await expect(saveReviewTrainingModel({ ...model, weights: [] }, plan.libraryScope)).rejects.toThrow();
+  expect(() => train({ ...input, folderId: null })).toThrow('review_training_folder_invalid');
+  await expect(loadReviewTrainingInput(null, plan.libraryScope)).rejects.toThrow('review_training_folder_invalid');
+  await expect(async () => saveReviewTrainingModel({ ...model, weights: [] }, plan.libraryScope)).rejects.toThrow();
+  await expect(async () => saveReviewTrainingModel({ ...model, folderId: null }, plan.libraryScope)).rejects.toThrow('review_training_folder_invalid');
   await expect(saveReviewTrainingModel({ ...model, folderId: 'missing' }, plan.libraryScope)).rejects.toThrow('review_training_folder_invalid');
   expect(readReviewModels(createBetterSqlite3Driver(sqlite!))).toEqual([]);
 });
@@ -208,10 +208,10 @@ it('runs automatic idle through production worker code, the real engine, and the
     await vi.advanceTimersByTimeAsync(1);
     await done;
     const models = readReviewModels(createBetterSqlite3Driver(sqlite!));
-    expect(models.map(model => model.folderId).sort()).toEqual(['folder', null]);
-    expect(models.find(model => model.folderId === null)?.enabled).toBe(true);
+    expect(models.map(model => model.folderId).sort()).toEqual(['folder']);
+    expect(models.find(model => model.folderId === 'folder')?.enabled).toBe(true);
     expect(sqlite!.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(before);
     expect((await loadReviewTrainingPlan()).folders).toEqual([]);
-    expect(stopped).toBe(2);
+    expect(stopped).toBe(1);
   } finally { unsubscribe(); idle.dispose(); vi.unstubAllGlobals(); }
 });

@@ -17,7 +17,8 @@ export function parseReviewModels(rows: readonly { key: string; value_json: stri
   const seen = new Set<string>();
   const models: ReviewTrainingModel[] = [];
   for (const row of rows) {
-    if (seen.has(row.key)) continue;
+    // Retired global settings remain syncable history, never active models.
+    if (row.key === reviewModelKey(null) || seen.has(row.key)) continue;
     seen.add(row.key);
     const model = reviewTrainingModelSchema.parse(JSON.parse(row.value_json));
     if (reviewModelKey(model.folderId) !== row.key) throw new Error('review_model_folder_mismatch');

@@ -55,6 +55,5 @@ export function resolveReviewWeights(nodeId: string | null, nodes: readonly Revi
     if (node.kind === 'folder' && model?.enabled) return model.weights;
     id = node.parentId;
   }
-  const global = modelById.get(null);
-  return global?.enabled ? global.weights : undefined;
+  return undefined;
 }
