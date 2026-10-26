@@ -59,14 +59,22 @@ export function recomputeNodeReview(driver: DatabaseDriver, nodeId: string) {
 
 /** Caller owns the application transaction, including the fact insert and this projection. */
 export async function recomputeNodeReviewWithDb(db: DbPort, nodeId: string) {
-  const events = (await db.query(EVENTS, [nodeId])).map(row => identityReviewRowSchema.parse(row));
+  const { events, parameters } = await readNodeReviewHistoryWithDb(db, nodeId);
   const [initial] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
-  const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
-  const modelNodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_ANCESTORS_SQL, [nodeId]);
-  const card = recomputeReview(events, { ...parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])),
-    weights: resolveReviewWeights(nodeId, modelNodes, models) })
+  const card = recomputeReview(events, parameters)
     ?? ungradedInitialReviewCard(initial?.initial_review_due, events);
   if (card) await db.run(UPSERT_NODE_REVIEW_SQL, values(nodeId, card));
   else await db.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
   return card;
+}
+
+/** Read through the caller's database owner so scheduling and durable projection share parameters. */
+export async function readNodeReviewHistoryWithDb(db: DbPort, nodeId: string) {
+  const events = (await db.query(EVENTS, [nodeId])).map(row => identityReviewRowSchema.parse(row));
+  const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+  const modelNodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_ANCESTORS_SQL, [nodeId]);
+  return { events, parameters: {
+    ...parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])),
+    weights: resolveReviewWeights(nodeId, modelNodes, models)
+  } };
 }

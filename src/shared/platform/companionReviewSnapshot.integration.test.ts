@@ -17,10 +17,15 @@ import { createBetterSqlite3Driver } from '../../../electron/database/betterSqli
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/desktopResourceSchemaStatements';
 import { loadWorkspaceListSnapshot } from '../../../lib/core/database/workspaceListSnapshot';
 import { createLocalReviewSchedulerAdapter } from '../../../lib/core/review/localSchedulerAdapter';
+import { recomputeReview, type ReviewEvent } from '../../../lib/core/review/recomputeReview';
+import { normalizeScheduledCardDue } from '../../../lib/core/review/reviewDayBoundary';
+import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../../lib/core/review/settings';
 import { createInitialSchedulerCard } from '../../../lib/core/review/types';
 import { gradeCompanionReviewCard } from '../../companion/companionReviewSession';
 import { persistCompanionReviewSyncObject } from '../../companion/companionReviewSyncPersistence';
+import { createReviewSchedulerAdapter } from '../../features/review/model/reviewSchedulerFactory';
 import { toNodeReviewProfile, toSchedulerCard } from '../../features/review/model/reviewTypes';
+import { mobileReviewModel, receiveMobileReviewModel } from '../../test/companionReviewTraining.testSupport';
 
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase
@@ -115,4 +120,85 @@ it.each([1, 2, 3, 4] as const)('rebuilds mobile grading from its recorded histor
     card: createInitialSchedulerCard(now), grade, now })).card);
   expect(desktopSnapshot().nodesById.card?.review).toEqual(rebuilt);
   expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(rebuilt);
+});
+
+function seedMobileHistory() {
+  const events: ReviewEvent[] = [1, 2, 3].map((day, index) => ({ op_id: `history-${day}`,
+    reviewed_at: `2026-05-0${day}T12:00:00.000Z`, grade: index === 0 ? 3 : 1,
+    kind: 'review', voids_op_id: null }));
+  const insert = database!.prepare(`INSERT INTO review_log
+    (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind, voids_op_id)
+    VALUES (?, ?, 'fixture', 'card', ?, '', ?, ?, ?)`);
+  for (const event of events) insert.run(event.op_id, event.op_id, event.grade, event.reviewed_at, event.kind, event.voids_op_id);
+  return events;
+}
+
+it.each([1, 2, 3, 4] as const)('uses received folder parameters immediately and after saving grade %s and reopening', async grade => {
+  const events = seedMobileHistory();
+  const before = database!.prepare('SELECT * FROM node_review').all();
+  const model = mobileReviewModel('inbox');
+  await receiveMobileReviewModel(model);
+  expect(database!.prepare('SELECT * FROM node_review').all()).toEqual(before);
+  await closeIosCompanionDatabase(); await openLibrary();
+  const now = '2026-05-04T12:00:00.000Z';
+  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  const actual = await gradeCompanionReviewCard({ grade, nodeId: 'card', now, snapshot });
+  const next = [...events, { op_id: '~preview', kind: 'review' as const, grade, reviewed_at: now, voids_op_id: null }];
+  const expected = recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights: model.weights })!;
+  const normalized = normalizeScheduledCardDue({ card: expected, reviewedAt: now,
+    newDayStartsAtHour: DEFAULT_REVIEW_SCHEDULER_SETTINGS.newDayStartsAtHour });
+  expect(actual!.reviewLog.cardAfter).toEqual(normalized);
+  expect(expected).not.toEqual(recomputeReview(next, DEFAULT_REVIEW_SCHEDULER_SETTINGS));
+  expect(database!.prepare('SELECT * FROM node_review').all()).toEqual(before);
+  await persistCompanionReviewSyncObject({ itemKind: 'fsrs', nodeId: 'card', snapshot: actual!.snapshot, reviewLog: actual!.reviewLog });
+  await closeIosCompanionDatabase(); await openLibrary();
+  expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot!.nodesById.card!.review).toEqual(toNodeReviewProfile(expected));
+});
+
+it('resolves inheritance and current folder ownership on every request without retraining', async () => {
+  const events = seedMobileHistory();
+  const adapter = createReviewSchedulerAdapter();
+  const now = '2026-05-04T12:00:00.000Z';
+  const input = { nodeId: 'card', card: createInitialSchedulerCard(now), now, grade: 3 as const };
+  const next = [...events, { op_id: '~preview', kind: 'review' as const, grade: 3, reviewed_at: now, voids_op_id: null }];
+  const expected = (weights?: number[]) => recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights });
+  expect((await adapter.grade(input)).card).toEqual(expected());
+  const global = mobileReviewModel(null);
+  await receiveMobileReviewModel(global);
+  expect((await adapter.grade(input)).card).toEqual(expected(global.weights));
+  database!.exec("INSERT INTO nodes (id, parent_id, kind, title, created_at, updated_at) VALUES ('child', 'inbox', 'folder', 'Child', 'now', 'now'); UPDATE nodes SET parent_id='child' WHERE id='card'");
+  const parent = mobileReviewModel('inbox'); parent.weights[2] = 24;
+  await receiveMobileReviewModel(parent);
+  await receiveMobileReviewModel({ ...mobileReviewModel('child'), enabled: false });
+  expect((await adapter.grade(input)).card).toEqual(expected(parent.weights));
+  database!.exec("UPDATE nodes SET parent_id=NULL WHERE id='card'");
+  expect((await adapter.grade(input)).card).toEqual(expected(global.weights));
+});
+
+it('fails closed when the companion database is unavailable', async () => {
+  const adapter = createReviewSchedulerAdapter();
+  await closeIosCompanionDatabase();
+  const now = '2026-05-04T12:00:00.000Z';
+  await expect(adapter.grade({ nodeId: 'card', card: createInitialSchedulerCard(now), now, grade: 3 })).rejects.toThrow('not ready');
+});
+
+it('replays reset and void facts with the current inherited retention and weights', async () => {
+  const events = seedMobileHistory();
+  database!.exec(`INSERT INTO review_log (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind, voids_op_id)
+    VALUES ('reset', 'reset', 'fixture', 'card', 0, '', '2026-05-02T13:00:00Z', 'reset', NULL),
+      ('void', 'void', 'fixture', 'card', 0, '', '2026-05-03T13:00:00Z', 'void', 'history-3');
+    UPDATE nodes SET desired_retention=0.97 WHERE id='inbox'`);
+  const model = mobileReviewModel('inbox'); await receiveMobileReviewModel(model);
+  const actualEvents = [...events,
+    { op_id: 'reset', grade: 0, kind: 'reset' as const, reviewed_at: '2026-05-02T13:00:00Z', voids_op_id: null },
+    { op_id: 'void', grade: 0, kind: 'void' as const, reviewed_at: '2026-05-03T13:00:00Z', voids_op_id: 'history-3' }];
+  const now = '2026-05-04T12:00:00.000Z';
+  const adapter = createReviewSchedulerAdapter();
+  const input = { nodeId: 'card', card: createInitialSchedulerCard(now), now };
+  const next = { op_id: '~preview', kind: 'review' as const, grade: 3, reviewed_at: now, voids_op_id: null };
+  const expected = recomputeReview([...actualEvents, next], { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
+    weights: model.weights, desiredRetention: 0.97 });
+  expect((await adapter.grade({ ...input, grade: 3 })).card).toEqual(expected);
+  expect((await adapter.preview(input)).Good.card).toEqual(expected);
+  expect(expected?.reps).toBe(1);
 });

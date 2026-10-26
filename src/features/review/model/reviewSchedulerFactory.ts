@@ -1,8 +1,9 @@
+import { createCompanionReviewSchedulerAdapter } from '../../../shared/platform/companion/reviewSchedulerAdapter';
 import { createDesktopRuntimeReviewSchedulerAdapter } from '../../../shared/platform/reviewSchedulerRuntimeAdapter';
 
 import { createLocalReviewSchedulerAdapter } from './localReviewSchedulerAdapter';
 import type { ReviewSchedulerAdapter } from './reviewTypes';
 
 export function createReviewSchedulerAdapter(): ReviewSchedulerAdapter {
-  return createDesktopRuntimeReviewSchedulerAdapter() ?? createLocalReviewSchedulerAdapter();
+  return createDesktopRuntimeReviewSchedulerAdapter() ?? createCompanionReviewSchedulerAdapter() ?? createLocalReviewSchedulerAdapter();
 }
