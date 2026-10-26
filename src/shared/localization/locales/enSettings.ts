@@ -225,4 +225,10 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.documentMenu.separatorBefore': 'Show separator before {label}',
   'settings.documentMenu.show': 'Show {label}',
   'settings.documentMenu.title': 'Editor menu',
+  'settings.review.optimization': 'Review optimization',
+  'settings.review.optimizeNow': 'Optimize now',
+  'settings.review.optimizing': 'Optimizing…',
+  'settings.review.optimizationDescription': 'Adjust review timing for folders with enough new review history.',
+  'settings.review.lastOptimization': 'Last optimization: {time}',
+  'settings.review.optimizationFailed': 'Optimization could not finish. Try again.',
 } as const;

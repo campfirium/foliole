@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { setReviewTrainingStudyActive } from '../../features/review/model/reviewTrainingSession';
 
 import type { StartStudyModeOptions } from './reviewModeSessionActions';
 import {
@@ -20,6 +22,7 @@ export function useStudyMode({ canStartStudyMode, onBlockedStart }: UseStudyMode
   const [isStudyMode, setIsStudyMode] = useState(
     () => import.meta.env.DEV && canStartStudyMode && isDevReviewStatusBarPersistenceEnabled() && isDevReviewStatusBarOpen()
   );
+  useEffect(() => { setReviewTrainingStudyActive(isStudyMode); }, [isStudyMode]);
   const setStudyMode = (next: boolean) => {
     setIsStudyMode(next);
     if (isDevReviewStatusBarPersistenceEnabledState) {

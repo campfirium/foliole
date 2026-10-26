@@ -10,7 +10,8 @@ import {
   asIntegerInRange,
   asLiteralUnion,
   asNullableString,
-  asTimestamp
+  asTimestamp,
+  asString
 } from './commandParsers.js';
 
 const REVIEW_RATINGS = ['Again', 'Hard', 'Good', 'Easy'] as const;
@@ -46,6 +47,7 @@ function parseDesiredRetention(value: unknown, field: string) {
 function parseReviewRequest(value: unknown, field: string) {
   const request = asObject(value, field);
   return {
+    ...(request.nodeId === undefined ? {} : { nodeId: asString(request.nodeId, `${field}.nodeId`) }),
     card: parseSchedulerCard(request.card, `${field}.card`),
     ...(request.desiredRetention === undefined ? {}
       : { desiredRetention: parseDesiredRetention(request.desiredRetention, `${field}.desiredRetention`) }),

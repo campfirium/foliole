@@ -7,6 +7,7 @@ import { parseReviewGradeArgs, parseReviewPreviewArgs } from './commandParserRev
 import { asString } from './commandParsers.js';
 import type { InvokeRequest } from './contracts.js';
 import { reviewGrade, reviewPreview } from './review.js';
+import { handleReviewTrainingCommand } from './reviewTrainingCommands.js';
 
 export async function handleReviewCommand(request: InvokeRequest) {
   const args = (request.args ?? {}) as Record<string, unknown>;
@@ -22,6 +23,10 @@ export async function handleReviewCommand(request: InvokeRequest) {
   }
   if (request.command === NATIVE_COMMANDS.reviewPreview) {
     return runWithDatabaseConnectionOwner(() => reviewPreview(parseReviewPreviewArgs(args)));
+  }
+  if ([NATIVE_COMMANDS.loadReviewTrainingPlan, NATIVE_COMMANDS.loadReviewTrainingInput, NATIVE_COMMANDS.saveReviewTrainingModel]
+    .some(command => command === request.command)) {
+    return runWithDatabaseConnectionOwner(() => handleReviewTrainingCommand(request.command, args));
   }
   return undefined;
 }

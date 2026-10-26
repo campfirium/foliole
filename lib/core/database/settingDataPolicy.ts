@@ -1,3 +1,5 @@
+import { isReviewModelKey } from '../review/trainingModel.js';
+
 export type SettingScope = 'host' | 'local_only' | 'session_resume' | 'user_space';
 export type DataRecovery = 'saved' | 'regenerated';
 
@@ -39,6 +41,8 @@ export const WORKSPACE_SETTING_KEYS = groups.filter((group) => group.scope === '
   .flatMap((group) => group.keys);
 
 export function resolveSettingDataPolicy(key: string) {
+  if (isReviewModelKey(key)) return { declared: true, scope: 'user_space' as const,
+    ownership: 'workspace' as const, recovery: 'regenerated' as const };
   const group = groups.find((candidate) => candidate.keys.includes(key));
   return { declared: Boolean(group), scope: group?.scope ?? 'host',
     ownership: group?.scope === 'user_space' ? 'workspace' as const : 'device' as const,

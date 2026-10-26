@@ -31,3 +31,13 @@ it.each([0, 1, -0.5, NaN, Infinity, '0.9', null])('rejects invalid retention at 
   expect(() => parseReviewGradeArgs({ request })).toThrow('request.desiredRetention');
   expect(() => parseReviewPreviewArgs({ request })).toThrow('request.desiredRetention');
 });
+
+it('preserves node identity for folder parameters and rejects malformed identities', () => {
+  const request = { card, now, rating: 'Good', nodeId: 'folder-item' };
+  expect(parseReviewGradeArgs({ request }).request.nodeId).toBe('folder-item');
+  expect(parseReviewPreviewArgs({ request }).request.nodeId).toBe('folder-item');
+  for (const nodeId of [null, 5, {}]) {
+    expect(() => parseReviewGradeArgs({ request: { ...request, nodeId } })).toThrow('request.nodeId');
+    expect(() => parseReviewPreviewArgs({ request: { ...request, nodeId } })).toThrow('request.nodeId');
+  }
+});

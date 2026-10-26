@@ -15,6 +15,7 @@ import {
 const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')}`;
 
 export interface ReviewSchedulerSettings {
+  weights?: number[] | undefined;
   algorithm: string;
   desiredRetention: number;
   maximumIntervalDays: number;
@@ -155,6 +156,7 @@ export function createReviewSchedulerParameters(
 ) {
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return generatorParameters({
+    ...(settings.weights ? { w: settings.weights } : {}),
     request_retention: clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention),
     maximum_interval: settings.maximumIntervalDays,
     enable_fuzz: true,
@@ -165,6 +167,7 @@ export function createReviewSchedulerParameters(
 export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSettings) {
   return [
     settings.algorithm,
+    ...(settings.weights ? [settings.weights.join(',')] : []),
     settings.desiredRetention.toFixed(2),
     settings.maximumIntervalDays,
     settings.newDayStartsAtHour,
@@ -185,6 +188,7 @@ export function getReviewSchedulerVersion(
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return [
     settings.algorithm,
+    ...(settings.weights ? [settings.weights.join(',')] : []),
     `dr=${clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention).toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,
     `ds=${settings.newDayStartsAtHour}`,

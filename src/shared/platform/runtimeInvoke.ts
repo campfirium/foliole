@@ -11,6 +11,7 @@ export type RuntimeInvoke = NativeInvoke;
 const WORKSPACE_WRITE_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.importRemoteImageAttachment,
   NATIVE_COMMANDS.applyReviewGrade,
+  NATIVE_COMMANDS.saveReviewTrainingModel,
   NATIVE_COMMANDS.createFolder,
   NATIVE_COMMANDS.createItem,
   NATIVE_COMMANDS.createPdfImageExcerpt,

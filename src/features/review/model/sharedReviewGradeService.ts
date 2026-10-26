@@ -61,6 +61,7 @@ export async function gradeSharedFsrsReviewNode(args: {
   const retention = resolveNodeDesiredRetentionSetting(args.nodeId, args.nodesById);
   const overrides = { enableShortTerm, ...(retention.source === 'default' ? {} : { desiredRetention: retention.value }) };
   const gradeResult = await args.scheduler.grade({
+    nodeId: args.nodeId,
     card: cardBefore,
     ...overrides,
     grade: args.grade,

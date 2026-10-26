@@ -3,6 +3,9 @@ import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContrac
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 
 export const NATIVE_COMMANDS = {
+  loadReviewTrainingPlan: 'load_review_training_plan',
+  loadReviewTrainingInput: 'load_review_training_input',
+  saveReviewTrainingModel: 'save_review_training_model',
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
   ...NATIVE_DATABASE_UPGRADE_COMMANDS,

@@ -26,6 +26,7 @@ import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearc
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type { NativeReviewCalendarHistory, NativeReviewCalendarHistoryArgs } from './nativeReviewCalendarContract.js';
+import type { NativeReviewTrainingCommandMap } from './nativeReviewTrainingContract.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
 import type { NativeSplitTopicPreferencesCommandMap } from './nativeSplitTopicPreferencesContract.js';
 import type {
@@ -60,7 +61,7 @@ export type * from './nativeAssistantImageContract.js';
 export type * from './nativeAssistantModelSettingsContract.js';
 export type * from './nativeBackupSearchContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeGuidedSampleCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
+export type NativeCommandMap = NativeReviewTrainingCommandMap & NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeGuidedSampleCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

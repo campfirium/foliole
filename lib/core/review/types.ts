@@ -14,6 +14,7 @@ export interface SchedulerCard {
 }
 
 export interface SchedulerGradeInput {
+  nodeId?: string;
   desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
@@ -22,6 +23,7 @@ export interface SchedulerGradeInput {
 }
 
 export interface SchedulerPreviewInput {
+  nodeId?: string;
   desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;

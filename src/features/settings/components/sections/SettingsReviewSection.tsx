@@ -2,6 +2,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { SettingsSection } from '../../../../shared/ui';
 import { useReviewSchedulerSettings } from '../../context/ReviewSchedulerSettingsProvider';
 
+import { ReviewOptimizationRow } from './ReviewOptimizationRow';
 import { PushQueueRows, SchedulerCoreRows } from './SettingsReviewRows';
 
 export function SettingsReviewSection() {
@@ -21,6 +22,7 @@ export function SettingsReviewSection() {
         onNewDayStartsAtHourChange={reviewSettings.onNewDayStartsAtHourChange}
         onNewItemLoadBalancingDaysChange={reviewSettings.onNewItemLoadBalancingDaysChange}
       />
+      <ReviewOptimizationRow />
       <PushQueueRows
         defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
         onDefaultPriorityChange={reviewSettings.onDefaultPriorityChange}

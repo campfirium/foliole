@@ -234,6 +234,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "0.45.4",
     "electron-updater": "6.8.10",
+    "fsrs-browser": "6.6.0",
     "katex": "0.19.0",
     "liquidjs": "10.30.0",
     "lucide-react": "^0.577.0",

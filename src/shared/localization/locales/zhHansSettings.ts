@@ -227,4 +227,10 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.documentMenu.separatorBefore': '在 {label} 前显示分割线',
   'settings.documentMenu.show': '显示 {label}',
   'settings.documentMenu.title': '编辑器菜单',
+  'settings.review.optimization': '复习优化',
+  'settings.review.optimizeNow': '立即优化',
+  'settings.review.optimizing': '正在优化…',
+  'settings.review.optimizationDescription': '根据新增复习记录，为数据充足的文件夹优化复习安排。',
+  'settings.review.lastOptimization': '上次优化：{time}',
+  'settings.review.optimizationFailed': '优化未能完成，请重试。',
 };

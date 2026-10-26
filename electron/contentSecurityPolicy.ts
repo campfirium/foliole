@@ -13,7 +13,7 @@ const MAIN_WINDOW_CSP = [
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
-  "script-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: file: foliole-asset: ${EXT_DOC_IMAGE_PROTOCOL_SOURCE} ${REMOTE_IMAGE_PROTOCOL_SOURCE}`,
   "font-src 'self' data:",
@@ -33,7 +33,7 @@ const MAIN_WINDOW_DEV_CSP = MAIN_WINDOW_CSP
     `img-src 'self' data: blob: file: foliole-asset: ${EXT_DOC_IMAGE_PROTOCOL_SOURCE} ${REMOTE_IMAGE_PROTOCOL_SOURCE} http://localhost:* http://127.0.0.1:*`
   )
   .replace(
-    "script-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:* http://127.0.0.1:*"
   )
   .replace(

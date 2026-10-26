@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { normalizeScheduledCardDue } from '../../../lib/core/review/reviewDayBoundary.js';
 import { resolveNodeDesiredRetentionSetting, resolveNodeShortTermSetting } from '../../features/nodes/model/nodeReviewSettings';
 import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
 import { createReviewSchedulerAdapter } from '../../features/review/model/reviewSchedulerFactory';
+import { getReviewTrainingSession, subscribeReviewTrainingSession } from '../../features/review/model/reviewTrainingSession';
 import { toSchedulerCard, type SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 
@@ -57,6 +58,7 @@ function normalizePreviewDue(result: SchedulerPreviewResult, newDayStartsAtHour:
 
 export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewResult | null {
   const [preview, setPreview] = useState<SchedulerPreviewResult | null>(null);
+  const { revision } = useSyncExternalStore(subscribeReviewTrainingSession, getReviewTrainingSession);
   const scheduler = useMemo(() => createReviewSchedulerAdapter(), []);
   const requestKeyRef = useRef('');
   const cardSignature = buildCardSignature(args.reviewProfile);
@@ -77,7 +79,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
 
     const now = new Date().toISOString();
     const card = toSchedulerCard(args.reviewProfile, now);
-    const requestKey = `${args.currentNodeId}:${args.previewSeed}:${desiredRetention}:${enableShortTerm ? 'st1' : 'st0'}:${cardSignature}`;
+    const requestKey = `${args.currentNodeId}:${args.previewSeed}:${desiredRetention}:${enableShortTerm ? 'st1' : 'st0'}:${cardSignature}:${revision}`;
     if (requestKeyRef.current === requestKey) {
       return;
     }
@@ -86,7 +88,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
 
     let isActive = true;
     void scheduler
-      .preview({ card, desiredRetention, enableShortTerm, now })
+      .preview({ nodeId: args.currentNodeId, card, desiredRetention, enableShortTerm, now })
       .then((result) => {
         if (isActive) {
           setPreview(normalizePreviewDue(result, getCurrentReviewSchedulerSettings().newDayStartsAtHour));
@@ -101,7 +103,7 @@ export function useReviewPreview(args: UseReviewPreviewArgs): SchedulerPreviewRe
     return () => {
       isActive = false;
     };
-  }, [args.currentNodeId, args.isAnswerRevealed, args.isReviewSchedulerSettingsReady, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, desiredRetention, enableShortTerm, scheduler]);
+  }, [args.currentNodeId, args.isAnswerRevealed, args.isReviewSchedulerSettingsReady, args.isStudyMode, args.previewSeed, args.reviewProfile, cardSignature, desiredRetention, enableShortTerm, revision, scheduler]);
 
   return preview;
 }

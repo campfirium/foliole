@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { refreshReviewTrainingParameters } from '../../features/review/model/reviewTrainingSession';
 import { hydrateRuntimeSystemEntryDisplayNames } from '../../shared/platform/desktop/systemEntryDisplayNamesRuntimeRepository';
 import {
   onWorkspaceContentChanged,
@@ -35,6 +36,7 @@ export function useWorkspaceSyncAppliedRefresh() {
     let unlisten: (() => void) | null = null;
     void onWorkspaceSyncApplied((payload) => {
       if (!disposed) {
+        if (payload.appliedObjectIds.some(id => id.includes(':review_training/'))) refreshReviewTrainingParameters();
         if (payload.workspaceScope && payload.libraryScope) {
           requestWorkspaceSyncRefresh(payload.workspaceScope, payload.libraryScope);
         } else if (syncAppliedChangesWorkspace(payload)) requestWorkspaceStateRefresh('sync-applied');
