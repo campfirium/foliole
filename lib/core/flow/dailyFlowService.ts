@@ -40,7 +40,7 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
     }
     const session = prepareFlowSession(snapshot, args, settings, seed);
     const saved = await writeDailyFlow(tx, { dayKey, mode: args.mode, settingsKey,
-      now: args.now, revision: (stored?.revision ?? 0) + 1, session, ...(candidates ? { candidateIds: candidates } : {}) });
+      now: args.now, revision: (stored?.revision ?? 0) + 1, session, previousEntries: stored?.entries ?? [], ...(candidates ? { candidateIds: candidates } : {}) });
     return { session: saved, nodes: receiptNodes(snapshot, [saved.currentNodeId, args.seed?.currentNodeId]) };
   });
 }
@@ -78,7 +78,7 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     if (stored.invalidated && !args.grade) session = prepareFlowSession(updated,
       { now: args.now, mode }, settings, session);
     const saved = await writeDailyFlow(tx, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
-      now: args.now, revision: stored.revision + 1, session,
+      now: args.now, revision: stored.revision + 1, session, previousEntries: stored.entries,
       ...(stored.invalidated ? { candidateIds: fullDayCandidates(updated, args.now, settings) } : {}) });
     await tx.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json) VALUES (?, ?, ?, ?)',
       [args.opId, hash, saved.daily!.revision, result.card === undefined ? null : JSON.stringify(result.card)]);

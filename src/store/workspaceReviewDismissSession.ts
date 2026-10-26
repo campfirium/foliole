@@ -23,8 +23,9 @@ export function buildNextDismissReviewSession(args: {
     nodesById: args.nextNodesById,
     releaseCurrentPin: true
   });
-  const nextNodeId = remainingQueueNodeIds[0] ?? nextQueue.currentNodeId ?? soonNodeIds[0] ?? null;
-  const nextSoonNodeIds = remainingQueueNodeIds.length > 0 || nextQueue.currentNodeId ? soonNodeIds : soonNodeIds.slice(1);
+  const queueNodeId = remainingQueueNodeIds[0] ?? (soonNodeIds.length ? null : nextQueue.currentNodeId);
+  const nextNodeId = queueNodeId ?? soonNodeIds[0] ?? null;
+  const nextSoonNodeIds = queueNodeId ? soonNodeIds : soonNodeIds.slice(1);
   const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
   const readingElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
   const readTopicDelta = args.snapshot.reviewSession.queueNodeIds.includes(args.currentNodeId) ? 1 : 0;
@@ -34,7 +35,7 @@ export function buildNextDismissReviewSession(args: {
       ? advanceReviewSession(args.snapshot.reviewSession, {
           handledAt: args.now,
           nextNodeId,
-          queueNodeIds: remainingQueueNodeIds.length > 0 ? remainingQueueNodeIds : nextQueue.currentNodeId ? nextQueue.taskNodeIds : [],
+          queueNodeIds: remainingQueueNodeIds.length > 0 ? remainingQueueNodeIds : queueNodeId ? nextQueue.taskNodeIds : [],
           readingElapsedMsDelta,
           readTopicDelta,
           soonNodeIds: nextSoonNodeIds

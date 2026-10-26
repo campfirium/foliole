@@ -3,21 +3,23 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
 
+export type DailyFlowPosition = { node_id: string; queue_position: number | null; soon_position: number | null };
+
 export async function readDailyFlow(db: DbPort) {
   const [row] = await db.query<{ day_key: string; revision: number; settings_key: string; mode: string;
     session_json: string; invalidated: number }>('SELECT * FROM daily_flow_state WHERE id = 1');
   if (!row) return null;
-  const entries = await db.query<{ node_id: string; queue_position: number | null; soon_position: number | null }>(
+  const entries = await db.query<DailyFlowPosition>(
     'SELECT node_id, queue_position, soon_position FROM daily_flow_entries ORDER BY initial_position');
   const ordered = (key: 'queue_position' | 'soon_position') => entries.filter(value => value[key] !== null)
     .sort((a, b) => a[key]! - b[key]!).map(value => value.node_id);
   const session = dailyFlowSessionSchema.parse({ ...JSON.parse(row.session_json), queueNodeIds: ordered('queue_position'),
     soonNodeIds: ordered('soon_position'), daily: { scope: (JSON.parse(row.settings_key) as { scope?: string }).scope ?? '', dayKey: row.day_key, revision: row.revision } });
-  return { ...row, session, candidateIds: entries.map(entry => entry.node_id) };
+  return { ...row, session, entries, candidateIds: entries.map(entry => entry.node_id) };
 }
 
 export async function writeDailyFlow(db: DbPort, args: { dayKey: string; mode: string; settingsKey: string;
-  now: string; revision: number; session: DailyFlowSession; candidateIds?: string[] }) {
+  now: string; revision: number; session: DailyFlowSession; candidateIds?: string[]; previousEntries?: DailyFlowPosition[] }) {
   const session = { ...args.session };
   delete session.daily;
   const queue = session.queueNodeIds;
@@ -27,8 +29,10 @@ export async function writeDailyFlow(db: DbPort, args: { dayKey: string; mode: s
   await db.run(`INSERT OR IGNORE INTO daily_flow_entries (node_id, initial_position)
     SELECT value, CAST(key AS INTEGER) + (SELECT COALESCE(MAX(initial_position) + 1, 0) FROM daily_flow_entries)
     FROM json_each(?)`, [JSON.stringify(ids)]);
+  const queuePositions = stablePositions(queue, args.previousEntries ?? [], 'queue_position');
+  const soonPositions = stablePositions(soon, args.previousEntries ?? [], 'soon_position');
   const positions = [...new Set([...queue, ...soon])].map(id => ({ id,
-    q: queue.includes(id) ? queue.indexOf(id) : null, s: soon.includes(id) ? soon.indexOf(id) : null }));
+    q: queuePositions.get(id) ?? null, s: soonPositions.get(id) ?? null }));
   await db.run(`WITH positions AS (SELECT json_extract(value, '$.id') AS id,
     json_extract(value, '$.q') AS q, json_extract(value, '$.s') AS s FROM json_each(?))
     UPDATE daily_flow_entries SET queue_position = (SELECT q FROM positions WHERE id = node_id),
@@ -41,4 +45,18 @@ export async function writeDailyFlow(db: DbPort, args: { dayKey: string; mode: s
     session_json = excluded.session_json, invalidated = 0, updated_at = excluded.updated_at`,
   [args.dayKey, args.revision, args.settingsKey, args.mode, JSON.stringify(metadata), args.now]);
   return { ...session, daily: { scope: (JSON.parse(args.settingsKey) as { scope?: string }).scope ?? '', dayKey: args.dayKey, revision: args.revision } };
+}
+
+function stablePositions(ids: string[], previous: DailyFlowPosition[], key: 'queue_position' | 'soon_position') {
+  const existing = new Map(previous.filter(row => row[key] !== null).map(row => [row.node_id, row[key]!]));
+  const retained = ids.flatMap(id => existing.has(id) ? [existing.get(id)!] : []);
+  let cursor = retained.length
+    ? retained.reduce((minimum, value) => Math.min(minimum, value), retained[0]!) - ids.length - 1 : -1;
+  const positions = ids.map(id => {
+    cursor = existing.get(id) ?? cursor + 1;
+    return cursor;
+  });
+  // Reordering may exhaust the integer gap; only that case needs fresh positions.
+  const ordered = positions.every((value, index) => index === 0 || value > positions[index - 1]!);
+  return new Map(ids.map((id, index) => [id, ordered ? positions[index]! : index]));
 }

@@ -51,7 +51,7 @@ export function advanceOrCompleteAfterReadingAction(args: {
     nodesById: args.nextNodesById,
     releaseCurrentPin: true
   });
-  const nextQueueNodeId = remainingQueueNodeIds[0] ?? nextQueue.currentNodeId;
+  const nextQueueNodeId = remainingQueueNodeIds[0] ?? (soonNodeIds.length ? null : nextQueue.currentNodeId);
   if (nextQueueNodeId) {
     return advanceReviewSession(args.snapshot.reviewSession, {
       handledAt: args.now,

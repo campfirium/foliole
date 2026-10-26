@@ -198,3 +198,21 @@ describe('workspace application shelve action history', () => {
     expect(harness.getState().reviewSession.queueNodeIds).toEqual(['child', 'other']);
   });
 });
+
+it('keeps the daily post-Queue Soon stage when another reading topic is unshelved', async () => {
+  const harness = createShelveHarness();
+  const node = harness.getState().nodesById['node-1']!;
+  harness.setState({ nodesById: { ...harness.getState().nodesById,
+    waiting: { ...node, id: 'waiting' }, returned: { ...node, id: 'returned', shelvedAt: '2026-04-01T00:00:00.000Z' } },
+  nodeOrder: ['node-1', 'waiting', 'returned'], reviewSessionMode: 'reading-only',
+  reviewSession: { ...createStartedReviewSession({ currentNodeId: 'node-1', continueNodeId: null,
+    queueNodeIds: [], sessionStartedAt: '2026-05-01T00:00:00.000Z', totalNodeCount: 2 }),
+  readTopicCount: 2, soonNodeIds: ['waiting'], daily: { scope: 'test-library', dayKey: '2026-05-01', revision: 1 } } });
+  const actions = createWorkspaceNodeActions(harness.setState, harness.getState);
+  expect(actions.unshelveNode('returned', '2026-05-01T00:01:00.000Z')).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.pendingAction).toBeNull());
+  expect(harness.getState().reviewSession.currentNodeId).toBe('node-1');
+  expect(harness.getState().reviewSession.queueNodeIds).toEqual([]);
+  expect(harness.getState().reviewSession.soonNodeIds).toEqual(['waiting']);
+  expect(harness.getState().reviewSession.readTopicCount).toBe(2);
+});

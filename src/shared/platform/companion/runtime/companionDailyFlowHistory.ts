@@ -38,5 +38,5 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
   const state = await readDailyFlow(db);
   if (!state) return session;
   return writeDailyFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
-    now, revision: state.revision + 1, session });
+    now, revision: state.revision + 1, session, previousEntries: state.entries });
 }

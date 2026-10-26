@@ -1,3 +1,4 @@
+import { prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -47,6 +48,14 @@ function areNodeIdsEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((nodeId, index) => nodeId === right[index]);
 }
 
+function buildDailyShelveRefresh(state: WorkspaceState, nodesById: WorkspaceState['nodesById'], now: string) {
+  const session = prepareFlowSession({ nodeOrder: state.nodeOrder, nodesById, trashedNodeIds: state.trashedNodeIds },
+    { now, mode: state.reviewSessionMode }, getCurrentReviewSchedulerSettings(), state.reviewSession);
+  const sameCurrent = session.currentNodeId === state.reviewSession.currentNodeId;
+  return { activeNodeId: sameCurrent ? state.activeNodeId : session.currentNodeId,
+    reviewSession: { ...session, isAnswerRevealed: sameCurrent && state.reviewSession.isAnswerRevealed } };
+}
+
 function buildReviewSessionRefreshPatch(args: {
   mode: 'shelve' | 'unshelve';
   nextNodesById: WorkspaceState['nodesById'];
@@ -57,6 +66,7 @@ function buildReviewSessionRefreshPatch(args: {
   if (!currentNodeId) {
     return null;
   }
+  if (args.state.reviewSession.daily) return buildDailyShelveRefresh(args.state, args.nextNodesById, args.now);
   const currentNodeWasShelved = args.mode === 'shelve' && hasShelvedAncestor(currentNodeId, args.nextNodesById);
   const nextQueue = buildCurrentReviewSessionQueueOutput(args.state, args.now, {
     nodesById: args.nextNodesById,

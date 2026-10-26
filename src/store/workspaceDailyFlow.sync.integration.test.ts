@@ -2,9 +2,11 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
 import { score } from '../../electron/database/reviewProjection.testSupport';
 import { assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { syncRequestLibrary as sync } from '../../electron/database/syncRequestLibrary.testSupport';
+import { softDeleteNodes } from '../../lib/core/database/nodeMutations';
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState';
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations';
@@ -14,6 +16,8 @@ import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
+
+import { advanceFlowSession } from './workspaceFlowSession';
 
 let desktop: Peer;
 let mobile: Peer;
@@ -96,4 +100,31 @@ it('rejects another library cursor even when its day and numeric revision match'
     nextSession: source.session }, settings(mobile), persistence(mobile))).rejects.toThrow('daily_flow_library_changed');
   expect((await readDailyFlow(mobile.port))!.session).toEqual(target.session);
   expect(mobile.db.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
+});
+
+it('removes a waiting Soon after a remote deletion and persists both independent libraries', async () => {
+  edit(desktop, 'Reading body', 'Reading', null, 'topic');
+  await sync(desktop, mobile);
+  const initial = await openDailyFlow(mobile.port, { now, mode: 'reading-only' }, settings(mobile), persistence(mobile));
+  const snapshot = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
+  const nextSession = advanceFlowSession({ action: 'soon', snapshot, session: initial.session, mode: 'reading-only', now });
+  await commitDailyFlow(mobile.port, { opId: 'soon-local', now, token: initial.session.daily!,
+    sourceSession: initial.session, nextSession, readings: [{ nodeId: 'topic', before: null, after: null }] },
+  settings(mobile), persistence(mobile));
+  const deletedAt = '2026-10-03T00:01:00.000Z';
+  softDeleteNodes(desktop.driver, { nodeIds: ['topic'], deletedAt });
+  desktop.driver.execute("UPDATE nodes SET sync_dirty=1, last_modified_by_host_name=? WHERE id='topic'", [desktop.name]);
+  flushNodeSyncVersionWithDriver(desktop.driver, 'topic', desktop.name, deletedAt);
+  await sync(desktop, mobile);
+  expect(mobile.db.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").get()).toEqual({ deleted_at: deletedAt });
+  const received = await openDailyFlow(mobile.port, { now: deletedAt, mode: 'reading-only' }, settings(mobile), persistence(mobile));
+  expect(received.session.currentNodeId).toBeNull();
+  expect(received.session.queueNodeIds).toEqual([]);
+  expect(received.session.soonNodeIds).toEqual([]);
+  expect((await readDailyFlow(mobile.port))!.session).toEqual(received.session);
+  for (const peer of [desktop, mobile]) {
+    const reopened = new Database(peer.file, { readonly: true });
+    try { expect(reopened.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").get()).toEqual({ deleted_at: deletedAt }); }
+    finally { reopened.close(); }
+  }
 });
