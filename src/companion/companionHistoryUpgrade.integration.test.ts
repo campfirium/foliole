@@ -94,3 +94,37 @@ it('retains the sole resume cursor for a pre-daily library rather than losing it
   expect(restoreFlowHistorySession(entry.beforeContext.reviewSession, saved.resumeSession!))
     .toEqual(original.undoStack[0]!.beforeContext.reviewSession);
 });
+
+it('upgrades a large legacy stack without returning the complete history across the database bridge', async () => {
+  const original = await legacyHistory();
+  const queue = Array.from({ length: 10000 }, (_, index) => `retained-library-node-${index.toString().padStart(6, '0')}`);
+  const entry = original.undoStack[0]!;
+  const expand = (session: typeof entry.beforeContext.reviewSession) => ({ ...session,
+    queueNodeIds: [...session.queueNodeIds, ...queue], totalNodeCount: session.totalNodeCount + queue.length });
+  const largeEntry = { ...entry,
+    beforeContext: { ...entry.beforeContext, reviewSession: expand(entry.beforeContext.reviewSession) },
+    afterContext: { ...entry.afterContext, reviewSession: expand(entry.afterContext.reviewSession) } };
+  const large = { undoStack: Array.from({ length: 12 }, (_, index) => ({ ...largeEntry, id: `retained-${index}` })),
+    redoStack: [largeEntry], extraFact: 'keep unknown fields' };
+  const encoded = JSON.stringify(large);
+  expect(Buffer.byteLength(encoded)).toBeGreaterThan(4 * 1024 * 1024);
+  app.db.prepare('UPDATE companion_meta SET value=? WHERE key=?').run(encoded, historyKey);
+  const db = createBetterSqliteDbPort(app.db);
+  const query = db.query.bind(db);
+  const payloadBytes: number[] = [];
+  vi.spyOn(db, 'query').mockImplementation(async (...args) => {
+    const result = await query(...args);
+    payloadBytes.push(Buffer.byteLength(JSON.stringify(result)));
+    return result;
+  });
+  await db.transaction(tx => migrateCompanionDatabase(tx, 102, COMPANION_DATABASE_VERSION));
+  expect(payloadBytes.length).toBeGreaterThan(0);
+  expect(Math.max(...payloadBytes)).toBeLessThan(2 * 1024 * 1024);
+  const saved = app.db.prepare('SELECT value FROM companion_meta WHERE key=?').pluck().get(historyKey) as string;
+  const parsed = JSON.parse(saved);
+  expect(parsed.extraFact).toBe(large.extraFact);
+  expect(parsed.undoStack.map((value: typeof largeEntry) =>
+    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toEqual(large.undoStack);
+  expect(parsed.redoStack.map((value: typeof largeEntry) =>
+    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toEqual(large.redoStack);
+});
