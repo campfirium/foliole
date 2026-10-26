@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
@@ -24,6 +24,7 @@ import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSu
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
+  reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
@@ -66,14 +67,16 @@ export function useCompanionFlowSession(args: {
     }).catch(error => { current.error = String(error); render(); });
   }, [args.snapshot]);
   const session = current.session;
-  const view = flowView(args.snapshot, current);
+  const scheduled = useMemo(() => args.snapshot ? resolveScheduledReviewSummary(args.snapshot) : null, [args.snapshot]);
+  const view = useMemo(() => flowView(args.snapshot, current, scheduled),
+    [args.snapshot, current.hydrated, session, scheduled]);
   useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
     session.currentNodeId, session.queueNodeIds);
   const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
-  const hasTopics = Boolean(args.snapshot && selectCanonicalVisibleNodeIds(args.snapshot).some((id) => {
+  const hasTopics = useMemo(() => Boolean(args.snapshot && selectCanonicalVisibleNodeIds(args.snapshot).some((id) => {
     const kind = args.snapshot?.nodesById[id]?.kind;
     return kind === 'topic' || kind === 'item';
-  }));
+  })), [args.snapshot]);
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { if (owner.current === current) void continueCurrentFlow(latest.current, current, mode, render).catch(error => { current.error = String(error); render(); }); }
@@ -183,12 +186,13 @@ function useFlowHydration(
   }, [identity, scope, args.ready, Boolean(args.snapshot)]);
 }
 
-function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner) {
+function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner,
+  scheduled: ReturnType<typeof resolveScheduledReviewSummary> | null) {
   const session = current.session;
   const queueNodeIds = session.currentNodeId
     ? [session.currentNodeId, ...session.queueNodeIds.filter((id) => id !== session.currentNodeId)] : [];
-  return snapshot && current.hydrated ? {
-    ...resolveScheduledReviewSummary(snapshot), queueNodeIds,
+  return snapshot && current.hydrated && scheduled ? {
+    ...scheduled, queueNodeIds,
     currentCard: buildCurrentCard(snapshot, queueNodeIds), totalCount: session.totalNodeCount
   } : emptyCompanionReviewSession();
 }
@@ -197,9 +201,12 @@ function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowO
   mode: 'review-first' | 'recommended', active: boolean) {
   if (snapshot && current.hydrated) {
     const previousNodeId = current.session.currentNodeId;
-    const refreshedAt = active && current.snapshot !== snapshot ? new Date().toISOString() : undefined;
-    current.session = reconcileFlowSession(snapshot, current.session, mode, refreshedAt);
-    current.snapshot = snapshot;
+    if (current.snapshot !== snapshot || current.reconciledSession !== current.session) {
+      const refreshedAt = active && current.snapshot !== snapshot ? new Date().toISOString() : undefined;
+      current.session = reconcileFlowSession(snapshot, current.session, mode, refreshedAt);
+      current.reconciledSession = current.session;
+      current.snapshot = snapshot;
+    }
     const kind = getReviewItemKind(snapshot.nodesById[current.session.currentNodeId ?? '']);
     if (previousNodeId !== current.session.currentNodeId || (current.kind !== null && current.kind !== kind)) {
       current.generation += 1;

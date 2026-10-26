@@ -47,3 +47,38 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
   expect(hook.result.current.flow.isAnswerRevealed).toBe(false);
   hook.unmount();
 });
+
+it('keeps the current Flow stable across an unrelated render without revisiting the next node facts', async () => {
+  library = await createSearchLibrary(0);
+  await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
+    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, new Date().toISOString());
+  const source = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  const reads = vi.spyOn(library.connection, 'query');
+  const hook = renderHook(({ snapshot }) => useCompanionFlowSession({ snapshot, ready: true, active: true,
+    onlyReview: false, libraryScope: source.libraryScope ?? 'test' }), { initialProps: { snapshot: source } });
+  await waitFor(() => expect(hook.result.current.ready).toBe(true));
+  const next = hook.result.current.view.queueNodeIds[1]!;
+  await waitFor(() => expect(reads.mock.calls.some(([sql, values]) => sql.includes('SELECT article.*') && values?.[0] === next)).toBe(true));
+  await getIosCompanionDatabaseOwner().read(async () => null);
+  const before = structuredClone(hook.result.current.view);
+  const originalSession = hook.result.current.capture().session;
+  const node = source.nodesById[next]!;
+  const kind = node.kind;
+  let visits = 0;
+  Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, get: () => { visits += 1; return kind; } });
+  try {
+    hook.rerender({ snapshot: source });
+    expect(hook.result.current.view).toEqual(before);
+    expect(visits).toBe(0);
+    Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, writable: true, value: kind });
+    await getIosCompanionDatabaseOwner().runWriter(db => db.run("UPDATE nodes SET kind = 'folder' WHERE id = ?", [next]));
+    const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+    hook.rerender({ snapshot: changed });
+    await waitFor(() => expect(hook.result.current.view.queueNodeIds).not.toContain(next));
+    act(() => { hook.result.current.workspaceHistoryControls.restoreFlowHistorySession(originalSession); });
+    expect(hook.result.current.view.queueNodeIds).not.toContain(next);
+  } finally {
+    Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, writable: true, value: kind });
+    hook.unmount();
+  }
+});
