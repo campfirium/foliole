@@ -1,5 +1,6 @@
 export const controlledSyncSqliteTests = [
   'electron/database/dailyFlowMigration.integration.test.ts',
+  'electron/database/dailyFlowStorage.integration.test.ts',
   'electron/database/desktopSqlRecording.export.test.ts',
   'electron/database/sqlRecording.integration.test.ts',
   'electron/database/workspaceSearch.emptyAttachments.test.ts',

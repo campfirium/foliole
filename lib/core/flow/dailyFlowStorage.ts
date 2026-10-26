@@ -29,16 +29,9 @@ export async function writeDailyFlow(db: DbPort, args: { dayKey: string; mode: s
   await db.run(`INSERT OR IGNORE INTO daily_flow_entries (node_id, initial_position)
     SELECT value, CAST(key AS INTEGER) + (SELECT COALESCE(MAX(initial_position) + 1, 0) FROM daily_flow_entries)
     FROM json_each(?)`, [JSON.stringify(ids)]);
-  const queuePositions = stablePositions(queue, args.previousEntries ?? [], 'queue_position');
-  const soonPositions = stablePositions(soon, args.previousEntries ?? [], 'soon_position');
-  const positions = [...new Set([...queue, ...soon])].map(id => ({ id,
-    q: queuePositions.get(id) ?? null, s: soonPositions.get(id) ?? null }));
-  await db.run(`WITH positions AS (SELECT json_extract(value, '$.id') AS id,
-    json_extract(value, '$.q') AS q, json_extract(value, '$.s') AS s FROM json_each(?))
-    UPDATE daily_flow_entries SET queue_position = (SELECT q FROM positions WHERE id = node_id),
-      soon_position = (SELECT s FROM positions WHERE id = node_id)
-    WHERE queue_position IS NOT (SELECT q FROM positions WHERE id = node_id)
-      OR soon_position IS NOT (SELECT s FROM positions WHERE id = node_id)`, [JSON.stringify(positions)]);
+  const previous = args.previousEntries ?? await db.query<DailyFlowPosition>(
+    'SELECT node_id, queue_position, soon_position FROM daily_flow_entries');
+  await writeDailyPositions(db, session, previous);
   await db.run(`INSERT INTO daily_flow_state (id, day_key, revision, settings_key, mode, session_json, invalidated, updated_at)
     VALUES (1, ?, ?, ?, ?, ?, 0, ?) ON CONFLICT(id) DO UPDATE SET day_key = excluded.day_key,
     revision = excluded.revision, settings_key = excluded.settings_key, mode = excluded.mode,
@@ -80,11 +73,22 @@ export async function writeDailyFlowGrade(db: DbPort, stored: NonNullable<Awaite
 
 export async function writeDailyFlowReading(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
   session: DailyFlowSession, affectedIds: string[], now: string) {
-  const queue = stablePositions(session.queueNodeIds, stored.entries, 'queue_position');
-  const soon = stablePositions(session.soonNodeIds ?? [], stored.entries, 'soon_position');
-  const previous = new Map(stored.entries.map(row => [row.node_id, row]));
-  const ids = [...new Set([...affectedIds, ...stored.session.queueNodeIds, ...(stored.session.soonNodeIds ?? []),
-    ...session.queueNodeIds, ...(session.soonNodeIds ?? [])])];
+  await writeDailyPositions(db, session, stored.entries, affectedIds);
+  const revision = stored.revision + 1;
+  const metadata = { ...session, daily: undefined, queueNodeIds: undefined, soonNodeIds: undefined };
+  await db.run('UPDATE daily_flow_state SET revision = ?, session_json = ?, invalidated = 0, updated_at = ? WHERE id = 1',
+    [revision, JSON.stringify(metadata), now]);
+  return { ...session, daily: { scope: (JSON.parse(stored.settings_key) as { scope?: string }).scope ?? '',
+    dayKey: stored.day_key, revision } };
+}
+
+
+async function writeDailyPositions(db: DbPort, session: DailyFlowSession, previousEntries: DailyFlowPosition[],
+  affectedIds: string[] = []) {
+  const queue = stablePositions(session.queueNodeIds, previousEntries, 'queue_position');
+  const soon = stablePositions(session.soonNodeIds ?? [], previousEntries, 'soon_position');
+  const previous = new Map(previousEntries.map(row => [row.node_id, row]));
+  const ids = [...new Set([...affectedIds, ...previous.keys(), ...queue.keys(), ...soon.keys()])];
   const changes = ids.map(id => ({ id, q: queue.get(id) ?? null, s: soon.get(id) ?? null }))
     .filter(row => !previous.has(row.id) || previous.get(row.id)!.queue_position !== row.q ||
       previous.get(row.id)!.soon_position !== row.s);
@@ -94,10 +98,4 @@ export async function writeDailyFlowReading(db: DbPort, stored: NonNullable<Awai
       json_extract(value, '$.q'), json_extract(value, '$.s') FROM json_each(?) WHERE true
     ON CONFLICT(node_id) DO UPDATE SET queue_position = excluded.queue_position, soon_position = excluded.soon_position`,
   [JSON.stringify(changes)]);
-  const revision = stored.revision + 1;
-  const metadata = { ...session, daily: undefined, queueNodeIds: undefined, soonNodeIds: undefined };
-  await db.run('UPDATE daily_flow_state SET revision = ?, session_json = ?, invalidated = 0, updated_at = ? WHERE id = 1',
-    [revision, JSON.stringify(metadata), now]);
-  return { ...session, daily: { scope: (JSON.parse(stored.settings_key) as { scope?: string }).scope ?? '',
-    dayKey: stored.day_key, revision } };
 }
