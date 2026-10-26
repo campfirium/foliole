@@ -1,4 +1,5 @@
 import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
+import type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow/dailyFlowSession';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
@@ -71,9 +72,9 @@ export interface WorkspaceState {
   redoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
   settleEditorAnnotationCreation: (args: { annotationNodeIds: string[]; nodeId: string; succeeded: boolean }) => void;
   relearnNode: (nodeId: string, now?: string) => boolean;
-  startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean;
-  continueReviewSessionReading: (now?: string) => boolean;
-  resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => boolean;
+  startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean | Promise<boolean>;
+  continueReviewSessionReading: (now?: string) => boolean | Promise<boolean>;
+  resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => boolean | Promise<boolean>;
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
@@ -163,22 +164,7 @@ export interface WorkspaceLayoutState {
   rightSidebarWidth: number;
 }
 
-export interface ReviewSessionState {
-  completedAt?: string | null;
-  continueNodeId?: string | null;
-  currentItemStartedAt?: string | null;
-  currentNodeId: string | null;
-  isAnswerRevealed: boolean;
-  queueNodeIds: string[];
-  readingElapsedMs?: number;
-  readTopicCount?: number;
-  reviewElapsedMs?: number;
-  reviewedItemCount?: number;
-  nextReviewDueAt?: string | null;
-  sessionStartedAt?: string | null;
-  soonNodeIds?: string[];
-  totalNodeCount: number;
-}
+export type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow/dailyFlowSession';
 
 export interface NodeViewState {
   scrollTop: number;

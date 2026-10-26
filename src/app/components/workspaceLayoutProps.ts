@@ -207,8 +207,8 @@ export interface WorkspaceLayoutFieldTypes {
   onCutImage: () => void;
   onDeleteImage: () => void;
   onExportImage: () => void;
-  onStartStudyMode: () => boolean;
-  onToggleReviewSession: () => boolean;
+  onStartStudyMode: () => boolean | Promise<boolean>;
+  onToggleReviewSession: () => boolean | Promise<boolean>;
   onOpenSettings: (category?: import('../../features/settings/model/settingsPanelOptions').SettingsCategoryId, rowId?: string) => void;
   onRunRailAction?: (commandId: string) => void;
   onCloseSettings: () => void;

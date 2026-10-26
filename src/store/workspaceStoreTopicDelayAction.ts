@@ -10,6 +10,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
@@ -147,7 +148,7 @@ export function createSetReviewTopicDelayActionWithPending(
       if (!began) return false;
       let persisted = false;
       try {
-        persisted = await persistence.persistReadingNodes([result.nextNode], now);
+        persisted = await persistTopicDelay(snapshot, result, now, persistence);
       } catch {
         persisted = false;
       }
@@ -180,4 +181,13 @@ export function createSetReviewTopicDelayActionWithPending(
       pendingNodeIds.delete(nodeId);
     }
   };
+}
+
+async function persistTopicDelay(snapshot: WorkspaceState, result: TopicDelayPatchResult, now: string,
+  persistence: WorkspaceReviewPersistenceAdapter) {
+  if (!hasPersistentDailyFlow(snapshot.reviewSession)) return persistence.persistReadingNodes([result.nextNode], now);
+  const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!);
+  result.patch.reviewSession = saved.session;
+  result.historyEntry.afterContext.reviewSession = saved.session;
+  return true;
 }

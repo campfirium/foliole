@@ -99,7 +99,7 @@ interface PaletteCommandRunnerArgs
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   startClipboardImport: () => void;
-  startReviewSession: () => boolean;
+  startReviewSession: () => boolean | Promise<boolean>;
   startStudyMode: (options?: StartStudyModeOptions) => void;
   trashViewOpen: boolean;
   undoWorkspaceAction: () => boolean;

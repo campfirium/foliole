@@ -3,6 +3,7 @@ import { useEffect, useReducer, useRef, useSyncExternalStore } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
@@ -16,6 +17,7 @@ import { resolveWorkspaceReviewHistoryTarget } from '../store/workspaceReviewHis
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import { canContinueReadingInFlowWindow, continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
 
+import { saveCompanionDailyNavigation } from './companionDailyNavigation';
 import { createCompanionFlowControls } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 
@@ -51,6 +53,16 @@ export function useCompanionFlowSession(args: {
       render();
     });
   }, [identity, current.hydrated, current.session.currentNodeId]);
+  useEffect(() => {
+    if (!args.active || !current.hydrated || !current.session.daily) return;
+    const source = current.session;
+    void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
+      if (owner.current !== current || current.session !== source || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
+      current.session = saved.session;
+      current.generation += 1;
+      render();
+    }).catch(error => { current.error = String(error); render(); });
+  }, [args.snapshot]);
   const session = current.session;
   const view = flowView(args.snapshot, current);
   const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
@@ -60,7 +72,7 @@ export function useCompanionFlowSession(args: {
   }));
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
-  function continueReading() { if (owner.current === current) continueCurrentFlow(latest.current, current, mode, render); }
+  function continueReading() { if (owner.current === current) void continueCurrentFlow(latest.current, current, mode, render).catch(error => { current.error = String(error); render(); }); }
   return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
     summary: { completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
@@ -68,13 +80,16 @@ export function useCompanionFlowSession(args: {
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
 }
 
-function continueCurrentFlow(args: Parameters<typeof useCompanionFlowSession>[0], current: FlowOwner,
+async function continueCurrentFlow(args: Parameters<typeof useCompanionFlowSession>[0], current: FlowOwner,
   mode: 'review-first' | 'recommended', render: () => void) {
   if (!args.active || current.scope !== getCompanionReadingScope() ||
     !canContinueFlowReading(args.snapshot, current, args.onlyReview) || !args.snapshot) return;
   const next = continueReviewSessionReading(flowState(args.snapshot, current.session, mode), new Date().toISOString());
   if (!next) return;
-  current.session = next;
+  const source = current.session;
+  const saved = source.daily ? await saveCompanionDailyNavigation(source, next) : next;
+  if (current.session !== source) return;
+  current.session = saved;
   current.generation += 1;
   render();
 }
@@ -92,7 +107,15 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
   const wasActive = useRef(args.active);
   useEffect(() => {
     if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
-      if (!current.session.currentNodeId) {
+      if (isAvailableNativeCompanionRuntime()) {
+        const source = current.session;
+        void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
+          if (current.session !== source) return;
+          current.session = saved.session;
+          current.generation += 1;
+          render();
+        }).catch(error => { current.error = String(error); render(); });
+      } else if (!current.session.currentNodeId) {
         current.session = resumeFlowSession(args.snapshot, mode, null, new Date().toISOString());
       }
       current.generation += 1;
@@ -115,7 +138,7 @@ function useFlowHydration(
     let cancelled = false;
     void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
       isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null
-    ]).then(([preferred, history]) => {
+    ]).then(async ([preferred, history]) => {
       if (cancelled || owner.current !== current || !latest.current.snapshot) return;
       current.session = resumeFlowSession(latest.current.snapshot, mode, preferred, new Date().toISOString());
       const entry = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
@@ -130,13 +153,20 @@ function useFlowHydration(
           resolveWorkspaceReviewHistoryTarget({ ...latest.current.snapshot, entry, mode: replayMode,
           reviewSession: context.reviewSession })) current.session = cloneWorkspaceReviewSession(context.reviewSession);
       }
+      if (isAvailableNativeCompanionRuntime()) {
+        const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode,
+          seed: current.session, preferredNodeId: preferred });
+        if (cancelled || owner.current !== current) return;
+        current.session = saved.session;
+      }
       current.hydrated = true;
       render();
     }).catch((error: unknown) => {
       if (cancelled) return;
       current.error = error instanceof Error ? error.message : 'Could not restore Flow.';
-      if (latest.current.snapshot) current.session = resumeFlowSession(latest.current.snapshot, mode, null, new Date().toISOString());
-      current.hydrated = true;
+      if (!isAvailableNativeCompanionRuntime() && latest.current.snapshot) current.session = resumeFlowSession(latest.current.snapshot, mode, null, new Date().toISOString());
+      if (isAvailableNativeCompanionRuntime()) current.session = createEmptyReviewSession();
+      current.hydrated = !isAvailableNativeCompanionRuntime();
       render();
     });
     return () => { cancelled = true; };

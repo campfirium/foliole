@@ -6,7 +6,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/f1-reading-entry-repair/native');
+const output = path.resolve('.tmp/artifacts/T441/daily-reading-native');
 type SaveProbe = { calls: number; release?: () => void };
 type ProbeGlobal = typeof globalThis & { readingSaveProbe: SaveProbe };
 
@@ -16,6 +16,12 @@ async function prepareReading(page: Page) {
   await page.reload();
   await expectWorkspaceShell(page);
   await page.evaluate(async () => {
+    const existing = await window.electronAPI.invoke('load_workspace_snapshot', {});
+    for (const node of Object.values(existing.nodesById)) {
+      if (node.kind === 'topic' || node.kind === 'item') {
+        await window.__folioleWorkspaceDebug!.deleteNode(node.id);
+      }
+    }
     await window.__folioleWorkspaceDebug?.seedNodes?.([
       { id: 'reading-failure-a', kind: 'topic', title: 'Reading A', content: 'Reading body A' },
       { id: 'reading-failure-b', kind: 'topic', title: 'Reading B', content: 'Reading body B' }
@@ -33,7 +39,7 @@ async function installSaveProbe(app: ElectronApplication) {
     (globalThis as ProbeGlobal).readingSaveProbe = probe;
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (event, request) => {
-      if (request.command === 'save_node_reading_state') {
+      if (request.command === 'save_node_reading_state' || (request.command === 'commit_daily_flow' && request.args.readings?.length)) {
         probe.calls += 1;
         if (probe.calls === 1) throw new Error('reading_save_failure_test');
         await new Promise<void>((resolve) => { probe.release = resolve; });

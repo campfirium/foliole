@@ -244,6 +244,8 @@ export const NATIVE_COMMANDS = {
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',
   deleteNodesPermanently: 'delete_nodes_permanently',
+  openDailyFlow: 'open_daily_flow',
+  commitDailyFlow: 'commit_daily_flow',
   applyReviewGrade: 'apply_review_grade'
 } as const;
 

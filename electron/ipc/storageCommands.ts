@@ -21,6 +21,7 @@ import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
 
 import { asString } from './commandParsers.js';
+import { handleDailyFlowCommand } from './dailyFlowCommands.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
@@ -47,6 +48,8 @@ export async function handleStorageCommand(
       command === NATIVE_COMMANDS.releaseNodeEditorBase) {
     return handleEditorHoldCommand(command, args);
   }
+  const dailyFlowResult = await handleDailyFlowCommand(command, args);
+  if (dailyFlowResult !== undefined) return dailyFlowResult;
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
     return syncMutationResult;

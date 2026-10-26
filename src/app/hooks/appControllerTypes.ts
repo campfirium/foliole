@@ -20,7 +20,7 @@ export interface AppControllerResult {
   goToNodeState: AppGoToNodeState;
   moveToNodeState: AppGoToNodeState;
   layoutProps: WorkspaceLayoutProps;
-  onStartNextDemoPreviewDayFlow: () => boolean;
+  onStartNextDemoPreviewDayFlow: () => boolean | Promise<boolean>;
   onOpenCompanionSyncSettings: () => void;
   paletteState: AppPaletteState;
   reviewSourceTopicDeleteDialog: Omit<ReviewSourceTopicDeleteDialogState, 'requestDeleteSourceTopic'> & {

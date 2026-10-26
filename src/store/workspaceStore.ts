@@ -9,6 +9,7 @@ import { scheduleEditorOperationHistorySave } from '../shared/platform/runtime/e
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
+import { installDailyFlowExternalRefresh } from './workspaceDailyFlowSessionActions';
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE } from './workspaceNavigation';
@@ -197,5 +198,7 @@ workspaceStore.subscribe((state, previousState) => {
   if (state.editorOperationHistory === previousState.editorOperationHistory) return;
   void scheduleEditorOperationHistorySave(serializeEditorOperationHistory(state.editorOperationHistory));
 });
+
+installDailyFlowExternalRefresh(workspaceStore);
 
 export const useWorkspaceStore = workspaceStore;

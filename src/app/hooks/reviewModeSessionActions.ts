@@ -7,18 +7,19 @@ export interface ReviewModeSessionActions {
   exitStudyMode: () => void;
   onReviewQueueEmpty?: () => void;
   onReviewSessionStarted?: () => void;
-  startReviewSession: () => boolean;
+  startReviewSession: () => boolean | Promise<boolean>;
   startStudyMode: (options?: StartStudyModeOptions) => void;
 }
 
 export function enterReviewModeSession(actions: Pick<ReviewModeSessionActions, 'onReviewQueueEmpty' | 'onReviewSessionStarted' | 'startReviewSession' | 'startStudyMode'>) {
-  if (!actions.startReviewSession()) {
-    actions.onReviewQueueEmpty?.();
-    return false;
-  }
-  actions.onReviewSessionStarted?.();
-  actions.startStudyMode({ force: true });
-  return true;
+  const apply = (started: boolean) => {
+    if (!started) { actions.onReviewQueueEmpty?.(); return false; }
+    actions.onReviewSessionStarted?.();
+    actions.startStudyMode({ force: true });
+    return true;
+  };
+  const result = actions.startReviewSession();
+  return typeof result === 'boolean' ? apply(result) : result.then(apply);
 }
 
 export function toggleReviewModeSession(isReviewMode: boolean, actions: ReviewModeSessionActions) {

@@ -164,6 +164,7 @@ function collectReviewQueueCandidates(args: {
 }
 
 export interface ReviewQueuePlanInput {
+  candidateNow?: string;
   includeScheduled?: boolean;
   limit?: number;
   mode?: ReviewSessionMode;
@@ -187,7 +188,7 @@ function buildOrderedQueues(args: ReviewQueuePlanInput) {
     newDayStartsAtHour,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
-    now: args.now,
+    now: args.candidateNow ?? args.now,
     trashedNodeIds
   });
 

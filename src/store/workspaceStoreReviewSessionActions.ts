@@ -1,5 +1,7 @@
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
+import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
+import { openWorkspaceDailyFlow, continueWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
 import {
@@ -43,9 +45,15 @@ function buildStartQueue(state: WorkspaceState, now: string, options: ReviewSess
 
 export function createStartReviewSessionAction(
   set: WorkspaceSet,
-  defaultOptions: ReviewSessionStartOptions = {}
+  defaultOptions: ReviewSessionStartOptions = {},
+  get?: () => WorkspaceState
 ): WorkspaceState['startReviewSession'] {
   return (now = new Date().toISOString(), options = {}) => {
+    if (get && hasDailyFlowRuntime()) {
+      const { preference } = buildStartQueue(get(), now, { ...defaultOptions, ...options });
+      return openWorkspaceDailyFlow(set, get, { now, mode: preference.reviewSessionMode,
+        seed: get().reviewSession, ...defaultOptions, ...options }, preference);
+    }
     let started = false;
     let openedNodeId: string | null = null;
     const startOptions = { ...defaultOptions, ...options };
@@ -71,8 +79,9 @@ export function createStartReviewSessionAction(
   };
 }
 
-export function createContinueReviewSessionReadingAction(set: WorkspaceSet): WorkspaceState['continueReviewSessionReading'] {
+export function createContinueReviewSessionReadingAction(set: WorkspaceSet, get?: () => WorkspaceState): WorkspaceState['continueReviewSessionReading'] {
   return (now = new Date().toISOString()) => {
+    if (get?.().reviewSession.daily && hasDailyFlowRuntime()) return continueWorkspaceDailyFlow(set, get, now);
     let continued = false;
     let openedNodeId: string | null = null;
     set((state) => {
@@ -91,8 +100,14 @@ export function createContinueReviewSessionReadingAction(set: WorkspaceSet): Wor
   };
 }
 
-export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceState['resumeReviewSession'] {
+export function createResumeReviewSessionAction(set: WorkspaceSet, get?: () => WorkspaceState): WorkspaceState['resumeReviewSession'] {
   return (now = new Date().toISOString(), options = {}) => {
+    if (get && hasDailyFlowRuntime()) {
+      const state = get();
+      const preference = resolveReviewSessionModePreference(state.reviewSessionMode, state.reviewSessionModeExpiresAt, now);
+      return openWorkspaceDailyFlow(set, get, { now, mode: preference.reviewSessionMode,
+        seed: state.reviewSession, ...options }, preference);
+    }
     let resumed = false;
     let openedNodeId: string | null = null;
     set((state) => {
@@ -123,8 +138,12 @@ export function createResumeReviewSessionAction(set: WorkspaceSet): WorkspaceSta
   };
 }
 
-export function createSetReviewSessionModeAction(set: WorkspaceSet): WorkspaceState['setReviewSessionMode'] {
+export function createSetReviewSessionModeAction(set: WorkspaceSet, get?: () => WorkspaceState): WorkspaceState['setReviewSessionMode'] {
   return (mode, now = new Date().toISOString()) => {
+    if (get?.().reviewSession.daily && hasDailyFlowRuntime()) {
+      void openWorkspaceDailyFlow(set, get, { now, mode, seed: get().reviewSession, refresh: true }, createReviewSessionModePreference(mode, now));
+      return;
+    }
     let openedNodeId: string | null = null;
     set((state) => {
       const preference = createReviewSessionModePreference(mode, now);

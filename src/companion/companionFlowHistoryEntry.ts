@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -15,7 +16,7 @@ export interface CompanionFlowHistoryContext {
 }
 
 export function createCompanionFlowHistoryEntry(args: {
-  action: FlowAction; nodeId: string; now: string; before: WorkspaceSnapshot;
+  action: FlowAction; grade?: 1 | 2 | 3 | 4; nodeId: string; now: string; before: WorkspaceSnapshot;
   after: WorkspaceSnapshot; history: CompanionFlowHistoryContext; relatedNodeIds?: string[];
 }) {
   const beforeSession = cloneWorkspaceReviewSession(args.history.session);
@@ -23,7 +24,7 @@ export function createCompanionFlowHistoryEntry(args: {
     session: beforeSession, mode: args.history.mode, now: args.now });
   const context = (session: ReviewSessionState) => ({ activeNodeId: session.currentNodeId,
     browseRootNodeId: '', reviewSession: session });
-  const common = { id: crypto.randomUUID(), mutationTimestamp: args.now, nodeId: args.nodeId,
+  const common = { id: beforeSession.daily ? dailyFlowOperationId(beforeSession.daily, args.nodeId, `${args.action}:${args.grade ?? ''}`) : crypto.randomUUID(), mutationTimestamp: args.now, nodeId: args.nodeId,
     beforeContext: context(beforeSession), afterContext: context(afterSession) };
   const before = args.before.nodesById[args.nodeId];
   const after = args.after.nodesById[args.nodeId];

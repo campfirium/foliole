@@ -615,6 +615,15 @@
         }
       ],
       "beforeVersion": 78
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install the local daily Flow list.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 102
     }
   ],
   "planKeys": {

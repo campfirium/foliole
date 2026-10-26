@@ -6,6 +6,7 @@ import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime
 import { isReviewProfileDue } from '../store/reviewQueuePlannerTime';
 import type { FlowAction } from '../store/workspaceFlowSession';
 import { isWorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
+import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import { createCompanionFlowHistoryEntry, completedFlowReviewDay, type CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import { dismissCompanionReviewTopic, postponeCompanionReviewTopic, readCompanionReviewTopic } from './companionReadingReview';
@@ -22,6 +23,7 @@ export type FlowMutation = {
   action: FlowAction;
   nodeId: string;
   now: string;
+  session?: ReviewSessionState;
   partial: boolean;
   targetConfirmed: boolean;
 };
@@ -42,18 +44,22 @@ export async function persistFlowMutation(args: {
     const snapshot = typeof saved === 'object' && 'card' in saved ? { ...result.snapshot,
       nodesById: { ...result.snapshot.nodesById, [args.nodeId]: { ...result.snapshot.nodesById[args.nodeId]!,
         review: saved.card ? toNodeReviewProfile(saved.card) : null } } } : result.snapshot;
-    return { ...args, snapshot, partial: false, targetConfirmed: true };
+    return { ...args, snapshot, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
   }
   const apply = args.action === 'read' ? readCompanionReviewTopic
     : args.action === 'later' ? postponeCompanionReviewTopic : dismissCompanionReviewTopic;
   const result = apply(args);
   if (!result) throw new Error('The current topic is no longer available.');
   if (args.history) {
-    await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
+    const saved = await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot,
         relatedNodeIds: result.syncNodeIds, history: args.history }),
       ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });
-    return { ...args, snapshot: result.snapshot, partial: false, targetConfirmed: true };
+    const nodesById = { ...result.snapshot.nodesById };
+    if (typeof saved === 'object' && 'readings' in saved) for (const value of saved.readings ?? []) {
+      if (nodesById[value.nodeId]) nodesById[value.nodeId] = { ...nodesById[value.nodeId]!, reading: value.reading };
+    }
+    return { ...args, snapshot: { ...result.snapshot, nodesById }, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
   }
   try {
     const saved = await persistCompanionReviewSyncObject({ itemKind: 'reading', completedReading: args.action === 'read',

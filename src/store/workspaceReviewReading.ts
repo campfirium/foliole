@@ -7,8 +7,6 @@ import {
 import type { ReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { parseLiteralUnion } from '../shared/lib/parseLiteralUnion';
 
-import { applyReviewSessionProgress } from './workspaceReviewSessionProgress';
-import type { WorkspaceState } from './workspaceStore';
 
 interface PriorityChainNode {
   id: string;
@@ -16,87 +14,7 @@ interface PriorityChainNode {
   priority?: number | null;
 }
 
-export function createEmptyReviewSession(): WorkspaceState['reviewSession'] {
-  return { currentNodeId: null, isAnswerRevealed: false, queueNodeIds: [], totalNodeCount: 0 };
-}
-
-export function isReviewSessionCompleted(reviewSession: WorkspaceState['reviewSession']) {
-  return !reviewSession.currentNodeId && reviewSession.totalNodeCount > 0 && reviewSession.queueNodeIds.length === 0;
-}
-
-export function createStartedReviewSession(args: {
-  continueNodeId: string | null;
-  currentNodeId: string | null;
-  queueNodeIds: string[];
-  sessionStartedAt: string;
-  totalNodeCount: number;
-}): WorkspaceState['reviewSession'] {
-  return {
-    completedAt: null,
-    continueNodeId: args.continueNodeId,
-    currentItemStartedAt: args.sessionStartedAt,
-    currentNodeId: args.currentNodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: args.queueNodeIds,
-    readingElapsedMs: 0,
-    readTopicCount: 0,
-    reviewElapsedMs: 0,
-    reviewedItemCount: 0,
-    sessionStartedAt: args.sessionStartedAt,
-    totalNodeCount: args.totalNodeCount
-  };
-}
-
-export function advanceReviewSession(
-  reviewSession: WorkspaceState['reviewSession'],
-  args: {
-    nextNodeId: string;
-    queueNodeIds: string[];
-    handledAt?: string;
-    nextReviewDueAt?: string | null;
-    readingElapsedMsDelta?: number;
-    readTopicDelta?: number;
-    reviewElapsedMsDelta?: number;
-    reviewedItemDelta?: number;
-    soonNodeIds?: string[];
-    totalNodeCount?: number;
-  }
-): WorkspaceState['reviewSession'] {
-  return applyReviewSessionProgress({
-    ...reviewSession,
-    completedAt: null,
-    currentNodeId: args.nextNodeId,
-    isAnswerRevealed: false,
-    queueNodeIds: args.queueNodeIds,
-    ...(args.soonNodeIds ?? reviewSession.soonNodeIds
-      ? { soonNodeIds: args.soonNodeIds ?? reviewSession.soonNodeIds }
-      : {}),
-    totalNodeCount: args.totalNodeCount ?? reviewSession.totalNodeCount
-  }, args);
-}
-
-export function completeReviewSession(
-  reviewSession: WorkspaceState['reviewSession'],
-  args: {
-    completedAt: string;
-    continueNodeId?: string | null;
-    nextReviewDueAt?: string | null;
-    readingElapsedMsDelta?: number;
-    readTopicDelta?: number;
-    reviewElapsedMsDelta?: number;
-    reviewedItemDelta?: number;
-  }
-): WorkspaceState['reviewSession'] {
-  return applyReviewSessionProgress({
-    ...reviewSession,
-    completedAt: args.completedAt,
-    continueNodeId: args.continueNodeId ?? reviewSession.continueNodeId ?? null,
-    currentNodeId: null,
-    isAnswerRevealed: false,
-    queueNodeIds: [],
-    soonNodeIds: []
-  }, { ...args, handledAt: args.completedAt });
-}
+export { createEmptyReviewSession, isReviewSessionCompleted, createStartedReviewSession, advanceReviewSession, completeReviewSession } from '../../lib/core/flow/flowSessionState';
 
 export function resolveNodePriorityChain(
   currentNodeId: string,

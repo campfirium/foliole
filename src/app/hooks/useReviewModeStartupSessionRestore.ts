@@ -39,9 +39,9 @@ export function useReviewModeStartupSessionRestore(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   onReviewSessionStarted: () => void;
-  resumeReviewSession: () => boolean;
+  resumeReviewSession: () => boolean | Promise<boolean>;
   reviewCurrentNodeId: string | null;
-  startReviewSession: () => boolean;
+  startReviewSession: () => boolean | Promise<boolean>;
 }) {
   const restoredEntryRef = useRef(false);
 
@@ -62,12 +62,10 @@ export function useReviewModeStartupSessionRestore(args: {
     if (isCurrentReviewItemActive) {
       return;
     }
-    if (args.resumeReviewSession()) {
-      return;
-    }
-    if (!args.reviewCurrentNodeId && !args.isReviewSessionCompleted) {
-      args.startReviewSession();
-    }
+    void Promise.resolve(args.resumeReviewSession()).then(resumed => {
+      if (!resumed && !args.reviewCurrentNodeId && !args.isReviewSessionCompleted) return args.startReviewSession();
+      return undefined;
+    });
   }, [
     args.activeNodeId,
     args.isReviewSessionCompleted,

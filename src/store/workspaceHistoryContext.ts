@@ -44,6 +44,7 @@ export function isSameWorkspaceReviewSession(
   right: WorkspaceState['reviewSession']
 ) {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  keys.delete('daily');
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
   return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&

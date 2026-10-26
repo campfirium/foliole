@@ -28,8 +28,8 @@ export function buildAppControllerResult(args: {
     goToNodeState: args.auxiliaryState.goToNodeState,
     moveToNodeState: args.auxiliaryState.moveToNodeState,
     layoutProps: args.layoutProps,
-    onStartNextDemoPreviewDayFlow: () => {
-      if (!args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true }))
+    onStartNextDemoPreviewDayFlow: async () => {
+      if (!await args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true }))
         return false;
       args.layoutProps.nodeList.onOpenNotesView();
       args.controller.study.startStudyMode({ force: true });

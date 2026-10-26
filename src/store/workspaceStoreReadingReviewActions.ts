@@ -2,7 +2,6 @@ import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates'
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
@@ -18,7 +17,6 @@ import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import {
-  advanceAfterSoonAction,
   advanceOrCompleteAfterReadingAction,
   isExistingQueueTopic
 } from './workspaceStoreReadingReviewSessionFlow';
@@ -104,55 +102,7 @@ export function createReadReviewTopicActionWithPending(
   };
 }
 
-export function createRevisitReviewTopicSoonAction(set: WorkspaceSet, get: WorkspaceGet): WorkspaceState['revisitReviewTopicSoon'] {
-  return async (now = new Date().toISOString()) => {
-    const snapshot = get();
-    if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
-        snapshot.appActionHistory.pendingCreate) return false;
-    const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
-    const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
-    const readingElapsedMsDelta = calculateReviewStepElapsedMs(snapshot.reviewSession, now);
-    const progressDelta = isExistingQueueTopic(snapshot.reviewSession, currentNodeId) ? 1 : 0;
-    set((state) => {
-      const node = state.nodesById[currentNodeId];
-      if (!node) return state;
-      const reviewSession = advanceAfterSoonAction({
-        currentNodeId,
-        now,
-        progressDelta,
-        readingElapsedMsDelta,
-        snapshot,
-        state
-      });
-      const activeContext = buildReviewActiveNodeContext(
-        state,
-        reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null
-      );
-      const historyEntry = createReadingReviewHistoryEntry({
-        afterActiveNodeId: activeContext.activeNodeId,
-        ...('browseRootNodeId' in activeContext
-          ? { afterBrowseRootNodeId: activeContext.browseRootNodeId }
-          : {}),
-        afterReading: node.reading,
-        afterReviewSession: reviewSession,
-        beforeReading: node.reading,
-        beforeReviewSession: snapshot.reviewSession,
-        mutationTimestamp: now,
-        nodeId: currentNodeId,
-        state,
-        title: 'Soon Topic'
-      });
-      return {
-        ...activeContext,
-        appActionHistory: pushWorkspaceUndoEntry(state.appActionHistory, historyEntry),
-        reviewSession
-      };
-    });
-    return true;
-  };
-}
+export { createRevisitReviewTopicSoonAction } from './workspaceDailySoonAction';
 
 function buildReadOrPostponeReadingReviewPatch(args: {
   action: 'read' | 'later';

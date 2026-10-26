@@ -6,7 +6,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/f2-grade-entry-repair/native');
+const output = path.resolve('.tmp/artifacts/T441/daily-grades-native');
 const labels = ['Again', 'Hard', 'Good', 'Easy'] as const;
 type Probe = { calls: unknown[]; release?: () => void };
 type Globals = typeof globalThis & { gradeSaveProbe: Probe };
@@ -37,8 +37,8 @@ async function installProbe(app: ElectronApplication) {
     (globalThis as Globals).gradeSaveProbe = probe;
     ipcMain.removeHandler('foliole:invoke');
     ipcMain.handle('foliole:invoke', async (event, request) => {
-      if (request.command === 'apply_review_grade') {
-        probe.calls.push(request.args);
+      if (request.command === 'apply_review_grade' || (request.command === 'commit_daily_flow' && request.args.grade)) {
+        probe.calls.push(request.command === 'commit_daily_flow' ? request.args.grade : request.args);
         if (probe.calls.length === 1) throw new Error('grade_save_failure_test');
         await new Promise<void>((resolve) => { probe.release = resolve; });
       }

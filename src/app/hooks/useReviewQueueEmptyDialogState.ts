@@ -75,14 +75,12 @@ export function bindReviewQueueEmptyDialogToLayoutProps(
   };
 }
 
-function startReviewAction(action: () => boolean, openEmptyDialog: () => void, shouldOpenBeforeStart: boolean) {
+function startReviewAction(action: () => boolean | Promise<boolean>, openEmptyDialog: () => void, shouldOpenBeforeStart: boolean) {
   if (shouldOpenBeforeStart) {
     openEmptyDialog();
     return false;
   }
-  if (action()) {
-    return true;
-  }
-  openEmptyDialog();
-  return false;
+  const apply = (started: boolean) => { if (!started) openEmptyDialog(); return started; };
+  const result = action();
+  return typeof result === 'boolean' ? apply(result) : result.then(apply);
 }

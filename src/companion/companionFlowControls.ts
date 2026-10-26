@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { advanceFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
@@ -28,15 +29,20 @@ export function createCompanionFlowControls(args: {
     return getCompanionReadingScope() === token.scope && owner.current === token.owner && current.generation === token.generation &&
       current.session.currentNodeId === token.nodeId;
   }
-  function advance(token: ReturnType<typeof capture>, action: FlowAction, snapshot: WorkspaceSnapshot, now: string) {
+  function advance(token: ReturnType<typeof capture>, action: FlowAction, snapshot: WorkspaceSnapshot, now: string, persistedSession?: FlowOwner['session']) {
     if (!matches(token)) return;
-    current.session = advanceFlowSession({ action, snapshot, session: current.session, mode, now });
+    current.session = persistedSession ?? advanceFlowSession({ action, snapshot, session: current.session, mode, now });
     current.generation += 1;
     render();
   }
-  function resume(token: ReturnType<typeof capture>, snapshot: WorkspaceSnapshot) {
+  async function resume(token: ReturnType<typeof capture>, snapshot: WorkspaceSnapshot) {
     if (!matches(token)) return;
-    current.session = resumeFlowSession(snapshot, mode, null, new Date().toISOString());
+    const now = new Date().toISOString();
+    const session = isAvailableNativeCompanionRuntime()
+      ? (await openCompanionDailyFlow({ now, mode, refresh: true })).session
+      : resumeFlowSession(snapshot, mode, null, now);
+    if (!matches(token)) return;
+    current.session = session;
     current.generation += 1;
     render();
   }

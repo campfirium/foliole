@@ -19,13 +19,20 @@ export function reconcileReviewSession(
   const queuedNodeIds = state.reviewSession.queueNodeIds.filter((nodeId) =>
     isVisibleQueuedNode(state, nodeId)
   );
-  if (queuedNodeIds.length === 0) {
+  if (queuedNodeIds.length === 0 && !state.reviewSession.daily) {
     if (isReviewSessionCompleted(state.reviewSession)) {
       return state.reviewSession;
     }
     return createEmptyReviewSession();
   }
 
+  if (state.reviewSession.daily) {
+    const soonNodeIds = (state.reviewSession.soonNodeIds ?? []).filter(id => isVisibleQueuedNode(state, id));
+    const currentNodeId = state.reviewSession.currentNodeId && isVisibleQueuedNode(state, state.reviewSession.currentNodeId)
+      ? state.reviewSession.currentNodeId : queuedNodeIds[0] ?? soonNodeIds.shift() ?? null;
+    return { ...state.reviewSession, currentNodeId, queueNodeIds: queuedNodeIds, soonNodeIds,
+      isAnswerRevealed: currentNodeId === state.reviewSession.currentNodeId && state.reviewSession.isAnswerRevealed };
+  }
   const removedQueueCount = state.reviewSession.queueNodeIds.length - queuedNodeIds.length;
   const nextTotalNodeCount = Math.max(
     queuedNodeIds.length,

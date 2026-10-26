@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -106,12 +106,15 @@ it('resumes the review session when restored Flow opens away from the current it
   expect(props.startReviewSession).not.toHaveBeenCalled();
 });
 
-it('starts a review session when restored Flow has no current session to resume', () => {
-  const props = renderRestoreHook({ reviewCurrentNodeId: null });
+it('starts a review session when restored Flow has no current session to resume', async () => {
+  const props = renderRestoreHook({
+    reviewCurrentNodeId: null,
+    resumeReviewSession: vi.fn(async () => false)
+  });
 
   expect(props.resumeReviewSession).toHaveBeenCalledTimes(1);
   expect(props.onReviewSessionStarted).toHaveBeenCalledTimes(1);
-  expect(props.startReviewSession).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(props.startReviewSession).toHaveBeenCalledTimes(1));
 });
 
 it('does not replace an already completed restored Flow session', () => {

@@ -12,7 +12,7 @@ import type { StartStudyModeOptions } from './reviewModeSessionActions';
 export interface OpenGuidedSampleCommandActions {
   closeTrashView: () => void;
   openNotesView: () => void;
-  startReviewSession: () => boolean;
+  startReviewSession: () => boolean | Promise<boolean>;
   startStudyMode: (options?: StartStudyModeOptions) => void;
 }
 
@@ -82,7 +82,7 @@ export async function openSeededGuidedSample(actions: OpenGuidedSampleCommandAct
 export function createOpenGuidedSampleCommand(
   closeTrashView: () => void,
   openNotesView: () => void,
-  startReviewSession: () => boolean,
+  startReviewSession: () => boolean | Promise<boolean>,
   startStudyMode: (options?: StartStudyModeOptions) => void
 ) {
   return () => openGuidedSampleCommand({ closeTrashView, openNotesView, startReviewSession, startStudyMode });

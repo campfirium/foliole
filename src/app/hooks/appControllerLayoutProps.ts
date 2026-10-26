@@ -107,7 +107,7 @@ export interface BuildControllerLayoutPropsArgs {
     nodeViewById: Record<string, NodeViewState | undefined>;
     resetLayout: () => void;
     continueReviewSessionReading: WorkspaceState['continueReviewSessionReading'];
-    resumeReviewSession: (now?: string) => boolean;
+    resumeReviewSession: (now?: string) => boolean | Promise<boolean>;
     revealReviewAnswer: () => void;
     reviewSession: ReviewSessionState;
     reviewSessionMode: ReviewSessionMode;

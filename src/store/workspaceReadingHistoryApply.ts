@@ -6,6 +6,7 @@ import {
   areRelatedReadingsValid,
   isSameReadingProfile
 } from './workspaceActionHistoryReading';
+import { hasPersistentDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import {
   applyWorkspaceHistoryContext,
@@ -62,10 +63,14 @@ export async function applyWorkspaceReadingHistory(args: {
 }): Promise<WorkspaceHistoryApplyResult> {
   if (!isApplicable(args.get(), args.entry, args.mode)) return { status: 'invalid' };
   const prepared = buildApplyNodes(args.get(), args.entry, args.mode);
+  let dailySession: WorkspaceState['reviewSession'] | undefined;
   try {
-    const persisted = await getWorkspaceHistoryPersistence()
+    const persisted = hasPersistentDailyFlow(args.get().reviewSession)
+      ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp })
+      : await getWorkspaceHistoryPersistence()
       .persistReadingSnapshots(prepared.nodes, args.mutationTimestamp);
     if (!persisted) return { status: 'failed' };
+    if (typeof persisted !== 'boolean') dailySession = persisted.session;
   } catch (error) {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };
   }
@@ -75,6 +80,7 @@ export async function applyWorkspaceReadingHistory(args: {
   const context = args.mode === 'undo' ? args.entry.beforeContext : args.entry.afterContext;
   return appliedWorkspaceHistory({ ...args.entry, mutationTimestamp: args.mutationTimestamp }, {
     ...applyWorkspaceHistoryContext(context),
+    ...(dailySession ? { reviewSession: dailySession } : {}),
     nodesById: applied.nextNodesById
   });
 }

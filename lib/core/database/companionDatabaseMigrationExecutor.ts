@@ -30,6 +30,7 @@ import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwners
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
+import { migrateCompanionDailyFlow } from './dailyFlowSchema.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
@@ -147,6 +148,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 99 && targetVersion >= 99) await migrateCompanionReviewLog(db);
   if (currentVersion < 100 && targetVersion >= 100) await retireCompanionReviewStateSync(db);
   if (currentVersion < 101 && targetVersion >= 101) await migrateCompanionInitialReviewSchedule(db);
+  if (currentVersion < 102 && targetVersion >= 102) await migrateCompanionDailyFlow(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

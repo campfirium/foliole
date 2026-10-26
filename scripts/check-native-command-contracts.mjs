@@ -8,6 +8,7 @@ const CONTRACT_FILES = JSON.parse(fs.readFileSync(
   'utf8'
 ));
 const ELECTRON_HANDLER_FILES = [
+  'electron/ipc/dailyFlowCommands.ts',
   'electron/ipc/assistantCommands.ts',
   'electron/ipc/assistantLocalHistoryCommands.ts',
   'electron/ipc/assistantStorageCommands.ts',

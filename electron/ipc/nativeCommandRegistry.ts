@@ -13,6 +13,8 @@ export interface NativeCommandRegistryEntry {
 }
 
 export const NATIVE_COMMAND_REGISTRY = [
+  { command: NATIVE_COMMANDS.openDailyFlow, route: 'storage', capability: 'dataMutation' },
+  { command: NATIVE_COMMANDS.commitDailyFlow, route: 'storage', capability: 'dataMutation' },
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   ...NATIVE_BACKUP_COMMAND_REGISTRY,

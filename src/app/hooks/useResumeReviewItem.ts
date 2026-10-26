@@ -32,7 +32,7 @@ export function useResumeReviewItem(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const demoRuntime = useDemoRuntimeState();
-  return useCallback(() => {
+  return useCallback(async () => {
     if (!args.reviewSettings.isReviewSchedulerSettingsReady) {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
@@ -52,7 +52,7 @@ export function useResumeReviewItem(args: {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
-    if (!args.ws.resumeReviewSession(args.nowIso, resumeOptions)) {
+    if (!await args.ws.resumeReviewSession(args.nowIso, resumeOptions)) {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }

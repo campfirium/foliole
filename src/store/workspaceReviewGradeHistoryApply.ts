@@ -1,5 +1,7 @@
 import { reviewHistoryOpId } from '../../lib/core/review/reviewEventIdentity';
+import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 
+import { hasPersistentDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
@@ -18,13 +20,19 @@ export async function applyWorkspaceReviewGradeHistory(args: {
   if (!prepare()) return { status: 'invalid' };
   const nextReview = args.mode === 'undo' ? args.entry.beforeReview : args.entry.afterReview;
   let reviewResult: { review: import('../features/nodes/model/nodeTypes').NodeReviewProfile | null } | null = null;
+  let dailySession: WorkspaceState['reviewSession'] | undefined;
   try {
-    const persisted = await getWorkspaceHistoryPersistence()
+    const persisted = hasPersistentDailyFlow(args.get().reviewSession)
+      ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp })
+      : await getWorkspaceHistoryPersistence()
       .persistReviewSnapshot(args.entry.nodeId, nextReview, args.mutationTimestamp, {
         mode: args.mode, targetOpId: args.entry.reviewOpId ?? args.entry.id
       });
     if (!persisted) return { status: 'failed' };
-    if (typeof persisted !== 'boolean') reviewResult = persisted;
+    if (typeof persisted !== 'boolean' && 'session' in persisted) {
+      dailySession = persisted.session;
+      reviewResult = { review: persisted.card ? toNodeReviewProfile(persisted.card) : null };
+    } else if (typeof persisted !== 'boolean') reviewResult = persisted;
   } catch { return { status: 'failed' }; }
   const applied = prepare();
   if (!applied) return { status: 'invalid' };
@@ -38,6 +46,6 @@ export async function applyWorkspaceReviewGradeHistory(args: {
     ...(reviewResult ? args.mode === 'undo' ? { beforeReview: reviewResult.review } : { afterReview: reviewResult.review } : {}),
     mutationTimestamp: args.mutationTimestamp,
     ...(args.mode === 'redo' ? { reviewOpId: reviewHistoryOpId(args.entry.reviewOpId ?? args.entry.id, args.mutationTimestamp, 'redo') } : {}) }, {
-    ...applyWorkspaceHistoryContext(context), nodesById
+    ...applyWorkspaceHistoryContext(context), ...(dailySession ? { reviewSession: dailySession } : {}), nodesById
   });
 }

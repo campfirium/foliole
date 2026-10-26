@@ -2,6 +2,7 @@ import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/databa
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -19,6 +20,7 @@ import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
+import { commitCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
 import { appendCompanionFlowHistory, readCompanionFlowHistory, readCompanionFlowHistoryAvailability, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
@@ -39,6 +41,7 @@ export function commitCompanionFlowHistory(args: {
   key: string; mode: ReviewSessionMode; entry: FlowHistoryEntry; reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string;
 }) {
   return runCompanionHistoryMutation(async db => {
+    if (args.entry.beforeContext.reviewSession.daily) return commitCompanionDailyHistory(db, args);
     await writeEntry(db, args.entry, 'redo', args.entry.beforeContext.reviewSession,
       args.reviewLog ? { ...args.reviewLog, opId: args.entry.id } : undefined, args.completedReviewDay);
     let entry = await withCurrentReview(db, args.entry, 'redo');
@@ -53,7 +56,10 @@ export function commitCompanionFlowHistory(args: {
     await appendCompanionFlowHistory(db, args.key, entry);
     return entry.type === 'review.grade' ? { card: entry.afterReview
       ? toSchedulerCard(entry.afterReview, entry.mutationTimestamp) : null } : true;
-  }, flowHistoryRefreshScope(args.entry));
+  }, flowHistoryRefreshScope(args.entry)).then(result => {
+    if (args.entry.beforeContext.reviewSession.daily) settleDailyFlowRetry(args.entry.id);
+    return result;
+  });
 }
 
 export async function replayCompanionFlowHistory(key: string, mode: HistoryMode, session: ReviewSessionState) {
@@ -64,7 +70,8 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
     if (entry.type === 'nodes.change') {
       await replayCompanionNodeHistoryWithDb(db, entry, mode);
       await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, entry, mode));
-      return { session: (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, entry };
+      const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, new Date().toISOString());
+      return { session: restored, entry };
     }
     if (entry.type !== 'review.grade' && entry.type !== 'topic.dismiss') throw new Error('flow_history_unavailable');
     const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
@@ -75,7 +82,8 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
       ...(entry.type === 'review.grade' && mode === 'redo'
         ? { reviewOpId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, 'redo') } : {}) };
     await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, updated, mode));
-    return { session: (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, entry: updated };
+    const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, mutationTimestamp);
+    return { session: restored, entry: updated };
   }, result => result ? flowHistoryRefreshScope(result.entry) : { kind: 'nodes', nodeIds: [] });
   return result?.session ?? null;
 }

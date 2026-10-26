@@ -1,3 +1,4 @@
+import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import type { ReviewGrade, SchedulerCard } from '../features/review/model/reviewTypes';
 
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
@@ -35,6 +36,7 @@ export function buildGradedReviewState(args: {
   currentNodeId: string;
   nodePatch: { review: import('../features/nodes/model/nodeTypes').NodeReviewProfile | null };
   now: string;
+  persistedSession?: WorkspaceState['reviewSession'];
 }) {
   const state = args.snapshot;
   const node = state.nodesById[args.currentNodeId];
@@ -46,7 +48,9 @@ export function buildGradedReviewState(args: {
       ...args.nodePatch
     }
   };
-  const nextQueue = buildCurrentReviewSessionQueueOutput(state, args.now, {
+  const nextQueue = args.persistedSession ? { currentNodeId: args.persistedSession.currentNodeId,
+    taskNodeIds: args.persistedSession.queueNodeIds, extensionNodeIds: [args.persistedSession.continueNodeId].filter((id): id is string => Boolean(id)) }
+    : buildCurrentReviewSessionQueueOutput(state, args.now, {
     nodesById: nextNodesById,
     releaseCurrentPin: true
   });
@@ -54,7 +58,7 @@ export function buildGradedReviewState(args: {
   const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
   const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
   const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
-  const nextReviewSession = buildReviewSessionAfterGrade({
+  const nextReviewSession = args.persistedSession ?? buildReviewSessionAfterGrade({
     continueNodeId,
     nextDueAt: args.nodePatch.review?.due ?? null,
     nextNodeId,
@@ -110,7 +114,8 @@ export function createReadingReviewHistoryEntry(args: {
       reviewSession: args.beforeReviewSession
     }),
     beforeReading: args.beforeReading,
-    id: createWorkspaceActionHistoryEntryId(),
+    id: args.beforeReviewSession.daily && args.title !== 'Postpone Topic'
+      ? dailyFlowOperationId(args.beforeReviewSession.daily, args.nodeId, args.title) : createWorkspaceActionHistoryEntryId(),
     mutationTimestamp: args.mutationTimestamp,
     nodeId: args.nodeId,
     ...(args.relatedReadings ? { relatedReadings: args.relatedReadings } : {}),

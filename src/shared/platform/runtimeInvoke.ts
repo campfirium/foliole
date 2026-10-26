@@ -9,6 +9,8 @@ import { isDesktopRuntime } from './runtime';
 export type RuntimeInvoke = NativeInvoke;
 
 const WORKSPACE_WRITE_COMMANDS = new Set<string>([
+  NATIVE_COMMANDS.openDailyFlow,
+  NATIVE_COMMANDS.commitDailyFlow,
   NATIVE_COMMANDS.importRemoteImageAttachment,
   NATIVE_COMMANDS.applyReviewGrade,
   NATIVE_COMMANDS.saveReviewTrainingModel,

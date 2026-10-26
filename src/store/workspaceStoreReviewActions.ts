@@ -141,10 +141,10 @@ export function createWorkspaceReviewActions(
 ): WorkspaceReviewActions {
   const readingPendingNodeIds: ReadingReviewPendingNodeIds = new Set();
   return {
-    startReviewSession: createStartReviewSessionAction(set, options.startReviewSession),
-    continueReviewSessionReading: createContinueReviewSessionReadingAction(set),
-    resumeReviewSession: createResumeReviewSessionAction(set),
-    setReviewSessionMode: createSetReviewSessionModeAction(set),
+    startReviewSession: createStartReviewSessionAction(set, options.startReviewSession, get),
+    continueReviewSessionReading: createContinueReviewSessionReadingAction(set, get),
+    resumeReviewSession: createResumeReviewSessionAction(set, get),
+    setReviewSessionMode: createSetReviewSessionModeAction(set, get),
     revealReviewAnswer: createRevealReviewAnswerAction(set),
     gradeReviewCard: createGradeReviewCardAction(set, get, scheduler, persistence),
     readReviewTopic: createReadReviewTopicActionWithPending(set, get, readingPendingNodeIds, persistence),

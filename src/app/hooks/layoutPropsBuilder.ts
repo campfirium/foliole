@@ -123,7 +123,7 @@ function getReviewSessionSummary(
 }
 
 function createContinueReadingAction(args: BuildLayoutPropsArgs) {
-  return () => {
+  return async () => {
     const continueNodeId = args.reviewSession.continueNodeId;
     const targetNodeId =
       continueNodeId && args.nodesById[continueNodeId] && !args.trashedNodeIds.includes(continueNodeId)
@@ -132,7 +132,7 @@ function createContinueReadingAction(args: BuildLayoutPropsArgs) {
     args.onOpenNotesView();
     if (targetNodeId && args.nodesById[targetNodeId] && !args.trashedNodeIds.includes(targetNodeId)) {
       args.nav.onSelectNode(targetNodeId);
-      if (args.continueReviewSessionReading(args.nowIso)) {
+      if (await args.continueReviewSessionReading(args.nowIso)) {
         return;
       }
     }
