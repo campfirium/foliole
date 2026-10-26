@@ -31,7 +31,7 @@ function fixture() {
       (node_id, version_id, host_name, content_hash, snapshot_json, deleted_at, created_at)
       VALUES ('known-deletion', 'version-tomb', 'source', 'tomb-hash', '{}', 'now', 'now');`);
   let seq = 0;
-  for (const type of ['node', 'node_reading', 'node_review', 'import_source']) {
+  for (const type of ['node', 'node_reading', 'import_source']) {
     for (const [id, dirty, deleted] of [['orphan', 0, null], ['unsent', 1, null], ['deleted', 1, 'now']]) {
       db.prepare(`INSERT INTO sync_object_state
         (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
@@ -54,8 +54,10 @@ function fixture() {
 
 function assertRepaired(db: Database.Database) {
   expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id = 'orphan'").pluck().get()).toBe(0);
-  expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id = 'unsent'").pluck().get()).toBe(4);
-  expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE deleted_at IS NOT NULL").pluck().get()).toBe(4);
+  expect(db.prepare("SELECT object_type FROM sync_object_state WHERE object_id = 'unsent' ORDER BY object_type").all())
+    .toEqual([{ object_type: 'import_source' }, { object_type: 'node' }, { object_type: 'node_reading' }]);
+  expect(db.prepare("SELECT object_type FROM sync_object_state WHERE deleted_at IS NOT NULL ORDER BY object_type").all())
+    .toEqual([{ object_type: 'import_source' }, { object_type: 'node' }, { object_type: 'node_reading' }]);
   expect(db.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_id IN ('live', 'known-deletion')")
     .pluck().get()).toBe(2);
   const receipts = db.prepare("SELECT name FROM sqlite_master WHERE name = 'sync_delivery_receipts'").get();

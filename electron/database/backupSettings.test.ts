@@ -35,12 +35,13 @@ it('uses compact count defaults for a new installation', () => {
 });
 
 it('uses the current count defaults when legacy time-window rules changed meaning', () => {
+  const backupDirectory = path.resolve('/Custom Backups');
   store.load.mockReturnValue({
     auto_daily_days: 7,
     auto_hourly_hours: 24,
     auto_monthly_months: 0,
     auto_weekly_weeks: 4,
-    backup_dir: '/Custom Backups',
+    backup_dir: backupDirectory,
     manual_max_count: 20,
     snapshot_max_count: 5,
     updated_at: '2026-09-13T00:00:00.000Z'
@@ -49,7 +50,7 @@ it('uses the current count defaults when legacy time-window rules changed meanin
   const settings = loadBackupSettings();
 
   expect(settings).toMatchObject({
-    backup_dir: path.normalize('/Custom Backups'),
+    backup_dir: backupDirectory,
     daily_max_count: 5,
     hourly_max_count: 8,
     monthly_max_count: 0,
