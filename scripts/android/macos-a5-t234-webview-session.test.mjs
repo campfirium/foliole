@@ -22,7 +22,8 @@ it('discovers the fixed socket when unrelated system sockets exceed the capture 
     await runT234WebViewSession({
       assertFixed: vi.fn(), buildIdentity: () => 'large', captured, checked: vi.fn(),
       paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' },
-      serial: '87a33a4b', waitForEnd: async () => {}
+      serial: '87a33a4b', waitForEnd: async () => {},
+      execute: vi.fn(async () => ({ code: 1, stderr: 'No test device' }))
     });
     expect(JSON.parse(fs.readFileSync(path.join(root, 'a5-t234-webview-session/large/session.json'), 'utf8')))
       .toMatchObject({ status: 'closed', socket: 'webview_devtools_remote_42' });
@@ -48,7 +49,8 @@ it('holds the fixed session and restores the main app when it closes', async () 
     await runT234WebViewSession({
       assertFixed: vi.fn(), buildIdentity: () => 'revision', captured, checked,
       paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' },
-      serial: '87a33a4b', waitForEnd
+      serial: '87a33a4b', waitForEnd,
+      execute: vi.fn(async () => ({ code: 1, stderr: 'No test device' }))
     });
     expect(waitForEnd).toHaveBeenCalledOnce();
     expect(checked.mock.calls[0][1]).toContain(
@@ -113,5 +115,32 @@ it('captures acceptance startup logs before restoring the daily app and preserve
     expect(log).not.toContain('unrelated data');
     expect(JSON.parse(fs.readFileSync(path.join(root,
       'a5-t234-webview-session/failed/session.json'), 'utf8')).status).toBe('failed');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+
+it('captures bounded session diagnostics before restoring the daily app without failing a closed session', async () => {
+  const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/a5-session-diagnostic-'));
+  const events = [];
+  const execute = vi.fn(async (_command, args) => {
+    if (args.includes('logcat')) {
+      events.push('logs');
+      return { code: 0, stdout: '10-27 10:00:00.000 42 42 I Capacitor: pending operation\n' };
+    }
+    return { code: 0, stdout: args.includes('pidof') ? '42' : '' };
+  });
+  try {
+    await runT234WebViewSession({ assertFixed: vi.fn(), buildIdentity: () => 'ended',
+      captured: (_command, args) => args.includes('pidof') ? '42' : args.includes('packages') ? '' : '000: @webview_devtools_remote_42',
+      checked: (_command, args) => {
+        if (args.includes('com.campfirium.foliole.android/com.foliole.android.MainActivity')) events.push('restore');
+      }, execute, serial: '87a33a4b', waitForEnd: async () => { events.push('end'); },
+      paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' }
+    });
+    expect(events).toEqual(['end', 'logs', 'logs', 'restore']);
+    const directory = path.join(root, 'a5-t234-webview-session/ended');
+    expect(fs.readFileSync(path.join(directory, 'instrumentation-failure/logcat-tail.txt'), 'utf8')).toContain('pending operation');
+    expect(JSON.parse(fs.readFileSync(path.join(directory, 'session.json'), 'utf8')).status).toBe('closed');
+    expect(execute.mock.calls.every(([, args]) => !args.includes('force-stop') && !args.includes('clear'))).toBe(true);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

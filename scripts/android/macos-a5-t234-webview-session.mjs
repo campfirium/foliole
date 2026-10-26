@@ -69,6 +69,8 @@ export async function runT234WebViewSession({
     save();
     process.stdout.write(`[macos-a5-dev] t234-webview-session-ready=${evidencePath}\n`);
     await waitForEnd();
+    await saveA5InstrumentationFailure({ appId, evidenceRoot, execute, options: {}, paths, serial,
+      error: new Error('WebView diagnostic session ended; capture does not imply a product failure.') });
   }
   catch (error) {
     failure = error;
