@@ -24,6 +24,7 @@ export function useStudyMode({ canStartStudyMode, onBlockedStart }: UseStudyMode
   );
   useEffect(() => { setReviewTrainingStudyActive(isStudyMode); }, [isStudyMode]);
   const setStudyMode = (next: boolean) => {
+    setReviewTrainingStudyActive(next);
     setIsStudyMode(next);
     if (isDevReviewStatusBarPersistenceEnabledState) {
       setDevReviewStatusBarOpen(next);

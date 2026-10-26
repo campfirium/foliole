@@ -67,7 +67,7 @@ function readTrainedGrade(app: ElectronApplication) {
   });
 }
 
-test('optimizes folder review history in a Worker and uses synced-capable parameters on the next grade', async ({ desktopApp, desktopWindow: page }) => {
+for (const automatic of [false, true]) test(`${automatic ? 'automatically optimizes idle' : 'manually optimizes'} folder history and uses parameters on the next grade`, async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -76,10 +76,10 @@ test('optimizes folder review history in a Worker and uses synced-capable parame
   await seedTrainingWorkspace(page, desktopApp);
   const before = await readTrainingState(desktopApp);
   const settings = await openSettingsCategory(page, 'Review');
-  await settings.getByRole('button', { name: 'Optimize now', exact: true }).click();
-  await expect(settings.getByText(/^Last optimization:/)).toBeVisible({ timeout: 30000 });
+  if (!automatic) await settings.getByRole('button', { name: 'Optimize now', exact: true }).click();
+  await expect(settings.getByText(/^Last optimization:/)).toBeVisible({ timeout: 60000 });
   await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toBeEnabled();
-  await page.screenshot({ path: path.resolve('.tmp/artifacts/T394/folder-review-optimization.png') });
+  await page.screenshot({ path: path.resolve(`.tmp/artifacts/T394/folder-review-${automatic ? 'idle' : 'manual'}-optimization.png`) });
   const optimized = await readTrainingState(desktopApp);
   expect(optimized.states).toEqual(before.states);
   expect(optimized.models).toHaveLength(2);

@@ -23,21 +23,23 @@ export async function refreshReviewTrainingStatus() {
   return plan;
 }
 
-export async function optimizeReadyReviewFolders() {
-  if (state.running || state.studyActive || !isForeground()) return;
+export async function optimizeReadyReviewFolders(shouldStart = () => true, signal?: AbortSignal) {
+  const canStart = () => !state.studyActive && isForeground() && !signal?.aborted && shouldStart();
+  if (state.running || !canStart()) return;
   update({ running: true, error: false });
   try {
     const plan = await refreshReviewTrainingStatus();
     for (const folder of plan.folders) {
-      if (state.studyActive || !isForeground()) break;
+      if (!canStart()) break;
       const input = await loadReviewTrainingInput(folder.folderId, plan.libraryScope);
+      if (!canStart()) break;
       // Fixed input and a fresh Worker per folder release wasm memory between training runs.
-      const model = await runReviewTrainingWorker(input);
+      const model = await runReviewTrainingWorker(input, signal);
       await saveReviewTrainingModel(model, plan.libraryScope);
       update({ lastTrainedAt: model.trainedAt, revision: state.revision + 1 });
     }
   } catch (error) {
-    update({ error: true });
+    if (!signal?.aborted) update({ error: true });
     throw error;
   } finally { update({ running: false }); }
 }
