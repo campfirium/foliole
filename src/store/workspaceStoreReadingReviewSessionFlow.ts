@@ -88,9 +88,10 @@ export function advanceAfterSoonAction(args: {
   readingElapsedMsDelta: number;
   snapshot: ReviewFlowState;
   state: ReviewFlowState;
+  isAvailable?: (nodeId: string) => boolean;
 }) {
   const remainingQueueNodeIds = withoutNodeId(args.snapshot.reviewSession.queueNodeIds, args.currentNodeId)
-    .filter((nodeId) => args.state.nodesById[nodeId] && !args.state.trashedNodeIds.includes(nodeId));
+    .filter(args.isAvailable ?? ((nodeId) => Boolean(args.state.nodesById[nodeId]) && !args.state.trashedNodeIds.includes(nodeId)));
   const soonNodeIds = [
     ...withoutNodeId(args.snapshot.reviewSession.soonNodeIds, args.currentNodeId),
     args.currentNodeId

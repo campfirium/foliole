@@ -1,5 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
+import { createWorkspaceSnapshotNodeAvailability, normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
@@ -65,11 +65,16 @@ export function advanceFlowSession(args: {
 }) {
   const currentNodeId = args.session.currentNodeId;
   if (!currentNodeId) return args.session;
-  const state = flowState(args.snapshot, args.session, args.mode);
-  const common = { currentNodeId, now: args.now, snapshot: state, state };
   const readingElapsedMsDelta = calculateReviewStepElapsedMs(args.session, args.now);
   const progressDelta = args.session.queueNodeIds.includes(currentNodeId) ? 1 : 0;
-  if (args.action === 'soon') return advanceAfterSoonAction({ ...common, progressDelta, readingElapsedMsDelta });
+  if (args.action === 'soon') {
+    const state = { ...args.snapshot, nodesById: args.snapshot.nodesById as ReviewFlowState['nodesById'],
+      reviewSession: args.session, reviewSessionMode: args.mode };
+    return advanceAfterSoonAction({ currentNodeId, now: args.now, snapshot: state, state,
+      progressDelta, readingElapsedMsDelta, isAvailable: createWorkspaceSnapshotNodeAvailability(args.snapshot) });
+  }
+  const state = flowState(args.snapshot, args.session, args.mode);
+  const common = { currentNodeId, now: args.now, snapshot: state, state };
   if (args.action === 'dismiss') return buildNextDismissReviewSession({
     ...common, nextNodesById: state.nodesById
   }).nextReviewSession;

@@ -113,15 +113,27 @@ function normalizeNodesById<TNode extends WorkspaceSnapshotNodeContract>(
 ) {
   const normalizedNodesById: Record<string, TNode> = {};
   for (const [nodeId, node] of Object.entries(nodesById)) {
-    if (!node || node.id !== nodeId) {
-      continue;
-    }
-    const legacyDeletedAt = deletedAtById?.[nodeId];
-    normalizedNodesById[nodeId] = legacyDeletedAt && node.deletedAt === undefined
-      ? { ...node, deletedAt: legacyDeletedAt }
-      : node;
+    const normalized = normalizeSnapshotNode(nodeId, node, deletedAtById);
+    if (normalized) normalizedNodesById[nodeId] = normalized;
   }
   return normalizedNodesById;
+}
+
+function normalizeSnapshotNode<TNode extends WorkspaceSnapshotNodeContract>(nodeId: string,
+  node: TNode | undefined, deletedAtById: Record<string, string | undefined> | undefined) {
+  if (!node || node.id !== nodeId) return undefined;
+  const legacyDeletedAt = deletedAtById?.[nodeId];
+  return legacyDeletedAt && node.deletedAt === undefined ? { ...node, deletedAt: legacyDeletedAt } : node;
+}
+
+export function createWorkspaceSnapshotNodeAvailability<TNode extends WorkspaceSnapshotNodeContract>(
+  snapshot: WorkspaceSnapshotContract<TNode>) {
+  const legacyTrashIds = new Set(snapshot.trashedNodeIds);
+  const deletedAtById = snapshot.trashedNodeDeletedAtById ?? {};
+  return (nodeId: string) => {
+    const node = normalizeSnapshotNode(nodeId, snapshot.nodesById[nodeId], deletedAtById);
+    return Boolean(node && !isTrashedSnapshotNode(nodeId, node, deletedAtById, legacyTrashIds));
+  };
 }
 
 export function resolveWorkspaceSnapshotActiveNodeId<TNode>(args: {
