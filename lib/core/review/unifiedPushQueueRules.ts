@@ -168,3 +168,22 @@ export function buildQueueMixCycle(ratio = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.queu
     ...Array.from({ length: normalizedRatio.reading }, () => 'reading' as const)
   ];
 }
+
+export function getPriorityWeight(
+  priority: RegularPushQueuePriority,
+  priorityRatio = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.priorityRatio
+) {
+  const ratio = normalizePriorityRatio(priorityRatio);
+  const alpha = Math.log(ratio) / Math.log(9);
+  return (10 - priority) ** alpha;
+}
+
+function parseQueueTimestamp(timestamp: string) {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) throw new TypeError(`Invalid timestamp: ${timestamp}`);
+  return parsed;
+}
+
+export function compareReadingNextAtAscending(left: Pick<{ nextAt: string }, 'nextAt'>, right: Pick<{ nextAt: string }, 'nextAt'>) {
+  return parseQueueTimestamp(left.nextAt) - parseQueueTimestamp(right.nextAt);
+}

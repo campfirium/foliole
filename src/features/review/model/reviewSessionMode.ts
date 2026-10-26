@@ -1,4 +1,5 @@
-export type ReviewSessionMode = 'recommended' | 'review-first' | 'reading-only';
+import type { ReviewSessionMode } from '../../../../lib/core/review/queue/reviewQueueTypes';
+export type { ReviewSessionMode } from '../../../../lib/core/review/queue/reviewQueueTypes';
 export type ReviewSessionModeAvailability = Record<ReviewSessionMode, boolean>;
 
 export const DEFAULT_REVIEW_SESSION_MODE: ReviewSessionMode = 'recommended';

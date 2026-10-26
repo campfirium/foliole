@@ -1,5 +1,6 @@
-import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
-import { buildQueueMixCycle, type UnifiedPushQueueRules } from '../features/review/model/unifiedPushQueueRules';
+import { buildQueueMixCycle, type UnifiedPushQueueRules } from '../unifiedPushQueueRules.js';
+
+import type { ReviewSessionMode } from './reviewQueueTypes.js';
 
 function mixUnifiedPushQueues(args: {
   fsrsQueueNodeIds: string[];

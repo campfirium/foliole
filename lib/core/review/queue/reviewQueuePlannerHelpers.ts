@@ -1,4 +1,4 @@
-import type { ReviewQueueNode } from './reviewQueuePlanner';
+import type { ReviewQueueNode } from './reviewQueuePlanner.js';
 
 export function createSeededRandom(seedInput: string) {
   let hash = 2166136261;

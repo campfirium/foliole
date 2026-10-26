@@ -5,7 +5,6 @@ import {
   type ReadingIntervalGrowthFactorRange,
   type RegularPushQueuePriority,
   buildQueueMixCycle as buildQueueMixCycleBase,
-  normalizePriorityRatio,
   normalizeReadingIntervalGrowthFactorRange,
   normalizeRegularPushQueuePriority,
   resolveInheritedPushQueuePriority,
@@ -54,15 +53,6 @@ function parseTimestamp(timestamp: string) {
     throw new TypeError(`Invalid timestamp: ${timestamp}`);
   }
   return parsed;
-}
-
-export function getPriorityWeight(
-  priority: RegularPushQueuePriority,
-  priorityRatio = DEFAULT_UNIFIED_PUSH_QUEUE_RULES.priorityRatio
-) {
-  const ratio = normalizePriorityRatio(priorityRatio);
-  const alpha = Math.log(ratio) / Math.log(9);
-  return (10 - priority) ** alpha;
 }
 
 export function getReadingIntervalGrowthFactor(
@@ -148,6 +138,4 @@ export function advanceReadingScheduleCoreFields(args: { growthFactorExponent?: 
   });
 }
 
-export function compareReadingNextAtAscending(left: Pick<{ nextAt: string }, 'nextAt'>, right: Pick<{ nextAt: string }, 'nextAt'>) {
-  return parseTimestamp(left.nextAt) - parseTimestamp(right.nextAt);
-}
+export { getPriorityWeight, compareReadingNextAtAscending } from '../../../../lib/core/review/unifiedPushQueueRules';

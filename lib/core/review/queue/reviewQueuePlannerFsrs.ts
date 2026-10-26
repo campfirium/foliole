@@ -1,22 +1,20 @@
 import { default_w, forgetting_curve } from 'ts-fsrs';
 
-import { toSchedulerCard } from '../features/review/model/reviewTypes';
-import { assembleFsrsPushQueue } from '../features/review/model/unifiedPushQueueAssembler';
-import type { PushQueuePriority, UnifiedPushQueueRules } from '../features/review/model/unifiedPushQueueRules';
+import { assembleFsrsPushQueue } from '../unifiedPushQueueAssembler.js';
+import type { PushQueuePriority, UnifiedPushQueueRules } from '../unifiedPushQueueRules.js';
 
-import type { ReviewQueueNode } from './reviewQueuePlanner';
-import { createSeededRandom } from './reviewQueuePlannerHelpers';
-import { resolveReviewQueueNodePathNodeIds } from './reviewQueuePlannerReadingPaths';
-import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime';
-
+import type { ReviewQueueNode } from './reviewQueuePlanner.js';
+import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
+import { resolveReviewQueueNodePathNodeIds } from './reviewQueuePlannerReadingPaths.js';
+import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
 
 function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
   if (!node.review) return 0;
-  const card = toSchedulerCard(node.review, now);
-  if (!card.last_review || card.stability <= 0) {
+  const card = node.review;
+  if (!card.lastReviewAt || card.stability <= 0) {
     return 0;
   }
-  const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.last_review)) / (24 * 60 * 60 * 1000), 0);
+  const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.lastReviewAt)) / (24 * 60 * 60 * 1000), 0);
   const retrievability = forgetting_curve(default_w, elapsedDays, card.stability);
   return Number.isFinite(retrievability) ? retrievability : 0;
 }
