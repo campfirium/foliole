@@ -57,6 +57,7 @@ const controlledElectronSqliteTests = [
   'electron/database/foregroundTimeOwner.test.ts',
   'electron/sync/foregroundTimeFramedSync.integration.test.ts',
   'src/shared/platform/companion/runtime/companionForegroundTimeOwner.sqlite.test.ts',
+  'src/shared/platform/companion/runtime/companionReviewTraining.integration.test.ts',
   'lib/core/database/foregroundTime.integration.test.ts',
   'src/shared/platform/companion/runtime/companionForegroundTime.test.ts',
   'src/shared/platform/companion/runtime/foregroundTimeSync.integration.test.ts',
