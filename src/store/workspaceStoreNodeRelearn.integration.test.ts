@@ -8,6 +8,7 @@ import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithD
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver.js';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport.js';
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport.js';
+import { handleDailyFlowCommand } from '../../electron/ipc/dailyFlowCommands.js';
 import { handleNodeMutationCommand } from '../../electron/ipc/storageNodeMutationCommands.js';
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from '../../electron/ipc/storageReadCommands.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
@@ -97,7 +98,8 @@ beforeEach(async () => {
   resetPendingDurableMutationsForTests();
   transport.invoke.mockClear();
   transport.invoke.mockImplementation((command: string, args: Record<string, unknown> = {}) =>
-    runWithDatabaseConnectionOwner(() => command === 'update_node_content'
+    runWithDatabaseConnectionOwner(() => command === 'open_daily_flow' || command === 'commit_daily_flow'
+      ? handleDailyFlowCommand(command, args) : command === 'update_node_content'
       ? handleNodeMutationCommand(command, args) : command === 'load_node_document'
         ? handleWorkspaceReadCommand(command, args) : handleReadingAndReviewCommand(command, args)));
 });
@@ -178,7 +180,8 @@ it.each([false, true])('consumes durable grading, next due and repeated undo/red
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState,
     { grade: createSchedulerGradeMock(at), preview: previewStub });
   const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
-  expect(actions.startReviewSession(at)).toBe(true); actions.revealReviewAnswer();
+  expect(await actions.startReviewSession(at)).toBe(true);
+  actions.revealReviewAnswer();
   expect(await actions.gradeReviewCard(3, at)).toBe(true);
   const card = readStoredReviewCard(source.driver, 'node-1')!;
   expect(card.reps).toBe(initialReps + 1);
