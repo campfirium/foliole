@@ -52,14 +52,17 @@ export async function writeCompanionFlowHistory(db: DbPort, key: string, value: 
 export async function appendCompanionFlowHistory(db: DbPort, key: string, value: CompanionWorkspaceHistoryEntry) {
   const result = await db.run(`INSERT INTO companion_meta (key, value, updated_at)
     VALUES (?, json_object('undoStack', json_array(json(?)), 'redoStack', json_array()), ?)
-    ON CONFLICT(key) DO UPDATE SET value = json_object('undoStack', json((
-      SELECT json_group_array(json(value)) FROM (
-        SELECT value FROM json_each(json_insert(companion_meta.value, '$.undoStack[#]',
-          json_extract(excluded.value, '$.undoStack[0]')), '$.undoStack')
-        WHERE CAST(key AS INTEGER) >= MAX(0, json_array_length(companion_meta.value, '$.undoStack') + 1 - ?)
-        ORDER BY CAST(key AS INTEGER)
+    ON CONFLICT(key) DO UPDATE SET value = (
+      WITH RECURSIVE retained(undo, excess) AS (
+        SELECT json_extract(companion_meta.value, '$.undoStack'),
+          MAX(0, json_array_length(companion_meta.value, '$.undoStack') + 1 - ?)
+        UNION ALL
+        SELECT json_remove(undo, '$[0]'), excess - 1 FROM retained WHERE excess > 0
       )
-    )), 'redoStack', json_array()), updated_at = excluded.updated_at
+      SELECT json_object('undoStack', json_insert(undo, '$[#]',
+        json_extract(excluded.value, '$.undoStack[0]')), 'redoStack', json_array())
+      FROM retained WHERE excess = 0
+    ), updated_at = excluded.updated_at
     WHERE json_type(companion_meta.value, '$.undoStack') = 'array'
       AND json_type(companion_meta.value, '$.redoStack') = 'array'`,
   [key, JSON.stringify(value), new Date().toISOString(), ACTION_HISTORY_LIMIT]);

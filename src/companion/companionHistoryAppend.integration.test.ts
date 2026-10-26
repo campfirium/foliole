@@ -1,4 +1,5 @@
 // @vitest-environment node
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
@@ -74,4 +75,31 @@ it('refuses to replace a stored history with an invalid stack shape', async () =
   await expect(writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new')))))
     .rejects.toThrow();
   expect(library.database.prepare('SELECT value FROM companion_meta WHERE key = ?').get(key)).toEqual({ value: invalid });
+});
+
+it('does not inspect the complete history once per retained undo step', async () => {
+  const undoStack = Array.from({ length: 50 }, (_, i) => entry(`old-${i}`));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [] }));
+  const storedBytes = JSON.stringify({ undoStack, redoStack: [] }).length;
+  const native = new Database(':memory:');
+  const length = native.prepare('SELECT json_array_length(?, ?) AS size');
+  let inspectedBytes = 0;
+  library.database.function('json_array_length', { deterministic: true }, (value: string, path: string) => {
+    inspectedBytes += value.length;
+    return (length.get(value, path) as { size: number }).size;
+  });
+  try {
+    await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))));
+    expect(inspectedBytes).toBeLessThanOrEqual(storedBytes * 2);
+    expect((await loadCompanionFlowHistory(key)).undoStack).toEqual([...undoStack.slice(1), entry('new')]);
+  } finally { native.close(); }
+});
+
+it('trims an oversized stored stack to the same newest fifty steps', async () => {
+  const undoStack = Array.from({ length: 53 }, (_, i) => entry(`old-${i}`));
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack, redoStack: [entry('redo')] }));
+  await writeIosCompanionDatabase(db => db.transaction(tx => appendCompanionFlowHistory(tx, key, entry('new'))));
+  const saved = await loadCompanionFlowHistory(key);
+  expect(saved.undoStack).toEqual([...undoStack.slice(4), entry('new')]);
+  expect(saved.redoStack).toEqual([]);
 });
