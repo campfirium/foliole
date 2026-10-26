@@ -28,6 +28,7 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   token: z.object({ scope: z.string(), dayKey: z.string(), revision: z.number().int().nonnegative() }).strict(),
   sourceSession: dailyFlowSessionSchema.optional(),
   nextSession: dailyFlowSessionSchema.optional(),
+  readingAction: z.enum(['read', 'later', 'dismiss']).optional(),
   readings: z.array(z.object({ nodeId: z.string().min(1), before: reading.nullable(), after: reading.nullable(),
     completedReviewDay: z.string().optional() }).strict()).optional(),
   grade: z.object({ nodeId: z.string().min(1), before: review.nullable(), grade: z.union([
@@ -35,7 +36,8 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
     schedulerVersion: z.string(), cardBefore: card, cardAfter: card }).strict().optional(),
   reviewHistory: z.object({ nodeId: z.string().min(1), before: review.nullable(), after: review.nullable(),
     mode: z.enum(['undo', 'redo']), targetOpId: z.string().min(1) }).strict().optional()
-}).strict().refine(value => Number(Boolean(value.grade)) + Number(Boolean(value.reviewHistory)) +
+}).strict().refine(value => !value.readingAction || Boolean(value.readings?.length && value.readings[0]?.nodeId === value.sourceSession?.currentNodeId),
+  'Reading advancement requires the current topic mutation').refine(value => Number(Boolean(value.grade)) + Number(Boolean(value.reviewHistory)) +
   Number(Boolean(value.readings?.length)) <= 1, 'Only one learning mutation per command');
 export type DailyFlowCommitArgs = z.infer<typeof dailyFlowCommitSchema>;
 export type DailyFlowResult = { replayed?: boolean; nodes?: Record<string, WorkspaceNodeSnapshot>; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };

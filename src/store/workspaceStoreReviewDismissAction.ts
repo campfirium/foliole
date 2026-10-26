@@ -41,7 +41,8 @@ function buildDismissReviewPatch(args: {
     state: args.state
   });
   if (!result) return null;
-  const { nextNodeId, nextReviewSession } = buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
+  const { nextNodeId, nextReviewSession } = args.snapshot.reviewSession.daily
+    ? { nextNodeId: args.currentNodeId, nextReviewSession: args.snapshot.reviewSession } : buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
   const activeContext = buildReviewActiveNodeContext(
     args.state,
     nextNodeId ?? nextReviewSession.continueNodeId ?? null

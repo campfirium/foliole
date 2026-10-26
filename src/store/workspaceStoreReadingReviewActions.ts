@@ -115,7 +115,8 @@ function buildReadOrPostponeReadingReviewPatch(args: {
 }): ReadingReviewPatchResult | null {
   const result = buildReadingReviewDomainPatch(args);
   if (!result) return null;
-  const reviewSession = advanceOrCompleteAfterReadingAction({
+  const reviewSession = args.snapshot.reviewSession.daily
+    ? args.snapshot.reviewSession : advanceOrCompleteAfterReadingAction({
     currentNodeId: args.currentNodeId,
     nextNodesById: result.nextNodesById,
     now: args.now,

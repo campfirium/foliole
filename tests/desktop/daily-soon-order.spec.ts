@@ -4,9 +4,9 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/T441/soon-native');
-
-test('keeps waiting Soon before later reading across refresh and reload', async ({ desktopWindow: page }) => {
+for (const action of ['Read', 'Later', 'Dismiss'] as const) {
+test(`${action} keeps waiting Soon before later reading across refresh and reload`, async ({ desktopWindow: page }) => {
+  const output = path.resolve(`.tmp/artifacts/T441/reading-order-native/${action}`);
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -35,7 +35,7 @@ test('keeps waiting Soon before later reading across refresh and reload', async 
   await page.evaluate(() => window.__folioleWorkspaceDebug!.unshelveNode('soon-later'));
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getNode('soon-later')?.shelvedAt)).toBeNull();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe(original[0]);
-  await page.getByRole('button', { name: 'Read', exact: true }).click();
+  await page.getByRole('button', { name: action, exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe(original[1]);
   await expect(page.getByRole('button', { name: 'Queue clear', exact: true })).toBeVisible();
   fs.mkdirSync(output, { recursive: true });
@@ -50,3 +50,4 @@ test('keeps waiting Soon before later reading across refresh and reload', async 
   await page.getByRole('button', { name: 'Read', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe('soon-later');
 });
+}

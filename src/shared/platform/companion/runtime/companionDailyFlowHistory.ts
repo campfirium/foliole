@@ -21,7 +21,10 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
       grade: args.reviewLog!.grade as 1 | 2 | 3 | 4, reviewedAt: args.reviewLog!.reviewedAt,
       schedulerVersion: args.reviewLog!.schedulerVersion, cardBefore: toSchedulerCard(entry.beforeReview, entry.mutationTimestamp),
       cardAfter: toSchedulerCard(entry.afterReview, entry.mutationTimestamp) } }), companionDailyFlowSettings(), companionDailyFlowPersistence)
-    : await commitDailyFlow(db, retainDailyFlowRetry({ ...common, readings: [{ nodeId: entry.nodeId,
+    : await commitDailyFlow(db, retainDailyFlowRetry({ ...common,
+      ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
+      : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
+      : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}), readings: [{ nodeId: entry.nodeId,
       before: entry.beforeReading ?? null, after: entry.afterReading ?? null,
       ...(args.completedReviewDay === undefined ? {} : { completedReviewDay: args.completedReviewDay }) },
     ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,

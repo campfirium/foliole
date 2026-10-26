@@ -24,3 +24,14 @@ it('rejects malformed learning facts before a storage transaction can execute', 
   expect(() => dailyFlowCommitSchema.parse({ opId: 'action', now, token, nextSession: session,
     grade: { nodeId: 'a', grade: 5 } })).toThrow();
 });
+
+it('requires a current-topic mutation for typed reading advancement', () => {
+  const profile = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now,
+    nextAt: now, priority: 5, readingPosition: 0, repetitionCount: 1, state: 'active' };
+  const args = { opId: 'read', now, token, sourceSession: session, readingAction: 'read',
+    readings: [{ nodeId: 'a', before: null, after: profile }] };
+  expect(dailyFlowCommitSchema.parse(args).readingAction).toBe('read');
+  expect(() => dailyFlowCommitSchema.parse({ ...args, readings: [] })).toThrow();
+  expect(() => dailyFlowCommitSchema.parse({ ...args, sourceSession: { ...session, currentNodeId: 'other' } })).toThrow();
+  expect(() => dailyFlowCommitSchema.parse({ ...args, readingAction: 'other' })).toThrow();
+});

@@ -15,6 +15,7 @@ import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../..
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings';
+import { readCompanionReviewTopic, postponeCompanionReviewTopic, dismissCompanionReviewTopic } from '../companion/companionReadingReview';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { advanceFlowSession } from './workspaceFlowSession';
@@ -126,5 +127,34 @@ it('removes a waiting Soon after a remote deletion and persists both independent
     const reopened = new Database(peer.file, { readonly: true });
     try { expect(reopened.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").get()).toEqual({ deleted_at: deletedAt }); }
     finally { reopened.close(); }
+  }
+});
+
+it.each(['read', 'later', 'dismiss'] as const)('synchronizes %s facts between independent lists without overwriting concurrent content', async action => {
+  edit(desktop, 'Reading body', 'Reading', null, 'topic');
+  await sync(desktop, mobile);
+  const source = await openDailyFlow(mobile.port, { now, mode: 'reading-only' }, settings(mobile), persistence(mobile));
+  const initial = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
+  const mutate = { read: readCompanionReviewTopic, later: postponeCompanionReviewTopic, dismiss: dismissCompanionReviewTopic }[action];
+  const changed = mutate({ nodeId: 'topic', now, snapshot: initial })!;
+  edit(desktop, 'Concurrent content edit', 'Reading', null, 'topic');
+  await sync(desktop, mobile);
+  const result = await commitDailyFlow(mobile.port, { opId: `reading-${action}`, now, token: source.session.daily!,
+    sourceSession: source.session, readingAction: action,
+    readings: [{ nodeId: 'topic', before: initial.nodesById.topic!.reading,
+      after: changed.snapshot.nodesById.topic!.reading }] }, settings(mobile), persistence(mobile));
+  expect(result.session.currentNodeId).toBeNull();
+  await sync(mobile, desktop);
+  await sync(desktop, mobile);
+  const received = await openDailyFlow(desktop.port, { now, mode: 'reading-only' }, settings(desktop), persistence(desktop));
+  expect(received.session.currentNodeId).toBeNull();
+  const reading = mobile.db.prepare("SELECT * FROM node_reading WHERE node_id='topic'").get();
+  for (const peer of [desktop, mobile]) {
+    const reopened = new Database(peer.file, { readonly: true });
+    try {
+      expect(reopened.prepare("SELECT * FROM node_reading WHERE node_id='topic'").get()).toEqual(reading);
+    } finally { reopened.close(); }
+    assertPersisted(peer, 'Concurrent content edit');
+    expect((await readDailyFlow(peer.port))!.session.currentNodeId).toBeNull();
   }
 });

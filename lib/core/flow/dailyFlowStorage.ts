@@ -77,3 +77,27 @@ export async function writeDailyFlowGrade(db: DbPort, stored: NonNullable<Awaite
   return { ...session, daily: { scope: (JSON.parse(stored.settings_key) as { scope?: string }).scope ?? '',
     dayKey: stored.day_key, revision } };
 }
+
+export async function writeDailyFlowReading(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
+  session: DailyFlowSession, affectedIds: string[], now: string) {
+  const queue = stablePositions(session.queueNodeIds, stored.entries, 'queue_position');
+  const soon = stablePositions(session.soonNodeIds ?? [], stored.entries, 'soon_position');
+  const previous = new Map(stored.entries.map(row => [row.node_id, row]));
+  const ids = [...new Set([...affectedIds, ...stored.session.queueNodeIds, ...(stored.session.soonNodeIds ?? []),
+    ...session.queueNodeIds, ...(session.soonNodeIds ?? [])])];
+  const changes = ids.map(id => ({ id, q: queue.get(id) ?? null, s: soon.get(id) ?? null }))
+    .filter(row => !previous.has(row.id) || previous.get(row.id)!.queue_position !== row.q ||
+      previous.get(row.id)!.soon_position !== row.s);
+  await db.run(`INSERT INTO daily_flow_entries (node_id, initial_position, queue_position, soon_position)
+    SELECT json_extract(value, '$.id'), CAST(key AS INTEGER) +
+      (SELECT COALESCE(MAX(initial_position) + 1, 0) FROM daily_flow_entries),
+      json_extract(value, '$.q'), json_extract(value, '$.s') FROM json_each(?) WHERE true
+    ON CONFLICT(node_id) DO UPDATE SET queue_position = excluded.queue_position, soon_position = excluded.soon_position`,
+  [JSON.stringify(changes)]);
+  const revision = stored.revision + 1;
+  const metadata = { ...session, daily: undefined, queueNodeIds: undefined, soonNodeIds: undefined };
+  await db.run('UPDATE daily_flow_state SET revision = ?, session_json = ?, invalidated = 0, updated_at = ? WHERE id = 1',
+    [revision, JSON.stringify(metadata), now]);
+  return { ...session, daily: { scope: (JSON.parse(stored.settings_key) as { scope?: string }).scope ?? '',
+    dayKey: stored.day_key, revision } };
+}

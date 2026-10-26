@@ -7,8 +7,9 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
 import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade } from './dailyFlowGrade.js';
 import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
+import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade } from './dailyFlowStorage.js';
+import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade, writeDailyFlowReading } from './dailyFlowStorage.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
 export interface DailyFlowPersistence {
@@ -63,24 +64,28 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
       stored.day_key !== flowDay(args.now, settings)) throw new Error('daily_flow_changed');
     const localGrade = await dailyGradeScope(tx, stored, args, settings);
-    const snapshot = localGrade ? await scopedDailySnapshot(tx, persistence, localGrade) : await persistence.snapshot(tx);
+    const localReading = await dailyReadingScope(tx, stored, args, settings);
+    const scope = localGrade ?? localReading;
+    const snapshot = scope ? await scopedDailySnapshot(tx, persistence, scope) : await persistence.snapshot(tx);
     assertCurrentFacts(snapshot, args);
     const mode = stored.mode as ReviewSessionMode;
     const base = stored.invalidated ? prepareFlowSession(snapshot, { now: args.now, mode }, settings, stored.session) : stored.session;
+    if (args.readingAction && base.currentNodeId !== args.readings?.[0]?.nodeId) throw new Error('daily_flow_learning_changed');
     if (args.grade && (base.currentNodeId !== args.grade.nodeId ||
       !flowPlan(snapshot, 'review-first', args.now, settings).fsrsQueueNodeIds.includes(args.grade.nodeId))) {
       throw new Error('daily_flow_learning_changed');
     }
     const result = await persistLearning(tx, args, persistence);
-    const updated = localGrade ? await scopedDailySnapshot(tx, persistence, localGrade) : await persistence.snapshot(tx);
+    const updated = scope ? await scopedDailySnapshot(tx, persistence, scope) : await persistence.snapshot(tx);
     let session = args.grade ? localGrade ? advanceDailyGrade(updated, base, args.now, settings)
-      : afterDailyGrade(updated, base, mode, args.now, settings) : args.nextSession;
+      : afterDailyGrade(updated, base, mode, args.now, settings) : args.readingAction ? advanceDailyReading(updated, base, args.now, mode, settings) : args.nextSession;
     if (!session) throw new Error('daily_flow_session_missing');
     if (args.reviewHistory?.mode === 'redo') session = { ...session, nextReviewDueAt:
       resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };
-    if (stored.invalidated && !args.grade) session = prepareFlowSession(updated,
+    if (stored.invalidated && !args.grade && !args.readingAction) session = prepareFlowSession(updated,
       { now: args.now, mode }, settings, session);
     const saved = localGrade ? await writeDailyFlowGrade(tx, stored, session, args.grade!.nodeId, args.now)
+      : localReading ? await writeDailyFlowReading(tx, stored, session, (args.readings ?? []).map(value => value.nodeId), args.now)
       : await writeDailyFlow(tx, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
       now: args.now, revision: stored.revision + 1, session, previousEntries: stored.entries,
       ...(stored.invalidated ? { candidateIds: fullDayCandidates(updated, args.now, settings) } : {}) });
