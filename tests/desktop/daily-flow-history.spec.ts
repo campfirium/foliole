@@ -12,23 +12,33 @@ async function prepare(page: Page, kind: 'item' | 'topic') {
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
   await expectWorkspaceShell(page);
-  await page.evaluate(async nodeKind => {
+  const retiredIds = await page.evaluate(async nodeKind => {
     const snapshot = await window.electronAPI.invoke('load_workspace_snapshot', {});
-    for (const node of Object.values(snapshot.nodesById)) {
-      if (node.kind === 'topic' || node.kind === 'item') await window.__folioleWorkspaceDebug!.deleteNode(node.id);
-    }
+    const retired = Object.values(snapshot.nodesById)
+      .filter(node => node.kind === 'topic' || node.kind === 'item').map(node => node.id);
     await window.__folioleWorkspaceDebug!.seedNodes(['a', 'b'].map(id => ({ id: `delta-${id}`,
       kind: nodeKind, title: `History ${id}`, content: `Readable history body ${id}`,
       reveal: nodeKind === 'item' ? `Answer ${id}` : null, reading: null,
       review: nodeKind === 'topic' ? null : { due: '2026-04-08T00:00:00.000Z', lastReviewAt: null, state: 0,
         stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 }
     })), { persist: true });
+    return retired;
   }, kind);
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
+  await page.evaluate(async ids => {
+    for (const id of ids) await window.__folioleWorkspaceDebug!.deleteNode(id);
+  }, retiredIds);
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   if (kind === 'topic') {
     await page.getByRole('button', { name: 'Change session mode', exact: true }).click();
     await page.getByRole('menuitem', { name: /Reading only/ }).click();
   }
+  await expect.poll(async () => (await session(page)).currentNodeId).toMatch(/^delta-[ab]$/);
 }
 
 const session = (page: Page) => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
