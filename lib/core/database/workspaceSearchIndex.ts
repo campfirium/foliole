@@ -142,6 +142,7 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
 /** One projection pass for the whole batch instead of one Node scan per attachment. */
 export function syncPdfSearchIndexForAttachmentIds(driver: DatabaseDriver, attachmentIds: string[]) {
   const ids = toUniqueIds(attachmentIds);
+  if (ids.length === 0) return;
   const rows = driver.queryAll<{ node_id: string }>(
     `SELECT DISTINCT a.node_id FROM (${NODE_PDF_RESOURCES_SQL}) a WHERE a.id IN (SELECT value FROM json_each(?))`,
     [JSON.stringify(ids)]
