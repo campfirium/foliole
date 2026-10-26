@@ -16,12 +16,12 @@ vi.mock('@capacitor/core', async () => {
 let app: Awaited<ReturnType<typeof createHistoryDeltaFixture>>;
 afterEach(async () => { await app?.library.close(); });
 
-async function legacyHistory() {
-  app = await createHistoryDeltaFixture();
+async function legacyHistory(kind: 'reading' | 'grade' = 'reading') {
+  app = await createHistoryDeltaFixture(kind === 'reading');
   await app.open();
-  await app.action('soon');
+  await app.action(kind === 'grade' ? 'grade' : 'soon');
   const first = restoreFlowHistoryEntry((await app.history()).undoStack.at(-1)!, app.session);
-  await app.action('read');
+  await app.action(kind === 'grade' ? 'grade' : 'read');
   await app.replay('undo');
   const second = restoreFlowHistoryEntry((await app.history()).redoStack.at(-1)!, app.session);
   if (first.type === 'nodes.change' || second.type === 'nodes.change') throw new Error('wrong_entry');
@@ -31,14 +31,18 @@ async function legacyHistory() {
   return history;
 }
 
-it('upgrades existing valid undo and redo stacks once, preserving facts, order, and replay after reopen', async () => {
-  const original = await legacyHistory();
+it.each(['reading', 'grade'] as const)('upgrades existing valid %s undo and redo once, preserving facts, order, and replay after reopen', async kind => {
+  const original = await legacyHistory(kind);
   const facts = app.db.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
+  const reviews = app.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
+  const cards = app.db.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   const state = app.db.prepare('SELECT * FROM daily_flow_state').get();
   const cursor = structuredClone(app.session);
   await app.reopen();
   expect(app.db.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
   expect(app.db.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(facts);
+  expect(app.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(reviews);
+  expect(app.db.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(cards);
   expect(app.db.prepare('SELECT * FROM daily_flow_state').get()).toEqual(state);
   const saved = await app.history();
   expect(saved.undoStack.map(entry => restoreFlowHistoryEntry(entry, cursor))).toEqual(original.undoStack);
