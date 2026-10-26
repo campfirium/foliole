@@ -3,6 +3,8 @@ import { vi } from 'vitest';
 import { recomputeReview, type ReviewEvent } from '../../lib/core/review/recomputeReview';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings';
 
+import { createSmokeDailyFlow } from './app-smoke-daily-flow.test-support';
+
 function createNodeMutationResult(command: string, payload?: Record<string, unknown>) {
   const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
   const parentNodeId = typeof payload?.parentNodeId === 'string' ? payload.parentNodeId : null;
@@ -43,7 +45,10 @@ function applySmokeReview(reviews: Map<string, ReviewEvent[]>, payload?: Record<
 }
 export function createSmokeRuntimeInvoke() {
   const reviews = new Map<string, ReviewEvent[]>();
+  const dailyFlow = createSmokeDailyFlow();
   return vi.fn(async (command: string, payload?: Record<string, unknown>) => {
+    if (command === 'open_daily_flow') return dailyFlow.open(payload);
+    if (command === 'commit_daily_flow') return dailyFlow.commit(payload);
     if (command === 'apply_review_grade') return applySmokeReview(reviews, payload);
     if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
       return createNodeMutationResult(command, payload);

@@ -36,6 +36,7 @@ function expectReviewToolbarSummary(label: string) {
 
 async function enterFlow() {
   fireEvent.click(await screen.findByRole('button', { name: 'Enter Flow' }));
+  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBeTruthy());
 }
 
 beforeEach(() => {
@@ -64,6 +65,7 @@ it('shows editor display mode entrypoint inside more menu trigger', () => {
 });
 
 it('runs study flow with FSRS cards consumed before queued reading cards', async () => {
+  const baseInvoke = createSmokeRuntimeInvoke();
   const invoke = vi.fn().mockImplementation((command: string, args?: { nodeId?: string }) => {
     if (command === 'load_node_document' && args?.nodeId === 'node-2') {
       return Promise.resolve({
@@ -73,7 +75,7 @@ it('runs study flow with FSRS cards consumed before queued reading cards', async
         reveal: 'Answer'
       });
     }
-    return createSmokeRuntimeInvoke()(command, args);
+    return baseInvoke(command, args);
   });
   vi.mocked(getBridgeRuntimeInvoke).mockReturnValue(invoke);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);

@@ -68,7 +68,7 @@ function renderResumeHook(args: {
   reviewSessionMode: 'reading-only' | 'recommended';
 }) {
   installDemoRuntime(args.isDemo);
-  const resumeReviewSession = vi.fn(() => true);
+  const resumeReviewSession = vi.fn().mockResolvedValue(true);
   const handleSelectNode = vi.fn();
   const hook = renderHook(() =>
     useResumeReviewItem({
@@ -98,7 +98,7 @@ function renderResumeHook(args: {
   return { handleSelectNode, hook, resumeReviewSession };
 }
 
-it('resumes the active Flow topic instead of falling back to the queue head', () => {
+it('resumes the active Flow topic instead of falling back to the queue head', async () => {
   const { handleSelectNode, hook, resumeReviewSession } = renderResumeHook({
     activeNodeId: 'topic-2',
     isDemo: false,
@@ -110,7 +110,7 @@ it('resumes the active Flow topic instead of falling back to the queue head', ()
     reviewSessionMode: 'reading-only'
   });
 
-  act(() => hook.result.current());
+  await act(async () => { await hook.result.current(); });
 
   expect(resumeReviewSession).toHaveBeenCalledWith('2026-03-10T12:00:00.000Z', {
     includeScheduledFallback: false,
@@ -119,7 +119,7 @@ it('resumes the active Flow topic instead of falling back to the queue head', ()
   expect(handleSelectNode).toHaveBeenCalledWith('topic-2', null, 'target-context');
 });
 
-it('lets Demo resume the active scheduled Flow topic', () => {
+it('lets Demo resume the active scheduled Flow topic', async () => {
   const { handleSelectNode, hook, resumeReviewSession } = renderResumeHook({
     activeNodeId: 'topic-future',
     isDemo: true,
@@ -131,7 +131,7 @@ it('lets Demo resume the active scheduled Flow topic', () => {
     reviewSessionMode: 'recommended'
   });
 
-  act(() => hook.result.current());
+  await act(async () => { await hook.result.current(); });
 
   expect(resumeReviewSession).toHaveBeenCalledWith('2026-03-10T12:00:00.000Z', {
     includeScheduledFallback: true,

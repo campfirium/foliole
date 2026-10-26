@@ -40,7 +40,8 @@ function createSchedulerPreviewResult(request?: SchedulerRequestPayload['request
 }
 
 export function resetReviewHotkeysRuntimeInvokeMock() {
-  vi.mocked(getRuntimeInvoke).mockImplementation(() => window.electronAPI?.invoke ?? createSmokeRuntimeInvoke());
+  const baseInvoke = createSmokeRuntimeInvoke();
+  vi.mocked(getRuntimeInvoke).mockImplementation(() => window.electronAPI?.invoke ?? baseInvoke);
 }
 
 export function installNativeKeyboardBridge() {

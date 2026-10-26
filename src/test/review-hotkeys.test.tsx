@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -25,6 +25,8 @@ beforeAll(async () => {
   await preloadTranslationCatalog('zh-Hans');
 });
 
+beforeEach(resetReviewHotkeysRuntimeInvokeMock);
+
 afterEach(() => {
   resetReviewHotkeysRuntimeInvokeMock();
 });
@@ -42,6 +44,7 @@ function seedActiveNode(node: ReturnType<typeof createNode>) {
 
 async function enterFlow() {
   fireEvent.click(await screen.findByRole('button', { name: 'Enter Flow' }));
+  await waitFor(() => expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBeTruthy());
 }
 
 it('supports review keyboard flow with edit mode guard (native Esc -> F)', async () => {
