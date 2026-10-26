@@ -39,19 +39,19 @@ async function initializeWorkspaceSyncState(args: {
   setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
 }) {
-  console.info('[FolioleStartup] workspace_state_started');
+  performance.mark('foliole.startup.workspace_state_started');
   const nextState = await loadCompanionWorkspaceSyncState();
-  console.info('[FolioleStartup] workspace_state_loaded');
+  performance.mark('foliole.startup.workspace_state_loaded');
   if (args.cancelled()) {
     return;
   }
   args.setState(nextState);
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
-  console.info('[FolioleStartup] workspace_conflicts_loaded');
+  performance.mark('foliole.startup.workspace_conflicts_loaded');
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
-  console.info('[FolioleStartup] workspace_review_settings_loaded');
+  performance.mark('foliole.startup.workspace_review_settings_loaded');
   await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
-  console.info('[FolioleStartup] workspace_settings_loaded');
+  performance.mark('foliole.startup.workspace_settings_loaded');
   args.setIsStateReady(true);
   args.setStatus('idle');
 }
