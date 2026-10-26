@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { normalizeLibraryPath } from '../../lib/platform/libraryPaths.js';
 import type {
   NativeBackupSettingOverride,
   NativeBackupSettings
 } from '../../lib/platform/nativeUtilityContract.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
+import { assertBackupDirectoryPath, normalizeBackupDirectory } from './backupDirectoryPaths.js';
 import {
   DEFAULT_BACKUP_SETTINGS,
   LEGACY_DEFAULTS,
@@ -58,8 +58,8 @@ function normalizePositiveInteger(value: unknown, fallback: number) {
 
 function inferLegacyOverrides(value: StoredBackupSettings) {
   const overrides: NativeBackupSettingOverride[] = [];
-  if (normalizeLibraryPath(value.backup_dir)) overrides.push('backup_dir');
-  if (normalizeLibraryPath(value.extra_backup_dir)) overrides.push('extra_backup_dir');
+  if (normalizeBackupDirectory(value.backup_dir)) overrides.push('backup_dir');
+  if (normalizeBackupDirectory(value.extra_backup_dir)) overrides.push('extra_backup_dir');
   if (typeof value.extra_backup_max_count === 'number' && value.extra_backup_max_count !== LEGACY_DEFAULTS.extra_backup_max_count) overrides.push('extra_backup_max_count');
   const safety = legacyValue(value, 'safety_max_count', 'snapshot_max_count');
   if (typeof safety === 'number' && safety !== LEGACY_DEFAULTS.safety_max_count && safety !== DEFAULT_BACKUP_SETTINGS.safety_max_count) overrides.push('safety_max_count');
@@ -96,8 +96,8 @@ export function normalizeBackupSettings(payload: unknown): NativeBackupSettings 
       legacyValue(value, 'weekly_max_count', 'auto_weekly_weeks'),
       DEFAULT_BACKUP_SETTINGS.weekly_max_count
     ),
-    backup_dir: normalizeLibraryPath(value.backup_dir) ?? '',
-    extra_backup_dir: normalizeLibraryPath(value.extra_backup_dir) ?? '',
+    backup_dir: normalizeBackupDirectory(value.backup_dir),
+    extra_backup_dir: normalizeBackupDirectory(value.extra_backup_dir),
     extra_backup_max_count: Math.max(
       1,
       normalizePositiveInteger(
@@ -158,6 +158,8 @@ export function saveBackupSettings(
     overridden_fields: SETTING_FIELDS,
     updated_at: settings.updated_at ?? new Date().toISOString()
   });
+  assertBackupDirectoryPath(incoming.backup_dir);
+  assertBackupDirectoryPath(incoming.extra_backup_dir, true);
   const overrides = new Set(current.overridden_fields);
   for (const field of SETTING_FIELDS) {
     const nextValue = settingValue(incoming, field);
@@ -188,13 +190,12 @@ export function reapplyBackupSettingsAfterRestore(
 export function resolveManagedBackupDirectory(
   settings = normalizeBackupSettings(readStoredBackupSettings())
 ) {
-  if (settings.backup_dir) {
-    return settings.backup_dir;
-  }
-  return path.join(loadLibraryPathSettingsSync().library_home, 'Backups');
+  const directoryPath = settings.backup_dir || path.join(loadLibraryPathSettingsSync().library_home, 'Backups');
+  assertBackupDirectoryPath(directoryPath);
+  return directoryPath;
 }
 
-export function ensureManagedBackupDirectory(settings?: NativeBackupSettings) {
+export function ensureManagedBackupDirectory(settings = normalizeBackupSettings(readStoredBackupSettings())) {
   const directoryPath = resolveManagedBackupDirectory(settings);
   fs.mkdirSync(directoryPath, { recursive: true });
   return directoryPath;

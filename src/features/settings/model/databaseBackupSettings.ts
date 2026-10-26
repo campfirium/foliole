@@ -84,11 +84,5 @@ export async function saveDatabaseBackupSettings(settings: DatabaseBackupSetting
   if (!hasSettingsRuntimeRepository()) {
     return normalizeDatabaseBackupSettings(settings);
   }
-  try {
-    return normalizeDatabaseBackupSettings(
-      await saveDatabaseBackupSettingsToRuntime(settings)
-    );
-  } catch {
-    return normalizeDatabaseBackupSettings(settings);
-  }
+  return normalizeDatabaseBackupSettings(await saveDatabaseBackupSettingsToRuntime(settings));
 }

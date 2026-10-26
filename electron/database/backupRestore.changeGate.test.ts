@@ -28,7 +28,7 @@ vi.mock('./backupFileDisposition.js', () => ({
 
 import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { saveJsonSetting } from './settingsStore.js';
 
@@ -95,3 +95,30 @@ async function ordinaryBackupNames() {
     name.startsWith('foliole-auto-') || name.startsWith('foliole-manual-')
       || name.startsWith('foliole-auto-backup-') || name.startsWith('manual-'));
 }
+
+
+it('keeps a contaminated stored path visible until an explicit local correction survives restart', async () => {
+  const invalidPath = path.relative(process.cwd(), path.join(tempRoot, 'wrong-root'));
+  const stored = { ...loadBackupSettings(), backup_dir: invalidPath, overridden_fields: ['backup_dir'] };
+  saveJsonSetting('backup_settings', stored);
+  closeDatabaseConnection();
+  await initializeDatabase();
+  expect(loadBackupSettings().backup_dir).toBe(invalidPath);
+  await expect(createApplicationDatabaseBackup()).rejects.toThrow(/folder on this device/u);
+  await expect(fs.access(path.resolve(invalidPath))).rejects.toThrow();
+  expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'backup_settings'"
+  )?.value).toBe(JSON.stringify(stored));
+
+  const localPath = path.join(tempRoot, 'local-backups');
+  saveBackupSettings({ backup_dir: localPath });
+  const backup = await createApplicationDatabaseBackup();
+  expect(path.dirname(backup.destinationPath)).toBe(localPath);
+  await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
+  closeDatabaseConnection();
+  await initializeDatabase();
+  expect(loadBackupSettings().backup_dir).toBe(localPath);
+  expect(openDatabaseConnection().driver.queryAll(
+    "SELECT scope FROM setting_records WHERE key = 'backup_settings'"
+  )).toEqual([{ scope: 'host' }]);
+});

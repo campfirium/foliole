@@ -95,16 +95,21 @@ it('materializes an accepted workspace setting and preserves it after database r
   expect(loadJsonSetting('search_aliases_document')).toEqual({ aliases: ['shared-search'] });
 });
 
-it('ignores legacy shared device preferences without creating accepted state', async () => {
-  saveJsonSetting('app_settings', { theme: 'light', fontSize: 19 });
-  const record = settingRecord({ formFactor: 'desktop', hostName: '*', key: 'app_settings',
+it.each(['app_settings', 'backup_settings'])('ignores legacy shared %s without creating accepted state', async (key) => {
+  const local = key === 'backup_settings' ? { backup_dir: '/Local Backups', extra_backup_dir: '/Extra Backups' }
+    : { theme: 'light', fontSize: 19 };
+  saveJsonSetting(key, local);
+  const record = settingRecord({ formFactor: 'desktop', hostName: '*', key,
     platform: 'windows', scope: 'user_space', updatedAt: '2099-07-10T00:01:00.000Z',
-    valueJson: '{"theme":"dark","fontSize":12}' });
+    valueJson: JSON.stringify({ backup_dir: '/Volumes/Other', theme: 'dark' }) });
   await expect(applySyncObjectsAsync([record])).resolves.toEqual([]);
-  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'light', fontSize: 19 });
+  expect(loadJsonSetting(key)).toEqual(local);
+  closeDatabaseConnection();
+  await initializeDatabase();
+  expect(loadJsonSetting(key)).toEqual(local);
   const driver = openDatabaseConnection().driver;
   expect(driver.queryAll('SELECT * FROM setting_records WHERE key = ? AND scope = ?',
-    ['app_settings', 'user_space'])).toEqual([]);
+    [key, 'user_space'])).toEqual([]);
   expect(driver.queryAll('SELECT * FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     ['setting', record.object_id])).toEqual([]);
 });

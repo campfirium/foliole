@@ -40,12 +40,16 @@ function readPrivate(file: string, id: string, key: string) {
   } finally { db.close(); }
 }
 
-it.each([{ scope: 'host', key: 'discourse_publish_settings' }, { scope: 'session_resume', key: 'window_state' }])(
-  'keeps each peer original $scope setting through shared rounds, restarts and a local tombstone', async ({ scope, key }) => {
+it.each([{ scope: 'host', key: 'discourse_publish_settings' }, { scope: 'host', key: 'backup_settings' }, { scope: 'session_resume', key: 'window_state' }])(
+  'keeps each peer original $scope $key setting through shared rounds, restarts and a local tombstone', async ({ scope, key }) => {
     const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
     try {
-      const leftId = await writePrivate(fixture.leftSnapshot.databasePath, '{"local":"left"}', scope, key);
-      const rightId = await writePrivate(fixture.rightSnapshot.databasePath, '{"local":"right"}', scope, key);
+      const leftValue = key === 'backup_settings'
+        ? JSON.stringify({ backup_dir: '/Volumes/Archive/Foliole', extra_backup_dir: '/Volumes/Extra/Foliole' }) : '{"local":"left"}';
+      const rightValue = key === 'backup_settings'
+        ? JSON.stringify({ backup_dir: 'D:\\Backups', extra_backup_dir: 'E:\\ExtraBackups' }) : '{"local":"right"}';
+      const leftId = await writePrivate(fixture.leftSnapshot.databasePath, leftValue, scope, key);
+      const rightId = await writePrivate(fixture.rightSnapshot.databasePath, rightValue, scope, key);
       const before = [readPrivate(fixture.leftSnapshot.databasePath, leftId, key), readPrivate(fixture.rightSnapshot.databasePath, rightId, key)];
       await fixture.left.seed({ content: 'Shared original body', nodeId: 'shared-topic', title: 'Shared' });
       await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);

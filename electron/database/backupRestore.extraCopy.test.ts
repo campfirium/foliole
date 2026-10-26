@@ -31,6 +31,7 @@ import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } fr
 import { loadBackupSettings, normalizeBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { saveJsonSetting } from './settingsStore.js';
 
 let tempRoot = '';
 
@@ -46,10 +47,10 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('normalizes extra backup settings with a disabled path and positive retained count', () => {
+it('preserves an invalid extra location for explicit correction with a positive retained count', () => {
   expect(normalizeBackupSettings({ extra_backup_dir: 'relative/path', extra_backup_max_count: 0 })).toEqual(
     expect.objectContaining({
-      extra_backup_dir: '',
+      extra_backup_dir: 'relative/path',
       extra_backup_max_count: 1
     })
   );
@@ -158,3 +159,16 @@ async function expectBackupDirectoryExcludesSidecars(directoryPath: string) {
   expect(fileNames).not.toContain('foliole-external.db');
   expect(fileNames).not.toContain(path.basename(openDatabaseConnection().searchDbPath));
 }
+
+
+it('keeps the primary backup when a stored extra location is invalid on this device', async () => {
+  const invalidPath = path.relative(process.cwd(), path.join(tempRoot, 'invalid-extra'));
+  saveJsonSetting('backup_settings', { ...loadBackupSettings(), extra_backup_dir: invalidPath,
+    overridden_fields: ['extra_backup_dir'] });
+  const result = await createApplicationDatabaseBackup();
+  await expect(fs.access(result.destinationPath)).resolves.toBeUndefined();
+  expect(result.extraBackup).toMatchObject({ status: 'failed',
+    errorMessage: expect.stringMatching(/folder on this device/u) });
+  await expect(fs.access(path.resolve(invalidPath))).rejects.toThrow();
+  expect(loadBackupSettings().extra_backup_dir).toBe(invalidPath);
+});

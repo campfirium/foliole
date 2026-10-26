@@ -47,9 +47,10 @@ export async function persistBackupSettings(args: {
   setDraft: (value: DatabaseBackupSettings) => void;
   setIsSavingSettings: (value: boolean) => void;
   setSettings: (value: DatabaseBackupSettings) => void;
+  setStatusMessage: (value: string) => void;
 }) {
   args.setDraft(args.nextSettings);
-  args.setSettings(args.nextSettings);
+  args.setStatusMessage('');
   args.setIsSavingSettings(true);
   const requestId = ++args.saveRequestIdRef.current;
   try {
@@ -59,6 +60,11 @@ export async function persistBackupSettings(args: {
     args.setDraft(savedSettings);
     if (args.refreshBackups) {
       await args.refreshBackupsList();
+    }
+  } catch (error) {
+    if (requestId === args.saveRequestIdRef.current) {
+      const message = error instanceof Error ? error.message : 'Could not save backup settings.';
+      args.setStatusMessage(message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, ''));
     }
   } finally {
     if (requestId === args.saveRequestIdRef.current) {

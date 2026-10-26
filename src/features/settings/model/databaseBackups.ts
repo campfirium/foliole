@@ -167,12 +167,12 @@ function normalizeSqliteRestoreResult(value: unknown): RuntimeSqliteRestoreResul
 
 function readErrorMessage(error: unknown) {
   if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message.trim();
+    return error.message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, '').trim();
   }
   if (typeof error === 'object' && error !== null) {
     const message = (error as { message?: unknown }).message;
     if (typeof message === 'string' && message.trim().length > 0) {
-      return message.trim();
+      return message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, '').trim();
     }
   }
   return 'Unknown desktop runtime error.';

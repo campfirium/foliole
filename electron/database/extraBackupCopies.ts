@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { NativeExtraBackupResult } from '../../lib/platform/nativeUtilityContract.js';
 
 import { listManagedDatabaseBackups } from './backupCatalog.js';
+import { assertBackupDirectoryPath } from './backupDirectoryPaths.js';
 import { forgetManagedBackup, reconcileBackupManagement, registerGeneratedBackup } from './backupManagement.js';
 
 export type ExtraBackupCopyResult = NativeExtraBackupResult;
@@ -36,6 +37,7 @@ export async function copyExtraBackup(options: CopyExtraBackupOptions): Promise<
 
   let tempPath = '';
   try {
+    assertBackupDirectoryPath(options.extraBackupDir, true);
     await fs.mkdir(options.extraBackupDir, { recursive: true });
     const destinationPath = path.join(options.extraBackupDir, path.basename(options.sourcePath));
     tempPath = path.join(options.extraBackupDir, `.foliole-extra-backup-${randomUUID()}.tmp`);

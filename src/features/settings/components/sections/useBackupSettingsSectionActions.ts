@@ -173,7 +173,8 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
       saveRequestIdRef: args.saveRequestIdRef,
       setDraft: args.setDraft,
       setIsSavingSettings: args.setIsSavingSettings,
-      setSettings: args.setSettings
+      setSettings: args.setSettings,
+      setStatusMessage: args.setStatusMessage
     });
 
   const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
