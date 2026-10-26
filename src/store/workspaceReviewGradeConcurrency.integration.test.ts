@@ -16,16 +16,26 @@ vi.mock('../../electron/ipc/paths.js', () => ({
 
 import { closeDatabaseConnection } from '../../electron/database/connection.js';
 import { initializeDatabase } from '../../electron/database/migrate.js';
+import * as reviewCalculation from '../../lib/core/review/recomputeReview.js';
+import { normalizeScheduledCardDue } from '../../lib/core/review/reviewDayBoundary.js';
+import { mapGradeToRustRating } from '../../lib/core/review/types.js';
 import { connection, externalGrade, facts, history, now, prepare, reopen, saveNode, snapshot } from '../../tests/fixtures/workspaceReviewGradeConcurrency';
+import { toNodeReviewProfile, toSchedulerCard } from '../features/review/model/reviewTypes';
+import { getCurrentReviewSchedulerSettings, hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { resetWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
+import * as queue from './workspaceReviewLiveQueue';
 import { createQaNode } from './workspaceStoreReviewActions.test-support';
+
+const originalSettings = getCurrentReviewSchedulerSettings();
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-grade-concurrency-'));
   initializeDatabase();
 });
 afterEach(async () => {
+  vi.restoreAllMocks();
+  hydrateCurrentReviewSchedulerSettings(originalSettings);
   resetWorkspaceHistoryPersistence();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
@@ -136,6 +146,7 @@ it('commits and replays a grade before a future reset while retaining the author
   const harness = prepare();
   const historyActions = history(harness);
   const currentId = harness.getState().reviewSession.currentNodeId!;
+  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
   connection().sqlite.prepare(`INSERT INTO review_log
     (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind)
     VALUES ('future-reset', 'future-reset', 'offline', ?, 0, '', '2099-10-25T08:00:00.000Z', 'reset')`).run(currentId);
@@ -143,6 +154,7 @@ it('commits and replays a grade before a future reset while retaining the author
   harness.releaseSave();
   await expect(harness.actions.gradeReviewCard(3, now)).resolves.toBe(true);
   expect(harness.getState().nodesById[currentId]!.review).toBeNull();
+  expect(plan).toHaveBeenCalledTimes(1);
   expect(harness.getState().appActionHistory.undoStack.at(-1)).toMatchObject({ afterReview: null });
   expect(reopen().nodesById[currentId]!.review).toBeNull();
   expect(historyActions.undoWorkspaceAction()).toBe(true);
@@ -151,4 +163,60 @@ it('commits and replays a grade before a future reset while retaining the author
   await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
   expect(harness.getState().nodesById[currentId]!.review).toBeNull();
   expect(reopen().nodesById[currentId]!.review).toBeNull();
+});
+
+const gradeCases = ([1, 2, 3, 4] as const).flatMap(grade =>
+  [true, false].map(sameReceipt => ({ grade, sameReceipt })));
+it.each(gradeCases)('calculates only grade $grade and plans once with equal receipt=$sameReceipt', async ({ grade, sameReceipt }) => {
+  const hour = new Date(now).getHours();
+  hydrateCurrentReviewSchedulerSettings({ ...originalSettings,
+    newDayStartsAtHour: sameReceipt ? hour : (hour + 1) % 24 });
+  const harness = prepare();
+  const before = harness.getState();
+  const nodeId = before.reviewSession.currentNodeId!;
+  const preview = await harness.scheduler.preview({ nodeId,
+    card: toSchedulerCard(before.nodesById[nodeId]!.review ?? null, now), now });
+  const calculate = vi.spyOn(reviewCalculation, 'previewReviewAt');
+  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
+  const pending = harness.actions.gradeReviewCard(grade, now);
+  harness.releaseCompute();
+  await harness.saving;
+  expect(calculate).toHaveBeenCalledTimes(1);
+  expect(plan).not.toHaveBeenCalled();
+  harness.releaseSave();
+  await expect(pending).resolves.toBe(true);
+  expect(plan).toHaveBeenCalledTimes(1);
+  expect(harness.persistReviewGrade.mock.calls[0]![0].cardAfter).toEqual(normalizeScheduledCardDue({
+    card: preview[mapGradeToRustRating(grade)].card, reviewedAt: now,
+    newDayStartsAtHour: getCurrentReviewSchedulerSettings().newDayStartsAtHour
+  }));
+  const predicted = toNodeReviewProfile(harness.persistReviewGrade.mock.calls[0]![0].cardAfter);
+  const persisted = snapshot().nodesById[nodeId]!.review;
+  if (sameReceipt) expect(predicted).toEqual(persisted);
+  else expect(predicted).not.toEqual(persisted);
+  const entry = harness.getState().appActionHistory.undoStack.at(-1)!;
+  if (entry.type !== 'review.grade') throw new Error('expected grade history');
+  expect(entry).toMatchObject({ afterReview: snapshot().nodesById[entry.nodeId]!.review });
+  expect(facts().filter(row => row.kind === 'review')).toMatchObject([{ grade }]);
+  expect(reopen().nodesById[entry.nodeId]!.review).toEqual(entry.afterReview);
+});
+
+it('does not plan a queue for a failed save and settles an undo requested while saving', async () => {
+  const harness = prepare();
+  const historyActions = history(harness);
+  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
+  connection().sqlite.exec(`CREATE TEMP TRIGGER reject_grade BEFORE INSERT ON review_log
+    BEGIN SELECT RAISE(ABORT, 'grade_save_failure'); END`);
+  harness.releaseCompute();
+  harness.releaseSave();
+  await expect(harness.actions.gradeReviewCard(3, now)).resolves.toBe(false);
+  expect(plan).not.toHaveBeenCalled();
+  connection().sqlite.exec('DROP TRIGGER reject_grade');
+  const retry = harness.actions.gradeReviewCard(3, now);
+  await harness.saving;
+  expect(historyActions.undoWorkspaceAction()).toBe(true);
+  await expect(retry).resolves.toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.redoStack).toHaveLength(1));
+  expect(facts().map(row => row.kind)).toEqual(['review', 'void']);
+  expect(reopen().nodesById.first!.review!.reps).toBe(0);
 });

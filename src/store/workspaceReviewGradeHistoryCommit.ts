@@ -8,9 +8,10 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
+import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
-import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
-import { isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
+import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
+import { createReviewGradeHistoryEntry, isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import type { WorkspaceReviewPersistenceAdapter } from './workspaceReviewPersistence';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -73,19 +74,14 @@ export async function commitWorkspaceReviewGrade(args: {
   set: WorkspaceSet;
   snapshot: WorkspaceState;
 }) {
-  let gradedState = buildGradedReviewState({
-    snapshot: args.snapshot,
-    currentNodeId: args.currentNodeId,
-    nodePatch: args.result.nodePatch,
-    now: args.now
-  });
-  if (!gradedState) return false;
-  if (!beginReviewGradeHistory(args.set, gradedState.historyEntry)) return false;
+  const entry = createPendingGradeEntry(args);
+  if (!beginReviewGradeHistory(args.set, entry)) return false;
+  let review: WorkspaceReviewGradeHistoryEntry['afterReview'] = args.result.nodePatch.review;
   let persisted = false;
   try {
     const result = await persistReviewGradeMutation({
       currentNodeId: args.currentNodeId,
-      opId: gradedState.historyEntry.id,
+      opId: entry.id,
       grade: args.grade,
       reviewedAt: args.result.reviewedAt,
       schedulerVersion: args.result.schedulerVersion,
@@ -93,26 +89,35 @@ export async function commitWorkspaceReviewGrade(args: {
       cardAfter: args.result.cardAfter
     }, args.persistence);
     persisted = Boolean(result);
-    if (result && typeof result !== 'boolean') gradedState = withProjection(args, gradedState, result.card);
+    if (result && typeof result !== 'boolean') review = result.card ? toNodeReviewProfile(result.card) : null;
   } catch {
     persisted = false;
   }
   if (!persisted) {
     args.set((state) => ({
-      appActionHistory: failWorkspaceAction(state.appActionHistory, gradedState.historyEntry.id)
+      appActionHistory: failWorkspaceAction(state.appActionHistory, entry.id)
     }));
     return false;
   }
+  const computed = buildGradedReviewState({ snapshot: args.snapshot, currentNodeId: args.currentNodeId,
+    nodePatch: { review }, now: args.now });
+  if (!computed) return false;
+  const gradedState = { ...computed, historyEntry: { ...computed.historyEntry, id: entry.id } };
   const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState);
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
   return true;
 }
 
-function withProjection(args: Parameters<typeof commitWorkspaceReviewGrade>[0],
-  current: NonNullable<ReturnType<typeof buildGradedReviewState>>,
-  card: import('../features/review/model/reviewTypes').SchedulerCard | null) {
-  const computed = buildGradedReviewState({ snapshot: args.snapshot, currentNodeId: args.currentNodeId,
-    nodePatch: { review: card ? toNodeReviewProfile(card) : null }, now: args.now });
-  return computed ? { ...computed, historyEntry: { ...computed.historyEntry, id: current.historyEntry.id } } : current;
+function createPendingGradeEntry(args: Parameters<typeof commitWorkspaceReviewGrade>[0]) {
+  const context = captureWorkspaceHistoryContext(args.snapshot);
+  return createReviewGradeHistoryEntry({
+    afterContext: context,
+    afterReview: args.result.nodePatch.review,
+    beforeContext: context,
+    beforeReview: args.snapshot.nodesById[args.currentNodeId]?.review ?? null,
+    id: createWorkspaceActionHistoryEntryId(),
+    mutationTimestamp: args.now,
+    nodeId: args.currentNodeId
+  });
 }

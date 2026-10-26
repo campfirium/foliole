@@ -116,7 +116,7 @@ it('rejects missing review request at the IPC boundary', async () => {
   expect(reviewPreview).not.toHaveBeenCalled();
 });
 
-it('does not broadcast workspace content changed after review grading', async () => {
+it('does not request sync or broadcast a content change for pure grade calculation', async () => {
   vi.mocked(reviewGrade).mockReturnValue({
     card: reviewArgs().request.card,
     reviewed_at: '2026-03-04T00:00:00.000Z'
@@ -125,6 +125,6 @@ it('does not broadcast workspace content changed after review grading', async ()
   await handleInvokeRequest({ command: 'review_grade', args: reviewArgs() });
 
   expect(reviewGrade).toHaveBeenCalledTimes(1);
-  expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
+  expect(requestDesktopHighValueSync).not.toHaveBeenCalled();
   expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
 });

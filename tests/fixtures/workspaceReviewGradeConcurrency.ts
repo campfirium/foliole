@@ -57,7 +57,7 @@ export function prepare() {
     { persistReviewGrade, persistReadingNodes: async () => false });
   actions.startReviewSession(now);
   actions.revealReviewAnswer();
-  return { ...harness, actions, persistReviewGrade, computing: computing.promise, saving: saving.promise,
+  return { ...harness, actions, scheduler, persistReviewGrade, computing: computing.promise, saving: saving.promise,
     releaseCompute: computed.resolve, releaseSave: saved.resolve };
 }
 
@@ -88,5 +88,7 @@ export function history(harness: ReturnType<typeof prepare>) {
         hostName: loadOrCreateDesktopHostName(updatedAt), ...(mutation ? { history: mutation } : {}) })
         ? snapshot().nodesById[nodeId]!.review ?? null : null
     }) });
-  return createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  const actions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  harness.setState(actions);
+  return actions;
 }

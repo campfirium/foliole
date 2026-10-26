@@ -1,6 +1,5 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import { bootReport } from './boot.js';
 import { parseReviewGradeArgs, parseReviewPreviewArgs } from './commandParserReview.js';
@@ -17,9 +16,7 @@ export async function handleReviewCommand(request: InvokeRequest) {
     return null;
   }
   if (request.command === NATIVE_COMMANDS.reviewGrade) {
-    const result = await runWithDatabaseConnectionOwner(() => reviewGrade(parseReviewGradeArgs(args)));
-    void requestDesktopHighValueSync();
-    return result;
+    return runWithDatabaseConnectionOwner(() => reviewGrade(parseReviewGradeArgs(args)));
   }
   if (request.command === NATIVE_COMMANDS.reviewPreview) {
     return runWithDatabaseConnectionOwner(() => reviewPreview(parseReviewPreviewArgs(args)));

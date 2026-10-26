@@ -11,7 +11,7 @@ import {
   loadReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
 
-import { previewNodeReviewHistory } from './reviewHistoryScheduling.js';
+import { gradeNodeReviewHistory, previewNodeReviewHistory } from './reviewHistoryScheduling.js';
 
 const reviewScheduler = createFsrsReviewScheduler({
   loadSettings: loadReviewSchedulerSettings,
@@ -20,8 +20,7 @@ const reviewScheduler = createFsrsReviewScheduler({
 });
 
 export function reviewGrade(payload: NativeReviewGradeArgs) {
-  const preview = previewNodeReviewHistory(payload.request);
-  return preview ? preview[payload.request.rating] : reviewScheduler.grade(payload.request);
+  return gradeNodeReviewHistory(payload.request) ?? reviewScheduler.grade(payload.request);
 }
 
 export function reviewPreview(payload: NativeReviewPreviewArgs): NativeReviewPreviewResult {

@@ -6,6 +6,9 @@ import { applyReviewGrade } from '../database/reviewMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
+const requestDesktopHighValueSync = vi.hoisted(() => vi.fn());
+vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync }));
+
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
   runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
@@ -94,6 +97,10 @@ it('handles transactional review grade command', async () => {
     await expect(handleInvokeRequest({ command: 'apply_review_grade', args: { ...args, opId } })).rejects.toThrow('opId');
   }
   expect(applyReviewGrade).toHaveBeenCalledTimes(2);
+  expect(requestDesktopHighValueSync).toHaveBeenCalledTimes(2);
+  vi.mocked(applyReviewGrade).mockImplementationOnce(() => { throw new Error('save failed'); });
+  await expect(handleInvokeRequest({ command: 'apply_review_grade', args })).rejects.toThrow('save failed');
+  expect(requestDesktopHighValueSync).toHaveBeenCalledTimes(2);
 });
 
 
