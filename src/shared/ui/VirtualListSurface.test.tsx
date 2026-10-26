@@ -5,6 +5,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { resolveComfortScrollTop, shouldVirtualizeList, VirtualListSurface } from './VirtualListSurface';
 
 beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(288);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(288);
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(300);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
