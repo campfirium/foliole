@@ -1,6 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
-import { NODE_PATHS_CTE_SQL } from './workspaceSearchIndexSql.js';
+import { SUBTREE_NODE_PATHS_CTE_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SUBTREE_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_subtree_seed_ids (
   id TEXT PRIMARY KEY
@@ -25,14 +25,14 @@ const INSERT_SUBTREE_AFFECTED_IDS_SQL = `WITH RECURSIVE node_descendants(id) AS 
   SELECT id
   FROM node_descendants`;
 
-const UPDATE_NODE_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
+const UPDATE_NODE_SEARCH_PATH_SQL = `${SUBTREE_NODE_PATHS_CTE_SQL}
   UPDATE search.node_search
   SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = node_search.node_id), ''),
     is_trashed = COALESCE((SELECT is_trashed FROM node_paths WHERE node_paths.node_id = node_search.node_id), 0)
   WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)
     AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = node_search.node_id)`;
 
-const UPDATE_PDF_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
+const UPDATE_PDF_SEARCH_PATH_SQL = `${SUBTREE_NODE_PATHS_CTE_SQL}
   UPDATE search.pdf_search
   SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), ''),
     is_trashed = COALESCE((SELECT is_trashed FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), 0)

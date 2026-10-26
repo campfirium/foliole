@@ -2,7 +2,7 @@ import type { DatabaseDriver } from './driver.js';
 import { NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
-import { NODE_PATHS_CTE_SQL, NODE_SEARCH_INSERT_AFFECTED_SQL, NODE_SEARCH_REBUILD_SQL, PDF_SEARCH_INSERT_AFFECTED_SQL, PDF_SEARCH_REBUILD_SQL } from './workspaceSearchIndexSql.js';
+import { AFFECTED_NODE_PATHS_CTE_SQL, NODE_PATHS_CTE_SQL, NODE_SEARCH_INSERT_AFFECTED_SQL, NODE_SEARCH_REBUILD_SQL, PDF_SEARCH_INSERT_AFFECTED_SQL, PDF_SEARCH_REBUILD_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids (
   id TEXT PRIMARY KEY
@@ -84,7 +84,7 @@ function prepareAffectedNodeIds(driver: DatabaseDriver, nodeIds: string[], optio
 }
 
 function requireAvailableNodeBodies(driver: DatabaseDriver, affectedOnly: boolean) {
-  const rows = driver.queryAll<{ id: string }>(`${NODE_PATHS_CTE_SQL}
+  const rows = driver.queryAll<{ id: string }>(`${affectedOnly ? AFFECTED_NODE_PATHS_CTE_SQL : NODE_PATHS_CTE_SQL}
     SELECT n.id FROM nodes n INNER JOIN node_paths paths ON paths.node_id = n.id
     WHERE n.content IS NULL
       ${affectedOnly ? 'AND n.id IN (SELECT id FROM temp_workspace_search_affected_ids)' : ''}`);

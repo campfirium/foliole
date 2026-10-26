@@ -3,9 +3,18 @@ import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 
 const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
 
-export const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path, is_trashed) AS (
+function nodePathsCte(affectedTable?: string) {
+  const requiredNodes = affectedTable ? `required_nodes(id, parent_id, title, deleted_at) AS (
+    SELECT n.id, n.parent_id, n.title, n.deleted_at
+    FROM ${affectedTable} affected JOIN nodes n ON n.id = affected.id
+    UNION
+    SELECT parent.id, parent.parent_id, parent.title, parent.deleted_at
+    FROM required_nodes child JOIN nodes parent ON parent.id = child.parent_id
+  ),` : '';
+  const source = affectedTable ? 'required_nodes' : 'nodes';
+  return `WITH RECURSIVE ${requiredNodes} node_paths(node_id, path, is_trashed) AS (
     SELECT id, '', deleted_at IS NOT NULL
-    FROM nodes
+    FROM ${source}
     WHERE parent_id IS NULL
     UNION ALL
     SELECT
@@ -15,14 +24,19 @@ export const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path, is_t
         ELSE paths.path || ' / ' || COALESCE(NULLIF(trim(parent.title), ''), 'Untitled')
       END,
       MAX(paths.is_trashed, child.deleted_at IS NOT NULL)
-    FROM nodes child INDEXED BY idx_nodes_parent_id
-    INNER JOIN nodes parent
+    FROM ${source} child ${affectedTable ? '' : 'INDEXED BY idx_nodes_parent_id'}
+    INNER JOIN ${source} parent
       ON parent.id = child.parent_id
     INNER JOIN node_paths paths
       ON paths.node_id = parent.id
   )`;
+}
 
-export const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
+export const NODE_PATHS_CTE_SQL = nodePathsCte();
+export const AFFECTED_NODE_PATHS_CTE_SQL = nodePathsCte('temp_workspace_search_affected_ids');
+export const SUBTREE_NODE_PATHS_CTE_SQL = nodePathsCte('temp_workspace_search_subtree_affected_ids');
+
+export const NODE_SEARCH_INSERT_AFFECTED_SQL = `${AFFECTED_NODE_PATHS_CTE_SQL}
   INSERT INTO search.node_search (title, path, content, node_id, updated_at, is_trashed)
   SELECT trim(n.title), COALESCE(paths.path, ''), ${NODE_BODY_CONTENT_SQL}, n.id, n.updated_at, COALESCE(paths.is_trashed, n.deleted_at IS NOT NULL)
   FROM nodes n
@@ -33,7 +47,7 @@ export const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
 
     AND paths.node_id IS NOT NULL`;
 
-export const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
+export const PDF_SEARCH_INSERT_AFFECTED_SQL = `${AFFECTED_NODE_PATHS_CTE_SQL}
   INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length, is_trashed)
   SELECT
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),

@@ -69,11 +69,11 @@ function insertNode(input: {
     );
 }
 
-function countPathCteExecutions(executeSpy: { mock: { calls: Array<[string, ...unknown[]]> } }) {
-  return executeSpy.mock.calls.filter(([sql]) => String(sql).includes('WITH RECURSIVE node_paths')).length;
+function countIndexInsertExecutions(executeSpy: { mock: { calls: Array<[string, ...unknown[]]> } }) {
+  return executeSpy.mock.calls.filter(([sql]) => /INSERT INTO search\.(node_search|pdf_search)/.test(String(sql))).length;
 }
 
-it('indexes high-fanout child nodes with constant path CTE executions', () => {
+it('indexes high-fanout child nodes with constant index insertion batches', () => {
   const connection = openDatabaseConnection();
   insertNode({ id: 'parent', title: 'Batch Parent', content: '' });
   const childIds = Array.from({ length: 200 }, (_, index) => `child-${index}`);
@@ -89,7 +89,7 @@ it('indexes high-fanout child nodes with constant path CTE executions', () => {
   const executeSpy = vi.spyOn(connection.driver, 'execute');
   syncWorkspaceSearchIndexForNodeIds(connection.driver, childIds);
 
-  expect(countPathCteExecutions(executeSpy)).toBe(2);
+  expect(countIndexInsertExecutions(executeSpy)).toBe(2);
   expect(
     connection.sqlite.prepare(
       `SELECT COUNT(*) AS count
@@ -122,7 +122,7 @@ it('keeps batch indexing equivalent for owned bodies and deleted nodes', () => {
   });
 });
 
-it('batches attachment-triggered pdf search indexing through one path CTE', () => {
+it('batches attachment-triggered pdf search indexing through one index insertion batch', () => {
   const connection = openDatabaseConnection();
   const attachmentIds = ['2778baef34a09e1df2288ad483990f75bfb3845f8d178785a752dca7993af07a', '884cefa084c318fea475eda355530798135b6256f95bd49c1e9b49589af1950c', '06c7b281a4e2571c0f0b0fcb7e6a80791c5223995604022b7cb9765b5ab50da5'];
   attachmentIds.forEach((attachmentId, index) => {
@@ -137,6 +137,6 @@ it('batches attachment-triggered pdf search indexing through one path CTE', () =
   const executeSpy = vi.spyOn(connection.driver, 'execute');
   syncPdfSearchIndexForAttachmentIds(connection.driver, attachmentIds);
 
-  expect(countPathCteExecutions(executeSpy)).toBe(1);
+  expect(countIndexInsertExecutions(executeSpy)).toBe(1);
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.pdf_search').get()).toEqual({ count: 3 });
 });
