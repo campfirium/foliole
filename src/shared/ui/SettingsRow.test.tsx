@@ -27,6 +27,14 @@ it('renders without a description block when description is omitted', () => {
   expect(screen.getByRole('heading', { level: 4, name: 'Bare row' })).toBeInTheDocument();
 });
 
+it('keeps a labeled read-only value with its explanatory row', () => {
+  render(<SettingsRow title="Automatic optimization" description="Learns from review history."
+    detail={{ label: 'Recent training', value: 'None yet' }} />);
+  expect(screen.getByText('Recent training')).toBeInTheDocument();
+  expect(screen.getByText('None yet')).toBeInTheDocument();
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+});
+
 it('renders an action-only row without an empty heading', () => {
   render(<SettingsRow><button type="button">View all</button></SettingsRow>);
 

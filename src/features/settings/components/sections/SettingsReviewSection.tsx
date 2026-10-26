@@ -12,6 +12,7 @@ export function SettingsReviewSection() {
 
   return (
     <SettingsSection ariaLabel={t('settings.review.sectionAria')} title={t('settings.review.section')}>
+      <ReviewOptimizationRow />
       <SchedulerCoreRows
         desiredRetention={reviewSchedulerSettings.desiredRetention}
         maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
@@ -22,7 +23,6 @@ export function SettingsReviewSection() {
         onNewDayStartsAtHourChange={reviewSettings.onNewDayStartsAtHourChange}
         onNewItemLoadBalancingDaysChange={reviewSettings.onNewItemLoadBalancingDaysChange}
       />
-      <ReviewOptimizationRow />
       <PushQueueRows
         defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
         onDefaultPriorityChange={reviewSettings.onDefaultPriorityChange}
