@@ -206,6 +206,7 @@
     "ios:sync:preflight": "node scripts/quality/quality-command-contracts.mjs allow ios:sync:preflight && npm run check:ios-boundary",
     "ios:sqlite-capability:gate": "node scripts/quality/quality-command-contracts.mjs allow ios:sqlite-capability:gate && node scripts/sync/ios-capacitor-sqlite-capability-gate.mjs",
     "sync:sql-surface:scan": "node scripts/quality/quality-command-contracts.mjs allow sync:sql-surface:scan && node scripts/sync/sql-surface-scan.mjs",
+    "database:record:report": "node scripts/diagnostics/sql-recording-report.mjs",
     "database:audit:snapshot": "python3 scripts/database/database-audit-snapshot.py",
     "database:audit": "node --no-warnings scripts/database/database-audit.mjs"
   },

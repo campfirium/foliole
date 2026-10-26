@@ -1,5 +1,7 @@
 import type BetterSqlite3 from 'better-sqlite3';
 
+import { recordSqliteStatement } from './sqlRecording.js';
+
 type SqliteDatabase = BetterSqlite3.Database;
 const caches = new WeakMap<SqliteDatabase, Map<string, BetterSqlite3.Statement>>();
 const MAX_CACHED_STATEMENTS = 128;
@@ -17,7 +19,7 @@ export function prepareCachedSqliteStatement(sqlite: SqliteDatabase, sql: string
     cache.set(sql, existing);
     return existing;
   }
-  const statement = sqlite.prepare(sql);
+  const statement = recordSqliteStatement(sqlite.prepare(sql), sql);
   if (cache.size === MAX_CACHED_STATEMENTS) {
     const oldest = cache.keys().next();
     if (!oldest.done) cache.delete(oldest.value);

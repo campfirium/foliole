@@ -1,7 +1,10 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
+import { sqlRecording } from '../../../lib/core/diagnostics/sqlRecording.js';
 import { DbPortError, type DbErrorCode, type DbParams, type DbPort, type DbRow, type DbRunResult, type DbValue } from '../../../lib/core/sync/dbPort.js';
+
+import { exposeCompanionSqlRecording } from './diagnostics/companionSqlRecording.js';
 
 interface CapacitorChanges {
   changes?: {
@@ -60,11 +63,13 @@ export function createCapacitorSqliteDbPort(
   connection: SQLiteDBConnection,
   platform = Capacitor.getPlatform()
 ): DbPort {
+  exposeCompanionSqlRecording();
   let transactionDepth = 0;
   const port: DbPort = {
     async run(sql, params = []) {
       try {
-        const result = await runStatement(connection, sql, params, platform);
+        const result = await sqlRecording.measureAsync(sql, 'run', platform,
+          () => runStatement(connection, sql, params, platform));
         return normalizeRunResult(result);
       } catch (error) {
         throw normalizeSqliteError(error, sql);
@@ -72,8 +77,10 @@ export function createCapacitorSqliteDbPort(
     },
     async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
       try {
-        const result = await connection.query(sql, normalizeParams(params, platform));
-        return (result.values ?? []).map(normalizeRow) as T[];
+        return await sqlRecording.measureAsync(sql, 'query', platform, async () => {
+          const result = await connection.query(sql, normalizeParams(params, platform));
+          return (result.values ?? []).map(normalizeRow) as T[];
+        });
       } catch (error) {
         throw normalizeSqliteError(error);
       }
