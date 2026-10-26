@@ -3,6 +3,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { saveA5InstrumentationFailure } from './macos-a5-instrumentation-failure.mjs';
+import { execute as executeProcess } from './macos-a5-process.mjs';
+
 const MAIN_APP = 'com.campfirium.foliole.android';
 const CAPACITY_APP = 'com.campfirium.foliole.android.acceptance';
 const DRIVER_APPS = [
@@ -35,7 +38,7 @@ function waitForSessionEnd() {
 
 export async function runT234WebViewSession({
   assertFixed, buildIdentity, captured, checked, paths, serial,
-  waitForEnd = waitForSessionEnd
+  waitForEnd = waitForSessionEnd, execute = executeProcess
 }) {
   const appId = CAPACITY_APP;
   assertFixed();
@@ -71,6 +74,8 @@ export async function runT234WebViewSession({
     failure = error;
     session = { ...session, status: 'failed', error: error.message };
     save();
+    await saveA5InstrumentationFailure({ appId, error, evidenceRoot, execute,
+      options: {}, paths, serial }).catch(() => {});
   }
   finally {
     let cleanupError;

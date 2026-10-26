@@ -71,6 +71,7 @@ it('restores the main app if WebView discovery fails', async () => {
     await expect(runT234WebViewSession({
       assertFixed: vi.fn(), buildIdentity: () => 'failed',
       captured: vi.fn(() => ''), checked,
+      execute: vi.fn(async () => ({ code: 1, stderr: 'No test device' })),
       paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' },
       serial: '87a33a4b'
     })).rejects.toThrow('Expected one fixed A5 process');
@@ -78,5 +79,39 @@ it('restores the main app if WebView discovery fails', async () => {
       'com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'a5-t234-webview-session',
       'failed', 'session.json'), 'utf8'))).toMatchObject({ status: 'failed' });
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+it('captures acceptance startup logs before restoring the daily app and preserves the launch failure', async () => {
+  const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/a5-launch-failure-'));
+  const events = [];
+  const original = new Error('Acceptance activity did not stay foreground');
+  const checked = vi.fn((_command, args) => {
+    if (args.some(arg => String(arg).endsWith('verify-android-launch.mjs'))) throw original;
+    if (args.includes('com.campfirium.foliole.android/com.foliole.android.MainActivity')) events.push('restore');
+  });
+  const execute = vi.fn(async (_command, args) => {
+    if (args.includes('logcat')) {
+      events.push('logs');
+      return { code: 0, stdout: '10-26 10:00:00.000 42 42 E AndroidRuntime: com.campfirium.foliole.android.acceptance crashed\n'
+        + '10-26 10:00:00.001 99 99 I PrivateApp: unrelated data' };
+    }
+    if (args.includes('pidof')) return { code: 0, stdout: '42' };
+    return { code: 0, stdout: '' };
+  });
+  try {
+    await expect(runT234WebViewSession({ assertFixed: vi.fn(), buildIdentity: () => 'failed',
+      captured: vi.fn(() => ''), checked, execute, serial: '87a33a4b',
+      paths: { adb: '/fixed/adb', artifactsRoot: root, buildRoot: '/fixed/source' }
+    })).rejects.toBe(original);
+    expect(events).toContain('logs');
+    expect(events.at(-1)).toBe('restore');
+    expect(events.slice(0, -1).every(event => event === 'logs')).toBe(true);
+    const log = fs.readFileSync(path.join(root,
+      'a5-t234-webview-session/failed/instrumentation-failure/logcat-tail.txt'), 'utf8');
+    expect(log).toContain('acceptance crashed');
+    expect(log).not.toContain('unrelated data');
+    expect(JSON.parse(fs.readFileSync(path.join(root,
+      'a5-t234-webview-session/failed/session.json'), 'utf8')).status).toBe('failed');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

@@ -80,3 +80,20 @@ it('collects the screenshot saved before Activity teardown and logs from its rep
   expect(execute.mock.calls.some(([, command]) => command.includes('screencap'))).toBe(false);
   expect(fs.existsSync(path.join(root, 'instrumentation-failure/screen.png'))).toBe(true);
 });
+
+it('retains the crash stack after the acceptance process has exited', async () => {
+  const { args, root, execute } = fixture();
+  const original = execute.getMockImplementation();
+  execute.mockImplementation(async (command, commandArgs) => {
+    if (commandArgs.includes('crash')) return { code: 0, stdout:
+      '10-26 10:00:00.000 77 77 E AndroidRuntime: Process: com.campfirium.foliole.android.acceptance, PID: 77\n'
+      + '10-26 10:00:00.001 77 77 E AndroidRuntime: java.lang.IllegalStateException: startup failed\n'
+      + '10-26 10:00:00.002 88 88 E AndroidRuntime: unrelated crash' };
+    if (commandArgs.includes('pidof')) return { code: 1, stderr: 'Process exited' };
+    return original(command, commandArgs);
+  });
+  await runMacosA5InstrumentationMechanics(args).catch(() => {});
+  const log = fs.readFileSync(path.join(root, 'instrumentation-failure/logcat-tail.txt'), 'utf8');
+  expect(log).toContain('IllegalStateException: startup failed');
+  expect(log).not.toContain('unrelated crash');
+});

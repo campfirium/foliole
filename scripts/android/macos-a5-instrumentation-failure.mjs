@@ -25,11 +25,15 @@ export async function saveA5InstrumentationFailure({
   const stdout = error.result?.stdout ?? error.result?.output ?? '';
   const failurePid = stdout.match(/^INSTRUMENTATION_STATUS: folioleFailurePid=(\d+)$/mu)?.[1];
   await attempt('logcat', async () => {
-    const log = await run(['logcat', '-d', '-v', 'threadtime',
+    const crash = await run(['logcat', '-b', 'crash', '-d', '-v', 'threadtime', '-t', '500']);
+    const log = crash + '\n' + await run(['logcat', '-d', '-v', 'threadtime',
       ...(failurePid ? [`--pid=${failurePid}`] : []), '-t', '2000']);
     const pids = new Set([...log.matchAll(
       /Start proc (\d+):com\.campfirium\.foliole\.android\.acceptance\//gu
     )].map((match) => match[1]));
+    for (const match of crash.matchAll(
+      /Process: com\.campfirium\.foliole\.android\.acceptance, PID: (\d+)/gu
+    )) pids.add(match[1]);
     if (failurePid) pids.add(failurePid);
     else await attempt('pid', async () => {
       const pid = await run(['shell', 'pidof', appId]);
