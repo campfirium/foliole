@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS } from '../../lib/core/database/androidCompanionBridgeContractDefinitions.ts';
+import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionNodeResourceQueryDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -28,6 +29,8 @@ describe('iOS companion contract assets', () => {
     const ios = await readJson(path.join(REPO_ROOT, 'ios/App/App', fileName));
     const android = await readJson(path.join(REPO_ROOT, 'android/app/src/main/assets', fileName));
 
+    expect(ios.queries.workspaceSnapshotNodes).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes);
+    expect(android.queries.workspaceSnapshotNodes).toEqual(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes);
     expect(ios.queries.syncPayloadSetting.syncPayload.defaultPlatform).toBe('ios');
     expect(android.queries.syncPayloadSetting.syncPayload.defaultPlatform).toBe('android');
     expect(ios.queries.syncPayloadViewActiveNode.syncPayload.platform).toBe('ios');

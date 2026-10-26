@@ -798,6 +798,11 @@
           "type": "nullableString"
         },
         {
+          "key": "initial_review_due",
+          "source": "initial_review_due",
+          "type": "nullableString"
+        },
+        {
           "key": "manual_child_order",
           "source": "manual_child_order",
           "type": "nullableString"

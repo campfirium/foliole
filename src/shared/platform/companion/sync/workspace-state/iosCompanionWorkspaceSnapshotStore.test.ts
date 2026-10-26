@@ -89,6 +89,8 @@ it('preserves every directory field while reducing native bridge bytes', async (
   const database = new Database(':memory:');
   try {
     seedSnapshotDatabase(database);
+    database.prepare('UPDATE nodes SET initial_review_due = ? WHERE id = ?')
+      .run('2026-11-01T08:00:00.000Z', snapshotNodeId(0));
     const { connection, port } = snapshotPort(database);
     const expected = database.prepare(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql).all('Phone');
     let transferredBytes = 0;
@@ -102,6 +104,8 @@ it('preserves every directory field while reducing native bridge bytes', async (
     expect(await loadCompanionSnapshotNodeRows(port, 'Phone')).toEqual(expected);
     // The representative directory must remove at least 30% of bridge payload overhead.
     expect(transferredBytes).toBeLessThan(Buffer.byteLength(JSON.stringify(expected)) * 0.7);
+    const snapshot = await loadIosCompanionWorkspaceSnapshot(port);
+    expect(snapshot!.nodesById[snapshotNodeId(0)]!.initialReviewDue).toBe('2026-11-01T08:00:00.000Z');
   } finally { database.close(); }
 });
 

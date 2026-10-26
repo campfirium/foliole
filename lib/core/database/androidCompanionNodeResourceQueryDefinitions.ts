@@ -167,6 +167,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'enable_short_term', source: 'enable_short_term', type: 'long' },
       { key: 'sequential_reading_enabled', source: 'sequential_reading_enabled', type: 'long' },
       { key: 'shelved_at', source: 'shelved_at', type: 'nullableString' },
+      { key: 'initial_review_due', source: 'initial_review_due', type: 'nullableString' },
       { key: 'manual_child_order', source: 'manual_child_order', type: 'nullableString' },
       { key: 'title', source: 'title', type: 'nullableString' },
       { key: 'is_title_manual', source: 'is_title_manual', type: 'long' },
