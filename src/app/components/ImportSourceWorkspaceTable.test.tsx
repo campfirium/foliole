@@ -7,6 +7,8 @@ import { createDraftImportSource } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
 
 beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(384);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(384);
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(300);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() =>

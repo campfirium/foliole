@@ -130,6 +130,8 @@ describe('ReadingFontSheet', () => {
 });
 
 it('windows a dense highlight list and keeps row actions bound to the highlight identity', async () => {
+  const clientHeight = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+  const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
   const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(300);
   const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
   const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
@@ -143,6 +145,8 @@ it('windows a dense highlight list and keeps row actions bound to the highlight 
     fireEvent.click(first);
     expect(onSelect).toHaveBeenCalledWith(highlights[0]);
   } finally {
+    clientHeight.mockRestore();
+    clientWidth.mockRestore();
     view.unmount(); height.mockRestore(); width.mockRestore(); rect.mockRestore();
   }
 });

@@ -40,6 +40,8 @@ afterEach(() => {
 });
 
 it('keeps the complete highlight extent while mounting only a viewport window', () => {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(320);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(ROW_HEIGHT);
   const onRevealHighlight = vi.fn();
   render(<HighlightsListHarness highlights={createHighlights()} onRevealHighlight={onRevealHighlight} />);

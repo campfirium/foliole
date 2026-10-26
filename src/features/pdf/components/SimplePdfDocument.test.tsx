@@ -58,6 +58,8 @@ import { SimplePdfDocument } from './SimplePdfDocument';
 beforeEach(() => {
   vi.clearAllMocks();
   resourceMock.pages = 2;
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
   resetTestAttachmentResources();
