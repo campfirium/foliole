@@ -1,5 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
-import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
+import { deleteWorkspacePdfPageMapForNodes } from './workspacePdfPageMap.js';
 import { SUBTREE_NODE_PATHS_CTE_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SUBTREE_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_subtree_seed_ids (
@@ -52,6 +52,7 @@ function deleteWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: s
   const placeholders = createPlaceholders(nodeIds);
   driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${placeholders})`, nodeIds);
   driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${placeholders})`, nodeIds);
+  deleteWorkspacePdfPageMapForNodes(driver, `SELECT value FROM json_each(?)`, [JSON.stringify(nodeIds)]);
 }
 
 function selectExistingNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
@@ -91,7 +92,7 @@ export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: Data
     SELECT id FROM node_descendants`;
   driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
   driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
-  refreshWorkspacePdfPageMap(driver);
+  deleteWorkspacePdfPageMapForNodes(driver, affectedIdsSql, seedIds);
 }
 
 export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
@@ -102,7 +103,7 @@ export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriv
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
   deleteWorkspaceSearchIndexForNodeIds(driver, missingIds);
-  refreshWorkspacePdfPageMap(driver);
+  deleteWorkspacePdfPageMapForNodes(driver, 'SELECT id FROM temp_workspace_search_subtree_affected_ids');
 }
 
 export function syncWorkspaceSearchPathForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {

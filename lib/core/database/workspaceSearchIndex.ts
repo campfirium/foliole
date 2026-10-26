@@ -1,7 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
 import { NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
-import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
+import { refreshWorkspacePdfPageMap, refreshWorkspacePdfPageMapForNodes } from './workspacePdfPageMap.js';
 import { AFFECTED_NODE_PATHS_CTE_SQL, NODE_PATHS_CTE_SQL, NODE_SEARCH_INSERT_AFFECTED_SQL, NODE_SEARCH_REBUILD_SQL, PDF_SEARCH_INSERT_AFFECTED_SQL, PDF_SEARCH_REBUILD_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids (
@@ -120,7 +120,7 @@ export function syncPdfSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: st
   }
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
-  refreshWorkspacePdfPageMap(driver);
+  refreshWorkspacePdfPageMapForNodes(driver, 'SELECT id FROM temp_workspace_search_affected_ids');
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
@@ -135,7 +135,7 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
-  refreshWorkspacePdfPageMap(driver);
+  refreshWorkspacePdfPageMapForNodes(driver, 'SELECT id FROM temp_workspace_search_affected_ids');
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 

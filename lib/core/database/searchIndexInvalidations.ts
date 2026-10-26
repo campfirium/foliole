@@ -187,6 +187,7 @@ export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: Sea
   syncStoredSourceSearchIndexForTargets(driver, sources);
   const attachmentIds = rows.filter((row) => row.invalidation_type === 'attachment_pdf').map((row) => row.target_id);
   for (const attachmentId of attachmentIds) {
+    driver.execute('DELETE FROM search.pdf_page_map WHERE attachment_id = ?', [attachmentId]);
     driver.execute('DELETE FROM search.pdf_search WHERE attachment_id = ?', [attachmentId]);
   }
   syncPdfSearchIndexForAttachmentIds(driver, attachmentIds);
