@@ -7,9 +7,12 @@ export class SqlRecording {
   private started = 0;
   private label = '';
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private readonly now: () => number;
   onStopped: ((report: SqlRecordingReport) => void) | undefined;
 
-  constructor(private readonly now = () => performance.now()) {}
+  constructor(now = () => performance.now()) {
+    this.now = now;
+  }
 
   start(options: SqlRecordingOptions = {}) {
     if (this.report?.running || this.report?.pending) throw new Error('sql_recording_already_active');

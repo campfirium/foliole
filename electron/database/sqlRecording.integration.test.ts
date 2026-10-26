@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
@@ -8,6 +11,19 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
 afterEach(() => { sqlRecording.stop(); });
+
+it('loads the recorder through the same strip-only source path as database workers', async () => {
+  const { stdout } = await promisify(execFile)(process.execPath, [
+    '--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-strip-types',
+    '--input-type=module', '--eval',
+    `import { SqlRecording } from './lib/core/diagnostics/sqlRecording.ts';
+     const recorder = new SqlRecording(() => 0);
+     recorder.start();
+     recorder.measure('SELECT 1', 'get', 'desktop', () => ({ value: 1 }));
+     console.log(JSON.stringify(recorder.stop().groups.map(group => group.count)));`
+  ], { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
+  expect(JSON.parse(stdout)).toEqual([1]);
+});
 
 it('records cached desktop driver and port calls while retaining rollback, binding and error behavior', async () => {
   const sqlite = new Database(':memory:');

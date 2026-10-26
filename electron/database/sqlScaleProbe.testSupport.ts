@@ -47,7 +47,7 @@ export function prepareUnrecorded(sqlite: Database.Database, sql: string) {
 
 function firstAppCaller() {
   const frame = (new Error().stack ?? '').split('\n').slice(1).find((line) => /\/(?:electron|lib)\//u.test(line) &&
-    !/sqlScaleProbe|sqliteStatementCache|betterSqlite3Driver|guardedBetterSqliteDatabase|node_modules/u.test(line));
+    !/sqlScaleProbe\.testSupport|sqlRecording\.ts:|sqliteStatementCache|betterSqlite3Driver|guardedBetterSqliteDatabase|node_modules/u.test(line));
   return (frame ?? '').replace(/^.*\/((?:electron|lib)\/[^):]+:\d+).*$/u, '$1').trim();
 }
 

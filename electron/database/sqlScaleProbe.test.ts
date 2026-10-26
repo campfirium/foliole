@@ -3,6 +3,7 @@
 import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 
+import { recordSqliteStatement } from './sqlRecording.js';
 import { NUMBERED_MIGRATION_STEP } from './sqlScaleProbe.testSupport.js';
 import { defaultScaleGrowthLimits, findSuperlinearGrowth } from './sqlScaleRatio.testSupport.js';
 import { LOOP_EXECUTIONS, runWithScaleProbe } from './sqlScanPlan.testSupport.js';
@@ -20,6 +21,19 @@ function library(rows = 100) {
 function scannedTables(findings: Awaited<ReturnType<typeof runWithScaleProbe>>['fullScanFindings']) {
   return findings.map((finding) => `${finding.via}:${finding.table}`);
 }
+
+it('attributes recorded statements to their application caller without hiding scans', async () => {
+  const sqlite = library();
+  try {
+    const run = await runWithScaleProbe('recorded-loop', () => {
+      const sql = 'SELECT id FROM items WHERE tag = ?';
+      const lookup = recordSqliteStatement(sqlite.prepare(sql), sql);
+      for (let index = 0; index < LOOP_EXECUTIONS; index += 1) lookup.get(`tag-${index}`);
+    });
+    expect(scannedTables(run.fullScanFindings)).toEqual(['statement:items']);
+    expect(run.fullScanFindings[0]!.record.caller).toMatch(/^electron\/database\/sqlScaleProbe\.test\.ts:\d+$/u);
+  } finally { sqlite.close(); }
+});
 
 describe('sql scale probe', () => {
   it('flags a loop statement that scans a table and passes the indexed version', async () => {
