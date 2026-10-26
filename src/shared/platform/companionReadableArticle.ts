@@ -14,6 +14,8 @@ import {
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
+import { scopeCompanionArticleSnapshot } from './companion/reading/companionArticleSnapshot';
+
 export type { CompanionRecentArticle } from './companionBrowseLists';
 
 export interface CompanionReadableArticle {
@@ -105,7 +107,8 @@ export function resolveReadableCompanionArticleByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null
 ): CompanionReadableArticle | null {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  const scoped = scopeCompanionArticleSnapshot(snapshot, nodeId);
+  const normalizedSnapshot = scoped ? normalizeWorkspaceSnapshot(scoped) : null;
   if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) {
     return null;
   }
@@ -119,6 +122,7 @@ export function resolveLoadedCompanionArticle(
   loadedNodeContentById: Record<string, string> = {}
 ): CompanionReadableArticle | null {
   if (!snapshot || !document) return null;
+  snapshot = scopeCompanionArticleSnapshot(snapshot, document.id)!;
   const node = snapshot.nodesById[document.id];
   if (!node) return null;
   const hydratedSnapshot: WorkspaceSnapshot = {
@@ -151,7 +155,8 @@ export function resolveReadableCompanionTrashArticleByNodeId(
   snapshot: WorkspaceSnapshot | null,
   nodeId: string | null
 ): CompanionReadableArticle | null {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
+  const scoped = scopeCompanionArticleSnapshot(snapshot, nodeId);
+  const normalizedSnapshot = scoped ? normalizeWorkspaceSnapshot(scoped) : null;
   if (!normalizedSnapshot || !nodeId || !isCanonicalTrashedNodeId(normalizedSnapshot, nodeId)) {
     return null;
   }
