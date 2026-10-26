@@ -1,4 +1,6 @@
 export const controlledSyncSqliteTests = [
+  'src/store/workspaceDailyEligibility.integration.test.ts',
+  'src/store/workspaceDailyExceptions.sync.integration.test.ts',
   'src/companion/companionHistoryDelta.integration.test.ts',
   'src/companion/companionHistoryUpgrade.integration.test.ts',
   'src/companion/companionWorkspaceHistory.integration.test.ts',

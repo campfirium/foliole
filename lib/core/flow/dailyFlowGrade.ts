@@ -21,19 +21,28 @@ export async function scopedDailySnapshot(db: DbPort, persistence: DailyFlowPers
 }
 
 export async function dailyGradeScope(db: DbPort, stored: StoredFlow, args: DailyFlowCommitArgs,
-  settings: DailyFlowSettings) {
+  settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
   if (!args.grade || stored.invalidated || stored.settings_key !== JSON.stringify(settings)) return null;
   const next = stored.session.queueNodeIds.find(id => id !== args.grade!.nodeId);
   // A newly due minute item is a time-driven eligibility change, rather than an ordinary grade.
-  const ready = await db.query(`SELECT e.node_id FROM daily_flow_entries e JOIN node_review r ON r.node_id = e.node_id
-    WHERE e.queue_position IS NULL AND r.scheduled_days < 1 AND julianday(r.due) <= julianday(?) LIMIT 1`, [args.now]);
-  if (ready.length) return null;
+  if (await hasReadyDailyReview(db, args.now, settings, persistence)) return null;
   const successor = next ?? stored.session.soonNodeIds?.[0];
   if (successor) return [args.grade.nodeId, successor];
   // At Queue Clear, only the saved daily reading candidates can form the continuation.
   const readings = await db.query<{ node_id: string }>(`SELECT e.node_id FROM daily_flow_entries e
     JOIN nodes n ON n.id = e.node_id WHERE n.kind = 'topic' ORDER BY e.initial_position`);
   return [args.grade.nodeId, ...readings.map(row => row.node_id)];
+}
+
+export async function hasReadyDailyReview(db: DbPort, now: string, settings: DailyFlowSettings,
+  persistence: DailyFlowPersistence) {
+  const due = await db.query<{ node_id: string }>(`SELECT e.node_id FROM daily_flow_entries e
+    JOIN node_review r ON r.node_id = e.node_id WHERE e.queue_position IS NULL
+      AND r.scheduled_days < 1 AND julianday(r.due) <= julianday(?)`, [now]);
+  if (!due.length) return false;
+  // Retired entries retain history positions; a due timestamp alone does not restore eligibility.
+  const snapshot = await scopedDailySnapshot(db, persistence, due.map(row => row.node_id));
+  return flowPlan({ ...snapshot, nodeOrder: due.map(row => row.node_id) }, 'review-first', now, settings).fsrsQueueNodeIds.length > 0;
 }
 
 export function advanceDailyGrade(snapshot: DailyFlowSnapshot, session: DailyFlowSession,

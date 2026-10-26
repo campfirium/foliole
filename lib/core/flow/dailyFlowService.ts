@@ -69,8 +69,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     } catch { throw new Error('daily_flow_changed'); }
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
       (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
-    const localGrade = await dailyGradeScope(tx, stored, args, settings);
-    const localReading = await dailyReadingScope(tx, stored, args, settings);
+    const localGrade = await dailyGradeScope(tx, stored, args, settings, persistence);
+    const localReading = await dailyReadingScope(tx, stored, args, settings, persistence);
     const scope = localGrade ?? localReading;
     const snapshot = scope ? await scopedDailySnapshot(tx, persistence, scope) : await persistence.snapshot(tx);
     assertCurrentFacts(snapshot, args);

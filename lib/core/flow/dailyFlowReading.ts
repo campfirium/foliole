@@ -2,18 +2,18 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import { hasReadyDailyReview } from './dailyFlowGrade.js';
 import { flowPlan } from './dailyFlowPlanning.js';
+import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import type { readDailyFlow } from './dailyFlowStorage.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
 import { advanceReviewSession, completeReviewSession } from './flowSessionState.js';
 
 export async function dailyReadingScope(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
-  args: DailyFlowCommitArgs, settings: DailyFlowSettings) {
+  args: DailyFlowCommitArgs, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
   if (!args.readingAction || stored.invalidated || stored.settings_key !== JSON.stringify(settings)) return null;
-  const ready = await db.query(`SELECT e.node_id FROM daily_flow_entries e JOIN node_review r ON r.node_id = e.node_id
-    WHERE e.queue_position IS NULL AND r.scheduled_days < 1 AND julianday(r.due) <= julianday(?) LIMIT 1`, [args.now]);
-  if (ready.length) return null;
+  if (stored.mode !== 'reading-only' && await hasReadyDailyReview(db, args.now, settings, persistence)) return null;
   const affected = (args.readings ?? []).map(value => value.nodeId);
   const next = stored.session.queueNodeIds.find(id => id !== stored.session.currentNodeId)
     ?? stored.session.soonNodeIds?.[0];
