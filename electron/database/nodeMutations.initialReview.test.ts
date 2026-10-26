@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import {
@@ -39,8 +39,8 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('creates an item without persisting a content-carried review snapshot', () => {
-  upsertNodeSnapshot({
+it.each([false, true])('creates an item while ignoring graded snapshots (graded=%s)', (graded) => {
+  const input = {
     nodeId: 'node-review',
     parentNodeId: null,
     kind: 'item',
@@ -51,21 +51,38 @@ it('creates an item without persisting a content-carried review snapshot', () =>
     anchorLink: null,
     review: {
       due: '2026-05-22T00:00:00.000Z',
-      lastReviewAt: null,
-      state: 0,
-      stability: 0,
-      difficulty: 0,
-      elapsedDays: 0,
-      scheduledDays: 0,
-      reps: 0,
-      lapses: 0
+      lastReviewAt: graded ? '2026-05-21T00:00:00.000Z' : null,
+      state: graded ? 2 : 0,
+      stability: 7,
+      difficulty: 5,
+      elapsedDays: 3,
+      scheduledDays: 6,
+      reps: graded ? 4 : 0,
+      lapses: 1
     },
     position: 0,
     createdAt: '2026-05-21T08:00:00.000Z',
     updatedAt: '2026-05-21T08:00:00.000Z'
-  });
+  } satisfies Parameters<typeof upsertNodeSnapshot>[0];
+  upsertNodeSnapshot(input);
+  closeDatabaseConnection();
 
-  expect(getNodeReviewRow('node-review')).toBeUndefined();
-  expect(getReviewCounts('node-review')).toEqual({ reviewCount: 0, reviewLogCount: 0 });
+  const expected = graded ? undefined : {
+    due: input.review.due, last_review_at: null, reps: 0, state: 0
+  };
+  expect(getNodeReviewRow('node-review')).toEqual(expected);
+  if (!graded) {
+    expect(openDatabaseConnection().sqlite.prepare(
+      'SELECT stability, difficulty, elapsed_days, scheduled_days, lapses FROM node_review WHERE node_id = ?'
+    ).get(input.nodeId)).toEqual({ stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 0, lapses: 0 });
+  }
+  expect(getReviewCounts('node-review')).toEqual({ reviewCount: graded ? 0 : 1, reviewLogCount: 0 });
+  expect(getNodeReviewSyncRow('node-review')).toBeUndefined();
+
+  upsertNodeSnapshot({ ...input, content: 'Edited prompt', review: { ...input.review,
+    due: '2099-01-01T00:00:00.000Z', reps: 9, state: 2, lastReviewAt: '2026-05-21T09:00:00.000Z' } });
+  closeDatabaseConnection();
+  expect(getNodeReviewRow('node-review')).toEqual(expected);
+  expect(getReviewCounts('node-review')).toEqual({ reviewCount: graded ? 0 : 1, reviewLogCount: 0 });
   expect(getNodeReviewSyncRow('node-review')).toBeUndefined();
 });
