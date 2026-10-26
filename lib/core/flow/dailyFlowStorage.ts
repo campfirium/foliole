@@ -60,3 +60,20 @@ function stablePositions(ids: string[], previous: DailyFlowPosition[], key: 'que
   const ordered = positions.every((value, index) => index === 0 || value > positions[index - 1]!);
   return new Map(ids.map((id, index) => [id, ordered ? positions[index]! : index]));
 }
+
+// An ordinary grade removes one ready entry; all other persisted positions stay intact.
+export async function writeDailyFlowGrade(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
+  session: DailyFlowSession, nodeId: string, now: string) {
+  if (!session.queueNodeIds.includes(nodeId)) {
+    await db.run('UPDATE daily_flow_entries SET queue_position = NULL WHERE node_id = ?', [nodeId]);
+  }
+  if (stored.session.soonNodeIds?.[0] === session.currentNodeId && !session.soonNodeIds?.includes(session.currentNodeId!)) {
+    await db.run('UPDATE daily_flow_entries SET soon_position = NULL WHERE node_id = ?', [session.currentNodeId]);
+  }
+  const metadata = { ...session, daily: undefined, queueNodeIds: undefined, soonNodeIds: undefined };
+  const revision = stored.revision + 1;
+  await db.run(`UPDATE daily_flow_state SET revision = ?, session_json = ?, invalidated = 0, updated_at = ? WHERE id = 1`,
+    [revision, JSON.stringify(metadata), now]);
+  return { ...session, daily: { scope: (JSON.parse(stored.settings_key) as { scope?: string }).scope ?? '',
+    dayKey: stored.day_key, revision } };
+}

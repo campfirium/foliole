@@ -1,3 +1,5 @@
+import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapshot.js';
+import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
 import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
@@ -12,7 +14,11 @@ import { applyReviewGrade } from './reviewMutations.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 export const desktopDailyFlowPersistence: DailyFlowPersistence = {
-  snapshot: async () => {
+  snapshot: async (_db, nodeIds) => {
+    if (nodeIds) {
+      const { nodesById, trashedNodeIds } = buildWorkspaceListNodesById(queryWorkspaceRows(openDatabaseConnection().driver, nodeIds));
+      return { nodeOrder: [...nodeIds], nodesById: Object.fromEntries(Object.entries(nodesById).map(([id, node]) => [id, definedProps({ ...node })])), trashedNodeIds };
+    }
     const snapshot = loadWorkspaceListSnapshot({ includePdfOpenings: false });
     return { ...snapshot, nodesById: Object.fromEntries(Object.entries(snapshot.nodesById)
       .map(([id, node]) => [id, definedProps(node)])) };

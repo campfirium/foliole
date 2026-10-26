@@ -62,8 +62,11 @@ export function afterDailyGrade(snapshot: DailyFlowSnapshot, session: DailyFlowS
   const plan = flowPlan(snapshot, mode, now, settings);
   const planned = mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only' ? plan.readingQueueNodeIds : plan.queueNodeIds;
   const soon = session.soonNodeIds ?? [];
-  const task = planned.filter(id => !soon.includes(id) && (!soon.length ||
-    session.queueNodeIds.includes(id) || plan.fsrsQueueNodeIds.includes(id)));
+  const eligible = new Set(mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only'
+    ? plan.readingQueueNodeIds : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]);
+  const retained = session.queueNodeIds.filter(id => eligible.has(id));
+  const task = [...retained, ...planned.filter(id => !retained.includes(id) && !soon.includes(id) && (!soon.length ||
+    session.queueNodeIds.includes(id) || plan.fsrsQueueNodeIds.includes(id)))];
   if (!task.length && soon.length) return advanceReviewSession(session, { handledAt: now,
     nextNodeId: soon[0]!, queueNodeIds: [], soonNodeIds: soon.slice(1),
     nextReviewDueAt: snapshot.nodesById[session.currentNodeId ?? '']?.review?.due ?? null,

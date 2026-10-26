@@ -5,6 +5,8 @@ import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowCo
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { toReadingPayload } from '../../companionSyncStateWriters';
+import { loadCompanionSnapshotNodeRows } from '../sync/workspace-state/companionSnapshotNodeRows';
+import { buildIosWorkspaceNodes } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotRows';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
@@ -14,8 +16,10 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export const companionDailyFlowPersistence: DailyFlowPersistence = {
-  snapshot: async db => (await loadIosCompanionWorkspaceSnapshot(db)) ?? {
-    nodeOrder: [], nodesById: {}, trashedNodeIds: [] },
+  snapshot: async (db, nodeIds) => {
+    if (nodeIds) return { ...buildIosWorkspaceNodes(await loadCompanionSnapshotNodeRows(db, await iosCompanionHostName(db), nodeIds, true)), nodeOrder: [...nodeIds] };
+    return (await loadIosCompanionWorkspaceSnapshot(db)) ?? { nodeOrder: [], nodesById: {}, trashedNodeIds: [] };
+  },
   grade: async (db, value, opId) => {
     const result = await saveIosReviewWithDb(db, { node_id: value.nodeId, review_json: '{}',
       review_log_json: JSON.stringify({ ...value, opId }) });

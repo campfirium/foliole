@@ -5,13 +5,14 @@ import type { SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade } from './dailyFlowGrade.js';
 import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { readDailyFlow, writeDailyFlow } from './dailyFlowStorage.js';
+import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade } from './dailyFlowStorage.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
 export interface DailyFlowPersistence {
-  snapshot(db: DbPort): Promise<DailyFlowSnapshot>;
+  snapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowSnapshot>;
   grade(db: DbPort, args: NonNullable<DailyFlowCommitArgs['grade']>, opId: string): Promise<SchedulerCard | null>;
   reading(db: DbPort, value: NonNullable<DailyFlowCommitArgs['readings']>[number], now: string): Promise<void>;
   reviewHistory(db: DbPort, value: NonNullable<DailyFlowCommitArgs['reviewHistory']>, now: string): Promise<SchedulerCard | null>;
@@ -56,12 +57,13 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     if (previous) {
       if (previous.input_hash !== hash) throw new Error('daily_flow_operation_mismatch');
       if (!stored || stored.invalidated || stored.revision !== previous.revision) throw new Error('daily_flow_ack_superseded');
-      const replayedSnapshot = await persistence.snapshot(tx);
+      const replayedSnapshot = await scopedDailySnapshot(tx, persistence, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]);
       return { nodes: receiptNodes(replayedSnapshot, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), replayed: true, ...(replayedSnapshot ? { readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: replayedSnapshot.nodesById[value.nodeId]?.reading ?? null })) } : {}), session: stored.session, ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) as SchedulerCard | null }) };
     }
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
       stored.day_key !== flowDay(args.now, settings)) throw new Error('daily_flow_changed');
-    const snapshot = await persistence.snapshot(tx);
+    const localGrade = await dailyGradeScope(tx, stored, args, settings);
+    const snapshot = localGrade ? await scopedDailySnapshot(tx, persistence, localGrade) : await persistence.snapshot(tx);
     assertCurrentFacts(snapshot, args);
     const mode = stored.mode as ReviewSessionMode;
     const base = stored.invalidated ? prepareFlowSession(snapshot, { now: args.now, mode }, settings, stored.session) : stored.session;
@@ -70,14 +72,16 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
       throw new Error('daily_flow_learning_changed');
     }
     const result = await persistLearning(tx, args, persistence);
-    const updated = await persistence.snapshot(tx);
-    let session = args.grade ? afterDailyGrade(updated, base, mode, args.now, settings) : args.nextSession;
+    const updated = localGrade ? await scopedDailySnapshot(tx, persistence, localGrade) : await persistence.snapshot(tx);
+    let session = args.grade ? localGrade ? advanceDailyGrade(updated, base, args.now, settings)
+      : afterDailyGrade(updated, base, mode, args.now, settings) : args.nextSession;
     if (!session) throw new Error('daily_flow_session_missing');
     if (args.reviewHistory?.mode === 'redo') session = { ...session, nextReviewDueAt:
       resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };
     if (stored.invalidated && !args.grade) session = prepareFlowSession(updated,
       { now: args.now, mode }, settings, session);
-    const saved = await writeDailyFlow(tx, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
+    const saved = localGrade ? await writeDailyFlowGrade(tx, stored, session, args.grade!.nodeId, args.now)
+      : await writeDailyFlow(tx, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
       now: args.now, revision: stored.revision + 1, session, previousEntries: stored.entries,
       ...(stored.invalidated ? { candidateIds: fullDayCandidates(updated, args.now, settings) } : {}) });
     await tx.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json) VALUES (?, ?, ?, ?)',
