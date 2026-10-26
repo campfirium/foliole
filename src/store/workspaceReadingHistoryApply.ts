@@ -70,7 +70,10 @@ export async function applyWorkspaceReadingHistory(args: {
       : await getWorkspaceHistoryPersistence()
       .persistReadingSnapshots(prepared.nodes, args.mutationTimestamp);
     if (!persisted) return { status: 'failed' };
-    if (typeof persisted !== 'boolean') dailySession = persisted.session;
+    if (typeof persisted !== 'boolean') {
+      dailySession = persisted.session;
+      args.mutationTimestamp = persisted.mutationTimestamp ?? args.mutationTimestamp;
+    }
   } catch (error) {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };
   }

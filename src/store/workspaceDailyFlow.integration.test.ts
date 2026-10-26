@@ -76,6 +76,8 @@ it('keeps the daily cursor and grade atomic, retries a lost native receipt once,
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log')).toHaveLength(1);
   expect(after.appActionHistory.undoStack).toHaveLength(1);
   const entry = after.appActionHistory.undoStack.at(-1)!;
+  expect(JSON.stringify(entry)).not.toContain('"queueNodeIds":["');
+  expect(JSON.stringify(entry)).toContain('"queueHistory":');
   expect(app.history.undoWorkspaceAction(entry.id)).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().nodesById[original.currentNodeId!]!.review?.reps ?? 0).toBe(0);
@@ -103,6 +105,8 @@ it.each(['read', 'later', 'soon', 'dismiss'] as const)('commits %s and desktop u
   const after = app.getState();
   const reading = after.nodesById[before.currentNodeId!]!.reading ?? null;
   const entry = after.appActionHistory.undoStack.at(-1)!;
+  expect(JSON.stringify(entry)).not.toContain('"queueNodeIds":["');
+  expect(JSON.stringify(entry)).toContain('"queueHistory":');
   expect(app.history.undoWorkspaceAction(entry.id)).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().reviewSession.currentNodeId).toBe(before.currentNodeId);
@@ -143,4 +147,30 @@ it('reopens the new learning day before retrying an old-day action without silen
   expect(app.getState().reviewSession.isAnswerRevealed).toBe(true);
   expect(await app.actions.gradeReviewCard(3, nextDay)).toBe(true);
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log')).toHaveLength(1);
+});
+
+it.each(['grade', 'soon', 'read', 'later', 'dismiss'] as const)('retries desktop %s undo and redo after losing each native receipt', async action => {
+  const app = setup(action === 'grade' ? 'item' : 'topic');
+  await app.actions.startReviewSession(now);
+  app.actions.revealReviewAnswer();
+  const actions = { grade: () => app.actions.gradeReviewCard(3, now),
+    read: () => app.actions.readReviewTopic(now), later: () => app.actions.postponeReviewTopic(now),
+    soon: () => app.actions.revisitReviewTopicSoon(now), dismiss: () => app.actions.dismissReviewTopic(now) };
+  expect(await actions[action]()).toBe(true);
+  for (const mode of ['undo', 'redo'] as const) {
+    const history = structuredClone(app.getState().appActionHistory);
+    const apply = mode === 'undo' ? app.history.undoWorkspaceAction : app.history.redoWorkspaceAction;
+    loseReceipt = true;
+    expect(apply()).toBe(true);
+    await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+    expect(app.getState().appActionHistory.undoStack).toEqual(history.undoStack);
+    expect(app.getState().appActionHistory.redoStack).toEqual(history.redoStack);
+    const facts = openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id');
+    const reading = openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading ORDER BY node_id');
+    expect(apply()).toBe(true);
+    await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+    expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id')).toEqual(facts);
+    expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading ORDER BY node_id')).toEqual(reading);
+    expect(app.getState().appActionHistory[mode === 'undo' ? 'redoStack' : 'undoStack']).toHaveLength(1);
+  }
 });

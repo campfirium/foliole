@@ -10,6 +10,7 @@ import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSessi
 import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade, writeDailyFlowReading } from './dailyFlowStorage.js';
+import { restoreFlowHistorySession } from './flowHistorySession.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
 export interface DailyFlowPersistence {
@@ -59,10 +60,15 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
       if (previous.input_hash !== hash) throw new Error('daily_flow_operation_mismatch');
       if (!stored || stored.invalidated || stored.revision !== previous.revision) throw new Error('daily_flow_ack_superseded');
       const replayedSnapshot = await scopedDailySnapshot(tx, persistence, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]);
-      return { nodes: receiptNodes(replayedSnapshot, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), replayed: true, ...(replayedSnapshot ? { readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: replayedSnapshot.nodesById[value.nodeId]?.reading ?? null })) } : {}), session: stored.session, ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) as SchedulerCard | null }) };
+      return { mutationTimestamp: args.now, nodes: receiptNodes(replayedSnapshot, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), replayed: true, ...(replayedSnapshot ? { readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: replayedSnapshot.nodesById[value.nodeId]?.reading ?? null })) } : {}), session: stored.session, ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) as SchedulerCard | null }) };
     }
+    try {
+      if (stored) args = { ...args,
+        ...(args.sourceSession ? { sourceSession: restoreFlowHistorySession(args.sourceSession, stored.session) } : {}),
+        ...(args.nextSession ? { nextSession: restoreFlowHistorySession(args.nextSession, stored.session) } : {}) };
+    } catch { throw new Error('daily_flow_changed'); }
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
-      stored.day_key !== flowDay(args.now, settings)) throw new Error('daily_flow_changed');
+      (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
     const localGrade = await dailyGradeScope(tx, stored, args, settings);
     const localReading = await dailyReadingScope(tx, stored, args, settings);
     const scope = localGrade ?? localReading;
@@ -91,7 +97,7 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
       ...(stored.invalidated ? { candidateIds: fullDayCandidates(updated, args.now, settings) } : {}) });
     await tx.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json) VALUES (?, ?, ?, ?)',
       [args.opId, hash, saved.daily!.revision, result.card === undefined ? null : JSON.stringify(result.card)]);
-    return { nodes: receiptNodes(updated, [saved.currentNodeId, args.grade?.nodeId, args.reviewHistory?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), session: saved, ...result, ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId, reading: updated.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
+    return { mutationTimestamp: args.now, nodes: receiptNodes(updated, [saved.currentNodeId, args.grade?.nodeId, args.reviewHistory?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), session: saved, ...result, ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId, reading: updated.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
   });
 }
 

@@ -3,6 +3,8 @@ import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/revi
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowContract';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
+import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
+import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { toReadingPayload } from '../../companionSyncStateWriters';
 import { loadCompanionSnapshotNodeRows } from '../sync/workspace-state/companionSnapshotNodeRows';
@@ -10,7 +12,7 @@ import { buildIosWorkspaceNodes } from '../sync/workspace-state/iosCompanionWork
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
-import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { readIosCompanionDatabase, writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { saveIosReadingWithDb, saveIosReviewWithDb } from './iosCompanionActiveDatabaseWrites';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from './iosCompanionMutationState';
@@ -33,7 +35,7 @@ export const companionDailyFlowPersistence: DailyFlowPersistence = {
   },
   reviewHistory: async (db, value, now) => {
     await recordReviewHistoryWithDb(db, { nodeId: value.nodeId, hostName: await iosCompanionHostName(db),
-      opId: `${value.mode}:${value.targetOpId}:${now}`, updatedAt: now,
+      opId: reviewHistoryOpId(value.targetOpId, now, value.mode), updatedAt: now,
       history: { mode: value.mode, targetOpId: value.targetOpId } });
     return recomputeNodeReviewWithDb(db, value.nodeId);
   }
@@ -46,4 +48,8 @@ export function companionDailyFlowSettings() {
 
 export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
   return writeIosCompanionDatabase(db => openDailyFlow(db, args, companionDailyFlowSettings(), companionDailyFlowPersistence));
+}
+
+export function loadCompanionDailySession() {
+  return readIosCompanionDatabase(async db => (await readDailyFlow(db))?.session ?? null);
 }

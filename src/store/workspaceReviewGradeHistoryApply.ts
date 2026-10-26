@@ -31,6 +31,7 @@ export async function applyWorkspaceReviewGradeHistory(args: {
     if (!persisted) return { status: 'failed' };
     if (typeof persisted !== 'boolean' && 'session' in persisted) {
       dailySession = persisted.session;
+      args.mutationTimestamp = persisted.mutationTimestamp ?? args.mutationTimestamp;
       reviewResult = { review: persisted.card ? toNodeReviewProfile(persisted.card) : null };
     } else if (typeof persisted !== 'boolean') reviewResult = persisted;
   } catch { return { status: 'failed' }; }

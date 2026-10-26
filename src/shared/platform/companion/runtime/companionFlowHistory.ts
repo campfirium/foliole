@@ -3,6 +3,7 @@ import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/revi
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
+import { restoreFlowHistoryEntry } from '../../../../../lib/core/flow/flowHistoryEntry';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -20,9 +21,10 @@ import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-import { commitCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
+import { commitCompanionDailyHistory, replayCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
 import { appendCompanionFlowHistory, readCompanionFlowHistory, readCompanionFlowHistoryAvailability, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
+import { readCompanionHistoryReplayReceipt } from './companionHistoryReplayReceipt';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
 import { readIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { saveIosReadingWithDb, saveIosReviewWithDb } from './iosCompanionActiveDatabaseWrites';
@@ -62,29 +64,41 @@ export function commitCompanionFlowHistory(args: {
   });
 }
 
-export async function replayCompanionFlowHistory(key: string, mode: HistoryMode, session: ReviewSessionState) {
+export async function replayCompanionFlowHistory(key: string, mode: HistoryMode, session: ReviewSessionState,
+  requestId: string = crypto.randomUUID()) {
   const result = await runCompanionHistoryMutation(async db => {
     const history = await readCompanionFlowHistory(db, key);
-    const entry = getWorkspaceHistoryTopEntry(history, mode);
-    if (!entry) return null;
+    const replayed = await readCompanionHistoryReplayReceipt(db, history, requestId, session);
+    if (replayed) return { session: replayed, entry: null };
+    const saved = getWorkspaceHistoryTopEntry(history, mode);
+    if (!saved) return null;
+    const entry = restoreFlowHistoryEntry(saved, session);
     if (entry.type === 'nodes.change') {
       await replayCompanionNodeHistoryWithDb(db, entry, mode);
-      await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, entry, mode));
       const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, new Date().toISOString());
+      await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, entry, mode),
+        replayReceipt: { id: requestId, mode, ...(restored.daily ? { daily: restored.daily } : {}) } });
       return { session: restored, entry };
     }
     if (entry.type !== 'review.grade' && entry.type !== 'topic.dismiss') throw new Error('flow_history_unavailable');
     const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
-    const mutationTimestamp = createWorkspaceHistoryMutationTimestamp(entry.mutationTimestamp);
-    await writeEntry(db, entry, mode,
-      { ...session, isAnswerRevealed: source.reviewSession.isAnswerRevealed }, undefined, undefined, mutationTimestamp);
+    let mutationTimestamp = createWorkspaceHistoryMutationTimestamp(entry.mutationTimestamp);
+    let daily: ReviewSessionState | undefined;
+    const current = { ...session, isAnswerRevealed: source.reviewSession.isAnswerRevealed };
+    if (session.daily) {
+      await prepareEntry(db, entry, mode, current);
+      const saved = await replayCompanionDailyHistory(db, { entry, session, mode, now: mutationTimestamp });
+      daily = saved.session;
+      mutationTimestamp = saved.mutationTimestamp ?? mutationTimestamp;
+    } else await writeEntry(db, entry, mode, current, undefined, undefined, mutationTimestamp);
     const updated = { ...await withCurrentReview(db, entry, mode), mutationTimestamp,
       ...(entry.type === 'review.grade' && mode === 'redo'
         ? { reviewOpId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, 'redo') } : {}) };
-    await writeCompanionFlowHistory(db, key, moveWorkspaceHistoryCursor(history, updated, mode));
-    const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, mutationTimestamp);
+    const restored = daily ?? await saveReplayedCompanionDailySession(db, (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, mutationTimestamp);
+    await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, updated, mode),
+      replayReceipt: { id: requestId, mode, ...(restored.daily ? { daily: restored.daily } : {}) } });
     return { session: restored, entry: updated };
-  }, result => result ? flowHistoryRefreshScope(result.entry) : { kind: 'nodes', nodeIds: [] });
+  }, result => result?.entry ? flowHistoryRefreshScope(result.entry) : { kind: 'nodes', nodeIds: [] });
   return result?.session ?? null;
 }
 
@@ -111,14 +125,8 @@ export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
 
 async function writeEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode,
   reviewSession: ReviewSessionState, reviewLog?: NativeSyncReviewLogDraft, completedReviewDay?: string, mutationTimestamp = entry.mutationTimestamp) {
-  const ids = [entry.nodeId, ...(entry.type === 'topic.dismiss' ? entry.relatedReadings ?? [] : []).map(r => r.nodeId)];
+  const { ids, loaded, target } = await prepareEntry(db, entry, mode, reviewSession);
   const hostName = await iosCompanionHostName(db);
-  const loaded = await Promise.all(ids.map(id => loadCompanionWorkspaceNodeFromDb(db, id, hostName)));
-  const nodesById: Record<string, NonNullable<typeof loaded[number]>> = {};
-  for (const node of loaded) if (node) nodesById[node.id] = node;
-  const trashedNodeIds = loaded.filter(node => node?.deletedAt).map(node => node!.id);
-  const target = resolveWorkspaceReviewHistoryTarget({ entry, mode, nodesById, trashedNodeIds, reviewSession });
-  if (!target) throw new Error('flow_history_changed');
   for (const [index, id] of ids.entries()) {
     const node = target.nodesById[id]!;
     if (entry.type === 'review.grade') {
@@ -136,6 +144,18 @@ async function writeEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode
       ...(completedReviewDay && id === entry.nodeId ? { completedReviewDay } : {}) });
   }
   return target.context;
+}
+
+async function prepareEntry(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode, reviewSession: ReviewSessionState) {
+  const ids = [entry.nodeId, ...(entry.type === 'topic.dismiss' ? entry.relatedReadings ?? [] : []).map(r => r.nodeId)];
+  const hostName = await iosCompanionHostName(db);
+  const loaded = await Promise.all(ids.map(id => loadCompanionWorkspaceNodeFromDb(db, id, hostName)));
+  const nodesById: Record<string, NonNullable<typeof loaded[number]>> = {};
+  for (const node of loaded) if (node) nodesById[node.id] = node;
+  const trashedNodeIds = loaded.filter(node => node?.deletedAt).map(node => node!.id);
+  const target = resolveWorkspaceReviewHistoryTarget({ entry, mode, nodesById, trashedNodeIds, reviewSession });
+  if (!target) throw new Error('flow_history_changed');
+  return { ids, loaded, target };
 }
 
 async function withCurrentReview(db: DbPort, entry: FlowHistoryEntry, mode: HistoryMode): Promise<FlowHistoryEntry> {

@@ -1,3 +1,4 @@
+import { dailyFlowHistoryCommand } from '../../../../../lib/core/flow/dailyFlowHistory';
 import { retainDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow, writeDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
@@ -42,4 +43,10 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
   if (!state) return session;
   return writeDailyFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
     now, revision: state.revision + 1, session, previousEntries: state.entries });
+}
+
+export function replayCompanionDailyHistory(db: DbPort, args: { session: ReviewSessionState;
+  entry: FlowHistoryEntry; mode: 'undo' | 'redo'; now: string }) {
+  return commitDailyFlow(db, retainDailyFlowRetry(dailyFlowHistoryCommand(args)),
+    companionDailyFlowSettings(), companionDailyFlowPersistence);
 }

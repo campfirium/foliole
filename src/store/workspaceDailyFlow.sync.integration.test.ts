@@ -11,14 +11,18 @@ import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadin
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState';
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations';
 import { hashTextBody } from '../../lib/core/database/textBodyHash';
+import { dailyFlowHistoryCommand } from '../../lib/core/flow/dailyFlowHistory';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService';
+import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
+import { compactFlowHistoryEntry, restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings';
 import { readCompanionReviewTopic, postponeCompanionReviewTopic, dismissCompanionReviewTopic } from '../companion/companionReadingReview';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { advanceFlowSession } from './workspaceFlowSession';
+import { createTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 let desktop: Peer;
 let mobile: Peer;
@@ -157,4 +161,49 @@ it.each(['read', 'later', 'dismiss'] as const)('synchronizes %s facts between in
     assertPersisted(peer, 'Concurrent content edit');
     expect((await readDailyFlow(peer.port))!.session.currentNodeId).toBeNull();
   }
+});
+
+it.each(['read', 'later', 'dismiss'] as const)('synchronizes delta %s undo/redo and rejects a later remote deletion atomically', async action => {
+  edit(desktop, 'Reading body', 'Reading', null, 'topic');
+  await sync(desktop, mobile);
+  const source = await openDailyFlow(mobile.port, { now, mode: 'reading-only' }, settings(mobile), persistence(mobile));
+  const initial = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
+  const mutate = { read: readCompanionReviewTopic, later: postponeCompanionReviewTopic, dismiss: dismissCompanionReviewTopic }[action];
+  const changed = mutate({ nodeId: 'topic', now, snapshot: initial })!;
+  const afterReading = changed.snapshot.nodesById.topic!.reading;
+  const result = await commitDailyFlow(mobile.port, { opId: `delta-${action}`, now, token: source.session.daily!,
+    sourceSession: source.session, readingAction: action, readings: [{ nodeId: 'topic',
+      before: initial.nodesById.topic!.reading, after: afterReading }] }, settings(mobile), persistence(mobile));
+  const context = (reviewSession: DailyFlowSession) => ({ activeNodeId: reviewSession.currentNodeId,
+    browseRootNodeId: '', reviewSession });
+  const entry = compactFlowHistoryEntry(createTopicDismissHistoryEntry({ id: `delta-${action}`, nodeId: 'topic',
+    mutationTimestamp: now, beforeContext: context(source.session), afterContext: context(result.session),
+    beforeReading: initial.nodesById.topic!.reading, afterReading }));
+  edit(desktop, 'Edited during history replay', 'Reading', null, 'topic');
+  await sync(desktop, mobile);
+  const undo = await commitDailyFlow(mobile.port, dailyFlowHistoryCommand({ session: result.session,
+    entry: restoreFlowHistoryEntry(entry, result.session), mode: 'undo', now }), settings(mobile), persistence(mobile));
+  await sync(mobile, desktop);
+  await sync(desktop, mobile);
+  for (const peer of [desktop, mobile]) {
+    const reader = new Database(peer.file, { readonly: true });
+    try { expect(reader.prepare("SELECT * FROM node_reading WHERE node_id='topic'").get()).toBeUndefined(); }
+    finally { reader.close(); }
+    assertPersisted(peer, 'Edited during history replay');
+  }
+  const redo = await commitDailyFlow(mobile.port, dailyFlowHistoryCommand({ session: undo.session,
+    entry: restoreFlowHistoryEntry(entry, undo.session), mode: 'redo', now }), settings(mobile), persistence(mobile));
+  await sync(mobile, desktop);
+  const deletedAt = '2026-10-03T00:01:00.000Z';
+  softDeleteNodes(desktop.driver, { nodeIds: ['topic'], deletedAt });
+  desktop.driver.execute("UPDATE nodes SET sync_dirty=1, last_modified_by_host_name=? WHERE id='topic'", [desktop.name]);
+  flushNodeSyncVersionWithDriver(desktop.driver, 'topic', desktop.name, deletedAt);
+  await sync(desktop, mobile);
+  const stored = await readDailyFlow(mobile.port);
+  const reading = mobile.db.prepare("SELECT * FROM node_reading WHERE node_id='topic'").get();
+  await expect(commitDailyFlow(mobile.port, dailyFlowHistoryCommand({ session: redo.session,
+    entry: restoreFlowHistoryEntry(entry, redo.session), mode: 'undo', now: deletedAt }), settings(mobile), persistence(mobile)))
+    .rejects.toThrow('daily_flow_learning_changed');
+  expect(await readDailyFlow(mobile.port)).toEqual(stored);
+  expect(mobile.db.prepare("SELECT * FROM node_reading WHERE node_id='topic'").get()).toEqual(reading);
 });

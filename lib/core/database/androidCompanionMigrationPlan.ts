@@ -177,6 +177,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(77, 'installSchema', 'Failed to install resumable framed publication completion.'),
   step(78, 'installSchema', 'Failed to install durable attachment demands.'),
   step(102, 'installSchema', 'Failed to install the local daily Flow list.'),
+  step(103, 'installSchema', 'Failed to upgrade local Flow history.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

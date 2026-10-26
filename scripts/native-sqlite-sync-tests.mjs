@@ -1,4 +1,9 @@
 export const controlledSyncSqliteTests = [
+  'src/companion/companionHistoryDelta.integration.test.ts',
+  'src/companion/companionHistoryUpgrade.integration.test.ts',
+  'src/companion/companionWorkspaceHistory.integration.test.ts',
+  'src/store/workspaceDailyFlow.integration.test.ts',
+  'src/store/workspaceDailyFlow.sync.integration.test.ts',
   'src/shared/platform/companion/sync/framed/reviewProjection.integration.test.ts',
   'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
   'lib/core/sync/framedSyncInventoryDigest.integration.test.ts',

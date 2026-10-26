@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
+import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import { saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -144,7 +145,7 @@ it('places Flow operations and structural operations in the same chronological s
   const entry = history.undoStack.at(-1)!;
   expect(entry.type).toBe('topic.dismiss');
   if (entry.type !== 'topic.dismiss') throw new Error('Missing Flow history');
-  await replayCompanionFlowHistory(key, 'undo', entry.afterContext.reviewSession);
+  await replayCompanionFlowHistory(key, 'undo', restoreFlowHistorySession(entry.afterContext.reviewSession, session));
   expect((await snapshot()).nodesById.reading?.reading).toBeNull();
 });
 

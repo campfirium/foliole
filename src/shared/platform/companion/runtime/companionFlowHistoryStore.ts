@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { compactFlowHistoryEntry } from '../../../../../lib/core/flow/flowHistoryEntry';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { ACTION_HISTORY_LIMIT, createEmptyWorkspaceActionHistory } from '../../../../store/workspaceActionHistoryState';
 import { workspaceHistorySessionSchema as session } from '../../../../store/workspaceHistorySessionSchema';
@@ -24,7 +25,11 @@ const flowEntry = z.discriminatedUnion('type', [
 ]);
 export type CompanionWorkspaceHistoryEntry = FlowHistoryEntry | WorkspaceNodeMetadataHistoryEntry;
 const entry = z.union([flowEntry, workspaceNodeMetadataHistorySchema]);
-const history = z.object({ undoStack: z.array(entry), redoStack: z.array(entry) });
+const replayReceipt = z.object({ id: z.string(), mode: z.enum(['undo', 'redo']),
+  daily: z.object({ scope: z.string(), dayKey: z.string(), revision: z.number() }).optional() });
+type ReplayReceipt = z.infer<typeof replayReceipt>;
+const history = z.object({ undoStack: z.array(entry), redoStack: z.array(entry), resumeSession: session.optional(),
+  replayReceipt: replayReceipt.optional() });
 
 export function companionFlowHistoryKey(libraryScope: string) {
   return `flow_history:${JSON.stringify([libraryScope, false])}`;
@@ -44,9 +49,10 @@ export async function readCompanionFlowHistoryAvailability(db: DbPort, key: stri
   return { canUndo: rows[0]?.can_undo === 1, canRedo: rows[0]?.can_redo === 1 };
 }
 
-export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'>) {
+export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'> & { replayReceipt?: ReplayReceipt }) {
   await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
-    [key, JSON.stringify({ undoStack: value.undoStack, redoStack: value.redoStack }), new Date().toISOString()]);
+    [key, JSON.stringify({ undoStack: value.undoStack.map(compactFlowHistoryEntry),
+      redoStack: value.redoStack.map(compactFlowHistoryEntry), replayReceipt: value.replayReceipt }), new Date().toISOString()]);
 }
 
 export async function appendCompanionFlowHistory(db: DbPort, key: string, value: CompanionWorkspaceHistoryEntry) {
@@ -65,6 +71,6 @@ export async function appendCompanionFlowHistory(db: DbPort, key: string, value:
     ), updated_at = excluded.updated_at
     WHERE json_type(companion_meta.value, '$.undoStack') = 'array'
       AND json_type(companion_meta.value, '$.redoStack') = 'array'`,
-  [key, JSON.stringify(value), new Date().toISOString(), ACTION_HISTORY_LIMIT]);
+  [key, JSON.stringify(compactFlowHistoryEntry(value)), new Date().toISOString(), ACTION_HISTORY_LIMIT]);
   if (!result.changes) throw new Error('flow_history_unavailable');
 }

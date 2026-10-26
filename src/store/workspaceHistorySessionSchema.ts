@@ -1,1 +1,1 @@
-export { dailyFlowSessionSchema as workspaceHistorySessionSchema } from '../../lib/core/flow/dailyFlowSessionSchema';
+export { flowHistorySessionSchema as workspaceHistorySessionSchema } from '../../lib/core/flow/flowHistorySession';

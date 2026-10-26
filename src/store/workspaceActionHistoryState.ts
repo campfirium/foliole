@@ -1,3 +1,5 @@
+import { compactFlowHistoryEntry, rebaseFollowingFlowHistoryDue } from '../../lib/core/flow/flowHistoryEntry';
+
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
 import type { WorkspaceNodeMetadataHistoryEntry } from './workspaceNodeMetadataHistory';
 import type { WorkspaceStructurePendingCreate } from './workspaceStructureHistoryTypes';
@@ -27,7 +29,7 @@ export function pushWorkspaceUndoEntry<Entry>(
   return {
     ...history,
     redoStack: [],
-    undoStack: trimHistoryStack([...history.undoStack, entry])
+    undoStack: trimHistoryStack([...history.undoStack, compactFlowHistoryEntry(entry)])
   };
 }
 
@@ -91,15 +93,16 @@ export function moveWorkspaceHistoryCursor<Entry extends WorkspaceActionHistoryE
     return {
       ...history,
       applying: null,
-      redoStack: trimHistoryStack([...history.redoStack, entry]),
+      redoStack: trimHistoryStack([...history.redoStack, compactFlowHistoryEntry(entry)]),
       undoStack: rebaseExpectedReview(history.undoStack.slice(0, -1), entry, mode)
     };
   }
   return {
     ...history,
     applying: null,
-    redoStack: rebaseExpectedReview(history.redoStack.slice(0, -1), entry, mode),
-    undoStack: trimHistoryStack([...history.undoStack, entry])
+    redoStack: rebaseExpectedReview(rebaseFollowingFlowHistoryDue(history.redoStack.slice(0, -1),
+      history.redoStack.at(-1), entry), entry, mode),
+    undoStack: trimHistoryStack([...history.undoStack, compactFlowHistoryEntry(entry)])
   };
 }
 

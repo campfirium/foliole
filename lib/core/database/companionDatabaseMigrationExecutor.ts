@@ -23,6 +23,7 @@ import {
   migrateSyncObjectStateSequence
 } from './companionDatabaseMigrationActions.js';
 import { migrateCompanionDeliveryAuthorizations } from './companionDeliveryAuthorizationMigration.js';
+import { migrateCompanionFlowHistory } from './companionFlowHistoryMigration.js';
 import { migrateCompanionHostPermanentState } from './companionHostPermanentStateMigration.js';
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
 import { migrateCompanionParentChildOrder } from './companionParentChildOrderMigration.js';
@@ -149,6 +150,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 100 && targetVersion >= 100) await retireCompanionReviewStateSync(db);
   if (currentVersion < 101 && targetVersion >= 101) await migrateCompanionInitialReviewSchedule(db);
   if (currentVersion < 102 && targetVersion >= 102) await migrateCompanionDailyFlow(db);
+  if (currentVersion < 103 && targetVersion >= 103) await migrateCompanionFlowHistory(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

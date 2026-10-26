@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { createFakeCapacitorConnection } from '../../companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorConnection, createFakeCapacitorDatabaseManager } from '../../companionSyncNodeVersionsTestSupport';
 
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 
@@ -50,4 +50,19 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
     await closeIosCompanionDatabase();
     rmSync(root, { recursive: true, force: true });
   } };
+}
+
+export async function reopenSearchLibrary(root: string, now: string) {
+  await closeIosCompanionDatabase();
+  const db = new Database(path.join(root, 'library.db'));
+  const connection = { ...createFakeCapacitorConnection(db), getUrl: async () => ({ url: path.join(root, 'library.db') }) };
+  const manager = createFakeCapacitorDatabaseManager(db, true, () => {});
+  const nativeConnection = connection as unknown as Awaited<ReturnType<typeof manager.createConnection>>;
+  const create = manager.createConnection.bind(manager);
+  const retrieve = manager.retrieveConnection.bind(manager);
+  manager.createConnection = async (...args) => args[4] ? create(...args) : nativeConnection;
+  manager.retrieveConnection = async (...args) => args[1] ? retrieve(...args) : nativeConnection;
+  await initializeIosCompanionDatabase({ booted_at: now, database_path: null, database_ready: false,
+    host_name: 'Search', runtime_kind: 'android-capacitor' }, manager);
+  return { db, connection };
 }

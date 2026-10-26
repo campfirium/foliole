@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
+import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -80,7 +81,7 @@ it('restores the current Flow card together with a deleted card', async () => {
   const entry = (await loadCompanionFlowHistory(key)).undoStack.at(-1)!;
   if (entry.type !== 'nodes.change') throw new Error('Missing structural history');
   expect(entry.afterSession?.currentNodeId).toBe('b');
-  const restored = await replayCompanionFlowHistory(key, 'undo', entry.afterSession!);
+  const restored = await replayCompanionFlowHistory(key, 'undo', restoreFlowHistorySession(entry.afterSession!, session));
   expect(restored?.currentNodeId).toBe('a');
   expect((await snapshot()).trashedNodeIds).not.toContain('a');
   expect((await replayCompanionFlowHistory(key, 'redo', restored!))?.currentNodeId).toBe('b');

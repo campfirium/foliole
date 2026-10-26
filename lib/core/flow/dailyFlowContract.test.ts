@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from './dailyFlowContract.js';
+import { compactFlowHistorySessions } from './flowHistorySession.js';
 
 const session = { currentNodeId: 'a', isAnswerRevealed: false, queueNodeIds: ['a'], totalNodeCount: 1 };
 const now = '2026-10-26T08:00:00.000Z';
@@ -34,4 +35,16 @@ it('requires a current-topic mutation for typed reading advancement', () => {
   expect(() => dailyFlowCommitSchema.parse({ ...args, readings: [] })).toThrow();
   expect(() => dailyFlowCommitSchema.parse({ ...args, sourceSession: { ...session, currentNodeId: 'other' } })).toThrow();
   expect(() => dailyFlowCommitSchema.parse({ ...args, readingAction: 'other' })).toThrow();
+});
+
+it('preserves compact cursor changes across the native command boundary and rejects malformed deltas', () => {
+  const pair = compactFlowHistorySessions(session, { ...session, currentNodeId: null, queueNodeIds: [] });
+  const args = { opId: 'undo', now, token, sourceSession: pair.after, nextSession: pair.before,
+    historyMode: 'undo', readings: [{ nodeId: 'a', before: null, after: null }] };
+  const parsed = dailyFlowCommitSchema.parse(args);
+  expect(parsed.sourceSession).toEqual(pair.after);
+  expect(parsed.nextSession).toEqual(pair.before);
+  expect(() => dailyFlowCommitSchema.parse({ ...args, readings: [] })).toThrow();
+  expect(() => dailyFlowCommitSchema.parse({ ...args, sourceSession: { ...pair.after,
+    queueHistory: { ...pair.after.queueHistory, queue: { removed: 'invalid' } } } })).toThrow();
 });

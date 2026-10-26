@@ -1,3 +1,5 @@
+import { matchesFlowHistoryQueues } from '../../lib/core/flow/flowHistorySession';
+
 import type { WorkspaceState } from './workspaceStore';
 
 export interface WorkspaceHistoryContext {
@@ -33,12 +35,6 @@ export function applyWorkspaceHistoryContext(context: WorkspaceHistoryContext) {
   };
 }
 
-function isSameStringArray(left: string[] | undefined, right: string[] | undefined) {
-  const a = left ?? [];
-  const b = right ?? [];
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
 export function isSameWorkspaceReviewSession(
   left: WorkspaceState['reviewSession'],
   right: WorkspaceState['reviewSession']
@@ -47,7 +43,7 @@ export function isSameWorkspaceReviewSession(
   keys.delete('daily');
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
+  keys.delete('queueHistory');
   return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
-    isSameStringArray(left.queueNodeIds, right.queueNodeIds) &&
-    isSameStringArray(left.soonNodeIds, right.soonNodeIds);
+    matchesFlowHistoryQueues(right, left);
 }

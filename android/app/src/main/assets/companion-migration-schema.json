@@ -624,6 +624,15 @@
         }
       ],
       "beforeVersion": 102
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade local Flow history.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 103
     }
   ],
   "planKeys": {

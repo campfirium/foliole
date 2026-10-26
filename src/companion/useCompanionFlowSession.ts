@@ -1,9 +1,10 @@
 import { useEffect, useReducer, useRef, useSyncExternalStore } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { loadCompanionDailySession, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
@@ -137,11 +138,17 @@ function useFlowHydration(
     if (!args.ready || !args.snapshot) return;
     let cancelled = false;
     void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
-      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null
-    ]).then(async ([preferred, history]) => {
+      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null,
+      isAvailableNativeCompanionRuntime() ? loadCompanionDailySession() : null
+    ]).then(async ([preferred, history, daily]) => {
       if (cancelled || owner.current !== current || !latest.current.snapshot) return;
       current.session = resumeFlowSession(latest.current.snapshot, mode, preferred, new Date().toISOString());
-      const entry = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
+      const top = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
+      let entry = top;
+      if (top) {
+        try { entry = restoreFlowHistoryEntry(top, daily ?? history?.resumeSession ?? current.session); }
+        catch { entry = null; }
+      }
       if (entry?.type === 'nodes.change') {
         const saved = history!.undoStack.length ? entry.afterSession : entry.beforeSession;
         if (saved?.currentNodeId === preferred) current.session = cloneWorkspaceReviewSession(saved);

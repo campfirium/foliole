@@ -1,3 +1,5 @@
+import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
+
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
 import { applyWorkspaceDeleteHistory } from './workspaceDeleteHistoryApply';
 import type { WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
@@ -13,6 +15,8 @@ export function applyWorkspaceHistoryEntry(args: {
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
 }): Promise<WorkspaceHistoryApplyResult> {
+  try { args = { ...args, entry: restoreFlowHistoryEntry(args.entry, args.get().reviewSession) }; }
+  catch { return Promise.resolve({ status: 'invalid' }); }
   const mutationTimestamp = createWorkspaceHistoryMutationTimestamp(
     'mutationTimestamp' in args.entry ? args.entry.mutationTimestamp : null
   );

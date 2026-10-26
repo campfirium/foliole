@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -73,7 +74,7 @@ it.each(['read', 'later', 'dismiss'] as const)('refreshes %s and its undo/redo w
   expect(saved.nodesById['000000']?.reading).not.toEqual(initial.nodesById['000000']?.reading);
   const entry = (await loadCompanionFlowHistory(key)).undoStack.at(-1)!;
   if (entry.type === 'nodes.change') throw new Error('Expected a reading history entry.');
-  const restoredSession = await replayCompanionFlowHistory(key, 'undo', entry.afterContext.reviewSession);
+  const restoredSession = await replayCompanionFlowHistory(key, 'undo', restoreFlowHistorySession(entry.afterContext.reviewSession, history.session));
   const undone = (await refreshCompanionWorkspaceAfterMutation())!;
   expect(undone.nodesById['000000']?.reading).toEqual(initial.nodesById['000000']?.reading);
   await replayCompanionFlowHistory(key, 'redo', restoredSession!);
