@@ -36,6 +36,14 @@ export async function readCompanionFlowHistory(db: DbPort, key: string) {
   return { ...createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>(), ...(stored ? history.parse(JSON.parse(stored.value)) : {}) };
 }
 
+export async function readCompanionFlowHistoryAvailability(db: DbPort, key: string) {
+  const rows = await db.query<{ can_undo: number; can_redo: number }>(`SELECT
+    json_array_length(value, '$.undoStack') > 0 AS can_undo,
+    json_array_length(value, '$.redoStack') > 0 AS can_redo
+    FROM companion_meta WHERE key = ?`, [key]);
+  return { canUndo: rows[0]?.can_undo === 1, canRedo: rows[0]?.can_redo === 1 };
+}
+
 export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'>) {
   await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
     [key, JSON.stringify({ undoStack: value.undoStack, redoStack: value.redoStack }), new Date().toISOString()]);

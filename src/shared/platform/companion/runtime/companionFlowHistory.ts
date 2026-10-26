@@ -19,7 +19,7 @@ import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
+import { appendCompanionFlowHistory, readCompanionFlowHistory, readCompanionFlowHistoryAvailability, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
 import { readIosCompanionDatabase } from './iosCompanionActiveDatabase';
@@ -29,6 +29,10 @@ import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export async function loadCompanionFlowHistory(key: string) {
   return readIosCompanionDatabase(db => readCompanionFlowHistory(db, key));
+}
+
+export function loadCompanionFlowHistoryAvailability(key: string) {
+  return readIosCompanionDatabase(db => readCompanionFlowHistoryAvailability(db, key));
 }
 
 export function commitCompanionFlowHistory(args: {

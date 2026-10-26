@@ -2,7 +2,7 @@ import { Redo2, Undo2 } from 'lucide-react';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { subscribeCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
@@ -23,8 +23,8 @@ export function CompanionFlowHistorySurface(props: {
     async function update() {
       if (!props.active || !isAvailableNativeCompanionRuntime()) return;
       try {
-        const history = await loadCompanionFlowHistory(props.historyKey);
-        if (active) setAvailability({ canUndo: history.undoStack.length > 0, canRedo: history.redoStack.length > 0 });
+        const next = await loadCompanionFlowHistoryAvailability(props.historyKey);
+        if (active) setAvailability(next);
       } catch { if (active) setAvailability({ canUndo: false, canRedo: false }); }
     }
     void update();

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { subscribeCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -11,8 +11,8 @@ export function useCompanionWorkspaceHistoryAvailability(key: string) {
     let mounted = true;
     async function update() {
       if (!isAvailableNativeCompanionRuntime()) return;
-      const history = await loadCompanionFlowHistory(key);
-      if (mounted) setAvailability({ canUndo: history.undoStack.length > 0, canRedo: history.redoStack.length > 0 });
+      const next = await loadCompanionFlowHistoryAvailability(key);
+      if (mounted) setAvailability(next);
     }
     const refresh = () => { void update().catch(() => { if (mounted) setAvailability({ canUndo: false, canRedo: false }); }); };
     refresh();
