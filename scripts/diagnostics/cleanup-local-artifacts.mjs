@@ -20,6 +20,7 @@ export const CLEANUP_ROOTS = [
 ];
 const PROTECTED_ROOTS = new Set([
   '.tmp/artifacts',
+  '.tmp/desktop-runtime',
   '.tmp/macos-desktop-daily-debug',
   '.tmp/macos-desktop-reset-preview',
   '.tmp/worktrees'

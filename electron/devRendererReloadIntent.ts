@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const DEV_RENDERER_RELOAD_INTENT_FILE = '.windows-dev-renderer-reload-intent.json';
+export const DEV_RENDERER_RELOAD_INTENT_FILE = '.tmp/desktop-runtime/.windows-dev-renderer-reload-intent.json';
 export const DEV_RENDERER_RELOAD_INTENT_KIND = 'foliole.electron.dev.renderer-reload-intent.v1';
-export const DEV_RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
+export const DEV_RENDERER_RELOAD_DELIVERY_FILE = '.tmp/desktop-runtime/.windows-dev-renderer-reload-delivered.json';
 const DEV_RENDERER_RELOAD_DELIVERY_KIND = 'foliole.electron.dev.renderer-reload-delivered.v1';
 
 interface RendererReloadIntent {
@@ -75,7 +75,7 @@ function resolveDevRendererReloadIntentPath(rootDir: string) {
 }
 
 function resolveDevRendererReloadDeliveryPath(rootDir: string) {
-  return path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE);
+  return path.join(rootDir, path.basename(DEV_RENDERER_RELOAD_DELIVERY_FILE));
 }
 
 function parseDevRendererReloadIntent(content: string): RendererReloadIntent | null {

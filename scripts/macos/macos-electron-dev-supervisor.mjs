@@ -52,6 +52,7 @@ async function waitForSessionReady(paths, bootSession, timeoutMs, closed) {
       },
       label: 'macOS Electron daily debug startup',
       stateRoot: paths.dailyRoot,
+      additionalRoots: [path.dirname(paths.appReadyFile)],
       signal: controller.signal,
       timeoutMs
     });

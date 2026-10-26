@@ -10,7 +10,7 @@
   "main": "dist/electron/main.js",
   "scripts": {
     "dev": "npm run appearance:colors:generate && vite",
-    "build": "npm run appearance:colors:generate && tsc -b && vite build",
+    "build": "npm run appearance:colors:generate && tsc --incremental --tsBuildInfoFile .tmp/typescript/root.tsbuildinfo && vite build",
     "build:vite-only": "npm run appearance:colors:generate && vite build",
     "preview": "vite preview",
     "appearance:colors:generate": "node --experimental-strip-types scripts/generate-appearance-colors.ts",

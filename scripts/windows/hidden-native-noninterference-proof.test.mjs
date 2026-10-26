@@ -11,9 +11,9 @@ const humanReady = {
 };
 
 const humanMarkers = {
-  '.windows-native-boot-ready.json': 'human-app',
-  '.windows-native-bridge-ready.json': 'human-bridge',
-  '.windows-native-window-visible.json': 'human-window'
+  '.tmp/desktop-runtime/.windows-native-boot-ready.json': 'human-app',
+  '.tmp/desktop-runtime/.windows-native-bridge-ready.json': 'human-bridge',
+  '.tmp/desktop-runtime/.windows-native-window-visible.json': 'human-window'
 };
 
 function snapshot(overrides = {}) {
@@ -54,7 +54,7 @@ describe('hidden native noninterference proof', () => {
   it('rejects human preview marker changes', () => {
     expect(() =>
       verifyNonInterference({
-        after: snapshot({ markers: { ...humanMarkers, '.windows-native-window-visible.json': 'changed' } }),
+        after: snapshot({ markers: { ...humanMarkers, '.tmp/desktop-runtime/.windows-native-window-visible.json': 'changed' } }),
         before: snapshot(),
         hidden: hidden()
       })

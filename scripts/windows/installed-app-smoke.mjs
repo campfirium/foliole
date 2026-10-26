@@ -158,8 +158,8 @@ export async function waitForInstalledReadyMarkers(input) {
   const deadline = Date.now() + input.timeoutMs;
   const markerReader = input.readMarker ?? readMarker;
   while (Date.now() < deadline) {
-    const appReady = markerReader(input.repoRoot, '.windows-native-boot-ready.json');
-    const bridgeReady = markerReader(input.repoRoot, '.windows-native-bridge-ready.json');
+    const appReady = markerReader(input.repoRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json');
+    const bridgeReady = markerReader(input.repoRoot, '.tmp/desktop-runtime/.windows-native-bridge-ready.json');
     if (readyMarkersMatch(appReady, bridgeReady, input.session)) {
       return { appReady, bridgeReady };
     }

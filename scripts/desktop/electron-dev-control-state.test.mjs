@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { EventEmitter } from 'node:events';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -15,6 +15,7 @@ import {
 } from './electron-dev-control-state.mjs';
 
 async function writeMarker(filePath, stage, session, payload = {}) {
+  await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, `${JSON.stringify({ payload, pid: 42, session, stage })}\n`, 'utf8');
 }
 

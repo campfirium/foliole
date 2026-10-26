@@ -10,9 +10,9 @@ import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
 import { resolveWindowsNativePaths } from './windows-native-paths.mjs';
 
 const MARKER_FILES = [
-  '.windows-native-boot-ready.json',
-  '.windows-native-bridge-ready.json',
-  '.windows-native-window-visible.json'
+  '.tmp/desktop-runtime/.windows-native-boot-ready.json',
+  '.tmp/desktop-runtime/.windows-native-bridge-ready.json',
+  '.tmp/desktop-runtime/.windows-native-window-visible.json'
 ];
 const MAIN_DATABASE_PATH = 'D:\\X\\U\\Foliole\\Data\\foliole.db';
 const VISIBLE_PRESENTATION_SPEC = 'tests/desktop/visible-native-presentation.spec.ts';
@@ -62,9 +62,9 @@ function readHumanPreviewSnapshot(paths) {
 
 function readVisibleMarkerSnapshot(stateRoot) {
   return {
-    appReady: readJson(path.join(stateRoot, '.windows-native-boot-ready.json')),
-    bridgeReady: readJson(path.join(stateRoot, '.windows-native-bridge-ready.json')),
-    windowVisible: readJson(path.join(stateRoot, '.windows-native-window-visible.json'))
+    appReady: readJson(path.join(stateRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json')),
+    bridgeReady: readJson(path.join(stateRoot, '.tmp/desktop-runtime/.windows-native-bridge-ready.json')),
+    windowVisible: readJson(path.join(stateRoot, '.tmp/desktop-runtime/.windows-native-window-visible.json'))
   };
 }
 

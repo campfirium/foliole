@@ -40,11 +40,12 @@ class MockPage extends EventEmitter {
 describe('playwright desktop diagnostics', () => {
   it('collects current runtime readiness, preload path, renderer URL, and bridge availability for the active pid', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
+    await mkdir(path.join(tempRoot, '.tmp/desktop-runtime'), { recursive: true });
     try {
       const logsDir = path.join(tempRoot, 'logs', 'windows');
       await mkdir(logsDir, { recursive: true });
       await writeFile(
-        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        path.join(tempRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json'),
         JSON.stringify({ pid: 4821, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
         'utf8'
       );
@@ -192,10 +193,11 @@ describe('playwright desktop diagnostics', () => {
 
   it('distinguishes a visible window with no bridge from a renderer startup failure when an older single-instance window holds the lock', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
+    await mkdir(path.join(tempRoot, '.tmp/desktop-runtime'), { recursive: true });
     try {
       await mkdir(path.join(tempRoot, 'logs', 'windows'), { recursive: true });
       await writeFile(
-        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        path.join(tempRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json'),
         JSON.stringify({ pid: 9911, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
         'utf8'
       );
@@ -248,16 +250,17 @@ describe('playwright desktop diagnostics', () => {
 
   it('marks bridge readiness only after the current runtime writes bridge_ready and the renderer reports the bridge flag', async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'desktop-diagnostics-test-'));
+    await mkdir(path.join(tempRoot, '.tmp/desktop-runtime'), { recursive: true });
     try {
       const logsDir = path.join(tempRoot, 'logs', 'windows');
       await mkdir(logsDir, { recursive: true });
       await writeFile(
-        path.join(tempRoot, '.windows-native-boot-ready.json'),
+        path.join(tempRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json'),
         JSON.stringify({ pid: 4821, stage: 'app_ready', timestamp: '2026-03-14T00:00:00.000Z' }),
         'utf8'
       );
       await writeFile(
-        path.join(tempRoot, '.windows-native-bridge-ready.json'),
+        path.join(tempRoot, '.tmp/desktop-runtime/.windows-native-bridge-ready.json'),
         JSON.stringify({ pid: 4821, stage: 'bridge_ready', timestamp: '2026-03-14T00:00:01.000Z' }),
         'utf8'
       );

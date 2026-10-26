@@ -152,3 +152,19 @@ describe('cleanup-local-artifacts', () => {
     expect(explicitResult.stdout).toContain(`root=${repoRoot}`);
   });
 });
+
+
+it('preserves relocated desktop runtime state during ordinary artifact cleanup', () => {
+  const root = mkdtempSync(join(tmpdir(), 'foliole-runtime-cleanup-'));
+  const runtime = join(root, '.tmp', 'desktop-runtime');
+  const marker = join(runtime, '.windows-native-boot-ready.json');
+  try {
+    mkdirSync(runtime, { recursive: true });
+    touch(marker, oldTime);
+    utimesSync(runtime, oldTime, oldTime);
+    runCleanup({ apply: true, days: 7, dryRun: false, nowMs, rootDir: root });
+    expect(existsSync(marker)).toBe(true);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});

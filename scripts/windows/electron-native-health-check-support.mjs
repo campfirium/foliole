@@ -5,9 +5,9 @@ import path from 'node:path';
 
 import { writeRendererReloadIntent } from './write-renderer-reload-intent.mjs';
 
-const READY_MARKER_FILE = '.windows-native-boot-ready.json';
-const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
-const RENDERER_RELOAD_DELIVERY_FILE = '.windows-dev-renderer-reload-delivered.json';
+const READY_MARKER_FILE = '.tmp/desktop-runtime/.windows-native-boot-ready.json';
+const BRIDGE_READY_MARKER_FILE = '.tmp/desktop-runtime/.windows-native-bridge-ready.json';
+const RENDERER_RELOAD_DELIVERY_FILE = '.tmp/desktop-runtime/.windows-dev-renderer-reload-delivered.json';
 
 function wait(ms) {
   return new Promise((resolve) => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -17,6 +17,7 @@ import {
 describe('writeRestartIntent', () => {
   it('writes a dev restart intent with a monotonic nonce', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       const first = await writeRestartIntent({
         head: 'head-1',
@@ -51,6 +52,7 @@ describe('writeRestartIntent', () => {
 
   it('recovers from an invalid prior contract by resetting nonce to one', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       await writeFile(path.join(rootDir, DEV_RESTART_INTENT_FILE), '{not-json', 'utf8');
 
@@ -68,6 +70,7 @@ describe('writeRestartIntent', () => {
 
   it('continues the nonce from the last delivered restart intent', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       await writeFile(path.join(rootDir, DEV_RESTART_DELIVERY_FILE), JSON.stringify({ nonce: 7 }), 'utf8');
 
@@ -85,6 +88,7 @@ describe('writeRestartIntent', () => {
 
   it('can request a full shell exit intent', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-restart-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       const result = await writeRestartIntent({
         head: 'head-1',

@@ -170,12 +170,12 @@ describe('installed app smoke', () => {
   it('waits for markers even when the launcher process already exited', async () => {
     const session = 'installed-app-smoke-exited-launcher';
     const markers = new Map([
-      ['.windows-native-boot-ready.json', {
+      ['.tmp/desktop-runtime/.windows-native-boot-ready.json', {
         pid: 4321,
         session,
         stage: 'app_ready'
       }],
-      ['.windows-native-bridge-ready.json', {
+      ['.tmp/desktop-runtime/.windows-native-bridge-ready.json', {
         payload: { bridgeAvailable: true },
         pid: 4321,
         session,

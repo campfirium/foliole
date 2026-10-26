@@ -301,8 +301,8 @@ async function readRendererPageState(windowPage) {
 }
 
 async function readBootDiagnostics(stateRoot) {
-  const readyMarkerPath = path.join(stateRoot, '.windows-native-boot-ready.json');
-  const bridgeReadyMarkerPath = path.join(stateRoot, '.windows-native-bridge-ready.json');
+  const readyMarkerPath = path.join(stateRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json');
+  const bridgeReadyMarkerPath = path.join(stateRoot, '.tmp/desktop-runtime/.windows-native-bridge-ready.json');
   const bootEventLogPath = path.join(stateRoot, 'logs', 'windows', 'native-boot-events.ndjson');
 
   const [readyMarker, bridgeReadyMarker, bootEvents] = await Promise.all([

@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 import { readFile, rm } from 'node:fs/promises';
 
 import {
@@ -55,6 +56,7 @@ export async function requestMacosElectronRuntimeRestart({
       },
       label: 'macOS Electron runtime restart',
       stateRoot: paths.dailyRoot,
+      additionalRoots: [path.dirname(paths.appReadyFile)],
       timeoutMs
     });
   } catch (error) {
@@ -99,6 +101,7 @@ export async function requestMacosElectronFullRestart({
     },
     label: 'macOS Electron full restart',
     stateRoot: paths.dailyRoot,
+    additionalRoots: [path.dirname(paths.appReadyFile)],
     timeoutMs
   });
 }
@@ -116,6 +119,7 @@ export async function stopMacosElectronDev({
     evaluate: () => !fs.existsSync(paths.clientStateFile),
     label: 'macOS Electron daily debug stop',
     stateRoot: paths.dailyRoot,
+    additionalRoots: [path.dirname(paths.appReadyFile)],
     timeoutMs
   });
   return true;

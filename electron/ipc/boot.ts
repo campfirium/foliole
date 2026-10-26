@@ -5,9 +5,9 @@ import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagno
 import { resolveWindowsDiagnosticLogDir } from '../diagnostics/windowsDiagnosticPaths.js';
 
 const BOOT_EVENT_LOG = path.join('logs', 'windows', 'native-boot-events.ndjson');
-const READY_MARKER_FILE = '.windows-native-boot-ready.json';
-const BRIDGE_READY_MARKER_FILE = '.windows-native-bridge-ready.json';
-const WINDOW_VISIBLE_MARKER_FILE = '.windows-native-window-visible.json';
+const READY_MARKER_FILE = '.tmp/desktop-runtime/.windows-native-boot-ready.json';
+const BRIDGE_READY_MARKER_FILE = '.tmp/desktop-runtime/.windows-native-bridge-ready.json';
+const WINDOW_VISIBLE_MARKER_FILE = '.tmp/desktop-runtime/.windows-native-window-visible.json';
 const MAX_BOOT_EVENT_LOG_BYTES = 5 * 1024 * 1024;
 const COMPACTED_BOOT_EVENT_TAIL_BYTES = 512 * 1024;
 type BootEventSource = 'main' | 'renderer';

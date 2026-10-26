@@ -60,7 +60,7 @@ function createTestFileSystem(intentPath: string, state: ReturnType<typeof creat
       state.onChange = listener;
     },
     writeDeliveryFile(filePath: string, content: string) {
-      expect(filePath).toBe(path.join(path.dirname(intentPath), DEV_RENDERER_RELOAD_DELIVERY_FILE));
+      expect(filePath).toBe(path.join(path.dirname(intentPath), path.basename(DEV_RENDERER_RELOAD_DELIVERY_FILE)));
       state.writeDeliveryFile(filePath, content);
     }
   };

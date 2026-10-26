@@ -5,9 +5,9 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export const ELECTRON_DEV_MARKERS = {
-  appReady: '.windows-native-boot-ready.json',
-  bridgeReady: '.windows-native-bridge-ready.json',
-  windowVisible: '.windows-native-window-visible.json'
+  appReady: '.tmp/desktop-runtime/.windows-native-boot-ready.json',
+  bridgeReady: '.tmp/desktop-runtime/.windows-native-bridge-ready.json',
+  windowVisible: '.tmp/desktop-runtime/.windows-native-window-visible.json'
 };
 
 export function resolveElectronDevArtifactPaths(stateRoot) {
@@ -16,7 +16,7 @@ export function resolveElectronDevArtifactPaths(stateRoot) {
     appReadyFile: path.join(root, ELECTRON_DEV_MARKERS.appReady),
     bootEventLogFile: path.join(root, 'logs', 'windows', 'native-boot-events.ndjson'),
     bridgeReadyFile: path.join(root, ELECTRON_DEV_MARKERS.bridgeReady),
-    clientStateFile: path.join(root, '.macos-electron-dev-client.json'),
+    clientStateFile: path.join(root, '.tmp/desktop-runtime/.macos-electron-dev-client.json'),
     stateRoot: root,
     windowVisibleFile: path.join(root, ELECTRON_DEV_MARKERS.windowVisible)
   };
@@ -78,7 +78,7 @@ export function readElectronDevSnapshot(paths, isAlive = processIsAlive) {
 }
 
 export async function writeElectronDevClientState(paths, state) {
-  await mkdir(paths.stateRoot, { recursive: true });
+  await mkdir(path.dirname(paths.clientStateFile), { recursive: true });
   await writeFile(paths.clientStateFile, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
@@ -95,6 +95,7 @@ export async function removeElectronDevReadyMarkers(paths) {
 }
 
 export function waitForElectronDevCondition({
+  additionalRoots = /** @type {string[]} */ ([]),
   evaluate,
   label,
   stateRoot,
@@ -108,12 +109,12 @@ export function waitForElectronDevCondition({
   return new Promise((resolve, reject) => {
     let settled = false;
     let timer = null;
-    let watcher = null;
+    const watchers = [];
     const finish = (error, value) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
-      watcher?.close();
+      watchers.forEach((watcher) => watcher.close());
       signal?.removeEventListener('abort', onAbort);
       if (error) reject(error);
       else resolve(value);
@@ -128,10 +129,17 @@ export function waitForElectronDevCondition({
         finish(error);
       }
     };
-    watcher = watch(stateRoot, check);
-    watcher.on?.('error', (error) => finish(error));
+    try {
+      for (const root of new Set([stateRoot, ...additionalRoots])) {
+        const watcher = watch(root, check);
+        watchers.push(watcher);
+        watcher.on?.('error', (error) => finish(error));
+      }
+    } catch (error) {
+      finish(error);
+    }
     if (settled) {
-      watcher.close();
+      watchers.forEach((watcher) => watcher.close());
       return;
     }
     timer = setTimeout(

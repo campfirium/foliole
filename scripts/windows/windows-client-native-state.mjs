@@ -1,5 +1,6 @@
 import fs from 'node:fs';
-import { rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import { processAlive } from './windows-process-alive.mjs';
 
@@ -99,5 +100,6 @@ export async function resetReadyMarkers({ appReadyFile, bridgeReadyFile, windowV
 }
 
 export async function saveClientState(stateFile, state) {
+  await mkdir(path.dirname(stateFile), { recursive: true });
   await writeFile(stateFile, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }

@@ -181,7 +181,7 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    const appReady = readMarker(repoRoot, '.windows-native-boot-ready.json');
+    const appReady = readMarker(repoRoot, '.tmp/desktop-runtime/.windows-native-boot-ready.json');
     if (appReady?.pid && appReady.pid !== electron.pid) {
       try {
         process.kill(appReady.pid);

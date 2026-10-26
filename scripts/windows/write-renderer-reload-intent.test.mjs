@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -17,6 +17,7 @@ import {
 describe('writeRendererReloadIntent', () => {
   it('writes a renderer reload intent with a monotonic nonce', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-reload-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       const first = await writeRendererReloadIntent({
         head: 'head-1',
@@ -50,6 +51,7 @@ describe('writeRendererReloadIntent', () => {
 
   it('recovers from an invalid prior contract by resetting nonce to one', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-reload-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       await writeFile(path.join(rootDir, DEV_RENDERER_RELOAD_INTENT_FILE), '{not-json', 'utf8');
 
@@ -67,6 +69,7 @@ describe('writeRendererReloadIntent', () => {
 
   it('continues the nonce from the last delivered renderer reload intent', async () => {
     const rootDir = await mkdtemp(path.join(os.tmpdir(), 'foliole-renderer-reload-intent-'));
+    await mkdir(path.join(rootDir, '.tmp/desktop-runtime'), { recursive: true });
     try {
       await writeFile(path.join(rootDir, DEV_RENDERER_RELOAD_DELIVERY_FILE), JSON.stringify({ nonce: 7 }), 'utf8');
 
