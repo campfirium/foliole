@@ -32,6 +32,15 @@ export function recomputeReview(events: readonly ReviewEvent[], parameters: Revi
   return card;
 }
 
+/** Preview the candidate at its event time; persistence still projects the complete immutable history. */
+export function previewReviewAt(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
+  candidate: { grade: number; now: string }): SchedulerCard | null {
+  const instant = reviewInstant(candidate.now);
+  const history = events.filter(event => reviewInstant(event.reviewed_at) <= instant);
+  return recomputeReview([...history, { op_id: '~preview', kind: 'review', grade: candidate.grade,
+    reviewed_at: candidate.now, voids_op_id: null }], parameters);
+}
+
 function reviewInstant(value: string) {
   const absolute = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value);
   const instant = Date.parse(value);

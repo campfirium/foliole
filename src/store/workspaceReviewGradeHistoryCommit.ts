@@ -27,10 +27,40 @@ function beginReviewGradeHistory(set: WorkspaceSet, entry: WorkspaceReviewGradeH
   acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
     if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
         state.appActionHistory.pendingCreate) return state;
+    if (!isReviewGradeApplicable(state, entry)) return state;
     began = true;
     return { appActionHistory: beginWorkspaceAction(state.appActionHistory, entry) };
   });
   return began;
+}
+
+function isReviewGradeApplicable(state: WorkspaceState, entry: WorkspaceReviewGradeHistoryEntry) {
+  const node = state.nodesById[entry.nodeId];
+  return Boolean(node && !state.trashedNodeIds.includes(entry.nodeId) &&
+    isSameReviewProfile(node.review ?? null, entry.beforeReview) &&
+    isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession));
+}
+
+function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<ReturnType<typeof buildGradedReviewState>>) {
+  let applied = false;
+  let undoRequested = false;
+  const entry = gradedState.historyEntry;
+  set((state) => {
+    const applicable = state.appActionHistory.pendingAction?.entry.id === entry.id &&
+      isReviewGradeApplicable(state, entry);
+    if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    const settled = settleWorkspaceAction({ ...state.appActionHistory,
+      pendingAction: { ...state.appActionHistory.pendingAction!, entry }
+    }, entry.id);
+    applied = true;
+    undoRequested = settled.undoRequested;
+    return { ...gradedState.patch,
+      nodesById: { ...state.nodesById, [entry.nodeId]: {
+        ...state.nodesById[entry.nodeId]!, review: entry.afterReview
+      } },
+      appActionHistory: settled.history };
+  });
+  return { applied, undoRequested };
 }
 
 export async function commitWorkspaceReviewGrade(args: {
@@ -73,22 +103,7 @@ export async function commitWorkspaceReviewGrade(args: {
     }));
     return false;
   }
-  let applied = false;
-  let undoRequested = false;
-  args.set((state) => {
-    const node = state.nodesById[args.currentNodeId];
-    const applicable = node &&
-      state.appActionHistory.pendingAction?.entry.id === gradedState.historyEntry.id &&
-      isSameReviewProfile(node.review ?? null, gradedState.historyEntry.beforeReview) &&
-      isSameWorkspaceReviewSession(state.reviewSession, gradedState.historyEntry.beforeContext.reviewSession);
-    if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
-    const settled = settleWorkspaceAction({ ...state.appActionHistory,
-      pendingAction: { ...state.appActionHistory.pendingAction!, entry: gradedState.historyEntry }
-    }, gradedState.historyEntry.id);
-    applied = true;
-    undoRequested = settled.undoRequested;
-    return { ...gradedState.patch, appActionHistory: settled.history };
-  });
+  const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState);
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
   return true;

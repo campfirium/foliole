@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { createFsrsReviewScheduler } from './fsrsScheduler.js';
-import { recomputeReview, type ReviewEvent } from './recomputeReview.js';
+import { previewReviewAt, recomputeReview, type ReviewEvent } from './recomputeReview.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from './settings.js';
 import { createInitialSchedulerCard } from './types.js';
 
@@ -52,4 +52,19 @@ it('rejects ambiguous local timestamps instead of interpreting the same fact dif
     expect(() => recomputeReview([{ ...events[0]!, reviewed_at: '2026-10-25T08:00:00' }],
       DEFAULT_REVIEW_SCHEDULER_SETTINGS)).toThrow('invalid_review_timestamp');
   }
+});
+
+it('previews a backdated score at its event time without changing the full-history projection', () => {
+  const now = '2026-10-26T08:00:00.000Z';
+  const parameters = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
+  const future: ReviewEvent = { op_id: 'future-reset', kind: 'reset', grade: 0,
+    reviewed_at: '2099-01-01T00:00:00.000Z', voids_op_id: null };
+  const candidate: ReviewEvent = { op_id: 'candidate', kind: 'review', grade: 3,
+    reviewed_at: now, voids_op_id: null };
+  expect(previewReviewAt([...events, future], parameters, { grade: 3, now }))
+    .toEqual(recomputeReview([...events, candidate], parameters));
+  expect(recomputeReview([...events, future, candidate], parameters)).toBeNull();
+  const next = { ...events[0]!, op_id: 'future-review', reviewed_at: '2099-01-02T00:00:00.000Z' };
+  expect(previewReviewAt([...events, future, next], parameters, { grade: 3, now }))
+    .toEqual(previewReviewAt(events, parameters, { grade: 3, now }));
 });

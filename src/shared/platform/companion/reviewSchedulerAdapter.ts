@@ -1,5 +1,5 @@
 import { readNodeReviewHistoryWithDb } from '../../../../lib/core/database/reviewProjection';
-import { recomputeReview } from '../../../../lib/core/review/recomputeReview';
+import { previewReviewAt } from '../../../../lib/core/review/recomputeReview';
 import type { ReviewSchedulerAdapter, SchedulerPreviewInput } from '../../../../lib/core/review/types';
 import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from '../companionRuntimeCapabilities';
 
@@ -22,8 +22,7 @@ async function history(input: SchedulerPreviewInput) {
   if (!nodeId) throw new Error('companion_review_node_required');
   const { events, parameters } = await readIosCompanionDatabase(db => readNodeReviewHistoryWithDb(db, nodeId));
   return (grade: number) => {
-    const card = recomputeReview([...events, { op_id: '~preview', kind: 'review', grade,
-      reviewed_at: input.now, voids_op_id: null }], parameters);
+    const card = previewReviewAt(events, parameters, { grade, now: input.now });
     if (!card) throw new Error('review_history_preview_missing');
     return { card, reviewed_at: input.now };
   };
