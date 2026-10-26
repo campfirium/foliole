@@ -2,7 +2,7 @@ import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry'
 import type { WorkspaceNodeMetadataHistoryEntry } from './workspaceNodeMetadataHistory';
 import type { WorkspaceStructurePendingCreate } from './workspaceStructureHistoryTypes';
 
-const ACTION_HISTORY_LIMIT = 50;
+export const ACTION_HISTORY_LIMIT = 50;
 
 export interface WorkspaceActionHistoryState<Entry = WorkspaceActionHistoryEntry> {
   applying?: { entryId: string; mode: 'redo' | 'undo' } | null;

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import { createEmptyWorkspaceActionHistory, pushWorkspaceUndoEntry } from '../../../../store/workspaceActionHistoryState';
+import { ACTION_HISTORY_LIMIT, createEmptyWorkspaceActionHistory } from '../../../../store/workspaceActionHistoryState';
 import { workspaceHistorySessionSchema as session } from '../../../../store/workspaceHistorySessionSchema';
 import { workspaceNodeMetadataHistorySchema, workspaceHistoryReadingSchema as reading, type WorkspaceNodeMetadataHistoryEntry } from '../../../../store/workspaceNodeMetadataHistory';
 import type { FlowHistoryEntry } from '../../../../store/workspaceReviewHistoryTarget';
@@ -50,6 +50,18 @@ export async function writeCompanionFlowHistory(db: DbPort, key: string, value: 
 }
 
 export async function appendCompanionFlowHistory(db: DbPort, key: string, value: CompanionWorkspaceHistoryEntry) {
-  const next = pushWorkspaceUndoEntry(await readCompanionFlowHistory(db, key), value);
-  await writeCompanionFlowHistory(db, key, next);
+  const result = await db.run(`INSERT INTO companion_meta (key, value, updated_at)
+    VALUES (?, json_object('undoStack', json_array(json(?)), 'redoStack', json_array()), ?)
+    ON CONFLICT(key) DO UPDATE SET value = json_object('undoStack', json((
+      SELECT json_group_array(json(value)) FROM (
+        SELECT value FROM json_each(json_insert(companion_meta.value, '$.undoStack[#]',
+          json_extract(excluded.value, '$.undoStack[0]')), '$.undoStack')
+        WHERE CAST(key AS INTEGER) >= MAX(0, json_array_length(companion_meta.value, '$.undoStack') + 1 - ?)
+        ORDER BY CAST(key AS INTEGER)
+      )
+    )), 'redoStack', json_array()), updated_at = excluded.updated_at
+    WHERE json_type(companion_meta.value, '$.undoStack') = 'array'
+      AND json_type(companion_meta.value, '$.redoStack') = 'array'`,
+  [key, JSON.stringify(value), new Date().toISOString(), ACTION_HISTORY_LIMIT]);
+  if (!result.changes) throw new Error('flow_history_unavailable');
 }
