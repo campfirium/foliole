@@ -9,8 +9,11 @@ export async function readDailyFlow(db: DbPort) {
   const [row] = await db.query<{ day_key: string; revision: number; settings_key: string; mode: string;
     session_json: string; invalidated: number }>('SELECT * FROM daily_flow_state WHERE id = 1');
   if (!row) return null;
-  const entries = await db.query<DailyFlowPosition>(
-    'SELECT node_id, queue_position, soon_position FROM daily_flow_entries ORDER BY initial_position');
+  const [packed] = await db.query<{ positions: string }>(`SELECT json_group_array(json_array(
+    node_id, queue_position, soon_position)) AS positions FROM
+    (SELECT node_id, queue_position, soon_position FROM daily_flow_entries ORDER BY initial_position)`);
+  const entries = (JSON.parse(packed!.positions) as [string, number | null, number | null][])
+    .map(([node_id, queue_position, soon_position]) => ({ node_id, queue_position, soon_position }));
   const ordered = (key: 'queue_position' | 'soon_position') => entries.filter(value => value[key] !== null)
     .sort((a, b) => a[key]! - b[key]!).map(value => value.node_id);
   const session = dailyFlowSessionSchema.parse({ ...JSON.parse(row.session_json), queueNodeIds: ordered('queue_position'),

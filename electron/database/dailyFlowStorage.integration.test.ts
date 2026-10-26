@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession.js';
 import { readDailyFlow, writeDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
+import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -36,3 +37,25 @@ it('saves a large Flow order promptly and durably preserves retained, removed an
     expect(after.session.soonNodeIds).toEqual([ids[0]]);
   } finally { sqlite.close(); }
 }, 30000);
+
+it('returns a large durable order within a compact bridge response budget', async () => {
+  const sqlite = new Database(':memory:');
+  try {
+    sqlite.exec(DAILY_FLOW_SCHEMA.slice(0, 3).join(';'));
+    const db = createBetterSqliteDbPort(sqlite);
+    const ids = Array.from({ length: 3000 }, (_, index) => `node-${String(index).padStart(36, '0')}`);
+    const session: DailyFlowSession = { currentNodeId: ids[0]!, queueNodeIds: ids,
+      soonNodeIds: [], totalNodeCount: ids.length, isAnswerRevealed: false };
+    const saved = await db.transaction(tx => writeDailyFlow(tx, { dayKey: '2026-10-27', mode: 'recommended',
+      settingsKey: '{"scope":"bridge"}', now: '2026-10-27T00:00:00.000Z', revision: 1, session, previousEntries: [] }));
+    const query = db.query.bind(db);
+    let largestResponse = 0;
+    db.query = async <T extends DbRow>(sql: string, params?: DbParams) => {
+      const rows = await query<T>(sql, params);
+      largestResponse = Math.max(largestResponse, Buffer.byteLength(JSON.stringify({ values: rows })));
+      return rows;
+    };
+    expect((await readDailyFlow(db))!.session).toEqual(saved);
+    expect(largestResponse).toBeLessThan(220 * 1024);
+  } finally { sqlite.close(); }
+});
