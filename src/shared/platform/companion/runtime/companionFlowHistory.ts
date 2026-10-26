@@ -22,7 +22,7 @@ import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyn
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { commitCompanionDailyHistory, replayCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
-import { appendCompanionFlowHistory, readCompanionFlowHistory, readCompanionFlowHistoryAvailability, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
+import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
 import { readCompanionHistoryReplayReceipt } from './companionHistoryReplayReceipt';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
@@ -35,9 +35,7 @@ export async function loadCompanionFlowHistory(key: string) {
   return readIosCompanionDatabase(db => readCompanionFlowHistory(db, key));
 }
 
-export function loadCompanionFlowHistoryAvailability(key: string) {
-  return readIosCompanionDatabase(db => readCompanionFlowHistoryAvailability(db, key));
-}
+export { loadCompanionFlowHistoryAvailability } from './companionHistoryAvailability';
 
 export function commitCompanionFlowHistory(args: {
   key: string; mode: ReviewSessionMode; entry: FlowHistoryEntry; reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string;

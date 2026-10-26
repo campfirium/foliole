@@ -4,10 +4,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
+import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { writeCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { CompanionFlowHistorySurface } from './CompanionFlowHistorySurface';
@@ -66,4 +69,38 @@ it('checks Flow edge availability without transferring stored sessions', async (
   await waitFor(() => expect(screen.getByTestId('flow-edge-undo')).not.toBeDisabled());
   expect(screen.getByTestId('flow-edge-redo')).toBeDisabled();
   expect(bytes()).toBeLessThan(256);
+});
+
+it('shares concurrent availability reads but reads committed changes again', async () => {
+  const owner = getIosCompanionDatabaseOwner();
+  const read = vi.spyOn(owner, 'read');
+  const results = await Promise.all([
+    loadCompanionFlowHistoryAvailability(key), loadCompanionFlowHistoryAvailability(key)
+  ]);
+  expect(results).toEqual([{ canUndo: true, canRedo: false }, { canUndo: true, canRedo: false }]);
+  expect(read).toHaveBeenCalledTimes(1);
+  await writeIosCompanionDatabase(db => writeCompanionFlowHistory(db, key, { undoStack: [], redoStack: [] }));
+  publishCompanionSyncMutationRevision({ kind: 'nodes', nodeIds: [] });
+  expect(await loadCompanionFlowHistoryAvailability(key)).toEqual({ canUndo: false, canRedo: false });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+
+it.each(['revision', 'scope'] as const)('does not share a pending read across a changed %s', async changed => {
+  const owner = getIosCompanionDatabaseOwner();
+  const original = owner.read.bind(owner);
+  let release!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  const read = vi.spyOn(owner, 'read').mockImplementation(async task => {
+    const result = await original(task);
+    await blocked;
+    return result;
+  });
+  const first = loadCompanionFlowHistoryAvailability(key);
+  if (changed === 'revision') publishCompanionSyncMutationRevision({ kind: 'nodes', nodeIds: [] });
+  else invalidateCompanionReadingScope();
+  const second = loadCompanionFlowHistoryAvailability(key);
+  expect(read).toHaveBeenCalledTimes(2);
+  release();
+  expect(await first).toEqual({ canUndo: true, canRedo: false });
+  expect(await second).toEqual({ canUndo: true, canRedo: false });
 });
