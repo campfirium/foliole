@@ -13,5 +13,7 @@ export interface DailyFlowSession {
   nextReviewDueAt?: string | null;
   sessionStartedAt?: string | null;
   soonNodeIds?: string[];
+  // Pending Soon excluded by the current mode, rather than completed work.
+  hiddenSoonNodeIds?: string[];
   totalNodeCount: number;
 }

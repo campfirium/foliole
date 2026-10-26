@@ -9,4 +9,5 @@ export const dailyFlowSessionSchema = z.object({ daily: z.object({ scope: z.stri
   continueNodeId: z.string().nullable().optional(), currentItemStartedAt: z.string().nullable().optional(),
   readingElapsedMs: z.number().optional(), readTopicCount: z.number().optional(), reviewElapsedMs: z.number().optional(),
   reviewedItemCount: z.number().optional(), nextReviewDueAt: z.string().nullable().optional(),
-  sessionStartedAt: z.string().nullable().optional(), soonNodeIds: z.array(z.string()).optional() }).transform(value => definedProps(value));
+  sessionStartedAt: z.string().nullable().optional(), soonNodeIds: z.array(z.string()).optional(),
+  hiddenSoonNodeIds: z.array(z.string()).optional() }).transform(value => definedProps(value));

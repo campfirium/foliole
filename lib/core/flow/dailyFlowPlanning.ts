@@ -34,7 +34,7 @@ export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFl
   const allowed = args.mode === 'review-first' ? planned.fsrsQueueNodeIds : args.mode === 'reading-only' ? planned.readingQueueNodeIds : [...planned.fsrsQueueNodeIds, ...planned.readingQueueNodeIds];
   const tasks = args.mode === 'review-first' ? planned.fsrsQueueNodeIds : args.mode === 'reading-only' ? planned.readingQueueNodeIds : planned.queueNodeIds;
   const ready = new Set(allowed);
-  const soon = (seed?.soonNodeIds ?? []).filter(id => ready.has(id));
+  const { soon, hiddenSoon } = resolveFlowSoon(seed, planned, ready);
   const continuation = seed?.currentNodeId && !seed.queueNodeIds.includes(seed.currentNodeId)
     && ready.has(seed.currentNodeId) ? seed.currentNodeId : null;
   const deferReading = soon.length > 0 || Boolean(continuation);
@@ -53,8 +53,20 @@ export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFl
     sessionStartedAt: args.now, currentItemStartedAt: args.now,
     readingElapsedMs: 0, readTopicCount: 0, reviewElapsedMs: 0, reviewedItemCount: 0 };
   return { ...prior, currentNodeId: current, queueNodeIds: queue, soonNodeIds: soon.filter(id => id !== current),
+    ...(hiddenSoon.length || seed?.hiddenSoonNodeIds ? { hiddenSoonNodeIds: hiddenSoon } : {}),
     isAnswerRevealed: false, totalNodeCount: Math.max(prior.totalNodeCount, (prior.readTopicCount ?? 0) + (prior.reviewedItemCount ?? 0) + queue.length),
     ...(current ? { completedAt: null } : {}) };
+}
+
+// Mode availability only partitions pending Soon; actual eligibility retires it.
+function resolveFlowSoon(seed: DailyFlowSession | undefined,
+  planned: ReturnType<typeof flowPlan>, ready: Set<string>) {
+  const eligible = new Set([...planned.fsrsQueueNodeIds, ...planned.readingQueueNodeIds]);
+  const hiddenCurrent = seed?.currentNodeId && !seed.queueNodeIds.includes(seed.currentNodeId)
+    && !ready.has(seed.currentNodeId) ? [seed.currentNodeId] : [];
+  const pending = [...new Set([...hiddenCurrent, ...(seed?.hiddenSoonNodeIds ?? []),
+    ...(seed?.soonNodeIds ?? [])])].filter(id => eligible.has(id));
+  return { soon: pending.filter(id => ready.has(id)), hiddenSoon: pending.filter(id => !ready.has(id)) };
 }
 
 export function afterDailyGrade(snapshot: DailyFlowSnapshot, session: DailyFlowSession,

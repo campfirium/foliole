@@ -221,3 +221,33 @@ it('rolls back daily progress and history when native digesting fails after the 
   expect((await loadCompanionFlowHistory(key)).undoStack).toEqual([]);
   expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
 });
+
+it('restores ordered Soon after review-only grading, restart and mobile undo redo', async () => {
+  await seed();
+  library.database.exec("UPDATE nodes SET kind='topic', reveal=NULL WHERE id IN ('a','b')");
+  await open();
+  const [first, second] = session.queueNodeIds;
+  await soon();
+  await soon();
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
+  session = (await openCompanionDailyFlow({ now, mode: 'review-first' })).session;
+  expect(session.currentNodeId).toBe('c');
+  expect(session.soonNodeIds).toEqual([]);
+  session.isAnswerRevealed = true;
+  session = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now,
+    snapshot: await snapshot(), history: { key, mode: 'review-first', session } })).session!;
+  expect(session.currentNodeId).toBeNull();
+  await reopen();
+  session = (await openCompanionDailyFlow({ now, mode: 'review-first' })).session;
+  expect(session.currentNodeId).toBeNull();
+  session = (await replayCompanionFlowHistory(key, 'undo', session))!;
+  expect(session.currentNodeId).toBe('c');
+  session = (await replayCompanionFlowHistory(key, 'redo', session))!;
+  expect(session.currentNodeId).toBeNull();
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
+  expect(session.currentNodeId).toBe(first);
+  expect(session.soonNodeIds).toEqual([second]);
+  expect(session.queueNodeIds).toEqual([]);
+  expect(session.readTopicCount).toBe(2);
+  expect(session.reviewedItemCount).toBe(1);
+});

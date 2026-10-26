@@ -48,3 +48,12 @@ it('preserves compact cursor changes across the native command boundary and reje
   expect(() => dailyFlowCommitSchema.parse({ ...args, sourceSession: { ...pair.after,
     queueHistory: { ...pair.after.queueHistory, queue: { removed: 'invalid' } } } })).toThrow();
 });
+
+it('preserves hidden Soon through native envelopes and rejects invalid identities', () => {
+  const hidden = { ...session, soonNodeIds: [], hiddenSoonNodeIds: ['reading-a', 'reading-b'] };
+  expect(dailyFlowOpenSchema.parse({ now, mode: 'review-first', seed: hidden }).seed).toEqual(hidden);
+  expect(dailyFlowCommitSchema.parse({ opId: 'grade', now, token, sourceSession: hidden,
+    nextSession: hidden }).nextSession).toEqual(hidden);
+  expect(() => dailyFlowOpenSchema.parse({ now, mode: 'review-first', seed: {
+    ...session, hiddenSoonNodeIds: [42] } })).toThrow();
+});

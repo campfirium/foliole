@@ -12,6 +12,7 @@ export function cloneWorkspaceReviewSession(reviewSession: WorkspaceState['revie
   return {
     ...reviewSession,
     queueNodeIds: [...reviewSession.queueNodeIds],
+    ...(reviewSession.hiddenSoonNodeIds ? { hiddenSoonNodeIds: [...reviewSession.hiddenSoonNodeIds] } : {}),
     ...(reviewSession.soonNodeIds ? { soonNodeIds: [...reviewSession.soonNodeIds] } : {})
   };
 }
@@ -44,6 +45,8 @@ export function isSameWorkspaceReviewSession(
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
   keys.delete('queueHistory');
+  keys.delete('hiddenSoonNodeIds');
   return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
-    matchesFlowHistoryQueues(right, left);
+    matchesFlowHistoryQueues(right, left) &&
+    JSON.stringify(left.hiddenSoonNodeIds ?? []) === JSON.stringify(right.hiddenSoonNodeIds ?? []);
 }
