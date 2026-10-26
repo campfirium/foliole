@@ -14,6 +14,7 @@ const controlledElectronSqliteTests = [
   'electron/database/reviewLogMigration.integration.test.ts',
   'electron/database/importReimportLearning.integration.test.ts',
   'lib/core/database/companionSnapshotReadwiseSources.test.ts',
+  'lib/core/database/companionNodeOrderRead.test.ts',
   'lib/core/database/companionTopicSearchDefinitions.test.ts',
   'electron/database/sqlStatementMeter.test.ts',
   'electron/ipc/storageCommandSqlBudget.test.ts',
