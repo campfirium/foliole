@@ -1,5 +1,5 @@
 import { dailyFlowHistoryCommand } from '../../../../../lib/core/flow/dailyFlowHistory';
-import { retainDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
+import { retainDailyFlowRetryAsync } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow, writeDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
@@ -18,11 +18,11 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
   if (!token) throw new Error('daily_flow_token_missing');
   const common = { opId: entry.id, now: entry.mutationTimestamp, token, sourceSession: entry.beforeContext.reviewSession, nextSession: entry.afterContext.reviewSession };
   const result = entry.type === 'review.grade'
-    ? await commitDailyFlow(db, retainDailyFlowRetry({ ...common, grade: { nodeId: entry.nodeId, before: entry.beforeReview,
+    ? await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, grade: { nodeId: entry.nodeId, before: entry.beforeReview,
       grade: args.reviewLog!.grade as 1 | 2 | 3 | 4, reviewedAt: args.reviewLog!.reviewedAt,
       schedulerVersion: args.reviewLog!.schedulerVersion, cardBefore: toSchedulerCard(entry.beforeReview, entry.mutationTimestamp),
       cardAfter: toSchedulerCard(entry.afterReview, entry.mutationTimestamp) } }), companionDailyFlowSettings(), companionDailyFlowPersistence)
-    : await commitDailyFlow(db, retainDailyFlowRetry({ ...common,
+    : await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common,
       ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
       : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
       : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}), readings: [{ nodeId: entry.nodeId,
@@ -45,8 +45,8 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
     now, revision: state.revision + 1, session, previousEntries: state.entries });
 }
 
-export function replayCompanionDailyHistory(db: DbPort, args: { session: ReviewSessionState;
+export async function replayCompanionDailyHistory(db: DbPort, args: { session: ReviewSessionState;
   entry: FlowHistoryEntry; mode: 'undo' | 'redo'; now: string }) {
-  return commitDailyFlow(db, retainDailyFlowRetry(dailyFlowHistoryCommand(args)),
+  return commitDailyFlow(db, await retainDailyFlowRetryAsync(dailyFlowHistoryCommand(args)),
     companionDailyFlowSettings(), companionDailyFlowPersistence);
 }

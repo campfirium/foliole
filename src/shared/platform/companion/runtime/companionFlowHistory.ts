@@ -3,7 +3,7 @@ import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/revi
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
 import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
-import { restoreFlowHistoryEntry } from '../../../../../lib/core/flow/flowHistoryEntry';
+import { restoreFlowHistoryEntryAsync } from '../../../../../lib/core/flow/flowHistoryEntryAsync';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -72,7 +72,7 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
     if (replayed) return { session: replayed, entry: null };
     const saved = getWorkspaceHistoryTopEntry(history, mode);
     if (!saved) return null;
-    const entry = restoreFlowHistoryEntry(saved, session);
+    const entry = await restoreFlowHistoryEntryAsync(saved, session);
     if (entry.type === 'nodes.change') {
       await replayCompanionNodeHistoryWithDb(db, entry, mode);
       const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, new Date().toISOString());

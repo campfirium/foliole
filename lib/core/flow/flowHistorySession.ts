@@ -16,7 +16,7 @@ export type FlowHistorySession = DailyFlowSession & { queueHistory?: z.infer<typ
 
 function fingerprint(ids: string[]) { return hashTextBody(JSON.stringify(ids)); }
 
-function change(before: string[], after: string[]): z.infer<typeof sequenceChange> {
+function change(before: string[], after: string[], digest = fingerprint): z.infer<typeof sequenceChange> {
   const target = new Map(after.map((id, index) => [id, index]));
   const retained = new Set<string>();
   let last = -1;
@@ -26,16 +26,16 @@ function change(before: string[], after: string[]): z.infer<typeof sequenceChang
     if (index !== undefined && index > last) { retained.add(id); last = index; }
   }
   const changed = (ids: string[]) => ids.flatMap((id, index) => retained.has(id) ? [] : [{ id, index }]);
-  return { removed: changed(before), added: changed(after), before: fingerprint(before), after: fingerprint(after) };
+  return { removed: changed(before), added: changed(after), before: digest(before), after: digest(after) };
 }
 
-export function compactFlowHistorySessions(before: FlowHistorySession, after: FlowHistorySession) {
+export function compactFlowHistorySessions(before: FlowHistorySession, after: FlowHistorySession, digest = fingerprint) {
   if (before.queueHistory || after.queueHistory) {
     if (!before.queueHistory || !after.queueHistory) throw new Error('flow_history_incomplete_delta');
     return { before, after };
   }
-  const queue = change(before.queueNodeIds, after.queueNodeIds);
-  const soon = change(before.soonNodeIds ?? [], after.soonNodeIds ?? []);
+  const queue = change(before.queueNodeIds, after.queueNodeIds, digest);
+  const soon = change(before.soonNodeIds ?? [], after.soonNodeIds ?? [], digest);
   const compact = (session: DailyFlowSession, side: 'before' | 'after'): FlowHistorySession => ({
     ...session, queueNodeIds: [], ...(session.soonNodeIds ? { soonNodeIds: [] } : {}),
     queueHistory: { side, queue, soon } });
@@ -43,8 +43,14 @@ export function compactFlowHistorySessions(before: FlowHistorySession, after: Fl
 }
 
 function restore(ids: string[], delta: z.infer<typeof sequenceChange>, side: 'before' | 'after') {
-  const actual = fingerprint(ids);
-  if (actual === delta[side]) return [...ids];
+  const candidate = restoreFlowSequenceCandidate(ids, delta, side, fingerprint(ids));
+  if (candidate.expected && fingerprint(candidate.ids) !== candidate.expected) throw new Error('flow_history_invalid_delta');
+  return candidate.ids;
+}
+
+export function restoreFlowSequenceCandidate(ids: string[], delta: z.infer<typeof sequenceChange>,
+  side: 'before' | 'after', actual: string) {
+  if (actual === delta[side]) return { ids: [...ids], expected: null };
   const other = side === 'before' ? 'after' : 'before';
   if (actual !== delta[other]) throw new Error('flow_history_changed');
   const removed = side === 'after' ? delta.removed : delta.added;
@@ -55,8 +61,7 @@ function restore(ids: string[], delta: z.infer<typeof sequenceChange>, side: 'be
   let cursor = 0;
   const result = Array.from({ length: retained.length + added.length }, (_, index) =>
     insertions.get(index) ?? retained[cursor++]!);
-  if (fingerprint(result) !== delta[side]) throw new Error('flow_history_invalid_delta');
-  return result;
+  return { ids: result, expected: delta[side] };
 }
 
 export function restoreFlowHistorySession(saved: FlowHistorySession, current: DailyFlowSession): DailyFlowSession {

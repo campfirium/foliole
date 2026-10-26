@@ -11,7 +11,7 @@ import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { dailySoonScope } from './dailyFlowSoon.js';
 import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade, writeDailyFlowReading } from './dailyFlowStorage.js';
-import { restoreFlowHistorySession } from './flowHistorySession.js';
+import { restoreFlowHistorySessionAsync } from './flowHistorySessionAsync.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
 export interface DailyFlowPersistence {
@@ -66,8 +66,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     }
     try {
       if (stored) args = { ...args,
-        ...(args.sourceSession ? { sourceSession: restoreFlowHistorySession(args.sourceSession, stored.session) } : {}),
-        ...(args.nextSession ? { nextSession: restoreFlowHistorySession(args.nextSession, stored.session) } : {}) };
+        ...(args.sourceSession ? { sourceSession: await restoreFlowHistorySessionAsync(args.sourceSession, stored.session) } : {}),
+        ...(args.nextSession ? { nextSession: await restoreFlowHistorySessionAsync(args.nextSession, stored.session) } : {}) };
     } catch { throw new Error('daily_flow_changed'); }
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
       (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');

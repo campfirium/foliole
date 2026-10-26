@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { compactFlowHistoryEntry } from '../../../../../lib/core/flow/flowHistoryEntry';
+import { compactFlowHistoryEntryAsync } from '../../../../../lib/core/flow/flowHistoryEntryAsync';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { ACTION_HISTORY_LIMIT, createEmptyWorkspaceActionHistory } from '../../../../store/workspaceActionHistoryState';
 import { workspaceHistorySessionSchema as session } from '../../../../store/workspaceHistorySessionSchema';
@@ -50,12 +50,14 @@ export async function readCompanionFlowHistoryAvailability(db: DbPort, key: stri
 }
 
 export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'> & { replayReceipt?: ReplayReceipt }) {
+  const [undoStack, redoStack] = await Promise.all([Promise.all(value.undoStack.map(compactFlowHistoryEntryAsync)),
+    Promise.all(value.redoStack.map(compactFlowHistoryEntryAsync))]);
   await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
-    [key, JSON.stringify({ undoStack: value.undoStack.map(compactFlowHistoryEntry),
-      redoStack: value.redoStack.map(compactFlowHistoryEntry), replayReceipt: value.replayReceipt }), new Date().toISOString()]);
+    [key, JSON.stringify({ undoStack, redoStack, replayReceipt: value.replayReceipt }), new Date().toISOString()]);
 }
 
 export async function appendCompanionFlowHistory(db: DbPort, key: string, value: CompanionWorkspaceHistoryEntry) {
+  const compact = await compactFlowHistoryEntryAsync(value);
   const result = await db.run(`INSERT INTO companion_meta (key, value, updated_at)
     VALUES (?, json_object('undoStack', json_array(json(?)), 'redoStack', json_array()), ?)
     ON CONFLICT(key) DO UPDATE SET value = (
@@ -71,6 +73,6 @@ export async function appendCompanionFlowHistory(db: DbPort, key: string, value:
     ), updated_at = excluded.updated_at
     WHERE json_type(companion_meta.value, '$.undoStack') = 'array'
       AND json_type(companion_meta.value, '$.redoStack') = 'array'`,
-  [key, JSON.stringify(compactFlowHistoryEntry(value)), new Date().toISOString(), ACTION_HISTORY_LIMIT]);
+  [key, JSON.stringify(compact), new Date().toISOString(), ACTION_HISTORY_LIMIT]);
   if (!result.changes) throw new Error('flow_history_unavailable');
 }

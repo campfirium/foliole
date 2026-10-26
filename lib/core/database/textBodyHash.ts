@@ -8,6 +8,12 @@ export function hashTextBody(content: string) {
   return hashTextBodyWithLength(content).hash;
 }
 
+export async function hashTextBodyAsync(content: string) {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) throw new Error('text_body_hash_unavailable');
+  return bytesToHex(new Uint8Array(await subtle.digest('SHA-256', new TextEncoder().encode(content))));
+}
+
 export function hashTextBodyWithLength(content: string) {
   const digest = sha256.create();
   let byteLength = 0;

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import path from 'node:path';
 
+import { sha256 } from '@noble/hashes/sha2.js';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -177,4 +178,46 @@ it('keeps ordinary Soon reads limited to the current and next topic while preser
     await reopen();
     expect((await open()).soonNodeIds).toEqual([before.currentNodeId]);
   } finally { reads.mockRestore(); }
+});
+
+
+it('keeps synchronous JavaScript hashing bounded while advancing a large daily queue', async () => {
+  await library.close();
+  library = await createSearchLibrary(3000);
+  library.database.prepare('UPDATE nodes SET created_at = ?, updated_at = ?').run(now, now);
+  await topics();
+  expect(session.queueNodeIds.length).toBeGreaterThan(3000);
+  const digest = sha256.create();
+  const prototype = Object.getPrototypeOf(digest) as typeof digest;
+  digest.destroy();
+  const update = prototype.update;
+  let synchronousBytes = 0;
+  const measured = vi.spyOn(prototype, 'update').mockImplementation(function (this: typeof digest, bytes) {
+    synchronousBytes += bytes.byteLength;
+    return update.call(this, bytes);
+  });
+  const before = session.currentNodeId;
+  try {
+    await soon();
+    expect(session.currentNodeId).not.toBe(before);
+    expect(session.soonNodeIds).toEqual([before]);
+    expect(synchronousBytes).toBeLessThan(32 * 1024);
+  } finally { measured.mockRestore(); }
+});
+
+it('rolls back daily progress and history when native digesting fails after the operation is written', async () => {
+  await topics();
+  const before = structuredClone(session);
+  const digest = crypto.subtle.digest.bind(crypto.subtle);
+  const failure = vi.spyOn(crypto.subtle, 'digest').mockImplementation((algorithm, bytes) => {
+    if (library.database.inTransaction && library.database.prepare('SELECT 1 FROM daily_flow_operations LIMIT 1').get()) {
+      return Promise.reject(new Error('native_digest_failed'));
+    }
+    return digest(algorithm, bytes);
+  });
+  try { await expect(soon()).rejects.toThrow('native_digest_failed'); }
+  finally { failure.mockRestore(); }
+  expect(await open()).toEqual(before);
+  expect((await loadCompanionFlowHistory(key)).undoStack).toEqual([]);
+  expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
 });
