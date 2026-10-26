@@ -162,3 +162,19 @@ it('keeps mixed minute and day reviews due at their own time while Soon waits af
   expect((await openCompanionDailyFlow({ now: '2026-10-25T08:05:00.000Z', mode: 'review-first' })).session.currentNodeId).toBeNull();
   expect((await openCompanionDailyFlow({ now: '2026-10-25T08:10:00.000Z', mode: 'review-first' })).session.currentNodeId).toBe('c');
 });
+
+it('keeps ordinary Soon reads limited to the current and next topic while preserving durable progress', async () => {
+  await topics();
+  const before = structuredClone(session);
+  const { companionDailyFlowPersistence } = await import('../shared/platform/companion/runtime/companionDailyFlow');
+  const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
+  try {
+    await soon();
+    expect(session.currentNodeId).toBe(before.queueNodeIds[1]);
+    expect(session.soonNodeIds).toEqual([before.currentNodeId]);
+    expect(session.readTopicCount).toBe(1);
+    expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 2)).toBe(true);
+    await reopen();
+    expect((await open()).soonNodeIds).toEqual([before.currentNodeId]);
+  } finally { reads.mockRestore(); }
+});
