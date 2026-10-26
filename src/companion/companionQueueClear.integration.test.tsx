@@ -16,6 +16,7 @@ vi.mock('@capacitor/app', () => ({ App: { addListener: async () => ({ remove: as
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { loadCompanionDailySession, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
@@ -50,16 +51,17 @@ afterEach(async () => {
   await runCompanionSyncWriterTask(async () => undefined);
   await closeIosCompanionDatabase();
   if (database.open) database.close();
+  vi.useRealTimers();
   rmSync(root, { recursive: true, force: true });
 });
 
-async function seed(kind: 'topic' | 'item', future = false) {
+async function seed(kind: 'topic' | 'item', future = false, nodeId: string = kind) {
   await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion({
-    id: kind, kind, content: `Body ${kind}`, reveal: kind === 'item' ? 'Answer' : null,
+    id: nodeId, kind, content: `Body ${kind}`, reveal: kind === 'item' ? 'Answer' : null,
     title: kind, parentNodeId: null, createdAt: initialTime, updatedAt: initialTime,
     hideTitleHeading: false, isTitleManual: true, anchorLink: null, reading: null, review: null
   }, 'fixture')]);
-  if (kind === 'item') await saveCompanionSyncNodeReviewRecord({ nodeId: kind, review: {
+  if (kind === 'item') await saveCompanionSyncNodeReviewRecord({ nodeId, review: {
     difficulty: 4.2, due: future ? '2099-01-01T00:00:00.000Z' : initialTime,
     elapsedDays: 2, lapses: 0, lastReviewAt: initialTime, reps: 3, scheduledDays: 2, stability: 2.1, state: 2
   } });
@@ -96,6 +98,10 @@ it('shows Queue clear after grading and continues the remaining topic without ch
   fireEvent.click(screen.getByRole('button', { name: 'Grade' }));
   await screen.findByText('Queue clear');
   expect(screen.queryByText(/synced review state/i)).not.toBeInTheDocument();
+  const completed = await loadCompanionDailySession();
+  expect(completed?.currentNodeId).toBeNull();
+  expect(completed?.continueNodeId).toBe('topic');
+  expect((await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' })).session).toEqual(completed);
   const before = database.prepare('SELECT * FROM node_reading').all();
   const reviewBefore = database.prepare('SELECT * FROM node_review').all();
   fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
@@ -121,6 +127,29 @@ it('shows Queue clear for a library whose items are scheduled later without offe
   await screen.findByText('Queue clear');
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
   expect(screen.queryByText(/sync|snapshot/i)).not.toBeInTheDocument();
+});
+
+it('admits a newly due minute item while a cleared queue retains a reading continuation', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-25T08:00:00.000Z'));
+  await seed('item');
+  await seed('topic');
+  await seed('item', true, 'minute');
+  database.prepare("UPDATE node_review SET due=?, scheduled_days=0 WHERE node_id='minute'")
+    .run('2026-10-25T08:10:00.000Z');
+  render(<Flow initial={await loadCompanionWorkspaceSyncState()} />);
+  await screen.findByText('item');
+  fireEvent.click(screen.getByRole('button', { name: 'Reveal' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Grade' }));
+  await screen.findByText('Queue clear');
+  const completed = await loadCompanionDailySession();
+  expect(completed).toMatchObject({ currentNodeId: null, continueNodeId: 'topic' });
+  const waiting = await openCompanionDailyFlow({ now: '2026-10-25T08:05:00.000Z', mode: 'recommended' });
+  expect(waiting.session).toEqual(completed);
+  const ready = await openCompanionDailyFlow({ now: '2026-10-25T08:10:00.000Z', mode: 'recommended' });
+  expect(ready.session.currentNodeId).toBe('minute');
+  expect(ready.session.queueNodeIds).toContain('minute');
+  expect((await loadCompanionDailySession())?.daily).toEqual(ready.session.daily);
 });
 
 it('keeps an empty library distinct from Queue clear', async () => {

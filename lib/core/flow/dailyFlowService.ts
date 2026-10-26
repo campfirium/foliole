@@ -5,7 +5,7 @@ import type { SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
-import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade } from './dailyFlowGrade.js';
+import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade, hasReadyDailyReview } from './dailyFlowGrade.js';
 import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -28,8 +28,9 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
     const settingsKey = JSON.stringify(settings);
     const sameDay = stored?.day_key === dayKey;
     if (sameDay && stored && !stored.invalidated && stored.settings_key === settingsKey &&
-      stored.mode === args.mode && stored.session.currentNodeId && !args.refresh && !args.preferredNodeId) {
-      return { session: stored.session };
+      stored.mode === args.mode && !args.refresh && !args.preferredNodeId) {
+      if (stored.session.currentNodeId || (stored.session.continueNodeId &&
+        !await hasReadyDailyReview(tx, args.now, settings, persistence))) return { session: stored.session };
     }
     const snapshot = await persistence.snapshot(tx);
     const candidates = sameDay && stored && !stored.invalidated && stored.settings_key === settingsKey
