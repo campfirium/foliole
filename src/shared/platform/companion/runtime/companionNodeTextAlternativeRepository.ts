@@ -45,12 +45,12 @@ export async function loadCompanionNodeTextAlternative(nodeId: string, alternati
   });
 }
 
-export async function updateCompanionNodeTextAlternativeStatus(alternativeId: string, status: 'dismissed' | 'promoted') {
+export async function updateCompanionNodeTextAlternativeStatus(nodeId: string, alternativeId: string, status: 'dismissed' | 'promoted') {
   return runCompanionHighValueMutationTask(() => writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const [node] = await tx.query<{ id: string }>(
       `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
        json_each(v.snapshot_json, '$.text_alternatives') entry
-       WHERE json_extract(entry.value, '$.id') = ? AND n.deleted_at IS NULL`, [alternativeId]);
+       WHERE n.id = ? AND json_extract(entry.value, '$.id') = ? AND n.deleted_at IS NULL`, [nodeId, alternativeId]);
     if (!node) throw new Error('text_alternative_unavailable');
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action: status,
       now: new Date().toISOString(), versionId: createOpaqueVersionRef(createCompanionUuid()),

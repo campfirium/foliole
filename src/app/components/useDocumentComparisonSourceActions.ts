@@ -26,8 +26,8 @@ export function useDocumentComparisonSourceActions(args: {
   const alternativeId = preview?.alternativeId ?? null;
 
   const accept = useCallback(async () => {
-    if (alternativeId) {
-      await promoteRuntimeNodeTextAlternative(alternativeId);
+    if (alternativeId && preview) {
+      await promoteRuntimeNodeTextAlternative(preview.sourceNodeId, alternativeId);
       args.clearPanel();
       return;
     }
@@ -41,18 +41,18 @@ export function useDocumentComparisonSourceActions(args: {
       args.props.onNodeContentChange(result.nodeId, content, { publishLocal: false });
     }
     args.clearPanel();
-  }, [alternativeId, args, incomingUpdateId, preview?.updatedContent]);
+  }, [alternativeId, args, incomingUpdateId, preview]);
 
   const dismiss = useCallback(async () => {
-    if (alternativeId) {
-      await dismissRuntimeNodeTextAlternative(alternativeId);
+    if (alternativeId && preview) {
+      await dismissRuntimeNodeTextAlternative(preview.sourceNodeId, alternativeId);
       args.clearPanel();
       return;
     }
     if (!incomingUpdateId) return;
     await dismissRuntimeIncomingUpdate(incomingUpdateId);
     args.clearPanel();
-  }, [alternativeId, args, incomingUpdateId]);
+  }, [alternativeId, args, incomingUpdateId, preview]);
 
   const importAsNew = useCallback(async () => {
     if (!incomingUpdateId) return;

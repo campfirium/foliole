@@ -8,14 +8,14 @@ export async function loadRuntimeNodeTextAlternativePreview(nodeId: string, alte
   return toRuntimeNodeSourceUpdatePreview(await invoke(NATIVE_COMMANDS.loadNodeTextAlternativePreview, { node_id: nodeId, ...(alternativeId ? { alternative_id: alternativeId } : {}) }));
 }
 
-export async function dismissRuntimeNodeTextAlternative(alternativeId: string) {
+export async function dismissRuntimeNodeTextAlternative(nodeId: string, alternativeId: string) {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.dismissNodeTextAlternative, { alternative_id: alternativeId });
+  return invoke(NATIVE_COMMANDS.dismissNodeTextAlternative, { node_id: nodeId, alternative_id: alternativeId });
 }
 
-export async function promoteRuntimeNodeTextAlternative(alternativeId: string) {
+export async function promoteRuntimeNodeTextAlternative(nodeId: string, alternativeId: string) {
   const invoke = getRuntimeInvoke();
   if (!invoke) return null;
-  return invoke(NATIVE_COMMANDS.promoteNodeTextAlternative, { alternative_id: alternativeId });
+  return invoke(NATIVE_COMMANDS.promoteNodeTextAlternative, { node_id: nodeId, alternative_id: alternativeId });
 }

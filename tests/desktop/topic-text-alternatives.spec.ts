@@ -39,6 +39,9 @@ async function seedAlternatives(app: ElectronApplication, page: Page) {
       db.prepare('INSERT INTO content_blob_data(hash,data) VALUES (?,?) ON CONFLICT(hash) DO NOTHING').run(digest, bytes);
       return {id:body,body_blob_hash:digest,source_host_name:'Device '+body,created_at:now,expires_at:expiry};
     });
+    snapshot.text_alternative_bodies = ['B', 'C'].map(body => ({
+      hash: hash('Alternative body '+body), text: 'Alternative body '+body
+    }));
     db.prepare('UPDATE node_sync_versions SET snapshot_json=? WHERE version_id=?').run(JSON.stringify(snapshot),row.version_id);
     db.close();
   `, path.join(home, 'Data', 'foliole.db'), NODE_ID], {

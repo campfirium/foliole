@@ -26,7 +26,7 @@ export function useCompanionNodeTextAlternative(args: {
     setBusy(true);
     setError(false);
     try {
-      await updateCompanionNodeTextAlternativeStatus(alternative.alternative_id, 'dismissed');
+      await updateCompanionNodeTextAlternativeStatus(alternative.node_id, alternative.alternative_id, 'dismissed');
       const next = await loadCompanionNodeTextAlternative(args.nodeId);
       setAlternative(next);
       if (!next) setOpen(false);
@@ -42,7 +42,7 @@ export function useCompanionNodeTextAlternative(args: {
     setBusy(true);
     setError(false);
     try {
-      const result = await updateCompanionNodeTextAlternativeStatus(alternative.alternative_id, 'promoted');
+      const result = await updateCompanionNodeTextAlternativeStatus(alternative.node_id, alternative.alternative_id, 'promoted');
       if (result.status !== 'promoted') throw new Error('text_alternative_unavailable');
       await args.onSetAsBody(args.nodeId, alternative.body_text);
       const next = await loadCompanionNodeTextAlternative(args.nodeId);

@@ -217,12 +217,12 @@ async function handleTextAlternativeMutation(
   window: Parameters<typeof handleStorageAttachmentCommand>[2]
 ) {
   if (command === NATIVE_COMMANDS.promoteNodeTextAlternative) {
-    const result = await promoteNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
+    const result = await promoteNodeTextAlternative(asString(args.node_id, 'node_id'), asString(args.alternative_id, 'alternative_id'));
     if (result.status === 'promoted') notifyWorkspaceContentChanged(window);
     return result;
   }
   if (command === NATIVE_COMMANDS.dismissNodeTextAlternative) {
-    const result = await dismissNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
+    const result = await dismissNodeTextAlternative(asString(args.node_id, 'node_id'), asString(args.alternative_id, 'alternative_id'));
     if (result.status === 'dismissed') notifyWorkspaceContentChanged(window);
     return result;
   }

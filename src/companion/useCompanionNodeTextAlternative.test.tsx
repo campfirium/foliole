@@ -38,7 +38,7 @@ it('adopts the whole version before refreshing the reading surface', async () =>
   await act(() => result.current.setAsBody());
 
   expect(onSetAsBody).toHaveBeenCalledWith('topic-1', 'Other body');
-  expect(repository.update).toHaveBeenCalledWith('alternative-1', 'promoted');
+  expect(repository.update).toHaveBeenCalledWith('topic-1', 'alternative-1', 'promoted');
   expect(order).toEqual(['adopt', 'version']);
   expect(result.current.alternative).toBeNull();
 });
@@ -51,4 +51,11 @@ it('does not save an expired or concurrently removed body as a new edit', async 
   await act(() => result.current.setAsBody());
   expect(onSetAsBody).not.toHaveBeenCalled();
   expect(result.current.error).toBe(true);
+});
+
+it('dismisses an alternative using the owner returned by its preview', async () => {
+  const { result } = renderHook(() => useCompanionNodeTextAlternative({ nodeId: 'topic-1' }));
+  await waitFor(() => expect(result.current.alternative).not.toBeNull());
+  await act(() => result.current.dismiss());
+  expect(repository.update).toHaveBeenCalledWith('topic-1', 'alternative-1', 'dismissed');
 });

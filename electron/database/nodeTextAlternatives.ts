@@ -38,21 +38,21 @@ export function loadNodeTextAlternativePreviewWithDriver(
   };
 }
 
-export function dismissNodeTextAlternative(alternativeId: string) {
-  return updateAlternative(alternativeId, 'dismissed');
+export function dismissNodeTextAlternative(nodeId: string, alternativeId: string) {
+  return updateAlternative(nodeId, alternativeId, 'dismissed');
 }
 
-export function promoteNodeTextAlternative(alternativeId: string) {
-  return updateAlternative(alternativeId, 'promoted');
+export function promoteNodeTextAlternative(nodeId: string, alternativeId: string) {
+  return updateAlternative(nodeId, alternativeId, 'promoted');
 }
 
-async function updateAlternative(alternativeId: string, action: 'dismissed' | 'promoted') {
+async function updateAlternative(nodeId: string, alternativeId: string, action: 'dismissed' | 'promoted') {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'mutate-topic-text' });
   return port.transaction(async (tx) => {
     const [node] = await tx.query<{ id: string }>(
       `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
        json_each(v.snapshot_json, '$.text_alternatives') entry
-       WHERE json_extract(entry.value, '$.id') = ? AND n.deleted_at IS NULL`, [alternativeId]);
+       WHERE n.id = ? AND json_extract(entry.value, '$.id') = ? AND n.deleted_at IS NULL`, [nodeId, alternativeId]);
     if (!node) return { alternative_id: alternativeId, node_id: null, status: 'unavailable' as const };
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action, now: new Date().toISOString(),
       versionId: createOpaqueVersionRef(randomUUID()), hostName: 'desktop-text-selection' });

@@ -28,10 +28,10 @@ it.each(['dismissed', 'promoted'] as const)('registers committed %s alternatives
     const read = vi.fn(async () => null);
     await companionWorkspaceSnapshots.refresh(read);
     expect(read).not.toHaveBeenCalled();
-    await expect(updateCompanionNodeTextAlternativeStatus('unknown', status)).rejects.toThrow('text_alternative_unavailable');
+    await expect(updateCompanionNodeTextAlternativeStatus('topic', 'unknown', status)).rejects.toThrow('text_alternative_unavailable');
     await companionWorkspaceSnapshots.refresh(read);
     expect(read).not.toHaveBeenCalled();
-    await updateCompanionNodeTextAlternativeStatus(alternative!.alternative_id, status);
+    await updateCompanionNodeTextAlternativeStatus('topic', alternative!.alternative_id, status);
     await companionWorkspaceSnapshots.refresh(read);
     expect(read).toHaveBeenCalledExactlyOnceWith({ current: null, scope: { kind: 'full' } });
     if (status === 'promoted') expect((await device.current()).body_text).toBe(alternative!.body_text);

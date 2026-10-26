@@ -65,11 +65,11 @@ export type NativeImportCommandMap = {
     } | null;
   };
   [NATIVE_COMMANDS.dismissNodeTextAlternative]: {
-    args: { alternative_id: string };
+    args: { node_id: string; alternative_id: string };
     result: { alternative_id: string; node_id: string | null; status: 'dismissed' | 'unavailable' };
   };
   [NATIVE_COMMANDS.promoteNodeTextAlternative]: {
-    args: { alternative_id: string };
+    args: { node_id: string; alternative_id: string };
     result: { alternative_id: string; node_id: string | null; status: 'promoted' | 'unavailable' };
   };
   [NATIVE_COMMANDS.acceptIncomingUpdate]: {

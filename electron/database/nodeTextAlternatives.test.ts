@@ -33,6 +33,7 @@ import {
   loadNodeTextAlternativePreview,
   promoteNodeTextAlternative
 } from './nodeTextAlternatives.js';
+import { observeAlternativeLookup } from './nodeTextAlternativeScope.testSupport.js';
 
 let tempRoot = '';
 
@@ -56,14 +57,14 @@ it('loads and dismisses one simple alternate body as durable state', async () =>
     updated_content: 'Other body'
   });
 
-  await dismissNodeTextAlternative('alternative-1');
+  await dismissNodeTextAlternative('topic-1', 'alternative-1');
 
   expect(await loadNodeTextAlternativePreview('topic-1')).toBeNull();
   expect(state()).toMatchObject({ count: 0, sync_dirty: 1 });
 });
 
 it('promotes the alternate body through a new formal child version', async () => {
-  await promoteNodeTextAlternative('alternative-1');
+  await promoteNodeTextAlternative('topic-1', 'alternative-1');
 
   const row = openDatabaseConnection().driver.queryOne<{
     content: string;
@@ -162,9 +163,53 @@ function seedAlternative() {
 }
 
 function state() {
-  return openDatabaseConnection().driver.queryOne<{ count: number; sync_dirty: number }>(
-    `SELECT json_array_length(v.snapshot_json, '$.text_alternatives') AS count, s.sync_dirty
+  return openDatabaseConnection().driver.queryOne<{ content: string; count: number; sync_dirty: number }>(
+    `SELECT n.content, json_array_length(v.snapshot_json, '$.text_alternatives') AS count, s.sync_dirty
      FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
      JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id WHERE n.id = 'topic-1'`
   );
 }
+
+it.each([24, 240, 2400].flatMap(count => [
+  { count, action: 'dismissed', mutate: dismissNodeTextAlternative },
+  { count, action: 'promoted', mutate: promoteNodeTextAlternative }
+]))('bounds unrelated JSON work at $count nodes for $action and persists it', async ({ count, action, mutate }) => {
+  const { sqlite } = openDatabaseConnection();
+  const observer = observeAlternativeLookup(sqlite, count);
+  try {
+    expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: action, node_id: 'topic-1' });
+    expect(observer.evaluatedIds.filter(id => id.startsWith('unrelated-'))).toEqual([]);
+    expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: 'unavailable' });
+    const persisted = state();
+    expect(persisted).toMatchObject({ content: action === 'promoted' ? 'Other body' : 'Current body', count: 0 });
+    closeDatabaseConnection();
+    expect(state()).toEqual(persisted);
+    expect(await loadNodeTextAlternativePreview('topic-1')).toBeNull();
+  } finally { observer.close(); }
+});
+
+it.each([dismissNodeTextAlternative, promoteNodeTextAlternative])('isolates wrong owners, stale alternatives and rollback', async mutate => {
+  const { sqlite } = openDatabaseConnection();
+  sqlite.exec("INSERT INTO nodes (id, kind, title, created_at, updated_at) VALUES ('wrong-topic', 'topic', 'Other topic', '2026-01-01', '2026-01-01')");
+  const before = sqlite.serialize();
+  expect(await mutate('wrong-topic', 'alternative-1')).toMatchObject({ status: 'unavailable', node_id: null });
+  expect(await mutate('topic-1', 'stale')).toMatchObject({ status: 'unavailable', node_id: null });
+  expect(sqlite.serialize()).toEqual(before);
+  sqlite.exec(`CREATE TRIGGER reject_selection BEFORE UPDATE OF current_version_id ON nodes
+    BEGIN SELECT RAISE(ABORT, 'selection_failed'); END`);
+  const withTrigger = sqlite.serialize();
+  await expect(mutate('topic-1', 'alternative-1')).rejects.toThrow('selection_failed');
+  expect(sqlite.serialize()).toEqual(withTrigger);
+});
+
+it.each([dismissNodeTextAlternative, promoteNodeTextAlternative])('rejects deleted or expired alternatives without writes', async mutate => {
+  const { sqlite } = openDatabaseConnection();
+  sqlite.exec("UPDATE nodes SET deleted_at = '2026-01-01' WHERE id = 'topic-1'");
+  let before = sqlite.serialize();
+  expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: 'unavailable' });
+  expect(sqlite.serialize()).toEqual(before);
+  sqlite.exec("UPDATE nodes SET deleted_at = NULL WHERE id = 'topic-1'; UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.text_alternatives[0].expires_at', '2026-01-01T00:00:00.000Z')");
+  before = sqlite.serialize();
+  expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: 'unavailable' });
+  expect(sqlite.serialize()).toEqual(before);
+});
