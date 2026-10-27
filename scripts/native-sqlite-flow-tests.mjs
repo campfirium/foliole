@@ -1,4 +1,5 @@
 export const controlledFlowSqliteTests = [
+  'src/store/workspaceFlowLearningFacts.integration.test.ts',
   'src/store/workspaceCycleFairness.integration.test.ts',
   'src/store/cycleFlowMigration.integration.test.ts',
   'src/store/workspaceCycleFlow.integration.test.ts',
