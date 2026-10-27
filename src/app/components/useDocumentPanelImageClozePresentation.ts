@@ -1,9 +1,8 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 
 import {
   deriveImageClozeRegionsFromChildren,
   getImageClozeLocator,
-  isImageClozeNode,
   listImageClozePresentationRegions,
   mergeImageClozeRegionGroups
 } from '../../features/image-cloze/model/imageCloze';
@@ -14,12 +13,15 @@ import {
 } from '../../features/image-cloze/model/imageClozePresentation';
 import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
 
+import { useDocumentPanelImageInputs } from './useDocumentPanelImageInputs';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
+
+type ImagePresentationSource = Pick<Node, 'id' | 'content' | 'anchorLink' | 'imageRegions'>;
 
 function registerFocusedImageClozePresentation(
   promptNodeId: string,
   answerNodeId: string | null,
-  activeNode: Node,
+  activeNode: ImagePresentationSource,
   locator: NonNullable<ReturnType<typeof getImageClozeLocator>>
 ) {
   const currentRegions = listImageClozePresentationRegions(activeNode.imageRegions).filter(
@@ -52,7 +54,7 @@ function registerFocusedImageClozePresentation(
   };
 }
 
-function resolveParentPresentationImageRegions(activeNode: Node) {
+function resolveParentPresentationImageRegions(activeNode: ImagePresentationSource) {
   if (activeNode.anchorLink?.kind === 'highlight') {
     return null;
   }
@@ -60,16 +62,13 @@ function resolveParentPresentationImageRegions(activeNode: Node) {
 }
 
 function listOccurrenceBoundImageExcerptRegions(args: {
-  activeNode: Node;
+  activeNode: ImagePresentationSource;
   nodesById: Record<string, Node>;
-  trashedNodeIds: string[];
 }) {
-  const trashed = new Set(args.trashedNodeIds);
   return Object.values(args.nodesById).flatMap((node) => {
     const locator = node.anchorLink?.locator;
     if (
       node.parentNodeId !== args.activeNode.id ||
-      trashed.has(node.id) ||
       node.anchorLink?.kind !== 'image-excerpt' ||
       !isTextAnchorLocator(locator) ||
       args.activeNode.content.slice(locator.from, locator.to) !== locator.originalText
@@ -95,53 +94,44 @@ export function useDocumentPanelImageClozePresentation(args: {
   onOpenNode: (nodeId: string) => void;
   trashedNodeIds: string[];
 }) {
+  const { source, selectedNodesById } = useDocumentPanelImageInputs(
+    args.editorNodeId ? args.activeNode : undefined, args.nodesById, args.trashedNodeIds
+  );
+  const { editorNodeId, onOpenNode } = args;
+  const parentRegions = useMemo(() => {
+    if (!source || getImageClozeLocator(source.anchorLink)) return [];
+    return [
+      ...listImageClozePresentationRegions(
+        mergeImageClozeRegionGroups(
+          resolveParentPresentationImageRegions(source),
+          deriveImageClozeRegionsFromChildren({ nodeId: source.id, nodesById: selectedNodesById })
+        )
+      ),
+      ...listOccurrenceBoundImageExcerptRegions({ activeNode: source, nodesById: selectedNodesById })
+    ];
+  }, [source, selectedNodesById]);
   useLayoutEffect(() => {
     return measureWorkspaceDiagnostic('document-panel-image-cloze-layout-effect', {
-      activeNodeId: args.activeNode?.id,
-      editorNodeId: args.editorNodeId,
-      nodeCount: Object.keys(args.nodesById).length
+      activeNodeId: source?.id,
+      editorNodeId,
+      imageNodeCount: Object.keys(selectedNodesById).length
     }, () => {
-      if (!args.editorNodeId || !args.activeNode) {
-        return undefined;
+      if (!editorNodeId || !source) return undefined;
+      const answerNodeId = getImageClozeAnswerEditorNodeId(editorNodeId);
+      const locator = getImageClozeLocator(source.anchorLink);
+      if (locator) {
+        return registerFocusedImageClozePresentation(editorNodeId, answerNodeId, source, locator);
       }
-      const promptNodeId = args.editorNodeId;
-      const answerNodeId = getImageClozeAnswerEditorNodeId(args.editorNodeId);
-      const parentRegions = [
-        ...listImageClozePresentationRegions(
-          mergeImageClozeRegionGroups(
-            resolveParentPresentationImageRegions(args.activeNode),
-            deriveImageClozeRegionsFromChildren({
-              nodeId: args.activeNode.id,
-              nodesById: args.nodesById,
-              trashedNodeIds: args.trashedNodeIds
-            })
-          )
-        ),
-        ...listOccurrenceBoundImageExcerptRegions({
-          activeNode: args.activeNode,
-          nodesById: args.nodesById,
-          trashedNodeIds: args.trashedNodeIds
-        })
-      ];
-
-      if (!isImageClozeNode(args.activeNode)) {
-        if (parentRegions.length === 0) return undefined;
-        registerImageClozeEditorPresentation(promptNodeId, {
-          canCreate: true,
-          focusRegionId: null,
-          hiddenRegionIds: [],
-          onOpenNode: args.onOpenNode,
-          outlinedRegionIds: parentRegions.map((region) => region.id),
-          regions: parentRegions
-        });
-        return () => unregisterImageClozeEditorPresentation(promptNodeId);
-      }
-
-      const locator = getImageClozeLocator(args.activeNode.anchorLink);
-      if (!locator) {
-        return undefined;
-      }
-      return registerFocusedImageClozePresentation(promptNodeId, answerNodeId, args.activeNode, locator);
+      if (parentRegions.length === 0) return undefined;
+      registerImageClozeEditorPresentation(editorNodeId, {
+        canCreate: true,
+        focusRegionId: null,
+        hiddenRegionIds: [],
+        onOpenNode,
+        outlinedRegionIds: parentRegions.map((region) => region.id),
+        regions: parentRegions
+      });
+      return () => unregisterImageClozeEditorPresentation(editorNodeId);
     });
-  }, [args.activeNode, args.editorNodeId, args.nodesById, args.onOpenNode, args.trashedNodeIds]);
+  }, [source, editorNodeId, selectedNodesById, onOpenNode, parentRegions]);
 }

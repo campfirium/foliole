@@ -45,9 +45,9 @@ export function collectNodePresentedRegions(node: Node) {
   return presentedByAttachmentId;
 }
 
-export function collectChildRegionIds(nodes: Node[], parentNodeId: string) {
+export function collectChildRegionIds(nodes: Node[]) {
   const regionIdsByAttachmentId = new Map<string, Set<string>>();
-  for (const node of nodes.filter((candidate) => candidate.parentNodeId === parentNodeId)) {
+  for (const node of nodes) {
     const presentedRegions = collectNodePresentedRegions(node);
     for (const [attachmentId, group] of presentedRegions.entries()) {
       const regionIds = regionIdsByAttachmentId.get(attachmentId) ?? new Set<string>();

@@ -144,9 +144,16 @@ export function deriveImageClozeRegionsFromChildren(args: {
     !(node.anchorLink?.kind === 'image-excerpt' && isTextAnchorLocator(node.anchorLink.locator))
   );
 
+  const childrenByParentId = new Map<string | null, Node[]>();
+  for (const node of visibleNodes) {
+    const siblings = childrenByParentId.get(node.parentNodeId) ?? [];
+    siblings.push(node);
+    childrenByParentId.set(node.parentNodeId, siblings);
+  }
+
   for (const node of childNodes) {
     const directChildRegionsByAttachmentId = collectNodePresentedRegions(node);
-    const directGrandchildRegionIdsByAttachmentId = collectChildRegionIds(visibleNodes, node.id);
+    const directGrandchildRegionIdsByAttachmentId = collectChildRegionIds(childrenByParentId.get(node.id) ?? []);
 
     for (const [attachmentId, group] of directChildRegionsByAttachmentId.entries()) {
       const grandchildRegionIds = directGrandchildRegionIdsByAttachmentId.get(attachmentId) ?? new Set<string>();
