@@ -16,6 +16,7 @@ import { projectFramedSyncParentRelation, projectFramedSyncReview, restoreFramed
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const hosts: ReturnType<typeof textDevice>[] = [];
@@ -80,6 +81,7 @@ it.each([147, 152])('upgrades schema %s preserving original identities, body has
     snapshot_json: JSON.stringify({ ...JSON.parse(String(row.snapshot_json)), content: null,
       body_blob_hash: createHash('sha256').update('Original body').digest('hex'), body_deleted: true }) } : row);
   host.sqlite.exec('UPDATE framed_sync_outbound_publications SET protocol_version = 22');
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma(`user_version = ${version}`);
   initializeDatabaseSchema(host.sqlite);
   expect(names(host.sqlite).filter(name => retired.includes(name))).toEqual([]);
@@ -107,6 +109,7 @@ it.each([147, 152])('rolls back schema %s when an immutable publication has no m
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   await publication(host, textBranch('unbacked-original', 'Irreplaceable body'));
   host.sqlite.exec('UPDATE framed_sync_outbound_publications SET protocol_version = 22');
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma(`user_version = ${version}`);
   expect(() => initializeDatabaseSchema(host.sqlite)).toThrow('legacy_sync_original_fact_unbacked');
   expect(host.sqlite.pragma('user_version', { simple: true })).toBe(version);
@@ -123,6 +126,7 @@ it('keeps the old publication when its complete body is the only remaining copy'
   await publication(host, original);
   host.sqlite.prepare("UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = ?")
     .run(original.version_id);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma('user_version = 152');
   expect(() => initializeDatabaseSchema(host.sqlite)).toThrow('legacy_sync_original_body_unbacked');
   expect(host.sqlite.pragma('user_version', { simple: true })).toBe(152);
@@ -146,6 +150,7 @@ it.each(['missing', 'changed', 'matching'])('checks the %s business copy of a pu
   }
   const manifest = { facts: [fact], blobs: [] };
   await publishManifest(host, manifest, 0);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma('user_version = 152');
   if (copy === 'matching') {
     initializeDatabaseSchema(host.sqlite);
@@ -168,6 +173,7 @@ it.each([false, true])('protects standalone original parent relations, backed=%s
   const fact = projectFramedSyncParentRelation({ object_id: 'topic', version_id: 'child',
     parent_version_id: 'parent', ordinal: 0 });
   await publishManifest(host, { facts: [fact], blobs: [] }, 0);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma('user_version = 152');
   if (backed) {
     const before = businessRows(host.sqlite);

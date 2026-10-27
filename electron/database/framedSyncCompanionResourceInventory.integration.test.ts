@@ -14,6 +14,7 @@ import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js
 import { inventoryAttachmentDirectory } from '../attachments/attachmentTrashFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { closeLibraries, createPeer, edit, root, startLibraries } from './syncLibrary.testSupport.js';
 
@@ -50,6 +51,7 @@ it('initializes resource presence once during a real companion upgrade and prese
       sqlite.exec(`DROP TRIGGER ${row.name}`);
     }
     for (const table of ['framed_sync_inventory', 'framed_sync_fact_summary', 'framed_sync_version_summary', 'framed_sync_resource_availability']) sqlite.exec(`DROP TABLE ${table}`);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.pragma('user_version = 70');
     await expect(bootstrapCompanionDatabase(db, { ...request, allowCreate: false,
       inventoryResourceStorageKeys: async () => { throw new Error('file_inventory_unavailable'); }

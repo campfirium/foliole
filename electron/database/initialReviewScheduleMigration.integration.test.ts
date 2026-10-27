@@ -11,6 +11,7 @@ import { projectFramedSyncNodeRecord, restoreFramedSyncProjectedNodeRecord } fro
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 import { firstAt, reviewFacts, reviewState, score, seedReviewPeer } from './reviewProjection.testSupport.js';
 
@@ -30,6 +31,7 @@ it.each(['desktop', 'android', 'ios'])('upgrades %s initial scheduling atomicall
       VALUES ('new-card', '2099-01-01T00:00:00.000Z', 0, 0, 0, 0, 0, 0, 0);
       ALTER TABLE nodes DROP COLUMN initial_review_due`);
     const oldVersion = host === 'desktop' ? 173 : 100;
+    restoreEmptyLegacyDailyFlowSchema(peer.sqlite);
     peer.sqlite.pragma(`user_version = ${oldVersion}`);
     const before = reviewState(peer);
     const facts = reviewFacts(peer);

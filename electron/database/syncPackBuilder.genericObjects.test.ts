@@ -10,6 +10,7 @@ import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventory
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
 import { insertAttachmentSyncState, insertExternalFolderSyncState, insertImportSourceSyncState,
   insertNodeReadingSyncState, insertNodeReviewSyncState, insertPdfPageTextSyncState,
@@ -133,6 +134,7 @@ it('refreshes a stale reading inventory during desktop retirement without changi
   const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_object_state'];
   const facts = () => tables.map(table => sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
   const before = facts();
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   sqlite.pragma('user_version = 152'); initializeDatabaseSchema(sqlite);
   expect(sqlite.prepare("SELECT states_json FROM framed_sync_inventory WHERE object_id = 'node-reading-1'").pluck().get())
     .toBe('[]');

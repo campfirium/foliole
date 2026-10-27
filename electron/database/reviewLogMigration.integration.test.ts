@@ -10,6 +10,7 @@ import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewL
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const OLD_TABLE = `CREATE TABLE review_log (
   id TEXT PRIMARY KEY, op_id TEXT NOT NULL UNIQUE, host_name TEXT NOT NULL,
@@ -41,6 +42,7 @@ async function fixture(host: string) {
   row('reset', 1, ['before', 1, 2], ['after', 3, 4]);
   row('normal', 1, ['before', 1, 2], ['chained', 3, 4]);
   row('normal', 2, ['chained', 3, 4], ['last', 5, 6]);
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   sqlite.pragma(`user_version = ${host === 'desktop' ? 171 : 98}`);
   return { sqlite, db };
 }

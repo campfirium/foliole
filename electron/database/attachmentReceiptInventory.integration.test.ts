@@ -18,6 +18,7 @@ import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionCo
 import { openDesktopAttachmentBlockReceiver } from '../sync/desktopAttachmentBlockFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 beforeAll(async () => { await fs.mkdir(path.resolve('.tmp/artifacts'), { recursive: true }); });
@@ -87,6 +88,7 @@ it.each([false, true])('upgrades the old presence triggers without changing pend
       sqlite.exec(sql);
     }
     await recordFramedSyncResourceAvailability(db, ['a'.repeat(64)], true);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.pragma(`user_version = ${companion ? 97 : 170}`);
     await upgrade();
     await flushRequestSyncInventoryDigests(db);

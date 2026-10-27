@@ -13,6 +13,7 @@ import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventory
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 const T = '2026-10-24T00:00:00.000Z';
@@ -60,6 +61,7 @@ it.each([false, true])('an upgraded library drops the node inventory triggers an
     try {
       expect(nodeTriggers(created.sqlite)).toEqual([]);
       for (const sql of RETIRED_NODE_TRIGGERS) upgraded.sqlite.exec(sql);
+      restoreEmptyLegacyDailyFlowSchema(upgraded.sqlite);
       upgraded.sqlite.pragma(`user_version = ${companion ? 96 : 169}`);
       for (const library of [created, upgraded]) await writeHistory(library, 0);
       const before = await readFramedSyncInventory(upgraded.db);

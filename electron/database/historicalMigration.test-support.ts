@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 import Database from 'better-sqlite3';
 
+import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
 import type { DatabaseMigrationTarget } from '../../lib/core/database/migrationTypes.js';
 import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 
@@ -85,4 +86,15 @@ export function removeCurrentInventoryFixtureTriggers(sqlite: Database.Database)
   const triggers = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_framed_inventory_%'")
     .all() as { name: string }[];
   for (const { name } of triggers) sqlite.exec(`DROP TRIGGER "${name.replaceAll('"', '""')}"`);
+}
+
+/** Restore the pre-cycle schema before assigning an older fixture version. */
+export function restoreEmptyLegacyDailyFlowSchema(sqlite: Database.Database) {
+  for (const table of ['daily_flow_state', 'daily_flow_entries', 'daily_flow_operations']) {
+    const count = sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get();
+    if (count !== 0) throw new Error(`legacy_flow_fixture_is_not_empty: ${table}`);
+  }
+  // Dropping the current entries table also removes its cycle-only index.
+  sqlite.exec('DROP TABLE daily_flow_entries; DROP TABLE daily_flow_operations');
+  for (const statement of DAILY_FLOW_SCHEMA.slice(1, 3)) sqlite.exec(statement);
 }

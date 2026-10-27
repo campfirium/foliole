@@ -10,7 +10,7 @@ import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDel
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
+import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const databases: Database.Database[] = [];
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });
@@ -20,6 +20,7 @@ function fixture() {
   databases.push(db);
   initializeDatabaseSchema(db);
   removeCurrentInventoryFixtureTriggers(db);
+  restoreEmptyLegacyDailyFlowSchema(db);
   for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
     ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) db.exec(sql);
   db.exec(`DROP TRIGGER IF EXISTS trg_sync_state_receipt_insert;

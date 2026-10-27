@@ -11,6 +11,7 @@ import { retireCompanionReviewStateSync, retireReviewStateSync } from '../../lib
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 import { firstAt, seedReviewPeer, score, reviewState, reviewFacts } from './reviewProjection.testSupport.js';
 import { legacyReviewFact } from './reviewStateSyncRetirement.testSupport.js';
@@ -33,6 +34,7 @@ it.each(['desktop', 'android', 'ios'])('retires upgraded %s state without changi
     peer.sqlite.prepare(`UPDATE framed_sync_inventory SET states_json=? WHERE object_id='topic'`)
       .run(JSON.stringify([JSON.stringify(['node_review', 'topic', 'f'.repeat(64)])]));
     peer.sqlite.exec("INSERT OR REPLACE INTO framed_sync_node_digest VALUES ('topic', 'old', 0)");
+    restoreEmptyLegacyDailyFlowSchema(peer.sqlite);
     peer.sqlite.pragma(`user_version = ${host === 'desktop' ? 172 : 99}`);
     const fail = () => { throw new Error('interrupted_upgrade'); };
     if (host === 'desktop') expect(() => initializeDatabaseSchema(peer.sqlite, { beforeVersionCommit: fail })).toThrow('interrupted_upgrade');
