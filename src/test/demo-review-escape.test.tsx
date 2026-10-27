@@ -7,6 +7,7 @@ import { App } from '../app/App';
 import { createDemoWorkspaceSnapshot } from '../demo/demoWorkspaceSnapshot';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { installDemoRuntimeController, type DemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
+import { installBrowserWorkspace } from '../store/installBrowserWorkspace';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 beforeAll(async () => {
@@ -45,6 +46,9 @@ function seedDemoWorkspace() {
 it('leaves Demo Flow editing with Escape before running reading shortcuts', async () => {
   installDemoRuntime();
   seedDemoWorkspace();
+  localStorage.clear();
+  installBrowserWorkspace(useWorkspaceStore, localStorage, useWorkspaceStore.getState());
+  await act(async () => { await useWorkspaceStore.getState().startReviewSession(); });
 
   render(<App />);
 
@@ -54,7 +58,7 @@ it('leaves Demo Flow editing with Escape before running reading shortcuts', asyn
   const editor = screen.getByTestId('editor-value');
   expect(editor.closest('.markdown-editor-host')).toHaveAttribute('data-review-escape-blur', 'true');
   const initialNextAt = useWorkspaceStore.getState().nodesById[reviewNodeId]?.reading?.nextAt;
-  expect(initialNextAt).toBeTruthy();
+  const initialCount = useWorkspaceStore.getState().nodesById[reviewNodeId]?.reading?.repetitionCount ?? 0;
 
   editor.focus();
   fireEvent.focusIn(editor);
@@ -69,6 +73,7 @@ it('leaves Demo Flow editing with Escape before running reading shortcuts', asyn
   fireEvent.keyDown(window, { code: 'Digit2', key: '2' });
 
   await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById[reviewNodeId]?.reading?.repetitionCount).toBe(initialCount + 1);
     expect(useWorkspaceStore.getState().nodesById[reviewNodeId]?.reading?.nextAt).not.toBe(initialNextAt);
   });
 });

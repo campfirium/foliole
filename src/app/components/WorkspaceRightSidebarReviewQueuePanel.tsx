@@ -9,6 +9,7 @@ import {
 } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useDailyFlowFuture } from '../hooks/useDailyFlowFuture';
 import { useDailyFlowView } from '../hooks/useDailyFlowView';
 
 
@@ -114,15 +115,19 @@ function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) 
   const reviewSessionMode = useWorkspaceStore(state => state.reviewSessionMode);
   const isHydrated = useWorkspaceStore(state => state.isHydrated);
   const now = props.flowWindow.queriedAt ?? '';
+  const demo = useDemoRuntimeState();
+  const future = useDailyFlowFuture(now, demo.isDemo && isHydrated, true);
   const nodesById = useWorkspaceStore(state => state.nodesById);
   const result = useDailyFlowView({ libraryScope, reviewSession, reviewSessionMode, nodesById,
     now, includeEntries: true, enabled: isHydrated && Boolean(now) });
-  if (result?.error) return <p role="alert">Could not load Flow.</p>;
+  if (result?.error || future?.error) return <p role="alert">Could not load Flow.</p>;
   if (!result?.view) return null;
   const nodeIds = result.view.nodeIds ?? [];
+  const dayBuckets = future?.view?.dayBuckets ?? [];
+  const dayOffsetByNodeId = Object.fromEntries(dayBuckets.flatMap(bucket => bucket.nodeIds.map(id => [id, bucket.dayOffset])));
   return <FlowQueuePanel {...props} currentNodeId={result.view.currentNodeId}
     nodesById={result.nodes ? { ...nodesById, ...result.nodes } : nodesById}
-    flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: [], dayBuckets: [], dayOffsetByNodeId: {} }} />;
+    flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: dayBuckets.flatMap(bucket => bucket.nodeIds), dayBuckets, dayOffsetByNodeId }} />;
 }
 
 function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {

@@ -1,9 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { getBrowserDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowBrowserRuntime';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 import type { WorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
 import { getDemoPreviewDisplayDay } from '../components/workspaceRightSidebarReviewQueueDays';
+
+import { useDailyFlowFuture } from './useDailyFlowFuture';
 
 export type ReviewQueueEmptyDialogContent =
   | { kind: 'empty' }
@@ -23,13 +26,16 @@ function buildDemoDayClearContent(previewDay: number): ReviewQueueEmptyDialogCon
 
 export function useReviewQueueEmptyDialogState(
   flowWindow: ReviewFlowWindow,
-  options: { allowDemoDayClear?: boolean } = {}
+  options: { allowDemoDayClear?: boolean; currentDayAvailable?: boolean | undefined } = {}
 ) {
   const demoState = useDemoRuntimeState();
+  const future = useDailyFlowFuture(flowWindow.queriedAt ?? '', demoState.isDemo, false, 'recommended');
+  const dayClear = getBrowserDailyFlowRuntime()
+    ? options.currentDayAvailable === false && Boolean(future?.view?.hasFuture) : shouldShowDemoDayClearDialog(flowWindow);
   const openedDemoPreviewDayRef = useRef<number | null>(null);
   const [content, setContent] = useState<ReviewQueueEmptyDialogContent | null>(null);
   const allowDemoDayClear = options.allowDemoDayClear ?? true;
-  const shouldOpenBeforeStart = allowDemoDayClear && demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow);
+  const shouldOpenBeforeStart = allowDemoDayClear && demoState.isDemo && dayClear;
   const close = useCallback(() => setContent(null), []);
   const openDemoDayClear = useCallback(() => {
     openedDemoPreviewDayRef.current = demoState.previewDay;
@@ -43,16 +49,17 @@ export function useReviewQueueEmptyDialogState(
     setContent({ kind: 'empty' });
   }, [openDemoDayClear, shouldOpenBeforeStart]);
   const openClear = useCallback(() => {
-    if (demoState.isDemo && shouldShowDemoDayClearDialog(flowWindow)) {
+    if (demoState.isDemo && dayClear) {
       openDemoDayClear();
       return;
     }
     setContent({ kind: 'empty' });
-  }, [demoState.isDemo, flowWindow, openDemoDayClear]);
+  }, [demoState.isDemo, dayClear, openDemoDayClear]);
 
   return {
     close,
     content,
+    isReady: !getBrowserDailyFlowRuntime() || Boolean(future?.view && options.currentDayAvailable !== undefined),
     isOpen: content !== null,
     openClear,
     openEmpty,

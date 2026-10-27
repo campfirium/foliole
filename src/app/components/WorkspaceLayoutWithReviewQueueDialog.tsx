@@ -16,7 +16,8 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
   const workspaceLayoutProps = buildWorkspaceLayoutProps(controller);
   const openedCompletedSessionRef = useRef<string | null>(null);
   const dialog = useReviewQueueEmptyDialogState(workspaceLayoutProps.review.reviewFlowWindow, {
-    allowDemoDayClear: !workspaceLayoutProps.review.isStudyMode
+    allowDemoDayClear: !workspaceLayoutProps.review.isStudyMode,
+    currentDayAvailable: workspaceLayoutProps.review.reviewSessionModeAvailability?.recommended
   });
   const layoutProps = bindReviewQueueEmptyDialogToLayoutProps(
     workspaceLayoutProps,
@@ -38,7 +39,7 @@ export function WorkspaceLayoutWithReviewQueueDialog({ controller }: { controlle
   const completedSessionKey = getCompletedNonQueueSessionKey(workspaceLayoutProps.review);
 
   useEffect(() => {
-    if (!completedSessionKey || openedCompletedSessionRef.current === completedSessionKey) {
+    if (!dialog.isReady || !completedSessionKey || openedCompletedSessionRef.current === completedSessionKey) {
       return;
     }
     openedCompletedSessionRef.current = completedSessionKey;

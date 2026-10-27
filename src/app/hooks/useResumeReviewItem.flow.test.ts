@@ -113,13 +113,12 @@ it('resumes the active Flow topic instead of falling back to the queue head', as
   await act(async () => { await hook.result.current(); });
 
   expect(resumeReviewSession).toHaveBeenCalledWith('2026-03-10T12:00:00.000Z', {
-    includeScheduledFallback: false,
     preferredNodeId: 'topic-2'
   });
   expect(handleSelectNode).toHaveBeenCalledWith('topic-2', null, 'target-context');
 });
 
-it('lets Demo resume the active scheduled Flow topic', async () => {
+it('asks Demo to resume its preferred target without allowing early learning', async () => {
   const { handleSelectNode, hook, resumeReviewSession } = renderResumeHook({
     activeNodeId: 'topic-future',
     isDemo: true,
@@ -134,7 +133,6 @@ it('lets Demo resume the active scheduled Flow topic', async () => {
   await act(async () => { await hook.result.current(); });
 
   expect(resumeReviewSession).toHaveBeenCalledWith('2026-03-10T12:00:00.000Z', {
-    includeScheduledFallback: true,
     preferredNodeId: 'topic-future'
   });
   expect(handleSelectNode).toHaveBeenCalledWith('topic-future', null, 'target-context');

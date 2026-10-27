@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
-import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -14,14 +13,12 @@ export function useResumeReviewItem(args: {
   reviewSettings: ReviewSchedulerSettingsContextValue;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
-  const demoRuntime = useDemoRuntimeState();
   return useCallback(async () => {
     if (!args.reviewSettings.isReviewSchedulerSettingsReady) {
       showAppRuntimeNotice(RESUME_REVIEW_UNAVAILABLE_NOTICE);
       return;
     }
     const resumeOptions = {
-      includeScheduledFallback: demoRuntime.isDemo,
       preferredNodeId: args.ws.activeNodeId
     };
     const nodeId = await args.ws.resumeReviewSession(args.nowIso, resumeOptions);
@@ -35,5 +32,5 @@ export function useResumeReviewItem(args: {
     args.controller.externalView.closeExternalView();
     args.controller.virtualView.closeVirtualView();
     args.controller.nav.handleSelectNode(nodeId, null, 'target-context');
-  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.ws.activeNodeId, args.ws.resumeReviewSession, demoRuntime.isDemo]);
+  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.ws.activeNodeId, args.ws.resumeReviewSession]);
 }

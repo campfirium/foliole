@@ -1,6 +1,7 @@
 import { commitCycleFlow } from '../../../../lib/core/flow/cycleFlowCommit';
 import { openStoredDailyFlow } from '../../../../lib/core/flow/cycleFlowOpen';
 import type { DailyFlowSettings } from '../../../../lib/core/flow/dailyFlowContract';
+import { readDailyFlowFuture } from '../../../../lib/core/flow/dailyFlowFuture';
 import { retainDailyFlowRetry, settleDailyFlowRetry } from '../../../../lib/core/flow/dailyFlowRetry';
 import { readStoredDailyFlowView } from '../../../../lib/core/flow/dailyFlowView';
 import type { BrowserWorkspaceCandidate } from '../../../store/workspaceBrowserCandidate';
@@ -15,6 +16,8 @@ export function createBrowserDailyFlowRuntime(args: {
   settings(): DailyFlowSettings;
 }): BrowserDailyFlowRuntime {
   return {
+    future: (input, nodes) => args.transaction(nodes, candidate =>
+      readDailyFlowFuture(createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet), input, args.settings())),
     open: (input, nodes) => args.transaction(nodes, candidate =>
       openStoredDailyFlow(createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet), input, args.settings())),
     commit: (input, nodes) => args.transaction(nodes, candidate => {

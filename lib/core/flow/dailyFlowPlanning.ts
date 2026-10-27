@@ -42,15 +42,12 @@ export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFl
     ...tasks.filter(id => !soon.includes(id) && id !== continuation &&
       (!deferReading || planned.fsrsQueueNodeIds.includes(id)))])];
   if (!queue.length && args.mode === 'recommended' && !soon.length && !continuation) queue.push(...planned.readingQueueNodeIds);
-  if (!queue.length && !soon.length && !continuation && args.includeScheduledFallback) {
-    const fallback = flowPlan(snapshot, args.mode, args.now, settings, true);
-    queue.push(...fallback.queueNodeIds);
-  }
   const preferred = args.preferredNodeId ?? seed?.currentNodeId;
   const current = preferred && (queue.includes(preferred) || soon.includes(preferred) || preferred === continuation) ? preferred : queue[0] ?? soon.shift() ?? null;
   if (current && queue.includes(current)) queue.splice(0, queue.length, current, ...queue.filter(id => id !== current));
+  const startedAt = !args.prepareOnly && current ? args.now : null;
   const prior = seed ?? { currentNodeId: null, queueNodeIds: [], isAnswerRevealed: false, totalNodeCount: 0,
-    sessionStartedAt: args.prepareOnly ? null : args.now, currentItemStartedAt: args.prepareOnly ? null : args.now,
+    sessionStartedAt: startedAt, currentItemStartedAt: startedAt,
     readingElapsedMs: 0, readTopicCount: 0, reviewElapsedMs: 0, reviewedItemCount: 0 };
   return { ...prior, currentNodeId: current, queueNodeIds: queue, soonNodeIds: soon.filter(id => id !== current),
     ...(hiddenSoon.length || seed?.hiddenSoonNodeIds ? { hiddenSoonNodeIds: hiddenSoon } : {}),
