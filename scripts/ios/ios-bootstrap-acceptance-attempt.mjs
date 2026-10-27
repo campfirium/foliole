@@ -227,12 +227,17 @@ function capture(options, command, args) {
   return result.stdout;
 }
 function run(options, command, args, extra = {}) {
-  const result = spawnSync(command, args, { cwd: options.repoRoot, stdio: 'inherit', timeout: 600_000, ...extra });
+  const timeout = extra.timeout ?? 600_000;
+  const result = spawnSync(command, args, { cwd: options.repoRoot, stdio: 'inherit', ...extra, timeout });
+  if (result.error) {
+    const detail = result.error.code === 'ETIMEDOUT' ? `timed out after ${timeout} ms` : result.error.message;
+    throw new Error(`${command} ${detail} (status=${result.status}, signal=${result.signal})`, { cause: result.error });
+  }
   if (result.status !== 0) throw new Error(`${command} failed with ${result.status}`);
 }
-function runHeavy(options, command, args, extra = {}) {
+export function runHeavy(options, command, args, extra = {}) {
   const task = iosResourceCommand(command, args, options.resourceMode);
-  run(options, task.command, task.args, extra);
+  run(options, task.command, task.args, { ...(command === 'xcodebuild' ? { timeout: 30 * 60_000 } : {}), ...extra });
 }
 function runAllowFailure(options, command, args) {
   spawnSync(command, args, { cwd: options.repoRoot, stdio: 'ignore', timeout: 600_000 });
