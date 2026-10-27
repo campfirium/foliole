@@ -92,7 +92,9 @@ function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren:
 function renderArticleMarkdown(article: ArticleNode, derivedChildren: MirrorRenderableNode[], manualTopics: ArticleNode[]) {
   const derivedByAnchorKey = collectAnchorChildren(article.id, derivedChildren);
   const title = article.title.trim() || 'Untitled';
-  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${renderManualTopicAppendix(manualTopics, derivedChildren)}`.trim();
+  const answer = article.kind === 'item' ? article.reveal?.trim() : '';
+  const answerSection = answer ? `\n\n## Answer\n\n${answer}` : '';
+  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${answerSection}${renderManualTopicAppendix(manualTopics, derivedChildren)}`.trim();
   if (body.length === 0) {
     return `# ${title}\n`;
   }

@@ -80,6 +80,7 @@ it.each([null, 'folder', 'special-inbox', 'topic'])('uses the saved Item input u
   expect(render.mock.calls[0]![0]).toMatchObject({ id: 'manual', content: 'Question body.', reveal: 'Saved answer fact.' });
   const automatic = await fs.readFile(mirror('manual'), 'utf8');
   expect(automatic).toContain('Edited annotation.');
+  expect(automatic.match(/Saved answer fact\./g)).toHaveLength(1);
   expect(automatic).not.toContain('Ancestor body');
   read.mockClear();
   await expect(exportCurrentArticleMirror('manual', null)).resolves.toEqual({ status: 'saved', path: outputPath });
@@ -203,4 +204,6 @@ it('rejects a stale nested Item render when its saved question or answer changes
   const body = await fs.readFile(mirror('manual'), 'utf8');
   expect(body).toContain('Question version two.');
   expect(body).not.toContain('Question version one.');
+  expect(body).toContain('Answer version two.');
+  expect(body).not.toContain('Saved answer fact.');
 });
