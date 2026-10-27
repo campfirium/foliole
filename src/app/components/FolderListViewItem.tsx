@@ -100,9 +100,8 @@ export function FolderListViewItem(props: FolderListItemProps) {
     props.sortKey === 'dateLastOpened'
       ? getWorkspaceListNodeLastOpenedLabel({ ...(props.lastOpenedAt === undefined ? {} : { lastOpenedAt: props.lastOpenedAt }) })
       : getWorkspaceListNodeDateLabel(props.node);
-  const locationPath = resolveFolderListLocationPath(props.node, props.nodesById);
-
   if (props.itemLayout === 'virtual-result') {
+    const locationPath = resolveFolderListLocationPath(props.node, props.nodesById);
     return renderVirtualResultItem({ ...props, dateLabel, displayTitle, locationPath });
   }
 
