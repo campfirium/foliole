@@ -1,8 +1,19 @@
+// @vitest-environment node
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, expect, it, vi } from 'vitest';
+
+vi.mock('node:worker_threads', async (original) => {
+  const native = await original<typeof import('node:worker_threads')>();
+  return { ...native, Worker: class extends native.Worker {
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      super(new URL(url.href.replace(/\.js$/, '.ts')), { ...options,
+        execArgv: ['--experimental-loader', './scripts/android/ts-js-extension-loader.mjs', '--experimental-strip-types'] });
+    }
+  } };
+});
 
 import { cloudflarePagesAssetHash, deleteCloudflarePagesProject, deployCloudflarePages, resolveCloudflarePagesProject } from './cloudflarePagesClient.js';
 
@@ -57,6 +68,12 @@ it('uploads missing assets before creating a manifest deployment', async () => {
     expect.stringContaining('/deployments')
   ]);
   const deployment = calls.at(-1)?.body as FormData;
+  expect(JSON.parse(String(calls[2]?.body))).toEqual([
+    { base64: true, key: cloudflarePagesAssetHash('404.html', Buffer.from('<h1>Page not found</h1>')),
+      metadata: { contentType: 'text/html' }, value: Buffer.from('<h1>Page not found</h1>').toString('base64') },
+    { base64: true, key: '8deb79e268ae1932009657bb3e496c87',
+      metadata: { contentType: 'text/html' }, value: Buffer.from('<h1>Hello</h1>').toString('base64') }
+  ]);
   expect(deployment.get('branch')).toBe('main');
   expect(JSON.parse(String(deployment.get('manifest')))).toEqual({
     '/404.html': expect.any(String), '/index.html': expect.any(String)
@@ -64,7 +81,6 @@ it('uploads missing assets before creating a manifest deployment', async () => {
 });
 
 it('waits for Cloudflare to finish every deployment', async () => {
-  vi.useFakeTimers();
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = String(input);
     if (url.endsWith('/upload-token')) return response({ jwt: 'upload-jwt' });
@@ -77,8 +93,6 @@ it('waits for Cloudflare to finish every deployment', async () => {
   const pending = deployCloudflarePages({
     accountId: 'account', projectName: 'project', siteRoot: temporarySite(), token: 'api-token'
   });
-  await vi.runAllTimersAsync();
-
   await expect(pending).resolves.toMatchObject({ latest_stage: { status: 'success' } });
 });
 

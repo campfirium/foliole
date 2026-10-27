@@ -1,9 +1,9 @@
 import {
   cloudflarePagesAssetHash,
   cloudflarePagesUploadBatches,
-  prepareCloudflarePagesFiles,
   type CloudflarePagesUploadFile
 } from './cloudflarePagesAssets.js';
+import { prepareCloudflarePagesFilesOffMainThread } from './cloudflarePagesPreparationWorkerClient.js';
 
 const API = 'https://api.cloudflare.com/client/v4';
 const DEPLOYMENT_POLL_INTERVAL_MS = 1_000;
@@ -161,7 +161,7 @@ export async function deployCloudflarePages(input: {
   accountId: string; projectName: string; siteRoot: string; token: string;
 }) {
   try {
-    const files = prepareCloudflarePagesFiles(input.siteRoot);
+    const files = await prepareCloudflarePagesFilesOffMainThread(input.siteRoot);
     const jwt = await getUploadToken(input);
     const missing = new Set(await getMissingHashes(files, jwt));
     await uploadAssets(files.filter((file) => missing.has(file.hash)), jwt);
