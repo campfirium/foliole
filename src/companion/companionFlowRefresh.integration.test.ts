@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
+import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
@@ -93,8 +94,8 @@ it.each(['read', 'later', 'dismiss'] as const)('refreshes %s and its undo/redo w
   expect(rows()).toBeLessThan(100);
 });
 
-function useReadingSurface(initial: WorkspaceSnapshot, publish: ReturnType<typeof vi.fn>) {
-  const [state, setState] = useState(createWorkspaceSync(initial).state);
+function useReadingSurface(initial: WorkspaceSnapshot, publish: Parameters<typeof useCompanionReadableArticleLoader>[1]) {
+  const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(createWorkspaceSync(initial).state);
   const snapshot = state.workspace_snapshot!;
   const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
     libraryScope: initial.libraryScope ?? 'surface-refresh' });

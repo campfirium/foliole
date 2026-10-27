@@ -48,7 +48,7 @@ export function useCompanionFlowSession(args: {
   const mode = args.onlyReview ? 'review-first' : 'recommended';
   reconcileCurrentFlow(args.snapshot, current, mode, args.active);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
-  useFlowReentry(args, current, mode, render);
+  useFlowReentry(args, current, owner, latest, mode, render);
   useEffect(() => {
     if (!current.hydrated) return;
     void saveCompanionFlowResume(args.libraryScope, args.onlyReview, current.session.currentNodeId).catch((error: unknown) => {
@@ -61,7 +61,7 @@ export function useCompanionFlowSession(args: {
     if (!args.active || !current.hydrated || !current.session.daily) return;
     const source = current.session;
     void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
-      if (owner.current !== current || current.session !== source || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
+      if (owner.current !== current || !latest.current.active || current.session !== source || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
       current.session = { ...saved.session, isAnswerRevealed:
         saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
       if (!source.cycle || saved.session.cycle?.stamp !== source.cycle.stamp) current.generation += 1;
@@ -112,14 +112,15 @@ function canContinueFlowReading(snapshot: WorkspaceSnapshot | null, current: Flo
 }
 
 function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
-  current: FlowOwner, mode: 'review-first' | 'recommended', render: () => void) {
+  current: FlowOwner, owner: { current: FlowOwner }, latest: { current: Parameters<typeof useCompanionFlowSession>[0] },
+  mode: 'review-first' | 'recommended', render: () => void) {
   const wasActive = useRef(args.active);
   useEffect(() => {
     if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
       if (isAvailableNativeCompanionRuntime()) {
         const source = current.session;
         void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
-          if (current.session !== source) return;
+          if (owner.current !== current || !latest.current.active || current.session !== source) return;
           current.session = { ...saved.session, isAnswerRevealed:
             saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
           current.generation += 1;
@@ -144,7 +145,7 @@ function useFlowHydration(
   identity: string, scope: object, mode: 'review-first' | 'recommended', render: () => void
 ) {
   useEffect(() => {
-    if (!args.ready || !args.snapshot) return;
+    if (!args.ready || !args.snapshot || !args.active || current.hydrated) return;
     let cancelled = false;
     void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
       isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null,
@@ -172,7 +173,7 @@ function useFlowHydration(
       if (isAvailableNativeCompanionRuntime()) {
         const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode,
           seed: current.session, preferredNodeId: preferred });
-        if (cancelled || owner.current !== current) return;
+        if (cancelled || owner.current !== current || !latest.current.active) return;
         current.session = saved.session;
       }
       current.hydrated = true;
@@ -186,7 +187,7 @@ function useFlowHydration(
       render();
     });
     return () => { cancelled = true; };
-  }, [identity, scope, args.ready, Boolean(args.snapshot)]);
+  }, [identity, scope, args.ready, args.active, Boolean(args.snapshot)]);
 }
 
 function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner,

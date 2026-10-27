@@ -1,4 +1,5 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
 import { isReadActionAdvanceReadyFromMetrics } from '../components/readActionAdvanceState';
@@ -59,7 +60,7 @@ function readReviewTopic(args: ReviewEditingArgs, isVisible: boolean) {
     findEnabledSequentialReadingSourceId(nodeId, args.ws.nodesById) && editor &&
     isReadActionAdvanceReadyFromMetrics(editor.getScrollMetrics())
   );
-  return args.ws.readReviewTopic(args.nowIso, { releaseSequentialReading });
+  return args.ws.readReviewTopic(getDemoRuntimeNowIso(), { releaseSequentialReading });
 }
 
 function useReviewEditingState(args: ReviewEditingArgs) {
@@ -84,7 +85,7 @@ function useReviewEditingState(args: ReviewEditingArgs) {
     ...buildReviewShortcutBindings(args.hotkeys.shortcutMap),
     isSourceTopicDeleteDialogOpen: args.isSourceTopicDeleteDialogOpen,
     readReviewTopic: () => readReviewTopic(args, isCurrentReviewItemVisible),
-    postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso()),
     deleteCurrentReviewItem: () => {
       const nodeId = resolveReviewDeleteTargetNodeId(args.ws);
       if (!nodeId) {
@@ -94,7 +95,7 @@ function useReviewEditingState(args: ReviewEditingArgs) {
       return true;
     },
     deleteReviewSourceTopic: args.onRequestDeleteSourceTopic,
-    dismissReviewTopic: () => args.ws.dismissReviewTopic(args.nowIso),
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso()),
     scrollReviewReadingDown: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'down'),
     scrollReviewReadingUp: () => scrollReviewReadingSurface(args.runtime.editorRef.current, 'up'),
     goBack: args.nav.handleGoBack,
@@ -103,8 +104,8 @@ function useReviewEditingState(args: ReviewEditingArgs) {
     resumeReviewItem: args.onResumeReviewItem,
     revealReviewAnswer: args.ws.revealReviewAnswer,
     selectNode: args.nav.handleSelectNode,
-    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(args.nowIso),
-    gradeReviewCard: (grade) => args.ws.gradeReviewCard(grade, args.nowIso)
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(getDemoRuntimeNowIso()),
+    gradeReviewCard: (grade) => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso())
   });
 }
 

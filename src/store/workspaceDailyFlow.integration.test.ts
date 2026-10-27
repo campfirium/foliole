@@ -149,19 +149,17 @@ it('rolls back a late cursor receipt failure and retries without advancing or ad
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log')).toHaveLength(1);
 });
 
-it('reopens the new learning day before retrying an old-day action without silently grading it twice', async () => {
+it('rebuilds the new learning day before the first grade and writes it once', async () => {
   const app = setup();
   await app.actions.startReviewSession(now);
   app.actions.revealReviewAnswer();
   const before = app.getState().reviewSession;
   const nextDay = '2026-10-27T08:00:00.000Z';
-  expect(await app.actions.gradeReviewCard(3, nextDay)).toBe(false);
-  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log')).toEqual([]);
-  expect(app.getState().reviewSession.daily!.dayKey).not.toBe(before.daily!.dayKey);
-  expect(app.getState().reviewSession.currentNodeId).toBe(before.currentNodeId);
-  expect(app.getState().reviewSession.isAnswerRevealed).toBe(true);
   expect(await app.actions.gradeReviewCard(3, nextDay)).toBe(true);
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM review_log')).toHaveLength(1);
+  expect(app.getState().reviewSession.daily!.dayKey).not.toBe(before.daily!.dayKey);
+  expect(app.getState().reviewSession.currentNodeId).not.toBe(before.currentNodeId);
+  expect(app.getState().appActionHistory.undoStack).toHaveLength(1);
 });
 
 it.each(['grade', 'soon', 'read', 'later', 'dismiss'] as const)('retries desktop %s undo and redo after losing each native receipt', async action => {

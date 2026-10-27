@@ -1,0 +1,23 @@
+import { useState } from 'react';
+import { vi } from 'vitest';
+
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+
+import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
+import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
+import { useCompanionReadableArticleLoader } from './useCompanionReadableArticleLoader';
+
+export function useDailyFlowSurface(initial: WorkspaceSnapshot, onlyReview = false) {
+  const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(createWorkspaceSync(initial).state);
+  const [readableArticle, publish] = useState<CompanionReadableArticle | null>(null);
+  const snapshot = state.workspace_snapshot!;
+  const loader = useCompanionReadableArticleLoader(snapshot, publish);
+  const actions = createWorkspaceSnapshotActions({ state, setState, setError: () => {},
+    setSyncConflictCount: () => {}, setSyncProgress: () => {}, setStatus: () => {} });
+  const workspace = { ...createWorkspaceSync(snapshot), state, readableArticle,
+    refreshAfterMutation: vi.fn(actions.refreshAfterMutation), openReadableArticle: loader.openReadableArticle };
+  return { surface: useCompanionArticleSurface(workspace, createFloatingBar(), undefined, { isOnlyReviewOpen: onlyReview }), snapshot, workspace };
+}

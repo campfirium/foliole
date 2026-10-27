@@ -1,5 +1,6 @@
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { definedProps } from '../../shared/lib/definedProps';
+import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import {
   isEditorInputDiagnosticEnabled,
   logEditorInputDiagnostic,
@@ -54,7 +55,7 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
     enterReviewModeSession({
       onReviewQueueEmpty: args.onReviewQueueEmpty,
       onReviewSessionStarted: args.onOpenReviewView,
-      startReviewSession: () => args.startReviewSession(args.nowIso),
+      startReviewSession: () => args.startReviewSession(getDemoRuntimeNowIso()),
       startStudyMode: args.startStudyMode
     });
   return {

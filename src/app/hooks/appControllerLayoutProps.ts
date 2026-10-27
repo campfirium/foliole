@@ -7,6 +7,7 @@ import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import type { ReviewSchedulerSettingsContextValue } from '../../features/settings/context/reviewSchedulerSettingsContext';
+import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import type { NodeViewState, ReviewSessionState, WorkspaceState } from '../../store/workspaceStore';
 import type { ReadReviewTopicOptions } from '../../store/workspaceStore';
 
@@ -202,11 +203,11 @@ function createLayoutHandlerArgs(
     onToggleBothSidebarVisibility: createToggleBothSidebarVisibility(args),
     onToggleImmersiveMode: () => args.runtime.setIsImmersiveMode((current) => !current),
     onToggleRightSidebarVisibility: createToggleRightSidebarVisibility(args),
-    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade, args.nowIso),
-    readReviewTopic: (_now?: string, options?: ReadReviewTopicOptions) => args.ws.readReviewTopic(args.nowIso, options),
-    postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
-    dismissReviewTopic: () => args.ws.dismissReviewTopic(args.nowIso),
-    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(args.nowIso),
+    updateGrade: (grade: ReviewGrade) => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso()),
+    readReviewTopic: (_now?: string, options?: ReadReviewTopicOptions) => args.ws.readReviewTopic(getDemoRuntimeNowIso(), options),
+    postponeReviewTopic: () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso()),
+    dismissReviewTopic: () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso()),
+    revisitReviewTopicSoon: () => args.ws.revisitReviewTopicSoon(getDemoRuntimeNowIso()),
     priorityQuickSetShortcutLabel: args.priorityQuickSet.shortcutLabel
   };
 }

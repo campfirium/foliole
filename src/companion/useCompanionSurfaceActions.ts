@@ -5,6 +5,7 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { isSameFlowActionTarget } from '../store/workspaceFlowDay';
 import type { FlowAction } from '../store/workspaceFlowSession';
 
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
@@ -37,7 +38,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
 
   async function submit(action: FlowAction, grade?: ReviewGrade) {
     if (locked.current || !args.active || historyReplay.refreshPending) return;
-    const token = args.flow.capture();
+    let token = args.flow.capture();
     if (!pending.current && !canSubmitFlowAction(args, token, action)) return;
     locked.current = true;
     setBusy(true);
@@ -45,16 +46,11 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     setReviewError(null);
     try {
       if (pending.current) { await finishPending(args, pending, setReadingError); return; }
-      await args.activity.flush();
-      if (!latest.current.active || !args.flow.matches(token)) return;
-      const snapshot = await args.workspaceSync.refreshAfterMutation();
-      if (!snapshot || !latest.current.active || !args.flow.matches(token) || !token.nodeId) return;
-      if (action === 'grade' && !latest.current.flow.isAnswerRevealed) return;
-      const now = new Date().toISOString();
-      if (action === 'grade' && !isCompanionGradeDue(snapshot, token.nodeId, now)) {
-        await args.flow.resume(token, snapshot);
-        return;
-      }
+      const prepared = await prepareSurfaceAction(args, token, action, () => latest.current.active);
+      if (!prepared) return;
+      const { snapshot, now } = prepared;
+      token = prepared.token;
+      if (!token.nodeId) return;
       const history = args.flow.historyContext(token);
       if (action === 'soon') {
         await commitSoonAction(args, token, snapshot, now);
@@ -85,6 +81,30 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     isSubmittingGrade: busy, isSubmittingReadingAction: busy,
     readingError, reviewError, setReadingError, setReviewError
   };
+}
+
+async function prepareSurfaceAction(args: CompanionSurfaceActionArgs, token: Token,
+  action: FlowAction, active: () => boolean) {
+  await args.activity.flush();
+  if (!active() || !args.flow.matches(token)) return null;
+  let snapshot = await args.workspaceSync.refreshAfterMutation();
+  if (!snapshot || !active() || !args.flow.matches(token) || !token.nodeId) return null;
+  const now = new Date().toISOString();
+  const beforePreparation = snapshot;
+  const prepared = await args.flow.prepareAction(token, now, () => active());
+  if (!prepared) return null;
+  if (prepared !== token) {
+    snapshot = await args.workspaceSync.refreshAfterMutation();
+    if (!snapshot || !active() || !args.flow.matches(prepared) ||
+      !isSameFlowActionTarget(beforePreparation.nodesById[token.nodeId], snapshot.nodesById[token.nodeId])) return null;
+    token = prepared;
+  }
+  if (!token.nodeId || (action === 'grade' && !token.session.isAnswerRevealed)) return null;
+  if (action === 'grade' && !isCompanionGradeDue(snapshot, token.nodeId, now)) {
+    await args.flow.resume(token, snapshot);
+    return null;
+  }
+  return { token, snapshot, now };
 }
 
 async function finishPending(args: CompanionSurfaceActionArgs,

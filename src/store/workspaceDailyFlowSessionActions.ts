@@ -10,12 +10,16 @@ import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
 
+const openRequests = new WeakMap<() => WorkspaceState, object>();
+
 export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
   args: DailyFlowOpenArgs, preference?: { reviewSessionMode: ReviewSessionMode; reviewSessionModeExpiresAt: string | null }, onlyIfNewer = false) {
+  const request = {};
+  openRequests.set(get, request);
   const before = get();
   const source = before.reviewSession;
   return openDailyFlowRuntime(args, before.nodesById).then(({ session, nodes, learning }) => {
-    if (get().reviewSession !== source) return false;
+    if (openRequests.get(get) !== request || get().libraryScope !== before.libraryScope || get().reviewSession !== source) return false;
     if (onlyIfNewer && !nodes && session.daily?.revision === source.daily?.revision && session.daily?.dayKey === source.daily?.dayKey && session.daily?.scope === source.daily?.scope) return Boolean(source.currentNodeId);
     set(state => ({ nodesById: mergeDailyFlowReceiptNodes(state.nodesById, before.nodesById, nodes, learning), ...(session.currentNodeId ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
       reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference }));

@@ -93,6 +93,7 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
     await db.run('DELETE FROM daily_flow_entries');
     await db.run('DELETE FROM daily_flow_operations');
     stored = null;
+    args = { ...args, seed: undefined, preferredNodeId: undefined };
   }
   let session: DailyFlowSession;
   if (!stored) session = (await initializeCycle(db, args, settings, persistence)).session;

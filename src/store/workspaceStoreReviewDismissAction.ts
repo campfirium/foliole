@@ -1,5 +1,6 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
+import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
@@ -83,6 +84,7 @@ export function createDismissReviewTopicActionWithPending(
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ) {
   return async (now = new Date().toISOString()) => {
+    if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;

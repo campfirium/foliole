@@ -9,6 +9,7 @@ import {
 
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
+import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
@@ -92,6 +93,7 @@ function createGradeReviewCardAction(
   persistence: WorkspaceReviewPersistenceAdapter
 ): WorkspaceReviewActions['gradeReviewCard'] {
   return async (grade: ReviewGrade, now = new Date().toISOString()) => {
+    if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || !snapshot.reviewSession.isAnswerRevealed) return false;

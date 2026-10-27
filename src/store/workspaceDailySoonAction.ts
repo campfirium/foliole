@@ -1,6 +1,7 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { hasPersistentDailyFlow } from './workspaceDailyFlowMutations';
+import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { persistAndApplyReadingReviewPatch } from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { runtimeWorkspaceReviewPersistence } from './workspaceReviewPersistence';
@@ -14,6 +15,7 @@ type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Parti
 export function createRevisitReviewTopicSoonAction(set: Set, get: () => WorkspaceState): WorkspaceState['revisitReviewTopicSoon'] {
   const pendingNodeIds = new Set<string>();
   return async (now = new Date().toISOString()) => {
+    if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const snapshot = get();
     const currentNodeId = snapshot.reviewSession.currentNodeId;
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId || pendingNodeIds.has(currentNodeId) ||

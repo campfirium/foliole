@@ -2,6 +2,7 @@ import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates'
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
@@ -35,6 +36,7 @@ export function createPostponeReviewTopicActionWithPending(
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['postponeReviewTopic'] {
   return async (now = new Date().toISOString()) => {
+    if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const snapshot = get();
     if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
         snapshot.appActionHistory.pendingCreate) return false;
@@ -70,6 +72,7 @@ export function createReadReviewTopicActionWithPending(
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['readReviewTopic'] {
   return async (now = new Date().toISOString(), options = {}) => {
+    if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const snapshot = get();
     if (snapshot.appActionHistory.applying || snapshot.appActionHistory.pendingAction ||
         snapshot.appActionHistory.pendingCreate) return false;

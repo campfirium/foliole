@@ -3,6 +3,7 @@ import type { ReviewSessionMode } from '../features/review/model/reviewSessionMo
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
+import { hasFlowDayChanged } from '../store/workspaceFlowDay';
 import { advanceFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 
@@ -46,10 +47,21 @@ export function createCompanionFlowControls(args: {
     current.generation += 1;
     render();
   }
+  async function prepareAction(token: ReturnType<typeof capture>, now: string, active: () => boolean) {
+    if (!matches(token) || !active()) return null;
+    if (!hasFlowDayChanged(current.session, now)) return token;
+    const saved = await openCompanionDailyFlow({ now, mode });
+    if (!matches(token) || !active()) return null;
+    current.session = { ...saved.session, isAnswerRevealed:
+      saved.session.currentNodeId === token.nodeId && token.session.isAnswerRevealed };
+    current.generation += 1;
+    render();
+    return saved.session.currentNodeId === token.nodeId ? capture() : null;
+  }
   function reveal() { current.session = { ...current.session, isAnswerRevealed: true }; render(); }
   const workspaceHistoryControls = {
     captureFlowHistoryContext: () => ({ session: capture().session, mode }),
     restoreFlowHistorySession: (session: FlowOwner['session']) => restore(capture(), session)
   };
-  return { capture, historyContext, restore, matches, advance, resume, reveal, workspaceHistoryControls };
+  return { capture, prepareAction, historyContext, restore, matches, advance, resume, reveal, workspaceHistoryControls };
 }
