@@ -35,16 +35,16 @@ export interface WorkspaceStructureRenameEntry extends WorkspaceStructureHistory
   type: 'structure.rename';
 }
 
-export interface WorkspaceStructurePlacement {
-  nextNodeId: string | null;
-  previousNodeId: string | null;
+export interface WorkspaceStructureParentOrder {
+  parentNodeId: string | null;
+  childIds: string[];
 }
 
 export interface WorkspaceStructureMoveEntry extends WorkspaceStructureHistoryBase {
   afterParentNodeIdByRoot: Record<string, string | null>;
-  afterPlacement: WorkspaceStructurePlacement;
+  afterParentOrders: WorkspaceStructureParentOrder[];
   beforeParentNodeIdByRoot: Record<string, string | null>;
-  beforePlacement: WorkspaceStructurePlacement;
+  beforeParentOrders: WorkspaceStructureParentOrder[];
   movedNodeIds: string[];
   rootNodeIds: string[];
   type: 'structure.move';

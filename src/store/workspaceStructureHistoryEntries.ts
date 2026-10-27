@@ -6,9 +6,9 @@ import type {
   WorkspaceStructureHistoryEntry,
   WorkspaceStructureKind,
   WorkspaceStructureMoveEntry,
-  WorkspaceStructurePlacement,
   WorkspaceStructureRenameEntry
 } from './workspaceStructureHistoryTypes';
+import { captureStructureParentOrders } from './workspaceStructureParentOrders';
 
 function createEntryId() {
   return `workspace-history-${crypto.randomUUID()}`;
@@ -53,19 +53,6 @@ export function createStructureRenameEntry(args: {
   return { ...args, id: createEntryId(), title: actionTitle('Rename', args.kind), type: 'structure.rename' };
 }
 
-export function captureStructurePlacement(
-  nodeOrder: string[],
-  movedNodeIds: string[]
-): WorkspaceStructurePlacement {
-  const moved = new Set(movedNodeIds);
-  const firstIndex = nodeOrder.findIndex((nodeId) => moved.has(nodeId));
-  const lastIndex = nodeOrder.findLastIndex((nodeId) => moved.has(nodeId));
-  return {
-    previousNodeId: firstIndex > 0 ? nodeOrder[firstIndex - 1] ?? null : null,
-    nextNodeId: lastIndex >= 0 ? nodeOrder[lastIndex + 1] ?? null : null
-  };
-}
-
 function captureParents(state: WorkspaceState, rootNodeIds: string[]) {
   return Object.fromEntries(rootNodeIds.map((nodeId) => [nodeId, state.nodesById[nodeId]?.parentNodeId ?? null]));
 }
@@ -78,11 +65,15 @@ export function createStructureMoveEntry(args: {
 }): WorkspaceStructureMoveEntry | null {
   const kind = args.before.nodesById[args.rootNodeIds[0] ?? '']?.kind;
   if (!kind || !isWorkspaceStructureKind(kind)) return null;
+  const parentIds = args.rootNodeIds.flatMap((id) => [
+    args.before.nodesById[id]?.parentNodeId ?? null,
+    args.after.nodesById[id]?.parentNodeId ?? null
+  ]);
   return {
     afterParentNodeIdByRoot: captureParents(args.after, args.rootNodeIds),
-    afterPlacement: captureStructurePlacement(args.after.nodeOrder, args.movedNodeIds),
+    afterParentOrders: captureStructureParentOrders(args.after, parentIds),
     beforeParentNodeIdByRoot: captureParents(args.before, args.rootNodeIds),
-    beforePlacement: captureStructurePlacement(args.before.nodeOrder, args.movedNodeIds),
+    beforeParentOrders: captureStructureParentOrders(args.before, parentIds),
     id: createEntryId(),
     kind,
     movedNodeIds: [...args.movedNodeIds],
