@@ -99,9 +99,9 @@ function rewriteImportImageReferences(input: {
   });
 }
 
-function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
+function rewriteImportLocalImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
   if (
-    prepared.sourceKind !== 'markdown' ||
+    (prepared.sourceKind !== 'markdown' && prepared.sourceKind !== 'html') ||
     !record.nodeId ||
     record.duplicateSemantic === 'duplicate' ||
     prepared.content.trim().length === 0
@@ -143,7 +143,7 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
 
   const degradedReason = appendDegradedReason(
     record.degradedReason,
-    `Markdown local image import degraded: ${degradedMessages.join(' | ')}`
+    `${prepared.sourceKind === 'html' ? 'HTML' : 'Markdown'} local image import degraded: ${degradedMessages.join(' | ')}`
   );
 
   connection.driver.execute('UPDATE import_runs SET result_status = ?, degraded_reason = ? WHERE id = ?', [
@@ -185,7 +185,7 @@ export function runPreparedImport(input: PreparedImportRecord, options?: RunPrep
     const imported = runPreparedImportViaDriver(driver, input, {
       ...options, prepareDeletionVersions: (nodeIds, deletedAt) => prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt)
     });
-    const record = rewriteMarkdownLocalImages(imported, input);
+    const record = rewriteImportLocalImages(imported, input);
     linkPreparedLocalizedImages(record, input);
     if (input.sourceKind === 'pdf' && record.nodeId && record.resultStatus !== 'failed') {
       importPdfSourceAttachment(record.nodeId, input.sourceLocator);
