@@ -29,9 +29,7 @@ function canExportCurrentArticle(args: EditorPaletteSource) {
   if (!args.activeNodeId || args.ws.trashedNodeIds.includes(args.activeNodeId)) return false;
   const activeNode = args.ws.nodesById[args.activeNodeId];
   if (!activeNode || activeNode.kind === 'folder') return false;
-  return activeNode.kind === 'topic' && !activeNode.anchorLink
-    ? true
-    : Boolean(activeNode.parentNodeId);
+  return !activeNode.anchorLink || Boolean(activeNode.parentNodeId);
 }
 
 function canAnnotateSelection(args: EditorPaletteSource) {

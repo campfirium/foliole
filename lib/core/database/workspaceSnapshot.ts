@@ -32,6 +32,7 @@ export interface WorkspaceSnapshot {
 
 export interface WorkspaceSnapshotLoadOptions {
   includeBody?: boolean;
+  includeReveal?: boolean;
 }
 
 interface WorkspaceNodeRow extends DatabaseRow {
@@ -112,7 +113,7 @@ function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
        ${bodyStatusExpression} AS body_status,
        n.virtual_filter,
        ${contentExpression} AS content,
-       n.reveal,
+       ${options?.includeReveal === false ? 'NULL' : 'n.reveal'} AS reveal,
        CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link,
        n.image_regions, n.image_sources, n.resource_references,
        n.import_content_fingerprint,

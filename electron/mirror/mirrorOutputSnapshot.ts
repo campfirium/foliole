@@ -14,7 +14,7 @@ import { collectChangedMirrorOwners, collectChangedMirrorPaths } from './mirrorP
 export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: string[]) {
   const paths = loadLibraryPathSettingsSync();
   const scoped = includeBody && Boolean(articleIds?.length);
-  let snapshot = loadWorkspaceSnapshot({ includeBody: includeBody && !scoped });
+  let snapshot = loadWorkspaceSnapshot({ includeBody: includeBody && !scoped, includeReveal: includeBody && !scoped });
   const plans = snapshot ? collectArticleMirrorPlans(snapshot, paths.mirror) : [];
   const recordsByArticleId = loadMirrorArticleRecords();
   if (scoped && snapshot) {
@@ -40,7 +40,7 @@ function loadMirrorPlanBodies(snapshot: WorkspaceSnapshot, plans: ArticleMirrorP
     const node = nodesById[nodeId];
     const document = loadWorkspaceNodeDocument(nodeId);
     if (!node || !document) throw new Error(`Mirror render node is missing: ${nodeId}`);
-    nodesById[nodeId] = { ...node, content: document.content, authorText: readNodeAuthorText(document.content) };
+    nodesById[nodeId] = { ...node, content: document.content, reveal: document.reveal, authorText: readNodeAuthorText(document.content) };
   }
   return { ...snapshot, nodesById };
 }
@@ -108,7 +108,7 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
         const node = snapshot.nodesById[nodeId];
         const document = loadWorkspaceNodeDocument(nodeId);
         if (!node || !document) return false;
-        nodesById[nodeId] = { ...node, content: document.content, authorText: readNodeAuthorText(document.content) };
+        nodesById[nodeId] = { ...node, content: document.content, reveal: document.reveal, authorText: readNodeAuthorText(document.content) };
       }
       return mirrorPlanRevision({ ...snapshot, nodesById }, plan) === revision;
     },

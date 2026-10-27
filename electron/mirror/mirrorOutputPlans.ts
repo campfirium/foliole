@@ -58,6 +58,16 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
   return record.mirroredAt < sourceUpdatedAt;
 }
 
+async function writeMirrorIfDifferent(filePath: string, markdown: string) {
+  try {
+    if (await fs.readFile(filePath, 'utf8') === markdown) return;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, markdown, 'utf8');
+}
+
 async function commitRenderedMirror(args: {
   currency: MirrorPlanCurrency;
   markdown: string;
@@ -74,8 +84,7 @@ async function commitRenderedMirror(args: {
         resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath),
         () => args.currency.retirementProtectedPaths(args.plan.articleId), args.paths.mirror);
     } else {
-      await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
-      await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
+      await writeMirrorIfDifferent(args.plan.targetPath, args.markdown);
     }
     await removeLegacyMirrorArticleDirectory(args.plan.targetPath, args.currency.retirementProtectedPaths(args.plan.articleId).paths);
     const record = { articleId: args.plan.articleId, mirroredAt: args.updatedAt, relativePath: args.plan.relativePath };
@@ -95,6 +104,7 @@ export async function processMirrorPlans(args: {
   updatedAt: string;
   changedOwners: Set<string>;
 }) {
+  const requested = new Set(args.options.articleIds ?? []);
   let rebuiltArticleCount = 0;
   const pendingArticleIds: string[] = [];
   let visitedArticleCount = 0;
@@ -109,7 +119,8 @@ export async function processMirrorPlans(args: {
       (args.mode === 'missing' && fileUpdatedAt
         ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
     const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== plan.relativePath);
-    if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged || args.changedOwners.has(plan.articleId)) {
+    if ((args.mode === 'incremental' && requested.has(plan.articleId)) ||
+      shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged || args.changedOwners.has(plan.articleId)) {
       await args.options.taskContext?.yieldIfNeeded();
       const markdown = await renderMirrorPlan(
         args.snapshot,

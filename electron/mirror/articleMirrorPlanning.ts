@@ -72,9 +72,10 @@ function resolveSourceUpdatedAt(snapshot: WorkspaceSnapshot, nodeIds: string[], 
 
 function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
   const nodeIdsByParent = new Map<string, string[]>();
+  const trashed = new Set(snapshot.trashedNodeIds);
   for (const node of Object.values(snapshot.nodesById)) {
     const parentId = node.parentNodeId;
-    if (parentId === null || node.anchorLink === null) continue;
+    if (parentId === null || node.anchorLink === null || trashed.has(node.id)) continue;
     const nodeIds = nodeIdsByParent.get(parentId) ?? [];
     nodeIds.push(node.id);
     nodeIdsByParent.set(parentId, nodeIds);

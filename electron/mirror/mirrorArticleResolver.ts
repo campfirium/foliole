@@ -1,5 +1,7 @@
 import { openDatabaseConnection } from '../database/connection.js';
 
+import { isManualItemAtFolderLevel } from './mirrorManualItemScope.js';
+
 interface MirrorNodeRow {
   id: string;
   parent_id: string | null;
@@ -16,14 +18,17 @@ function loadNodeRow(nodeId: string) {
 
 function resolveOwnerFromChain(rows: MirrorNodeRow[]) {
   let ownerId: string | null = null;
+  const byId = new Map(rows.map((row) => [row.id, row]));
   for (const row of rows) {
-    if (row.deleted_at && row.kind !== 'topic') {
+    if (isManualItemAtFolderLevel({ kind: row.kind, anchorLink: row.anchor_link, parentNodeId: row.parent_id },
+      byId.get(row.parent_id ?? '')?.kind)) return row.id;
+    if (row.deleted_at && row.kind !== 'topic' && !row.anchor_link) {
       return ownerId;
     }
     if (row.kind === 'topic' && !row.anchor_link) {
       ownerId = row.id;
     }
-    if (row.deleted_at) {
+    if (row.deleted_at && !row.anchor_link) {
       return ownerId;
     }
   }
@@ -50,7 +55,7 @@ function loadFolderArticleIds(folderId: string) {
        SELECT n.id, n.parent_id, n.kind, n.anchor_link
        FROM nodes n JOIN descendants d ON n.parent_id = d.id
      )
-     SELECT id FROM descendants WHERE id <> ? AND kind = 'topic' AND anchor_link IS NULL`
+     SELECT id FROM descendants WHERE id <> ? AND kind IN ('topic', 'item') AND anchor_link IS NULL`
   ).all(folderId, folderId) as Array<{ id: string }>;
   return rows.map((row) => row.id);
 }

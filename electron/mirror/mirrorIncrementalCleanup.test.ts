@@ -99,7 +99,7 @@ it.each(['missing', 'resume'] as const)('keeps unrelated leftovers during %s wor
 
 it('does not retire the selected legacy copy when its new output fails', async () => {
   await seedLeftovers();
-  save('article', 'Before');
+  save('article', 'After');
   vi.spyOn(fs, 'writeFile').mockRejectedValue(new Error('injected output failure'));
   await expect(syncIncrementalMirrorOutput(['article'])).rejects.toThrow('injected output failure');
   await expect(fs.readFile(mirror('Before/manual.txt'), 'utf8')).resolves.toContain('Legacy content');
