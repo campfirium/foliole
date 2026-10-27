@@ -86,9 +86,14 @@ function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderab
   });
   const unlocated = [...derivedByAnchorKey.entries()].flatMap(([key, children]) => {
     const anchor = children[0]?.anchorLink;
-    if (!anchor || (anchor.kind !== 'highlight' && anchor.kind !== 'cloze') || renderedKeys.has(key)) return [];
+    if (!anchor || renderedKeys.has(key)) return [];
     const locator = anchor.locator;
     const pages = getPdfAnchorLocators(locator).map((fragment) => fragment.page);
+    if (anchor.kind === 'image-excerpt' && pages.length > 0) {
+      return `(❄ PDF page: ${pages.join(', ')}; image excerpt: ` +
+        children.map((child) => preserveNoteLines(renderArticleBody(child, derivedChildren))).filter(Boolean).join(' | ') + ')';
+    }
+    if (anchor.kind !== 'highlight' && anchor.kind !== 'cloze') return [];
     if (pages.length > 0) {
       return `(❄ PDF ${pages.length === 1 ? 'page' : 'pages'}: ${pages.join(', ')})` +
         createNote(anchor.kind, anchor.id, '', 0, 0, false);
