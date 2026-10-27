@@ -1,7 +1,6 @@
 import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 
-import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { parseMarkdownImageLabelSize } from './markdownImageSize';
 import { isBrowserImageSource, isInternalImageSource, isRelativeImageSource } from './markdownImageSourceKinds';
 import type { MarkdownImageMatch } from './markdownImageTypes';
@@ -13,6 +12,7 @@ import {
   type MarkdownSyntaxTree
 } from './markdownLinkReferences';
 import { isSafeMarkdownLinkHref, normalizeMarkdownLinkDestination } from './markdownLinkSafety';
+import { parseMarkdownProjectionText } from './markdownProjectionParse';
 
 export type { MarkdownImageMatch } from './markdownImageTypes';
 
@@ -199,7 +199,7 @@ export function collectImageMatches(
   references: MarkdownLinkReferenceMap = new Map(),
   options: { allowRelativeImages?: boolean } = {}
 ): MarkdownImageMatch[] {
-  return collectImageMatchesFromTree(folioleMarkdownParser.parse(text), from, text, references, options);
+  return collectImageMatchesFromTree(parseMarkdownProjectionText(text), from, text, references, options);
 }
 
 export function collectImageMatchesFromTree(

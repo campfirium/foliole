@@ -1,6 +1,5 @@
-import { folioleMarkdownParser } from './folioleMarkdownParser';
+import { parseMarkdownProjectionText, type MarkdownProjectionTree as MarkdownSyntaxTree } from './markdownProjectionParse';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 export interface MarkdownWikiLinkRange {
@@ -189,21 +188,21 @@ function visitEmbeds(args: {
 }
 
 export function collectMarkdownWikiLinkRanges(text: string, offset = 0): MarkdownWikiLinkRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  const tree = parseMarkdownProjectionText(text);
   const links: MarkdownWikiLinkRange[] = [];
   visitWikiLinks({ links, node: tree.topNode, offset, source: text });
   return links.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
 export function collectMarkdownEmbedRanges(text: string, offset = 0): MarkdownEmbedRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  const tree = parseMarkdownProjectionText(text);
   const embeds: MarkdownEmbedRange[] = [];
   visitEmbeds({ embeds, node: tree.topNode, offset, source: text });
   return embeds.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
 export function collectMarkdownFootnoteRanges(text: string, offset = 0): MarkdownFootnoteRange[] {
-  const tree = folioleMarkdownParser.parse(text);
+  const tree = parseMarkdownProjectionText(text);
   const footnotes: MarkdownFootnoteRange[] = [];
   visitFootnotes({ footnotes, node: tree.topNode, offset, source: text });
   return footnotes.sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));

@@ -20,6 +20,7 @@ import {
 } from './inlineTextDecorationPlans';
 import { collectImageMatches, type MarkdownImageMatch } from './markdownImageMatches';
 import type { MarkdownLinkReferenceMap } from './markdownLinkReferences';
+import { withMarkdownProjectionParse } from './markdownProjectionParse';
 export interface PreviewLineDecorationPlan {
   escapedRanges: ReturnType<typeof collectPreviewLineMatchState>['escapedRanges'];
   footnoteMatches: ReturnType<typeof collectPreviewLineMatchState>['footnoteMatches'];
@@ -126,6 +127,10 @@ function collectPreviewInlinePresentationPlans(args: {
 }
 
 export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlanArgs): PreviewLineDecorationPlan {
+  return withMarkdownProjectionParse(args.lineText, () => buildPreviewLineDecorationPlan(args));
+}
+
+function buildPreviewLineDecorationPlan(args: PreviewLineDecorationPlanArgs): PreviewLineDecorationPlan {
   const isCodeFenceLine = args.codeFenceLineFroms?.has(args.lineFrom) ?? false;
   const showSyntaxOnLine = args.markdownSyntaxVisible && args.isCursorLine;
   const linkReferences = args.linkReferences ?? new Map();
@@ -186,7 +191,11 @@ export function collectPreviewLineDecorationPlan(args: PreviewLineDecorationPlan
   };
 }
 
-export function collectSourceLineDecorationPlan(args: {
+export function collectSourceLineDecorationPlan(args: Parameters<typeof buildSourceLineDecorationPlan>[0]): SourceLineDecorationPlan {
+  return withMarkdownProjectionParse(args.lineText, () => buildSourceLineDecorationPlan(args));
+}
+
+function buildSourceLineDecorationPlan(args: {
   inCodeBlock: boolean;
   codeFenceLineFroms?: ReadonlySet<number>;
   lineFrom: number;

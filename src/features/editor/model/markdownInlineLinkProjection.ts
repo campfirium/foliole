@@ -1,4 +1,3 @@
-import { folioleMarkdownParser } from './folioleMarkdownParser';
 import type { MarkdownInlineLinkRange } from './markdownInlineProjectionTypes';
 import {
   normalizeMarkdownLinkReferenceLabel,
@@ -11,6 +10,7 @@ import {
   normalizeMarkdownLinkDestination,
   projectMarkdownEscapedText
 } from './markdownLinkSafety';
+import { parseMarkdownProjectionText } from './markdownProjectionParse';
 
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
@@ -135,7 +135,7 @@ function collectParsedMarkdownInlineLinkRanges(args: {
 }) {
   return collectParsedMarkdownInlineLinkRangesFromTree({
     ...args,
-    tree: folioleMarkdownParser.parse(args.text)
+    tree: parseMarkdownProjectionText(args.text)
   });
 }
 

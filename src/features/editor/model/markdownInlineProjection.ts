@@ -1,11 +1,10 @@
-import { folioleMarkdownParser } from './folioleMarkdownParser';
 import { overlapsInlineCandidateRange, selectInlineProjectionCandidates } from './markdownInlineCandidateSelection';
 import type { MarkdownInlineRange, MarkdownInlineRangeKind } from './markdownInlineProjectionTypes';
 import { collectLenientAdjacentStrongCandidates } from './markdownLenientAdjacentStrongProjection';
 import { collectLenientSpacedStrongCandidates } from './markdownLenientSpacedStrongProjection';
 import { collectLenientTripleStarCandidates } from './markdownLenientTripleStarProjection';
+import { parseMarkdownProjectionText, type MarkdownProjectionTree as MarkdownSyntaxTree } from './markdownProjectionParse';
 
-type MarkdownSyntaxTree = ReturnType<typeof folioleMarkdownParser.parse>;
 type MarkdownSyntaxNode = MarkdownSyntaxTree['topNode'];
 
 interface InlineProjectionCandidate {
@@ -189,7 +188,7 @@ function visitInlineCandidates(args: {
 }
 
 function collectInlineCandidates(text: string) {
-  const tree = folioleMarkdownParser.parse(text);
+  const tree = parseMarkdownProjectionText(text);
   const candidates: InlineProjectionCandidate[] = [];
   visitInlineCandidates({
     candidates,
