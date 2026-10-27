@@ -4,7 +4,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import { cycleChanges } from './cycleFlowChanges.js';
 import { allocateCycleKey, cycleStamp } from './cycleFlowFingerprint.js';
 import { chooseCycleCurrent } from './cycleFlowOpen.js';
-import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { fullDayCandidates } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -12,7 +12,7 @@ import { readCycleRows, writeCycleRows } from './dailyFlowStorage.js';
 import { calculateReviewStepElapsedMs, resolveEarliestReviewDueAt } from './flowSessionProgress.js';
 
 export async function advanceCycleFlow(db: DbPort, source: DailyFlowSession, args: DailyFlowCommitArgs,
-  snapshot: DailyFlowSnapshot, settings: DailyFlowSettings, persistence: DailyFlowPersistence,
+  snapshot: DailyFlowLearningSnapshot, settings: DailyFlowSettings, persistence: DailyFlowPersistence,
   mode: Parameters<typeof chooseCycleCurrent>[2]) {
   const cycle = { ...source.cycle! };
   delete cycle.change;

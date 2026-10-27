@@ -1,7 +1,9 @@
+import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapshot.js';
 import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
 import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
+import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
@@ -14,6 +16,7 @@ import { applyReviewGrade } from './reviewMutations.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 export const desktopDailyFlowPersistence: DailyFlowPersistence = {
+  learningSnapshot: async (db, ids) => loadDailyFlowLearningSnapshot(db, requireDatabaseHostName(openDatabaseConnection().driver), ids),
   snapshot: async (_db, nodeIds) => {
     if (nodeIds) {
       const { nodesById, trashedNodeIds } = buildWorkspaceListNodesById(queryWorkspaceRows(openDatabaseConnection().driver, nodeIds));

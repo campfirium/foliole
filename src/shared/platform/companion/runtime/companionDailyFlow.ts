@@ -2,6 +2,7 @@ import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/revi
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowContract';
+import { loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
@@ -18,6 +19,7 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export const companionDailyFlowPersistence: DailyFlowPersistence = {
+  learningSnapshot: async (db, ids) => loadDailyFlowLearningSnapshot(db, await iosCompanionHostName(db), ids),
   snapshot: async (db, nodeIds) => {
     if (nodeIds) return { ...buildIosWorkspaceNodes(await loadCompanionSnapshotNodeRows(db, await iosCompanionHostName(db), nodeIds, true)), nodeOrder: [...nodeIds] };
     return (await loadIosCompanionWorkspaceSnapshot(db)) ?? { nodeOrder: [], nodesById: {}, trashedNodeIds: [] };

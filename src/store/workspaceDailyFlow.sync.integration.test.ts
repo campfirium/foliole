@@ -19,6 +19,7 @@ import { compactFlowHistoryEntry, restoreFlowHistoryEntry } from '../../lib/core
 import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, createReviewSchedulerParameters, getReviewSchedulerVersion } from '../../lib/core/review/settings';
 import { readCompanionReviewTopic, postponeCompanionReviewTopic, dismissCompanionReviewTopic } from '../companion/companionReadingReview';
+import { companionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { advanceFlowSession } from './workspaceFlowSession';
@@ -32,6 +33,7 @@ function settings(peer: Peer) {
 }
 function persistence(peer: Peer): DailyFlowPersistence {
   return {
+    learningSnapshot: companionDailyFlowPersistence.learningSnapshot,
     snapshot: async db => (await loadIosCompanionWorkspaceSnapshot(db))!,
     grade: async (_db, value, opId) => applyReviewGrade(peer.driver, { ...value, opId },
       { hostName: peer.name, createId: () => `${opId}-log` }),

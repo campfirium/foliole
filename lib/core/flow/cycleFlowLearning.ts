@@ -2,7 +2,7 @@ import { hasDeletedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js
 import type { SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 
-import type { DailyFlowCommitArgs, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 
 export function sameLearningProfile(left: unknown, right: unknown) {
@@ -12,7 +12,7 @@ export function sameLearningProfile(left: unknown, right: unknown) {
   return Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(key => a[key] === b[key]);
 }
 
-export function assertCycleLearningFacts(snapshot: DailyFlowSnapshot, args: DailyFlowCommitArgs) {
+export function assertCycleLearningFacts(snapshot: DailyFlowLearningSnapshot, args: DailyFlowCommitArgs) {
   const changes = args.grade ? [{ nodeId: args.grade.nodeId, before: args.grade.before, field: 'review' as const }]
     : args.reviewHistory ? [{ nodeId: args.reviewHistory.nodeId, before: args.reviewHistory.before, field: 'review' as const }]
     : (args.readings ?? []).map(value => ({ ...value, field: 'reading' as const }));

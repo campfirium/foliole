@@ -3,12 +3,13 @@ import { readNodeAuthorText } from '../nodes/nodeAuthorFrontmatter.js';
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { normalizeReadwiseRemoteLifecycle, type ReadwiseRemoteLifecycleState } from '../readwise/readwiseRemoteLifecycle.js';
-import { isReadingState, type ReadingState } from '../review/readingState.js';
+import { type ReadingState } from '../review/readingState.js';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
 import { parseImageSources } from './imageSources.js';
 import { parseNodeResourceReferences, type NodeResourceReference } from './nodeResourceReferences.js';
+import { toReadingProfile, toReviewProfile } from './workspaceLearningProfiles.js';
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -137,42 +138,6 @@ export interface WorkspaceNodeRowShape {
 
 function parseNodeKind(value: string | null): NodeKind {
   return isNodeKind(value) ? value : 'topic';
-}
-
-function toReadingProfile(row: WorkspaceNodeRowShape): WorkspaceReadingProfile | null {
-  if (typeof row.reading_last_handled_at !== 'string' || typeof row.reading_next_at !== 'string') {
-    return null;
-  }
-  if (!isReadingState(row.reading_state)) {
-    return null;
-  }
-  return {
-    intervalDurationMs: row.reading_interval_duration_ms ?? 0,
-    intervalGrowthFactor: row.reading_interval_growth_factor ?? 1,
-    lastHandledAt: row.reading_last_handled_at,
-    nextAt: row.reading_next_at,
-    priority: row.reading_priority ?? 0,
-    readingPosition: row.reading_position ?? 0,
-    repetitionCount: row.reading_repetition_count ?? 0,
-    state: row.reading_state
-  };
-}
-
-function toReviewProfile(row: WorkspaceNodeRowShape): WorkspaceReviewProfile | null {
-  if (typeof row.review_due !== 'string') {
-    return null;
-  }
-  return {
-    due: row.review_due,
-    lastReviewAt: row.review_last_review_at,
-    state: (row.review_state ?? 0) as 0 | 1 | 2 | 3,
-    stability: row.review_stability ?? 0,
-    difficulty: row.review_difficulty ?? 0,
-    elapsedDays: row.review_elapsed_days ?? 0,
-    scheduledDays: row.review_scheduled_days ?? 0,
-    reps: row.review_reps ?? 0,
-    lapses: row.review_lapses ?? 0
-  };
 }
 
 export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): WorkspaceNodeSnapshot {

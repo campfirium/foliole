@@ -1,6 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import type { DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -11,14 +11,23 @@ import { advanceReviewSession } from './flowSessionState.js';
 
 export async function scopedDailySnapshot(db: DbPort, persistence: DailyFlowPersistence,
   ids: (string | null | undefined)[]) {
+  return persistence.snapshot(db, await dailyFactNodeIds(db, ids));
+}
+
+export async function scopedDailyLearningSnapshot(db: DbPort, persistence: DailyFlowPersistence,
+  ids: (string | null | undefined)[]) {
+  return persistence.learningSnapshot(db, await dailyFactNodeIds(db, ids));
+}
+
+async function dailyFactNodeIds(db: DbPort, ids: (string | null | undefined)[]) {
   const ancestors = await db.query<{ id: string }>(`WITH RECURSIVE selected(id, parent_id) AS (
     SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
     UNION SELECT n.id, n.parent_id FROM nodes n JOIN selected s ON n.id = s.parent_id
   ) SELECT id FROM selected`, [JSON.stringify(ids.filter(Boolean))]);
-  return persistence.snapshot(db, ancestors.map(row => row.id));
+  return ancestors.map(row => row.id);
 }
 
-export function advanceDailyGrade(snapshot: DailyFlowSnapshot, session: DailyFlowSession,
+export function advanceDailyGrade(snapshot: DailyFlowLearningSnapshot, session: DailyFlowSession,
   now: string, settings: DailyFlowSettings): DailyFlowSession {
   const nodeId = session.currentNodeId!;
   const stillReady = flowPlan(snapshot, 'review-first', now, settings).fsrsQueueNodeIds.includes(nodeId);

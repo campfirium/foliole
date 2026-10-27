@@ -1,12 +1,12 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 
-import type { DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
 import { advanceReviewSession, completeReviewSession } from './flowSessionState.js';
 
-export function advanceDailyReading(snapshot: DailyFlowSnapshot, session: DailyFlowSession,
+export function advanceDailyReading(snapshot: DailyFlowLearningSnapshot, session: DailyFlowSession,
   now: string, mode: ReviewSessionMode,
   settings: DailyFlowSettings): DailyFlowSession {
   const current = session.currentNodeId!;

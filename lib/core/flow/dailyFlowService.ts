@@ -3,11 +3,12 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { commitCycleFlow } from './cycleFlowCommit.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
-import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
 export interface DailyFlowPersistence {
+  learningSnapshot(db: DbPort, nodeIds: readonly string[]): Promise<DailyFlowLearningSnapshot>;
   snapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowSnapshot>;
   grade(db: DbPort, args: NonNullable<DailyFlowCommitArgs['grade']>, opId: string): Promise<SchedulerCard | null>;
   reading(db: DbPort, value: NonNullable<DailyFlowCommitArgs['readings']>[number], now: string): Promise<void>;

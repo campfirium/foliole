@@ -3,7 +3,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { CycleMeta, CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -16,7 +16,7 @@ async function scanRange(db: DbPort, meta: CycleMeta, args: { mode: ReviewSessio
     const rows = await db.query<CycleRow>(`SELECT * FROM daily_flow_entries WHERE active=1
       AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [meta.scanAfter, meta.lapLimit, BATCH_SIZE]);
     const ids = rows.map(row => row.node_id);
-    const snapshot = ids.length ? await scopedDailySnapshot(db, args.persistence, ids) : null;
+    const snapshot = ids.length ? await scopedDailyLearningSnapshot(db, args.persistence, ids) : null;
     const plan = snapshot ? flowPlan({ ...snapshot, nodeOrder: ids }, args.mode, args.now, args.settings) : null;
     const ready = new Set(args.mode === 'review-first' ? plan?.fsrsQueueNodeIds : args.mode === 'reading-only'
       ? plan?.readingQueueNodeIds : [...(plan?.fsrsQueueNodeIds ?? []), ...(plan?.readingQueueNodeIds ?? [])]);

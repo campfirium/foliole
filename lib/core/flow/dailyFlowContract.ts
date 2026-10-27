@@ -11,6 +11,8 @@ import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
 import { flowHistorySessionSchema } from './flowHistorySession.js';
 
 export type DailyFlowSnapshot = { nodeOrder: string[]; nodesById: Record<string, WorkspaceNodeSnapshot>; trashedNodeIds: string[] };
+export type DailyFlowLearningNode = Omit<ReviewQueueNode, 'content' | 'reveal'> & { hasContent: boolean; hasReveal: boolean };
+export type DailyFlowLearningSnapshot = { nodeOrder: string[]; nodesById: Record<string, ReviewQueueNode>; trashedNodeIds: string[] };
 export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string };
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']), includeScheduledFallback: z.boolean().optional(),

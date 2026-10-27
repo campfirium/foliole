@@ -11,7 +11,7 @@ import { replayLegacyCycle } from './cycleFlowLegacy.js';
 import { chooseCycleCurrent, isCycleCurrentReady, reconcileCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot, scopedDailySnapshot } from './dailyFlowGrade.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { flowDay, flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
@@ -45,7 +45,7 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
     cycle: { ...base.cycle! } };
   delete sourceSession.cycle.change;
   sourceSession.cycle.stamp = cycleStamp(sourceSession.cycle, sourceSession);
-  const snapshot = await scopedDailySnapshot(db, persistence, ids);
+  const snapshot = await scopedDailyLearningSnapshot(db, persistence, ids);
   assertCycleLearningFacts(snapshot, args);
   if (args.readingAction && (base.currentNodeId !== args.readings?.[0]?.nodeId ||
     !isReadingReviewItemNode(snapshot.nodesById[base.currentNodeId ?? '']))) throw new Error('daily_flow_learning_changed');
@@ -56,7 +56,7 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
   const historySession = args.historyMode ? args.historySourceSession?.flowFormat === 'legacy-queue-v1'
     ? await replayLegacyCycle(db, base, args, settings, persistence) : await replayCycleHistory(db, base, args) : null;
   const { learningChanged, ...result } = await persistCycleLearning(db, args, persistence);
-  const updated = learningChanged ? await scopedDailySnapshot(db, persistence, ids) : snapshot;
+  const updated = learningChanged ? await scopedDailyLearningSnapshot(db, persistence, ids) : snapshot;
   let session: DailyFlowSession = historySession ?? await advanceCycleFlow(db, sourceSession, args, updated, settings, persistence, mode);
   if (args.reviewHistory?.mode === 'redo') session = { ...session,
     nextReviewDueAt: resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };

@@ -2,13 +2,15 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
+import { scopedDailyLearningSnapshot } from '../../lib/core/flow/dailyFlowGrade';
+import { transactionDailyFlowPersistence } from '../../lib/core/flow/dailyFlowTransactionFacts';
 import { commitDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readCompanionReviewTopic } from '../companion/companionReadingReview';
 import { assertDurable, node, now, open, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
 afterEach(closeLibraries);
 
-it.each(['soon', 'read'] as const)('reads unchanged learning facts once while preserving %s receipts', async action => {
+it.each(['soon', 'read'] as const)('reads unchanged learning facts once while persisting %s results', async action => {
   const [peer] = await setupPeers();
   for (const id of ['a', 'b', 'c']) node(peer, id, 'topic');
   const config = settings(peer);
@@ -22,9 +24,9 @@ it.each(['soon', 'read'] as const)('reads unchanged learning facts once while pr
   const result = await commitDailyFlow(peer.port, { opId: crypto.randomUUID(), now,
     token: session.daily!, sourceSession: session, readingAction: action,
     readings: [{ nodeId: id, before: reading, after }] }, config, { ...persistence,
-    snapshot: async (db, ids) => {
+    learningSnapshot: async (db, ids) => {
       reads.push([...(ids ?? [])]);
-      return persistence.snapshot(db, ids);
+      return persistence.learningSnapshot(db, ids);
     } });
   expect(reads.filter(ids => ids.length === 1 && ids[0] === id)).toHaveLength(action === 'soon' ? 1 : 2);
   if (action === 'soon') {
@@ -33,8 +35,7 @@ it.each(['soon', 'read'] as const)('reads unchanged learning facts once while pr
   }
   const persisted = await snapshot(peer);
   expect(persisted.nodesById[id]!.reading).toEqual(after);
-  expect(result.readings).toEqual([{ nodeId: id, reading: after ?? null }]);
-  expect(result.nodes![id]!.reading).toEqual(after);
+  if (action === 'read') expect(result.readings).toEqual([{ nodeId: id, reading: after ?? null }]);
   expect(result.session.currentNodeId).not.toBe(id);
   await assertDurable(peer, result.session);
 });
@@ -72,9 +73,10 @@ it('returns every requested ancestor even when a deep hierarchy exceeds retained
   const result = await commitDailyFlow(peer.port, { opId: crypto.randomUUID(), now,
     token: session.daily!, sourceSession: session, readingAction: 'soon',
     readings: [{ nodeId: 'article', before: null, after: null }] }, config, persistence);
-  expect(Object.keys(result.nodes!)).toHaveLength(141);
-  expect(result.nodes!['folder-0']?.title).toBe('folder-0');
-  expect(result.nodes!.article?.parentNodeId).toBe('folder-139');
+  const facts = await peer.port.transaction(db => scopedDailyLearningSnapshot(db, transactionDailyFlowPersistence(persistence), ['article']));
+  expect(Object.keys(facts.nodesById)).toHaveLength(141);
+  expect(facts.nodesById['folder-0']?.kind).toBe('folder');
+  expect(facts.nodesById.article?.parentNodeId).toBe('folder-139');
   expect(result.session.currentNodeId).toBe('article');
   await assertDurable(peer, result.session);
 });

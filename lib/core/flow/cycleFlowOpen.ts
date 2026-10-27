@@ -7,7 +7,7 @@ import { allocateCycleKey, changeCycleHash, cycleMeta, cycleStamp } from './cycl
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { EMPTY_CYCLE_HASH, type CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot, scopedDailySnapshot } from './dailyFlowGrade.js';
 import { flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -67,7 +67,7 @@ export async function isCycleCurrentReady(db: DbPort, session: DailyFlowSession,
   if (!id) return false;
   const [row] = await readCycleRows(db, [id]);
   if (!row?.active) return false;
-  const snapshot = await scopedDailySnapshot(db, persistence, [id]);
+  const snapshot = await scopedDailyLearningSnapshot(db, persistence, [id]);
   const plan = flowPlan(snapshot, mode, now, settings);
   return (mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only' ? plan.readingQueueNodeIds
     : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]).includes(id);

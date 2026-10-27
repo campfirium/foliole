@@ -2,7 +2,7 @@ import { buildReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart } from '../review/reviewDayBoundary.js';
 
-import type { DailyFlowSettings, DailyFlowSnapshot, DailyFlowOpenArgs } from './dailyFlowContract.js';
+import type { DailyFlowSettings, DailyFlowLearningSnapshot, DailyFlowOpenArgs } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { buildReviewSessionAfterGrade } from './flowGradeSession.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
@@ -21,7 +21,7 @@ export function flowPlan(snapshot: FlowPlanningSnapshot, mode: ReviewSessionMode
     pushQueueRules: settings.pushQueue });
 }
 
-export function fullDayCandidates(snapshot: DailyFlowSnapshot, now: string, settings: DailyFlowSettings) {
+export function fullDayCandidates(snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings) {
   const end = new Date(flowDay(now, settings));
   end.setDate(end.getDate() + 1);
   const plan = flowPlan(snapshot, 'recommended', now, settings, false, new Date(end.getTime() - 1).toISOString());
@@ -69,7 +69,7 @@ function resolveFlowSoon(seed: DailyFlowSession | undefined,
   return { soon: pending.filter(id => ready.has(id)), hiddenSoon: pending.filter(id => !ready.has(id)) };
 }
 
-export function afterDailyGrade(snapshot: DailyFlowSnapshot, session: DailyFlowSession,
+export function afterDailyGrade(snapshot: DailyFlowLearningSnapshot, session: DailyFlowSession,
   mode: ReviewSessionMode, now: string, settings: DailyFlowSettings): DailyFlowSession {
   const plan = flowPlan(snapshot, mode, now, settings);
   const planned = mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only' ? plan.readingQueueNodeIds : plan.queueNodeIds;

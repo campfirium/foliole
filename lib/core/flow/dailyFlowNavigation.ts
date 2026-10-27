@@ -4,7 +4,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import { reconcileCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot, scopedDailySnapshot } from './dailyFlowGrade.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { readCycleRows, saveCycleFlow, type CycleStored } from './dailyFlowStorage.js';
@@ -17,7 +17,7 @@ export async function commitDailyFlowNavigation(db: DbPort, stored: CycleStored,
   const target = args.expectedContinueNodeId!;
   const base = stored.invalidated ? await reconcileCycle(db, stored, args.now, settings, persistence)
     : { ...source, cycle: { ...source.cycle! } };
-  const snapshot = await scopedDailySnapshot(db, persistence, [target]);
+  const snapshot = await scopedDailyLearningSnapshot(db, persistence, [target]);
   const [row] = await readCycleRows(db, [target]);
   const ready = row?.active && flowPlan(snapshot, 'reading-only', args.now, settings).readingQueueNodeIds.includes(target);
   const session = { ...base, currentNodeId: ready ? target : null, continueNodeId: null,
@@ -28,5 +28,6 @@ export async function commitDailyFlowNavigation(db: DbPort, stored: CycleStored,
     settingsKey: JSON.stringify(settings), now: args.now, revision: stored.revision + 1, session: window });
   await db.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json) VALUES (?, ?, ?, NULL)',
     [args.opId, hash, saved.daily!.revision]);
-  return { session: saved, nodes: snapshot.nodesById };
+  const receipt = await scopedDailySnapshot(db, persistence, [target]);
+  return { session: saved, nodes: receipt.nodesById };
 }

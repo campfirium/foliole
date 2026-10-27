@@ -2,7 +2,7 @@ import type { WorkspaceNodeSnapshot } from '../database/workspaceSnapshotHelpers
 import { hasNodeReveal } from '../nodes/nodeContentFlags.js';
 
 export type ReviewItemKind = 'none' | 'reading' | 'fsrs';
-export type ReviewItemNodeLike = Pick<WorkspaceNodeSnapshot, 'kind' | 'review' | 'reveal' | 'hasReveal'> & {
+export type ReviewItemNodeLike = Pick<WorkspaceNodeSnapshot, 'kind' | 'review'> & Partial<Pick<WorkspaceNodeSnapshot, 'reveal' | 'hasReveal'>> & {
   anchorLink?: { kind: 'highlight' | 'cloze' | 'image-excerpt' } | null;
 };
 
