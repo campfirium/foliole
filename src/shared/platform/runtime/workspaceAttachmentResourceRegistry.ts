@@ -10,6 +10,8 @@ interface WorkspaceAttachmentSnapshot {
   nodesById: Record<string, { attachments?: readonly unknown[] }>;
 }
 
+const catalogDescriptions = new WeakMap<WorkspaceAttachmentSnapshot['nodesById'], AttachmentResourceDescription[]>();
+
 function isAttachmentResourceDescription(value: unknown): value is AttachmentResourceDescription {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
@@ -26,8 +28,13 @@ function isAttachmentResourceDescription(value: unknown): value is AttachmentRes
 
 export function registerWorkspaceAttachmentResources(snapshot: WorkspaceAttachmentSnapshot | null) {
   if (!snapshot) return;
-  const descriptions = Object.values(snapshot.nodesById)
-    .flatMap((node) => node.attachments ?? [])
-    .filter(isAttachmentResourceDescription);
+  let descriptions = catalogDescriptions.get(snapshot.nodesById);
+  if (!descriptions) {
+    descriptions = Object.values(snapshot.nodesById)
+      .flatMap((node) => node.attachments ?? [])
+      .filter(isAttachmentResourceDescription);
+    catalogDescriptions.set(snapshot.nodesById, descriptions);
+  }
+  // Registration still runs after a registry reset or another library's publication.
   registerAttachmentResourceDescriptions(descriptions);
 }

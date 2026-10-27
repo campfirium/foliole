@@ -12,7 +12,7 @@ test('recovers when a local attachment arrives after its image is first rendered
   const attachmentId = createHash('sha256').update(sourceBuffer).digest('hex');
   const sourceBytes = sourceBuffer.toString('base64');
 
-  await desktopWindow.evaluate(async ({ attachmentId: id, nodeId, sourceBytes: bytes }) => {
+  await desktopWindow.evaluate(async ({ attachmentId: id, nodeId }) => {
     const debug = window.__folioleWorkspaceDebug;
     if (!debug?.seedNodes || !debug.openNode || !debug.importClipboardImageAttachment) {
       throw new Error('Workspace debug attachment helpers are unavailable');
@@ -23,25 +23,17 @@ test('recovers when a local attachment arrives after its image is first rendered
       kind: 'topic',
       title: 'Delayed local image'
     }]);
-    const widgetReady = new Promise<void>((resolve) => {
-      const selector = `[data-md-image-editor-node-id="${nodeId}"]`;
-      const observer = new MutationObserver(() => {
-        if (!document.querySelector(selector)) return;
-        observer.disconnect();
-        resolve();
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
+    await debug.openNode(nodeId);
+  }, { attachmentId, nodeId: NODE_ID });
+  const widget = desktopWindow.locator(`[data-md-image-editor-node-id="${NODE_ID}"]`);
+  await expect(widget).toHaveCount(1);
+  expect(await widget.locator('img').evaluateAll((images: HTMLImageElement[]) =>
+    images.every(image => image.naturalWidth === 0))).toBe(true);
+  await desktopWindow.evaluate(async ({ nodeId, bytes }) => {
+    await window.__folioleWorkspaceDebug?.importClipboardImageAttachment?.({
+      bytesBase64: bytes, mimeType: 'image/png', nodeId, originalName: 'delayed-local-image.png'
     });
-    const openNode = debug.openNode(nodeId);
-    await widgetReady;
-    await debug.importClipboardImageAttachment({
-      bytesBase64: bytes,
-      mimeType: 'image/png',
-      nodeId,
-      originalName: 'delayed-local-image.png'
-    });
-    await openNode;
-  }, { attachmentId, nodeId: NODE_ID, sourceBytes });
+  }, { nodeId: NODE_ID, bytes: sourceBytes });
 
   await expect(desktopWindow.locator(`[data-md-image-editor-node-id="${NODE_ID}"]`)).toHaveCount(1);
   const image = desktopWindow.locator('.cm-md-image-element');
