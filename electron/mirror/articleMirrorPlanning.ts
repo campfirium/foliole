@@ -70,8 +70,21 @@ function resolveSourceUpdatedAt(snapshot: WorkspaceSnapshot, nodeIds: string[], 
   }, initial);
 }
 
+function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
+  const nodeIdsByParent = new Map<string, string[]>();
+  for (const node of Object.values(snapshot.nodesById)) {
+    const parentId = node.parentNodeId;
+    if (parentId === null || node.anchorLink === null) continue;
+    const nodeIds = nodeIdsByParent.get(parentId) ?? [];
+    nodeIds.push(node.id);
+    nodeIdsByParent.set(parentId, nodeIds);
+  }
+  return nodeIdsByParent;
+}
+
 export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorPlan[] {
   const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
+  const derivedNodeIdsByParent = collectDerivedNodeIdsByParent(snapshot);
   const usedDirectoryNamesByParent = createRootReservedDirectoryNames(mirrorRoot);
   const resolvedFolderDirectories = new Map<string, string>();
 
@@ -89,9 +102,7 @@ export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoo
     const usedNames = usedDirectoryNamesByParent.get(targetDirectory) ?? new Set<string>();
     usedDirectoryNamesByParent.set(targetDirectory, usedNames);
     const targetPath = path.join(targetDirectory, createStableFileName(article.title, article.createdAt, usedNames));
-    const derivedNodeIds = Object.values(snapshot.nodesById)
-      .filter((node) => node.parentNodeId === article.id && node.anchorLink !== null)
-      .map((node) => node.id);
+    const derivedNodeIds = derivedNodeIdsByParent.get(article.id) ?? [];
     const manualTopicIds = (manualTopicsByArticleId.get(article.id) ?? []).map((node) => node.id);
     return {
       articleId: article.id,
