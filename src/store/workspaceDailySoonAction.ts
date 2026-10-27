@@ -1,5 +1,6 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
+import { hasPersistentDailyFlow } from './workspaceDailyFlowMutations';
 import { persistAndApplyReadingReviewPatch } from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { runtimeWorkspaceReviewPersistence } from './workspaceReviewPersistence';
@@ -21,7 +22,7 @@ export function createRevisitReviewTopicSoonAction(set: Set, get: () => Workspac
       persistence: runtimeWorkspaceReviewPersistence, buildPatch: state => {
         const node = state.nodesById[currentNodeId];
         if (!node) return null;
-        const reviewSession = advanceAfterSoonAction({ currentNodeId, now, snapshot, state,
+        const reviewSession = hasPersistentDailyFlow(snapshot.reviewSession) ? snapshot.reviewSession : advanceAfterSoonAction({ currentNodeId, now, snapshot, state,
           readingElapsedMsDelta: calculateReviewStepElapsedMs(snapshot.reviewSession, now),
           progressDelta: isExistingQueueTopic(snapshot.reviewSession, currentNodeId) ? 1 : 0 });
         const active = buildReviewActiveNodeContext(state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null);

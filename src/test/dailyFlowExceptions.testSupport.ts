@@ -14,7 +14,6 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/setting
 import { readCompanionReviewTopic } from '../companion/companionReadingReview';
 import { gradeCompanionReviewCard } from '../companion/companionReviewSession';
 import { companionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
-import { advanceFlowSession } from '../store/workspaceFlowSession';
 
 export const now = '2026-10-26T08:00:00.000Z';
 export const due = '2026-10-26T08:01:00.000Z';
@@ -69,9 +68,8 @@ export async function act(peer: Peer, session: DailyFlowSession, action: 'grade'
     return (await commitDailyFlow(peer.port, { ...base, grade: { nodeId: id, before: before.nodesById[id]!.review,
       grade: 3, reviewedAt: stamp, cardBefore, cardAfter, schedulerVersion } }, config, persistence)).session;
   }
-  const nextSession = advanceFlowSession({ action: 'soon', snapshot: before, session, mode: 'recommended', now: stamp });
   const reading = action === 'read' ? readCompanionReviewTopic({ snapshot: before, nodeId: id, now: stamp })!.snapshot.nodesById[id]!.reading : before.nodesById[id]!.reading;
-  return (await commitDailyFlow(peer.port, { ...base, ...(action === 'soon' ? { nextSession } : { readingAction: 'read' }),
+  return (await commitDailyFlow(peer.port, { ...base, readingAction: action === 'soon' ? 'soon' : 'read',
     readings: [{ nodeId: id, before: before.nodesById[id]!.reading, after: reading }] }, config, persistence)).session;
 }
 

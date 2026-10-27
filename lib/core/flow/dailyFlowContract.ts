@@ -31,7 +31,7 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   expectedContinueNodeId: z.string().min(1).optional(),
   sourceSession: flowHistorySessionSchema.optional(),
   nextSession: flowHistorySessionSchema.optional(),
-  readingAction: z.enum(['read', 'later', 'dismiss']).optional(),
+  readingAction: z.enum(['read', 'later', 'dismiss', 'soon']).optional(),
   historyMode: z.enum(['undo', 'redo']).optional(),
   readings: z.array(z.object({ nodeId: z.string().min(1), before: reading.nullable(), after: reading.nullable(),
     completedReviewDay: z.string().optional() }).strict()).optional(),
@@ -44,7 +44,10 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   !value.sourceSession && !value.nextSession && !value.grade && !value.readings && !value.readingAction &&
   !value.historyMode && !value.reviewHistory) : !value.expectedContinueNodeId,
   'Continue navigation requires only its target and cursor identity').refine(value => !value.readingAction || Boolean(value.readings?.length && value.readings[0]?.nodeId === value.sourceSession?.currentNodeId),
-  'Reading advancement requires the current topic mutation').refine(value => !value.historyMode || Boolean(value.sourceSession && value.nextSession &&
+  'Reading advancement requires the current topic mutation').refine(value => value.readingAction !== 'soon' || Boolean(
+    !value.nextSession && value.readings?.length === 1 && value.readings[0]?.completedReviewDay === undefined &&
+    JSON.stringify(value.readings[0]?.before) === JSON.stringify(value.readings[0]?.after)),
+  'Soon advances only the current topic without changing its reading facts').refine(value => !value.historyMode || Boolean(value.sourceSession && value.nextSession &&
     !value.grade && !value.readingAction && (value.reviewHistory?.mode === value.historyMode || value.readings?.length)),
   'History replay requires its source, target and learning mutation').refine(value => Number(Boolean(value.grade)) + Number(Boolean(value.reviewHistory)) +
   Number(Boolean(value.readings?.length)) <= 1, 'Only one learning mutation per command');

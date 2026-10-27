@@ -69,3 +69,18 @@ it('accepts only the minimal continue-reading intent and forbids mixing navigati
   expect(dailyFlowCommitSchema.safeParse({ ...args, expectedContinueNodeId: undefined }).success).toBe(false);
   expect(dailyFlowCommitSchema.safeParse({ ...args, navigation: undefined }).success).toBe(false);
 });
+
+
+it('accepts Soon as an unchanged reading intent and rejects renderer successor or learning changes', () => {
+  const profile = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now, nextAt: now,
+    priority: 5, readingPosition: 0, repetitionCount: 1, state: 'active' };
+  const args = { opId: 'soon', now, token, sourceSession: session, readingAction: 'soon',
+    readings: [{ nodeId: 'a', before: profile, after: profile }] };
+  expect(dailyFlowCommitSchema.parse(args).readingAction).toBe('soon');
+  expect(dailyFlowCommitSchema.safeParse({ ...args, nextSession: session }).success).toBe(false);
+  expect(dailyFlowCommitSchema.safeParse({ ...args, readings: [{ nodeId: 'a', before: profile,
+    after: { ...profile, nextAt: '2026-10-27T08:00:00.000Z' } }] }).success).toBe(false);
+  expect(dailyFlowCommitSchema.safeParse({ ...args, readings: [] }).success).toBe(false);
+  expect(dailyFlowCommitSchema.safeParse({ ...args, readings: [...args.readings, ...args.readings] }).success).toBe(false);
+  expect(dailyFlowCommitSchema.safeParse({ ...args, readings: [{ ...args.readings[0], completedReviewDay: '' }] }).success).toBe(false);
+});

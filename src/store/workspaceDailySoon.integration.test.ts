@@ -7,6 +7,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let tempRoot = '';
 let loseReceipt = false;
+let beforeCommit: (() => void) | null = null;
+let soonPayload: Record<string, unknown> | null = null;
 vi.mock('../../electron/deviceAnchorStore.js', () => ({
   loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'daily-flow', libraryPath })
 }));
@@ -16,6 +18,8 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
   const { openDesktopDailyFlow, commitDesktopDailyFlow } = await import('../../electron/database/dailyFlow');
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') {
+    soonPayload = args as Record<string, unknown>;
+    const mutation = beforeCommit; beforeCommit = null; mutation?.();
     const result = await commitDesktopDailyFlow(args);
     if (loseReceipt) { loseReceipt = false; throw new Error('ipc_receipt_lost'); }
     return result;
@@ -38,7 +42,7 @@ const now = '2026-10-26T08:00:00.000Z';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-daily-flow-'));
   initializeDatabase();
-  loseReceipt = false;
+  loseReceipt = false; beforeCommit = null; soonPayload = null;
 });
 afterEach(async () => {
   closeDatabaseConnection();
@@ -199,4 +203,32 @@ it('keeps reading Soon through review-only grading, history replay and restart',
   expect(restored.queueNodeIds).toEqual([]);
   expect(restored.readTopicCount).toBe(count);
   expect(restored.reviewedItemCount).toBe(1);
+});
+
+
+it('does not defer a topic that became a review item before the native Soon transaction', async () => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const source = app.getState().reviewSession;
+  beforeCommit = () => {
+    openDatabaseConnection().sqlite.prepare("UPDATE nodes SET kind='item', reveal='Answer' WHERE id=?")
+      .run(source.currentNodeId!);
+  };
+  expect(await app.actions.revisitReviewTopicSoon(now)).toBe(false);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM daily_flow_operations')).toEqual([]);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading')).toEqual([]);
+  expect(app.getState().reviewSession.readTopicCount).toBe(0);
+  expect(app.getState().appActionHistory.undoStack).toEqual([]);
+});
+
+it('sends a Soon intent and lets the shared transaction determine the next session', async () => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const [first, second] = app.getState().reviewSession.queueNodeIds;
+  expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
+  expect(soonPayload?.readingAction).toBe('soon');
+  expect(soonPayload).not.toHaveProperty('nextSession');
+  expect(app.getState().reviewSession.currentNodeId).toBe(second);
+  expect(app.getState().reviewSession.soonNodeIds).toEqual([first]);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading')).toEqual([]);
 });

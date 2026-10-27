@@ -79,3 +79,25 @@ it('rejects a stale review-only grade while retaining valid Soon after a synchro
   expect(local.queueNodeIds).toEqual([]);
   await assertDurable(mobile, local);
 });
+
+
+it.each(['desktop', 'mobile'] as const)('refuses stale Soon on %s after the peer converts the current topic to a review item', async owner => {
+  const peers = await setupPeers();
+  const local = peers[owner === 'desktop' ? 0 : 1];
+  const remote = peers[owner === 'desktop' ? 1 : 0];
+  for (const id of ['a', 'b']) node(local, id, 'topic');
+  const source = await open(local, now, settings(local), 'reading-only');
+  await exchange(local, remote);
+  node(remote, source.currentNodeId!, 'item');
+  await exchange(remote, local);
+  const facts = await snapshot(local);
+  await expect(act(local, source, 'soon')).rejects.toThrow('daily_flow_learning_changed');
+  expect(local.db.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
+  expect(await snapshot(local)).toEqual(facts);
+  const restored = await open(local, due);
+  expect(restored.readTopicCount).toBe(0);
+  expect(restored.queueNodeIds).toContain(source.currentNodeId);
+  await assertDurable(local, restored);
+  expect((await snapshot(local)).nodesById[source.currentNodeId!]!.kind).toBe('item');
+  expect((await snapshot(remote)).nodesById[source.currentNodeId!]!.kind).toBe('item');
+});

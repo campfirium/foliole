@@ -11,6 +11,7 @@ export const controlledSyncSqliteTests = [
   'src/companion/companionDailyGrade.integration.test.ts',
   'src/companion/companionDailyReading.integration.test.ts',
   'src/companion/companionDailySoon.integration.test.ts',
+  'src/companion/companionDailySoonIntent.integration.test.ts',
   'src/shared/platform/companion/editing/companionContentVisibility.integration.test.ts',
   'src/shared/platform/companion/runtime/companionNodeTextAlternativeScope.integration.test.ts',
   'src/shared/platform/companionSqlRecording.integration.test.ts',

@@ -1,17 +1,18 @@
 import { hashTextBody } from '../database/textBodyHash.js';
 import { hasDeletedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
+import { isReadingReviewItemNode } from '../review/reviewItemKind.js';
 import type { SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 
-import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
+import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowOpenArgs, type DailyFlowResult, type DailyFlowSettings, type DailyFlowSnapshot } from './dailyFlowContract.js';
 import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade } from './dailyFlowGrade.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import { hasNewReadyDailyCandidate } from './dailyFlowReentry.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { dailySoonScope } from './dailyFlowSoon.js';
+import { advanceDailySoon, dailySoonScope } from './dailyFlowSoon.js';
 import { readDailyFlow, writeDailyFlow, writeDailyFlowGrade, writeDailyFlowReading } from './dailyFlowStorage.js';
 import { restoreFlowHistorySessionAsync } from './flowHistorySessionAsync.js';
 import { resolveEarliestReviewDueAt } from './flowSessionProgress.js';
@@ -55,6 +56,7 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
 export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
+    if (args.readingAction === 'soon') dailyFlowCommitSchema.parse(args);
     const stored = await readDailyFlow(tx);
     if (args.token.scope !== (settings.scope ?? '')) throw new Error('daily_flow_library_changed');
     const hash = hashTextBody(JSON.stringify(args));
@@ -82,6 +84,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     assertCurrentFacts(snapshot, args);
     const mode = stored.mode as ReviewSessionMode;
     const base = stored.invalidated ? prepareFlowSession(snapshot, { now: args.now, mode }, settings, stored.session) : stored.session;
+    if (args.readingAction === 'soon' && !isReadingReviewItemNode(snapshot.nodesById[base.currentNodeId ?? '']))
+      throw new Error('daily_flow_learning_changed');
     if (args.readingAction && base.currentNodeId !== args.readings?.[0]?.nodeId) throw new Error('daily_flow_learning_changed');
     if (args.grade && (base.currentNodeId !== args.grade.nodeId ||
       !flowPlan(snapshot, 'review-first', args.now, settings).fsrsQueueNodeIds.includes(args.grade.nodeId))) {
@@ -90,7 +94,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     const result = await persistLearning(tx, args, persistence);
     const updated = localSoon ? snapshot : scope ? await scopedDailySnapshot(tx, persistence, scope) : await persistence.snapshot(tx);
     let session = args.grade ? localGrade ? advanceDailyGrade(updated, base, args.now, settings)
-      : afterDailyGrade(updated, base, mode, args.now, settings) : args.readingAction ? advanceDailyReading(updated, base, args.now, mode, settings) : args.nextSession;
+      : afterDailyGrade(updated, base, mode, args.now, settings) : args.readingAction === 'soon' ? advanceDailySoon(base, args.now)
+      : args.readingAction ? advanceDailyReading(updated, base, args.now, mode, settings) : args.nextSession;
     if (!session) throw new Error('daily_flow_session_missing');
     if (args.reviewHistory?.mode === 'redo') session = { ...session, nextReviewDueAt:
       resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };

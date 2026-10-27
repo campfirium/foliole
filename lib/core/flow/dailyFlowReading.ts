@@ -12,7 +12,7 @@ import { advanceReviewSession, completeReviewSession } from './flowSessionState.
 
 export async function dailyReadingScope(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
   args: DailyFlowCommitArgs, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
-  if (!args.readingAction || stored.invalidated || stored.settings_key !== JSON.stringify(settings)) return null;
+  if (!args.readingAction || args.readingAction === 'soon' || stored.invalidated || stored.settings_key !== JSON.stringify(settings)) return null;
   if (stored.mode !== 'reading-only' && await hasReadyDailyReview(db, args.now, settings, persistence)) return null;
   const affected = (args.readings ?? []).map(value => value.nodeId);
   const next = stored.session.queueNodeIds.find(id => id !== stored.session.currentNodeId)

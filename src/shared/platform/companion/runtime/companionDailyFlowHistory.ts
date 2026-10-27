@@ -16,13 +16,13 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
   const entry = args.entry;
   const token = entry.beforeContext.reviewSession.daily;
   if (!token) throw new Error('daily_flow_token_missing');
-  const common = { opId: entry.id, now: entry.mutationTimestamp, token, sourceSession: entry.beforeContext.reviewSession, nextSession: entry.afterContext.reviewSession };
+  const common = { opId: entry.id, now: entry.mutationTimestamp, token, sourceSession: entry.beforeContext.reviewSession, ...(entry.type === 'topic.dismiss' && entry.title === 'Soon Topic' ? {} : { nextSession: entry.afterContext.reviewSession }) };
   const result = entry.type === 'review.grade'
     ? await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, grade: { nodeId: entry.nodeId, before: entry.beforeReview,
       grade: args.reviewLog!.grade as 1 | 2 | 3 | 4, reviewedAt: args.reviewLog!.reviewedAt,
       schedulerVersion: args.reviewLog!.schedulerVersion, cardBefore: toSchedulerCard(entry.beforeReview, entry.mutationTimestamp),
       cardAfter: toSchedulerCard(entry.afterReview, entry.mutationTimestamp) } }), companionDailyFlowSettings(), companionDailyFlowPersistence)
-    : await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common,
+    : await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : {}),
       ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
       : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
       : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}), readings: [{ nodeId: entry.nodeId,

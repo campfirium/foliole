@@ -19,7 +19,7 @@ export function saveDailyReading(session: ReviewSessionState, entry: WorkspaceTo
   ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,
     before: value.beforeReading ?? null, after: value.afterReading ?? null }))];
   return commitDailyFlowRuntime({ opId: entry.id, now, token: session.daily!, sourceSession: session,
-    nextSession: withoutDailyToken(nextSession), readings: changes,
+    ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : { nextSession: withoutDailyToken(nextSession) }), readings: changes,
     ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
       : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
       : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}) });
