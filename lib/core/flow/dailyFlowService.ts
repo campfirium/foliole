@@ -5,6 +5,7 @@ import { commitCycleFlow } from './cycleFlowCommit.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
+import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
 export interface DailyFlowPersistence {
@@ -22,7 +23,7 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
 
 export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
-  return db.transaction(tx => commitCycleFlow(tx, args, settings, transactionDailyFlowPersistence(persistence)));
+  return db.transaction(tx => commitCycleFlow(createSqliteDailyFlowStore(tx, transactionDailyFlowPersistence(persistence)), args, settings));
 }
 
 export function withoutDailyToken(session: DailyFlowSession): DailyFlowSession {

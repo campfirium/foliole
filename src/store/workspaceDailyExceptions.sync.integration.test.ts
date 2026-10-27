@@ -5,7 +5,7 @@ import { closeLibraries } from '../../electron/database/syncLibrary.testSupport'
 import { restoreNodes, softDeleteNodes } from '../../lib/core/database/nodeMutations';
 import { resetNodeReviewState } from '../../lib/core/database/reviewMutations';
 import { readCycleRows } from '../../lib/core/flow/dailyFlowStorage';
-import { act, assertDurable, due, exchange, node, now, open, persistence, publish, setupPeers, settings, snapshot } from '../test/dailyFlowExceptions.testSupport';
+import { act, assertDurable, due, exchange, node, now, open, persistence, publish, readView, setupPeers, settings, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
 afterEach(async () => { vi.restoreAllMocks(); await closeLibraries(); });
 
@@ -19,7 +19,7 @@ it('keeps current, Soon and completed facts across remote creation, deletion and
   const soon = local.currentNodeId!;
   local = await act(mobile, local, 'soon');
   const current = local.currentNodeId!;
-  const removed = local.queueNodeIds.find(id => id !== current)!;
+  const removed = (await readView(mobile, now, 'reading-only')).find(id => id !== current && id !== soon)!;
   await exchange(mobile, desktop);
   node(desktop, 'new-topic', 'topic');
   softDeleteNodes(desktop.driver, { nodeIds: [removed], deletedAt: due });
@@ -41,11 +41,11 @@ it('keeps current, Soon and completed facts across remote creation, deletion and
   local = await act(mobile, local, 'read', due);
   expect(local.currentNodeId).toBe(soon);
   local = await act(mobile, local, 'read', due);
-  expect(new Set(local.queueNodeIds)).toEqual(new Set([removed, 'new-topic']));
+  expect(new Set(await readView(mobile, due, 'reading-only'))).toEqual(new Set([removed, 'new-topic']));
   await assertDurable(mobile, local);
   await exchange(mobile, desktop);
   const remote = await open(desktop, due, settings(desktop), 'reading-only');
-  expect(new Set(remote.queueNodeIds)).toEqual(new Set([removed, 'new-topic']));
+  expect(new Set(await readView(desktop, due, 'reading-only'))).toEqual(new Set([removed, 'new-topic']));
   await assertDurable(desktop, remote);
   expect((await snapshot(desktop)).nodesById[completed]!.reading).toEqual((await snapshot(mobile)).nodesById[completed]!.reading);
 });
@@ -58,7 +58,7 @@ it('admits a remote relearn after synchronized grading and keeps the remaining m
   let local = await open(mobile);
   const first = local.currentNodeId!;
   local = await act(mobile, local, 'grade');
-  const remaining = [...local.queueNodeIds];
+  const remaining = await readView(mobile);
   const current = local.currentNodeId;
   await exchange(mobile, desktop);
   const remote = await open(desktop);
@@ -67,7 +67,7 @@ it('admits a remote relearn after synchronized grading and keeps the remaining m
   await exchange(desktop, mobile);
   local = await open(mobile, due);
   expect(local.currentNodeId).toBe(current);
-  expect(local.queueNodeIds.filter(id => id !== first)).toEqual(remaining);
+  expect((await readView(mobile, due)).filter(id => id !== first)).toEqual(remaining);
   expect((await readCycleRows(mobile.port, [first]))[0]?.active).toBe(1);
   expect((await snapshot(mobile)).nodesById[first]!.review).toBeNull();
   const reads = vi.spyOn(persistence, 'snapshot');
@@ -90,14 +90,14 @@ it('rejects a stale grade after the remote authority grades it and resumes the l
   const stale = await open(mobile);
   const remote = await open(desktop);
   expect(stale.currentNodeId).toBe(remote.currentNodeId);
-  await act(desktop, remote, 'grade');
+  const committed = await act(desktop, remote, 'grade');
   await exchange(desktop, mobile);
   const facts = mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
   await expect(act(mobile, stale, 'grade')).rejects.toThrow('daily_flow_learning_changed');
   expect(mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
   for (const peer of [desktop, mobile]) {
     const final = await open(peer);
-    expect(final.currentNodeId).toBe(stale.queueNodeIds[1]);
+    expect(final.currentNodeId).toBe(committed.currentNodeId);
     expect(final.queueNodeIds).not.toContain(stale.currentNodeId);
     expect((await snapshot(peer)).nodesById[stale.currentNodeId!]!.review!.reps).toBe(1);
     await assertDurable(peer, final);
@@ -109,7 +109,7 @@ it.each(['grade', 'soon'] as const)('saves the displayed successor on the first 
   for (const id of ['a', 'b']) node(peer, id, action === 'grade' ? 'item' : 'topic');
   const source = await open(peer);
   const removed = source.currentNodeId!;
-  const next = source.queueNodeIds[1]!;
+  const next = (await readView(peer))[1]!;
   softDeleteNodes(peer.driver, { nodeIds: [removed], deletedAt: due });
   const displayed = { ...source, currentNodeId: next, queueNodeIds: source.queueNodeIds.filter(id => id !== removed) };
   const saved = await act(peer, displayed, action, due);

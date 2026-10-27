@@ -1,9 +1,8 @@
 import { hasDeletedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { SchedulerCard } from '../review/types.js';
-import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
-import type { DailyFlowPersistence } from './dailyFlowService.js';
+import type { DailyFlowStore } from './dailyFlowStore.js';
 
 export function sameLearningProfile(left: unknown, right: unknown) {
   if (left == null || right == null) return left == null && right == null;
@@ -23,13 +22,12 @@ export function assertCycleLearningFacts(snapshot: DailyFlowLearningSnapshot, ar
   }
 }
 
-export async function persistCycleLearning(db: DbPort, args: DailyFlowCommitArgs,
-  persistence: DailyFlowPersistence): Promise<{ card?: SchedulerCard | null; learningChanged: boolean }> {
-  if (args.grade) return { card: await persistence.grade(db, args.grade, args.opId), learningChanged: true };
-  if (args.reviewHistory) return { card: await persistence.reviewHistory(db, args.reviewHistory, args.now), learningChanged: true };
+export async function persistCycleLearning(db: DailyFlowStore, args: DailyFlowCommitArgs): Promise<{ card?: SchedulerCard | null; learningChanged: boolean }> {
+  if (args.grade) return { card: await db.grade(args.grade, args.opId), learningChanged: true };
+  if (args.reviewHistory) return { card: await db.reviewHistory(args.reviewHistory, args.now), learningChanged: true };
   let learningChanged = false;
   for (const value of args.readings ?? []) if (!sameLearningProfile(value.before, value.after)) {
-    await persistence.reading(db, value, args.now);
+    await db.reading(value, args.now);
     learningChanged = true;
   }
   return { learningChanged };

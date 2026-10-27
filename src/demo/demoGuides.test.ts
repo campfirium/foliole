@@ -1,6 +1,8 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
+import { installWorkspaceBrowserCommit } from '../store/workspaceBrowserCommit';
 import { WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
@@ -10,6 +12,14 @@ import {
 } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import { createDemoWorkspaceSnapshot, installDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
+
+beforeEach(() => {
+  installWorkspaceBrowserCommit(null);
+  installBrowserDailyFlowRuntime(null);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-06-17T00:00:00.000Z'));
+});
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 const NOW = new Date('2026-06-17T00:00:00.000Z');
 
@@ -57,7 +67,7 @@ it('uses generated zh-hans Guides content for zh-hans routes', () => {
   expect(snapshot.nodesById[welcomeNodeId]?.title).toBe('欢迎使用 Foliole');
 });
 
-it('reinstalls the official Demo snapshot when a stored payload is missing Guides', async () => {
+it('preserves a saved removal of Guides when upgrading its known envelope', async () => {
   const storage = new Map<string, string>();
   const snapshot = createDemoWorkspaceSnapshot('/en/demo/', NOW);
   delete snapshot.nodesById[DEMO_GUIDES_NODE_ID];
@@ -75,7 +85,7 @@ it('reinstalls the official Demo snapshot when a stored payload is missing Guide
   await installDemoWorkspaceSnapshot();
 
   const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
-  expect(payload.state.nodesById[DEMO_GUIDES_NODE_ID]).toMatchObject({ title: DEMO_GUIDES_TITLE });
+  expect(payload.state.nodesById[DEMO_GUIDES_NODE_ID]).toBeUndefined();
   expect(payload.state.nodesById[getDemoTopicNodeId(DEFAULT_DEMO_TOPIC)]).toMatchObject({ title: 'Welcome to Foliole' });
   vi.unstubAllGlobals();
 });

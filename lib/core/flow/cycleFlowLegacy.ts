@@ -1,22 +1,20 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import type { DbPort } from '../sync/dbPort.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
 import { allocateCycleKey } from './cycleFlowFingerprint.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
-import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { readDailyFlow, readCycleRows, writeCycleRows } from './dailyFlowStorage.js';
+import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
+import type { DailyFlowStore } from './dailyFlowStore.js';
 import { restoreFlowHistorySessionAsync } from './flowHistorySessionAsync.js';
 
 // This materialization is reserved for an explicitly tagged legacy undo/redo operation.
-export async function readLegacyCycleProjection(db: DbPort, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence, now: string): Promise<DailyFlowSession> {
-  const stored = await readDailyFlow(db);
+export async function readStoredLegacyCycleProjection(db: DailyFlowStore, settings: DailyFlowSettings, now: string): Promise<DailyFlowSession> {
+  const stored = await db.readState();
   if (!stored) throw new Error('daily_flow_changed');
-  const rows = (await readCycleRows(db)).filter(row => row.active);
-  const snapshot = await persistence.learningSnapshot(db);
+  const rows = (await db.readRows()).filter(row => row.active);
+  const snapshot = await db.learningSnapshot();
   const plan = flowPlan(snapshot, stored.mode as ReviewSessionMode, now, settings);
   const all = new Set([...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]);
   const allowed = new Set(stored.mode === 'review-first' ? plan.fsrsQueueNodeIds : stored.mode === 'reading-only'
@@ -41,9 +39,9 @@ export function sameLegacySession(left: DailyFlowSession, right: DailyFlowSessio
   return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
 }
 
-export async function replayLegacyCycle(db: DbPort, source: DailyFlowSession,
-  args: import('./dailyFlowContract.js').DailyFlowCommitArgs, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
-  const projection = await readLegacyCycleProjection(db, settings, persistence, args.now);
+export async function replayLegacyCycle(db: DailyFlowStore, source: DailyFlowSession,
+  args: import('./dailyFlowContract.js').DailyFlowCommitArgs, settings: DailyFlowSettings) {
+  const projection = await readStoredLegacyCycleProjection(db, settings, args.now);
   if (!args.historySourceSession || !args.nextSession) throw new Error('flow_history_unavailable');
   const expected = await restoreFlowHistorySessionAsync(args.historySourceSession, projection);
   const target = await restoreFlowHistorySessionAsync(args.nextSession, projection);
@@ -51,12 +49,12 @@ export async function replayLegacyCycle(db: DbPort, source: DailyFlowSession,
   return installLegacyCycleTarget(db, source, projection, target, args.now);
 }
 
-export async function installLegacyCycleTarget(db: DbPort, source: DailyFlowSession, projection: DailyFlowSession,
+export async function installLegacyCycleTarget(db: DailyFlowStore, source: DailyFlowSession, projection: DailyFlowSession,
   target: DailyFlowSession, now: string) {
   if (!source.cycle) throw new Error('daily_flow_cycle_missing');
   const meta = { ...source.cycle };
   delete meta.change;
-  const original = await readCycleRows(db);
+  const original = await db.readRows();
   const rows = new Map(original.map(row => [row.node_id, row]));
   const projected = new Set([...projection.queueNodeIds, ...(projection.soonNodeIds ?? []),
     ...(projection.hiddenSoonNodeIds ?? []), projection.currentNodeId].filter(Boolean));
@@ -77,7 +75,7 @@ export async function installLegacyCycleTarget(db: DbPort, source: DailyFlowSess
       handled: targetQueue.includes(id) ? 0 : row?.handled ?? 1, cohort: targetQueue.includes(id) ? 'queue' : pending.includes(id) ? 'soon' : row?.cohort ?? 'none',
       initial_task: targetQueue.includes(id) ? 1 : complement.includes(id) ? row?.initial_task ?? 0 : 0 });
   }
-  await writeCycleRows(db, changes.rows());
+  await db.writeRows(changes.rows());
   const saved = new Map([...original, ...changes.rows()].map(row => [row.node_id, row]));
   meta.clearKey = targetQueue.length ? saved.get(targetQueue.at(-1)!)!.order_key : 0;
   meta.clearedAt = targetQueue.length ? null : source.cycle.clearedAt ?? target.completedAt ?? now;
@@ -87,4 +85,9 @@ export async function installLegacyCycleTarget(db: DbPort, source: DailyFlowSess
   // The ordinary open/commit eligibility refresh supplies authoritative kind counts.
   meta.reviewRemaining = Math.min(meta.reviewRemaining, meta.remaining);
   return { ...target, flowFormat: 'cycle-v1' as const, cycle: meta };
+}
+
+export function readLegacyCycleProjection(db: import('../sync/dbPort.js').DbPort, settings: DailyFlowSettings,
+  persistence: import('./dailyFlowService.js').DailyFlowPersistence, now: string) {
+  return readStoredLegacyCycleProjection(createSqliteDailyFlowStore(db, persistence), settings, now);
 }

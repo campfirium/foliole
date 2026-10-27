@@ -1,25 +1,22 @@
-import { ensureInboxNodeInSnapshot, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-import { browserLocalWorkspaceReviewPersistence } from '../store/workspaceReviewPersistence';
+import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
+import { installBrowserWorkspace } from '../store/installBrowserWorkspace';
+import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import {
   createInitialWorkspaceState,
   useWorkspaceStore,
-  WORKSPACE_STORAGE_KEY,
   type WorkspacePersistedState
 } from '../store/workspaceStore';
-import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
 
 import { DEFAULT_DEMO_TOPIC, DEMO_TOPICS, getDemoTopicsForLocale, getDemoTopicNodeId, type DemoTopic } from './demoContent';
 import {
   createDemoGuidesNode,
   DEMO_GUIDES_NODE_ID,
-  getDemoGuidesRequiredNodeIds,
   moveDemoGuidesBeforeInbox
 } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import type { DemoPackReviewItem, DemoPackReviewScheduleSeed } from './demoPack';
 import { isLocaleDemoPath, resolveDemoLocalePathSegment, resolveGuideSlugFromPath } from './demoRoutes';
-import { createDemoReviewSession } from './demoWorkspaceSession';
-import { repairDemoWorkspacePayload } from './demoWorkspaceSnapshotRepair';
+import { repairDemoWorkspaceState } from './demoWorkspaceSnapshotRepair';
 
 export function resolveDemoTopicFromPath(pathname: string, topics: DemoTopic[] = DEMO_TOPICS) {
   const slug = resolveDemoSlugFromPath(pathname);
@@ -50,7 +47,7 @@ export function createDemoWorkspaceSnapshot(pathname: string, now = new Date()):
     nodeOrder: allNodes.map((node) => node.id),
     nodesById: Object.fromEntries(allNodes.map((node) => [node.id, node])),
     rendererBoundaryKeepNodeIds: officialNodes.map((node) => node.id),
-    reviewSession: createDemoReviewSession(activeNodeId, timestamp),
+    reviewSession: createEmptyReviewSession(),
     trashedNodeDeletedAtById: {},
     trashedNodeIds: [],
     untitledSequenceByParent: {},
@@ -154,66 +151,8 @@ function resolveDemoRelativeTime(now: Date, dayOffset: number) {
 }
 
 export async function installDemoWorkspaceSnapshot(pathname = window.location.pathname) {
-  const rawPayload = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
-  if (rawPayload) {
-    const repairedPayload = repairDemoWorkspacePayload(rawPayload, pathname);
-    if (repairedPayload) {
-      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, repairedPayload);
-    }
-  }
-  if (!hasCompatibleDemoWorkspacePayload(pathname)) {
-    const snapshot = createDemoWorkspaceSnapshot(pathname);
-    window.localStorage.setItem(
-      WORKSPACE_STORAGE_KEY,
-      JSON.stringify({ state: snapshot, version: 0 })
-    );
-    window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
-  }
-  await useWorkspaceStore.persist.rehydrate();
-  installDemoBrowserLocalReviewActions();
-}
-
-function installDemoBrowserLocalReviewActions() {
-  useWorkspaceStore.setState(createWorkspaceReviewActions(
-    useWorkspaceStore.setState,
-    useWorkspaceStore.getState,
-    undefined,
-    browserLocalWorkspaceReviewPersistence,
-    { startReviewSession: { includeScheduledFallback: true } }
-  ));
-}
-
-function hasCompatibleDemoWorkspacePayload(pathname: string) {
-  const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
-  const marker = window.localStorage.getItem(DEMO_SNAPSHOT_VERSION);
-  if (!raw || marker !== DEMO_CAPTURED_VERSION) return false;
-  try {
-    const payload = JSON.parse(raw) as { state?: Partial<WorkspacePersistedState>; version?: number };
-    return payload.version === 0 && isCompatibleDemoWorkspaceState(payload.state, pathname);
-  } catch {
-    return false;
-  }
-}
-
-function isCompatibleDemoWorkspaceState(state: Partial<WorkspacePersistedState> | undefined, pathname: string) {
-  if (!state || state.capturedWorkspaceVersion !== DEMO_CAPTURED_VERSION) return false;
-  if (!state.nodesById || !state.nodeOrder || !state.reviewSession) return false;
-  if (state.activeNodeId !== null && state.activeNodeId !== undefined && !state.nodesById[state.activeNodeId]) {
-    return false;
-  }
-  const topics = getDemoTopicsForLocale(resolveDemoLocalePathSegment(pathname));
-  return Boolean(
-    state.nodeOrder.includes(INBOX_NODE_ID) &&
-    isDemoGuidesOrderedBeforeInbox(state.nodeOrder) &&
-    getDemoGuidesRequiredNodeIds(pathname).every((nodeId) => state.nodesById?.[nodeId]) &&
-    topics.every((topic) => state.nodesById?.[getDemoTopicNodeId(topic)]?.title === topic.title)
-  );
-}
-
-function isDemoGuidesOrderedBeforeInbox(nodeOrder: readonly string[]) {
-  const guidesIndex = nodeOrder.indexOf('demo-guides');
-  const inboxIndex = nodeOrder.indexOf(INBOX_NODE_ID);
-  return guidesIndex >= 0 && inboxIndex >= 0 && guidesIndex < inboxIndex;
+  installBrowserWorkspace(useWorkspaceStore, window.localStorage, createDemoWorkspaceSnapshot(pathname), state => repairDemoWorkspaceState(state, pathname));
+  window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
 }
 
 function requireDemoTopic(topic: DemoTopic | undefined) {

@@ -1,12 +1,22 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
+import { installWorkspaceBrowserCommit } from '../store/workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import { DEMO_GUIDES_NODE_ID } from './demoGuides';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
 import { createDemoWorkspaceSnapshot, installDemoWorkspaceSnapshot, resolveDemoTopicFromPath } from './demoWorkspaceSnapshot';
+
+beforeEach(() => {
+  installWorkspaceBrowserCommit(null);
+  installBrowserDailyFlowRuntime(null);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-06-17T00:00:00.000Z'));
+});
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function requireTopic(index: number) {
   const topic = DEMO_TOPICS[index];
@@ -34,13 +44,15 @@ it('routes a compatible browser-local payload to the current Demo topic URL', as
 
   const nextPayload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
   expect(nextPayload.state.activeNodeId).toBe(getDemoTopicNodeId(firstTopic));
-  expect(nextPayload.state.reviewSession.currentNodeId).toBe(getDemoTopicNodeId(firstTopic));
-  expect(nextPayload.state.reviewSession.queueNodeIds[0]).toBe(getDemoTopicNodeId(firstTopic));
+  expect(nextPayload.state.reviewSession.currentNodeId).toBeNull();
+  expect(nextPayload.state.reviewSession.queueNodeIds).toEqual([]);
   vi.unstubAllGlobals();
 });
 
 it('keeps a compatible browser-local payload on the Demo app entry', async () => {
+  installWorkspaceBrowserCommit({ save() {} });
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')));
+  installWorkspaceBrowserCommit(null);
   const storage = new Map<string, string>();
   storage.set(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
   const payload = {
@@ -63,25 +75,18 @@ it('keeps a compatible browser-local payload on the Demo app entry', async () =>
   vi.unstubAllGlobals();
 });
 
-it('rebuilds Demo sequential reading from the Guides topic order', () => {
+it('saves sequential reading using the Guides topic order without starting learning', async () => {
   const topic = requireTopic(0);
   const now = new Date('2026-06-17T00:00:00.000Z');
-  useWorkspaceStore.setState({
-    ...createDemoWorkspaceSnapshot(canonicalGuidePath(topic.slug), now),
-    isHydrated: true,
-    workspaceHydrationError: null
-  });
-
-  expect(useWorkspaceStore.getState().setNodeSequentialReading(DEMO_GUIDES_NODE_ID, true, now.toISOString())).toBe(true);
+  const storage = new Map<string, string>();
+  stubDemoWindow(storage, canonicalGuidePath(topic.slug));
+  await installDemoWorkspaceSnapshot();
+  expect(await useWorkspaceStore.getState().setNodeSequentialReading(DEMO_GUIDES_NODE_ID, true, now.toISOString())).toBe(true);
   const state = useWorkspaceStore.getState();
   const topicNodeId = getDemoTopicNodeId(topic);
-  const expectedQueue = DEMO_TOPICS
-    .filter((demoTopic) => demoTopic.id === topic.id || demoTopic.parentId === topic.id)
-    .map(getDemoTopicNodeId);
-
   expect(state.activeNodeId).toBe(topicNodeId);
-  expect(state.reviewSession.currentNodeId).toBe(topicNodeId);
-  expect(state.reviewSession.queueNodeIds).toEqual(expectedQueue);
+  expect(state.reviewSession.currentNodeId).toBeNull();
+  expect(state.nodesById[DEMO_GUIDES_NODE_ID]?.sequentialReadingEnabled).toBe(true);
   expect(state.nodesById[topicNodeId]?.reading?.state).toBe('active');
 });
 

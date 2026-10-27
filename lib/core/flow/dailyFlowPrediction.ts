@@ -6,6 +6,7 @@ import type { DailyFlowSettings } from './dailyFlowContract.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
+import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
 
 export type DailyFlowPredictionArgs = { now: string; token: NonNullable<DailyFlowSession['daily']>; currentNodeId: string };
@@ -18,7 +19,7 @@ export async function predictDailyFlowDocument(db: DbPort, args: DailyFlowPredic
     || args.token.scope !== (settings.scope ?? '') || stored.day_key !== args.token.dayKey
     || stored.day_key !== flowDay(args.now, settings) || stored.revision !== args.token.revision
     || stored.session.currentNodeId !== args.currentNodeId) return null;
-  const next = await selectCycleSuccessor(db, { ...stored.session.cycle! }, {
-    mode: stored.mode as ReviewSessionMode, now: args.now, settings, persistence, excluded: args.currentNodeId });
+  const next = await selectCycleSuccessor(createSqliteDailyFlowStore(db, persistence), { ...stored.session.cycle! }, {
+    mode: stored.mode as ReviewSessionMode, now: args.now, settings, excluded: args.currentNodeId });
   return next?.node_id ?? null;
 }

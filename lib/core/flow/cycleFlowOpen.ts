@@ -1,22 +1,20 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
-import type { DbPort } from '../sync/dbPort.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
 import { allocateCycleKey, changeCycleHash, cycleMeta, cycleStamp } from './cycleFlowFingerprint.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { EMPTY_CYCLE_HASH, type CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
-import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { readDailyFlow, readCycleRows, saveCycleFlow, writeCycleRows, type CycleStored } from './dailyFlowStorage.js';
+import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
+import type { DailyFlowStore } from './dailyFlowStore.js';
+import type { CycleStored } from './dailyFlowStore.js';
 
-export async function initializeCycle(db: DbPort, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence) {
-  const snapshot = await persistence.learningSnapshot(db);
+export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
+  const snapshot = await db.learningSnapshot();
   const seed = args.seed?.sessionStartedAt && flowDay(args.seed.sessionStartedAt, settings) === flowDay(args.now, settings)
     ? args.seed : undefined;
   const initial = prepareFlowSession(snapshot, args, settings, seed);
@@ -29,19 +27,19 @@ export async function initializeCycle(db: DbPort, args: DailyFlowOpenArgs, setti
   const cycle = { clearKey: queue.length, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
     rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows), stamp: '', remaining: queue.length,
     reviewRemaining: queue.filter(id => isFsrsReviewItemNode(snapshot.nodesById[id])).length };
-  await writeCycleRows(db, rows);
+  await db.writeRows(rows);
   const current = initial.currentNodeId;
   const session = { ...initial, currentNodeId: current, flowFormat: 'cycle-v1' as const, cycle };
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
-  else await chooseCycleCurrent(db, session, args.mode, args.now, settings, persistence);
+  else await chooseCycleCurrent(db, session, args.mode, args.now, settings);
   return { session, snapshot };
 }
 
-export async function reconcileCycle(db: DbPort, stored: CycleStored, now: string,
-  settings: DailyFlowSettings, persistence: DailyFlowPersistence, captureChanges = false) {
-  const snapshot = await persistence.learningSnapshot(db);
+export async function reconcileCycle(db: DailyFlowStore, stored: CycleStored, now: string,
+  settings: DailyFlowSettings, captureChanges = false) {
+  const snapshot = await db.learningSnapshot();
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
-  const rows = await readCycleRows(db);
+  const rows = await db.readRows();
   const meta = { ...stored.session.cycle! };
   const changes = cycleChanges(meta);
   const known = new Map(rows.map(row => [row.node_id, row]));
@@ -52,7 +50,7 @@ export async function reconcileCycle(db: DbPort, stored: CycleStored, now: strin
   }
   for (const id of eligible) if (!known.has(id)) changes.set(undefined,
     { node_id: id, order_key: allocateCycleKey(meta), active: 1, initial_task: 0, handled: 0, cohort: 'none' });
-  await writeCycleRows(db, changes.rows());
+  await db.writeRows(changes.rows());
   const final = new Map([...rows, ...changes.rows()].map(row => [row.node_id, row]));
   const remaining = [...final.values()].filter(row => row.active && row.initial_task);
   meta.remaining = remaining.length;
@@ -62,21 +60,21 @@ export async function reconcileCycle(db: DbPort, stored: CycleStored, now: strin
   return { ...stored.session, cycle: meta };
 }
 
-export async function isCycleCurrentReady(db: DbPort, session: DailyFlowSession, mode: ReviewSessionMode,
-  now: string, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
+export async function isCycleCurrentReady(db: DailyFlowStore, session: DailyFlowSession, mode: ReviewSessionMode,
+  now: string, settings: DailyFlowSettings) {
   const id = session.currentNodeId;
   if (!id) return false;
-  const [row] = await readCycleRows(db, [id]);
+  const [row] = await db.readRows([id]);
   if (!row?.active) return false;
-  const snapshot = await scopedDailyLearningSnapshot(db, persistence, [id]);
+  const snapshot = await db.scopedLearningSnapshot([id]);
   const plan = flowPlan(snapshot, mode, now, settings);
   return (mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only' ? plan.readingQueueNodeIds
     : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]).includes(id);
 }
 
-export async function chooseCycleCurrent(db: DbPort, session: DailyFlowSession, mode: ReviewSessionMode,
-  now: string, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
-  const selected = await selectCycleSuccessor(db, session.cycle!, { mode, now, settings, persistence });
+export async function chooseCycleCurrent(db: DailyFlowStore, session: DailyFlowSession, mode: ReviewSessionMode,
+  now: string, settings: DailyFlowSettings) {
+  const selected = await selectCycleSuccessor(db, session.cycle!, { mode, now, settings });
   session.currentNodeId = selected?.node_id ?? null;
   session.isAnswerRevealed = false;
   session.currentItemStartedAt = now;
@@ -85,37 +83,35 @@ export async function chooseCycleCurrent(db: DbPort, session: DailyFlowSession, 
   return selected;
 }
 
-export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence, captureChanges = false) {
-  let stored = await readDailyFlow(db);
+export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false) {
+  let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
   if (stored && stored.day_key !== dayKey) {
-    await db.run('DELETE FROM daily_flow_entries');
-    await db.run('DELETE FROM daily_flow_operations');
+    await db.resetCycle();
     stored = null;
     args = { ...args, seed: undefined, preferredNodeId: undefined };
   }
   if (args.startup && args.mode !== 'recommended') {
-    const snapshot = await persistence.learningSnapshot(db);
+    const snapshot = await db.learningSnapshot();
     const plan = flowPlan(snapshot, args.mode, args.now, settings);
     const ready = args.mode === 'review-first' ? plan.fsrsQueueNodeIds : plan.readingQueueNodeIds;
     if (!ready.length) args = { ...args, mode: 'recommended' };
   }
   let session: DailyFlowSession;
-  if (!stored) session = (await initializeCycle(db, args, settings, persistence)).session;
+  if (!stored) session = (await initializeCycle(db, args, settings)).session;
   else {
     session = stored.invalidated || stored.settings_key !== JSON.stringify(settings)
-      ? await reconcileCycle(db, stored, args.now, settings, persistence, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
+      ? await reconcileCycle(db, stored, args.now, settings, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
     if (args.preferredNodeId && args.preferredNodeId !== session.currentNodeId) {
       const preferred = { ...session, currentNodeId: args.preferredNodeId };
-      if (await isCycleCurrentReady(db, preferred, args.mode, args.now, settings, persistence)) {
-        const [row] = await readCycleRows(db, [args.preferredNodeId]);
+      if (await isCycleCurrentReady(db, preferred, args.mode, args.now, settings)) {
+        const [row] = await db.readRows([args.preferredNodeId]);
         session = { ...preferred, completedAt: null, currentItemStartedAt: args.now, isAnswerRevealed: false,
           cycle: { ...session.cycle!, scanAfter: row!.order_key } };
       }
     }
-    if (!await isCycleCurrentReady(db, session, args.mode, args.now, settings, persistence)) {
-      await chooseCycleCurrent(db, session, args.mode, args.now, settings, persistence);
+    if (!await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
+      await chooseCycleCurrent(db, session, args.mode, args.now, settings);
     }
   }
   if (args.prepareOnly && !session.sessionStartedAt) {
@@ -131,8 +127,13 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
   const unchanged = stored && !stored.invalidated && stored.mode === args.mode && stored.settings_key === JSON.stringify(settings)
     && cycleStamp(session.cycle!, session) === stored.session.cycle!.stamp
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
-  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, persistence, stored.session.currentNodeId) };
-  const saved = await saveCycleFlow(db, { dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
+  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
+  const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: (stored?.revision ?? 0) + 1, session });
-  return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, persistence, saved.currentNodeId) };
+  return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, saved.currentNodeId) };
+}
+
+export function openCycleFlow(db: import('../sync/dbPort.js').DbPort, args: DailyFlowOpenArgs,
+  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false) {
+  return openStoredDailyFlow(createSqliteDailyFlowStore(db, persistence), args, settings, captureChanges);
 }

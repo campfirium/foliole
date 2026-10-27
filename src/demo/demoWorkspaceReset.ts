@@ -1,6 +1,6 @@
-import { browserLocalWorkspaceReviewPersistence } from '../store/workspaceReviewPersistence';
-import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
-import { createWorkspaceReviewActions } from '../store/workspaceStoreReviewActions';
+import { emptyBrowserDailyFlow } from '../shared/platform/runtime/browserDailyFlowState';
+import { replaceBrowserWorkspace } from '../store/installBrowserWorkspace';
+import { createInitialWorkspaceState, useWorkspaceStore } from '../store/workspaceStore';
 
 import { getDemoTopicsForLocale, getDemoTopicNodeId } from './demoContent';
 import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION } from './demoLocalStorage';
@@ -18,22 +18,12 @@ export function syncDemoWorkspaceSnapshotLocale(pathname = window.location.pathn
 
 export function resetDemoWorkspaceSnapshot(pathname = window.location.pathname) {
   const snapshot = createDemoWorkspaceSnapshot(pathname);
-  window.localStorage.setItem(
-    WORKSPACE_STORAGE_KEY,
-    JSON.stringify({ state: snapshot, version: 0 })
-  );
-  window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
-  useWorkspaceStore.setState({
+  replaceBrowserWorkspace(useWorkspaceStore, window.localStorage, {
     ...createInitialWorkspaceState(),
     ...snapshot,
+    browserDailyFlow: emptyBrowserDailyFlow(),
     isHydrated: true,
     workspaceHydrationError: null
   });
-  useWorkspaceStore.setState(createWorkspaceReviewActions(
-    useWorkspaceStore.setState,
-    useWorkspaceStore.getState,
-    undefined,
-    browserLocalWorkspaceReviewPersistence,
-    { startReviewSession: { includeScheduledFallback: true } }
-  ));
+  window.localStorage.setItem(DEMO_SNAPSHOT_VERSION, DEMO_CAPTURED_VERSION);
 }

@@ -1,6 +1,8 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
+import { installWorkspaceBrowserCommit } from '../store/workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalGuidePath, DEFAULT_DEMO_TOPIC, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
@@ -14,6 +16,14 @@ import {
   installDemoWorkspaceSnapshot,
   resolveDemoTopicFromPath
 } from './demoWorkspaceSnapshot';
+
+beforeEach(() => {
+  installWorkspaceBrowserCommit(null);
+  installBrowserDailyFlowRuntime(null);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-06-17T00:00:00.000Z'));
+});
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function requireTopic(index: number) {
   const topic = DEMO_TOPICS[index];
@@ -40,8 +50,8 @@ it('projects the guided sample tree into the Foliole Demo workspace under Guides
       title: DEMO_GUIDES_TITLE
     });
     expect(snapshot.activeNodeId).toBe(topicNodeId);
-    expect(snapshot.reviewSession.currentNodeId).toBe(topicNodeId);
-    expect(snapshot.reviewSession.queueNodeIds).toEqual([topicNodeId]);
+    expect(snapshot.reviewSession.currentNodeId).toBeNull();
+    expect(snapshot.reviewSession.queueNodeIds).toEqual([]);
     expect(welcome).toMatchObject({
       bodyStatus: 'ready',
       kind: 'topic',
@@ -71,7 +81,7 @@ it('selects the Demo topic that matches the current canonical path', () => {
 
     expect(resolveDemoTopicFromPath(canonicalGuidePath(selectedTopic.slug))).toBe(selectedTopic);
     expect(snapshot.activeNodeId).toBe(getDemoTopicNodeId(selectedTopic));
-    expect(snapshot.reviewSession.currentNodeId).toBe(getDemoTopicNodeId(selectedTopic));
+    expect(snapshot.reviewSession.currentNodeId).toBeNull();
 });
 
 it('uses generated zh-hans Guides content for zh-hans routes', () => {
@@ -97,7 +107,9 @@ it('does not route legacy Demo slug URLs to public guide topics', () => {
 });
 
 function stubDemoStorage(storage: Map<string, string>, pathname = canonicalGuidePath(requireTopic(0).slug)) {
+  installWorkspaceBrowserCommit({ save() {} });
   useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-06-17T00:00:00.000Z')));
+  installWorkspaceBrowserCommit(null);
   vi.stubGlobal('window', {
     localStorage: {
       getItem: (key: string) => storage.get(key) ?? null,
@@ -155,15 +167,14 @@ it('persists Demo browser-local review actions into the workspace payload', asyn
     const now = '2026-06-17T00:10:00.000Z';
     stubDemoStorage(storage);
     await installDemoWorkspaceSnapshot();
-    const activeNodeId = useWorkspaceStore.getState().activeNodeId!;
+    await useWorkspaceStore.getState().startReviewSession(now);
+    const activeNodeId = useWorkspaceStore.getState().reviewSession.currentNodeId!;
 
     await expect(useWorkspaceStore.getState().readReviewTopic(now)).resolves.toBe(true);
 
     const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
     expect(payload.state.reviewSession).toMatchObject({
-      completedAt: now,
-      currentNodeId: null,
-      queueNodeIds: []
+      readTopicCount: 1
     });
     expect(payload.state.nodesById[activeNodeId].reading).toMatchObject({
       lastHandledAt: now,
@@ -204,7 +215,7 @@ it('repairs browser-local Demo nodes stuck in fetching state during refresh', as
     vi.unstubAllGlobals();
 });
 
-it('reinstalls the official Demo snapshot when the stored payload is incompatible', async () => {
+it('retains an unrecognized Demo payload and reports its format error', async () => {
     const storage = new Map<string, string>();
     stubDemoStorage(storage);
     storage.set(WORKSPACE_STORAGE_KEY, JSON.stringify({
@@ -214,11 +225,9 @@ it('reinstalls the official Demo snapshot when the stored payload is incompatibl
     storage.set('demo-workspace-v1', 'demo:2026-06-17');
     simulateDemoRefresh(storage);
 
-    await installDemoWorkspaceSnapshot();
-
-    const payload = JSON.parse(storage.get(WORKSPACE_STORAGE_KEY) ?? 'null');
-    expect(payload.state.activeNodeId).toBe(getDemoTopicNodeId(requireTopic(0)));
-    expect(payload.state.nodesById[INBOX_NODE_ID]).toMatchObject({ specialKind: 'inbox' });
+    const original = storage.get(WORKSPACE_STORAGE_KEY);
+    await expect(installDemoWorkspaceSnapshot()).rejects.toThrow('browser_workspace_format_unknown');
+    expect(storage.get(WORKSPACE_STORAGE_KEY)).toBe(original);
     vi.unstubAllGlobals();
 });
 

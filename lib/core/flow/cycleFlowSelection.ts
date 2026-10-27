@@ -1,12 +1,10 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import type { DbPort } from '../sync/dbPort.js';
 
-import type { CycleMeta, CycleRow } from './cycleFlowTypes.js';
+import type { CycleMeta } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowPlan } from './dailyFlowPlanning.js';
-import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
+import type { DailyFlowStore } from './dailyFlowStore.js';
 
 const BATCH_SIZE = 32;
 
@@ -17,13 +15,12 @@ export function cycleReadyNodeIds(snapshot: DailyFlowLearningSnapshot, mode: Rev
     ? plan.readingQueueNodeIds : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds];
 }
 
-async function scanRange(db: DbPort, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
-  settings: DailyFlowSettings; persistence: DailyFlowPersistence; excluded?: string }) {
+async function scanRange(db: DailyFlowStore, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
+  settings: DailyFlowSettings; excluded?: string }) {
   while (meta.scanAfter < meta.lapLimit) {
-    const rows = await db.query<CycleRow>(`SELECT * FROM daily_flow_entries WHERE active=1
-      AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [meta.scanAfter, meta.lapLimit, BATCH_SIZE]);
+    const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE);
     const ids = rows.map(row => row.node_id);
-    const snapshot = ids.length ? await scopedDailyLearningSnapshot(db, args.persistence, ids) : null;
+    const snapshot = ids.length ? await db.scopedLearningSnapshot(ids) : null;
     const ready = new Set(snapshot ? cycleReadyNodeIds({ ...snapshot, nodeOrder: ids }, args.mode, args.now, args.settings) : []);
     for (const row of rows) {
       crossClear(meta, row.order_key, args.now);
@@ -43,7 +40,7 @@ function crossClear(meta: CycleMeta, position: number, now: string) {
   if (!meta.clearedAt && position > meta.clearKey) meta.clearedAt = now;
 }
 
-export async function selectCycleSuccessor(db: DbPort, meta: CycleMeta,
+export async function selectCycleSuccessor(db: DailyFlowStore, meta: CycleMeta,
   args: Parameters<typeof scanRange>[2]) {
   const currentLap = await scanRange(db, meta, args);
   if (currentLap) return currentLap;

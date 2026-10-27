@@ -39,7 +39,7 @@ function toPersistedReviewSession(reviewSession: WorkspaceState['reviewSession']
   return persistedReviewSession;
 }
 
-function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
+export function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
   if (hasWorkspaceRuntimeRepository()) {
     return state;
   }

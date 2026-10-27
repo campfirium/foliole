@@ -34,7 +34,10 @@ async function waitForDemoWorkspace(page: Page) {
 
 async function clearDemoStorage(page: Page) {
   await page.addInitScript(() => {
-    window.localStorage.clear();
+    if (!window.sessionStorage.getItem('demo-reset-fixture-ready')) {
+      window.localStorage.clear();
+      window.sessionStorage.setItem('demo-reset-fixture-ready', '1');
+    }
   });
 }
 
@@ -118,6 +121,7 @@ test('reset data returns the Demo to its first-run learning state', async ({ pag
   await page.goto('/en/demo/', { waitUntil: 'domcontentloaded' });
   await waitForDemoWorkspace(page);
 
+  await expect(page.locator('ol[aria-label="Flow items"] button', { hasText: 'Welcome to Foliole' })).toBeVisible();
   const firstRun = await readLearningSnapshot(page);
   expect(firstRun.flowTitles).toContain('Welcome to Foliole');
   await expect(page.getByText('Day 2')).toBeHidden();
@@ -133,7 +137,9 @@ test('reset data returns the Demo to its first-run learning state', async ({ pag
 
   await expect(dialog).toBeHidden();
   await waitForDemoWorkspace(page);
+  await expect(page.locator('ol[aria-label="Flow items"] button', { hasText: 'Welcome to Foliole' })).toBeVisible();
   const afterReset = await readLearningSnapshot(page);
   expect(afterReset).toEqual(firstRun);
   await expect(page.getByText('Day 2')).toBeHidden();
+  await page.screenshot({ path: '.tmp/artifacts/T536/browser-reset.png', fullPage: true });
 });

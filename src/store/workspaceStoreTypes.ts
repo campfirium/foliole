@@ -13,6 +13,7 @@ import type { WorkspaceBrowseRootIntent } from './workspaceBrowseRoot';
 import type { NodeNavigationResult, WorkspaceNavigationState } from './workspaceNavigation';
 
 export interface WorkspaceState {
+  browserDailyFlow?: import('../shared/platform/runtime/browserDailyFlowState').BrowserDailyFlowState;
   libraryScope?: string;
   activeNodeId: string | null;
   browseRootNodeId: string;
@@ -64,8 +65,8 @@ export interface WorkspaceState {
   unshelveNode: (nodeId: string, now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;
   dismissNodes: (nodeIds: string[], now?: string) => boolean;
-  undoWorkspaceAction: (now?: string) => boolean;
-  redoWorkspaceAction: (now?: string) => boolean;
+  undoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
+  redoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
   deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   undoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
@@ -75,7 +76,7 @@ export interface WorkspaceState {
   startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean | Promise<boolean>;
   continueReviewSessionReading: (now?: string) => boolean | Promise<boolean>;
   resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => string | false | Promise<string | false>;
-  setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
+  setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void | Promise<void>;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
   readReviewTopic: (now?: string, options?: ReadReviewTopicOptions) => Promise<boolean>;
@@ -138,6 +139,8 @@ export interface WorkspaceNodeCreationOptions {
 }
 
 export interface WorkspacePersistedState {
+  browserDailyFlow?: import('../shared/platform/runtime/browserDailyFlowState').BrowserDailyFlowState;
+  appActionHistory?: import('./workspaceActionHistoryState').WorkspaceActionHistoryState;
   libraryScope?: string;
   activeNodeId: string | null;
   browseRootNodeId?: string;

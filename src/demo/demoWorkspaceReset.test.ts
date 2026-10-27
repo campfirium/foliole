@@ -1,6 +1,8 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
+import { installWorkspaceBrowserCommit } from '../store/workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore, WORKSPACE_STORAGE_KEY } from '../store/workspaceStore';
 
 import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
@@ -9,6 +11,14 @@ import { DEMO_CAPTURED_VERSION, DEMO_SNAPSHOT_VERSION, readDemoPreviewDay, write
 import { createBrowserDemoRuntimeController } from './demoRuntimeController';
 import { resetDemoWorkspaceSnapshot } from './demoWorkspaceReset';
 import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
+
+beforeEach(() => {
+  installWorkspaceBrowserCommit(null);
+  installBrowserDailyFlowRuntime(null);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-06-17T00:00:00.000Z'));
+});
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function stubDemoStorage(storage: Map<string, string>, pathname: string) {
   vi.stubGlobal('window', {
@@ -131,7 +141,7 @@ it('resets Demo learning state back to the official seed', () => {
   vi.unstubAllGlobals();
 });
 
-it('keeps scheduled Flow fallback available after Demo reset', () => {
+it('keeps future topics out of today after reset and opens them on their simulated day', async () => {
   const topic = DEMO_TOPICS[0];
   if (!topic) throw new Error('Demo reset test requires a topic.');
   const pathname = canonicalGuidePath(topic.slug);
@@ -151,7 +161,8 @@ it('keeps scheduled Flow fallback available after Demo reset', () => {
     }
   });
 
-  expect(useWorkspaceStore.getState().startReviewSession('2026-06-20T00:00:00.000Z')).toBe(true);
+  expect(await useWorkspaceStore.getState().startReviewSession('2026-06-20T00:00:00.000Z')).toBe(false);
+  expect(await useWorkspaceStore.getState().startReviewSession('2026-06-23T00:00:00.000Z')).toBe(true);
   expect(useWorkspaceStore.getState().reviewSession.currentNodeId).toBe('future-topic');
   vi.unstubAllGlobals();
 });

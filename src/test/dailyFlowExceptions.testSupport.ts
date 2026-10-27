@@ -10,6 +10,7 @@ import type { DailyFlowSettings } from '../../lib/core/flow/dailyFlowContract';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
+import { readDailyFlowView } from '../../lib/core/flow/dailyFlowView';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings';
 import { readCompanionReviewTopic } from '../companion/companionReadingReview';
 import { gradeCompanionReviewCard } from '../companion/companionReviewSession';
@@ -81,4 +82,10 @@ export async function assertDurable(peer: Peer, session: DailyFlowSession) {
     if (session.currentNodeId) expect(current).toEqual({ active: 1, order_key: session.cycle!.scanAfter });
     expect(reader.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 0 });
   } finally { reader.close(); }
+}
+
+export async function readView(peer: Peer, stamp = now, mode: 'recommended' | 'reading-only' | 'review-first' = 'recommended') {
+  const view = await readDailyFlowView(peer.port, { now: stamp, mode, includeEntries: true }, settings(peer), persistence);
+  if (view.status !== 'ready') throw new Error('test_flow_view_not_ready');
+  return view.nodeIds!;
 }

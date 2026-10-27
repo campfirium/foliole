@@ -7,6 +7,7 @@ import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSess
 import { scheduleEditorOperationHistorySave } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { prepareBrowserWorkspacePublish } from './workspaceBrowserCommit';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { installDailyFlowExternalRefresh } from './workspaceDailyFlowSessionActions';
@@ -116,7 +117,7 @@ const workspaceStore = create<WorkspaceState>()(
           if (nextState === currentState) {
             return currentState;
           }
-          return withWorkspaceRendererBoundary(nextState, currentState);
+          return prepareBrowserWorkspacePublish(currentState, withWorkspaceRendererBoundary(nextState, currentState));
         });
       };
 
@@ -177,12 +178,12 @@ workspaceStore.setState = ((partial, replace) =>
       if (nextState === currentState) {
         return currentState;
       }
-      return withWorkspaceRendererBoundary(
+      return prepareBrowserWorkspacePublish(currentState, withWorkspaceRendererBoundary(
         'activeNodeId' in nextState || !('nodesById' in nextState)
           ? nextState
           : { ...nextState, activeNodeId: currentState.activeNodeId },
         currentState
-      );
+      ));
     };
 
     if (replace) {

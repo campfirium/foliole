@@ -87,8 +87,8 @@ export function createBrowserDemoRuntimeController(): DemoRuntimeController {
 
 async function clearBrowserDemoLocalData(updateState: (partial: Partial<DemoRuntimeState>) => void) {
   try {
-    clearDemoLocalStorage();
     resetDemoWorkspaceSnapshot();
+    clearDemoLocalStorage({ keepWorkspace: true });
     updateState({
       ...createDemoRuntimeState()
     });

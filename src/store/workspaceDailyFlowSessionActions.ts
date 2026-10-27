@@ -4,6 +4,7 @@ import type { ReviewSessionMode } from '../features/review/model/reviewSessionMo
 import { commitDailyFlowRuntime, hasDailyFlowRuntime, openDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
+import { hasWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { createReviewSessionModePreference } from './workspaceReviewSessionModePreference';
@@ -52,7 +53,7 @@ export function continueWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, 
 export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceState;
   setState: Set; subscribe(handler: (state: WorkspaceState, previous: WorkspaceState) => void): () => void }) {
   store.subscribe((state, previous) => {
-    if (!hasDailyFlowRuntime() || !state.reviewSession.daily || state.nodesById === previous.nodesById ||
+    if (hasWorkspaceBrowserCommit() || !hasDailyFlowRuntime() || !state.reviewSession.daily || state.nodesById === previous.nodesById ||
       state.appActionHistory.applying || state.appActionHistory.pendingAction) return;
     const token = state.reviewSession.daily;
     const prior = previous.reviewSession.daily;

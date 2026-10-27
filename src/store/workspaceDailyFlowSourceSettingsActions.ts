@@ -19,7 +19,7 @@ export async function saveWorkspaceFlowSourceSettings(set: Set, get: () => Works
   try {
     const scope = before.libraryScope ?? before.reviewSession.daily?.scope;
     if (!scope) throw new Error('daily_flow_library_missing');
-    if (!await saveDailyFlowSourceSettingsRuntime({ scope, sourceNodeId, now, before: sourcePreferences(source), after, readings })) return false;
+    if (!await saveDailyFlowSourceSettingsRuntime({ scope, sourceNodeId, now, before: sourcePreferences(source), after, readings }, before.nodesById)) return false;
     if (get().libraryScope !== before.libraryScope) return false;
     set(state => {
       const merged = { ...state.nodesById };

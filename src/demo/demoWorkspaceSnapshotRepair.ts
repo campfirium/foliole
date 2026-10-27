@@ -10,9 +10,8 @@ export function repairDemoWorkspacePayload(raw: string, pathname = '/en/demo/'):
   try {
     const payload = JSON.parse(raw) as { state?: WorkspacePersistedState; version?: number };
     if (!payload.state?.nodesById) return null;
-    const nodesById = repairInlineDocumentNodes(payload.state.nodesById);
-    const state = repairDemoGuidesOrder(routeStateToDemoPath({ ...payload.state, nodesById }, pathname));
-    if (nodesById === payload.state.nodesById && state === payload.state) return null;
+    const state = repairDemoWorkspaceState(payload.state, pathname);
+    if (state === payload.state) return null;
     return JSON.stringify({
       ...payload,
       state
@@ -20,6 +19,13 @@ export function repairDemoWorkspacePayload(raw: string, pathname = '/en/demo/'):
   } catch {
     return null;
   }
+}
+
+export function repairDemoWorkspaceState(state: WorkspacePersistedState, pathname: string): WorkspacePersistedState {
+  const nodesById = repairInlineDocumentNodes(state.nodesById);
+  return repairDemoGuidesOrder(routeStateToDemoPath(nodesById === state.nodesById ? state : { ...state, nodesById,
+    ...(state.browserDailyFlow?.state ? { browserDailyFlow: { ...state.browserDailyFlow,
+      state: { ...state.browserDailyFlow.state, invalidated: 1 } } } : {}) }, pathname));
 }
 
 function repairDemoGuidesOrder(state: WorkspacePersistedState): WorkspacePersistedState {
@@ -51,7 +57,7 @@ function repairInlineDocumentNodes(nodesById: Record<string, Node | undefined>):
       nextNodesById[nodeId] = nextNode;
     }
   });
-  return changed ? nextNodesById : Object.fromEntries(Object.entries(nodesById).filter((entry): entry is [string, Node] => Boolean(entry[1])));
+  return changed ? nextNodesById : nodesById as Record<string, Node>;
 }
 
 function repairInlineDocumentNode(node: Node | undefined) {
@@ -83,19 +89,7 @@ function repairInlineDocumentNode(node: Node | undefined) {
 function routeStateToDemoPath(state: WorkspacePersistedState, pathname: string) {
   const routedNodeId = resolveDemoNodeIdFromPath(pathname);
   if (!routedNodeId || !state.nodesById[routedNodeId]) return state;
-  if (state.activeNodeId === routedNodeId && state.reviewSession.currentNodeId === routedNodeId) return state;
-  const queueNodeIds = [routedNodeId, ...state.reviewSession.queueNodeIds.filter((nodeId) => nodeId !== routedNodeId)];
-  return {
-    ...state,
-    activeNodeId: routedNodeId,
-    reviewSession: {
-      ...state.reviewSession,
-      currentNodeId: routedNodeId,
-      isAnswerRevealed: false,
-      queueNodeIds,
-      totalNodeCount: Math.max(state.reviewSession.totalNodeCount, queueNodeIds.length)
-    }
-  };
+  return state.activeNodeId === routedNodeId ? state : { ...state, activeNodeId: routedNodeId };
 }
 
 function resolveDemoNodeIdFromPath(pathname: string) {

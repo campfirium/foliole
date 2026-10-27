@@ -4,6 +4,7 @@ import { cycleWindow } from '../../../../../lib/core/flow/cycleFlowSelection';
 import { dailyFlowHistoryCommand } from '../../../../../lib/core/flow/dailyFlowHistory';
 import { retainDailyFlowRetryAsync } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
+import { createSqliteDailyFlowStore } from '../../../../../lib/core/flow/dailyFlowSqliteStore';
 import { readDailyFlow, saveCycleFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
@@ -49,7 +50,7 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
     return (await openCycleFlow(db, { now, mode: state.mode as 'recommended' | 'review-first' | 'reading-only',
       refresh: true }, companionDailyFlowSettings(), companionDailyFlowPersistence)).session;
   }
-  const restored = await replayCycleHistory(db, state.session, { opId: 'structural-replay', now, token: state.session.daily!,
+  const restored = await replayCycleHistory(createSqliteDailyFlowStore(db, companionDailyFlowPersistence), state.session, { opId: 'structural-replay', now, token: state.session.daily!,
     historyMode: replay.mode, historySourceSession: replay.source, nextSession: session,
     ...(replay.after.cycle?.change ? { cycleReplay: replay.after.cycle.change } : {}) });
   const window = cycleWindow(restored);

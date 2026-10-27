@@ -1,12 +1,10 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import { cycleStamp } from './cycleFlowFingerprint.js';
 import type { CycleRow } from './cycleFlowTypes.js';
-import type { DailyFlowSession } from './dailyFlowSession.js';
 import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
-
-export type CycleStored = { day_key: string; revision: number; settings_key: string; mode: string;
-  session_json: string; invalidated: number; session: DailyFlowSession };
+import { cycleStateToSave, type CycleSaveArgs } from './dailyFlowStore.js';
+import type { CycleStored } from './dailyFlowStore.js';
+export type { CycleStored } from './dailyFlowStore.js';
 
 export async function readDailyFlow(db: DbPort): Promise<CycleStored | null> {
   const [row] = await db.query<Omit<CycleStored, 'session'>>('SELECT * FROM daily_flow_state WHERE id = 1');
@@ -31,18 +29,12 @@ export async function writeCycleRows(db: DbPort, rows: CycleRow[]) {
     json_extract(value, '$.cohort'), json_extract(value, '$.initial_task'), json_extract(value, '$.handled') FROM json_each(?)`, [JSON.stringify(rows)]);
 }
 
-export async function saveCycleFlow(db: DbPort, args: { dayKey: string; mode: string; settingsKey: string;
-  now: string; revision: number; session: DailyFlowSession }) {
-  if (!args.session.cycle) throw new Error('daily_flow_cycle_missing');
-  const cycle = { ...args.session.cycle };
-  const session = { ...args.session, cycle, flowFormat: 'cycle-v1' as const };
-  cycle.stamp = cycleStamp(cycle, session);
-  const metadata = { ...session, daily: undefined };
+export async function saveCycleFlow(db: DbPort, args: CycleSaveArgs) {
+  const saved = cycleStateToSave(args);
   await db.run(`INSERT INTO daily_flow_state (id, day_key, revision, settings_key, mode, session_json, invalidated, updated_at)
     VALUES (1, ?, ?, ?, ?, ?, 0, ?) ON CONFLICT(id) DO UPDATE SET day_key=excluded.day_key,
     revision=excluded.revision, settings_key=excluded.settings_key, mode=excluded.mode,
     session_json=excluded.session_json, invalidated=0, updated_at=excluded.updated_at`,
-  [args.dayKey, args.revision, args.settingsKey, args.mode, JSON.stringify(metadata), args.now]);
-  return { ...session, daily: { scope: (JSON.parse(args.settingsKey) as { scope?: string }).scope ?? '',
-    dayKey: args.dayKey, revision: args.revision } };
+  [saved.day_key, saved.revision, saved.settings_key, saved.mode, saved.session_json, args.now]);
+  return saved.session;
 }

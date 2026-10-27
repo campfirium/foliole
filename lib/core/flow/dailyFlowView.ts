@@ -3,21 +3,24 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { cycleReadyNodeIds } from './cycleFlowSelection.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
-import { readCycleRows, readDailyFlow } from './dailyFlowStorage.js';
+import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
+import type { DailyFlowStore } from './dailyFlowStore.js';
 import type { DailyFlowViewArgs, DailyFlowViewResult } from './dailyFlowViewContract.js';
 
 export function readDailyFlowView(db: DbPort, args: DailyFlowViewArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowViewResult> {
-  return db.transaction(async tx => {
-    const stored = await readDailyFlow(tx);
+  return db.transaction(tx => readStoredDailyFlowView(createSqliteDailyFlowStore(tx, persistence), args, settings));
+}
+
+export async function readStoredDailyFlowView(store: DailyFlowStore, args: DailyFlowViewArgs, settings: DailyFlowSettings): Promise<DailyFlowViewResult> {
+    const stored = await store.readState();
     if (!stored || stored.invalidated || stored.day_key !== flowDay(args.now, settings) ||
       stored.settings_key !== JSON.stringify(settings)) return { status: 'needs-preparation' };
-    const rows = (await readCycleRows(tx)).filter(row => row.active);
+    const rows = (await store.readRows()).filter(row => row.active);
     const ids = rows.map(row => row.node_id);
-    const snapshot = await scopedDailyLearningSnapshot(tx, persistence, ids);
+    const snapshot = await store.scopedLearningSnapshot(ids);
     const modes: ReviewSessionMode[] = ['recommended', 'review-first', 'reading-only'];
     const ready = Object.fromEntries(modes.map(mode => [mode,
       new Set(cycleReadyNodeIds({ ...snapshot, nodeOrder: ids }, mode, args.now, settings))])) as Record<ReviewSessionMode, Set<string>>;
@@ -37,5 +40,4 @@ export function readDailyFlowView(db: DbPort, args: DailyFlowViewArgs, settings:
         'reading-only': available('reading-only') },
       canContinueReading: Boolean(!stored.session.currentNodeId && target && target === stored.session.continueNodeId &&
         (stored.session.reviewedItemCount ?? 0) > 0 && args.mode !== 'review-first' && ids.includes(target) && ready['reading-only'].has(target)) };
-  });
 }

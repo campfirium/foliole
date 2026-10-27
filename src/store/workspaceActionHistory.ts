@@ -38,7 +38,7 @@ function requestPendingUndo(set: WorkspaceSet, expectedEntryId?: string) {
   return requested;
 }
 
-function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet, mode: 'redo' | 'undo') {
+function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet, mode: 'redo' | 'undo', awaitCommit = false) {
   return (expectedEntryId?: string) => {
     const snapshot = get();
     const command = resolveWorkspaceHistoryCommand(snapshot.appActionHistory, mode, expectedEntryId);
@@ -48,7 +48,7 @@ function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet,
     set((state) => ({
       appActionHistory: { ...state.appActionHistory, applying: { entryId: entry.id, mode } }
     }));
-    void applyWorkspaceHistoryEntry({ entry, get, mode }).then((result) => {
+    const committed = applyWorkspaceHistoryEntry({ entry, get, mode }).then((result) => {
       set((state) => {
         const applying = state.appActionHistory.applying;
         const top = getWorkspaceHistoryTopEntry(state.appActionHistory, mode);
@@ -64,8 +64,9 @@ function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet,
           appActionHistory: moveWorkspaceHistoryCursor(state.appActionHistory, result.entry, mode)
         };
       });
+      return result.status === 'applied';
     });
-    return true;
+    return awaitCommit ? committed : true;
   };
 }
 
@@ -86,5 +87,12 @@ export function createWorkspaceActionHistoryActions(set: WorkspaceSet, get: Work
   return {
     redoWorkspaceAction: createApplyWorkspaceHistoryAction(set, get, 'redo'),
     undoWorkspaceAction: createApplyWorkspaceHistoryAction(set, get, 'undo')
+  };
+}
+
+export function createAwaitedWorkspaceHistoryActions(set: WorkspaceSet, get: WorkspaceGet) {
+  return {
+    redoWorkspaceAction: createApplyWorkspaceHistoryAction(set, get, 'redo', true),
+    undoWorkspaceAction: createApplyWorkspaceHistoryAction(set, get, 'undo', true)
   };
 }

@@ -4,11 +4,15 @@ import { retainDailyFlowRetry, settleDailyFlowRetry } from '../../../../lib/core
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
+import { getBrowserDailyFlowRuntime } from './dailyFlowBrowserRuntime';
+
 export function hasDailyFlowRuntime() {
-  return Boolean(getRuntimeInvoke());
+  return Boolean(getRuntimeInvoke() || getBrowserDailyFlowRuntime());
 }
 
 export function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: Record<string, unknown>) {
+  const browser = getBrowserDailyFlowRuntime();
+  if (browser) return browser.open(args, knownNodes);
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
   return invoke(NATIVE_COMMANDS.openDailyFlow, args).then(async result => ({ ...result,
@@ -16,6 +20,8 @@ export function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: Record
 }
 
 export function commitDailyFlowRuntime(args: DailyFlowCommitArgs, knownNodes: Record<string, unknown>) {
+  const browser = getBrowserDailyFlowRuntime();
+  if (browser) return browser.commit(args, knownNodes);
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
   return invoke(NATIVE_COMMANDS.commitDailyFlow, retainDailyFlowRetry(args)).then(async result => {
@@ -40,6 +46,8 @@ export async function loadDailyFlowDisplayNodes(result: DailyFlowResult, knownNo
 export async function loadDailyFlowViewRuntime(args: import('../../../../lib/core/flow/dailyFlowViewContract').DailyFlowViewArgs,
   seed: import('../../../../lib/core/flow/dailyFlowSession').DailyFlowSession,
   knownNodes: Record<string, unknown>) {
+  const browser = getBrowserDailyFlowRuntime();
+  if (browser) return browser.view(args, seed, knownNodes);
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
   let view = await invoke(NATIVE_COMMANDS.readDailyFlowView, args);
@@ -55,7 +63,9 @@ export async function loadDailyFlowViewRuntime(args: import('../../../../lib/cor
   return { view, nodes: projection?.nodesById };
 }
 
-export function saveDailyFlowSourceSettingsRuntime(args: import('../../../../lib/core/flow/dailyFlowSourceSettings').DailyFlowSourceSettingsArgs) {
+export function saveDailyFlowSourceSettingsRuntime(args: import('../../../../lib/core/flow/dailyFlowSourceSettings').DailyFlowSourceSettingsArgs, knownNodes: Record<string, unknown> = {}) {
+  const browser = getBrowserDailyFlowRuntime();
+  if (browser) return browser.saveSourceSettings(args, knownNodes);
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
   return invoke(NATIVE_COMMANDS.saveDailyFlowSourceSettings, args);

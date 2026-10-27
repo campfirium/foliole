@@ -12,13 +12,19 @@ export interface ReviewEvent {
 
 /** Events are immutable facts; snapshots and event scheduler versions never seed this calculation. */
 export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings): SchedulerCard | null {
+  return replayReviewEventsFromBaseline(events, parameters, null);
+}
+
+/** A browser import may carry an explicit pre-event profile; native replay always supplies null. */
+export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
+  baseline: SchedulerCard | null): SchedulerCard | null {
   const voids = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
   const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at) }))
     .sort((a, b) => a.instant - b.instant
     || (a.op_id < b.op_id ? -1 : a.op_id > b.op_id ? 1 : 0));
   const scheduler = createFsrsReviewScheduler({ loadSettings: () => parameters,
     getSettingsVersion: getReviewSchedulerVersion, createParameters: createReviewSchedulerParameters });
-  let card: SchedulerCard | null = null;
+  let card: SchedulerCard | null = baseline;
   for (const event of ordered) {
     if (event.kind === 'reset') card = null;
     if (event.kind !== 'review' || voids.has(event.op_id)) continue;

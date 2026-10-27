@@ -29,8 +29,8 @@ export function readOrCreateDemoStartedAt(now = new Date()) {
   return startedAt;
 }
 
-export function clearDemoLocalStorage() {
-  const keys = [WORKSPACE_STORAGE_KEY, DEMO_SNAPSHOT_VERSION];
+export function clearDemoLocalStorage(options: { keepWorkspace?: boolean } = {}) {
+  const keys = options.keepWorkspace ? [] : [WORKSPACE_STORAGE_KEY, DEMO_SNAPSHOT_VERSION];
   for (let index = 0; index < window.localStorage.length; index += 1) {
     const key = window.localStorage.key(index);
     if (key?.startsWith(DEMO_STORAGE_KEY_PREFIX)) {

@@ -63,7 +63,7 @@ interface PaletteCommandRunnerArgs
   openPostponeTopicPanel: () => void;
   dismissReviewTopic: () => Promise<boolean | void>;
   revisitReviewTopicSoon: () => Promise<boolean>;
-  redoWorkspaceAction: () => boolean;
+  redoWorkspaceAction: () => boolean | Promise<boolean>;
   isReviewMode: boolean;
   openPerformancePanel: () => void;
   openSplitTopicDialog: () => boolean | void | Promise<boolean | void>;
@@ -102,7 +102,7 @@ interface PaletteCommandRunnerArgs
   startReviewSession: () => boolean | Promise<boolean>;
   startStudyMode: (options?: StartStudyModeOptions) => void;
   trashViewOpen: boolean;
-  undoWorkspaceAction: () => boolean;
+  undoWorkspaceAction: () => boolean | Promise<boolean>;
 }
 
 function createPaletteReviewCommandActions(

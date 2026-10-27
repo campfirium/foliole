@@ -17,8 +17,8 @@ import {
 interface RunAppCommandActions {
   cleanFormatting?: () => void;
   configureCleanFormatting?: () => void;
-  undo: () => boolean | void;
-  redo: () => boolean | void;
+  undo: () => boolean | void | Promise<boolean>;
+  redo: () => boolean | void | Promise<boolean>;
   importDirectory: () => void | Promise<void>;
   closeSettings: () => void;
   createFolder: () => void;
@@ -105,7 +105,7 @@ interface RunAppCommandActions {
   toggleDevTools: () => void;
 }
 
-type CommandActionResult = boolean | void | Promise<void>;
+type CommandActionResult = boolean | void | Promise<boolean | void>;
 
 export function buildAppPaletteItems(options: BuildAppPaletteItemsOptions): CommandPaletteItem[] {
   const defaultShortcuts = getPlatformDefaultCommandShortcuts();

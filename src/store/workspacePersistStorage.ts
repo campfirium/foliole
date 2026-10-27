@@ -2,6 +2,7 @@ import type { PersistStorage, StateStorage } from 'zustand/middleware';
 
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { hasWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import {
   readFallbackWorkspaceState,
   removeFallbackWorkspaceState,
@@ -33,13 +34,13 @@ export const workspacePersistStorage: StateStorage = {
     return readFallbackWorkspaceState(name);
   },
   setItem(name, value) {
-    if (hasWorkspaceRuntimeRepository()) {
+    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
       return;
     }
     writeFallbackWorkspaceState(name, value);
   },
   removeItem(name) {
-    if (hasWorkspaceRuntimeRepository()) {
+    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
       return;
     }
     removeFallbackWorkspaceState(name);
@@ -52,7 +53,7 @@ export const workspacePersistStoreStorage: PersistStorage<WorkspacePersistedStat
     return value ? JSON.parse(value) : null;
   },
   setItem(name, value) {
-    if (hasWorkspaceRuntimeRepository()) {
+    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
       return;
     }
     return workspacePersistStorage.setItem(name, JSON.stringify(value));

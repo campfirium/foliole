@@ -140,8 +140,7 @@ export function createResumeReviewSessionAction(set: WorkspaceSet, get?: () => W
 export function createSetReviewSessionModeAction(set: WorkspaceSet, get?: () => WorkspaceState): WorkspaceState['setReviewSessionMode'] {
   return (mode, now = new Date().toISOString()) => {
     if (get?.().reviewSession.daily && hasDailyFlowRuntime()) {
-      void openWorkspaceDailyFlow(set, get, { now, mode, seed: get().reviewSession, refresh: true }, createReviewSessionModePreference(mode, now));
-      return;
+      return openWorkspaceDailyFlow(set, get, { now, mode, seed: get().reviewSession, refresh: true }, createReviewSessionModePreference(mode, now)).then(() => undefined);
     }
     let openedNodeId: string | null = null;
     set((state) => {
