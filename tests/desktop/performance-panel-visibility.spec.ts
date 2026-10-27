@@ -7,7 +7,7 @@ test('performance statistics resume after docked, compact and immersive visibili
   await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
   const palette = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
   await palette.getByRole('textbox').fill('DEV Open Performance Panel');
-  await palette.getByRole('button', { name: /DEV Open Performance Panel|DEV 打开性能面板/ }).click();
+  await palette.getByRole('button', { name: /^(DEV Open Performance Panel|DEV 打开性能面板)$/ }).click();
   const memory = desktopWindow.getByRole('heading', { name: /^(Memory|内存)$/ });
   await expect(memory).toBeVisible();
   const toggle = desktopWindow.locator('.window-titlebar').getByRole('button', {
