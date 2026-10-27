@@ -24,14 +24,14 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
   const session = useMemo(() => {
     const retained = drafts.get(args.nodeId);
     if (retained) return retained;
-    if (!args.onSaveContent) return null;
+    if (!args.canEdit || !args.onSaveContent) return null;
     const created = new ContentDraftSession(args.nodeId, {
       content: args.initialContent, versionId: args.initialVersionId ?? ''
     }, args.onSaveContent, args.saveDelayMs ?? COMPANION_TOPIC_EDIT_AUTOSAVE_DELAY_MS);
     drafts.set(args.nodeId, created);
     return created;
     // Source refreshes must not replace an existing node's edit owner.
-  }, [drafts, args.nodeId, Boolean(args.onSaveContent)]);
+  }, [drafts, args.nodeId, args.canEdit, Boolean(args.onSaveContent)]);
   if (session && args.onSaveContent) session.save = args.onSaveContent;
   const editRound = useMemo(() => session ? new ContentEditRound(session) : null, [session]);
 

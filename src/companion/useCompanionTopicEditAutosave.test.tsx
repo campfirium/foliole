@@ -123,3 +123,32 @@ it('retains a saved acknowledgement and retries only refresh after a refresh fai
   expect(refresh).toHaveBeenCalledTimes(1);
   expect(result.current.error).toBeNull();
 });
+
+it('browses without creating edit owners and verifies the latest source before editing starts', async () => {
+  const save = Object.assign(createContentSaveMock(), {
+    retainHold: vi.fn(async () => {}), releaseHold: vi.fn(async () => {})
+  });
+  const hook = renderHook(({ nodeId, canEdit }) => useCompanionTopicEditAutosave({
+    canEdit, initialContent: 'Prepared readable body', initialVersionId: 'prepared', nodeId, onSaveContent: save
+  }), { initialProps: { nodeId: 'n1', canEdit: false }, wrapper: CompanionDraftProvider });
+  await act(async () => { await hook.result.current.flushPendingSave(); });
+  hook.rerender({ nodeId: 'n2', canEdit: false });
+  await act(async () => { await hook.result.current.flushPendingSave(); });
+  expect(hook.result.current.value).toBe('Prepared readable body');
+  expect(save.readSource).not.toHaveBeenCalled();
+  expect(save.retainHold).not.toHaveBeenCalled();
+  const source = deferred<{ content: string; versionId: string }>();
+  save.readSource.mockImplementationOnce(() => source.promise);
+  save.setSource({ content: 'Latest body', versionId: 'latest' });
+  hook.rerender({ nodeId: 'n2', canEdit: true });
+  expect(hook.result.current.ready).toBe(false);
+  expect(save.readSource).toHaveBeenCalledWith('n2', expect.any(String));
+  act(() => hook.result.current.handleChange('Blocked input'));
+  expect(save).not.toHaveBeenCalled();
+  await act(async () => { source.resolve({ content: 'Latest body', versionId: 'latest' }); });
+  expect(hook.result.current.ready).toBe(true);
+  expect(hook.result.current.value).toBe('Latest body');
+  act(() => hook.result.current.handleChange('New input'));
+  await act(async () => { await hook.result.current.flushPendingSave(); });
+  expect(save).toHaveBeenCalledWith('n2', 'New input', expect.objectContaining({ baseVersionId: 'latest' }));
+});

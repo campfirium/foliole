@@ -44,7 +44,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { editor = null; await library.close(); });
 
-function Reader() {
+function Reader({ editing = true }: { editing?: boolean }) {
   const [source, setSource] = useState({ content: 'Original body', currentVersionId: 'base' });
   const [open, setOpen] = useState(false);
   const [activity] = useState(() => new CompanionReadingActivity('topic', () => {}));
@@ -56,8 +56,8 @@ function Reader() {
   const save = createCompanionTopicContentSaveHandler({ state: { workspace_snapshot: null },
     refreshAfterMutation: refresh } as ReturnType<typeof useCompanionWorkspaceSync>);
   return <>
-    <ReadingChrome isContentEditing title="Topic" onExit={() => {}} onOpenActions={() => setOpen(true)} onOpenOutline={() => {}} />
-    <ReadableArticleDocument allowContentEditing activity={activity} onSaveContent={save} onEditorReady={value => { editor = value; }}
+    <ReadingChrome isContentEditing={editing} title="Topic" onExit={() => {}} onOpenActions={() => setOpen(true)} onOpenOutline={() => {}} />
+    <ReadableArticleDocument allowContentEditing={editing} activity={activity} onSaveContent={save} onEditorReady={value => { editor = value; }}
       readableArticle={{ ...source, nodeId: 'topic', title: 'Topic', hideTitleHeading: false,
         textAnchorDecorations: [], pdfAttachmentId: null, persistedNodeViewState: null }}
       readingTypographySettings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
@@ -105,4 +105,28 @@ it('retries a failed refresh without undoing a second edit', async () => {
   fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]!);
   await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
   expect((await readCompanionContentSource('topic')).content).toBe('First');
+});
+
+
+it('reads a prepared body without editing queries and opens editing against the current SQLite version', async () => {
+  const content = (editing: boolean) => <LocalizationProvider initialLanguagePreference="en">
+    <MouseGestureSettingsProvider><CompanionDraftProvider><Reader editing={editing} />
+    </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>;
+  const reads = vi.spyOn(library.connection, 'query');
+  const view = render(content(false));
+  const textbox = await screen.findByRole('document', { name: 'Topic body' });
+  expect(textbox).toHaveAttribute('contenteditable', 'false');
+  await act(async () => undefined);
+  expect(reads.mock.calls.filter(([sql]) => sql.includes('SELECT v.* FROM nodes n'))).toHaveLength(0);
+  const source = await readCompanionContentSource('topic');
+  await saveCompanionContentEdit({ nodeId: 'topic', content: 'Current persisted body', baseContent: source.content,
+    baseVersionId: source.versionId, versionId: crypto.randomUUID(), updatedAt: new Date().toISOString() });
+  view.rerender(content(true));
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));
+  await waitFor(() => expect(editor!.getContent()).toBe('Current persisted body'));
+  act(() => editor!.replaceRange(0, 0, 'Edited '));
+  fireEvent.blur(screen.getByRole('textbox', { name: 'Topic body' }));
+  await waitFor(() => expect(library.database.prepare("SELECT content FROM nodes WHERE id='topic'").get())
+    .toEqual({ content: 'Edited Current persisted body' }));
+  view.unmount();
 });
