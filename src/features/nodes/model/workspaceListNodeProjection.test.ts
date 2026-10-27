@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
 
+import { patchWorkspaceRecord } from '../../../shared/workspaceRecordPatch';
+
 import type { Node } from './nodeTypes';
 import { projectWorkspaceListNodesById } from './workspaceListNode';
 
@@ -18,18 +20,18 @@ function createTopicNode(overrides: Partial<Node> = {}): Node {
   };
 }
 
-it('keeps the list projection stable when a body save only advances updatedAt', () => {
-  const initialProjection = projectWorkspaceListNodesById({ 'node-1': createTopicNode() });
-  const nextProjection = projectWorkspaceListNodesById(
-    {
-      'node-1': createTopicNode({
-        content: 'Version 2',
-        updatedAt: '2026-04-08T00:00:01.000Z'
-      })
-    },
-    initialProjection
-  );
+it.each([false, true])('publishes changed modification time with local patch=%s', (localPatch) => {
+  const source = { 'node-1': createTopicNode(), other: createTopicNode({ id: 'other' }) };
+  const initialProjection = projectWorkspaceListNodesById(source);
+  const updatedAt = '2026-04-08T00:00:01.000Z';
+  const node = { ...source['node-1'], updatedAt };
+  const nextSource = localPatch
+    ? patchWorkspaceRecord(source, { 'node-1': node })
+    : { ...source, 'node-1': node };
+  const nextProjection = projectWorkspaceListNodesById(nextSource, initialProjection);
 
-  expect(nextProjection).toBe(initialProjection);
-  expect(nextProjection['node-1']).toBe(initialProjection['node-1']);
+  expect(nextProjection['node-1']?.updatedAt).toBe(updatedAt);
+  expect(initialProjection['node-1']?.updatedAt).toBe(source['node-1'].updatedAt);
+  expect(nextProjection.other).toBe(initialProjection.other);
+  expect(projectWorkspaceListNodesById(nextSource, nextProjection)).toBe(nextProjection);
 });
