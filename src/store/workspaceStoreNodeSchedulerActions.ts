@@ -1,5 +1,6 @@
 import { normalizeNodeDesiredRetention } from '../features/nodes/model/nodeReviewSettings';
 import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
+import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -25,7 +26,7 @@ export function createUpdateNodePriorityAction(set: WorkspaceSet): WorkspaceStat
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;
-      return { nodesById: { ...state.nodesById, [nodeId]: nextNode } };
+      return { nodesById: patchWorkspaceRecord(state.nodesById, { [nodeId]: nextNode }) };
     });
     if (nextNodeForSync) {
       syncNodeContentToRuntime(nextNodeForSync);
@@ -50,7 +51,7 @@ export function createUpdateNodeDesiredRetentionAction(
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;
-      return { nodesById: { ...state.nodesById, [nodeId]: nextNode } };
+      return { nodesById: patchWorkspaceRecord(state.nodesById, { [nodeId]: nextNode }) };
     });
     if (nextNodeForSync) {
       syncNodeContentToRuntime(nextNodeForSync);
@@ -72,7 +73,7 @@ export function createUpdateNodeShortTermAction(set: WorkspaceSet): WorkspaceSta
         updatedAt: new Date().toISOString()
       };
       nextNodeForSync = nextNode;
-      return { nodesById: { ...state.nodesById, [nodeId]: nextNode } };
+      return { nodesById: patchWorkspaceRecord(state.nodesById, { [nodeId]: nextNode }) };
     });
     if (nextNodeForSync) {
       syncNodeContentToRuntime(nextNodeForSync);

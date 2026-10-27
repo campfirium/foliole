@@ -1,10 +1,14 @@
-import { renderHook } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
+import { expect, it, vi } from 'vitest';
 
+import * as textAnchors from '../../features/editor/model/documentTextAnchorDecorations';
+import * as formulaCloze from '../../features/formula-cloze/model/formulaCloze';
 import { getFormulaClozeEditorPresentation } from '../../features/formula-cloze/model/formulaClozePresentation';
 import type { FormulaAnchorLocator, Node } from '../../features/nodes/model/nodeTypes';
 import { patchWorkspaceRecord, readWorkspaceRecordPatch, recordWorkspaceRecordPatch } from '../../shared/workspaceRecordPatch';
 import { enforceWorkspaceRendererBoundary } from '../../store/workspaceRendererBoundary';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { useDocumentPanelFormulaClozePresentation } from './useDocumentPanelFormulaClozePresentation';
@@ -123,4 +127,43 @@ it('updates draft offsets, marker edits, reparenting, trash, restore and untrack
   expect(result.current).toEqual([{ from: 6, to: 10, kind: 'highlight', nodeId: 'text' }]);
   expect(getFormulaClozeEditorPresentation(parent.id)?.regions).toHaveLength(1);
   unmount();
+});
+
+it('reuses markers after real scheduling actions commit through the workspace store', () => {
+  const previous = useWorkspaceStore.getState();
+  useWorkspaceStore.setState({ nodesById: {
+    [parent.id]: parent, text, formula, other: { ...parent, id: 'other' }
+  } });
+  const collect = vi.spyOn(textAnchors, 'collectDocumentTextAnchorDecorations');
+  const derive = vi.spyOn(formulaCloze, 'deriveFormulaClozeRegionsFromChildren');
+  let commits = 0;
+  const trashedNodeIds: string[] = [];
+  const hook = renderHook(() => {
+    const nodesById = useWorkspaceStore((state) => state.nodesById);
+    useLayoutEffect(() => { commits++; });
+    return useMarkers({ nodesById, editorContent: parent.content, trashedNodeIds });
+  });
+  try {
+    const decorations = hook.result.current;
+    const presentation = getFormulaClozeEditorPresentation(parent.id);
+    const initialCalls = collect.mock.calls.length;
+    const initialFormulaCalls = derive.mock.calls.length;
+    const initialCommits = commits;
+    act(() => useWorkspaceStore.getState().updateNodePriority('other', 5));
+    act(() => useWorkspaceStore.getState().updateNodeDesiredRetention('other', 0.9));
+    act(() => useWorkspaceStore.getState().updateNodeShortTerm('other', true));
+    expect(useWorkspaceStore.getState().nodesById.other).toMatchObject({
+      priority: 5, desiredRetention: 0.9, enableShortTerm: true
+    });
+    expect(commits - initialCommits).toBe(3);
+    expect(collect.mock.calls.length - initialCalls).toBe(0);
+    expect(derive.mock.calls.length - initialFormulaCalls).toBe(0);
+    expect(hook.result.current).toEqual(decorations);
+    expect(getFormulaClozeEditorPresentation(parent.id)).toEqual(presentation);
+  } finally {
+    hook.unmount();
+    collect.mockRestore();
+    derive.mockRestore();
+    useWorkspaceStore.setState(previous, true);
+  }
 });
