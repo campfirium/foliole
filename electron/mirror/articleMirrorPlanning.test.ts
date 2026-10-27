@@ -76,14 +76,15 @@ it('preserves direct derived membership, independent ordering, timestamps and fr
   input.trashedNodeIds = ['trashed'];
   const plans = collectArticleMirrorPlans(input, '/isolated/mirror');
 
-  expect(plans.map(({ articleId }) => articleId)).toEqual(['second', 'article']);
-  expect(plans[1]).toMatchObject({
-    derivedNodeIds: ['derived-b', 'derived-a'], manualTopicIds: ['manual-a', 'manual-b'],
-    sourceUpdatedAt: '2026-10-04T00:00:00Z', relativePath: 'article.md'
+  expect(plans.map(({ articleId }) => articleId)).toEqual(['second', 'manual-a', 'article', 'manual-b']);
+  expect(plans[2]).toMatchObject({
+    derivedNodeIds: ['derived-b', 'derived-a'], manualTopicIds: [],
+    sourceUpdatedAt: '2026-10-03T00:00:00Z', relativePath: 'article.md'
   });
+  expect(plans[1]?.derivedNodeIds).toEqual(['nested-derived']);
   expect(plans[0]?.derivedNodeIds).toEqual(['other-derived']);
   input.nodesById['derived-b']!.parentNodeId = 'second';
   const next = collectArticleMirrorPlans(input, '/isolated/mirror');
   expect(next[0]?.derivedNodeIds).toEqual(['derived-b', 'other-derived']);
-  expect(next[1]?.derivedNodeIds).toEqual(['derived-a']);
+  expect(next[2]?.derivedNodeIds).toEqual(['derived-a']);
 });

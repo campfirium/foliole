@@ -188,9 +188,9 @@ it.each([100, 1000, 3000])('reads only the selected article body among %i unrela
 });
 
 
-it('keeps scoped content identical to full output including existing manual notes', async () => {
+it('keeps scoped content identical to full output including existing EPUB-generated chapters', async () => {
   save('article', null, 'topic', 'Article', '---\nauthor: Ada\n---\nBody', '2026-10-06T00:00:00.000Z');
-  save('note', 'article', 'topic', 'Note', 'Manual note body', '2026-10-06T00:00:00.000Z');
+  save('node-epub-note', 'article', 'topic', 'Note', 'Manual note body', '2026-10-06T00:00:00.000Z');
   save('unrelated', null, 'topic', 'Other', 'Other body', '2026-10-06T00:00:00.000Z');
   await rebuildAllMirrorOutput();
   const fullOutput = await fs.readFile(mirrorPath('Article.md'), 'utf8');
@@ -205,5 +205,5 @@ it('keeps scoped content identical to full output including existing manual note
   await expect(fs.readFile(mirrorPath('Article.md'), 'utf8')).resolves.toBe(fullOutput);
   expect(fullOutput).toContain('Manual note body');
   expect(fullOutput).toContain('author: Ada');
-  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(['article', 'note', 'article', 'note']);
+  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(['article', 'node-epub-note', 'article', 'node-epub-note']);
 });

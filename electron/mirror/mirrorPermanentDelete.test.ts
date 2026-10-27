@@ -143,8 +143,8 @@ it('keeps nonempty old parents when an unrelated file remains there', async () =
 });
 
 
-it('retires a nested manual Item without removing or rewriting its Topic output', async () => {
-  save('nested-item', 'Nested Item', 'item', 'article');
+it.each(['item', 'topic'] as const)('retires a nested manual %s without removing or rewriting its parent output', async (kind) => {
+  save('nested-item', 'Nested Item', kind, 'article');
   await rebuildAllMirrorOutput();
   const parentFile = mirror('Folder/Article.md');
   const parentBefore = await fs.stat(parentFile);

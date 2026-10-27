@@ -1,3 +1,4 @@
+import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { isManualItem } from './mirrorManualItemScope.js';
@@ -12,6 +13,8 @@ function resolveOwningArticleId(snapshot: WorkspaceSnapshot, node: ArticleNode, 
   while (current && !trashedNodeIds.has(current.id)) {
     if (current.anchorLink === null && current.kind === 'topic') {
       ownerId = current.id;
+      // Preserve existing book aggregation; ordinary Topics are explicit inputs.
+      if (!isEpubGeneratedNodeId(current.id)) return ownerId;
     }
     if (!current.parentNodeId || current.parentNodeId === INBOX_NODE_ID) {
       return ownerId;

@@ -55,7 +55,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it('exports the same saved content as automatic mirrors including author, nested notes and absolute assets', async () => {
+it('exports the same saved content as automatic mirrors including author and absolute assets while keeping manual child Topics separate', async () => {
   save('article', `---\nauthor: Ada\n---\nBody ![image](asset://${hash}.png)`);
   save('note', 'First note', 'article');
   save('nested-note', 'Nested note', 'note');
@@ -71,10 +71,11 @@ it('exports the same saved content as automatic mirrors including author, nested
   const output = await fs.readFile(outputPath, 'utf8');
   expect(output).toBe(expected);
   expect(output).toContain('author: Ada');
-  expect(output).toContain('Nested note');
+  expect(output).not.toContain('Nested note');
+  expect(output).not.toContain('First note');
   expect(output).toContain(path.join(loadLibraryPathSettingsSync().assets_dir, `${hash}.png`));
   expect(output).not.toContain('asset://');
-  expect(new Set(readDocument.mock.calls.map(([id]) => id))).toEqual(new Set(['article', 'note', 'nested-note']));
+  expect(new Set(readDocument.mock.calls.map(([id]) => id))).toEqual(new Set(['article']));
   await rebuildAllMirrorOutput();
   await expect(fs.readFile(mirror, 'utf8')).resolves.toBe(output);
 });

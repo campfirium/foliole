@@ -146,16 +146,16 @@ it('updates the same article mirror when cloze content changes', async () => {
   );
 });
 
-it('updates the parent article mirror when a manual child topic changes', async () => {
+it('updates the book mirror when an existing EPUB-generated chapter changes', async () => {
   saveNode('node-article', null, 'Parent body.', '2026-03-30T00:00:00.000Z', { title: 'Mirror Demo' });
-  saveNode('node-child-topic', 'node-article', 'First child body.', '2026-03-30T00:00:00.000Z', {
+  saveNode('node-epub-child-topic', 'node-article', 'First child body.', '2026-03-30T00:00:00.000Z', {
     kind: 'topic',
     title: 'Key Point',
     position: 1
   });
   await rebuildMirrorOutput();
 
-  saveNode('node-child-topic', 'node-article', 'Updated child body.', '2030-03-30T00:17:00.000Z', {
+  saveNode('node-epub-child-topic', 'node-article', 'Updated child body.', '2030-03-30T00:17:00.000Z', {
     kind: 'topic',
     title: 'Key Point',
     position: 1
@@ -257,14 +257,14 @@ it('clears stale mirror output during a full rebuild', async () => {
   await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body updated.');
 });
 
-it('appends manual child topics to the parent article mirror instead of exporting extra files', async () => {
+it('keeps existing EPUB-generated chapters in the book mirror instead of exporting extra files', async () => {
   saveNode('folder-root', null, '', '2026-03-30T00:00:00.000Z', { kind: 'folder', title: 'test' });
   saveNode('node-parent-topic', 'folder-root', 'Parent body.', '2026-03-30T00:00:00.000Z', {
     kind: 'topic',
     title: 'Parent Topic',
     position: 1
   });
-  saveNode('node-child-topic', 'node-parent-topic', 'Child body.', '2026-03-30T00:00:00.000Z', {
+  saveNode('node-epub-child-topic', 'node-parent-topic', 'Child body.', '2026-03-30T00:00:00.000Z', {
     kind: 'topic',
     title: 'Key Point',
     position: 2

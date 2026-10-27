@@ -1,3 +1,4 @@
+import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { isManualItem } from './mirrorManualItemScope.js';
@@ -27,6 +28,8 @@ function resolveOwnerFromChain(rows: MirrorNodeRow[]) {
     }
     if (row.kind === 'topic' && !row.anchor_link) {
       ownerId = row.id;
+      // Generated book structure keeps its existing aggregate notification.
+      if (!isEpubGeneratedNodeId(row.id)) return ownerId;
     }
     if (row.deleted_at && !row.anchor_link) {
       return ownerId;
