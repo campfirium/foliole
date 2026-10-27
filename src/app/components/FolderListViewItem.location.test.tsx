@@ -11,7 +11,7 @@ import { FolderListViewItem } from './FolderListViewItem';
 
 function node(id: string, parentNodeId: string | null = null, title = id): Node {
   return {
-    id, parentNodeId, title, kind: 'topic', content: '', review: null,
+    id, parentNodeId, title, kind: 'topic', content: '', reveal: null, review: null,
     createdAt: '2026-04-01T00:00:00.000Z', updatedAt: '2026-04-01T00:00:00.000Z'
   };
 }
