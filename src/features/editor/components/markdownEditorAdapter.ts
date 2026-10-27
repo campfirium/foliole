@@ -24,6 +24,7 @@ function syncEditorAdapterInputRefs(
   refs.onDocumentInputRef.current = args.onDocumentInput;
   refs.onMissingAttachmentResourceRef.current = args.onMissingAttachmentResource;
   refs.initialValueRef.current = args.initialValue;
+  refs.nodeIdRef.current = args.nodeId;
   refs.liveMarkdownEnabledRef.current = args.liveMarkdownEnabled;
   refs.localDocumentPathRef.current = args.localDocumentPath ?? null;
   refs.onOpenExternalLinkRef.current = args.onOpenExternalLink;
@@ -48,6 +49,7 @@ function useEditorAdapterInputRefs(
     applicationCutEnabledRef: useRef(args.applicationCutEnabled),
     hideTitleHeadingRef: useRef(args.hideTitleHeading),
     initialValueRef: useRef(args.initialValue),
+    nodeIdRef: useRef(args.nodeId),
     liveMarkdownEnabledRef: useRef(args.liveMarkdownEnabled),
     localDocumentPathRef: useRef(args.localDocumentPath ?? null),
     onChangeRef: useRef(args.onChange),
@@ -72,6 +74,7 @@ function useEditorAdapterInputs(args: {
   applicationCutEnabled: boolean | undefined;
   hideTitleHeading: boolean;
   initialValue: string;
+  nodeId: string | null;
   liveMarkdownEnabled: boolean | undefined;
   localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
@@ -114,6 +117,7 @@ function useEditorAdapterLifecycle(args: {
       hideTitleHeading: inputs.hideTitleHeadingRef.current,
       host,
       initialContent: inputs.initialValueRef.current,
+      nodeId: inputs.nodeIdRef.current,
       liveMarkdownEnabled: inputs.liveMarkdownEnabledRef.current,
       localDocumentPath: inputs.localDocumentPathRef.current,
       onChange: (nextValue, meta) => inputs.onChangeRef.current(nextValue, meta),
@@ -168,13 +172,15 @@ export function useEditorAdapter(
   onUndo: MarkdownEditorProps['onUndo'],
   readOnly: boolean | undefined,
   readOnlyInteractionMode: MarkdownEditorProps['readOnlyInteractionMode'],
-  trailingDivider: boolean | undefined
+  trailingDivider: boolean | undefined,
+  nodeId: string | null
 ) {
   const adapterRef = useRef<CodeMirrorEditorAdapter | null>(null);
   const inputs = useEditorAdapterInputs({
     applicationCutEnabled,
     hideTitleHeading,
     initialValue,
+    nodeId,
     liveMarkdownEnabled,
     localDocumentPath: localDocumentPath ?? null,
     onChange,

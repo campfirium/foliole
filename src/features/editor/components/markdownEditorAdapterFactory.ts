@@ -11,6 +11,7 @@ export function createMarkdownEditorAdapter(args: {
   hideTitleHeading: boolean;
   host: HTMLDivElement;
   initialContent: string;
+  nodeId: string | null;
   liveMarkdownEnabled: boolean | undefined;
   localDocumentPath?: string | null;
   onChange: MarkdownEditorProps['onChange'];
@@ -31,6 +32,7 @@ export function createMarkdownEditorAdapter(args: {
     ...(args.applicationCutEnabled !== undefined ? { applicationCutEnabled: args.applicationCutEnabled } : {}),
     hideTitleHeading: args.hideTitleHeading,
     initialContent: args.initialContent,
+    nodeId: args.nodeId,
     ...(args.liveMarkdownEnabled !== undefined ? { liveMarkdownEnabled: args.liveMarkdownEnabled } : {}),
     localDocumentPath: args.localDocumentPath ?? null,
     onChange: args.onChange,

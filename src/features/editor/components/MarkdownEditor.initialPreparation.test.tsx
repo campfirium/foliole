@@ -19,7 +19,7 @@ it('prepares a reading paragraph without repeatedly rebuilding the same initial 
   </MouseGestureSettingsProvider></LocalizationProvider>);
   expect(screen.getByRole('document', { name: 'Prepared article' })).toHaveTextContent('Prepared body');
   expect(screen.getByRole('document', { name: 'Prepared article' }).querySelector('.cm-md-strong')).toHaveTextContent('Prepared body');
-  expect(parse.mock.calls.filter(([input]) => input === text).length).toBeLessThanOrEqual(2);
+  expect(parse.mock.calls.filter(([input]) => input === text).length).toBeLessThanOrEqual(1);
 });
 
 

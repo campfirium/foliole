@@ -164,7 +164,8 @@ function useMarkdownEditorModel(props: MarkdownEditorProps) {
     props.onUndo,
     props.readOnly,
     props.readOnlyInteractionMode,
-    props.trailingDivider
+    props.trailingDivider,
+    props.nodeId
   );
   const { closePreview, previewImage } = useMarkdownImagePreview(hostRef);
   const { closePreview: closeMermaidPreview, previewMermaid } = useMarkdownMermaidPreview(hostRef);

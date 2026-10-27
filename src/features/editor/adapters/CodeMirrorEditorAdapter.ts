@@ -29,7 +29,6 @@ import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
 import type { HighlightRangePreview } from './codeMirrorHighlightRangePreview';
 import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
-import { applyCodeMirrorLocalizedImageChanges } from './codeMirrorLocalizedImageChanges';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
 import {
@@ -84,6 +83,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   private highlightRangePreview: HighlightRangePreview | null = null;
 
   constructor(private readonly host: HTMLElement, options: CodeMirrorEditorAdapterOptions) {
+    this.nodeId = options.nodeId ?? null;
     this.hideTitleHeading = options.hideTitleHeading === true;
     this.localDocumentPath = options.localDocumentPath ?? null;
     this.textAnchorDecorations = options.textAnchorDecorations ?? EMPTY_EDITOR_TEXT_ANCHOR_DECORATIONS;
@@ -105,6 +105,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       getContent: () => this.getContent(),
       getNodeId: () => this.nodeId,
       getOnChange: () => this.onChange,
+      getView: () => this.view,
       hideTitleHeading: this.hideTitleHeading,
       host,
       imageClozePresentationVersion: this.imageClozePresentationVersion,
@@ -115,13 +116,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       onOpenNodeLink: this.onOpenNodeLink,
       onPreviewNodeLink: this.onPreviewNodeLink,
       onPastedAnchors: this.onPastedAnchors,
-      onApplyLocalizedChanges: (changes, snapshot, retainDisplay) => {
-        applyCodeMirrorLocalizedImageChanges({
-          changes, contentSnapshot: snapshot, nodeId: this.nodeId, retainDisplay, view: this.view,
-          setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; }
-        });
-        this.remoteImageLocalization.schedule();
-      },
+      setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; },
       onSetContent: (content) => this.setContent(content),
       options,
       paragraphMarkerCompartment: this.paragraphMarkerCompartment,
@@ -180,8 +175,10 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setNodeId(nodeId: string | null) {
     if (nodeId !== this.nodeId) clearRetainedRemoteImageSources(this.nodeId);
     this.externalChangeBuffer.flushNow();
-    this.nodeId = nodeId;
-    this.reconfigureLiveMarkdown();
+    if (nodeId !== this.nodeId) {
+      this.nodeId = nodeId;
+      this.reconfigureLiveMarkdown();
+    }
     this.remoteImageLocalization.schedule();
   }
   setLocalDocumentPath(localDocumentPath: string | null) {

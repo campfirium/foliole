@@ -8,12 +8,12 @@ import type {
   CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
+import { applyCodeMirrorLocalizedImageChanges } from './codeMirrorLocalizedImageChanges';
 import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorBodyOverflow, EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 import { editorImageReferences } from './editorImageReferences';
-import type { LocalizedImageChange } from './localizeRemoteMarkdownImages';
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
   hasBodyOverflowListener: () => boolean;
@@ -21,6 +21,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   diffDecorationsCompartment: Compartment;
   getContent: () => string;
   getNodeId: () => string | null;
+  getView: () => EditorView;
   getOnChange: () => ((content: string, meta?: EditorContentChangeMeta) => void) | undefined;
   host: HTMLElement;
   hideTitleHeading: boolean;
@@ -32,7 +33,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
-  onApplyLocalizedChanges: (changes: LocalizedImageChange[], contentSnapshot: string, retainDisplay?: boolean) => void;
+  setApplyingExternalContent: (value: boolean) => void;
   onSetContent: (content: string) => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: Compartment;
@@ -45,8 +46,13 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
 function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
     applyLocalizedContent: (localized, contentSnapshot, changes, retainDisplay) => {
-      if (changes?.length) args.onApplyLocalizedChanges(changes, contentSnapshot, retainDisplay);
-      else args.onSetContent(localized);
+      if (changes?.length) {
+        applyCodeMirrorLocalizedImageChanges({
+          changes, contentSnapshot, nodeId: args.getNodeId(), retainDisplay, view: args.getView(),
+          setApplyingExternalContent: args.setApplyingExternalContent
+        });
+        controllers.remoteImageLocalization.schedule();
+      } else args.onSetContent(localized);
       args.options.onDocumentInput?.({
         contentLength: localized.length,
         isComposing: false,
