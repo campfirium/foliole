@@ -216,7 +216,7 @@ it('classifies TXT metadata without preloading file content', async () => {
 
 it('defers HTML conversion until the native import command runs', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.html')] });
-  readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
+  readFile.mockResolvedValue(Buffer.from('<h2>Imported</h2><p><strong>Bold</strong> text</p>'));
   runPreparedImport.mockReturnValue({ ...importedHtmlResult, sourceLocator: fixturePath('inbox.html') });
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({

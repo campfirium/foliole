@@ -42,7 +42,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetImportPathAuthorizationForTests();
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/inbox.html'] });
-  readFile.mockResolvedValue('<h2>Imported</h2><p><strong>Bold</strong> text</p>');
+  readFile.mockImplementation(async (_filePath: string, encoding?: string) => {
+    const content = '<h2>Imported</h2><p><strong>Bold</strong> text</p>';
+    return encoding ? content : Buffer.from(content);
+  });
   runPreparedImport.mockReturnValue({
     contentFingerprint: 'content-fingerprint',
     degradedReason: null,
@@ -61,7 +64,7 @@ beforeEach(() => {
 });
 
 it('returns the selected HTML file without preloading the full content', async () => {
-  readFile.mockResolvedValue(DEGRADED_HTML);
+  readFile.mockResolvedValue(Buffer.from(DEGRADED_HTML));
 
   await expect(selectImportTextFile()).resolves.toEqual({
     content: '',
@@ -73,7 +76,7 @@ it('returns the selected HTML file without preloading the full content', async (
 });
 
 it('marks HTML file imports as degraded when conversion had to fall back', async () => {
-  readFile.mockResolvedValue(DEGRADED_HTML);
+  readFile.mockResolvedValue(Buffer.from(DEGRADED_HTML));
   runPreparedImport.mockReturnValue({
     contentFingerprint: 'content-fingerprint',
     degradedReason: 'HTML conversion degraded: embedded content',
@@ -118,7 +121,7 @@ it('marks HTML file imports as degraded when conversion had to fall back', async
 });
 
 it('supports adopting markdown highlight markers during import', async () => {
-  readFile.mockResolvedValue('Use ==important== text');
+  readFile.mockResolvedValue(Buffer.from('Use ==important== text'));
 
   await expect(runTextFileImport(undefined, { highlight_policy: 'adopt' })).resolves.toEqual({
     content_fingerprint: 'content-fingerprint',
