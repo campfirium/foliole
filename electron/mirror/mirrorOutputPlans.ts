@@ -77,9 +77,11 @@ async function commitRenderedMirror(args: {
   persistedRecord: MirrorArticleRecord | null;
   plan: ArticleMirrorPlan;
   revision: string;
+  signal?: AbortSignal;
   updatedAt: string;
 }) {
   return runWithDatabaseConnectionOwner(async () => {
+    if (args.signal?.aborted) throw new DOMException('AbortError', 'AbortError');
     if (args.isEligible && !args.isEligible(args.plan.articleId)) return false;
     if (!args.currency.isPlanCurrent(args.plan.articleId, args.revision)) return false;
     if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
@@ -132,7 +134,9 @@ export async function processMirrorPlans(args: {
       );
       const revision = mirrorPlanRevision(args.snapshot, plan);
       const committed = await commitRenderedMirror({ currency: args.currency, markdown, paths: args.paths, persistedRecord,
-        plan, revision, updatedAt: args.updatedAt, ...(args.options.isEligible ? { isEligible: args.options.isEligible } : {}) });
+        plan, revision, updatedAt: args.updatedAt,
+        ...(args.options.taskContext ? { signal: args.options.taskContext.signal } : {}),
+        ...(args.options.isEligible ? { isEligible: args.options.isEligible } : {}) });
       if (committed) rebuiltArticleCount += 1;
       else {
         pendingArticleIds.push(plan.articleId);

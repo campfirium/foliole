@@ -10,6 +10,8 @@ const DEBOUNCE_MS = 60_000;
 let timer: ReturnType<typeof setTimeout> | null = null;
 const pendingNodes = new Map<string, number>();
 const pendingArticles = new Map<string, number>();
+const suspendedArticles = new Set<string>();
+const suspendedNodes = new Set<string>();
 let flushInFlight: Promise<void> | null = null;
 
 function clearTimer() {
@@ -20,16 +22,23 @@ function clearTimer() {
 function resolvePendingNodes() {
   for (const [nodeId, deadline] of pendingNodes) {
     for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) {
+      const wasPending = pendingArticles.has(articleId);
       pendingArticles.set(articleId, Math.max(deadline, pendingArticles.get(articleId) ?? 0));
+      if (!suspendedNodes.has(nodeId)) suspendedArticles.delete(articleId);
+      else if (!wasPending) suspendedArticles.add(articleId);
     }
   }
   pendingNodes.clear();
+  suspendedNodes.clear();
 }
 
 function scheduleFlush() {
   clearTimer();
   if (flushInFlight) return;
-  const deadlines = [...pendingNodes.values(), ...pendingArticles.values()];
+  const deadlines = [
+    ...[...pendingNodes].filter(([id]) => !suspendedNodes.has(id)).map(([, deadline]) => deadline),
+    ...[...pendingArticles].filter(([id]) => !suspendedArticles.has(id)).map(([, deadline]) => deadline)
+  ];
   if (!deadlines.length) return;
   timer = setTimeout(() => {
     timer = null;
@@ -37,35 +46,60 @@ function scheduleFlush() {
   }, Math.max(0, Math.min(...deadlines) - Date.now()));
 }
 
-async function processPending(bypass: boolean, context: DesktopTaskContext) {
+async function processPending(bypass: boolean, context: DesktopTaskContext, attempted: Map<string, number>) {
   await runWithDatabaseConnectionOwner(resolvePendingNodes);
-  const candidates = [...pendingArticles.keys()];
+  for (const [id, deadline] of pendingArticles) attempted.set(id, deadline);
+  const candidates = [...attempted.keys()];
   for (const articleId of candidates) {
     await context.yieldIfNeeded();
     const eligible = () => {
       resolvePendingNodes();
-      return bypass || (pendingArticles.get(articleId) ?? Infinity) <= Date.now();
+      return bypass || (!suspendedArticles.has(articleId) && (pendingArticles.get(articleId) ?? Infinity) <= Date.now());
     };
     if (!await runWithDatabaseConnectionOwner(eligible)) continue;
+    const deadline = pendingArticles.get(articleId)!;
     pendingArticles.delete(articleId);
-    await syncIncrementalMirrorOutput([articleId], context, bypass ? undefined : (targetId) => {
-      resolvePendingNodes();
-      return !pendingArticles.has(targetId) || pendingArticles.get(targetId)! <= Date.now();
-    });
+    suspendedArticles.delete(articleId);
+    try {
+      await syncIncrementalMirrorOutput([articleId], context, bypass ? undefined : (targetId) => {
+        resolvePendingNodes();
+        return !pendingArticles.has(targetId) || pendingArticles.get(targetId)! <= Date.now();
+      });
+    } catch (error) {
+      await runWithDatabaseConnectionOwner(() => {
+        resolvePendingNodes();
+        if (!pendingArticles.has(articleId)) {
+          pendingArticles.set(articleId, deadline);
+          suspendedArticles.add(articleId);
+        }
+      });
+      throw error;
+    }
   }
 }
 
 async function drainQueue(bypass: boolean) {
   clearTimer();
   if (flushInFlight) return flushInFlight;
+  let completed = false;
+  const attemptedNodes = new Map(pendingNodes);
+  const attemptedArticles = new Map(pendingArticles);
   const handle = submitDesktopOperation('mirror-incremental', {
     failureLabel: '[mirror] incremental export failed',
-    run: (context) => processPending(bypass, context)
+    run: async (context) => {
+      await processPending(bypass, context, attemptedArticles);
+      completed = !context.signal.aborted;
+    }
   });
   flushInFlight = handle.promise.then(() => undefined);
   try {
     await flushInFlight;
   } finally {
+    if (!completed) {
+      // Failed/cancelled work stays available to an explicit flush, without a retry timer.
+      for (const [id, deadline] of attemptedNodes) if (pendingNodes.get(id) === deadline) suspendedNodes.add(id);
+      for (const [id, deadline] of attemptedArticles) if (pendingArticles.get(id) === deadline) suspendedArticles.add(id);
+    }
     flushInFlight = null;
     scheduleFlush();
   }
@@ -76,9 +110,15 @@ export function scheduleMirrorSync(nodeIds: string[], articleIds: string[] = [],
   if (preserveDeadline) resolvePendingNodes();
   const deadline = Date.now() + DEBOUNCE_MS;
   for (const articleId of articleIds) {
-    if (!preserveDeadline || !pendingArticles.has(articleId)) pendingArticles.set(articleId, deadline);
+    if (!preserveDeadline || !pendingArticles.has(articleId)) {
+      pendingArticles.set(articleId, deadline);
+      suspendedArticles.delete(articleId);
+    }
   }
-  for (const nodeId of nodeIds) pendingNodes.set(nodeId, deadline);
+  for (const nodeId of nodeIds) {
+    pendingNodes.set(nodeId, deadline);
+    suspendedNodes.delete(nodeId);
+  }
   scheduleFlush();
 }
 
