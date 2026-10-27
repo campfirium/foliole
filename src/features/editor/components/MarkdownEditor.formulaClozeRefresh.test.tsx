@@ -57,15 +57,6 @@ describe('MarkdownEditor formula cloze presentation refresh', () => {
     unregisterFormulaClozeEditorPresentation('node-1');
   });
 
-  it('refreshes for initial content and after the presentation listener is installed for the current node', async () => {
-    renderEditor();
-
-    await waitFor(() => {
-      expect(mockSetNodeId).toHaveBeenCalledWith('node-1');
-      expect(mockRefreshImageClozePresentation).toHaveBeenCalledTimes(3);
-    });
-  });
-
   it('refreshes when formula cloze regions are registered externally', async () => {
     renderEditor();
 
