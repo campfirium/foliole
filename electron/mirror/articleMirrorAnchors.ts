@@ -13,6 +13,8 @@ interface LocatorMirrorSpan {
   kind: 'highlight' | 'cloze';
   sourceText: string;
   to: number;
+  located: boolean;
+  noteSourceText: string;
 }
 
 function isLocatorMirrorSpan(span: LocatorMirrorSpan | null): span is LocatorMirrorSpan {
@@ -48,35 +50,30 @@ function resolveTextMirrorLocator(
   return null;
 }
 
-function collectLocatorMirrorSpans(
-  articleContent: string,
-  derivedByAnchorKey: Map<string, MirrorNode[]>
-) {
+function collectAnchorSpans(articleContent: string, key: string, linkedChildren: MirrorNode[]) {
+  const [kind, anchorId] = key.split(':') as ['highlight' | 'cloze', string];
+  const locator = linkedChildren.find(
+    (child) => resolveTextMirrorLocator(child.anchorLink?.locator) !== null
+  )?.anchorLink?.locator;
+  const first = resolveTextMirrorLocator(locator);
+  const groupedHighlight = kind === 'highlight' && locator && 'ranges' in locator;
+  const ranges = groupedHighlight ? locator.ranges : first ? [first] : [];
+  const spans = ranges.map((range) => {
+    const { from, to } = range;
+    const inBounds = Number.isInteger(from) && Number.isInteger(to) && from >= 0 && to > from && to <= articleContent.length;
+    const source = inBounds ? articleContent.slice(from, to) : '';
+    const located = inBounds && (!groupedHighlight || source === range.originalText);
+    if (!located && kind !== 'highlight') return null;
+    return { anchorId, from, kind, located, noteSourceText: '',
+      sourceText: located ? source : range.originalText ?? '', to } satisfies LocatorMirrorSpan;
+  }).filter(isLocatorMirrorSpan);
+  const noteSourceText = spans.map((span) => span.sourceText).join('\n');
+  return spans.map((span) => ({ ...span, noteSourceText }));
+}
+
+function collectLocatorMirrorSpans(articleContent: string, derivedByAnchorKey: Map<string, MirrorNode[]>) {
   return [...derivedByAnchorKey.entries()]
-    .map(([key, linkedChildren]) => {
-      const [kind, anchorId] = key.split(':') as ['highlight' | 'cloze', string];
-      const locator = linkedChildren.find(
-        (child) => resolveTextMirrorLocator(child.anchorLink?.locator) !== null
-      )?.anchorLink?.locator;
-      const textLocator = resolveTextMirrorLocator(locator);
-      if (!textLocator) {
-        return null;
-      }
-      const from = textLocator.from ?? -1;
-      const to = textLocator.to ?? -1;
-      if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to <= from || to > articleContent.length) {
-        return null;
-      }
-      const sourceText = articleContent.slice(from, to);
-      return {
-        anchorId,
-        from,
-        kind,
-        sourceText: sourceText || textLocator.originalText || '',
-        to
-      } satisfies LocatorMirrorSpan;
-    })
-    .filter(isLocatorMirrorSpan)
+    .flatMap(([key, children]) => collectAnchorSpans(articleContent, key, children))
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }
 
@@ -151,7 +148,27 @@ export function renderArticleBodyFromLocators(input: {
   createExtraNote: (span: LocatorMirrorSpan) => string;
   derivedByAnchorKey: Map<string, MirrorNode[]>;
 }) {
-  const spans = collectLocatorMirrorSpans(input.articleContent, input.derivedByAnchorKey);
+  const allSpans = collectLocatorMirrorSpans(input.articleContent, input.derivedByAnchorKey);
+  const spans = allSpans.filter((span) => span.located);
+  const noted = new Set<string>();
+  const createExtraNote = (span: LocatorMirrorSpan) => {
+    const key = `${span.kind}:${span.anchorId}`;
+    if (noted.has(key)) return '';
+    noted.add(key);
+    return input.createExtraNote({ ...span, sourceText: span.kind === 'highlight' ? span.noteSourceText : span.sourceText });
+  };
+  const body = renderLocatedArticleBody({ ...input, createExtraNote, spans });
+  const unlocated = allSpans.filter((span) => !span.located)
+    .map((span) => `(❄ highlight: ${span.sourceText})${createExtraNote(span)}`);
+  return [body, ...unlocated].filter(Boolean).join('\n\n');
+}
+
+function renderLocatedArticleBody(input: {
+  articleContent: string;
+  createExtraNote: (span: LocatorMirrorSpan) => string;
+  spans: LocatorMirrorSpan[];
+}) {
+  const { spans } = input;
   if (spans.length === 0) {
     return input.articleContent;
   }

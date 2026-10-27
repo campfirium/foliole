@@ -126,7 +126,7 @@ it('exports article files when database rows contain text locator payloads', asy
   await expect(fs.readFile(outputPath, 'utf8')).resolves.toContain('Keep ==bright text== here.');
 });
 
-it('does not export unresolved zero-width locator highlights back into article markdown', () => {
+it('preserves unresolved highlight text as an appendix without restoring its old inline position', () => {
   seedArticleWithUnresolvedLocatorHighlight();
 
   const articleRow = loadArticleNode('node-article-unresolved');
@@ -135,7 +135,7 @@ it('does not export unresolved zero-width locator highlights back into article m
     throw new Error('expected article row');
   }
 
-  expect(renderArticleMirrorMarkdown(articleRow)).toBe('# Mirror Export Unresolved Demo\n\nKeep  here.\n');
+  expect(renderArticleMirrorMarkdown(articleRow)).toBe('# Mirror Export Unresolved Demo\n\nKeep  here.\n\n(❄ highlight: bright text)\n');
 });
 
 it('exports unresolved zero-width locator articles without reintroducing inline highlight markup', async () => {
@@ -145,7 +145,7 @@ it('exports unresolved zero-width locator articles without reintroducing inline 
 
   const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Mirror Export Unresolved Demo.md');
   const output = await fs.readFile(outputPath, 'utf8');
-  expect(output).toBe('# Mirror Export Unresolved Demo\n\nKeep  here.\n');
+  expect(output).toBe('# Mirror Export Unresolved Demo\n\nKeep  here.\n\n(❄ highlight: bright text)\n');
   expect(output).not.toContain('<highlight');
   expect(output).not.toContain('==bright text==');
 });
