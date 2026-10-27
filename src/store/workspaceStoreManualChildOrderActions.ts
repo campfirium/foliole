@@ -1,6 +1,8 @@
 import { normalizeManualChildOrder, updateFolderManualChildOrder } from '../features/nodes/model/manualChildOrder';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
+import { saveWorkspaceFlowSourceSettings } from './workspaceDailyFlowSourceSettingsActions';
 import { buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
@@ -41,17 +43,14 @@ function buildManualOrderReviewSessionPatch(state: WorkspaceState, nodesById: Wo
   };
 }
 
-export function createSetFolderManualChildOrderAction(set: WorkspaceSet) {
-  return (folderNodeId: string, manualChildOrder: string[], now = new Date().toISOString()) => {
-    let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
-    set((state) => {
+function buildManualOrderSourcePatch(state: WorkspaceState, folderNodeId: string, manualChildOrder: string[], now: string) {
       const folder = state.nodesById[folderNodeId];
       if (!folder || folder.kind !== 'folder') {
-        return state;
+        return null;
       }
       const nextNode = updateFolderManualChildOrder(folder, normalizeManualChildOrder(manualChildOrder), now);
       if (nextNode === folder) {
-        return state;
+        return null;
       }
       let nodesById = { ...state.nodesById, [folderNodeId]: nextNode };
       const syncNodeIds = new Set([folderNodeId]);
@@ -70,6 +69,22 @@ export function createSetFolderManualChildOrderAction(set: WorkspaceSet) {
         syncNodeIds.add(sequentialPatch.sourceNodeId);
         sequentialPatch.changes.forEach((change) => syncNodeIds.add(change.nodeId));
       }
+      return { nodesById, syncNodeIds };
+}
+
+export function createSetFolderManualChildOrderAction(set: WorkspaceSet, get?: () => WorkspaceState): NonNullable<WorkspaceState['setFolderManualChildOrder']> {
+  return (folderNodeId: string, manualChildOrder: string[], now = new Date().toISOString()) => {
+    if (get && hasDailyFlowRuntime()) {
+      const before = get();
+      const patch = buildManualOrderSourcePatch(before, folderNodeId, manualChildOrder, now);
+      return patch ? saveWorkspaceFlowSourceSettings(set, get, before, folderNodeId, patch.nodesById,
+        [...patch.syncNodeIds], now) : false;
+    }
+    let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
+    set((state) => {
+      const patch = buildManualOrderSourcePatch(state, folderNodeId, manualChildOrder, now);
+      if (!patch) return state;
+      const { nodesById, syncNodeIds } = patch;
       const reviewSessionPatch = buildManualOrderReviewSessionPatch(state, nodesById, now);
       nextNodesForSync = [...syncNodeIds]
         .map((nodeId) => nodesById[nodeId])

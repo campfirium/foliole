@@ -119,8 +119,8 @@ export function createWorkspaceNodeActions(set: WorkspaceSet, get?: () => Worksp
     updateNodePriority: createUpdateNodePriorityAction(set),
     updateNodeDesiredRetention: createUpdateNodeDesiredRetentionAction(set),
     updateNodeShortTerm: createUpdateNodeShortTermAction(set),
-    setNodeSequentialReading: createSetNodeSequentialReadingAction(set),
-    setFolderManualChildOrder: createSetFolderManualChildOrderAction(set),
+    setNodeSequentialReading: createSetNodeSequentialReadingAction(set, get),
+    setFolderManualChildOrder: createSetFolderManualChildOrderAction(set, get),
     createRootNode: createRootNodeAction(set, runtimeHandlers, get),
     createChildNode: createChildNodeAction(
       set,

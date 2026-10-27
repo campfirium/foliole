@@ -36,7 +36,7 @@ interface NodeListTreeMenuProps {
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   restoreNode: (nodeId: string) => void;
   returnNode: (nodeId: string, now?: string) => boolean;
-  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean | Promise<boolean>;
   shelveNode: (nodeId: string, now?: string) => boolean;
   state: NodeListState;
   unshelveNode: (nodeId: string, now?: string) => boolean;

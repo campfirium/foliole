@@ -36,7 +36,7 @@ export function createWorkspaceTopicTreeMove(args: {
   isVirtualFolderManualOrder?: boolean;
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
-  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
+  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean | Promise<boolean>;
 }) {
   return async (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => {
     const operation = resolveWorkspaceTopicTreeDropOperation({

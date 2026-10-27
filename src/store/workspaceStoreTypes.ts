@@ -58,8 +58,8 @@ export interface WorkspaceState {
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
-  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
-  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[], now?: string) => boolean;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean | Promise<boolean>;
+  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[], now?: string) => boolean | Promise<boolean>;
   shelveNode: (nodeId: string, now?: string) => boolean;
   unshelveNode: (nodeId: string, now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;

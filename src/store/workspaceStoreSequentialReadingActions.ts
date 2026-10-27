@@ -1,5 +1,7 @@
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
+import { saveWorkspaceFlowSourceSettings } from './workspaceDailyFlowSourceSettingsActions';
 import { buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
 import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
@@ -44,9 +46,16 @@ function buildSequentialReadingReviewSessionPatch(state: WorkspaceState, nodesBy
 }
 
 export function createSetNodeSequentialReadingAction(
-  set: WorkspaceSet
+  set: WorkspaceSet, get?: () => WorkspaceState
 ): WorkspaceState['setNodeSequentialReading'] {
   return (nodeId, enabled, now = new Date().toISOString()) => {
+    if (get && hasDailyFlowRuntime()) {
+      const before = get();
+      const patch = buildSequentialReadingSourcePatch({ defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
+        enabled, nodeOrder: before.nodeOrder, nodesById: before.nodesById, now, sourceNodeId: nodeId });
+      return patch ? saveWorkspaceFlowSourceSettings(set, get, before, nodeId, patch.nodesById,
+        [patch.sourceNodeId, ...patch.changes.map(change => change.nodeId)], now) : false;
+    }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
     let updated = false;
     set((state) => {

@@ -51,4 +51,3 @@ export function useWorkspaceStudyModeState(args: {
     onBlockedStart: useReviewStartBlockedNotice(args.isReviewSchedulerSettingsReady) });
   return { ...study, dailyFlowView: result?.view };
 }
-

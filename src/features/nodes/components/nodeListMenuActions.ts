@@ -85,7 +85,7 @@ export function createToggleSequentialReadingAction(args: {
   closeContextMenu: () => void;
   nodesById: WorkspaceListNodesById;
   primaryTargetId: string | null;
-  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean | Promise<boolean>;
 }) {
   return () => {
     const node = args.primaryTargetId ? args.nodesById[args.primaryTargetId] : undefined;

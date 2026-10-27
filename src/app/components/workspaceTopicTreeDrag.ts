@@ -22,7 +22,7 @@ interface WorkspaceTopicTreeDragArgs {
   moveNodes: (nodeIds: string[], targetNodeId: string | null, intent: WorkspaceTopicTreeMoveIntent) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   selectedNodeIds: string[];
-  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean;
+  setFolderManualChildOrder?: (folderNodeId: string, manualChildOrder: string[]) => boolean | Promise<boolean>;
 }
 
 export function useWorkspaceTopicTreeDrag(args: WorkspaceTopicTreeDragArgs) {

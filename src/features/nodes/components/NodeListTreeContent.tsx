@@ -52,7 +52,7 @@ interface NodeListTreeContentProps {
   scrollTargetNodeId: string | null;
   selectedNodeIds: string[];
   selectedTrashNodeId: string | null;
-  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean;
+  setNodeSequentialReading: (nodeId: string, enabled: boolean, now?: string) => boolean | Promise<boolean>;
   shelveNode: (nodeId: string, now?: string) => boolean;
   showTitleSearch: boolean;
   showVirtualCreateAction?: boolean;

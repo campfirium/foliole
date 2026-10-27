@@ -54,3 +54,9 @@ export async function loadDailyFlowViewRuntime(args: import('../../../../lib/cor
     { nodeIds: [], ancestorNodeIds: missing, structure: false, libraryScope: view.scope }) : null;
   return { view, nodes: projection?.nodesById };
 }
+
+export function saveDailyFlowSourceSettingsRuntime(args: import('../../../../lib/core/flow/dailyFlowSourceSettings').DailyFlowSourceSettingsArgs) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('Daily Flow storage is unavailable.');
+  return invoke(NATIVE_COMMANDS.saveDailyFlowSourceSettings, args);
+}

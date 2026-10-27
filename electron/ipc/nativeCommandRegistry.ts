@@ -13,6 +13,7 @@ export interface NativeCommandRegistryEntry {
 }
 
 export const NATIVE_COMMAND_REGISTRY = [
+  { command: NATIVE_COMMANDS.saveDailyFlowSourceSettings, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.readDailyFlowView, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.openDailyFlow, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.commitDailyFlow, route: 'storage', capability: 'dataMutation' },

@@ -19,7 +19,7 @@ export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),
   prepareOnly: z.boolean().optional(), startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
 export type DailyFlowOpenArgs = z.infer<typeof dailyFlowOpenSchema>;
-const reading = z.object({ intervalDurationMs: z.number(), intervalGrowthFactor: z.number(), lastHandledAt: z.string(),
+export const dailyFlowReadingSchema = z.object({ intervalDurationMs: z.number(), intervalGrowthFactor: z.number(), lastHandledAt: z.string(),
   nextAt: z.string(), priority: z.number(), readingPosition: z.number(), repetitionCount: z.number(),
   state: z.enum(['active', 'done', 'dismissed', 'locked']) });
 const review = z.object({ due: z.string(), lastReviewAt: z.string().nullable(), state: z.union([
@@ -38,7 +38,7 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   readingAction: z.enum(['read', 'later', 'dismiss', 'soon']).optional(),
   historyMode: z.enum(['undo', 'redo']).optional(),
   cycleReplay: cycleChangeSchema.optional(),
-  readings: z.array(z.object({ nodeId: z.string().min(1), before: reading.nullable(), after: reading.nullable(),
+  readings: z.array(z.object({ nodeId: z.string().min(1), before: dailyFlowReadingSchema.nullable(), after: dailyFlowReadingSchema.nullable(),
     completedReviewDay: z.string().optional() }).strict()).optional(),
   grade: z.object({ nodeId: z.string().min(1), before: review.nullable(), grade: z.union([
     z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), reviewedAt: z.string(),
