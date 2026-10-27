@@ -5,6 +5,7 @@ export const controlledFlowSqliteTests = [
   'src/store/workspaceDailyNavigation.integration.test.ts',
   'src/store/workspaceDailyNavigation.sync.integration.test.ts',
   'src/companion/companionDailyNavigation.integration.test.ts',
+  'src/companion/companionDailyReentry.integration.test.ts',
   'electron/database/dailyFlowMigration.integration.test.ts',
   'electron/database/dailyFlowStorage.integration.test.ts',
   'src/companion/companionDailyFlow.integration.test.ts',

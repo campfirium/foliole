@@ -162,8 +162,11 @@ describe('test-files', () => {
     }
   });
 
-  it('refuses real sqlite tests outside the Electron ABI runner', { meta: { calibratedMs: ABI_GUARD_TEST_TIMEOUT_MS } }, async () => {
-    const result = await runTestFiles(['src/shared/platform/companionSyncStateObjects.test.ts']);
+  it.each([
+    'src/shared/platform/companionSyncStateObjects.test.ts',
+    'src/companion/companionDailyReentry.integration.test.ts'
+  ])('refuses real sqlite test %s outside the Electron ABI runner', { meta: { calibratedMs: ABI_GUARD_TEST_TIMEOUT_MS } }, async (file) => {
+    const result = await runTestFiles([file]);
 
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('real sqlite tests cannot run under the ordinary Node ABI');
