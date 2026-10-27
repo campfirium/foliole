@@ -27,10 +27,12 @@ vi.mock('electron', () => ({
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import * as nodeDocument from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorPlans } from './articleMirrorPlanning.js';
+import * as renderWorker from './articleMirrorRenderWorkerClient.js';
 import { loadMirrorArticleRecords, saveMirrorArticleRecord } from './mirrorOutputStorage.js';
 import { syncIncrementalMirrorOutput, backfillMissingMirrorOutput } from './mirrorOutputSync.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
@@ -48,6 +50,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -134,5 +137,80 @@ it.each(['incremental', 'missing', 'full'] as const)('repairs old aliased record
   else await rebuildMirrorOutput();
   await expectAllBodies();
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 0 });
+  await expectAllBodies();
+});
+
+
+it.each([
+  ['Case', 'case'],
+  ['Café', 'Cafe\u0301']
+])('repairs only the selected alias group (%s / %s)', async (firstTitle, secondTitle) => {
+  saveNode('first', firstTitle);
+  saveNode('second', secondTitle);
+  saveNode('other-first', 'Other');
+  saveNode('other-second', 'other');
+  await rebuildMirrorOutput();
+  const before = loadMirrorArticleRecords();
+  for (const [first, second] of [['first', 'second'], ['other-first', 'other-second']]) {
+    saveMirrorArticleRecord({ ...before.get(second!)!, relativePath: before.get(first!)!.relativePath });
+  }
+  const unrelatedPaths = ['other-first', 'other-second'].map((id) =>
+    path.join(mirrorRoot(), before.get(id)!.relativePath));
+  const unrelatedBefore = await Promise.all(unrelatedPaths.map(async (file) => ({
+    body: await fs.readFile(file, 'utf8'), mtime: (await fs.stat(file)).mtimeMs
+  })));
+  const readDocument = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
+
+  await expect(syncIncrementalMirrorOutput(['second'])).resolves.toMatchObject({ rebuilt_article_count: 2 });
+
+  const after = loadMirrorArticleRecords();
+  for (const id of ['first', 'second']) {
+    const file = path.join(mirrorRoot(), after.get(id)!.relativePath);
+    expect(after.get(id)!.relativePath).toBe(before.get(id)!.relativePath);
+    expect(await fs.readFile(file, 'utf8')).toContain(`Body for ${id}.`);
+  }
+  expect(after.get('other-second')!.relativePath).toBe(before.get('other-first')!.relativePath);
+  expect(new Set(readDocument.mock.calls.map(([id]) => id))).toEqual(new Set(['first', 'second']));
+  for (const [index, file] of unrelatedPaths.entries()) {
+    expect(await fs.readFile(file, 'utf8')).toBe(unrelatedBefore[index]!.body);
+    expect((await fs.stat(file)).mtimeMs).toBe(unrelatedBefore[index]!.mtime);
+  }
+});
+
+it('repairs a transitive ownership chain reached from the selected record', async () => {
+  for (const id of ['first', 'second', 'third', 'unrelated']) saveNode(id, id);
+  await rebuildMirrorOutput();
+  const records = loadMirrorArticleRecords();
+  saveMirrorArticleRecord({ ...records.get('second')!, relativePath: records.get('first')!.relativePath });
+  saveMirrorArticleRecord({ ...records.get('third')!, relativePath: records.get('second')!.relativePath });
+  const readDocument = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
+
+  await syncIncrementalMirrorOutput(['third']);
+
+  expect(new Set(readDocument.mock.calls.map(([id]) => id))).toEqual(new Set(['first', 'second', 'third']));
+  await expectAllBodies();
+});
+
+it('rechecks ownership claimed by another article while the selected article renders', async () => {
+  saveNode('first', 'Case');
+  saveNode('second', 'case');
+  saveNode('unrelated', 'Unrelated');
+  await rebuildMirrorOutput();
+  const records = loadMirrorArticleRecords();
+  saveMirrorArticleRecord({ ...records.get('first')!, mirroredAt: '2000-01-01T00:00:00Z' });
+  const render = renderWorker.renderArticleMirrorInWorker;
+  const renderedIds: string[] = [];
+  vi.spyOn(renderWorker, 'renderArticleMirrorInWorker').mockImplementation(async (input, signal) => {
+    renderedIds.push(input.article.id);
+    if (renderedIds.length === 1) {
+      saveMirrorArticleRecord({ ...records.get('second')!, relativePath: records.get('first')!.relativePath });
+    }
+    return render(input, signal);
+  });
+
+  await syncIncrementalMirrorOutput(['first']);
+
+  expect(loadMirrorArticleRecords().get('second')!.relativePath).toBe(records.get('second')!.relativePath);
+  expect(renderedIds).not.toContain('unrelated');
   await expectAllBodies();
 });

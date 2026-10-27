@@ -5,8 +5,9 @@ import { loadWorkspaceSnapshot, type WorkspaceSnapshot } from '../database/works
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
-import { loadMirrorArticleRecords } from './mirrorOutputStorage.js';
-import { collectChangedMirrorOwners } from './mirrorPathOwnership.js';
+import { loadMirrorArticleRecords, type MirrorArticleRecord } from './mirrorOutputStorage.js';
+import { mirrorPathKey } from './mirrorPathIdentity.js';
+import { collectChangedMirrorOwners, collectChangedMirrorPaths } from './mirrorPathOwnership.js';
 
 export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: string[]) {
   const paths = loadLibraryPathSettingsSync();
@@ -16,7 +17,7 @@ export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: str
   const recordsByArticleId = loadMirrorArticleRecords();
   if (scoped && snapshot) {
     const selected = new Set(articleIds);
-    const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId);
+    const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId, selected);
     const selectedPlans = plans.filter((plan) => selected.has(plan.articleId) || changedOwners.has(plan.articleId));
     snapshot = loadMirrorPlanBodies(snapshot, selectedPlans);
   }
@@ -54,11 +55,18 @@ type CapturedMirrorOutput = ReturnType<typeof captureMirrorOutputSnapshot>;
  * Every method must run while the caller owns the database connection.
  */
 export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
-  let verified = { captured: seed, token: readDatabaseChangeToken() };
+  let verified = {
+    captured: { ...seed, recordsByArticleId: new Map(seed.recordsByArticleId) },
+    token: readDatabaseChangeToken()
+  };
+  const expectedRecords = new Map(seed.recordsByArticleId);
+  let changedOwnershipPaths = new Set<string>();
   const current = () => {
     const token = readDatabaseChangeToken();
     if (token !== verified.token || loadLibraryPathSettingsSync().mirror !== verified.captured.paths.mirror) {
-      verified = { captured: captureMirrorOutputSnapshot(false), token };
+      const captured = captureMirrorOutputSnapshot(false);
+      changedOwnershipPaths = collectChangedMirrorPaths(expectedRecords, captured.recordsByArticleId);
+      verified = { captured, token };
     }
     return verified.captured;
   };
@@ -68,6 +76,9 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
       const { plans, snapshot } = current();
       const plan = plans.find((candidate) => candidate.articleId === articleId);
       if (!plan || !snapshot) return false;
+      const oldPath = expectedRecords.get(articleId)?.relativePath;
+      if (changedOwnershipPaths.has(mirrorPathKey(plan.relativePath)) ||
+        (oldPath && changedOwnershipPaths.has(mirrorPathKey(oldPath)))) return false;
       const nodesById: WorkspaceSnapshot['nodesById'] = {};
       for (const nodeId of [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds]) {
         const node = snapshot.nodesById[nodeId];
@@ -78,10 +89,17 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
       return mirrorPlanRevision({ ...snapshot, nodesById }, plan) === revision;
     },
     /** Runs this pass's own write; it does not count as a library change unless another one preceded it. */
-    async ownWrite<T>(write: () => Promise<T> | T) {
+    async ownWrite<T>(
+      write: () => Promise<T> | T,
+      updateRecords: (records: Map<string, MirrorArticleRecord>) => void
+    ) {
       const before = readDatabaseChangeToken();
       const result = await write();
-      if (before === verified.token) verified = { ...verified, token: readDatabaseChangeToken() };
+      if (before === verified.token) {
+        updateRecords(expectedRecords);
+        updateRecords(verified.captured.recordsByArticleId);
+        verified = { ...verified, token: readDatabaseChangeToken() };
+      }
       return result;
     }
   };

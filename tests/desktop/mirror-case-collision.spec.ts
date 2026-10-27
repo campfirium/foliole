@@ -71,3 +71,69 @@ test('exports case-only articles and nested folders without overwriting and keep
     body: JSON.stringify({ ...seed, outputs }, null, 2), contentType: 'application/json'
   });
 });
+
+async function repairSelectedAlias(desktopApp: ElectronApplication) {
+  return desktopApp.evaluate(async (_, cwd) => {
+    const moduleApi = process.getBuiltinModule('module')!;
+    const pathApi = process.getBuiltinModule('path')!;
+    const fsApi = process.getBuiltinModule('fs')!;
+    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
+    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
+    const storage = require(pathApi.join(cwd, 'dist/electron/mirror/mirrorOutputStorage.js'));
+    const sync = require(pathApi.join(cwd, 'dist/electron/mirror/mirrorOutputSync.js'));
+    const { loadLibraryPathSettingsSync } = require(pathApi.join(cwd, 'dist/electron/ipc/libraryPaths.js'));
+    const before = await connection.runWithDatabaseConnectionOwner(() => {
+      const records = storage.loadMirrorArticleRecords() as Map<string, { articleId: string; relativePath: string; mirroredAt: string }>;
+      const root = loadLibraryPathSettingsSync().mirror;
+      const files = [...records.values()].filter((record) => record.articleId.startsWith('t513-')).map((record) => {
+        const file = pathApi.join(root, record.relativePath);
+        return { ...record, body: fsApi.readFileSync(file, 'utf8'), mtime: fsApi.statSync(file).mtimeMs };
+      });
+      for (const [first, second] of [['t513-first', 't513-second'], ['t513-other-first', 't513-other-second']]) {
+        storage.saveMirrorArticleRecord({ ...records.get(second!)!, relativePath: records.get(first!)!.relativePath });
+      }
+      return { files, root };
+    });
+    const result = await sync.syncIncrementalMirrorOutput(['t513-second']);
+    const after = await connection.runWithDatabaseConnectionOwner(() => {
+      const records = storage.loadMirrorArticleRecords() as Map<string, { articleId: string; relativePath: string; mirroredAt: string }>;
+      return before.files.map((original) => {
+        const file = pathApi.join(before.root, original.relativePath);
+        return { ...records.get(original.articleId)!, body: fsApi.readFileSync(file, 'utf8'), mtime: fsApi.statSync(file).mtimeMs };
+      });
+    });
+    return { before: before.files, after, result };
+  }, process.cwd());
+}
+
+test('repairs a selected physical alias without rewriting an unrelated conflict group', async ({
+  desktopApp, desktopWindow
+}, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await desktopWindow.evaluate(async () => {
+    await window.__folioleWorkspaceDebug!.seedNodes([
+      { id: 't513-first', title: 'Café', kind: 'topic', content: 'First alias body.' },
+      { id: 't513-second', title: 'Cafe\u0301', kind: 'topic', content: 'Second alias body.' },
+      { id: 't513-other-first', title: 'Other', kind: 'topic', content: 'Other first body.' },
+      { id: 't513-other-second', title: 'other', kind: 'topic', content: 'Other second body.' }
+    ], { persist: true });
+    await window.electronAPI!.invoke('rebuild_mirror_output');
+  });
+  const evidence = await repairSelectedAlias(desktopApp);
+  expect(evidence.result).toMatchObject({ rebuilt_article_count: 2, pending_article_count: 0 });
+  for (const before of evidence.before) {
+    const after = evidence.after.find((file) => file.articleId === before.articleId)!;
+    expect(after.body).toBe(before.body);
+    if (before.articleId.startsWith('t513-other-')) {
+      expect(after.mtime).toBe(before.mtime);
+    } else {
+      expect(after.relativePath).toBe(before.relativePath);
+    }
+  }
+  expect(evidence.after.find((file) => file.articleId === 't513-other-second')!.relativePath)
+    .toBe(evidence.before.find((file) => file.articleId === 't513-other-first')!.relativePath);
+  await testInfo.attach('selected-alias-repair', {
+    body: JSON.stringify(evidence, null, 2), contentType: 'application/json'
+  });
+});
