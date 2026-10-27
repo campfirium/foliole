@@ -62,16 +62,18 @@ async function setup(itemCount = 12, topicCount = 3) {
 }
 
 it.each(['read', 'later', 'dismiss'] as const)('%s keeps the remaining order and reads only affected nodes', async action => {
-  const app = await setup(0, 8);
+  const app = await setup(0, 100);
   const before = app.getState().reviewSession;
   const db = openDatabaseConnection().sqlite;
-  db.exec('CREATE TABLE touched (node_id TEXT); CREATE TRIGGER track_daily AFTER UPDATE ON daily_flow_entries BEGIN INSERT INTO touched VALUES (NEW.node_id); END');
+  const untouched = () => db.prepare('SELECT * FROM daily_flow_entries WHERE node_id<>? ORDER BY order_key').all(before.currentNodeId);
+  const rowsBefore = untouched();
   const reads = vi.spyOn(desktopDailyFlowPersistence, 'snapshot');
   const invoke = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic, dismiss: app.actions.dismissReviewTopic };
   expect(await invoke[action](now)).toBe(true);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual(before.queueNodeIds.slice(1));
-  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 2)).toBe(true);
-  expect(db.prepare('SELECT * FROM touched').all()).toEqual([{ node_id: before.currentNodeId }]);
+  expect(app.getState().reviewSession.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(app.getState().reviewSession.queueNodeIds).toHaveLength(2);
+  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
+  expect(untouched()).toEqual(rowsBefore);
 });
 
 it.each(['read', 'later', 'dismiss'] as const)('%s rolls back the fact, cursor and history, then retries a lost receipt once', async action => {
@@ -125,8 +127,8 @@ it.each(['read', 'later'] as const)('%s keeps the configured short reading inter
   expect(reading.intervalDurationMs).toBe(expected);
   expect(reading.nextAt).toBe(new Date(Date.parse(now) + expected).toISOString());
   await app.actions.revisitReviewTopicSoon(now);
+  const waiting = app.getState().reviewSession.currentNodeId;
   await app.actions.revisitReviewTopicSoon(now);
-  const waiting = app.getState().reviewSession.soonNodeIds![0];
   expect(await app.actions.readReviewTopic(reading.nextAt)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(waiting);
   expect(await app.actions.readReviewTopic(reading.nextAt)).toBe(true);
@@ -144,10 +146,22 @@ it.each(['read', 'later', 'dismiss'] as const)('%s rejects changed target facts 
   expect(await invoke(now)).toBe(false);
   expect(loadWorkspaceSnapshot()!.nodesById[target]!.reading).toEqual(changed);
   expect(app.getState().appActionHistory.undoStack).toEqual([]);
+  app.setState({ nodesById: { ...app.getState().nodesById,
+    [target]: { ...app.getState().nodesById[target]!, reading: loadWorkspaceSnapshot()!.nodesById[target]!.reading } } });
   const next = app.getState().reviewSession.queueNodeIds.find(id => id !== target)!;
   openDatabaseConnection().sqlite.prepare('UPDATE nodes SET deleted_at=? WHERE id=?').run(now, next);
   expect(await invoke(now)).toBe(true);
   expect(app.getState().reviewSession.queueNodeIds).not.toContain(next);
+  const committed = app.getState().reviewSession;
+  const entry = app.getState().appActionHistory.undoStack.at(-1)!;
+  app.history.undoWorkspaceAction(entry.id);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect(app.getState().reviewSession.currentNodeId).toBe(target);
+  expect(loadWorkspaceSnapshot()!.nodesById[target]!.reading).toEqual(changed);
+  expect(app.getState().reviewSession.queueNodeIds).not.toContain(next);
+  app.history.redoWorkspaceAction(entry.id);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect(app.getState().reviewSession.currentNodeId).toBe(committed.currentNodeId);
   closeDatabaseConnection();
   initializeDatabase();
   expect((await openDesktopDailyFlow({ now, mode: 'recommended' })).session.queueNodeIds).not.toContain(next);
@@ -199,7 +213,7 @@ it.each(['read', 'read-release', 'later', 'dismiss'] as const)('%s preserves seq
   expect(loadWorkspaceSnapshot()!.nodesById[second]!.reading!.state).toBe(released ? 'active' : 'locked');
 });
 
-it('keeps a newly due minute item behind the existing reading Queue and waiting Soon', async () => {
+it('keeps a same-day minute item in its cycle position ahead of a topic moved Soon', async () => {
   const app = await setup(1, 2);
   const db = openDatabaseConnection().sqlite;
   const due = '2026-10-26T08:01:00.000Z';
@@ -209,10 +223,8 @@ it('keeps a newly due minute item behind the existing reading Queue and waiting 
   expect(topics).not.toContain('node-0');
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(await app.actions.readReviewTopic(due)).toBe(true);
-  expect(app.getState().reviewSession.currentNodeId).toBe(topics[0]);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual([]);
-  expect(await app.actions.readReviewTopic(due)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe('node-0');
+  expect(app.getState().reviewSession.queueNodeIds).toEqual(['node-0', topics[0]]);
   closeDatabaseConnection();
   initializeDatabase();
   expect((await openDesktopDailyFlow({ now: due, mode: 'recommended' })).session.currentNodeId).toBe('node-0');

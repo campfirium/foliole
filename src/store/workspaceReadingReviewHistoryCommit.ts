@@ -45,7 +45,8 @@ export function persistReadingReviewNodes(
   return persistence.persistReadingNodes(nodes);
 }
 
-function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReviewPatchResult) {
+function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReviewPatchResult,
+  beforeReviewSession: WorkspaceState['reviewSession']) {
   const entry = result.historyEntry;
   const node = state.nodesById[entry.nodeId];
   const apply = resolveTopicReadingHistoryApply(entry, 'redo');
@@ -54,7 +55,7 @@ function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReview
     !affectedIds.some(id => state.trashedNodeIds.includes(id)) &&
     isSameReadingProfile(node.reading, entry.beforeReading) &&
     areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
-    isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession);
+    isSameWorkspaceReviewSession(state.reviewSession, beforeReviewSession);
   if (!applicable) return null;
   const nodesById = { ...mergeDailyFlowReceiptNodes(state.nodesById, result.beforeNodes ?? state.nodesById, result.receiptNodes), [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
   applyRelatedReadingSnapshots({ nextNodesById: nodesById, readings: apply.relatedReadings });
@@ -65,11 +66,12 @@ function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReview
   };
 }
 
-function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPatchResult) {
+function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPatchResult,
+  beforeReviewSession: WorkspaceState['reviewSession']) {
   let applied = false;
   let undoRequested = false;
   set((state) => {
-    const committed = applyCommittedReadingPatch(state, result);
+    const committed = applyCommittedReadingPatch(state, result, beforeReviewSession);
     if (!committed) return { appActionHistory: createEmptyWorkspaceActionHistory() };
     applied = true;
     undoRequested = committed.undoRequested;
@@ -91,6 +93,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
     const result = args.buildPatch(args.get());
     if (!result) return false;
     result.beforeNodes = args.get().nodesById;
+    const beforeReviewSession = args.get().reviewSession;
     let began = false;
     acceptWorkspaceHistoryCommand(args.set, 'preserve', (state) => {
       if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
@@ -116,7 +119,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
       }));
       return false;
     }
-    const { applied, undoRequested } = settleCommittedReadingPatch(args.set, result);
+    const { applied, undoRequested } = settleCommittedReadingPatch(args.set, result, beforeReviewSession);
     if (!applied) return false;
     if (undoRequested) args.get().undoWorkspaceAction(result.historyEntry.id);
     const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
