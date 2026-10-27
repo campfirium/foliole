@@ -5,8 +5,8 @@ import { loadWorkspaceSnapshot, type WorkspaceSnapshot } from '../database/works
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
-import { loadMirrorArticleRecords, type MirrorArticleRecord } from './mirrorOutputStorage.js';
-import { mirrorPathKey } from './mirrorPathIdentity.js';
+import { loadMirrorArticleRecords, type MirrorArticleRecord, resolveAbsoluteMirrorPath } from './mirrorOutputStorage.js';
+import { collectProtectedMirrorPaths, mirrorPathKey } from './mirrorPathIdentity.js';
 import { collectChangedMirrorOwners, collectChangedMirrorPaths } from './mirrorPathOwnership.js';
 
 export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: string[]) {
@@ -78,6 +78,13 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
     return verified.captured;
   };
   return {
+    retirementProtectedPaths(articleId: string) {
+      const captured = current();
+      const plans = captured.plans.filter((plan) => plan.articleId !== articleId).map((plan) => plan.targetPath);
+      const records = [...captured.recordsByArticleId.values()].filter((record) => record.articleId !== articleId)
+        .map((record) => resolveAbsoluteMirrorPath(captured.paths.mirror, record.relativePath));
+      return collectProtectedMirrorPaths([...plans, ...records]);
+    },
     isArticleStillAbsent: (articleId: string) => !current().plans.some((plan) => plan.articleId === articleId),
     isPlanCurrent(articleId: string, revision: string) {
       const { plans, snapshot } = current();

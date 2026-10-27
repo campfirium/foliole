@@ -74,19 +74,26 @@ async function syncMirrorOutput(
   const selectedPlans = selectedArticleIds
     ? plans.filter((plan) => selectedArticleIds.has(plan.articleId) || changedOwners.has(plan.articleId)) : plans;
 
+  const retainedPaths = [...plans.map((plan) => plan.targetPath), ...plans.flatMap((plan) => {
+    const record = recordsByArticleId.get(plan.articleId);
+    return record && record.relativePath !== plan.relativePath
+      ? [resolveAbsoluteMirrorPath(paths.mirror, record.relativePath)] : [];
+  })];
+  const retainedProtectedPaths = collectProtectedMirrorPaths(retainedPaths);
+
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror, currency);
   } else if (mode === 'incremental') {
-    await runWithDatabaseConnectionOwner(() => pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath)));
+    await runWithDatabaseConnectionOwner(() => pruneMirrorOutputToTargets(paths.mirror, retainedPaths));
   }
 
   await removeObsoleteMirrorRecords(currency, mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
 
   await runWithDatabaseConnectionOwner(() => removeLegacyMirrorArtifacts(
-    paths.mirror, plans.map((plan) => plan.targetPath), protectedPaths));
+    paths.mirror, plans.map((plan) => plan.targetPath), retainedProtectedPaths));
 
   const processed = snapshot
-    ? await processMirrorPlans({ currency, mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
+    ? await processMirrorPlans({ currency, mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, changedOwners })
     : { pendingArticleIds: [], rebuiltArticleCount: 0 };
 
   if (processed.pendingArticleIds.length > 0 && attempt < 3) {

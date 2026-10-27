@@ -9,8 +9,9 @@ import type { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 import type { MirrorRenderableNode } from './articleMirrorOutput.js';
 import type { ArticleMirrorPlan } from './articleMirrorPlanning.js';
 import { renderArticleMirrorInWorker } from './articleMirrorRenderWorkerClient.js';
+import { writeRenamedMirror } from './mirrorOutputRename.js';
 import { type MirrorPlanCurrency, mirrorPlanRevision } from './mirrorOutputSnapshot.js';
-import { type MirrorArticleRecord, readMirrorFileUpdatedAt, removeMirrorFileAndLegacyDirectory,
+import { type MirrorArticleRecord, readMirrorFileUpdatedAt,
   resolveAbsoluteMirrorPath, saveMirrorArticleRecord } from './mirrorOutputStorage.js';
 
 export type MirrorSyncMode = 'full' | 'incremental' | 'missing';
@@ -63,18 +64,19 @@ async function commitRenderedMirror(args: {
   paths: ReturnType<typeof loadLibraryPathSettingsSync>;
   persistedRecord: MirrorArticleRecord | null;
   plan: ArticleMirrorPlan;
-  protectedPaths: Set<string>;
   revision: string;
   updatedAt: string;
 }) {
   return runWithDatabaseConnectionOwner(async () => {
     if (!args.currency.isPlanCurrent(args.plan.articleId, args.revision)) return false;
     if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
-      await removeMirrorFileAndLegacyDirectory(
-        resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath), args.protectedPaths);
+      await writeRenamedMirror(args.plan.targetPath, args.markdown,
+        resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath),
+        () => args.currency.retirementProtectedPaths(args.plan.articleId));
+    } else {
+      await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
+      await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
     }
-    await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
-    await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
     const record = { articleId: args.plan.articleId, mirroredAt: args.updatedAt, relativePath: args.plan.relativePath };
     await args.currency.ownWrite(() => saveMirrorArticleRecord(record), (records) => records.set(record.articleId, record));
     return true;
@@ -90,7 +92,6 @@ export async function processMirrorPlans(args: {
   recordsByArticleId: Map<string, MirrorArticleRecord>;
   snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>;
   updatedAt: string;
-  protectedPaths: Set<string>;
   changedOwners: Set<string>;
 }) {
   let rebuiltArticleCount = 0;
@@ -115,7 +116,7 @@ export async function processMirrorPlans(args: {
       );
       const revision = mirrorPlanRevision(args.snapshot, plan);
       const committed = await commitRenderedMirror({ currency: args.currency, markdown, paths: args.paths, persistedRecord,
-        plan, protectedPaths: args.protectedPaths, revision, updatedAt: args.updatedAt });
+        plan, revision, updatedAt: args.updatedAt });
       if (committed) rebuiltArticleCount += 1;
       else {
         pendingArticleIds.push(plan.articleId);
