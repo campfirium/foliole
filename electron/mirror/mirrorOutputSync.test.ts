@@ -29,6 +29,7 @@ import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 
+import { flushMirrorSync } from './mirrorSyncScheduler.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 import {
   backfillMissingMirrorOutput,
@@ -187,7 +188,9 @@ it('startup resume refreshes only missing or stale mirror work', async () => {
     position: 3
   });
 
-  await expect(resumePendingMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1 });
+  await expect(resumePendingMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 0, pending_article_count: 1 });
+  await expect(readMirror('Second Demo.md')).resolves.toContain('Plain body.');
+  await flushMirrorSync();
 
   await expect(readMirror('Second Demo.md')).resolves.toContain('Resume pending mirror.');
   expect((await fs.stat(mirrorPath('Mirror Demo.md'))).mtimeMs).toBe(untouchedBefore.mtimeMs);

@@ -53,8 +53,8 @@ const DESKTOP_CORE_OPERATION_DEFINITIONS: Record<DesktopCoreOperationName, Deskt
     blocksStartup: false,
     cancellable: true,
     coalescing: 'coalesce',
-    completion: 'Every missing article mirror has a file and a persisted mirror record.',
-    concurrencyKey: 'mirror-output',
+    completion: 'Recognizable missing or stale article mirrors are queued with independent sixty-second deadlines.',
+    concurrencyKey: 'mirror-startup-discovery',
     cost: 'heavy',
     evidence: 'Per-article body loading and worker rendering; startup only plans metadata.',
     label: 'Mirror output backfill',
@@ -67,7 +67,7 @@ const DESKTOP_CORE_OPERATION_DEFINITIONS: Record<DesktopCoreOperationName, Deskt
     startupEligibility: 'startup-deferred',
     trigger: 'App-ready recovery when configured mirror files may be missing.',
     verification: 'No-op restart, missing-only rebuild, cancellation resume, and interactive-load latency.',
-    workload: 'One article body and one rendered file per scheduling unit.'
+    workload: 'Existing metadata and target file checks; rendering runs through ordinary incremental scheduling.'
   },
   'mirror-incremental': {
     blocksStartup: false,

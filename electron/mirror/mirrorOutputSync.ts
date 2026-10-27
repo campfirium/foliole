@@ -14,6 +14,7 @@ import {
   clearMirrorArticleRecords,
   deleteMirrorArticleRecord,
   type MirrorArticleRecord,
+  readMirrorFileUpdatedAt,
   removeMirrorFileAndLegacyDirectory,
   resetMirrorRoot,
   resolveAbsoluteMirrorPath
@@ -125,6 +126,21 @@ export function backfillMissingMirrorOutput(context?: DesktopTaskContext) {
   return syncMirrorOutput('missing', context ? { taskContext: context } : {});
 }
 
-export function resumePendingMirrorOutput(context?: DesktopTaskContext) {
-  return syncMirrorOutput('incremental', context ? { taskContext: context } : {});
+export async function resumePendingMirrorOutput(context?: DesktopTaskContext): Promise<NativeMirrorOutputRebuildResult> {
+  // Startup discovers from existing metadata; ordinary saves own rendering and deadlines.
+  const { plans, recordsByArticleId } = await runWithDatabaseConnectionOwner(() => captureMirrorOutputSnapshot(false));
+  let queued = 0;
+  for (const plan of plans) {
+    if (context?.signal.aborted) throw new DOMException('Mirror startup cancelled', 'AbortError');
+    await context?.yieldIfNeeded();
+    const record = recordsByArticleId.get(plan.articleId);
+    const fileUpdatedAt = await readMirrorFileUpdatedAt(plan.targetPath);
+    if (!fileUpdatedAt || !record || record.mirroredAt < plan.sourceUpdatedAt || record.relativePath !== plan.relativePath) {
+      // A save received during discovery already has its own deadline; preserve it.
+      await runWithDatabaseConnectionOwner(() => scheduleMirrorSync([], [plan.articleId], true));
+      queued += 1;
+    }
+  }
+  return { queued_article_count: queued, rebuilt_article_count: 0, failed_article_count: 0,
+    pending_article_count: queued, updated_at: new Date().toISOString() };
 }
