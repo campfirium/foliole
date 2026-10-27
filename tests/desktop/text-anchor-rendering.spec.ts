@@ -85,17 +85,19 @@ test('keeps breadcrumb return stable for a multi-range cloze child', async ({ de
   await expectWorkspaceShell(desktopWindow);
   await seedTextAnchorWorkspace(desktopWindow);
 
-  await desktopWindow.evaluate(async () => {
+  const childId = await desktopWindow.evaluate(async () => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     const target = api?.listNodes?.().find((node) => node.title === '[...] Beta [...] Delta') ?? null;
     if (!target) {
       throw new Error('missing cloze child');
     }
     await api?.openNode?.(target.id);
+    return target.id;
   });
 
-  await expect(desktopWindow.getByRole('button', { name: '[...] Beta [...] Delta', exact: true })).toBeVisible();
-  await desktopWindow.getByRole('navigation', { name: 'Node breadcrumbs' })
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe(childId);
+  await desktopWindow.getByRole('navigation')
     .getByRole('button', { name: 'Playwright Text Anchor Parent' })
     .click();
 
