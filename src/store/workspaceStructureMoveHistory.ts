@@ -1,6 +1,8 @@
+import { buildMoveRuntimePayload, mergeMoveResult, moveResultMatchesRequest } from './workspaceMoveCommit';
+import { confirmMoveReadingContent } from './workspaceMoveContentBarrier';
+import { refreshMoveStructure } from './workspaceMoveRefresh';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import type { WorkspaceState } from './workspaceStore';
-import { applySequentialReadingMovedNodes } from './workspaceStoreTreeSequentialReading';
 import type { WorkspaceStructureMoveEntry } from './workspaceStructureHistoryTypes';
 import { restoreStructureParentOrders, structureParentOrdersMatch } from './workspaceStructureParentOrders';
 
@@ -23,56 +25,28 @@ function buildRestorePatch(state: WorkspaceState, entry: WorkspaceStructureMoveE
     if (node) nodesById[id] = { ...node, parentNodeId: parents[id] ?? null, updatedAt: timestamp };
   });
   const nodeOrder = restoreStructureParentOrders({ nodeOrder: state.nodeOrder, nodesById }, orders);
-  return applySequentialReadingMovedNodes({ patch: { nodeOrder, nodesById },
-    rootNodeIds: entry.rootNodeIds, state }).patch;
-}
-
-function mergeRestorePatch(
-  before: WorkspaceState, latest: WorkspaceState, patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>,
-  entry: WorkspaceStructureMoveEntry, mode: 'redo' | 'undo'
-) {
-  const nodesById = { ...latest.nodesById };
-  for (const [id, next] of Object.entries(patch.nodesById)) {
-    const previous = before.nodesById[id];
-    const current = latest.nodesById[id];
-    if (previous === next || !previous || !current) continue;
-    const updates: Partial<typeof current> = {};
-    for (const key of ['parentNodeId', 'reading', 'sequentialReadingEnabled', 'updatedAt'] as const) {
-      if (next[key] !== previous[key] && current[key] === previous[key]) {
-        Object.assign(updates, { [key]: next[key] });
-      }
-    }
-    nodesById[id] = { ...current, ...updates };
-  }
-  const orders = mode === 'undo' ? entry.beforeParentOrders : entry.afterParentOrders;
-  return { nodeOrder: restoreStructureParentOrders({ nodeOrder: latest.nodeOrder, nodesById }, orders), nodesById };
+  return { nodeOrder, nodesById };
 }
 
 export async function applyStructureMoveHistory(
   get: () => WorkspaceState, entry: WorkspaceStructureMoveEntry, mode: 'redo' | 'undo'
 ) {
-  const before = get();
+  let before = get();
   if (!isStructureMoveApplicable(before, entry, mode)) return null;
-  const patch = buildRestorePatch(before, entry, mode);
-  const syncNodeIds = [...new Set([...entry.rootNodeIds, ...Object.keys(patch.nodesById).filter(
-    (id) => patch.nodesById[id] !== before.nodesById[id]
-  )])];
-  const payload = {
-    nodeOrder: patch.nodeOrder,
-    nodes: syncNodeIds.map((id) => patch.nodesById[id])
-      .filter((node): node is WorkspaceState['nodesById'][string] => Boolean(node)).map((node) => ({
-        nodeId: node.id,
-        parentNodeId: node.parentNodeId,
-        reading: node.reading ?? null,
-        sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
-        updatedAt: node.updatedAt
-      }))
-  };
+  let patch = buildRestorePatch(before, entry, mode);
+  const ready = confirmMoveReadingContent(before, patch.nodesById, entry.rootNodeIds);
+  if (!(typeof ready === 'boolean' ? ready : await ready)) return null;
+  before = get();
+  if (!isStructureMoveApplicable(before, entry, mode)) return null;
+  patch = buildRestorePatch(before, entry, mode);
+  const payload = buildMoveRuntimePayload(before, patch, entry.rootNodeIds, true);
   const result = await getWorkspaceMutationRepository().syncMoveNodes(payload);
-  const latest = get();
-  if (!result || result.movedNodeIds.length !== syncNodeIds.length ||
-      !result.movedNodeIds.every((id) => syncNodeIds.includes(id)) ||
-      result.nodeOrder.join('\0') !== patch.nodeOrder.join('\0') ||
-      !isStructureMoveApplicable(latest, entry, mode)) return null;
-  return mergeRestorePatch(before, latest, patch, entry, mode);
+  if (!result || !moveResultMatchesRequest(payload, result)) {
+    await refreshMoveStructure(before, payload);
+    return null;
+  }
+  const merged = mergeMoveResult(before, get(), payload, result);
+  if (merged) return merged;
+  await refreshMoveStructure(before, payload);
+  return {};
 }

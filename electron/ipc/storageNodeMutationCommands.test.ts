@@ -9,6 +9,7 @@ import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchI
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import { handleInvokeRequest } from './commands.js';
+import { registerMoveCommandCoverage } from './storageNodeMove.test-support.js';
 
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
@@ -79,7 +80,7 @@ vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollection
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(moveNodes).mockReturnValue({ movedNodeIds: ['node-2'], nodeOrder: ['node-1', 'node-2'] });
+  vi.mocked(moveNodes).mockReturnValue({ movedNodeIds: ['node-2'], parentOrders: [], nodes: [], readings: [] });
   vi.mocked(restoreNodes).mockReturnValue({ nodeOrder: ['node-1'], restoredNodeIds: ['node-1'], skippedConflicts: [] });
 });
 
@@ -204,23 +205,7 @@ it('handles node order replacement command', async () => {
   expect(replaceNodeOrder).toHaveBeenCalledWith(['node-1', 'node-2']);
 });
 
-it('handles move nodes command', async () => {
-  const args = {
-    nodeOrder: ['node-1', 'node-2'],
-    nodes: [{
-      nodeId: 'node-2',
-      parentNodeId: 'node-1',
-      sequentialReadingEnabled: null,
-      updatedAt: '2026-03-06T00:00:02.000Z'
-    }]
-  };
-
-  await expect(handleInvokeRequest({ command: 'move_nodes', args })).resolves.toEqual({
-    movedNodeIds: ['node-2'],
-    nodeOrder: ['node-1', 'node-2']
-  });
-  expect(moveNodes).toHaveBeenCalledWith(args);
-});
+registerMoveCommandCoverage();
 
 it('handles soft delete node command', async () => {
   await expect(

@@ -6,9 +6,7 @@ import { isDesktopRuntime } from './runtime';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import {
-  capturePendingNodeOrderAck,
-  drainPendingWorkspaceRelearnNode,
-  resolveCapturedPendingNodeOrder
+  drainPendingWorkspaceRelearnNode
 } from './workspaceRuntimeDurableRepository';
 import {
   isDeleteNodesPermanentlyResult,
@@ -81,11 +79,9 @@ export async function moveWorkspaceNodes(payload: WorkspaceMoveNodesPayload): Pr
   if (!runtimeInvoke) {
     return undefined;
   }
-  const pendingOrderAck = capturePendingNodeOrderAck();
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.moveNodes, payload);
     if (!isMoveNodesResult(result)) return undefined;
-    resolveCapturedPendingNodeOrder(pendingOrderAck);
     return result;
   } catch (error) {
     logWorkspaceRuntimeMutationError('sync_move_nodes', NATIVE_COMMANDS.moveNodes, error);

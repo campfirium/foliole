@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
+
 import {
   createBrowserLocalWorkspaceMutationRepository,
   getWorkspaceMutationRepository,
@@ -28,14 +30,15 @@ vi.mock('./workspaceRuntimeSync', () => ({
 const deletedAt = '2026-06-17T00:00:00.000Z';
 const nodeIds = ['node-1'];
 const nodeOrder = ['node-2'];
-const movedNodeOrder = ['node-2', 'node-1'];
 const moveNodesPayload = {
-  nodeOrder: movedNodeOrder,
+  parentOrders: [{ parentNodeId: null, expectedChildIds: ['node-1', 'node-2'], childIds: ['node-2'] },
+    { parentNodeId: 'node-2', expectedChildIds: [], childIds: ['node-1'] }],
+  maintainSequentialReading: true,
+  defaultPriority: 5 as const,
   nodes: [{
     nodeId: 'node-1',
+    expectedParentNodeId: null,
     parentNodeId: 'node-2',
-    reading: null,
-    sequentialReadingEnabled: null,
     updatedAt: deletedAt
   }]
 };
@@ -75,7 +78,7 @@ function mockRuntimeMutationResults() {
   vi.mocked(syncSoftDeleteNodesToRuntime).mockResolvedValue({ deletedNodeIds: nodeIds });
   vi.mocked(syncRestoreNodesToRuntime).mockResolvedValue({ restoredNodeIds: nodeIds, skippedConflicts: [] });
   vi.mocked(syncDeleteNodesPermanentlyToRuntime).mockResolvedValue({ nodeOrder, removedNodeIds: nodeIds });
-  vi.mocked(syncMoveNodesToRuntime).mockResolvedValue({ movedNodeIds: nodeIds, nodeOrder: movedNodeOrder });
+  vi.mocked(syncMoveNodesToRuntime).mockResolvedValue(workspaceMoveReceipt(moveNodesPayload));
 }
 
 async function expectRepositoryAcks(repository: ReturnType<typeof getWorkspaceMutationRepository>) {
@@ -90,8 +93,5 @@ async function expectRepositoryAcks(repository: ReturnType<typeof getWorkspaceMu
     nodeOrder,
     removedNodeIds: nodeIds
   });
-  await expect(Promise.resolve(repository.syncMoveNodes(moveNodesPayload))).resolves.toEqual({
-    movedNodeIds: nodeIds,
-    nodeOrder: movedNodeOrder
-  });
+  await expect(Promise.resolve(repository.syncMoveNodes(moveNodesPayload))).resolves.toEqual(workspaceMoveReceipt(moveNodesPayload));
 }

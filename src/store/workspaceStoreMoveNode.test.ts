@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeMoveNodesArgs } from '../../lib/platform/nativeMoveContract';
 import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
 
 import {
   createBrowserLocalWorkspaceMutationRepository,
@@ -53,10 +55,7 @@ beforeEach(() => {
       };
     }
     if (command === 'move_nodes') {
-      return {
-        movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
-        nodeOrder: (args as { nodeOrder: string[] }).nodeOrder
-      };
+      return workspaceMoveReceipt(args as NativeMoveNodesArgs);
     }
     return null;
   }));
@@ -196,10 +195,7 @@ it('keeps a concurrent change in another parent while a move is pending', async 
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn((command, args?: unknown) => {
     if (command !== 'move_nodes') return Promise.resolve(null);
     return new Promise((resolve) => {
-      completeMove = () => resolve({
-        movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
-        nodeOrder: (args as { nodeOrder: string[] }).nodeOrder
-      });
+      completeMove = () => resolve(workspaceMoveReceipt(args as NativeMoveNodesArgs));
     });
   }));
   const pending = useWorkspaceStore.getState().moveNodes([rootB], rootA, 'before');

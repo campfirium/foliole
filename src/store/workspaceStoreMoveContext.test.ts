@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeMoveNodesArgs } from '../../lib/platform/nativeMoveContract';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
 
 import { resetWorkspaceMutationRepository } from './workspaceMutationRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -19,7 +21,7 @@ function createRuntimeInvoke() {
       };
     }
     if (command === 'move_nodes') {
-      return { movedNodeIds: payload.nodes?.map((node) => node.nodeId) ?? [], nodeOrder: payload.nodeOrder };
+      return workspaceMoveReceipt(args as NativeMoveNodesArgs);
     }
     return null;
   });
@@ -76,9 +78,8 @@ it('does not let a pending move overwrite a newer workspace context', async () =
   let finishMove!: (result: { movedNodeIds: string[]; nodeOrder: string[] }) => void;
   const pendingMove = new Promise<{ movedNodeIds: string[]; nodeOrder: string[] }>((resolve) => { finishMove = resolve; });
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(async (command, args?: unknown) => {
-    const payload = args as { nodeOrder: string[] };
     return command === 'move_nodes'
-      ? pendingMove.then((result) => ({ ...result, nodeOrder: payload.nodeOrder }))
+      ? pendingMove.then(() => workspaceMoveReceipt(args as NativeMoveNodesArgs))
       : null;
   }));
   useWorkspaceStore.setState({ activeNodeId: movedTopicId, browseRootNodeId: folderAId });

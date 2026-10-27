@@ -1,3 +1,4 @@
+import { PUSH_QUEUE_PRIORITIES } from '../../lib/core/review/unifiedPushQueueRules.js';
 import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 import type {
   DeleteNodesPermanentlyInput,
@@ -42,13 +43,6 @@ function asNullableString(value: unknown, field: string): string | null {
   return asString(value, field);
 }
 
-function asBooleanOrNull(value: unknown, field: string): boolean | null {
-  if (value === null || typeof value === 'boolean') {
-    return value;
-  }
-  throw new Error(`invalid argument: ${field}`);
-}
-
 function asMoveNodePatch(value: unknown) {
   if (!value || typeof value !== 'object') {
     throw new Error('invalid argument: nodes');
@@ -56,15 +50,14 @@ function asMoveNodePatch(value: unknown) {
   const input = value as Record<string, unknown>;
   const patch: MoveNodesInput['nodes'][number] = {
     nodeId: asString(input.nodeId, 'nodeId'),
+    expectedParentNodeId: asNullableString(input.expectedParentNodeId, 'expectedParentNodeId'),
     parentNodeId: asNullableString(input.parentNodeId, 'parentNodeId'),
     updatedAt: asString(input.updatedAt, 'updatedAt')
   };
-  if ('reading' in input) {
-    patch.reading = input.reading as MoveNodesInput['nodes'][number]['reading'];
+  if (!patch.nodeId || patch.parentNodeId === '' || patch.expectedParentNodeId === '') {
+    throw new Error('invalid argument: move node identity');
   }
-  if ('sequentialReadingEnabled' in input) {
-    patch.sequentialReadingEnabled = asBooleanOrNull(input.sequentialReadingEnabled, 'sequentialReadingEnabled');
-  }
+  if ('reading' in input || 'sequentialReadingEnabled' in input) throw new Error('invalid argument: move snapshot');
   return patch;
 }
 
@@ -91,11 +84,21 @@ export function parseDeleteNodesPermanentlyArgs(args: Record<string, unknown>): 
 }
 
 export function parseMoveNodesArgs(args: Record<string, unknown>): MoveNodesInput {
-  if (!Array.isArray(args.nodes)) {
+  if (!Array.isArray(args.nodes) || !Array.isArray(args.parentOrders) ||
+      typeof args.maintainSequentialReading !== 'boolean' ||
+      !PUSH_QUEUE_PRIORITIES.some((priority) => priority === args.defaultPriority) || 'nodeOrder' in args) {
     throw new Error('invalid argument: nodes');
   }
   return {
-    nodeOrder: asStringArray(args.nodeOrder, 'nodeOrder'),
-    nodes: args.nodes.map(asMoveNodePatch)
+    nodes: args.nodes.map(asMoveNodePatch),
+    parentOrders: args.parentOrders.map((value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid argument: parentOrders');
+      const order = value as Record<string, unknown>;
+      return { parentNodeId: asNullableString(order.parentNodeId, 'parentNodeId'),
+        expectedChildIds: asStringArray(order.expectedChildIds, 'expectedChildIds'),
+        childIds: asStringArray(order.childIds, 'childIds') };
+    }),
+    maintainSequentialReading: args.maintainSequentialReading,
+    defaultPriority: args.defaultPriority as MoveNodesInput['defaultPriority']
   };
 }

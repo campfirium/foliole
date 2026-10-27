@@ -1,5 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
+
 import {
   syncMoveNodesToRuntime,
   syncNodeContentToRuntime,
@@ -13,10 +15,7 @@ import {
 
 export function registerRootMoveCoverage() {
   it('syncs moved root nodes through runtime command bridge', async () => {
-    vi.mocked(syncMoveNodesToRuntime).mockImplementation(async (payload) => ({
-      movedNodeIds: payload.nodes.map((node) => node.nodeId),
-      nodeOrder: payload.nodeOrder
-    }));
+    vi.mocked(syncMoveNodesToRuntime).mockImplementation(async (payload) => workspaceMoveReceipt(payload));
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const firstFolderId = (await actions.createRootNode('Folder A', 'folder'))!;
@@ -27,8 +26,9 @@ export function registerRootMoveCoverage() {
 
     expect([moved, ...[firstFolderId, secondFolderId].map((id) => harness.getState().nodesById[id]?.parentNodeId)]).toEqual([true, null, null]);
     expect(syncMoveNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({
-      nodeOrder: [...createWorkspaceNodeActionsFixture().nodeOrder, secondFolderId, firstFolderId],
-      nodes: []
+      parentOrders: [expect.objectContaining({ parentNodeId: null,
+        childIds: expect.arrayContaining([secondFolderId, firstFolderId]) })],
+      nodes: [expect.objectContaining({ nodeId: secondFolderId, expectedParentNodeId: null, parentNodeId: null })]
     }));
     expect(harness.getState().nodeOrder).toEqual([...createWorkspaceNodeActionsFixture().nodeOrder, secondFolderId, firstFolderId]);
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();

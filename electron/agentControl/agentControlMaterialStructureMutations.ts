@@ -9,6 +9,7 @@ import {
   VIRTUAL_ROOT_NODE_ID
 } from '../../lib/core/database/specialNodeIds.js';
 import { deriveNodeTitleFromContent } from '../../lib/core/nodes/deriveNodeTitle.js';
+import { moveOrderChildren } from '../../lib/core/nodes/structureMoveOrder.js';
 import {
   allocateNewItemReviewDueDates,
   createInitialNewItemReviewProfile
@@ -63,9 +64,16 @@ export function moveAgentControlMaterial(input: { expectedUpdatedAt: string; id:
   const movedIds = order.filter((id) => subtree.has(id));
   if (!movedIds.includes(node.id)) throw new AgentMaterialMutationError('not_found', 404);
   const remaining = order.filter((id) => !subtree.has(id));
+  const nextOrder = insertAtParentEnd(remaining, nodes, movedIds, parentId);
   moveNodes({
-    nodeOrder: insertAtParentEnd(remaining, nodes, movedIds, parentId),
-    nodes: [{ nodeId: node.id, parentNodeId: parentId, updatedAt: new Date().toISOString() }]
+    parentOrders: [...new Set([node.parent_id, parentId])].map((parentNodeId) => ({ parentNodeId,
+      expectedChildIds: moveOrderChildren(parentNodeId, order.filter((id) =>
+        nodes.find((member) => member.id === id)?.parent_id === parentNodeId)),
+      childIds: moveOrderChildren(parentNodeId, nextOrder.filter((id) =>
+        (id === node.id ? parentId : nodes.find((member) => member.id === id)?.parent_id) === parentNodeId)) })),
+    maintainSequentialReading: node.parent_id !== parentId,
+    defaultPriority: loadReviewSchedulerSettings().pushQueue.defaultPriority,
+    nodes: [{ nodeId: node.id, expectedParentNodeId: node.parent_id, parentNodeId: parentId, updatedAt: new Date().toISOString() }]
   });
   return readMaterialOrThrow(node.id);
 }

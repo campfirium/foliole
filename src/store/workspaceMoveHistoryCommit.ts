@@ -1,27 +1,15 @@
+import type { NativeMoveNodesResult } from '../../lib/platform/nativeMoveContract';
+
 import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootForTarget } from './workspaceBrowseRoot';
-import { applyMoveToCurrentOrder, moveSiblingOrderUnchanged } from './workspaceMoveScopedOrder';
+import { mergeMoveResult } from './workspaceMoveCommit';
 import type { WorkspaceState } from './workspaceStore';
 import type { MoveNodesTransaction } from './workspaceStoreTreeActions';
 import { createStructureMoveEntry, isWorkspaceStructureKind } from './workspaceStructureHistoryEntries';
 
-function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTransaction) {
-  if (!moveSiblingOrderUnchanged(state, transaction.sourceSiblingOrder) ||
-      Object.entries(transaction.sourceNodesById).some(([nodeId, node]) => state.nodesById[nodeId] !== node)) {
-    return null;
-  }
-  const nodesById = { ...state.nodesById };
-  Object.keys(transaction.sourceNodesById).forEach((nodeId) => {
-    const nextNode = transaction.patch.nodesById[nodeId];
-    if (nextNode) nodesById[nodeId] = nextNode;
-  });
-  const targetPatch = {
-    nodeOrder: applyMoveToCurrentOrder({
-      state, rootIds: transaction.rootNodeIds, targetNodeId: transaction.targetNodeId,
-      intent: transaction.intent, nodesById
-    }),
-    nodesById
-  };
+function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTransaction, result: NativeMoveNodesResult) {
+  const targetPatch = mergeMoveResult(transaction.before, state, transaction.runtimePayload, result);
+  if (!targetPatch) return null;
   if (!transaction.movedActiveTopic || !transaction.activeNodeIdAtRequest ||
       state.activeNodeId !== transaction.activeNodeIdAtRequest ||
       state.browseRootNodeId !== transaction.browseRootNodeIdAtRequest) return targetPatch;
@@ -30,21 +18,21 @@ function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTr
     browseRootNodeId: resolveWorkspaceBrowseRootForTarget({
       browseRootNodeId: state.browseRootNodeId,
       intent: 'target-context',
-      nodesById: transaction.patch.nodesById,
+      nodesById: targetPatch.nodesById,
       targetNodeId: transaction.activeNodeIdAtRequest,
       trashedNodeIds: state.trashedNodeIds
     })
   };
 }
 
-export function commitMoveTransaction(state: WorkspaceState, transaction: MoveNodesTransaction) {
-  const patch = buildCommittedMovePatch(state, transaction);
+export function commitMoveTransaction(state: WorkspaceState, transaction: MoveNodesTransaction, result: NativeMoveNodesResult) {
+  const patch = buildCommittedMovePatch(state, transaction, result);
   if (!patch) return null;
   const firstRoot = state.nodesById[transaction.rootNodeIds[0] ?? ''];
   const entry = firstRoot && isWorkspaceStructureKind(firstRoot.kind)
     ? createStructureMoveEntry({
         after: { ...state, ...patch },
-        before: state,
+        before: transaction.before,
         movedNodeIds: transaction.movedNodeIds,
         rootNodeIds: transaction.rootNodeIds
       })

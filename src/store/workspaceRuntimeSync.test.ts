@@ -4,6 +4,7 @@ import type { NativeWorkspaceNodeSnapshot } from '../../lib/platform/nativeStora
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { readPendingNodeOrder, stagePendingNodeOrder } from '../shared/platform/workspacePendingDurableMutations';
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
 
 import { mergePendingNodeSyncIntoSnapshot } from './workspacePendingNodeSync';
 import {
@@ -200,32 +201,35 @@ it('syncs full node order through replace_node_order command', () => {
     expectNoWorkspacePersist(invoke);
 });
 
-it('syncs move nodes through move_nodes command and returns the confirmed patch', async () => {
-    const invoke = vi.fn().mockResolvedValue({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
+it('syncs only the move scope without acknowledging a different pending global order', async () => {
+    const payload = {
+      parentOrders: [{ parentNodeId: null, expectedChildIds: ['node-1', 'node-2'], childIds: ['node-2'] },
+        { parentNodeId: 'node-2', expectedChildIds: [], childIds: ['node-1'] }],
+      nodes: [{ nodeId: 'node-1', expectedParentNodeId: null, parentNodeId: 'node-2',
+        updatedAt: '2026-03-06T00:00:01.000Z' }],
+      maintainSequentialReading: true, defaultPriority: 5 as const
+    };
+    const receipt = workspaceMoveReceipt(payload);
+    const invoke = vi.fn().mockResolvedValue(receipt);
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     stagePendingNodeOrder(['node-1', 'node-2']);
-
-    await expect(syncMoveNodesToRuntime({
-      nodeOrder: ['node-2', 'node-1'],
-      nodes: [{
-        nodeId: 'node-1',
-        parentNodeId: 'node-2',
-        reading: null,
-        sequentialReadingEnabled: null,
-        updatedAt: '2026-03-06T00:00:01.000Z'
-      }]
-    })).resolves.toEqual({ movedNodeIds: ['node-1'], nodeOrder: ['node-2', 'node-1'] });
-    expect(readPendingNodeOrder()).toBeNull();
-
-    expect(invoke).toHaveBeenCalledWith('move_nodes', {
-      nodeOrder: ['node-2', 'node-1'],
-      nodes: [{
-        nodeId: 'node-1',
-        parentNodeId: 'node-2',
-        reading: null,
-        sequentialReadingEnabled: null,
-        updatedAt: '2026-03-06T00:00:01.000Z'
-      }]
-    });
+    const pending = readPendingNodeOrder();
+    await expect(syncMoveNodesToRuntime(payload)).resolves.toEqual(receipt);
+    expect(readPendingNodeOrder()).toEqual(pending);
+    expect(invoke).toHaveBeenCalledWith('move_nodes', payload);
     expectNoWorkspacePersist(invoke);
+});
+
+
+it.each([
+  { movedNodeIds: ['node-1'], nodeOrder: ['node-1'] },
+  { movedNodeIds: ['node-1'], parentOrders: [], nodes: [], readings: [{ nodeId: 'node-1', reading: { state: 'active' } }] },
+  { movedNodeIds: ['node-1'], parentOrders: [{ parentNodeId: null, childIds: [12] }], nodes: [], readings: [] }
+])('rejects incomplete or malformed move receipts without acknowledging a pending order', async (receipt) => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(receipt));
+  stagePendingNodeOrder(['node-1']);
+  const pending = readPendingNodeOrder();
+  await expect(syncMoveNodesToRuntime({ nodes: [], parentOrders: [], maintainSequentialReading: false,
+    defaultPriority: 5 })).resolves.toBeUndefined();
+  expect(readPendingNodeOrder()).toEqual(pending);
 });

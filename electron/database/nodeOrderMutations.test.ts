@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+
 let mockedAppDataDir = '/tmp/foliole-node-order-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -109,17 +111,20 @@ it('moves parent and order in one sqlite mutation without rewriting content', ()
   seedNode('node-topic', null, 1);
 
   const result = moveNodes({
-    nodeOrder: ['folder-a', 'node-topic'],
+    parentOrders: [{ parentNodeId: null, expectedChildIds: readMoveParentOrder(openDatabaseConnection().driver, null).visibleIds,
+      childIds: readMoveParentOrder(openDatabaseConnection().driver, null).visibleIds.filter((id) => id !== 'node-topic') }, { parentNodeId: 'folder-a', expectedChildIds: [], childIds: ['node-topic'] }],
+    maintainSequentialReading: true, defaultPriority: 5,
     nodes: [{
       nodeId: 'node-topic',
+      expectedParentNodeId: null,
       parentNodeId: 'folder-a',
-      reading: null,
-      sequentialReadingEnabled: null,
       updatedAt: '2026-03-06T00:05:00.000Z'
     }]
   });
 
-  expect(result).toEqual({ movedNodeIds: ['node-topic'], nodeOrder: ['folder-a', 'node-topic'] });
+  expect(result).toMatchObject({ movedNodeIds: ['node-topic'], parentOrders: [
+    { parentNodeId: null, childIds: expect.arrayContaining(['folder-a']) },
+    { parentNodeId: 'folder-a', childIds: ['node-topic'] }] });
   expect(getNodeRow('node-topic')).toMatchObject({
     content: '# node-topic',
     parent_id: 'folder-a'

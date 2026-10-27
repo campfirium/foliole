@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+
 let mockedAppDataDir = '/tmp/foliole-node-sync-versions-order-tests';
 let mockedDocumentsDir = '/tmp/foliole-node-sync-versions-order-documents';
 
@@ -19,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
@@ -139,8 +141,10 @@ it('leaves a shifted sibling clean when a different node moves', () => {
   upsertTestNode('node-3', 2);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
   moveNodes({
-    nodeOrder: ['node-2', 'node-1', 'node-3'],
-    nodes: [{ nodeId: 'node-1', parentNodeId: null, updatedAt: '2026-04-21T10:02:00.000Z' }]
+    parentOrders: [{ parentNodeId: null, expectedChildIds: readMoveParentOrder(openDatabaseConnection().driver, null).visibleIds,
+      childIds: readMoveParentOrder(openDatabaseConnection().driver, null).visibleIds.map((id) =>
+        id === 'node-1' ? 'node-2' : id === 'node-2' ? 'node-1' : id) }], maintainSequentialReading: false, defaultPriority: 5,
+    nodes: [{ nodeId: 'node-1', expectedParentNodeId: null, parentNodeId: null, updatedAt: '2026-04-21T10:02:00.000Z' }]
   });
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     'SELECT sync_dirty FROM nodes WHERE id = ?', ['node-2']

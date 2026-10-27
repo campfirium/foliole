@@ -82,24 +82,8 @@ export function replaceNodeOrder(nodeIds: string[]): void {
 }
 
 export function moveNodes(input: MoveNodesInput): MoveNodesResult {
-  const connection = openDatabaseConnection();
-  const now = new Date().toISOString();
-  const hostName = loadOrCreateDesktopHostName(now);
-  return withTransaction(connection.driver, () => {
-    const result = moveNodesViaDriver(connection.driver, {
-      nodeOrder: input.nodeOrder,
-      nodes: input.nodes.map((node) => ({ ...node, hostName }))
-    });
-    for (const node of input.nodes) {
-      connection.driver.execute(
-        `UPDATE nodes
-         SET last_modified_by_host_name = ?, sync_dirty = 1
-         WHERE id = ?`,
-        [hostName, node.nodeId]
-      );
-    }
-    return result;
-  });
+  loadOrCreateDesktopHostName(new Date().toISOString());
+  return moveNodesViaDriver(openDatabaseConnection().driver, input);
 }
 
 export function updateNodeAnchorLinks(inputs: UpdateNodeAnchorLinkInput[]): void {

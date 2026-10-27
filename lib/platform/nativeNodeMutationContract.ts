@@ -80,23 +80,7 @@ export type NativeNodeSnapshotBatchMutationSpec = {
   result: NativeNodeMutationPatchResult;
 };
 
-export interface NativeMoveNodesArgs {
-  nodeOrder: string[];
-  nodes: NativeMoveNodePatch[];
-}
-
-export interface NativeMoveNodePatch {
-  nodeId: string;
-  parentNodeId: string | null;
-  reading?: NativeNodeSnapshotArgs['reading'];
-  sequentialReadingEnabled?: boolean | null;
-  updatedAt: string;
-}
-
-export interface NativeMoveNodesResult {
-  movedNodeIds: string[];
-  nodeOrder: string[];
-}
+export type { NativeMoveNodesArgs, NativeMoveNodesResult, NativeMoveNodePatch } from './nativeMoveContract.js';
 
 export interface NativeRestoreNodesResult {
   restoredNodeIds: string[];

@@ -24,6 +24,7 @@ import { initializeDatabase } from '../../electron/database/migrate.js';
 import { moveNodes, upsertNodeSnapshot } from '../../electron/database/nodeMutations.js';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot.js';
 
+import { buildMoveRuntimePayload } from './workspaceMoveCommit';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
 import { maintenanceTree } from './workspaceSequentialReadingMaintenance.testSupport';
 import { createInitialWorkspaceState, useWorkspaceStore, type WorkspaceState } from './workspaceStore';
@@ -54,14 +55,10 @@ it('persists every unlocked descendant through the production move and database 
   }
   timings.seededAtMs = performance.now() - startedAt;
   const patch = buildSequentialReadingMaintenancePatch(args)!;
-  moveNodes({
-    nodeOrder: args.nodeOrder,
-    nodes: ['moved', ...patch.changes.map((change) => change.nodeId)].map((id) => {
-      const node = patch.nodesById[id]!;
-      return { nodeId: id, parentNodeId: node.parentNodeId, reading: node.reading ?? null,
-        sequentialReadingEnabled: node.sequentialReadingEnabled ?? null, updatedAt: args.now };
-    })
-  });
+  const beforeState: WorkspaceState = { ...useWorkspaceStore.getState(), ...createInitialWorkspaceState(),
+    nodesById: args.previousNodesById, nodeOrder: args.nodeOrder };
+  moveNodes(buildMoveRuntimePayload(beforeState,
+    { nodesById: args.nodesById, nodeOrder: args.nodeOrder }, ['moved'], true));
   timings.movedAtMs = performance.now() - startedAt;
   closeDatabaseConnection();
   initializeDatabase();

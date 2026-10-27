@@ -36,12 +36,19 @@ export function isDeleteNodesPermanentlyResult(value: unknown): value is Workspa
 }
 
 export function isMoveNodesResult(value: unknown): value is WorkspaceMoveNodesResult {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      Array.isArray((value as WorkspaceMoveNodesResult).movedNodeIds) &&
-      Array.isArray((value as WorkspaceMoveNodesResult).nodeOrder)
-  );
+  if (!isObjectRecord(value) || !isStringArray(value.movedNodeIds) ||
+      !Array.isArray(value.parentOrders) || !Array.isArray(value.nodes) || !Array.isArray(value.readings)) return false;
+  return value.parentOrders.every((order) => isObjectRecord(order) &&
+    (order.parentNodeId === null || typeof order.parentNodeId === 'string') && isStringArray(order.childIds)) &&
+    value.nodes.every((node) => isObjectRecord(node) && typeof node.nodeId === 'string' &&
+      (node.parentNodeId === null || typeof node.parentNodeId === 'string') && typeof node.updatedAt === 'string') &&
+    value.readings.every((node) => isObjectRecord(node) && typeof node.nodeId === 'string' &&
+      (node.reading === null || (isObjectRecord(node.reading) &&
+        ['active', 'locked', 'done', 'dismissed'].includes(String(node.reading.state)) &&
+        typeof node.reading.lastHandledAt === 'string' && typeof node.reading.nextAt === 'string' &&
+        ['intervalDurationMs', 'intervalGrowthFactor', 'priority', 'readingPosition', 'repetitionCount']
+          .every((key) => typeof node.reading === 'object' && node.reading !== null &&
+            Number.isFinite((node.reading as Record<string, unknown>)[key])))));
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

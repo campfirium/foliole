@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeMoveNodesArgs } from '../../lib/platform/nativeMoveContract';
 import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
 
 import { resetWorkspaceMutationRepository } from './workspaceMutationRepository';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -59,8 +61,7 @@ beforeEach(() => {
   runtimeInvoke.mockReset();
   runtimeInvoke.mockImplementation(async (command, args?: unknown) => {
     if (command !== 'move_nodes') return null;
-    const payload = args as { nodeOrder: string[]; nodes: Array<{ nodeId: string }> };
-    return { movedNodeIds: payload.nodes.map((entry) => entry.nodeId), nodeOrder: payload.nodeOrder };
+    return workspaceMoveReceipt(args as NativeMoveNodesArgs);
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(runtimeInvoke);
   seedWorkspace();

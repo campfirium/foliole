@@ -54,10 +54,12 @@ function createRuntimeWorkspaceMutationRepository(): WorkspaceMutationRepository
 export function createBrowserLocalWorkspaceMutationRepository(): WorkspaceMutationRepository {
   return {
     syncDeleteNodesPermanently: ({ nodeIds, nodeOrder }) => ({ nodeOrder, removedNodeIds: nodeIds }),
-    syncMoveNodes: async ({ nodeOrder, nodes }) => ({
-      movedNodeIds: nodes.map((node) => node.nodeId),
-      nodeOrder
-    }),
+    syncMoveNodes: async (payload) => {
+      const [{ buildBrowserMoveResult }, { useWorkspaceStore }] = await Promise.all([
+        import('./workspaceBrowserMoveResult'), import('./workspaceStore')
+      ]);
+      return buildBrowserMoveResult(useWorkspaceStore.getState(), payload);
+    },
     syncNodeMutation: async (node, position) => {
       return {
         nodes: [createWorkspaceRuntimeNodeSnapshot(node, position)],

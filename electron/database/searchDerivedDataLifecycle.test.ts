@@ -234,10 +234,13 @@ it('refreshes node and PDF search paths after moving a subtree to a new parent',
   processSearchQueue();
 
   moveNodes({
-    nodeOrder: ['folder-a', 'folder-b'],
+    parentOrders: [{ parentNodeId: 'folder-a', expectedChildIds: ['article'], childIds: [] },
+      { parentNodeId: 'folder-b', expectedChildIds: [], childIds: ['article'] }],
+    maintainSequentialReading: true, defaultPriority: 5,
     nodes: [
       {
         nodeId: 'article',
+        expectedParentNodeId: 'folder-a',
         parentNodeId: 'folder-b',
         updatedAt: '2026-05-26T00:03:00.000Z'
       }

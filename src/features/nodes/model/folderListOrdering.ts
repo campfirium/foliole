@@ -1,3 +1,4 @@
+import { sortManualFolderNodes } from '../../../../lib/core/nodes/manualFolderOrder';
 import { isReadwiseUnlocatedNodeId } from '../../../../lib/core/readwise/readwiseBookUnlocated';
 
 import type { Node } from './nodeTypes';
@@ -142,7 +143,7 @@ export function sortFolderListNodes(
   }));
 
   if (sortKey === 'manual') {
-    return placeReadwiseUnlocatedLast(sortManualFolderListNodes(baseEntries, manualChildOrder));
+    return sortManualFolderNodes(nodes, manualChildOrder);
   }
 
   return placeReadwiseUnlocatedLast(baseEntries
@@ -191,26 +192,4 @@ function placeReadwiseUnlocatedLast(nodes: Node[]) {
     ...nodes.filter((node) => !isReadwiseUnlocatedNodeId(node.id)),
     ...nodes.filter((node) => isReadwiseUnlocatedNodeId(node.id))
   ];
-}
-
-function sortManualFolderListNodes(
-  entries: Array<{ index: number; node: Node; title: string }>,
-  manualChildOrder: readonly string[] | null | undefined
-) {
-  const entriesById = new Map<string, { index: number; node: Node; title: string }>();
-  for (const entry of entries) {
-    entriesById.set(entry.node.id, entry);
-  }
-  const orderedEntries: Array<{ index: number; node: Node; title: string }> = [];
-  for (const nodeId of manualChildOrder ?? []) {
-    const entry = entriesById.get(nodeId);
-    if (entry) {
-      orderedEntries.push(entry);
-    }
-  }
-  const orderedIdSet = new Set(orderedEntries.map((entry) => entry.node.id));
-  const remainingEntries = entries
-    .filter((entry) => !orderedIdSet.has(entry.node.id))
-    .sort((left, right) => compareName(left, right, 1));
-  return [...orderedEntries, ...remainingEntries].map((entry) => entry.node);
 }

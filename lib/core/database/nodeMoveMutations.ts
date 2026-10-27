@@ -1,97 +1,33 @@
+import type { NativeMoveNodePatch, NativeMoveNodesArgs, NativeMoveNodesResult } from '../../platform/nativeMoveContract.js';
+
 import type { DatabaseDriver } from './driver.js';
-import type { UpsertNodeSnapshotInput } from './nodeMutationPayloads.js';
-import {
-  createUpsertNodeReadingHostStateStatement,
-  createUpsertNodeReadingStatement
-} from './nodeMutationStatements.js';
-import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
-import { type WriteNodeReadingSyncInput, writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
+import { captureMoveReadingScope, loadMoveReadingContext } from './nodeMoveReadingContext.js';
+import { maintainMoveReading } from './nodeMoveReadingMaintenance.js';
+import { readMoveParentOrder, validateMoveStructure, writeMoveStructure } from './nodeMoveStructure.js';
 import { enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds } from './searchIndexInvalidations.js';
 
-export interface MoveNodesInput {
-  nodeOrder: string[];
-  nodes: MoveNodePatchInput[];
-}
+export type MoveNodesInput = NativeMoveNodesArgs;
+export type MoveNodesResult = NativeMoveNodesResult;
+export type MoveNodePatchInput = NativeMoveNodePatch;
 
-export interface MoveNodesResult {
-  movedNodeIds: string[];
-  nodeOrder: string[];
-}
-
-export interface MoveNodePatchInput {
-  nodeId: string;
-  hostName?: string;
-  parentNodeId: string | null;
-  reading?: UpsertNodeSnapshotInput['reading'];
-  sequentialReadingEnabled?: boolean | null;
-  updatedAt: string;
-}
-
-interface ExistingMoveParentRow {
-  [column: string]: unknown;
-  parent_id: string | null;
-}
-
+/** Coordinates independent structure and reading owners inside the existing transaction. */
 export function moveNodes(driver: DatabaseDriver, input: MoveNodesInput): MoveNodesResult {
-  const updateNodeMoveStatement = driver.prepare(
-    `UPDATE nodes
-     SET parent_id = ?,
-         sequential_reading_enabled = ?,
-         updated_at = ?,
-         last_modified_by_host_name = COALESCE(?, last_modified_by_host_name),
-         sync_dirty = 1
-     WHERE id = ?`
-  );
-  const upsertNodeReadingStatement = createUpsertNodeReadingStatement(driver);
-  const upsertNodeReadingHostStateStatement = createUpsertNodeReadingHostStateStatement(driver);
-  const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
-  const deleteNodeReadingHostStateStatement = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
-
-  driver.transaction(() => {
-    const pathInvalidationNodeIds = readPathInvalidationNodeIds(driver, input.nodes);
-    for (const node of input.nodes) {
-      updateNodeMoveStatement.run([
-        node.parentNodeId,
-        node.sequentialReadingEnabled == null ? null : node.sequentialReadingEnabled ? 1 : 0,
-        node.updatedAt,
-        node.hostName ?? null,
-        node.nodeId
-      ]);
-      if ('reading' in node) {
-        writeNodeReadingSnapshotWithSync(driver, toReadingSyncInput(node), {
-          deleteDeviceState: deleteNodeReadingHostStateStatement.run,
-          deleteReading: deleteNodeReadingStatement.run,
-          upsertDeviceState: upsertNodeReadingHostStateStatement.run,
-          upsertReading: upsertNodeReadingStatement.run
-        });
-      }
-    }
-    rewriteExistingNodeOrder(driver, input.nodeOrder);
-    enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, pathInvalidationNodeIds);
+  return driver.transaction(() => {
+    const structure = validateMoveStructure(driver, input);
+    const needsReading = input.maintainSequentialReading ||
+      input.nodes.some((node) => node.expectedParentNodeId !== node.parentNodeId);
+    const scope = needsReading ? captureMoveReadingScope(driver, input) : null;
+    const beforeReading = scope ? loadMoveReadingContext(driver, scope) : null;
+    writeMoveStructure(driver, input, structure);
+    const parentOrders = input.parentOrders.map(({ parentNodeId }) => ({ parentNodeId,
+      childIds: readMoveParentOrder(driver, parentNodeId).visibleIds }));
+    const readings = scope && beforeReading ? maintainMoveReading(driver, input, scope, beforeReading) : [];
+    const changedRoots = input.nodes.filter((node) => node.expectedParentNodeId !== node.parentNodeId);
+    enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(driver, changedRoots.map((node) => node.nodeId));
+    const nodes = driver.queryAll<{ id: string; parent_id: string | null; updated_at: string }>(
+      'SELECT id, parent_id, updated_at FROM nodes WHERE id IN (SELECT value FROM json_each(?))',
+      [JSON.stringify(input.nodes.map((node) => node.nodeId))]).map((row) =>
+      ({ nodeId: row.id, parentNodeId: row.parent_id, updatedAt: row.updated_at }));
+    return { movedNodeIds: nodes.map((node) => node.nodeId), parentOrders, nodes, readings };
   });
-  return {
-    movedNodeIds: input.nodes.map((node) => node.nodeId),
-    nodeOrder: input.nodeOrder
-  };
-}
-
-function readPathInvalidationNodeIds(driver: DatabaseDriver, nodes: MoveNodePatchInput[]) {
-  return nodes
-    .filter((node) => {
-      const existing = driver.queryOne<ExistingMoveParentRow>('SELECT parent_id FROM nodes WHERE id = ?', [
-        node.nodeId
-      ]);
-      return Boolean(existing && existing.parent_id !== node.parentNodeId);
-    })
-    .map((node) => node.nodeId);
-}
-
-function toReadingSyncInput(node: MoveNodePatchInput): WriteNodeReadingSyncInput {
-  const input: WriteNodeReadingSyncInput = {
-    nodeId: node.nodeId,
-    reading: node.reading ?? null,
-    updatedAt: node.updatedAt
-  };
-  if (node.hostName) input.hostName = node.hostName;
-  return input;
 }

@@ -17,7 +17,8 @@ vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] },
   systemPreferences: { getUserDefault: vi.fn(), subscribeNotification: vi.fn() } }));
 vi.mock('./mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
-import { closeDatabaseConnection } from '../database/connection.js';
+import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { moveNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import * as nodeDocument from '../database/workspaceNodeDocument.js';
@@ -83,8 +84,7 @@ it('migrates a nested folder rename without reading or modifying unrelated artic
 
 it('migrates only the moved subtree through the production move mutation', async () => {
   save('destination', 'Destination', null, 'folder');
-  moveNodes({ nodes: [{ nodeId: 'nested', parentNodeId: 'destination', updatedAt: '2030-10-06T00:01:00.000Z' }],
-    nodeOrder: loadWorkspaceSnapshot()!.nodeOrder });
+  moveMirrorNode('nested', 'destination', '2030-10-06T00:01:00.000Z');
   await syncFolder('nested');
   expect(loadMirrorArticleRecords().get('a')!.relativePath).toBe('Destination/Nested/A.md');
   expect(loadMirrorArticleRecords().get('second')!.relativePath).toBe('Alpha/Second.md');
@@ -159,8 +159,7 @@ it('preserves remaining old outputs if a later file in the folder migration fail
 it('finishes moving a previous directory before an article reclaims that path as a file', async () => {
   save('report', 'Report');
   save('folder-a', 'Report.md', null, 'folder');
-  moveNodes({ nodes: [{ nodeId: 'report', parentNodeId: null, updatedAt: '2030-10-06T00:02:00.000Z' }],
-    nodeOrder: ['report', ...loadWorkspaceSnapshot()!.nodeOrder.filter((id) => id !== 'report')] });
+  moveMirrorNode('report', null, '2030-10-06T00:02:00.000Z', true);
   await rebuildAllMirrorOutput();
   save('folder-a', 'Elsewhere', null, 'folder');
   await syncFolder();
@@ -186,3 +185,19 @@ it('revisits an already migrated conflict owner if a later folder render changes
   expect(loadMirrorArticleRecords().get('a')!.relativePath).toBe('Elsewhere/Nested/A.md');
   for (const id of ['report', 'a', 'second']) await expectBody(id);
 });
+
+function moveMirrorNode(nodeId: string, parentNodeId: string | null, updatedAt: string, first = false) {
+  const previous = loadWorkspaceSnapshot()!.nodesById[nodeId]!.parentNodeId;
+  const driver = openDatabaseConnection().driver;
+  moveNodes({ nodes: [{ nodeId, expectedParentNodeId: previous, parentNodeId, updatedAt }],
+    defaultPriority: 5, maintainSequentialReading: previous !== parentNodeId,
+    parentOrders: [...new Set([previous, parentNodeId])].map((parent) => {
+      const expectedChildIds = readMoveParentOrder(driver, parent).visibleIds;
+      const childIds = expectedChildIds.filter((id) => id !== nodeId);
+      if (parent === parentNodeId) {
+        if (first) childIds.unshift(nodeId);
+        else childIds.push(nodeId);
+      }
+      return { parentNodeId: parent, expectedChildIds, childIds };
+    }) });
+}

@@ -1,6 +1,9 @@
+import { moveOrderChildren } from '../../lib/core/nodes/structureMoveOrder';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
-import type { WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
+import type { WorkspaceMoveNodesPayload, WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
+import { buildMoveRuntimePayload, moveResultMatchesRequest } from './workspaceMoveCommit';
+import { confirmMoveReadingContent } from './workspaceMoveContentBarrier';
 import { commitMoveTransaction } from './workspaceMoveHistoryCommit';
 import {
   isSameNodeOrder,
@@ -8,12 +11,11 @@ import {
   resolveNextParentNodeId,
   type NodeDropIntent
 } from './workspaceMoveNodes';
-import { captureMoveSiblingOrder } from './workspaceMoveScopedOrder';
+import { refreshMoveStructure } from './workspaceMoveRefresh';
 import { canMoveRootsIntoTarget } from './workspaceNodeKindRules';
 import { collectOrderedSubtreeIds } from './workspaceNodeTreeOrder';
 import type { WorkspaceState } from './workspaceStore';
 import { collectMovedNodeBlock, collectMoveRootIds } from './workspaceStoreMoveHelpers';
-import { applySequentialReadingMovedNodes } from './workspaceStoreTreeSequentialReading';
 
 type WorkspaceSet = (
   partial:
@@ -22,25 +24,14 @@ type WorkspaceSet = (
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-type NodeSnapshot = WorkspaceState['nodesById'][string];
-export type MoveNodesRuntimePayload = {
-  nodeOrder: string[];
-  nodes: Array<{
-    nodeId: string;
-    parentNodeId: string | null;
-    reading?: NodeSnapshot['reading'];
-    sequentialReadingEnabled?: boolean | null;
-    updatedAt: string;
-  }>;
-};
+export type MoveNodesRuntimePayload = WorkspaceMoveNodesPayload;
 export type MoveNodesTransaction = {
   activeNodeIdAtRequest: string | null;
   browseRootNodeIdAtRequest: string | null;
   movedActiveTopic: boolean;
   movedNodeIds: string[];
   rootNodeIds: string[];
-  sourceSiblingOrder: ReturnType<typeof captureMoveSiblingOrder>;
-  sourceNodesById: Record<string, NodeSnapshot>;
+  before: WorkspaceState;
   targetNodeId: string | null;
   intent: NodeDropIntent;
   patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
@@ -153,14 +144,6 @@ function prepareMoveNodesTransaction(
   );
   const changedParent = rootNodeIds.some((nodeId) =>
     state.nodesById[nodeId]?.parentNodeId !== movePatch.nodesById[nodeId]?.parentNodeId);
-  const sequentialState = changedParent
-    ? applySequentialReadingMovedNodes({ patch: movePatch, rootNodeIds, state })
-    : { patch: movePatch };
-  const syncNodeIds = [...new Set([
-    ...Object.keys(sequentialState.patch.nodesById).filter(
-      (nodeId) => sequentialState.patch.nodesById[nodeId] !== state.nodesById[nodeId]
-    )
-  ])];
   return {
     activeNodeIdAtRequest: state.activeNodeId,
     browseRootNodeIdAtRequest: state.browseRootNodeId,
@@ -171,28 +154,11 @@ function prepareMoveNodesTransaction(
     ),
     movedNodeIds: movedBlockNodeIds,
     rootNodeIds,
-    sourceSiblingOrder: captureMoveSiblingOrder(
-      state, rootNodeIds, movePatch.nodesById[rootNodeIds[0] ?? '']?.parentNodeId ?? null
-    ),
-    sourceNodesById: Object.fromEntries(syncNodeIds.flatMap((nodeId) => state.nodesById[nodeId]
-      ? [[nodeId, state.nodesById[nodeId]!]]
-      : [])),
+    before: state,
     targetNodeId,
     intent,
-    patch: sequentialState.patch,
-    runtimePayload: {
-      nodeOrder: sequentialState.patch.nodeOrder,
-      nodes: syncNodeIds
-        .map((nodeId) => sequentialState.patch.nodesById[nodeId])
-        .filter((node): node is NodeSnapshot => Boolean(node))
-        .map((node) => ({
-          nodeId: node.id,
-          parentNodeId: node.parentNodeId,
-          reading: node.reading ?? null,
-          sequentialReadingEnabled: node.sequentialReadingEnabled ?? null,
-          updatedAt: node.updatedAt
-        }))
-    }
+    patch: movePatch,
+    runtimePayload: buildMoveRuntimePayload(state, movePatch, rootNodeIds, changedParent)
   };
 }
 
@@ -212,18 +178,35 @@ export function createMoveNodesAction(
     if (!preparedTransaction) {
       return false;
     }
-    const result = await onNodesMoved?.(preparedTransaction.runtimePayload);
-    const expectedIds = preparedTransaction.runtimePayload.nodes.map((node) => node.nodeId);
-    if (!result || result.movedNodeIds.length !== expectedIds.length ||
-        !result.movedNodeIds.every((nodeId) => expectedIds.includes(nodeId))) return false;
+    if (preparedTransaction.runtimePayload.maintainSequentialReading) {
+      const ready = confirmMoveReadingContent(preparedTransaction.before, preparedTransaction.patch.nodesById,
+        preparedTransaction.rootNodeIds);
+      if (!(typeof ready === 'boolean' ? ready : await ready)) return false;
+    }
+    let latest: WorkspaceState = preparedTransaction.before;
+    set((state) => { latest = state; return state; });
+    if (preparedTransaction.runtimePayload.parentOrders.some((order) =>
+      moveOrderChildren(order.parentNodeId, latest.nodeOrder.filter((id) =>
+        latest.nodesById[id]?.parentNodeId === order.parentNodeId)).join('\0') !== order.expectedChildIds.join('\0')) ||
+      preparedTransaction.runtimePayload.nodes.some((node) =>
+        latest.nodesById[node.nodeId]?.parentNodeId !== node.expectedParentNodeId)) return false;
+    // Saving related content can change node objects without changing the intended structural operation.
+    const current = prepareMoveNodesTransaction(latest, nodeIds, targetNodeId, intent);
+    if (!current) return false;
+    const result = await onNodesMoved?.(current.runtimePayload);
+    if (!result || !moveResultMatchesRequest(current.runtimePayload, result)) {
+      await refreshMoveStructure(latest, current.runtimePayload);
+      return false;
+    }
 
     let applied = false;
     set((state) => {
-      const committedPatch = commitMoveTransaction(state, preparedTransaction);
+      const committedPatch = commitMoveTransaction(state, current, result);
       if (!committedPatch) return state;
       applied = true;
       return committedPatch;
     });
-    return applied;
+    if (!applied) await refreshMoveStructure(latest, current.runtimePayload);
+    return true;
   };
 }

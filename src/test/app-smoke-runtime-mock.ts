@@ -2,8 +2,10 @@ import { vi } from 'vitest';
 
 import { recomputeReview, type ReviewEvent } from '../../lib/core/review/recomputeReview';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings';
+import type { NativeMoveNodesArgs } from '../../lib/platform/nativeMoveContract';
 
 import { createSmokeDailyFlow } from './app-smoke-daily-flow.test-support';
+import { workspaceMoveReceipt } from './workspaceMoveReceipt';
 
 function createNodeMutationResult(command: string, payload?: Record<string, unknown>) {
   const nodeId = typeof payload?.nodeId === 'string' ? payload.nodeId : 'node-created';
@@ -69,9 +71,7 @@ export function createSmokeRuntimeInvoke() {
       const nodeIds = Array.isArray(payload?.nodeIds) ? payload.nodeIds : [];
       return { nodeOrder: nodeOrder.filter((nodeId) => !nodeIds.includes(nodeId)), removedNodeIds: nodeIds };
     }
-    if (command === 'move_nodes') return { movedNodeIds: Array.isArray(payload?.nodes)
-      ? payload.nodes.flatMap((node) => typeof node?.nodeId === 'string' ? [node.nodeId] : [])
-      : [], nodeOrder: payload?.nodeOrder };
+    if (command === 'move_nodes') return workspaceMoveReceipt(payload as unknown as NativeMoveNodesArgs);
     if (command === 'inspect_foliole_published_delete') return { status: 'allowed' };
     if (command === 'load_node_backlinks') return [];
     if (command === 'load_readwise_books_inventory') return { books: [] };

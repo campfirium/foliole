@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { NativeMoveNodesArgs } from '../../lib/platform/nativeMoveContract';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
+import { workspaceMoveReceipt } from '../test/workspaceMoveReceipt';
 
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -47,10 +49,7 @@ async function createActionsHarness() {
       };
     }
     if (command === 'move_nodes') {
-      return {
-        movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
-        nodeOrder: (args as { nodeOrder: string[] }).nodeOrder
-      };
+      return workspaceMoveReceipt(args as NativeMoveNodesArgs);
     }
     return null;
   });
