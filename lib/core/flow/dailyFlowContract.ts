@@ -27,6 +27,8 @@ const card = z.object({ due: z.string(), last_review: z.string().nullable(), sta
   elapsed_days: z.number(), scheduled_days: z.number(), reps: z.number(), lapses: z.number() });
 export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.string().datetime(),
   token: z.object({ scope: z.string(), dayKey: z.string(), revision: z.number().int().nonnegative() }).strict(),
+  navigation: z.literal('continue-reading').optional(),
+  expectedContinueNodeId: z.string().min(1).optional(),
   sourceSession: flowHistorySessionSchema.optional(),
   nextSession: flowHistorySessionSchema.optional(),
   readingAction: z.enum(['read', 'later', 'dismiss']).optional(),
@@ -38,7 +40,10 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
     schedulerVersion: z.string(), cardBefore: card, cardAfter: card }).strict().optional(),
   reviewHistory: z.object({ nodeId: z.string().min(1), before: review.nullable(), after: review.nullable(),
     mode: z.enum(['undo', 'redo']), targetOpId: z.string().min(1) }).strict().optional()
-}).strict().refine(value => !value.readingAction || Boolean(value.readings?.length && value.readings[0]?.nodeId === value.sourceSession?.currentNodeId),
+}).strict().refine(value => value.navigation ? Boolean(value.expectedContinueNodeId &&
+  !value.sourceSession && !value.nextSession && !value.grade && !value.readings && !value.readingAction &&
+  !value.historyMode && !value.reviewHistory) : !value.expectedContinueNodeId,
+  'Continue navigation requires only its target and cursor identity').refine(value => !value.readingAction || Boolean(value.readings?.length && value.readings[0]?.nodeId === value.sourceSession?.currentNodeId),
   'Reading advancement requires the current topic mutation').refine(value => !value.historyMode || Boolean(value.sourceSession && value.nextSession &&
     !value.grade && !value.readingAction && (value.reviewHistory?.mode === value.historyMode || value.readings?.length)),
   'History replay requires its source, target and learning mutation').refine(value => Number(Boolean(value.grade)) + Number(Boolean(value.reviewHistory)) +

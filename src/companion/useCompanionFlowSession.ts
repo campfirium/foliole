@@ -16,9 +16,9 @@ import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 import { buildReviewFlowWindow } from '../store/workspaceReviewFlowWindow';
 import { resolveWorkspaceReviewHistoryTarget } from '../store/workspaceReviewHistoryTarget';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
-import { canContinueReadingInFlowWindow, continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
+import { canContinueReadingInFlowWindow } from '../store/workspaceReviewReadingContinuation';
 
-import { saveCompanionDailyNavigation } from './companionDailyNavigation';
+import { continueCompanionDailyFlow } from './companionDailyNavigation';
 import { createCompanionFlowControls } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
@@ -79,26 +79,12 @@ export function useCompanionFlowSession(args: {
   })), [args.snapshot]);
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
-  function continueReading() { if (owner.current === current) void continueCurrentFlow(latest.current, current, mode, render).catch(error => { current.error = String(error); render(); }); }
+  function continueReading() { if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
   return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
     summary: { completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
-}
-
-async function continueCurrentFlow(args: Parameters<typeof useCompanionFlowSession>[0], current: FlowOwner,
-  mode: 'review-first' | 'recommended', render: () => void) {
-  if (!args.active || current.scope !== getCompanionReadingScope() ||
-    !canContinueFlowReading(args.snapshot, current, args.onlyReview) || !args.snapshot) return;
-  const next = continueReviewSessionReading(flowState(args.snapshot, current.session, mode), new Date().toISOString());
-  if (!next) return;
-  const source = current.session;
-  const saved = source.daily ? await saveCompanionDailyNavigation(source, next) : next;
-  if (current.session !== source) return;
-  current.session = saved;
-  current.generation += 1;
-  render();
 }
 
 function canContinueFlowReading(snapshot: WorkspaceSnapshot | null, current: FlowOwner, onlyReview: boolean) {

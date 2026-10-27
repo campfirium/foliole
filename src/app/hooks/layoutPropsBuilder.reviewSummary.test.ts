@@ -1,81 +1,11 @@
 import { expect, it, vi } from 'vitest';
 
-import type { Node } from '../../features/nodes/model/nodeTypes';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ReviewSessionState } from '../../store/workspaceStore';
 
 import { buildLayoutProps, countCreatedNodesDuringSession } from './layoutPropsBuilder';
+import { createNode, reviewGateLayoutArgs } from './layoutPropsBuilder.reviewSummary.testSupport';
 import type { BuildLayoutPropsArgs } from './layoutPropsBuilderTypes';
-
-function createNode(id: string, kind: Node['kind'], createdAt: string): Node {
-  return {
-    content: '',
-    createdAt,
-    id,
-    kind,
-    parentNodeId: null,
-    reveal: null,
-    review: null,
-    title: id,
-    updatedAt: createdAt
-  };
-}
-
-const reviewGateLayoutArgs = {
-  activeNodeId: null,
-  canGoBack: false,
-  canGoForward: false,
-  canGoParent: false,
-  canStartStudyMode: true,
-  contextMenu: null,
-  editorAdapterRef: { current: null },
-  editorCtx: {},
-  editorNodeId: null,
-  editorNodeViewState: null,
-  isExternalViewOpen: false,
-  isImmersiveMode: false,
-  isImportManagementOpen: false,
-  isListCollapsed: false,
-  isPriorityQuickSetActive: false,
-  isResizingList: false,
-  isResizingRightSidebar: false,
-  isReviewEditing: false,
-  isRightSidebarCollapsed: false,
-  isSettingsOpen: false,
-  isStudyMode: false,
-  isTrashViewOpen: false,
-  isViewingTrashNode: false,
-  isVirtualViewOpen: false,
-  isWorkspaceHydrated: true,
-  listWidth: 320,
-  nav: {},
-  nodeOrder: ['review-1'],
-  nodesById: {
-    'review-1': {
-      ...createNode('review-1', 'item', '2026-03-03T12:00:00.000Z'),
-      review: { due: '2026-03-03T00:00:00.000Z' } as never
-    }
-  },
-  nowIso: '2026-03-03T12:00:00.000Z',
-  requestedSettingsCategory: null,
-  requestedSettingsDialog: null,
-  reviewPreview: null,
-  reviewSession: {
-    currentNodeId: null,
-    isAnswerRevealed: false,
-    queueNodeIds: ['review-1'],
-    totalNodeCount: 1
-  },
-  reviewSessionMode: 'recommended',
-  reviewSettings: {
-    isReviewSchedulerSettingsReady: false,
-    reviewSchedulerSettings: DEFAULT_REVIEW_SCHEDULER_SETTINGS
-  },
-  rightSidebarWidth: 320,
-  selectedTrashNodeId: null,
-  showAnswerSection: false,
-  trashedNodeIds: []
-} as const;
 
 it('counts created items and topics inside the completed review session window', () => {
   const reviewSession: ReviewSessionState = {
@@ -248,4 +178,22 @@ it('exits Flow in place without restoring the browse list or selecting another d
   expect(exitStudyMode).toHaveBeenCalledOnce();
   expect(onOpenNotesView).not.toHaveBeenCalled();
   expect(onSelectNode).not.toHaveBeenCalled();
+});
+
+it.each([true, false])('keeps daily continuation under the save owner when navigation returns %s', async saved => {
+  const onSelectNode = vi.fn();
+  const onOpenNotesView = vi.fn();
+  const exitReviewSession = vi.fn();
+  const continueReviewSessionReading = vi.fn(async () => saved);
+  const props = buildLayoutProps({ ...reviewGateLayoutArgs, continueReviewSessionReading, exitReviewSession,
+    onOpenNotesView, nav: { onSelectNode }, nodesById: { 'reading-1': createNode('reading-1', 'topic', '2026-06-21T12:00:00.000Z') },
+    reviewSession: { completedAt: '2026-06-21T12:00:00.000Z', currentNodeId: null, continueNodeId: 'reading-1',
+      queueNodeIds: [], isAnswerRevealed: false, totalNodeCount: 1, reviewedItemCount: 1,
+      daily: { scope: 'library', dayKey: '2026-06-21T00:00:00.000Z', revision: 2 } }
+  } as unknown as BuildLayoutPropsArgs);
+  await props.review.onContinueReading();
+  expect(continueReviewSessionReading).toHaveBeenCalledWith(reviewGateLayoutArgs.nowIso);
+  expect(exitReviewSession).not.toHaveBeenCalled();
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(onOpenNotesView).toHaveBeenCalledTimes(saved ? 1 : 0);
 });

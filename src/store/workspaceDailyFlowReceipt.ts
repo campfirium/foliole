@@ -4,13 +4,15 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
 import { isSameReviewProfile } from './workspaceReviewGradeActionHistory';
 
-export function mergeDailyFlowReceiptNodes(current: Record<string, Node>, before: Record<string, Node>,
+type ReceiptNode = Node | WorkspaceNodeSnapshot;
+
+export function mergeDailyFlowReceiptNodes<T extends ReceiptNode>(current: Record<string, T>, before: Record<string, T>,
   receipt: Record<string, WorkspaceNodeSnapshot> | undefined) {
   if (!receipt || !Object.keys(receipt).length) return current;
   const nodes = { ...current };
   for (const [id, value] of Object.entries(receipt ?? {})) {
     const node = current[id];
-    if (!node) { nodes[id] = value as Node; continue; }
+    if (!node) { nodes[id] = value as T; continue; }
     const expected = before[id];
     if (!expected) continue;
     nodes[id] = { ...node,

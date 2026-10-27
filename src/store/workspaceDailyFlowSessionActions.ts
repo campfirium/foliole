@@ -1,11 +1,11 @@
 import type { DailyFlowOpenArgs } from '../../lib/core/flow/dailyFlowContract';
+import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { commitDailyFlowRuntime, hasDailyFlowRuntime, openDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
-import { continueReviewSessionReading } from './workspaceReviewReadingContinuation';
 import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
@@ -29,14 +29,19 @@ export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
 
 export function continueWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, now: string) {
   const state = get();
-  const nextSession = continueReviewSessionReading(state, now);
-  if (!nextSession || !state.reviewSession.daily) return Promise.resolve(false);
-  return commitDailyFlowRuntime({ opId: crypto.randomUUID(), now, token: state.reviewSession.daily, sourceSession: state.reviewSession, nextSession })
-    .then(({ session }) => {
+  const source = state.reviewSession;
+  if (source.currentNodeId || !source.continueNodeId || !source.daily) return Promise.resolve(false);
+  return commitDailyFlowRuntime({ opId: dailyFlowOperationId(source.daily, source.continueNodeId, 'continue-reading'),
+    now, token: source.daily, navigation: 'continue-reading', expectedContinueNodeId: source.continueNodeId })
+    .then(({ session, nodes }) => {
       if (get().reviewSession !== state.reviewSession) return false;
-      set(current => ({ ...buildReviewActiveNodeContext(current, session.currentNodeId), reviewSession: session }));
+      set(current => ({ nodesById: mergeDailyFlowReceiptNodes(current.nodesById, state.nodesById, nodes),
+        ...(session.currentNodeId ? buildReviewActiveNodeContext(current, session.currentNodeId) : {}), reviewSession: session }));
       return Boolean(session.currentNodeId);
-    }).catch(() => false);
+    }).catch(async error => {
+      if (get().reviewSession === source) await recoverWorkspaceDailyFlow(set, get, error, now);
+      return false;
+    });
 }
 
 export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceState;

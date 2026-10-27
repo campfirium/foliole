@@ -57,3 +57,15 @@ it('preserves hidden Soon through native envelopes and rejects invalid identitie
   expect(() => dailyFlowOpenSchema.parse({ now, mode: 'review-first', seed: {
     ...session, hiddenSoonNodeIds: [42] } })).toThrow();
 });
+
+
+it('accepts only the minimal continue-reading intent and forbids mixing navigation with mutations or renderer sessions', () => {
+  const args = { opId: 'continue', now, token, navigation: 'continue-reading', expectedContinueNodeId: 'topic' };
+  expect(dailyFlowCommitSchema.parse(args)).toEqual(args);
+  for (const extra of [{ nextSession: session }, { sourceSession: session }, { readings: [] },
+    { grade: {} }, { readingAction: 'read' }, { historyMode: 'undo' }, { reviewHistory: {} }]) {
+    expect(dailyFlowCommitSchema.safeParse({ ...args, ...extra }).success).toBe(false);
+  }
+  expect(dailyFlowCommitSchema.safeParse({ ...args, expectedContinueNodeId: undefined }).success).toBe(false);
+  expect(dailyFlowCommitSchema.safeParse({ ...args, navigation: undefined }).success).toBe(false);
+});

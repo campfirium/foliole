@@ -124,6 +124,10 @@ function getReviewSessionSummary(
 
 function createContinueReadingAction(args: BuildLayoutPropsArgs) {
   return async () => {
+    if (args.reviewSession.daily) {
+      if (await args.continueReviewSessionReading(args.nowIso)) args.onOpenNotesView();
+      return;
+    }
     const continueNodeId = args.reviewSession.continueNodeId;
     const targetNodeId =
       continueNodeId && args.nodesById[continueNodeId] && !args.trashedNodeIds.includes(continueNodeId)

@@ -6,6 +6,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
 import { dailyGradeScope, scopedDailySnapshot, advanceDailyGrade } from './dailyFlowGrade.js';
+import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { afterDailyGrade, flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
 import { dailyReadingScope, advanceDailyReading } from './dailyFlowReading.js';
 import { hasNewReadyDailyCandidate } from './dailyFlowReentry.js';
@@ -62,8 +63,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     if (previous) {
       if (previous.input_hash !== hash) throw new Error('daily_flow_operation_mismatch');
       if (!stored || stored.invalidated || stored.revision !== previous.revision) throw new Error('daily_flow_ack_superseded');
-      const replayedSnapshot = await scopedDailySnapshot(tx, persistence, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]);
-      return { mutationTimestamp: args.now, nodes: receiptNodes(replayedSnapshot, [stored.session.currentNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), replayed: true, ...(replayedSnapshot ? { readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: replayedSnapshot.nodesById[value.nodeId]?.reading ?? null })) } : {}), session: stored.session, ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) as SchedulerCard | null }) };
+      const replayedSnapshot = await scopedDailySnapshot(tx, persistence, [stored.session.currentNodeId, args.expectedContinueNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]);
+      return { mutationTimestamp: args.now, nodes: receiptNodes(replayedSnapshot, [stored.session.currentNodeId, args.expectedContinueNodeId, args.grade?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)]), replayed: true, ...(replayedSnapshot ? { readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: replayedSnapshot.nodesById[value.nodeId]?.reading ?? null })) } : {}), session: stored.session, ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) as SchedulerCard | null }) };
     }
     try {
       if (stored) args = { ...args,
@@ -72,6 +73,7 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     } catch { throw new Error('daily_flow_changed'); }
     if (!stored || stored.day_key !== args.token.dayKey || (stored.revision !== args.token.revision && !sameSession(stored.session, args.sourceSession)) ||
       (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
+    if (args.navigation) return commitDailyFlowNavigation(tx, stored, args, settings, persistence, hash);
     const localGrade = await dailyGradeScope(tx, stored, args, settings, persistence);
     const localReading = await dailyReadingScope(tx, stored, args, settings, persistence);
     const localSoon = await dailySoonScope(tx, stored, args, settings, persistence);
