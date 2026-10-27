@@ -1,4 +1,7 @@
+import { getPdfAnchorLocators } from '../../lib/core/anchors/pdfAnchorLocator.js';
 import type { StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
+import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { renderArticleBodyFromLocators } from './articleMirrorAnchors.js';
@@ -85,13 +88,21 @@ function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderab
     const anchor = children[0]?.anchorLink;
     if (!anchor || (anchor.kind !== 'highlight' && anchor.kind !== 'cloze') || renderedKeys.has(key)) return [];
     const locator = anchor.locator;
+    const pages = getPdfAnchorLocators(locator).map((fragment) => fragment.page);
+    if (pages.length > 0) {
+      return `(❄ PDF ${pages.length === 1 ? 'page' : 'pages'}: ${pages.join(', ')})` +
+        createNote(anchor.kind, anchor.id, '', 0, 0, false);
+    }
     if (anchor.kind === 'cloze' && locator && !('ranges' in locator) &&
       (!('from' in locator && 'to' in locator) || 'x' in locator)) return [];
     const ranges = locator && 'ranges' in locator ? locator.ranges : locator ? [locator] : [];
     const source = ranges.map((range) => 'originalText' in range ? range.originalText : '').filter(Boolean).join('\n');
     return createNote(anchor.kind, anchor.id, anchor.kind === 'cloze' ? source : '', 0, 0, false);
   });
-  return [body, ...unlocated].filter(Boolean).join('\n\n');
+  const sources = (article.resourceReferences ?? [])
+    .filter((resource) => resource.role === 'reference' && resource.storage_key.endsWith('.pdf'))
+    .map((resource) => `[PDF source](<${buildAssetMarkdownUrl(resource.storage_key)}>)`);
+  return [body, ...sources, ...unlocated].filter(Boolean).join('\n\n');
 }
 
 function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren: MirrorRenderableNode[]) {
@@ -134,6 +145,7 @@ export interface MirrorRenderableNode {
   content: string;
   reveal: string | null;
   anchorLink: StoredAnchorLink | null;
+  resourceReferences?: NodeResourceReference[];
   updatedAt: string;
 }
 
