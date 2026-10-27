@@ -87,7 +87,7 @@ function seedArticleWithUnresolvedLocatorCloze() {
   });
 }
 
-it('does not export unresolved zero-width locator clozes back into article markdown', () => {
+it('keeps unresolved zero-width cloze facts in an appendix without inventing an inline span', () => {
   seedArticleWithUnresolvedLocatorCloze();
 
   const articleRow = loadArticleNode('node-article-unresolved-cloze');
@@ -96,7 +96,11 @@ it('does not export unresolved zero-width locator clozes back into article markd
     throw new Error('expected article row');
   }
 
-  expect(renderArticleMirrorMarkdown(articleRow)).toBe('# Mirror Export Unresolved Cloze Demo\n\nStudy  today.\n');
+  const output = renderArticleMirrorMarkdown(articleRow);
+  expect(output).toContain('Study  today.');
+  expect(output).toContain('cloze: Study [...] today.');
+  expect(output).toContain('answer: answer');
+  expect(output).not.toContain('<u>');
 });
 
 it('exports unresolved zero-width locator cloze articles without reintroducing inline cloze markup', async () => {
@@ -106,7 +110,9 @@ it('exports unresolved zero-width locator cloze articles without reintroducing i
 
   const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Mirror Export Unresolved Cloze Demo.md');
   const output = await fs.readFile(outputPath, 'utf8');
-  expect(output).toBe('# Mirror Export Unresolved Cloze Demo\n\nStudy  today.\n');
+  expect(output).toContain('Study  today.');
+  expect(output).toContain('cloze: Study [...] today.');
+  expect(output).toContain('answer: answer');
+  expect(output).not.toContain('<u>');
   expect(output).not.toContain('<cloze');
-  expect(output).not.toContain('[...]');
 });
