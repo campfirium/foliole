@@ -55,8 +55,8 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
   }
   const historySession = args.historyMode ? args.historySourceSession?.flowFormat === 'legacy-queue-v1'
     ? await replayLegacyCycle(db, base, args, settings, persistence) : await replayCycleHistory(db, base, args) : null;
-  const result = await persistCycleLearning(db, args, persistence);
-  const updated = await scopedDailySnapshot(db, persistence, ids);
+  const { learningChanged, ...result } = await persistCycleLearning(db, args, persistence);
+  const updated = learningChanged ? await scopedDailySnapshot(db, persistence, ids) : snapshot;
   let session: DailyFlowSession = historySession ?? await advanceCycleFlow(db, sourceSession, args, updated, settings, persistence, mode);
   if (args.reviewHistory?.mode === 'redo') session = { ...session,
     nextReviewDueAt: resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };

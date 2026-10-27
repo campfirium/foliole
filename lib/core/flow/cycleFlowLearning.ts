@@ -24,9 +24,13 @@ export function assertCycleLearningFacts(snapshot: DailyFlowSnapshot, args: Dail
 }
 
 export async function persistCycleLearning(db: DbPort, args: DailyFlowCommitArgs,
-  persistence: DailyFlowPersistence): Promise<{ card?: SchedulerCard | null }> {
-  if (args.grade) return { card: await persistence.grade(db, args.grade, args.opId) };
-  if (args.reviewHistory) return { card: await persistence.reviewHistory(db, args.reviewHistory, args.now) };
-  for (const value of args.readings ?? []) if (!sameLearningProfile(value.before, value.after)) await persistence.reading(db, value, args.now);
-  return {};
+  persistence: DailyFlowPersistence): Promise<{ card?: SchedulerCard | null; learningChanged: boolean }> {
+  if (args.grade) return { card: await persistence.grade(db, args.grade, args.opId), learningChanged: true };
+  if (args.reviewHistory) return { card: await persistence.reviewHistory(db, args.reviewHistory, args.now), learningChanged: true };
+  let learningChanged = false;
+  for (const value of args.readings ?? []) if (!sameLearningProfile(value.before, value.after)) {
+    await persistence.reading(db, value, args.now);
+    learningChanged = true;
+  }
+  return { learningChanged };
 }
