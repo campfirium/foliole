@@ -10,6 +10,7 @@ import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/c
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { resolveCompanionRecentArticles } from '../shared/platform/companionBrowseLists';
+import * as browseLists from '../shared/platform/companionBrowseLists';
 import * as queuePlanner from '../store/reviewQueuePlanner';
 
 import { useDailyFlowSurface } from './companionFlowDay.testSupport';
@@ -37,6 +38,23 @@ async function seedItems() {
   await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
 }
 
+function observeFolderNodeVisits() {
+  const visited: string[] = [];
+  for (const name of ['resolveCompanionFolderViewByNodeId', 'resolveCompanionTrashFolderViewByNodeId'] as const) {
+    const resolve = browseLists[name];
+    vi.spyOn(browseLists, name).mockImplementation((snapshot, ...args) => resolve(snapshot ? {
+      ...snapshot,
+      nodesById: new Proxy(snapshot.nodesById, {
+        get(nodes, key: string) {
+          visited.push(key);
+          return Reflect.get(nodes, key);
+        }
+      })
+    } : null, ...args));
+  }
+  return visited;
+}
+
 it.each(['soon', 'later', 'read', 'dismiss', 1, 2, 3, 4] as const)(
   'completes %s without sorting hidden Browse and opens the latest actual list', async action => {
     if (typeof action === 'number') await seedItems();
@@ -50,6 +68,7 @@ it.each(['soon', 'later', 'read', 'dismiss', 1, 2, 3, 4] as const)(
     if (typeof action === 'number') act(() => ui.result.current.surface.handleRevealAnswer());
     const compare = vi.spyOn(String.prototype, 'localeCompare');
     const plan = vi.spyOn(queuePlanner, 'buildReviewQueuePlan');
+    const folderNodeVisits = observeFolderNodeVisits();
     await act(async () => {
       const surface = ui.result.current.surface;
       if (typeof action === 'number') await surface.handleGradeReview(action);
@@ -63,6 +82,7 @@ it.each(['soon', 'later', 'read', 'dismiss', 1, 2, 3, 4] as const)(
     expect(ui.result.current.surface.isSubmittingReadingAction).toBe(false);
     expect(ui.result.current.surface.readingError).toBeNull();
     expect(ui.result.current.surface.reviewError).toBeNull();
+    expect(folderNodeVisits).toEqual([]);
     // Numeric title comparisons identify the observed whole-list work, not learning timestamp comparisons.
     expect(compare.mock.calls.filter(call => call[2]?.numeric)).toHaveLength(0);
     compare.mockRestore();

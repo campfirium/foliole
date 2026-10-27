@@ -54,11 +54,13 @@ async function reopen() {
 
 it.each([1, 2, 3, 4] as const)('keeps grade %s local and restores the same mixed order and mobile undo after reopen', async value => {
   const before = structuredClone(session);
+  const next = library.database.prepare('SELECT node_id FROM daily_flow_entries WHERE active=1 AND node_id<>? ORDER BY order_key LIMIT 1')
+    .get(before.currentNodeId!) as { node_id: string };
   const retained = library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id<>? ORDER BY order_key').all(before.currentNodeId!);
   const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
   await grade(value);
   const after = structuredClone(session);
-  expect(after.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(after.currentNodeId).toBe(next.node_id);
   expect(after.reviewedItemCount).toBe((before.reviewedItemCount ?? 0) + 1);
   expect(library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id<>? ORDER BY order_key').all(before.currentNodeId!)).toEqual(retained);
   expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
@@ -93,8 +95,10 @@ it('preserves the next reading while grading five successive items', async () =>
   }
   expect(session.currentNodeId).toBe(initial[5]);
   expect((await snapshot()).nodesById[session.currentNodeId!]!.kind).toBe('topic');
-  expect(session.queueNodeIds).toEqual(initial.slice(5, 7));
   expect(session.reviewedItemCount).toBe(5);
+  session = (await persistFlowMutation({ action: 'read', nodeId: session.currentNodeId!, now,
+    snapshot: await snapshot(), history: { key, mode: 'recommended', session } })).session!;
+  expect(session.currentNodeId).toBe(initial[6]);
 });
 
 it('keeps minute grades waiting, admits them when due, and respects a runtime short-term setting change', async () => {

@@ -5,7 +5,8 @@ import { createCollectionVirtualNodeFilter, createManualVirtualNodeFilter } from
 
 import {
   resolveCompanionFolderViewByNodeId,
-  resolveCompanionRootDirectoryView
+  resolveCompanionRootDirectoryView,
+  resolveCompanionTrashFolderViewByNodeId
 } from './companionBrowseLists';
 
 function topic(id: string, title: string, collections: string[] = []) {
@@ -78,4 +79,36 @@ it('opens the Virtual root as containers before opening a Collection as YAML-mat
 it('uses manual virtual folder order without stale or deleted ids', () => {
   expect(resolveCompanionFolderViewByNodeId(createSnapshot(), 'manual')?.items.map((item) => item.nodeId))
     .toEqual(['topic-b', 'topic-a']);
+});
+
+it.each([resolveCompanionFolderViewByNodeId, resolveCompanionTrashFolderViewByNodeId])(
+  'leaves the workspace untouched without a folder target (%#)', resolve => {
+    const accessed: PropertyKey[] = [];
+    const snapshot = new Proxy(createSnapshot(), {
+      get(source, key) {
+        accessed.push(key);
+        return Reflect.get(source, key);
+      }
+    });
+    expect(resolve(snapshot, null)).toBeNull();
+    expect(accessed).toEqual([]);
+    expect(resolve(null, 'missing')).toBeNull();
+  });
+
+it('keeps deleted ancestry and sorting when opening an actual trash folder', () => {
+  const snapshot = createSnapshot();
+  snapshot.nodesById.archived = { ...folder('archived', 'Archived'), deletedAt: '2026-07-28T01:00:00.000Z' };
+  snapshot.nodesById.alpha = { ...topic('alpha', 'Alpha'), parentNodeId: 'archived', deletedAt: '2026-07-28T01:00:00.000Z' };
+  snapshot.nodesById.beta = { ...topic('beta', 'Beta'), parentNodeId: 'archived', deletedAt: '2026-07-28T01:00:00.000Z' };
+  snapshot.nodesById.beta.updatedAt = '2026-07-28T02:00:00.000Z';
+  expect(resolveCompanionFolderViewByNodeId(snapshot, 'archived')).toBeNull();
+  expect(resolveCompanionTrashFolderViewByNodeId(snapshot, 'archived', 'dateSaved', 'asc')).toMatchObject({
+    nodeId: 'archived', title: 'Archived', items: [
+      { nodeId: 'alpha', title: 'Alpha' }, { nodeId: 'beta', title: 'Beta' }
+    ]
+  });
+  expect(resolveCompanionTrashFolderViewByNodeId(snapshot, 'archived', 'dateSaved', 'desc')?.items.map(item => item.nodeId))
+    .toEqual(['beta', 'alpha']);
+  expect(resolveCompanionTrashFolderViewByNodeId(snapshot, 'manual')).toBeNull();
+  expect(resolveCompanionTrashFolderViewByNodeId(snapshot, 'missing')).toBeNull();
 });

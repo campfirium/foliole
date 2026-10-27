@@ -145,8 +145,9 @@ export function resolveCompanionFolderViewByNodeId(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionFolderView | null {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot || !nodeId || !isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) return null;
+  if (!snapshot || !nodeId) return null;
+  const normalizedSnapshot = normalizeWorkspaceSnapshot(snapshot);
+  if (!isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isBrowseContainerNode(folderNode)) return null;
   if (isVirtualFolderNode(folderNode)) {
@@ -193,8 +194,9 @@ export function resolveCompanionTrashFolderViewByNodeId(
   sortKey: FolderListSortKey = DEFAULT_FOLDER_LIST_SORT_KEY,
   sortDirection: FolderListSortDirection = DEFAULT_FOLDER_LIST_SORT_DIRECTION
 ): CompanionFolderView | null {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot || !nodeId || !isCanonicalTrashedNodeId(normalizedSnapshot, nodeId)) return null;
+  if (!snapshot || !nodeId) return null;
+  const normalizedSnapshot = normalizeWorkspaceSnapshot(snapshot);
+  if (!isCanonicalTrashedNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isBrowseContainerNode(folderNode)) return null;
   const childNodes = selectCanonicalTrashedNodeIds(normalizedSnapshot)
