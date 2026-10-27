@@ -90,7 +90,7 @@ async function readMirror(fileName: string) {
   return fs.readFile(mirrorPath(fileName), 'utf8');
 }
 
-it('updates the same article mirror when article body changes and removes legacy mirror artifacts', async () => {
+it('updates the article body and retires only its own legacy directory', async () => {
   seedArticles();
   await rebuildMirrorOutput();
   await fs.writeFile(mirrorPath('Highlights.md'), 'old', 'utf8');
@@ -111,8 +111,8 @@ it('updates the same article mirror when article body changes and removes legacy
 
   await expect(syncIncrementalMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 1, queued_article_count: 1 });
   await expect(readMirror('Mirror Demo.md')).resolves.toContain('Updated body keeps <u>answer</u>.');
-  await expect(fs.access(mirrorPath('Highlights.md'))).rejects.toThrow();
-  await expect(fs.access(mirrorPath('Clozes.md'))).rejects.toThrow();
+  await expect(readMirror('Highlights.md')).resolves.toBe('old');
+  await expect(readMirror('Clozes.md')).resolves.toBe('old');
   await expect(fs.access(path.join(tempRoot, 'Library', 'Mirror', 'Mirror Demo'))).rejects.toThrow();
 });
 
@@ -241,7 +241,7 @@ it('moves article mirrors when the parent folder path changes', async () => {
   await expect(fs.access(mirrorPath(path.join('Projects', 'Research', 'Mirror Demo.md')))).rejects.toThrow();
 });
 
-it('prunes stale mirror output that is no longer in the current target set', async () => {
+it('clears stale mirror output during a full rebuild', async () => {
   seedArticles();
   await rebuildMirrorOutput();
   await fs.mkdir(mirrorPath(path.join('Old Folder', 'Nested')), { recursive: true });
@@ -250,7 +250,7 @@ it('prunes stale mirror output that is no longer in the current target set', asy
 
   saveNode('node-second', null, 'Plain body updated.', '2030-03-30T00:18:00.000Z', { title: 'Second Demo', position: 3 });
 
-  await expect(syncIncrementalMirrorOutput(['node-second'])).resolves.toMatchObject({ rebuilt_article_count: 1 });
+  await expect(rebuildMirrorOutput()).resolves.toMatchObject({ rebuilt_article_count: 2 });
   await expect(fs.access(mirrorPath(path.join('Old Folder')))).rejects.toThrow();
   await expect(fs.access(mirrorPath('stale-root.md'))).rejects.toThrow();
   await expect(readMirror('Mirror Demo.md')).resolves.toContain('Keep ==bright text== here.');

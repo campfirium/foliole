@@ -3,8 +3,8 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 
 import { orderMirrorPlansForMigration } from './mirrorDirectoryOwnership.js';
+import { removeEmptyMirrorParents } from './mirrorOutputDirectory.js';
 import { processMirrorPlans, type MirrorSyncMode, type MirrorSyncOptions } from './mirrorOutputPlans.js';
-import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
 import {
   captureMirrorOutputSnapshot,
   createMirrorPlanCurrency,
@@ -14,12 +14,10 @@ import {
   clearMirrorArticleRecords,
   deleteMirrorArticleRecord,
   type MirrorArticleRecord,
-  removeLegacyMirrorArtifacts,
   removeMirrorFileAndLegacyDirectory,
   resetMirrorRoot,
   resolveAbsoluteMirrorPath
 } from './mirrorOutputStorage.js';
-import { collectProtectedMirrorPaths } from './mirrorPathIdentity.js';
 import { collectChangedMirrorOwners } from './mirrorPathOwnership.js';
 import { scheduleMirrorSync } from './mirrorSyncScheduler.js';
 
@@ -36,7 +34,6 @@ async function removeObsoleteMirrorRecords(
   mirrorRoot: string,
   recordsByArticleId: Map<string, MirrorArticleRecord>,
   targetArticleIds: Set<string>,
-  protectedPaths: Set<string>,
   selectedArticleIds?: Set<string>
 ) {
   if (mode === 'missing') {
@@ -51,7 +48,9 @@ async function removeObsoleteMirrorRecords(
     }
     await runWithDatabaseConnectionOwner(async () => {
       if (!currency.isArticleStillAbsent(record.articleId)) return;
-      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath), protectedPaths);
+      const previousPath = resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath);
+      await removeMirrorFileAndLegacyDirectory(previousPath, currency.retirementProtectedPaths(record.articleId).paths);
+      await removeEmptyMirrorParents(previousPath, mirrorRoot);
       await currency.ownWrite(() => deleteMirrorArticleRecord(record.articleId), (records) => records.delete(record.articleId));
     });
   }
@@ -71,28 +70,12 @@ async function syncMirrorOutput(
   const targetArticleIds = new Set(plans.map((plan) => plan.articleId));
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
   const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId, selectedArticleIds);
-  const protectedPaths = collectProtectedMirrorPaths(plans.map((plan) => plan.targetPath));
   const selectedPlans = orderMirrorPlansForMigration(selectedArticleIds
     ? plans.filter((plan) => selectedArticleIds.has(plan.articleId) || changedOwners.has(plan.articleId)) : plans,
   mode === 'full' ? new Map() : recordsByArticleId);
 
-  const retainedPaths = [...plans.map((plan) => plan.targetPath), ...plans.flatMap((plan) => {
-    const record = recordsByArticleId.get(plan.articleId);
-    return record && record.relativePath !== plan.relativePath
-      ? [resolveAbsoluteMirrorPath(paths.mirror, record.relativePath)] : [];
-  })];
-  const retainedProtectedPaths = collectProtectedMirrorPaths(retainedPaths);
-
-  if (mode === 'full') {
-    await prepareFullMirrorRebuild(paths.mirror, currency);
-  } else if (mode === 'incremental') {
-    await runWithDatabaseConnectionOwner(() => pruneMirrorOutputToTargets(paths.mirror, retainedPaths));
-  }
-
-  await removeObsoleteMirrorRecords(currency, mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
-
-  await runWithDatabaseConnectionOwner(() => removeLegacyMirrorArtifacts(
-    paths.mirror, plans.map((plan) => plan.targetPath), retainedProtectedPaths));
+  if (mode === 'full') await prepareFullMirrorRebuild(paths.mirror, currency);
+  await removeObsoleteMirrorRecords(currency, mode, paths.mirror, recordsByArticleId, targetArticleIds, selectedArticleIds);
 
   const processed = snapshot
     ? await processMirrorPlans({ currency, mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, changedOwners })

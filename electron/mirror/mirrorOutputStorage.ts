@@ -72,17 +72,11 @@ async function removeUnprotectedMirrorPath(targetPath: string, protectedPaths: S
 
 export async function removeMirrorFileAndLegacyDirectory(filePath: string, protectedPaths = new Set<string>()) {
   await removeUnprotectedMirrorPath(filePath, protectedPaths);
-  await removeUnprotectedMirrorPath(resolveLegacyArticleDirectory(filePath), protectedPaths, true);
+  await removeLegacyMirrorArticleDirectory(filePath, protectedPaths);
 }
 
-export async function removeLegacyMirrorArtifacts(mirrorRoot: string, targetPaths: string[], protectedPaths = new Set<string>()) {
-  await Promise.all([
-    removeUnprotectedMirrorPath(path.join(mirrorRoot, 'Highlights.md'), protectedPaths),
-    removeUnprotectedMirrorPath(path.join(mirrorRoot, 'Clozes.md'), protectedPaths)
-  ]);
-  await Promise.all(targetPaths.map((targetPath) =>
-    removeUnprotectedMirrorPath(resolveLegacyArticleDirectory(targetPath), protectedPaths, true)
-  ));
+export async function removeLegacyMirrorArticleDirectory(filePath: string, protectedPaths = new Set<string>()) {
+  await removeUnprotectedMirrorPath(resolveLegacyArticleDirectory(filePath), protectedPaths, true);
 }
 
 export async function resetMirrorRoot(mirrorRoot: string) {

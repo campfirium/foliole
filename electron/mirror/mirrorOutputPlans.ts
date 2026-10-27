@@ -12,7 +12,7 @@ import { renderArticleMirrorInWorker } from './articleMirrorRenderWorkerClient.j
 import { writeRenamedMirror } from './mirrorOutputRename.js';
 import { type MirrorPlanCurrency, mirrorPlanRevision } from './mirrorOutputSnapshot.js';
 import { type MirrorArticleRecord, readMirrorFileUpdatedAt,
-  resolveAbsoluteMirrorPath, saveMirrorArticleRecord } from './mirrorOutputStorage.js';
+  removeLegacyMirrorArticleDirectory, resolveAbsoluteMirrorPath, saveMirrorArticleRecord } from './mirrorOutputStorage.js';
 
 export type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
@@ -77,6 +77,7 @@ async function commitRenderedMirror(args: {
       await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
       await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
     }
+    await removeLegacyMirrorArticleDirectory(args.plan.targetPath, args.currency.retirementProtectedPaths(args.plan.articleId).paths);
     const record = { articleId: args.plan.articleId, mirroredAt: args.updatedAt, relativePath: args.plan.relativePath };
     await args.currency.ownWrite(() => saveMirrorArticleRecord(record), (records) => records.set(record.articleId, record));
     return true;
