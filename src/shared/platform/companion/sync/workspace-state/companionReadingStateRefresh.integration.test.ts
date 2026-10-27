@@ -51,6 +51,8 @@ it('publishes every committed reading profile in a batch exactly as a complete d
     });
     const displayed = await refreshCompanionWorkspaceAfterMutation();
     expect(library.fullDirectoryQueries(), 'reading writes must not trigger a full directory read').toBe(reads);
+    expect(library.projectionPlans().filter(plan => plan.kind === 'attachments'),
+      'learning writes must not reload attachment projections').toHaveLength(0);
     expect(displayed).toEqual(await readComplete());
     expect(displayed?.nodesById.a?.reading).toEqual(reading);
     expect(displayed?.nodesById.b?.reading).toEqual({

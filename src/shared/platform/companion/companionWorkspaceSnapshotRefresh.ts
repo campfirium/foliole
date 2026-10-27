@@ -4,6 +4,7 @@ import type { WorkspaceRefreshScope } from '../../../../lib/core/database/worksp
 import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/workspaceSnapshotValueEqual.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
+import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
 import { companionWorkspaceSnapshots, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
@@ -27,6 +28,10 @@ async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: W
 async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeScope) {
   const reviewed = scope.reviewNodeIds ?? [];
   const reading = scope.readingNodeIds ?? [];
+  if (!scope.nodeIds.length) {
+    const learning = await mergeCompanionLearningSnapshot(db, current, reviewed, reading);
+    return learning && mergeCompanionLocalState(db, learning, scope);
+  }
   const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
   let next = current;
   if (roots.size) {

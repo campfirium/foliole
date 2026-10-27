@@ -4,6 +4,8 @@ import {
   clearAttachmentResourceDescriptions,
   listAttachmentResourceDescriptions
 } from '../../../../lib/platform/attachmentResourceRegistry';
+import { patchWorkspaceRecord } from '../../workspaceRecordPatch';
+
 
 import { registerWorkspaceAttachmentResources } from './workspaceAttachmentResourceRegistry';
 
@@ -35,6 +37,21 @@ function description() {
   return { attachmentId: 'resource', availability: 'cached', contentHash: hash, libraryScope: 'test-library',
     mimeType: 'application/pdf', originalName: 'resource.pdf', role: 'reference', storageKey: `${hash}.pdf` };
 }
+
+it('does not revisit unrelated attachments after a committed learning-only patch', () => {
+  const resource = description();
+  let visits = 0;
+  const nodes = { current: { attachments: [resource] }, unrelated: {
+    get attachments() { visits += 1; return []; }
+  } };
+  registerWorkspaceAttachmentResources({ nodesById: nodes });
+  visits = 0;
+  const next = patchWorkspaceRecord(nodes, { current: { ...nodes.current } });
+  clearAttachmentResourceDescriptions();
+  registerWorkspaceAttachmentResources({ nodesById: next });
+  expect(listAttachmentResourceDescriptions()).toEqual([resource]);
+  expect(visits).toBe(0);
+});
 
 it('reuses unchanged catalog descriptions across refreshes and repopulates a cleared registry', () => {
   let visits = 0;

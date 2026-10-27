@@ -5,7 +5,7 @@ import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import { resolveLoadedCompanionArticle } from '../../companionReadableArticle';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-import { CompanionReadingSnapshotChanged } from './companionReadingDemand';
+import { companionArticleChildIds, CompanionReadingSnapshotChanged } from './companionReadingDemand';
 import { getCompanionReadingScope } from './companionReadingScope';
 
 interface Annotation extends DbRow {
@@ -16,8 +16,8 @@ interface Annotation extends DbRow {
 }
 
 function matchesAnnotations(snapshot: WorkspaceSnapshot, nodeId: string, rows: Annotation[]) {
-  const expected = Object.values(snapshot.nodesById).filter((node) =>
-    node.parentNodeId === nodeId && node.anchorLink && !node.deletedAt);
+  const expected = companionArticleChildIds(snapshot.nodesById, nodeId)
+    .filter(id => snapshot.nodesById[id]?.anchorLink && !snapshot.nodesById[id]?.deletedAt);
   return expected.length === rows.length && rows.every((row) => {
     const node = snapshot.nodesById[row.id];
     return node && node.parentNodeId === nodeId &&

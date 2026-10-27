@@ -44,6 +44,13 @@ beforeEach(async () => {
 });
 afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
 
+function nextPersistedTopic() {
+  const row = library.database.prepare(`SELECT node_id FROM daily_flow_entries WHERE active=1
+    AND order_key > (SELECT order_key FROM daily_flow_entries WHERE node_id=?) ORDER BY order_key LIMIT 1`)
+    .get(session.currentNodeId) as { node_id: string };
+  return row.node_id;
+}
+
 async function act(action: 'read' | 'later' | 'dismiss', stamp = now, initial?: Awaited<ReturnType<typeof snapshot>>) {
   return persistFlowMutation({ action, nodeId: session.currentNodeId!, now: stamp,
     snapshot: initial ?? await snapshot(), history: { key, mode: 'recommended', session } });
@@ -58,10 +65,11 @@ async function reopen() {
 
 it.each(['read', 'later', 'dismiss'] as const)('%s reads locally and restores mobile history after reopening the database', async action => {
   const before = structuredClone(session);
+  const next = nextPersistedTopic();
   const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
   session = (await act(action)).session!;
   const after = structuredClone(session);
-  expect(after.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(after.currentNodeId).toBe(next);
   expect(after.cycle?.remaining).toBe(before.cycle!.remaining - 1);
   expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
   const reading = (await snapshot()).nodesById[before.currentNodeId!]!.reading;
@@ -79,6 +87,7 @@ it.each(['read', 'later', 'dismiss'] as const)('%s reads locally and restores mo
 
 it.each(['read', 'later', 'dismiss'] as const)('%s commits facts, daily progress and mobile history atomically and deduplicates a lost receipt', async action => {
   const before = structuredClone(session);
+  const next = nextPersistedTopic();
   const initial = await snapshot();
   library.database.exec("CREATE TRIGGER reject_daily BEFORE INSERT ON daily_flow_operations BEGIN SELECT RAISE(ABORT, 'disk full'); END");
   await expect(act(action, now, initial)).rejects.toThrow();
@@ -97,14 +106,14 @@ it.each(['read', 'later', 'dismiss'] as const)('%s commits facts, daily progress
   expect((await snapshot()).nodesById[before.currentNodeId!]!.reading).toEqual(committed);
   expect((await loadCompanionFlowHistory(key)).undoStack).toHaveLength(1);
   expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toHaveLength(1);
-  expect(session.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(session.currentNodeId).toBe(next);
   expect(session.readTopicCount).toBe((before.readTopicCount ?? 0) + 1);
 });
 
 it.each(['read', 'later', 'dismiss'] as const)('%s rejects a stale target and preserves an unrelated external edit', async action => {
   const initial = await snapshot();
   const target = session.currentNodeId!;
-  library.database.prepare("UPDATE nodes SET title='Concurrent edit' WHERE id=?").run(session.queueNodeIds[1]!);
+  library.database.prepare("UPDATE nodes SET title='Concurrent edit' WHERE id=?").run(nextPersistedTopic());
   library.database.prepare('UPDATE nodes SET deleted_at=? WHERE id=?').run(now, target);
   await expect(act(action, now, initial)).rejects.toThrow('daily_flow_learning_changed');
   expect((await snapshot()).nodesById[target]!.reading).toBeNull();

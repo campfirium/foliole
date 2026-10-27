@@ -1,21 +1,26 @@
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import { isCanonicalTrashedNodeId, isCanonicalVisibleNodeId } from '../../../workspaceCanonicalSelectors';
+import { getWorkspaceRecordPatch } from '../../../workspaceRecordPatch';
 
 type Node = WorkspaceSnapshot['nodesById'][string];
 const annotationIndexes = new WeakMap<WorkspaceSnapshot['nodesById'], Map<string, string[]>>();
 
-function annotationIds(nodes: WorkspaceSnapshot['nodesById'], parentId: string) {
+export function companionArticleChildIds(nodes: WorkspaceSnapshot['nodesById'], parentId: string) {
   let index = annotationIndexes.get(nodes);
+  const patch = getWorkspaceRecordPatch(nodes);
+  if (!index && patch && patch.changedIds.every(id => patch.previous[id]?.parentNodeId === nodes[id]?.parentNodeId)) {
+    index = annotationIndexes.get(patch.previous);
+    if (index) annotationIndexes.set(nodes, index);
+  }
   if (!index) {
     index = new Map();
-    // Catalog structure is replaced with nodesById; content facts remain checked on every demand.
+    // Unknown catalog changes rebuild relations; learning patches preserve them.
     for (const node of Object.values(nodes)) {
-      if (!node.anchorLink || !node.parentNodeId) continue;
+      if (!node.parentNodeId) continue;
       const children = index.get(node.parentNodeId) ?? [];
       children.push(node.id);
       index.set(node.parentNodeId, children);
     }
-    for (const children of index.values()) children.sort((a, b) => a.localeCompare(b));
     annotationIndexes.set(nodes, index);
   }
   return index.get(parentId) ?? [];
@@ -37,7 +42,9 @@ export function companionReadingDemandKey(snapshot: WorkspaceSnapshot | null, no
   const visible = isCanonicalVisibleNodeId(snapshot, nodeId);
   const trashed = isCanonicalTrashedNodeId(snapshot, nodeId);
   if (!visible && !trashed) return null;
-  const annotations = annotationIds(snapshot.nodesById, nodeId)
+  const annotations = companionArticleChildIds(snapshot.nodesById, nodeId)
+    .filter(id => snapshot.nodesById[id]?.anchorLink)
+    .sort((a, b) => a.localeCompare(b))
     .map((id) => [contentFacts(snapshot.nodesById[id]!), isCanonicalTrashedNodeId(snapshot, id)]);
   return JSON.stringify([snapshot.libraryScope, visible, trashed, contentFacts(snapshot.nodesById[nodeId]), annotations]);
 }

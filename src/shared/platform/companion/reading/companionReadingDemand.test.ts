@@ -1,11 +1,26 @@
 import { expect, it } from 'vitest';
 
+import { patchWorkspaceRecord } from '../../../workspaceRecordPatch';
 import { createStoredSyncState } from '../../companionWorkspaceSync.testSupport';
 
 import { companionReadingDemandKey } from './companionReadingDemand';
 
 function source() { return createStoredSyncState().workspace_snapshot!; }
 const anchor = { id: 'anchor', kind: 'highlight' as const, locator: { from: 0, to: 4, originalText: 'body' } };
+
+it('keeps article identity independent of unrelated committed learning changes', () => {
+  const snapshot = source();
+  let visits = 0;
+  snapshot.nodesById.unrelated = { ...snapshot.nodesById['node-1']!, id: 'unrelated',
+    get parentNodeId() { visits += 1; return null; } };
+  const key = companionReadingDemandKey(snapshot, 'node-1');
+  visits = 0;
+  const nodesById = patchWorkspaceRecord(snapshot.nodesById, {
+    'node-2': { ...snapshot.nodesById['node-2']!, review: null }
+  });
+  expect(companionReadingDemandKey({ ...snapshot, nodesById }, 'node-1')).toBe(key);
+  expect(visits).toBe(0);
+});
 
 it('rechecks current content and annotation facts without revisiting unrelated relations in the same catalog', () => {
   const snapshot = source();

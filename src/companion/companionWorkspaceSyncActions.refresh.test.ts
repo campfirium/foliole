@@ -95,6 +95,7 @@ it('merges a delayed local refresh into the latest connection state', async () =
   resetSyncActionMocks();
   const { actions, callbacks } = createActions();
   const snapshot = createSnapshot('saved-topic');
+  syncObjectsMock.loadCompanionSyncNodeConflicts.mockRejectedValue(new Error('unrelated conflict read'));
   let resolveRead!: (value: typeof snapshot) => void;
   getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockReturnValue(
     new Promise((resolve) => { resolveRead = resolve; })
@@ -104,7 +105,8 @@ it('merges a delayed local refresh into the latest connection state', async () =
   resolveRead(snapshot);
   await refresh;
   expect(callbacks.setState.mock.lastCall?.[0](latest)).toEqual({ ...latest, workspace_snapshot: snapshot });
-  expect(callbacks.setSyncConflictCount).toHaveBeenCalledWith(0);
+  expect(syncObjectsMock.loadCompanionSyncNodeConflicts).not.toHaveBeenCalled();
+  expect(callbacks.setSyncConflictCount).not.toHaveBeenCalled();
 });
 
 it('does not invent a saved projection when the repository read fails', async () => {

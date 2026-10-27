@@ -5,11 +5,17 @@ interface WorkspaceRecordPatch<T> {
 
 const recordPatches = new WeakMap<object, WorkspaceRecordPatch<unknown>>();
 
+export function getWorkspaceRecordPatch<T>(next: Record<string, T>) {
+  return recordPatches.get(next) as WorkspaceRecordPatch<T> | undefined;
+}
+
 export function recordWorkspaceRecordPatch<T>(
   previous: Record<string, T>,
   next: Record<string, T>,
   changedIds: readonly string[]
 ) {
+  // Hints describe one immutable transition; do not retain a chain of old maps.
+  recordPatches.delete(previous);
   recordPatches.set(next, { changedIds, previous });
   return next;
 }

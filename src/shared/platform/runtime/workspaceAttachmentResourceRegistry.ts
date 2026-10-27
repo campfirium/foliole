@@ -3,6 +3,7 @@ import {
   isCanonicalAttachmentStorageKey
 } from '../../../../lib/platform/attachmentResource.js';
 import { registerAttachmentResourceDescriptions } from '../../../../lib/platform/attachmentResourceRegistry.js';
+import { getWorkspaceRecordPatch } from '../../workspaceRecordPatch.js';
 
 const AVAILABILITIES = new Set(['cached', 'local', 'missing', 'remote_known', 'unresolved']);
 
@@ -29,6 +30,12 @@ function isAttachmentResourceDescription(value: unknown): value is AttachmentRes
 export function registerWorkspaceAttachmentResources(snapshot: WorkspaceAttachmentSnapshot | null) {
   if (!snapshot) return;
   let descriptions = catalogDescriptions.get(snapshot.nodesById);
+  const patch = getWorkspaceRecordPatch(snapshot.nodesById);
+  if (!descriptions && patch && patch.changedIds.every(id =>
+    patch.previous[id]?.attachments === snapshot.nodesById[id]?.attachments)) {
+    descriptions = catalogDescriptions.get(patch.previous);
+    if (descriptions) catalogDescriptions.set(snapshot.nodesById, descriptions);
+  }
   if (!descriptions) {
     descriptions = Object.values(snapshot.nodesById)
       .flatMap((node) => node.attachments ?? [])

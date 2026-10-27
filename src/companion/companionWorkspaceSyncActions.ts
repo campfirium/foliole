@@ -99,7 +99,6 @@ async function refreshAfterMutation(
   const previous = contentNodeId ? args.state.workspace_snapshot : previewSnapshot;
   const workspaceSnapshot = await refreshCompanionWorkspaceAfterMutation(previous, contentNodeId);
   args.setState(current => ({ ...current, workspace_snapshot: workspaceSnapshot }));
-  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   return workspaceSnapshot;
 }
 

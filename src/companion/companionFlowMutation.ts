@@ -4,6 +4,7 @@ import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 import { isReviewProfileDue } from '../store/reviewQueuePlannerTime';
 import type { FlowAction } from '../store/workspaceFlowSession';
 import { isWorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
@@ -50,7 +51,9 @@ export async function persistFlowMutation(args: {
   }
   const apply = args.action === 'read' ? readCompanionReviewTopic
     : args.action === 'later' ? postponeCompanionReviewTopic : dismissCompanionReviewTopic;
-  const result = apply(args);
+  const snapshot = args.history?.session.daily && args.action !== 'dismiss'
+    ? scopeReadingCalculation(args.snapshot, args.nodeId) : args.snapshot;
+  const result = apply({ ...args, snapshot });
   if (!result) throw new Error('The current topic is no longer available.');
   if (args.history) {
     const saved = await commitCompanionFlowHistory({ key: args.history.key, mode: args.history.mode,
@@ -58,11 +61,12 @@ export async function persistFlowMutation(args: {
         relatedNodeIds: result.syncNodeIds, history: args.history }),
       ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });
     if (typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, args.snapshot);
-    const nodesById = { ...result.snapshot.nodesById };
+    const changes = Object.fromEntries(result.syncNodeIds.map(id => [id, result.snapshot.nodesById[id]!]));
     if (typeof saved === 'object' && 'readings' in saved) for (const value of saved.readings ?? []) {
-      if (nodesById[value.nodeId]) nodesById[value.nodeId] = { ...nodesById[value.nodeId]!, reading: value.reading };
+      if (changes[value.nodeId]) changes[value.nodeId] = { ...changes[value.nodeId]!, reading: value.reading };
     }
-    return { ...args, snapshot: { ...result.snapshot, nodesById }, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
+    const nodesById = patchWorkspaceRecord(args.snapshot.nodesById, changes);
+    return { ...args, snapshot: { ...args.snapshot, nodesById }, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
   }
   try {
     const saved = await persistCompanionReviewSyncObject({ itemKind: 'reading', completedReading: args.action === 'read',
@@ -73,6 +77,20 @@ export async function persistFlowMutation(args: {
     if (!isWorkspacePartialPersistenceError(error)) throw error;
     return { ...args, snapshot: result.snapshot, partial: true, targetConfirmed: false };
   }
+}
+
+// Reading schedule inheritance needs only the current node and its ancestors.
+// The durable daily queue, rather than a renderer copy, owns successor selection.
+function scopeReadingCalculation(snapshot: WorkspaceSnapshot, nodeId: string) {
+  const nodesById: WorkspaceSnapshot['nodesById'] = {};
+  let id: string | null = nodeId;
+  while (id && !nodesById[id]) {
+    const node: WorkspaceSnapshot['nodesById'][string] | undefined = snapshot.nodesById[id];
+    if (!node) break;
+    nodesById[id] = node;
+    id = node.parentNodeId;
+  }
+  return { ...snapshot, nodesById, nodeOrder: [] };
 }
 
 export function confirmFlowMutation(mutation: FlowMutation, snapshot: WorkspaceSnapshot) {
