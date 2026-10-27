@@ -73,6 +73,7 @@ function collectAnchorSpans(articleContent: string, key: string, linkedChildren:
 
 function collectLocatorMirrorSpans(articleContent: string, derivedByAnchorKey: Map<string, MirrorNode[]>) {
   return [...derivedByAnchorKey.entries()]
+    .filter(([key]) => key.startsWith('highlight:') || key.startsWith('cloze:'))
     .flatMap(([key, children]) => collectAnchorSpans(articleContent, key, children))
     .sort((left, right) => (left.from === right.from ? right.to - left.to : left.from - right.from));
 }

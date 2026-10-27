@@ -71,6 +71,15 @@ function createExtraNote(
   return notes.length > 0 ? ` (❄ ${notes.join(' | ')})` : '';
 }
 
+function renderImageExcerpt(article: ArticleNode, children: ArticleNode[], derivedChildren: MirrorRenderableNode[], pages: number[]) {
+  const locator = children[0]?.anchorLink?.locator;
+  const source = locator && 'originalText' in locator ? locator.originalText : '';
+  const parts = children.map((child) => preserveNoteLines(renderArticleBody(child, derivedChildren))).filter(Boolean);
+  if (source && !article.content.includes(source)) parts.push(`source: ${source}`);
+  const page = pages.length > 0 ? `PDF page: ${pages.join(', ')}; ` : '';
+  return `(❄ ${page}image excerpt: ${parts.join(' | ')})`;
+}
+
 function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderableNode[]): string {
   const derivedByAnchorKey = collectAnchorChildren(article.id, derivedChildren);
   const renderedKeys = new Set<string>();
@@ -89,10 +98,7 @@ function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderab
     if (!anchor || renderedKeys.has(key)) return [];
     const locator = anchor.locator;
     const pages = getPdfAnchorLocators(locator).map((fragment) => fragment.page);
-    if (anchor.kind === 'image-excerpt' && pages.length > 0) {
-      return `(❄ PDF page: ${pages.join(', ')}; image excerpt: ` +
-        children.map((child) => preserveNoteLines(renderArticleBody(child, derivedChildren))).filter(Boolean).join(' | ') + ')';
-    }
+    if (anchor.kind === 'image-excerpt') return renderImageExcerpt(article, children, derivedChildren, pages);
     if (anchor.kind !== 'highlight' && anchor.kind !== 'cloze') return [];
     if (pages.length > 0) {
       return `(❄ PDF ${pages.length === 1 ? 'page' : 'pages'}: ${pages.join(', ')})` +
