@@ -30,7 +30,11 @@ async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeSco
   const roots = new Set([...scope.nodeIds, ...reviewed, ...reading]);
   let next = current;
   if (roots.size) {
-    const nodes = await loadCompanionContentProjection(db, [...roots]);
+    const projection = await loadCompanionContentProjection(db, [...roots]);
+    const nodes = Object.fromEntries(Object.entries(projection).map(([id, node]) => {
+      const lifecycle = current.nodesById[id]?.readwiseRemoteLifecycle;
+      return [id, lifecycle !== undefined ? { ...node, readwiseRemoteLifecycle: lifecycle } : node];
+    }));
     const expected = Object.values(current.nodesById)
       .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
       .map(node => node.id);

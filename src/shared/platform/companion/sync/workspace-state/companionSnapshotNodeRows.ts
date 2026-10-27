@@ -1,8 +1,8 @@
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { COMPANION_CONTENT_SNAPSHOT_SQL } from '../../../../../../lib/core/database/companionContentSnapshotQuery';
+import { COMPANION_SNAPSHOT_NODE_QUERY, COMPANION_WORKSPACE_DISPLAY_NODE_QUERY } from '../../../../../../lib/core/database/companionSnapshotNodeQuery';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 
-const definition = ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes;
+const definition = COMPANION_SNAPSHOT_NODE_QUERY;
 const columns = definition.columns.map(column => column.source);
 const statement = `SELECT json_array(${columns.map(column => `"${column}"`).join(', ')}) AS packed
   FROM (${definition.sql})`;
@@ -15,6 +15,18 @@ export async function loadCompanionSnapshotNodeRows(db: DbPort, hostName: string
   const scoped = exact ? contentStatement.replace(' OR parent_id IN (SELECT value FROM json_each(?))', '') : contentStatement;
   const rows = await db.query(`${ids ? scoped : statement} ORDER BY created_at ASC, id ASC`,
     ids ? exact ? [ids, hostName] : [ids, ids, hostName] : [hostName]);
+  return decodeRows(rows, columns);
+}
+
+export async function loadCompanionWorkspaceDisplayNodeRows(db: DbPort, hostName: string): Promise<DbRow[]> {
+  const display = COMPANION_WORKSPACE_DISPLAY_NODE_QUERY;
+  const columns = display.columns.map(column => column.source);
+  const sql = `SELECT json_array(${columns.map(column => `"${column}"`).join(', ')}) AS packed
+    FROM (${display.sql}) ORDER BY created_at ASC, id ASC`;
+  return decodeRows(await db.query(sql, [hostName]), columns);
+}
+
+function decodeRows(rows: DbRow[], columns: string[]): DbRow[] {
   return rows.map(row => {
     if (typeof row.packed !== 'string') throw new Error('workspace_snapshot_row_invalid');
     const values: unknown = JSON.parse(row.packed);

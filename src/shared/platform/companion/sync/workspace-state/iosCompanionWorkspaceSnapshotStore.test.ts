@@ -5,7 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
+import { COMPANION_SNAPSHOT_NODE_QUERY } from '../../../../../../lib/core/database/companionSnapshotNodeQuery';
 import { createCapacitorSqliteDbPort } from '../../../capacitorSqliteDbPort';
 
 import { loadCompanionSnapshotNodeRows } from './companionSnapshotNodeRows';
@@ -92,7 +92,7 @@ it('preserves every directory field while reducing native bridge bytes', async (
     database.prepare('UPDATE nodes SET initial_review_due = ? WHERE id = ?')
       .run('2026-11-01T08:00:00.000Z', snapshotNodeId(0));
     const { connection, port } = snapshotPort(database);
-    const expected = database.prepare(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql).all('Phone');
+    const expected = database.prepare(COMPANION_SNAPSHOT_NODE_QUERY.sql).all('Phone');
     let transferredBytes = 0;
     const query = connection.query;
     vi.spyOn(connection, 'query').mockImplementation(async (sql, params) => {

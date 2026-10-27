@@ -1,4 +1,4 @@
-import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
+import { COMPANION_SNAPSHOT_NODE_QUERY } from './companionSnapshotNodeQuery.js';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 // Walk only the selected nodes' ancestors to determine visibility. Walking down
@@ -16,7 +16,7 @@ const scopedVisibility = `WITH RECURSIVE selected_nodes AS (
   HAVING SUM(deleted_at IS NOT NULL) = 0 AND MAX(parent_id IS NULL) = 1
 )`;
 
-export const COMPANION_CONTENT_SNAPSHOT_SQL = ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql
+export const COMPANION_CONTENT_SNAPSHOT_SQL = COMPANION_SNAPSHOT_NODE_QUERY.sql
   .replace(SNAPSHOT_VISIBLE_NODES_CTE_SQL, scopedVisibility)
   .replace('FROM nodes n LEFT JOIN visible_nodes',
     'FROM selected_nodes selected JOIN nodes n ON n.id = selected.id LEFT JOIN visible_nodes');

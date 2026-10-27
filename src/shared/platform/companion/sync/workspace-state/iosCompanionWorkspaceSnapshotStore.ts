@@ -4,7 +4,7 @@ import { NODE_RESOURCES_SQL } from '../../../../../../lib/core/database/nodeReso
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
-import { loadCompanionSnapshotNodeRows } from './companionSnapshotNodeRows';
+import { loadCompanionWorkspaceDisplayNodeRows } from './companionSnapshotNodeRows';
 import {
   attachIosWorkspaceNodeAttachments,
   buildIosPersistedNodeViews,
@@ -23,7 +23,7 @@ export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
 async function loadSnapshot(connection: DbPort) {
   const hostName = await loadMetaValue(connection, 'companion_meta', HOST_NAME_KEY);
   if (!hostName) throw new Error('Companion Host is unavailable.');
-  const nodes = await loadCompanionSnapshotNodeRows(connection, hostName);
+  const nodes = await loadCompanionWorkspaceDisplayNodeRows(connection, hostName);
   if (nodes.length === 0) return null;
 
   const { nodesById, trashedNodeIds } = buildIosWorkspaceNodes(nodes);
