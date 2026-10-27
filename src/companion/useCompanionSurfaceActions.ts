@@ -93,8 +93,9 @@ async function finishPending(args: CompanionSurfaceActionArgs,
     const saved = pending.current;
     if (!saved) return;
     if (saved.token.scope !== getCompanionReadingScope()) { pending.current = null; return; }
-    // A grade registers its committed review scope; a supplied projection would force a complete read.
-    const preview = saved.mutation.partial || saved.mutation.action === 'grade' ? undefined : saved.mutation.snapshot;
+    // Daily receipts already register committed changes; a preview would force a full native read.
+    const preview = saved.mutation.partial || saved.mutation.session?.daily || saved.mutation.action === 'grade'
+      ? undefined : saved.mutation.snapshot;
     const snapshot = await args.workspaceSync.refreshAfterMutation(preview);
     if (!snapshot) throw new Error('Could not refresh the saved action.');
     if (confirmFlowMutation(saved.mutation, snapshot)) {
