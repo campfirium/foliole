@@ -71,7 +71,6 @@ function prepareNodeContentLocalState(args: ContentUpdateOptions & {
   const timestamp = new Date().toISOString();
   const nextNode = prepareNextContentNode(node, args.content, timestamp, args);
   if (!canSaveNodeText(nextNode)) return args.state;
-  nextNode.contentEditBaseContent = args.baseContent ?? node.contentEditBaseContent ?? node.content;
   if (args.newImageReferences?.length) nextNode.pendingImageReferences = [...new Map(
     [...node.pendingImageReferences ?? [], ...args.newImageReferences].map(reference => [reference.storage_key, reference])).values()];
   if (args.baseVersionId !== undefined) nextNode.currentVersionId = args.baseVersionId;
@@ -196,6 +195,7 @@ async function updateNodeContent(
     });
   metrics.runtimePatchMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimePatchStartedAt : 0;
   scheduleNodeContentRuntimePersist({
+    baseContent: options.baseContent,
     contentLength: content.length,
     diagnosticsEnabled,
     localState,

@@ -99,6 +99,7 @@ export function applyNodeContentLocalPatch(args: {
 }
 
 async function runNodeContentRuntimePersist(args: {
+  baseContent?: string | undefined;
   edit?: LocalContentEdit | undefined;
   contentLength: number;
   diagnosticsEnabled: boolean;
@@ -108,7 +109,7 @@ async function runNodeContentRuntimePersist(args: {
   set: WorkspaceSet;
   version: number;
 }) {
-  if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync);
+  if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
   continueContentEdit(args.nextNodeForSync.id, args.edit);
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
   const runtimeResult = await applyNodeContentRuntimePatch({
@@ -138,7 +139,7 @@ async function runNodeContentRuntimePersist(args: {
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
   syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
-  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit: captureContentEdit(args.nextNodeForSync) });
+  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit: captureContentEdit(args.nextNodeForSync, args.baseContent) });
 }
 
 export const deferNodeContentRuntimePersist = contentPersistQueue.defer;

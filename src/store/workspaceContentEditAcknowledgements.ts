@@ -11,12 +11,12 @@ type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState)
 const createdVersions = new Map<string, string>();
 const confirmedBranches = new Map<string, { baseVersionIds: Set<string>; submittedVersionId: string; content: string }>();
 
-export function captureContentEdit(node: Node): LocalContentEdit | undefined {
+export function captureContentEdit(node: Node, baseContent?: string): LocalContentEdit | undefined {
   const baseVersionId = node.currentVersionId ?? createdVersions.get(node.id);
   if (!baseVersionId) return undefined;
   return {
     baseVersionId,
-    ...(node.contentEditBaseContent !== undefined ? { baseContent: node.contentEditBaseContent } : {}),
+    ...(baseContent !== undefined ? { baseContent } : {}),
     ...(node.pendingImageReferences?.length ? { newImageReferences: node.pendingImageReferences } : {}),
     versionId: createOpaqueVersionRef(crypto.randomUUID())
   };
@@ -64,7 +64,6 @@ export function acknowledgeContentEdit(args: {
       ...current,
       bodyStatus: persisted.content.trim().length > 0 ? 'ready' : 'empty',
       content: persisted.content,
-      contentEditBaseContent: persisted.content,
       currentVersionId: acknowledgement.currentVersionId,
       pendingImageReferences: (current.pendingImageReferences ?? []).filter(reference => !args.edit?.newImageReferences?.some(
         saved => saved.storage_key === reference.storage_key && saved.original_name === reference.original_name)),
@@ -72,7 +71,7 @@ export function acknowledgeContentEdit(args: {
       hideTitleHeading: persisted.hideTitleHeading ?? false,
       title: persisted.title,
       updatedAt: persisted.updatedAt
-    } : { ...current, currentVersionId: acknowledgement.submittedVersionId, contentEditBaseContent: args.node.content };
+    } : { ...current, currentVersionId: acknowledgement.submittedVersionId };
     syncWorkspaceNodeDocumentCacheFromNode(node);
     return { nodesById: { ...state.nodesById, [node.id]: node } };
   });

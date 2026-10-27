@@ -4,6 +4,7 @@ import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-h
 
 import { clickNativeHistoryCommand } from './harness/contextualWorkspaceHistory';
 import { expect, test, type DesktopSession } from './harness/fixtures';
+import { loadNodeDocument } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
 const SOURCE_ID = 'playwright-editor-save-source';
@@ -122,11 +123,11 @@ test('persists a long pasted body after immediate node switch and relaunch', asy
     await expect.poll(() => collectNodeContent(desktopWindow, createdNodeId!)).toBe(CREATED_CONTENT);
 
     await openNode(desktopWindow, 'special-inbox');
-    await expect.poll(() => collectNodeContent(desktopWindow, createdNodeId!)).toBe(CREATED_CONTENT);
+    await expect.poll(async () => (await loadNodeDocument(desktopWindow, createdNodeId!))?.content).toBe(CREATED_CONTENT);
     await desktopWindow.waitForTimeout(1800);
 
     await testInfo.attach('editor-save-before-relaunch', {
-      body: JSON.stringify(await collectNodeContent(desktopWindow, createdNodeId!), null, 2),
+      body: JSON.stringify(await loadNodeDocument(desktopWindow, createdNodeId!), null, 2),
       contentType: 'application/json'
     });
 

@@ -133,7 +133,6 @@ export interface Node {
   imageRegions?: NodeImageRegionGroup[] | null;
   imageSources?: Record<string, string> | null;
   resourceReferences?: NodeResourceReference[];
-  contentEditBaseContent?: string;
   pendingImageReferences?: readonly import('../../../../lib/core/sync/localContentEditResources').ContentImageReference[];
   reveal: string | null;
   reading?: NodeReadingProfile | null;
