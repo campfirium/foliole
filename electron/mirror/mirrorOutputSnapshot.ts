@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { readNodeAuthorText } from '../../lib/core/nodes/nodeAuthorFrontmatter.js';
 import { readDatabaseChangeToken } from '../database/databaseChangeToken.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
@@ -56,6 +58,16 @@ export function mirrorPlanRevision(
 
 type CapturedMirrorOutput = ReturnType<typeof captureMirrorOutputSnapshot>;
 
+function collectRetirementProtection(captured: CapturedMirrorOutput, articleId: string) {
+  const plans = captured.plans.filter((plan) => plan.articleId !== articleId).map((plan) => plan.targetPath);
+  const records = [...captured.recordsByArticleId.values()].filter((record) => record.articleId !== articleId)
+    .map((record) => resolveAbsoluteMirrorPath(captured.paths.mirror, record.relativePath));
+  return {
+    paths: collectProtectedMirrorPaths([...plans, ...records]),
+    files: new Set([...plans, ...records].map((file) => mirrorPathKey(path.resolve(file))))
+  };
+}
+
 /**
  * Checks rendered mirrors against the library for one sync pass. The workspace is reloaded only
  * when the database changed since it was last verified, not once per article.
@@ -78,13 +90,11 @@ export function createMirrorPlanCurrency(seed: CapturedMirrorOutput) {
     return verified.captured;
   };
   return {
-    retirementProtectedPaths(articleId: string) {
-      const captured = current();
-      const plans = captured.plans.filter((plan) => plan.articleId !== articleId).map((plan) => plan.targetPath);
-      const records = [...captured.recordsByArticleId.values()].filter((record) => record.articleId !== articleId)
-        .map((record) => resolveAbsoluteMirrorPath(captured.paths.mirror, record.relativePath));
-      return collectProtectedMirrorPaths([...plans, ...records]);
+    changedPlanPaths(plans: ArticleMirrorPlan[]) {
+      const currentPaths = new Map(current().plans.map((plan) => [plan.articleId, plan.relativePath]));
+      return plans.filter((plan) => currentPaths.get(plan.articleId) !== plan.relativePath).map((plan) => plan.articleId);
     },
+    retirementProtectedPaths: (articleId: string) => collectRetirementProtection(current(), articleId),
     isArticleStillAbsent: (articleId: string) => !current().plans.some((plan) => plan.articleId === articleId),
     isPlanCurrent(articleId: string, revision: string) {
       const { plans, snapshot } = current();

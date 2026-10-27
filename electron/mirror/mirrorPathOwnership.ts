@@ -1,4 +1,5 @@
 import type { ArticleMirrorPlan } from './articleMirrorPlanning.js';
+import { collectChangedDirectoryOwnerGroups } from './mirrorDirectoryOwnership.js';
 import type { MirrorArticleRecord } from './mirrorOutputStorage.js';
 import { mirrorPathKey } from './mirrorPathIdentity.js';
 
@@ -9,22 +10,26 @@ export function collectChangedMirrorOwners(
   records: Map<string, MirrorArticleRecord>,
   selectedArticleIds?: Set<string>
 ) {
-  const ownersByPath = new Map<string, Set<string>>();
-  const pathsByOwner = new Map<string, Set<string>>();
-  const add = (articleId: string, relativePath: string) => {
-    const key = mirrorPathKey(relativePath);
+  const ownersByPath = new Map<string | symbol, Set<string>>();
+  const pathsByOwner = new Map<string, Set<string | symbol>>();
+  const add = (articleId: string, relativePath: string | symbol) => {
+    const key = typeof relativePath === 'string' ? mirrorPathKey(relativePath) : relativePath;
     const owners = ownersByPath.get(key) ?? new Set<string>();
     owners.add(articleId);
     ownersByPath.set(key, owners);
-    const paths = pathsByOwner.get(articleId) ?? new Set<string>();
+    const paths = pathsByOwner.get(articleId) ?? new Set<string | symbol>();
     paths.add(key);
     pathsByOwner.set(articleId, paths);
   };
   for (const plan of plans) add(plan.articleId, plan.relativePath);
   for (const record of records.values()) add(record.articleId, record.relativePath);
+  for (const owners of collectChangedDirectoryOwnerGroups(plans, records)) {
+    const key = Symbol();
+    for (const owner of owners) add(owner, key);
+  }
   const queue = [...(selectedArticleIds ?? pathsByOwner.keys())];
   const visited = new Set<string>();
-  const visitedPaths = new Set<string>();
+  const visitedPaths = new Set<string | symbol>();
   const changedOwners = new Set<string>();
   for (let index = 0; index < queue.length; index += 1) {
     const articleId = queue[index]!;

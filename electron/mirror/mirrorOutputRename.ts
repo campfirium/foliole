@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { alignMirrorDirectorySpelling, removeEmptyMirrorParents } from './mirrorOutputDirectory.js';
 import { removeMirrorFileAndLegacyDirectory } from './mirrorOutputStorage.js';
 import { collectProtectedMirrorPaths, mirrorPathKey } from './mirrorPathIdentity.js';
 
@@ -22,7 +23,8 @@ export async function writeRenamedMirror(
   targetPath: string,
   markdown: string,
   previousPath: string,
-  retirementProtectedPaths: () => Set<string>
+  retirementProtectedPaths: () => { paths: Set<string>; files: Set<string> },
+  mirrorRoot: string
 ) {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   const temporaryPath = path.join(path.dirname(targetPath), `.foliole-mirror-${randomUUID()}.tmp`);
@@ -32,11 +34,16 @@ export async function writeRenamedMirror(
   } finally {
     await fs.rm(temporaryPath, { force: true });
   }
-  const protectedPaths = retirementProtectedPaths();
+  await alignMirrorDirectorySpelling(previousPath, targetPath);
+  const protection = retirementProtectedPaths();
+  const protectedPaths = protection.paths;
   if (mirrorPathKey(previousPath) === mirrorPathKey(targetPath)) {
     await removeSeparateAlias(previousPath, targetPath, protectedPaths);
   } else {
+    const oldKey = mirrorPathKey(path.resolve(previousPath));
+    if (!protection.files.has(oldKey)) protectedPaths.delete(oldKey);
     for (const key of collectProtectedMirrorPaths([targetPath])) protectedPaths.add(key);
     await removeMirrorFileAndLegacyDirectory(previousPath, protectedPaths);
   }
+  await removeEmptyMirrorParents(previousPath, mirrorRoot);
 }

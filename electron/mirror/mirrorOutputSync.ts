@@ -2,6 +2,7 @@ import type { NativeMirrorOutputRebuildResult } from '../../lib/platform/nativeU
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 
+import { orderMirrorPlansForMigration } from './mirrorDirectoryOwnership.js';
 import { processMirrorPlans, type MirrorSyncMode, type MirrorSyncOptions } from './mirrorOutputPlans.js';
 import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
 import {
@@ -71,8 +72,9 @@ async function syncMirrorOutput(
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
   const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId, selectedArticleIds);
   const protectedPaths = collectProtectedMirrorPaths(plans.map((plan) => plan.targetPath));
-  const selectedPlans = selectedArticleIds
-    ? plans.filter((plan) => selectedArticleIds.has(plan.articleId) || changedOwners.has(plan.articleId)) : plans;
+  const selectedPlans = orderMirrorPlansForMigration(selectedArticleIds
+    ? plans.filter((plan) => selectedArticleIds.has(plan.articleId) || changedOwners.has(plan.articleId)) : plans,
+  mode === 'full' ? new Map() : recordsByArticleId);
 
   const retainedPaths = [...plans.map((plan) => plan.targetPath), ...plans.flatMap((plan) => {
     const record = recordsByArticleId.get(plan.articleId);
@@ -96,9 +98,13 @@ async function syncMirrorOutput(
     ? await processMirrorPlans({ currency, mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, changedOwners })
     : { pendingArticleIds: [], rebuiltArticleCount: 0 };
 
-  if (processed.pendingArticleIds.length > 0 && attempt < 3) {
+  const pendingArticleIds = processed.pendingArticleIds.length
+    ? await runWithDatabaseConnectionOwner(() => [...new Set([
+      ...processed.pendingArticleIds, ...currency.changedPlanPaths(selectedPlans)
+    ])]) : [];
+  if (pendingArticleIds.length > 0 && attempt < 3) {
     const retry = await syncMirrorOutput('incremental', {
-      articleIds: processed.pendingArticleIds,
+      articleIds: pendingArticleIds,
       ...(options.taskContext ? { taskContext: options.taskContext } : {})
     }, attempt + 1);
     return {
@@ -107,13 +113,13 @@ async function syncMirrorOutput(
       rebuilt_article_count: processed.rebuiltArticleCount + retry.rebuilt_article_count
     };
   }
-  if (processed.pendingArticleIds.length > 0) scheduleMirrorSync(processed.pendingArticleIds);
+  if (pendingArticleIds.length > 0) scheduleMirrorSync(pendingArticleIds);
 
   return {
     queued_article_count: mode === 'full' ? plans.length : processed.rebuiltArticleCount,
     rebuilt_article_count: processed.rebuiltArticleCount,
     failed_article_count: 0,
-    pending_article_count: processed.pendingArticleIds.length,
+    pending_article_count: pendingArticleIds.length,
     updated_at: updatedAt
   };
 }

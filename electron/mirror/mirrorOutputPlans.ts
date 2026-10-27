@@ -72,7 +72,7 @@ async function commitRenderedMirror(args: {
     if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
       await writeRenamedMirror(args.plan.targetPath, args.markdown,
         resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath),
-        () => args.currency.retirementProtectedPaths(args.plan.articleId));
+        () => args.currency.retirementProtectedPaths(args.plan.articleId), args.paths.mirror);
     } else {
       await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
       await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');

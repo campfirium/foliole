@@ -61,7 +61,12 @@ export async function readMirrorFileUpdatedAt(filePath: string) {
 
 async function removeUnprotectedMirrorPath(targetPath: string, protectedPaths: Set<string>, recursive = false) {
   if (!protectedPaths.has(mirrorPathKey(path.resolve(targetPath)))) {
-    await fs.rm(targetPath, { force: true, recursive });
+    try {
+      await fs.rm(targetPath, { force: true, recursive });
+    } catch (error) {
+      // A file awaiting relocation can still occupy an ancestor of this absent legacy path.
+      if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error;
+    }
   }
 }
 
