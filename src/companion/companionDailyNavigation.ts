@@ -4,8 +4,6 @@ import { getCompanionReadingScope } from '../shared/platform/companion/reading/c
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { applyCompanionFlowReceipt, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
-import { flowState } from '../store/workspaceFlowSession';
-import { continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import type { FlowOwner, useCompanionFlowSession } from './useCompanionFlowSession';
@@ -28,8 +26,8 @@ export async function continueCompanionDailyFlow(args: Parameters<typeof useComp
   const source = current.session;
   const matches = () => owner.current === current && current.session === source && current.scope === getCompanionReadingScope();
   try {
-    const saved = source.daily ? await saveCompanionDailyNavigation(source)
-      : { session: continueReviewSessionReading(flowState(args.snapshot, source, mode), new Date().toISOString()) };
+    if (!source.daily) throw new Error('daily_flow_storage_unavailable');
+    const saved = await saveCompanionDailyNavigation(source);
     if (saved.session) await applyCompanionFlowReceipt({ ...saved, session: saved.session }, args.snapshot);
     if (!matches() || !saved.session) return;
     current.session = saved.session;

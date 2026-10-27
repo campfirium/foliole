@@ -7,6 +7,8 @@ import { loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dail
 import { predictDailyFlowDocument, type DailyFlowPredictionArgs } from '../../../../../lib/core/flow/dailyFlowPrediction';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
+import { readDailyFlowView } from '../../../../../lib/core/flow/dailyFlowView';
+import type { DailyFlowViewArgs } from '../../../../../lib/core/flow/dailyFlowViewContract';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { toReadingPayload } from '../../companionSyncStateWriters';
@@ -68,4 +70,8 @@ export function predictCompanionFlowDocument(args: DailyFlowPredictionArgs, sign
   const settings = companionDailyFlowSettings();
   return owner.readBackgroundSnapshot(db => predictDailyFlowDocument(db, args, settings,
     companionDailyFlowPersistence), signal);
+}
+
+export function readCompanionDailyFlowView(args: DailyFlowViewArgs) {
+  return readIosCompanionDatabase(db => readDailyFlowView(db, args, companionDailyFlowSettings(), companionDailyFlowPersistence));
 }

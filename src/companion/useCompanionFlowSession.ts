@@ -1,28 +1,21 @@
 import { useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { loadCompanionDailySession } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
-import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
-import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
+import { saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
-import { getWorkspaceHistoryTopEntry } from '../store/workspaceActionHistoryState';
-import { flowState, reconcileFlowSession, resumeFlowSession } from '../store/workspaceFlowSession';
-import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
-import { buildReviewFlowWindow } from '../store/workspaceReviewFlowWindow';
-import { resolveWorkspaceReviewHistoryTarget } from '../store/workspaceReviewHistoryTarget';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
-import { canContinueReadingInFlowWindow } from '../store/workspaceReviewReadingContinuation';
 
 import { continueCompanionDailyFlow } from './companionDailyNavigation';
 import { createCompanionFlowControls, trackCompanionFlowRefresh } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
+import { useFlowHydration } from './useCompanionFlowHydration';
+import { useCompanionFlowReadView } from './useCompanionFlowReadView';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
@@ -47,7 +40,7 @@ export function useCompanionFlowSession(args: {
   const latest = useRef(args);
   latest.current = args;
   const mode = args.onlyReview ? 'review-first' : 'recommended';
-  reconcileCurrentFlow(args.snapshot, current, mode, args.active);
+  reconcileCurrentFlow(args.snapshot, current);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
   useFlowReentry(args, current, owner, latest, mode, render);
   useEffect(() => {
@@ -76,7 +69,8 @@ export function useCompanionFlowSession(args: {
     [args.snapshot, current.hydrated, session, scheduled]);
   const cancelDocumentPreparation = useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
     session);
-  const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
+  const dailyView = useCompanionFlowReadView(args.active, current.hydrated, current.session, mode, args.libraryScope);
+  const canContinueReading = dailyView?.view?.canContinueReading ?? false;
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
@@ -84,7 +78,7 @@ export function useCompanionFlowSession(args: {
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
-    isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
+    isAnswerRevealed: session.isAnswerRevealed, error: current.error ?? dailyView?.error ?? null, ready: current.hydrated };
 }
 
 function useFlowCatalogSummary(snapshot: WorkspaceSnapshot | null, hasCurrent: boolean) {
@@ -108,14 +102,6 @@ function useFlowCatalog(snapshot: WorkspaceSnapshot | null) {
   [nodesById, nodeOrder, trashedNodeIds, trashedNodeDeletedAtById]);
 }
 
-function canContinueFlowReading(snapshot: WorkspaceSnapshot | null, current: FlowOwner, onlyReview: boolean) {
-  if (!snapshot || !current.hydrated || onlyReview || current.session.currentNodeId) return false;
-  const state = flowState(snapshot, current.session, 'recommended');
-  return canContinueReadingInFlowWindow({ reviewedItemCount: current.session.reviewedItemCount ?? 0,
-    continueNodeId: current.session.continueNodeId ?? null },
-  buildReviewFlowWindow(state, new Date().toISOString(), current.session.queueNodeIds));
-}
-
 function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
   current: FlowOwner, owner: { current: FlowOwner }, latest: { current: Parameters<typeof useCompanionFlowSession>[0] },
   mode: 'review-first' | 'recommended', render: () => void) {
@@ -131,8 +117,6 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
           current.generation += 1;
           render();
         }).catch(error => { current.error = String(error); render(); }));
-      } else if (!current.session.currentNodeId) {
-        current.session = resumeFlowSession(args.snapshot, mode, null, new Date().toISOString());
       }
       current.generation += 1;
       current.epoch += 1;
@@ -140,59 +124,6 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
     }
     wasActive.current = args.active;
   }, [args.active]);
-}
-
-function useFlowHydration(
-  args: Parameters<typeof useCompanionFlowSession>[0],
-  current: FlowOwner,
-  owner: { current: FlowOwner },
-  latest: { current: Parameters<typeof useCompanionFlowSession>[0] },
-  identity: string, scope: object, mode: 'review-first' | 'recommended', render: () => void
-) {
-  useEffect(() => {
-    if (!args.ready || !args.snapshot || !args.active || current.hydrated) return;
-    let cancelled = false;
-    void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
-      isAvailableNativeCompanionRuntime() ? loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)) : null,
-      isAvailableNativeCompanionRuntime() ? loadCompanionDailySession() : null
-    ]).then(async ([preferred, history, daily]) => {
-      if (cancelled || owner.current !== current || !latest.current.snapshot) return;
-      current.session = resumeFlowSession(latest.current.snapshot, mode, preferred, new Date().toISOString());
-      const top = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));
-      let entry = top;
-      if (top) {
-        try { entry = restoreFlowHistoryEntry(top, daily ?? history?.resumeSession ?? current.session); }
-        catch { entry = null; }
-      }
-      if (entry?.type === 'nodes.change') {
-        const saved = history!.undoStack.length ? entry.afterSession : entry.beforeSession;
-        if (saved?.currentNodeId === preferred) current.session = cloneWorkspaceReviewSession(saved);
-      }
-      if (entry && (entry.type === 'review.grade' || entry.type === 'topic.dismiss')) {
-        const replayMode = history!.undoStack.length ? 'undo' : 'redo';
-        const context = replayMode === 'undo' ? entry.afterContext : entry.beforeContext;
-        if (context.reviewSession.currentNodeId === preferred &&
-          resolveWorkspaceReviewHistoryTarget({ ...latest.current.snapshot, entry, mode: replayMode,
-          reviewSession: context.reviewSession })) current.session = cloneWorkspaceReviewSession(context.reviewSession);
-      }
-      if (isAvailableNativeCompanionRuntime()) {
-        const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode,
-          seed: current.session, preferredNodeId: preferred });
-        if (cancelled || owner.current !== current || !latest.current.active) return;
-        current.session = saved.session;
-      }
-      current.hydrated = true;
-      render();
-    }).catch((error: unknown) => {
-      if (cancelled) return;
-      current.error = error instanceof Error ? error.message : 'Could not restore Flow.';
-      if (!isAvailableNativeCompanionRuntime() && latest.current.snapshot) current.session = resumeFlowSession(latest.current.snapshot, mode, null, new Date().toISOString());
-      if (isAvailableNativeCompanionRuntime()) current.session = createEmptyReviewSession();
-      current.hydrated = !isAvailableNativeCompanionRuntime();
-      render();
-    });
-    return () => { cancelled = true; };
-  }, [identity, scope, args.ready, args.active, Boolean(args.snapshot)]);
 }
 
 function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner,
@@ -206,13 +137,10 @@ function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner,
   } : emptyCompanionReviewSession();
 }
 
-function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowOwner,
-  mode: 'review-first' | 'recommended', active: boolean) {
+function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowOwner) {
   if (snapshot && current.hydrated) {
     const previousNodeId = current.session.currentNodeId;
     if (current.snapshot !== snapshot || current.reconciledSession !== current.session) {
-      const refreshedAt = active && current.snapshot !== snapshot ? new Date().toISOString() : undefined;
-      current.session = reconcileFlowSession(snapshot, current.session, mode, refreshedAt);
       current.reconciledSession = current.session;
       current.snapshot = snapshot;
     }
