@@ -105,7 +105,10 @@ function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderab
         createNote(anchor.kind, anchor.id, '', 0, 0, false);
     }
     if (anchor.kind === 'cloze' && locator && !('ranges' in locator) &&
-      (!('from' in locator && 'to' in locator) || 'x' in locator)) return [];
+      (!('from' in locator && 'to' in locator) || 'x' in locator)) {
+      return 'attachmentId' in locator && 'x' in locator
+        ? createNote('cloze', anchor.id, '', 0, 0, false) : [];
+    }
     const ranges = locator && 'ranges' in locator ? locator.ranges : locator ? [locator] : [];
     const source = ranges.map((range) => 'originalText' in range ? range.originalText : '').filter(Boolean).join('\n');
     return createNote(anchor.kind, anchor.id, anchor.kind === 'cloze' ? source : '', 0, 0, false);
