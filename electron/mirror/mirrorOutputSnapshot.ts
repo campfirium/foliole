@@ -24,6 +24,13 @@ export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: str
   return { paths, plans, recordsByArticleId, snapshot };
 }
 
+export function captureArticleMirrorSnapshot(articleId: string) {
+  const captured = captureMirrorOutputSnapshot(false);
+  const plan = captured.plans.find((candidate) => candidate.articleId === articleId);
+  if (!plan || !captured.snapshot) return null;
+  return { ...captured, plan, snapshot: loadMirrorPlanBodies(captured.snapshot, [plan]) };
+}
+
 function loadMirrorPlanBodies(snapshot: WorkspaceSnapshot, plans: ArticleMirrorPlan[]) {
   const nodesById = { ...snapshot.nodesById };
   const nodeIds = new Set(plans.flatMap((plan) => [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds]));

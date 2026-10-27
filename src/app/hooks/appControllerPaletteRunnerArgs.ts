@@ -45,7 +45,9 @@ function createExportCurrentArticleCommand(args: {
     if (args.runtime.isViewingTrashNode || !args.ws.activeNodeId) {
       return false;
     }
-    const result = await exportCurrentArticleMirror(args.ws.activeNodeId);
+    const nodeId = args.ws.activeNodeId;
+    if (!await args.runtime.flushPendingEditorDraftImmediately()) return false;
+    const result = await exportCurrentArticleMirror(nodeId);
     return result?.status === 'saved';
   };
 }

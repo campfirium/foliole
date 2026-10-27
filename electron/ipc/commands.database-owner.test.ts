@@ -48,6 +48,7 @@ it('queues storage commands behind the active database owner', async () => {
 });
 
 it.each([
+  NATIVE_COMMANDS.exportCurrentArticleMirror,
   NATIVE_COMMANDS.completeSyncGroupJoin,
   NATIVE_COMMANDS.connectReadwiseApiFromClipboard,
   NATIVE_COMMANDS.importRemoteImageAttachment,

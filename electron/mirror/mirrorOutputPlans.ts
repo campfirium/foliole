@@ -29,7 +29,7 @@ function requireRenderableNode(
   return node;
 }
 
-async function renderMirrorPlan(
+export async function renderMirrorPlan(
   snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
   plan: ArticleMirrorPlan,
   signal?: AbortSignal
