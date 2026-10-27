@@ -17,7 +17,7 @@ export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHou
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']), includeScheduledFallback: z.boolean().optional(),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),
-  refresh: z.boolean().optional() }).strict();
+  startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
 export type DailyFlowOpenArgs = z.infer<typeof dailyFlowOpenSchema>;
 const reading = z.object({ intervalDurationMs: z.number(), intervalGrowthFactor: z.number(), lastHandledAt: z.string(),
   nextAt: z.string(), priority: z.number(), readingPosition: z.number(), repetitionCount: z.number(),
@@ -59,4 +59,4 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   'Cycle changes are only accepted during history replay');
 export type DailyFlowCommitArgs = z.infer<typeof dailyFlowCommitSchema>;
 export type DailyFlowLearningReceipt = Pick<WorkspaceNodeSnapshot, 'reading' | 'review'>;
-export type DailyFlowResult = { sourceSession?: DailyFlowSession; replayed?: boolean; mutationTimestamp?: string; learning?: Record<string, DailyFlowLearningReceipt> | undefined; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };
+export type DailyFlowResult = { mode?: DailyFlowOpenArgs['mode']; sourceSession?: DailyFlowSession; replayed?: boolean; mutationTimestamp?: string; learning?: Record<string, DailyFlowLearningReceipt> | undefined; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };

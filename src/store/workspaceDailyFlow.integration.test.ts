@@ -223,7 +223,7 @@ it('hydrates a missing current display node when reopening an unchanged daily cu
   delete nodesById[id];
   app.setState({ nodesById });
   bridgeCommands.length = 0;
-  expect(await openWorkspaceDailyFlow(app.setState, app.getState, { now, mode: 'recommended' }, undefined, true)).toBe(true);
+  expect(await openWorkspaceDailyFlow(app.setState, app.getState, { now, mode: 'recommended' }, undefined, true)).toBe(app.getState().reviewSession.currentNodeId);
   expect(app.getState().nodesById[id]).toMatchObject({ id, title: id, kind: 'topic' });
   expect(bridgeCommands.filter(command => command === 'load_workspace_list_projection')).toHaveLength(1);
 });

@@ -68,7 +68,7 @@ function renderResumeHook(args: {
   reviewSessionMode: 'reading-only' | 'recommended';
 }) {
   installDemoRuntime(args.isDemo);
-  const resumeReviewSession = vi.fn().mockResolvedValue(true);
+  const resumeReviewSession = vi.fn().mockResolvedValue(args.activeNodeId);
   const handleSelectNode = vi.fn();
   const hook = renderHook(() =>
     useResumeReviewItem({

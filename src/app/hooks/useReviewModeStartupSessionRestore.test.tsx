@@ -89,7 +89,7 @@ function renderRestoreHook(overrides: Partial<Parameters<typeof useReviewModeSta
     isStudyMode: true,
     isWorkspaceHydrated: true,
     onReviewSessionStarted: vi.fn(),
-    resumeReviewSession: vi.fn(() => false),
+    resumeReviewSession: vi.fn(() => false as const),
     reviewCurrentNodeId: 'review-1',
     startReviewSession: vi.fn(() => true),
     ...overrides
@@ -109,7 +109,7 @@ it('resumes the review session when restored Flow opens away from the current it
 it('starts a review session when restored Flow has no current session to resume', async () => {
   const props = renderRestoreHook({
     reviewCurrentNodeId: null,
-    resumeReviewSession: vi.fn(async () => false)
+    resumeReviewSession: vi.fn(async () => false as const)
   });
 
   expect(props.resumeReviewSession).toHaveBeenCalledTimes(1);
@@ -144,7 +144,7 @@ it('does not repeat the review surface startup action while restored Flow stays 
     isStudyMode: true,
     isWorkspaceHydrated: true,
     onReviewSessionStarted: vi.fn(),
-    resumeReviewSession: vi.fn(() => false),
+    resumeReviewSession: vi.fn(() => false as const),
     reviewCurrentNodeId: 'review-1',
     startReviewSession: vi.fn(() => true)
   };
@@ -166,7 +166,7 @@ it('waits for review scheduler settings before restoring a startup review sessio
     isStudyMode: true,
     isWorkspaceHydrated: true,
     onReviewSessionStarted: vi.fn(),
-    resumeReviewSession: vi.fn(() => false),
+    resumeReviewSession: vi.fn(() => false as const),
     reviewCurrentNodeId: 'review-1',
     startReviewSession: vi.fn(() => true)
   };

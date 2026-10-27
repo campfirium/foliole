@@ -58,7 +58,7 @@ function createWorkspaceActionStubs() {
     relearnNode: () => false,
     startReviewSession: () => false,
     continueReviewSessionReading: () => false,
-    resumeReviewSession: () => false,
+    resumeReviewSession: () => false as const,
     setReviewSessionMode: () => undefined,
     revealReviewAnswer: () => undefined,
     gradeReviewCard: async () => false,

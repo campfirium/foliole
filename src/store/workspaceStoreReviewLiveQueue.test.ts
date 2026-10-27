@@ -124,7 +124,7 @@ it('resumes due cards from the live queue even when they are missing from the pe
     preview: previewStub
   });
 
-  expect(actions.resumeReviewSession(now)).toBe(true);
+  expect(actions.resumeReviewSession(now)).toBe('qa-live');
 
   expect(harness.getState().activeNodeId).toBe('qa-live');
   expect(harness.getState().reviewSession).toMatchObject({
@@ -153,7 +153,7 @@ it('resumes a restored study session whose persisted queue is empty', () => {
     preview: previewStub
   });
 
-  expect(actions.resumeReviewSession(now)).toBe(true);
+  expect(actions.resumeReviewSession(now)).toBe('qa-live');
 
   expect(harness.getState().activeNodeId).toBe('qa-live');
   expect(harness.getState().reviewSession).toMatchObject({
@@ -183,7 +183,7 @@ it('resumes a restored current review item even when the persisted queue omitted
     preview: previewStub
   });
 
-  expect(actions.resumeReviewSession(now)).toBe(true);
+  expect(actions.resumeReviewSession(now)).toBe('qa-current');
 
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: 'qa-current',

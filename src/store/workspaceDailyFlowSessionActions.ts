@@ -6,6 +6,7 @@ import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
+import { createReviewSessionModePreference } from './workspaceReviewSessionModePreference';
 import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
@@ -13,17 +14,17 @@ type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Parti
 const openRequests = new WeakMap<() => WorkspaceState, object>();
 
 export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
-  args: DailyFlowOpenArgs, preference?: { reviewSessionMode: ReviewSessionMode; reviewSessionModeExpiresAt: string | null }, onlyIfNewer = false) {
+  args: DailyFlowOpenArgs, preference?: { reviewSessionMode: ReviewSessionMode; reviewSessionModeExpiresAt: string | null }, onlyIfNewer = false): Promise<string | false> {
   const request = {};
   openRequests.set(get, request);
   const before = get();
   const source = before.reviewSession;
-  return openDailyFlowRuntime(args, before.nodesById).then(({ session, nodes, learning }) => {
+  return openDailyFlowRuntime(args, before.nodesById).then(({ session, nodes, learning, mode }) => {
     if (openRequests.get(get) !== request || get().libraryScope !== before.libraryScope || get().reviewSession !== source) return false;
-    if (onlyIfNewer && !nodes && session.daily?.revision === source.daily?.revision && session.daily?.dayKey === source.daily?.dayKey && session.daily?.scope === source.daily?.scope) return Boolean(source.currentNodeId);
+    if (onlyIfNewer && !nodes && session.daily?.revision === source.daily?.revision && session.daily?.dayKey === source.daily?.dayKey && session.daily?.scope === source.daily?.scope) return source.currentNodeId ?? false;
     set(state => ({ nodesById: mergeDailyFlowReceiptNodes(state.nodesById, before.nodesById, nodes, learning), ...(session.currentNodeId ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
-      reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference }));
-    return Boolean(session.currentNodeId);
+      reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference, ...(preference && session.daily && args.startup ? createReviewSessionModePreference(mode ?? args.mode, args.now) : {}) }));
+    return session.currentNodeId ?? false;
   }).catch(error => {
     logRuntimeError('could not open daily Flow', { area: 'persistence', action: 'open_daily_flow',
       fallback: 'keep_previous_session', error });

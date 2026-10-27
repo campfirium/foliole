@@ -74,7 +74,7 @@ export interface WorkspaceState {
   relearnNode: (nodeId: string, now?: string) => boolean;
   startReviewSession: (now?: string, options?: ReviewSessionStartOptions) => boolean | Promise<boolean>;
   continueReviewSessionReading: (now?: string) => boolean | Promise<boolean>;
-  resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => boolean | Promise<boolean>;
+  resumeReviewSession: (now?: string, options?: ReviewSessionResumeOptions) => string | false | Promise<string | false>;
   setReviewSessionMode: (mode: ReviewSessionMode, now?: string) => void;
   revealReviewAnswer: () => void;
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;

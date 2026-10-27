@@ -50,9 +50,10 @@ export function createStartReviewSessionAction(
 ): WorkspaceState['startReviewSession'] {
   return (now = new Date().toISOString(), options = {}) => {
     if (get && hasDailyFlowRuntime()) {
-      const { preference } = buildStartQueue(get(), now, { ...defaultOptions, ...options });
+      const state = get();
+      const preference = resolveReviewSessionModePreference(state.reviewSessionMode, state.reviewSessionModeExpiresAt, now);
       return openWorkspaceDailyFlow(set, get, { now, mode: preference.reviewSessionMode,
-        seed: get().reviewSession, ...defaultOptions, ...options }, preference);
+        seed: state.reviewSession, ...defaultOptions, ...options, startup: true }, preference).then(Boolean);
     }
     let started = false;
     let openedNodeId: string | null = null;
@@ -106,9 +107,8 @@ export function createResumeReviewSessionAction(set: WorkspaceSet, get?: () => W
       const state = get();
       const preference = resolveReviewSessionModePreference(state.reviewSessionMode, state.reviewSessionModeExpiresAt, now);
       return openWorkspaceDailyFlow(set, get, { now, mode: preference.reviewSessionMode,
-        seed: state.reviewSession, ...options }, preference);
+        seed: state.reviewSession, ...options, startup: true }, preference);
     }
-    let resumed = false;
     let openedNodeId: string | null = null;
     set((state) => {
       const preference = resolveReviewSessionModePreference(
@@ -119,7 +119,6 @@ export function createResumeReviewSessionAction(set: WorkspaceSet, get?: () => W
       const queueNodeIds = buildResumeReviewSessionQueue({ ...state, ...preference }, now, options);
       const currentNodeId = queueNodeIds[0] ?? null;
       if (!currentNodeId) return preference;
-      resumed = true;
       openedNodeId = currentNodeId;
       return {
         ...buildReviewActiveNodeContext(state, currentNodeId),
@@ -134,7 +133,7 @@ export function createResumeReviewSessionAction(set: WorkspaceSet, get?: () => W
       };
     });
     if (openedNodeId) void persistNodeOpened(set, openedNodeId, now);
-    return resumed;
+    return openedNodeId ?? false;
   };
 }
 

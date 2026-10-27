@@ -167,7 +167,7 @@ it('resumes the remaining active session queue without rebuilding from scheduled
 
   const resumed = actions.resumeReviewSession(now);
 
-  expect(resumed).toBe(true);
+  expect(resumed).toBe('qa-remaining');
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: 'qa-remaining',
     isAnswerRevealed: false,
@@ -199,7 +199,7 @@ it('reorders a persisted reading queue by material source before resuming', () =
   const harness = createSetStateHarness(fixture);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
 
-  expect(actions.resumeReviewSession(now)).toBe(true);
+  expect(actions.resumeReviewSession(now)).toBe('a-1');
 
   expect(harness.getState().reviewSession.queueNodeIds).toEqual([
     'a-1',
@@ -233,7 +233,7 @@ it('skips future cards that linger in a persisted review session queue', () => {
   const harness = createSetStateHarness(fixture);
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, schedulerStub);
 
-  expect(actions.resumeReviewSession(now)).toBe(true);
+  expect(actions.resumeReviewSession(now)).toBe('qa-due');
 
   expect(harness.getState().reviewSession).toMatchObject({
     currentNodeId: 'qa-due',

@@ -39,7 +39,7 @@ export function useReviewModeStartupSessionRestore(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   onReviewSessionStarted: () => void;
-  resumeReviewSession: () => boolean | Promise<boolean>;
+  resumeReviewSession: () => string | false | Promise<string | false>;
   reviewCurrentNodeId: string | null;
   startReviewSession: () => boolean | Promise<boolean>;
 }) {

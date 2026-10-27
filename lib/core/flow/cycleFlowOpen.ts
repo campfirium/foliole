@@ -95,6 +95,12 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
     stored = null;
     args = { ...args, seed: undefined, preferredNodeId: undefined };
   }
+  if (args.startup && args.mode !== 'recommended') {
+    const snapshot = await persistence.learningSnapshot(db);
+    const plan = flowPlan(snapshot, args.mode, args.now, settings);
+    const ready = args.mode === 'review-first' ? plan.fsrsQueueNodeIds : plan.readingQueueNodeIds;
+    if (!ready.length) args = { ...args, mode: 'recommended' };
+  }
   let session: DailyFlowSession;
   if (!stored) session = (await initializeCycle(db, args, settings, persistence)).session;
   else {
@@ -120,8 +126,8 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
   const unchanged = stored && !stored.invalidated && stored.mode === args.mode && stored.settings_key === JSON.stringify(settings)
     && cycleStamp(session.cycle!, session) === stored.session.cycle!.stamp
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
-  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { session: stored.session, learning: await readCurrentFlowLearning(db, persistence, stored.session.currentNodeId) };
+  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, persistence, stored.session.currentNodeId) };
   const saved = await saveCycleFlow(db, { dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: (stored?.revision ?? 0) + 1, session });
-  return { session: saved, learning: await readCurrentFlowLearning(db, persistence, saved.currentNodeId) };
+  return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, persistence, saved.currentNodeId) };
 }

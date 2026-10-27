@@ -41,7 +41,7 @@ function createTestWorkspaceActionMocks(): Partial<WorkspaceState> {
     relearnNode: vi.fn(() => false),
     resetLayout: vi.fn(),
     restoreNode: vi.fn(async () => null),
-    resumeReviewSession: vi.fn(() => false),
+    resumeReviewSession: vi.fn(() => false as const),
     revealReviewAnswer: vi.fn(),
     setReviewSessionMode: vi.fn(),
     setActiveNode: vi.fn(),
