@@ -105,7 +105,19 @@ it('returns after three changing-source attempts and schedules the remaining art
   const result = await syncIncrementalMirrorOutput(['article']);
   expect(renderState.calls).toBe(3);
   expect(result).toMatchObject({ rebuilt_article_count: 0, pending_article_count: 1 });
-  expect(scheduleMirrorSync).toHaveBeenCalledWith(['article']);
+  expect(scheduleMirrorSync).toHaveBeenCalledWith([], ['article'], true);
+  await expect(fs.access(mirrorPath('Article.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('returns an automatic V2 to debounce without immediately rendering it', async () => {
+  save('article', null, 'topic', 'Article', 'V1', '2026-10-06T00:00:00.000Z');
+  renderState.onFirstRender = () => {
+    save('article', null, 'topic', 'Article', 'V2', '2026-10-06T00:00:00.000Z');
+  };
+  const result = await syncIncrementalMirrorOutput(['article'], undefined, () => true);
+  expect(renderState.calls).toBe(1);
+  expect(result).toMatchObject({ rebuilt_article_count: 0, pending_article_count: 1 });
+  expect(scheduleMirrorSync).toHaveBeenCalledWith([], ['article'], true);
   await expect(fs.access(mirrorPath('Article.md'))).rejects.toMatchObject({ code: 'ENOENT' });
 });
 

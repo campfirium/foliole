@@ -85,7 +85,7 @@ async function syncMirrorOutput(
     ? await runWithDatabaseConnectionOwner(() => [...new Set([
       ...processed.pendingArticleIds, ...currency.changedPlanPaths(selectedPlans)
     ])]) : [];
-  if (pendingArticleIds.length > 0 && attempt < 3) {
+  if (pendingArticleIds.length > 0 && !options.isEligible && attempt < 3) {
     const retry = await syncMirrorOutput('incremental', {
       articleIds: pendingArticleIds,
       ...(options.taskContext ? { taskContext: options.taskContext } : {})
@@ -96,7 +96,9 @@ async function syncMirrorOutput(
       rebuilt_article_count: processed.rebuiltArticleCount + retry.rebuilt_article_count
     };
   }
-  if (pendingArticleIds.length > 0) scheduleMirrorSync(pendingArticleIds);
+  if (pendingArticleIds.length > 0) {
+    await runWithDatabaseConnectionOwner(() => scheduleMirrorSync([], pendingArticleIds, true));
+  }
 
   return {
     queued_article_count: mode === 'full' ? plans.length : processed.rebuiltArticleCount,
@@ -111,10 +113,11 @@ export function rebuildAllMirrorOutput() {
   return syncMirrorOutput('full');
 }
 
-export function syncIncrementalMirrorOutput(articleIds?: string[], taskContext?: DesktopTaskContext) {
+export function syncIncrementalMirrorOutput(articleIds?: string[], taskContext?: DesktopTaskContext, isEligible?: (articleId: string) => boolean) {
   return syncMirrorOutput('incremental', {
     ...(articleIds?.length ? { articleIds } : {}),
-    ...(taskContext ? { taskContext } : {})
+    ...(taskContext ? { taskContext } : {}),
+    ...(isEligible ? { isEligible } : {})
   });
 }
 

@@ -1,98 +1,90 @@
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { submitDesktopOperation } from '../desktopOperations.js';
+import type { DesktopTaskContext } from '../desktopTaskTypes.js';
 
 import * as articleMirror from './exportArticleMirror.js';
 import { flushPermanentMirrorRetirements } from './mirrorPermanentDelete.js';
 import { syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
 
-const DEBOUNCE_MS = 10_000;
-const MAX_WAIT_MS = 60_000;
-
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
-let pendingNodeIds = new Set<string>();
-let pendingArticleIds = new Set<string>();
+const DEBOUNCE_MS = 60_000;
+let timer: ReturnType<typeof setTimeout> | null = null;
+const pendingNodes = new Map<string, number>();
+const pendingArticles = new Map<string, number>();
 let flushInFlight: Promise<void> | null = null;
 
-function clearTimers() {
-  if (debounceTimer !== null) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
+function clearTimer() {
+  if (timer !== null) clearTimeout(timer);
+  timer = null;
+}
+
+function resolvePendingNodes() {
+  for (const [nodeId, deadline] of pendingNodes) {
+    for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) {
+      pendingArticles.set(articleId, Math.max(deadline, pendingArticles.get(articleId) ?? 0));
+    }
   }
-  if (maxWaitTimer !== null) {
-    clearTimeout(maxWaitTimer);
-    maxWaitTimer = null;
+  pendingNodes.clear();
+}
+
+function scheduleFlush() {
+  clearTimer();
+  if (flushInFlight) return;
+  const deadlines = [...pendingNodes.values(), ...pendingArticles.values()];
+  if (!deadlines.length) return;
+  timer = setTimeout(() => {
+    timer = null;
+    void drainQueue(false).catch((error) => console.error('[mirror] incremental export failed', error));
+  }, Math.max(0, Math.min(...deadlines) - Date.now()));
+}
+
+async function processPending(bypass: boolean, context: DesktopTaskContext) {
+  await runWithDatabaseConnectionOwner(resolvePendingNodes);
+  const candidates = [...pendingArticles.keys()];
+  for (const articleId of candidates) {
+    await context.yieldIfNeeded();
+    const eligible = () => {
+      resolvePendingNodes();
+      return bypass || (pendingArticles.get(articleId) ?? Infinity) <= Date.now();
+    };
+    if (!await runWithDatabaseConnectionOwner(eligible)) continue;
+    pendingArticles.delete(articleId);
+    await syncIncrementalMirrorOutput([articleId], context, bypass ? undefined : (targetId) => {
+      resolvePendingNodes();
+      return !pendingArticles.has(targetId) || pendingArticles.get(targetId)! <= Date.now();
+    });
   }
 }
 
-async function drainQueue() {
-  clearTimers();
+async function drainQueue(bypass: boolean) {
+  clearTimer();
   if (flushInFlight) return flushInFlight;
   const handle = submitDesktopOperation('mirror-incremental', {
     failureLabel: '[mirror] incremental export failed',
-    run: async (context) => {
-      while (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) {
-        const nodeIds = pendingNodeIds;
-        pendingNodeIds = new Set();
-        const articleIds = pendingArticleIds;
-        pendingArticleIds = new Set();
-        await runWithDatabaseConnectionOwner(() => {
-          for (const nodeId of nodeIds) {
-            for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
-          }
-        });
-        if (articleIds.size > 0) {
-          const result = await syncIncrementalMirrorOutput([...articleIds], context);
-          if (result.pending_article_count > 0) break;
-        }
-        await context.yieldIfNeeded();
-      }
-    }
+    run: (context) => processPending(bypass, context)
   });
   flushInFlight = handle.promise.then(() => undefined);
   try {
     await flushInFlight;
   } finally {
     flushInFlight = null;
-    if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) scheduleFlush();
-  }
-}
-
-function scheduleFlush() {
-  if (debounceTimer !== null) {
-    clearTimeout(debounceTimer);
-  }
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    void drainQueue();
-  }, DEBOUNCE_MS);
-
-  if (maxWaitTimer === null) {
-    maxWaitTimer = setTimeout(() => {
-      maxWaitTimer = null;
-      if (debounceTimer !== null) {
-        clearTimeout(debounceTimer);
-        debounceTimer = null;
-      }
-      void drainQueue();
-    }, MAX_WAIT_MS);
-  }
-}
-
-export function scheduleMirrorSync(nodeIds: string[], articleIds: string[] = []) {
-  for (const articleId of articleIds) pendingArticleIds.add(articleId);
-  for (const nodeId of nodeIds) {
-    pendingNodeIds.add(nodeId);
-  }
-
-  if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) {
     scheduleFlush();
   }
 }
 
+export function scheduleMirrorSync(nodeIds: string[], articleIds: string[] = [], preserveDeadline = false) {
+  // Output retries already own the database and must retain the latest save deadline.
+  if (preserveDeadline) resolvePendingNodes();
+  const deadline = Date.now() + DEBOUNCE_MS;
+  for (const articleId of articleIds) {
+    if (!preserveDeadline || !pendingArticles.has(articleId)) pendingArticles.set(articleId, deadline);
+  }
+  for (const nodeId of nodeIds) pendingNodes.set(nodeId, deadline);
+  scheduleFlush();
+}
+
 export async function flushMirrorSync() {
-  clearTimers();
-  if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) await drainQueue();
+  clearTimer();
   if (flushInFlight) await flushInFlight;
+  if (pendingNodes.size || pendingArticles.size) await drainQueue(true);
   await flushPermanentMirrorRetirements();
 }

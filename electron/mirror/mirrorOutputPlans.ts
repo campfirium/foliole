@@ -18,6 +18,7 @@ export type MirrorSyncMode = 'full' | 'incremental' | 'missing';
 
 export interface MirrorSyncOptions {
   articleIds?: string[];
+  isEligible?: (articleId: string) => boolean;
   taskContext?: DesktopTaskContext;
 }
 
@@ -70,6 +71,7 @@ async function writeMirrorIfDifferent(filePath: string, markdown: string) {
 
 async function commitRenderedMirror(args: {
   currency: MirrorPlanCurrency;
+  isEligible?: (articleId: string) => boolean;
   markdown: string;
   paths: ReturnType<typeof loadLibraryPathSettingsSync>;
   persistedRecord: MirrorArticleRecord | null;
@@ -78,6 +80,7 @@ async function commitRenderedMirror(args: {
   updatedAt: string;
 }) {
   return runWithDatabaseConnectionOwner(async () => {
+    if (args.isEligible && !args.isEligible(args.plan.articleId)) return false;
     if (!args.currency.isPlanCurrent(args.plan.articleId, args.revision)) return false;
     if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
       await writeRenamedMirror(args.plan.targetPath, args.markdown,
@@ -129,7 +132,7 @@ export async function processMirrorPlans(args: {
       );
       const revision = mirrorPlanRevision(args.snapshot, plan);
       const committed = await commitRenderedMirror({ currency: args.currency, markdown, paths: args.paths, persistedRecord,
-        plan, revision, updatedAt: args.updatedAt });
+        plan, revision, updatedAt: args.updatedAt, ...(args.options.isEligible ? { isEligible: args.options.isEligible } : {}) });
       if (committed) rebuiltArticleCount += 1;
       else {
         pendingArticleIds.push(plan.articleId);
