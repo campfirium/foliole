@@ -6,6 +6,7 @@ import {
   splitPermanentDeleteChunks
 } from '../database/nodePermanentDeleteChunks.js';
 import { enqueueReleasedBodyCollection } from '../database/releasedBodyCollectionTask.js';
+import { resolveArticleIdsFromNodeId } from '../mirror/mirrorArticleResolver.js';
 import { capturePermanentMirrorPaths, retirePermanentMirrorPaths } from '../mirror/mirrorPermanentDelete.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
@@ -26,14 +27,17 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
   const plan = await runDesktopDatabaseWrite('foreground', () => preparePermanentDelete(parsed.nodeIds));
   const released: string[] = [];
   const removed: string[] = [];
+  const affectedArticleIds = new Set<string>();
   try {
     for (const chunk of splitPermanentDeleteChunks(plan, PERMANENT_DELETE_CHUNK_SIZE)) {
       const result = await runDesktopDatabaseWrite('foreground', () => {
         const mirrors = capturePermanentMirrorPaths(chunk);
-        return { released: deletePermanentDeleteChunk(chunk), mirrors };
+        const articleIds = chunk.flatMap(resolveArticleIdsFromNodeId);
+        return { released: deletePermanentDeleteChunk(chunk), mirrors, articleIds };
       });
       released.push(...result.released);
       removed.push(...chunk);
+      for (const articleId of result.articleIds) affectedArticleIds.add(articleId);
       await retirePermanentMirrorPaths(result.mirrors);
       await yieldToEventLoop();
     }
@@ -44,7 +48,7 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
     throw error;
   } finally {
     enqueueReleasedBodyCollection(released);
-    if (removed.length) scheduleMirrorSync(removed);
+    if (removed.length) scheduleMirrorSync([...new Set([...removed, ...affectedArticleIds])]);
   }
   return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds: parsed.nodeIds }, originWindow);
 }

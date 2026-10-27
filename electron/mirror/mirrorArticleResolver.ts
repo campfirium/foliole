@@ -31,7 +31,7 @@ function resolveOwnerFromChain(rows: MirrorNodeRow[]) {
       // Generated book structure keeps its existing aggregate notification.
       if (!isEpubGeneratedNodeId(row.id)) return ownerId;
     }
-    if (row.deleted_at && !row.anchor_link) {
+    if (row.deleted_at && !row.anchor_link && !(row.kind === 'topic' && isEpubGeneratedNodeId(row.id))) {
       return ownerId;
     }
   }

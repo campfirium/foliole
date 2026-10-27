@@ -103,8 +103,9 @@ export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoo
     const usedNames = usedDirectoryNamesByParent.get(targetDirectory) ?? new Set<string>();
     usedDirectoryNamesByParent.set(targetDirectory, usedNames);
     const targetPath = path.join(targetDirectory, createStableFileName(article.title, article.createdAt, usedNames));
-    const derivedNodeIds = derivedNodeIdsByParent.get(article.id) ?? [];
     const manualTopicIds = (manualTopicsByArticleId.get(article.id) ?? []).map((node) => node.id);
+    const derivedNodeIds = [article.id, ...manualTopicIds]
+      .flatMap((nodeId) => derivedNodeIdsByParent.get(nodeId) ?? []);
     return {
       articleId: article.id,
       derivedNodeIds,

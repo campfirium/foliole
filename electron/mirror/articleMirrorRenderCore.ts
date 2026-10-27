@@ -72,14 +72,14 @@ function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string,
   });
 }
 
-function renderManualTopicAppendix(manualTopics: ArticleNode[]) {
+function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren: MirrorRenderableNode[]) {
   if (manualTopics.length === 0) {
     return '';
   }
   const appendix = manualTopics
     .map((topic) => {
       const parts = [`keyword: ${compactNoteText(topic.title) || 'Untitled'}`];
-      const note = preserveNoteLines(topic.content);
+      const note = preserveNoteLines(renderArticleBody(topic, collectAnchorChildren(topic.id, derivedChildren)));
       if (note) {
         parts.push(`note: ${note}`);
       }
@@ -89,9 +89,10 @@ function renderManualTopicAppendix(manualTopics: ArticleNode[]) {
   return `\n\n${appendix}`;
 }
 
-function renderArticleMarkdown(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>, manualTopics: ArticleNode[]) {
+function renderArticleMarkdown(article: ArticleNode, derivedChildren: MirrorRenderableNode[], manualTopics: ArticleNode[]) {
+  const derivedByAnchorKey = collectAnchorChildren(article.id, derivedChildren);
   const title = article.title.trim() || 'Untitled';
-  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${renderManualTopicAppendix(manualTopics)}`.trim();
+  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${renderManualTopicAppendix(manualTopics, derivedChildren)}`.trim();
   if (body.length === 0) {
     return `# ${title}\n`;
   }
@@ -113,15 +114,20 @@ export interface MirrorRenderableNode {
   updatedAt: string;
 }
 
+function collectAnchorChildren(parentId: string, derivedChildren: MirrorRenderableNode[]) {
+  const map = new Map<string, ArticleNode[]>();
+  for (const node of derivedChildren) {
+    if (node.parentNodeId !== parentId) continue;
+    const key = `${node.anchorLink?.kind}:${node.anchorLink?.id}`;
+    map.set(key, [...(map.get(key) ?? []), node as ArticleNode]);
+  }
+  return map;
+}
+
 export function renderSingleArticleMirrorRaw(
   article: MirrorRenderableNode,
   derivedChildren: MirrorRenderableNode[],
   manualTopics: MirrorRenderableNode[]
 ): string {
-  const map = new Map<string, ArticleNode[]>();
-  for (const node of derivedChildren) {
-    const key = `${node.anchorLink?.kind}:${node.anchorLink?.id}`;
-    map.set(key, [...(map.get(key) ?? []), node as ArticleNode]);
-  }
-  return renderArticleMarkdown(article as ArticleNode, map, manualTopics as ArticleNode[]);
+  return renderArticleMarkdown(article as ArticleNode, derivedChildren, manualTopics as ArticleNode[]);
 }

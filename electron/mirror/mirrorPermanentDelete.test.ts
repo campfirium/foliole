@@ -29,8 +29,9 @@ import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 import { handlePermanentDeleteNodeCommand } from '../ipc/permanentDeleteCommand.js';
 
 import { loadMirrorArticleRecords, saveMirrorArticleRecord } from './mirrorOutputStorage.js';
-import { rebuildAllMirrorOutput } from './mirrorOutputSync.js';
+import { rebuildAllMirrorOutput, syncIncrementalMirrorOutput } from './mirrorOutputSync.js';
 import { flushPermanentMirrorRetirements } from './mirrorPermanentDelete.js';
+import { scheduleMirrorSync } from './mirrorSyncScheduler.js';
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 vi.mock('../database/releasedBodyCollectionTask.js', () => ({ enqueueReleasedBodyCollection: vi.fn() }));
@@ -155,4 +156,36 @@ it.each(['item', 'topic'] as const)('retires a nested manual %s without removing
   await expect(fs.access(mirror('Folder/Nested Item.md'))).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fs.readFile(parentFile, 'utf8')).resolves.toBe(parentBody);
   expect((await fs.stat(parentFile)).mtimeMs).toBe(parentBefore.mtimeMs);
+});
+
+it('retires an entire generated chapter tree while preserving an unrelated mirror', async () => {
+  save('node-epub-chapter', 'Chapter', 'topic', 'article');
+  save('node-epub-section', 'Section', 'topic', 'node-epub-chapter');
+  upsertNodeSnapshot({ nodeId: 'chapter-note', parentNodeId: 'node-epub-section', kind: 'topic',
+    title: 'Annotation', isTitleManual: true, hideTitleHeading: false, content: 'Saved chapter note.',
+    reveal: null, anchorLink: { id: 'note', kind: 'highlight', locator: { from: 0, to: 4, originalText: 'Body' } },
+    position: 0, createdAt: '2026-10-06T00:00:00.000Z', updatedAt: '2030-10-06T00:00:00.000Z' });
+  await rebuildAllMirrorOutput();
+  await expect(fs.readFile(mirror('Folder/Article.md'), 'utf8')).resolves.toContain('Saved chapter note.');
+  const before = (await fs.stat(mirror('Unrelated.md'))).mtimeMs;
+  await remove(['article', 'node-epub-chapter', 'node-epub-section', 'chapter-note']);
+  await expect(fs.access(mirror('Folder/Article.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+  expect([...loadMirrorArticleRecords().keys()]).toEqual(['unrelated']);
+  expect((await fs.stat(mirror('Unrelated.md'))).mtimeMs).toBe(before);
+});
+
+it('notifies the surviving book when a chapter note is permanently deleted before its Trash mirror runs', async () => {
+  save('node-epub-chapter', 'Chapter', 'topic', 'article');
+  upsertNodeSnapshot({ nodeId: 'chapter-note', parentNodeId: 'node-epub-chapter', kind: 'topic',
+    title: 'Annotation', isTitleManual: true, hideTitleHeading: false, content: 'Saved chapter note.',
+    reveal: null, anchorLink: { id: 'note', kind: 'highlight', locator: { from: 0, to: 4, originalText: 'Body' } },
+    position: 0, createdAt: '2026-10-06T00:00:00.000Z', updatedAt: '2030-10-06T00:00:00.000Z' });
+  await rebuildAllMirrorOutput();
+  await expect(fs.readFile(mirror('Folder/Article.md'), 'utf8')).resolves.toContain('Saved chapter note.');
+  vi.mocked(scheduleMirrorSync).mockClear();
+  await remove(['chapter-note']);
+  const notifications = vi.mocked(scheduleMirrorSync).mock.calls.flatMap(([ids]) => ids);
+  expect(notifications).toContain('article');
+  await syncIncrementalMirrorOutput(notifications);
+  await expect(fs.readFile(mirror('Folder/Article.md'), 'utf8')).resolves.not.toContain('Saved chapter note.');
 });
