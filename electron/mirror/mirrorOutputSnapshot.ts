@@ -6,12 +6,33 @@ import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
 import { loadMirrorArticleRecords } from './mirrorOutputStorage.js';
+import { collectChangedMirrorOwners } from './mirrorPathOwnership.js';
 
-export function captureMirrorOutputSnapshot(includeBody = true) {
+export function captureMirrorOutputSnapshot(includeBody = true, articleIds?: string[]) {
   const paths = loadLibraryPathSettingsSync();
-  const snapshot = loadWorkspaceSnapshot({ includeBody });
+  const scoped = includeBody && Boolean(articleIds?.length);
+  let snapshot = loadWorkspaceSnapshot({ includeBody: includeBody && !scoped });
   const plans = snapshot ? collectArticleMirrorPlans(snapshot, paths.mirror) : [];
-  return { paths, plans, recordsByArticleId: loadMirrorArticleRecords(), snapshot };
+  const recordsByArticleId = loadMirrorArticleRecords();
+  if (scoped && snapshot) {
+    const selected = new Set(articleIds);
+    const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId);
+    const selectedPlans = plans.filter((plan) => selected.has(plan.articleId) || changedOwners.has(plan.articleId));
+    snapshot = loadMirrorPlanBodies(snapshot, selectedPlans);
+  }
+  return { paths, plans, recordsByArticleId, snapshot };
+}
+
+function loadMirrorPlanBodies(snapshot: WorkspaceSnapshot, plans: ArticleMirrorPlan[]) {
+  const nodesById = { ...snapshot.nodesById };
+  const nodeIds = new Set(plans.flatMap((plan) => [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds]));
+  for (const nodeId of nodeIds) {
+    const node = nodesById[nodeId];
+    const document = loadWorkspaceNodeDocument(nodeId);
+    if (!node || !document) throw new Error(`Mirror render node is missing: ${nodeId}`);
+    nodesById[nodeId] = { ...node, content: document.content, authorText: readNodeAuthorText(document.content) };
+  }
+  return { ...snapshot, nodesById };
 }
 
 export function mirrorPlanRevision(

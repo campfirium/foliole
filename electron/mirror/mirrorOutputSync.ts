@@ -197,7 +197,7 @@ async function syncMirrorOutput(
 ): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
   const { captured, currency } = await runWithDatabaseConnectionOwner(() => {
-    const capturedOutput = captureMirrorOutputSnapshot();
+    const capturedOutput = captureMirrorOutputSnapshot(true, mode === 'incremental' ? options.articleIds : undefined);
     return { captured: capturedOutput, currency: createMirrorPlanCurrency(capturedOutput) };
   });
   const { paths, plans, recordsByArticleId, snapshot } = captured;

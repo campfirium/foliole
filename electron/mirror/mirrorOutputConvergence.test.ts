@@ -12,14 +12,17 @@ const renderState = vi.hoisted(() => ({
   onFirstRender: null as null | (() => void)
 }));
 
-vi.mock('./articleMirrorRenderWorkerClient.js', () => ({
-  renderArticleMirrorInWorker: vi.fn(async (input: { article: { content: string } }) => {
-    renderState.calls += 1;
-    renderState.onRender?.();
-    if (renderState.calls === 1) renderState.onFirstRender?.();
-    return `${input.article.content}\n`;
-  })
-}));
+vi.mock('./articleMirrorRenderWorkerClient.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./articleMirrorRenderWorkerClient.js')>();
+  return {
+    renderArticleMirrorInWorker: vi.fn(async (...args: Parameters<typeof actual.renderArticleMirrorInWorker>) => {
+      renderState.calls += 1;
+      renderState.onRender?.();
+      if (renderState.calls === 1) renderState.onFirstRender?.();
+      return actual.renderArticleMirrorInWorker(...args);
+    })
+  };
+});
 const scheduleMirrorSync = vi.hoisted(() => vi.fn());
 vi.mock('./mirrorSyncScheduler.js', () => ({ scheduleMirrorSync }));
 
@@ -66,7 +69,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it.each(['incremental', 'full'] as const)('loads the full library a bounded number of times for a stable %s pass', async (mode) => {
+it.each(['incremental', 'full'] as const)('captures library metadata once and validates only rendered bodies for a stable %s pass', async (mode) => {
   for (const id of ['first', 'second', 'third']) {
     save(id, null, 'topic', id, `---\nauthor: ${id}\n---\nBody`, '2026-10-06T00:00:00.000Z');
   }
@@ -74,10 +77,10 @@ it.each(['incremental', 'full'] as const)('loads the full library a bounded numb
   const loadDocument = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
   if (mode === 'full') await rebuildAllMirrorOutput();
   else await syncIncrementalMirrorOutput(['first']);
-  expect(load.mock.calls.filter(([options]) => options?.includeBody).length).toBe(1);
+  expect(load.mock.calls.filter(([options]) => options?.includeBody).length).toBe(mode === 'full' ? 1 : 0);
   // Checking each rendered article must not reload the whole workspace again.
   expect(load).toHaveBeenCalledTimes(1);
-  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(mode === 'full' ? ['first', 'second', 'third'] : ['first']);
+  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(mode === 'full' ? ['first', 'second', 'third'] : ['first', 'first']);
   await expect(fs.readFile(mirrorPath('first.md'), 'utf8')).resolves.toContain('author: first');
 });
 
@@ -153,4 +156,54 @@ it('writes only the current path when a parent moves during rendering', async ()
   expect(openDatabaseConnection().sqlite.prepare(
     'SELECT relative_path FROM mirror_articles WHERE article_id = ?').get('article'))
     .toEqual({ relative_path: 'After/Article.md' });
+});
+
+it.each([100, 1000, 3000])('reads only the selected article body among %i unrelated nodes', async (count) => {
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.transaction(() => {
+    save('article', null, 'topic', 'Article', 'initial body', '2026-10-06T00:00:00.000Z');
+    for (let index = 0; index < count; index += 1) {
+      save(`unrelated-${index}`, null, 'topic', `Unrelated ${index}`,
+        `Unrelated body ${index}`, '2026-10-06T00:00:00.000Z');
+    }
+  })();
+  await syncIncrementalMirrorOutput(['article']);
+  await fs.writeFile(mirrorPath('Unrelated 0.md'), 'Unrelated output');
+  const unrelatedBefore = await fs.stat(mirrorPath('Unrelated 0.md'));
+  save('article', null, 'topic', 'Article', 'updated body', '2030-10-06T00:00:00.000Z');
+  const load = vi.spyOn(workspaceSnapshot, 'loadWorkspaceSnapshot');
+  const loadDocument = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
+
+  await syncIncrementalMirrorOutput(['article']);
+
+  await expect(fs.readFile(mirrorPath('Article.md'), 'utf8')).resolves.toContain('updated body');
+  await expect(fs.readFile(mirrorPath('Unrelated 0.md'), 'utf8')).resolves.toBe('Unrelated output');
+  expect((await fs.stat(mirrorPath('Unrelated 0.md'))).mtimeMs).toBe(unrelatedBefore.mtimeMs);
+  for (const result of load.mock.results) {
+    if (result.type !== 'return' || !result.value) continue;
+    const unrelated = Object.values(result.value.nodesById).filter((node) => node.id !== 'article');
+    expect(unrelated.every((node) => node.content === '')).toBe(true);
+  }
+  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(['article', 'article']);
+});
+
+
+it('keeps scoped content identical to full output including existing manual notes', async () => {
+  save('article', null, 'topic', 'Article', '---\nauthor: Ada\n---\nBody', '2026-10-06T00:00:00.000Z');
+  save('note', 'article', 'topic', 'Note', 'Manual note body', '2026-10-06T00:00:00.000Z');
+  save('unrelated', null, 'topic', 'Other', 'Other body', '2026-10-06T00:00:00.000Z');
+  await rebuildAllMirrorOutput();
+  const fullOutput = await fs.readFile(mirrorPath('Article.md'), 'utf8');
+  save('article', null, 'topic', 'Article', '---\nauthor: Ada\n---\nBody', '2030-10-06T00:00:00.000Z');
+  renderState.calls = 0;
+  renderState.onFirstRender = () =>
+    save('unrelated', null, 'topic', 'Other', 'Changed unrelated body', '2030-10-06T00:00:00.000Z');
+  const loadDocument = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
+
+  await syncIncrementalMirrorOutput(['article']);
+
+  await expect(fs.readFile(mirrorPath('Article.md'), 'utf8')).resolves.toBe(fullOutput);
+  expect(fullOutput).toContain('Manual note body');
+  expect(fullOutput).toContain('author: Ada');
+  expect(loadDocument.mock.calls.map(([id]) => id)).toEqual(['article', 'note', 'article', 'note']);
 });
