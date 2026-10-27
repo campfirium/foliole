@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isHomeNode, isInboxNode, isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -9,7 +10,6 @@ import { translate, type TranslationKey } from '../../shared/localization/transl
 import { updateNodeImageState } from '../../shared/platform/performanceDiagnosticsProbe';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 
-import { hasCachedMarkdownImageReference } from './documentPanelImageReferenceCache';
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 
 export { hasVisibleTitleHeading } from '../../shared/lib/nodeTitleSlot';
@@ -97,10 +97,10 @@ function getDocumentPanelState(
   const reveal = activeNode?.reveal ?? '';
   const shouldCheckItemImages = activeNode?.kind === 'item' && Boolean(showAnswerSection);
   const hasPromptImage = shouldCheckItemImages
-    ? Boolean(activeNode?.content && hasCachedMarkdownImageReference(activeNode.content))
+    ? Boolean(activeNode?.content && collectMarkdownImageReferences(activeNode.content).length > 0)
     : false;
   const hasAnswerImage = shouldCheckItemImages
-    ? Boolean(activeNode?.reveal && hasCachedMarkdownImageReference(activeNode.reveal))
+    ? Boolean(activeNode?.reveal && collectMarkdownImageReferences(activeNode.reveal).length > 0)
     : false;
   const shouldFitItemImages = shouldCheckItemImages && (hasPromptImage || hasAnswerImage);
 

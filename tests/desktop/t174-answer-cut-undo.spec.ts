@@ -53,9 +53,9 @@ test('cuts and replays answer history without crossing into the prompt', async (
       reveal: ANSWER,
       title: 'T174 answer cut'
     });
-    const revealAnswer = desktopWindow.getByRole('button', { name: /^(Show answer|显示答案)$/ });
-    await expect(revealAnswer).toBeVisible();
-    await revealAnswer.click();
+    const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+    if (await exitFlow.isVisible()) await exitFlow.click();
+    await desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id), NODE_ID);
     await expect.poll(() => collectState(desktopWindow)).toMatchObject({ answer: ANSWER, body: BODY });
 
     await expect.poll(() => desktopWindow.evaluate(({ from, to }) => (

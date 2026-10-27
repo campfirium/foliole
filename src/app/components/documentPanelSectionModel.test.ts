@@ -63,6 +63,43 @@ function buildProps(overrides: Partial<DocumentPanelSectionProps> = {}): Documen
   };
 }
 
+describe('item image layout', () => {
+  it.each([
+    ['Prompt', 'Answer', false],
+    ['![Prompt](./prompt.png)', 'Answer', true],
+    ['Prompt', '![Answer](./answer.png)', true],
+    ['![Prompt](./prompt.png)', '![Answer](./answer.png)', true]
+  ])('preserves item image layout for %s and %s', (content, reveal, hasImages) => {
+    const node: Node = { ...baseNode, kind: 'item', content, reveal };
+    const props = buildProps({ editorContent: content, nodesById: { 'node-1': node }, showAnswerSection: true });
+    const body = getDocumentPanelView(props, 'preview', 860).bodyProps;
+
+    expect(body.hasAnswerSection).toBe(true);
+    expect(body.fitBlockImagesToViewport).toBe(hasImages);
+    expect(body.answerSectionMode).toBe(hasImages ? 'balanced' : 'fixed');
+    expect(getDocumentPanelView({ ...props, showAnswerSection: false }, 'preview', 860).bodyProps.fitBlockImagesToViewport).toBe(false);
+    node.kind = 'topic';
+    expect(getDocumentPanelView(props, 'preview', 860).bodyProps.fitBlockImagesToViewport).toBe(false);
+  });
+
+  it('updates item image layout when either field changes without a version change', () => {
+    const node: Node = { ...baseNode, kind: 'item', content: 'Prompt', reveal: 'Answer', currentVersionId: 'same' };
+    const props = buildProps({ nodesById: { 'node-1': node }, showAnswerSection: true });
+    const layout = () => getDocumentPanelView(props, 'preview', 860).bodyProps;
+
+    expect(layout().fitBlockImagesToViewport).toBe(false);
+    node.content = '![Prompt](./prompt.png)';
+    expect(layout().answerSectionMode).toBe('balanced');
+    node.reveal = '![Answer](./answer.png)';
+    node.content = 'Prompt';
+    expect(layout().fitBlockImagesToViewport).toBe(true);
+    node.reveal = 'Answer';
+    expect(layout().fitBlockImagesToViewport).toBe(false);
+    expect(layout().answerSectionMode).toBe('fixed');
+  });
+
+});
+
 describe('documentPanelSectionModel', () => {
   it('detects only visible first-level headings as title headings', () => {
     expect(hasVisibleTitleHeading('# Node title\nBody', false)).toBe(true);
