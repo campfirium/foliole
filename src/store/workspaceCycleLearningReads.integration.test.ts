@@ -27,10 +27,54 @@ it.each(['soon', 'read'] as const)('reads unchanged learning facts once while pr
       return persistence.snapshot(db, ids);
     } });
   expect(reads.filter(ids => ids.length === 1 && ids[0] === id)).toHaveLength(action === 'soon' ? 1 : 2);
+  if (action === 'soon') {
+    const ids = reads.flat();
+    expect(ids).toHaveLength(new Set(ids).size);
+  }
   const persisted = await snapshot(peer);
   expect(persisted.nodesById[id]!.reading).toEqual(after);
   expect(result.readings).toEqual([{ nodeId: id, reading: after ?? null }]);
   expect(result.nodes![id]!.reading).toEqual(after);
   expect(result.session.currentNodeId).not.toBe(id);
+  await assertDurable(peer, result.session);
+});
+
+it('checks externally changed learning facts again in the next transaction', async () => {
+  const [peer] = await setupPeers();
+  for (const id of ['a', 'b', 'c']) node(peer, id, 'topic');
+  const config = settings(peer);
+  const initial = await open(peer, now, config, 'reading-only');
+  const current = initial.currentNodeId!;
+  const first = await commitDailyFlow(peer.port, { opId: crypto.randomUUID(), now,
+    token: initial.daily!, sourceSession: initial, readingAction: 'soon',
+    readings: [{ nodeId: current, before: null, after: null }] }, config, persistence);
+  const next = first.session.currentNodeId!;
+  const changed = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now,
+    nextAt: now, priority: 10, readingPosition: 0, repetitionCount: 9, state: 'active' as const };
+  await persistence.reading(peer.port, { nodeId: next, before: null, after: changed }, now);
+  await expect(commitDailyFlow(peer.port, { opId: crypto.randomUUID(), now,
+    token: first.session.daily!, sourceSession: first.session, readingAction: 'soon',
+    readings: [{ nodeId: next, before: null, after: null }] }, config, persistence))
+    .rejects.toThrow('daily_flow_learning_changed');
+  expect((await snapshot(peer)).nodesById[next]!.reading).toEqual(changed);
+  expect(peer.db.prepare('SELECT * FROM daily_flow_operations').all()).toHaveLength(1);
+});
+
+it('returns every requested ancestor even when a deep hierarchy exceeds retained facts', async () => {
+  const [peer] = await setupPeers();
+  for (let index = 0; index < 140; index++) {
+    node(peer, `folder-${index}`, 'folder', index ? `folder-${index - 1}` : null);
+  }
+  node(peer, 'article', 'topic', 'folder-139');
+  const config = settings(peer);
+  const session = await open(peer, now, config, 'reading-only');
+  expect(session.currentNodeId).toBe('article');
+  const result = await commitDailyFlow(peer.port, { opId: crypto.randomUUID(), now,
+    token: session.daily!, sourceSession: session, readingAction: 'soon',
+    readings: [{ nodeId: 'article', before: null, after: null }] }, config, persistence);
+  expect(Object.keys(result.nodes!)).toHaveLength(141);
+  expect(result.nodes!['folder-0']?.title).toBe('folder-0');
+  expect(result.nodes!.article?.parentNodeId).toBe('folder-139');
+  expect(result.session.currentNodeId).toBe('article');
   await assertDurable(peer, result.session);
 });
