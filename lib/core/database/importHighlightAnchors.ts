@@ -95,8 +95,9 @@ export function applyImportedHighlightAnchors(input: {
       return;
     }
     const highlightText = highlight.content.replace(/\n※ [\s\S]*$/u, '').trim();
-    if (input.ambiguityPolicy !== 'first'
-      && classifyImportedBodyCandidate(content, highlightText).status === 'ambiguous') {
+    const primaryMatch = input.ambiguityPolicy === 'first'
+      ? undefined : classifyImportedBodyCandidate(content, highlightText);
+    if (primaryMatch?.status === 'ambiguous') {
       return;
     }
     const findAvailableOccurrence = input.ambiguityPolicy === 'first'
@@ -104,7 +105,7 @@ export function applyImportedHighlightAnchors(input: {
       : findUniqueAvailableImportedBodyOccurrence;
     let range: { from: number; to: number } | null = null;
     for (const excerpt of collectAnchorExcerptCandidates(locator, highlight)) {
-      range = findAvailableOccurrence(content, excerpt, occupiedRanges);
+      range = findAvailableOccurrence(content, excerpt, occupiedRanges, excerpt === highlightText ? primaryMatch : undefined);
       if (range) break;
     }
     if (!range) {

@@ -119,9 +119,10 @@ export function classifyImportedBodyCandidate(content: string, excerpt: string):
 export function findUniqueAvailableImportedBodyOccurrence(
   content: string,
   excerpt: string,
-  occupiedRanges: ImportedBodyRange[]
+  occupiedRanges: ImportedBodyRange[],
+  classified?: ImportedBodyMatch
 ) {
-  const candidate = classifyImportedBodyCandidate(content, excerpt).range;
+  const candidate = (classified ?? classifyImportedBodyCandidate(content, excerpt)).range;
   if (!candidate) return null;
   const overlaps = occupiedRanges.some((range) => candidate.from < range.to && candidate.to > range.from);
   return overlaps ? null : candidate;
