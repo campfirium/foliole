@@ -1,13 +1,13 @@
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
 import { readTopicTextSnapshot } from '../../../../../lib/core/sync/topicTextBodies';
-import { expireTopicText } from '../../../../../lib/core/sync/topicTextExpiry';
+import { expireTopicText, findTopicsWithExpiredText } from '../../../../../lib/core/sync/topicTextExpiry';
 import { mutateTopicText } from '../../../../../lib/core/sync/topicTextMutation';
 import { textAlternativesSchema, type TopicTextAlternative } from '../../../../../lib/core/sync/topicTextState';
 import { createCompanionUuid } from '../../companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 import { runCompanionHighValueMutationTask, runCompanionOptionalHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
-import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { readIosCompanionDatabase, writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export interface CompanionNodeTextAlternative {
@@ -25,9 +25,10 @@ export interface CompanionNodeTextAlternative {
 export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string) {
   if (!isAvailableNativeCompanionRuntime()) return null;
   const now = new Date().toISOString();
-  await runCompanionOptionalHighValueMutationTask(() => writeIosCompanionDatabase(async db =>
+  const expired = await readIosCompanionDatabase(db => findTopicsWithExpiredText(db, [nodeId], now));
+  if (expired.has(nodeId)) await runCompanionOptionalHighValueMutationTask(() => writeIosCompanionDatabase(async db =>
     await expireTopicText(db, nodeId, now) ? true : null), { kind: 'full' });
-  return writeIosCompanionDatabase(async (db) => {
+  return readIosCompanionDatabase(async (db) => {
     const [record] = await db.query<{ snapshot_json: string; version_id: string; updated_at: string }>(
       `SELECT v.snapshot_json, v.version_id, n.updated_at
        FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id

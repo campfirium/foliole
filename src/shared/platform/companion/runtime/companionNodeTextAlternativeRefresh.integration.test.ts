@@ -9,7 +9,10 @@ import { invalidateCompanionReadingScope } from '../reading/companionReadingScop
 import { loadCompanionNodeTextAlternative, updateCompanionNodeTextAlternativeStatus } from './companionNodeTextAlternativeRepository.js';
 
 const runtime = vi.hoisted(() => ({ db: null as DbPort | null }));
-vi.mock('./iosCompanionActiveDatabase', () => ({ writeIosCompanionDatabase: (write: (db: DbPort) => unknown) => write(runtime.db!) }));
+vi.mock('./iosCompanionActiveDatabase', () => ({
+  readIosCompanionDatabase: (read: (db: DbPort) => unknown) => read(runtime.db!),
+  writeIosCompanionDatabase: (write: (db: DbPort) => unknown) => write(runtime.db!)
+}));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ isAvailableNativeCompanionRuntime: () => true }));
 
 afterEach(() => { vi.useRealTimers(); invalidateCompanionReadingScope(); runtime.db = null; });
