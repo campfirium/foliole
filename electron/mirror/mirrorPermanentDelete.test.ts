@@ -39,7 +39,7 @@ vi.mock('./mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
 let root = '';
 const mirror = (name: string) => path.join(root, 'Library', 'Mirror', name);
-function save(id: string, title: string, kind: 'topic' | 'folder' = 'topic', parentNodeId: string | null = null) {
+function save(id: string, title: string, kind: 'topic' | 'folder' | 'item' = 'topic', parentNodeId: string | null = null) {
   upsertNodeSnapshot({ nodeId: id, parentNodeId, kind, title, isTitleManual: true, hideTitleHeading: false,
     content: `Body for ${id}.`, reveal: null, anchorLink: null, position: 0,
     createdAt: '2026-10-06T00:00:00.000Z', updatedAt: '2030-10-06T00:00:00.000Z' });
@@ -140,4 +140,19 @@ it('keeps nonempty old parents when an unrelated file remains there', async () =
   await remove();
   await expect(fs.readFile(mirror('Folder/manual.txt'), 'utf8')).resolves.toBe('manual note');
   await expect(fs.access(mirror('Folder/Article.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+
+it('retires a nested manual Item without removing or rewriting its Topic output', async () => {
+  save('nested-item', 'Nested Item', 'item', 'article');
+  await rebuildAllMirrorOutput();
+  const parentFile = mirror('Folder/Article.md');
+  const parentBefore = await fs.stat(parentFile);
+  const parentBody = await fs.readFile(parentFile, 'utf8');
+  expect(loadMirrorArticleRecords().has('nested-item')).toBe(true);
+  await remove(['nested-item']);
+  expect(loadMirrorArticleRecords().has('nested-item')).toBe(false);
+  await expect(fs.access(mirror('Folder/Nested Item.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.readFile(parentFile, 'utf8')).resolves.toBe(parentBody);
+  expect((await fs.stat(parentFile)).mtimeMs).toBe(parentBefore.mtimeMs);
 });

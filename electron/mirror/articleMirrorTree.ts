@@ -1,6 +1,6 @@
 import type { WorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
-import { isManualItemAtFolderLevel } from './mirrorManualItemScope.js';
+import { isManualItem } from './mirrorManualItemScope.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -26,7 +26,7 @@ export function collectArticleData(snapshot: WorkspaceSnapshot) {
   const orderedIds = new Map(snapshot.nodeOrder.map((nodeId, index) => [nodeId, index]));
   const manualTopicsByArticleId = new Map<string, ArticleNode[]>();
   const articles = Object.values(snapshot.nodesById)
-    .filter((node) => node.id !== INBOX_NODE_ID && node.anchorLink === null && (node.kind === 'topic' || isManualItemAtFolderLevel(node, snapshot.nodesById[node.parentNodeId ?? '']?.kind)) && !trashedNodeIds.has(node.id))
+    .filter((node) => node.id !== INBOX_NODE_ID && node.anchorLink === null && (node.kind === 'topic' || isManualItem(node, snapshot.nodesById[node.parentNodeId ?? '']?.kind)) && !trashedNodeIds.has(node.id))
     .filter((node) => {
       if (node.kind === 'item') return true;
       const articleId = resolveOwningArticleId(snapshot, node, trashedNodeIds);

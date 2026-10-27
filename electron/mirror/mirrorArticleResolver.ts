@@ -1,6 +1,6 @@
 import { openDatabaseConnection } from '../database/connection.js';
 
-import { isManualItemAtFolderLevel } from './mirrorManualItemScope.js';
+import { isManualItem } from './mirrorManualItemScope.js';
 
 interface MirrorNodeRow {
   id: string;
@@ -20,7 +20,7 @@ function resolveOwnerFromChain(rows: MirrorNodeRow[]) {
   let ownerId: string | null = null;
   const byId = new Map(rows.map((row) => [row.id, row]));
   for (const row of rows) {
-    if (isManualItemAtFolderLevel({ kind: row.kind, anchorLink: row.anchor_link, parentNodeId: row.parent_id },
+    if (isManualItem({ kind: row.kind, anchorLink: row.anchor_link, parentNodeId: row.parent_id },
       byId.get(row.parent_id ?? '')?.kind)) return row.id;
     if (row.deleted_at && row.kind !== 'topic' && !row.anchor_link) {
       return ownerId;

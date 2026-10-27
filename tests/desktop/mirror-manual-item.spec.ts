@@ -34,23 +34,8 @@ async function configureItemExportDialog(app: ElectronApplication) {
   });
 }
 
-for (const parent of [null, 't513-item-folder'] as const) {
-test(`outputs a saved ${parent ? 'folder-level' : 'root'} Item through automatic, export and full paths`, async ({
-  desktopApp, desktopWindow
-}, testInfo) => {
-  await expectWorkspaceShell(desktopWindow);
-  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
-  await desktopWindow.evaluate(async (parent) => {
-    await window.__folioleWorkspaceDebug!.seedNodes([
-      { id: 't513-item-folder', title: 'Folder', kind: 'folder', content: '' },
-      { id: 't513-item-manual', title: 'Manual Item', kind: 'item', parentNodeId: parent, content: 'Question body.', reveal: 'Saved answer fact.' },
-      { id: 't513-item-highlight', title: 'Annotation', kind: 'topic', parentNodeId: 't513-item-manual', content: 'Initial annotation.',
-        anchorLink: { id: 'item-highlight', kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Question' } } },
-      { id: 't513-item-unrelated', title: 'Unrelated', kind: 'topic', content: 'Unrelated saved body.' }
-    ], { persist: true });
-    await window.electronAPI!.invoke('rebuild_mirror_output');
-  }, parent);
-  await desktopApp.evaluate(async (_, cwd) => {
+async function settleInitialMirror(app: ElectronApplication) {
+  await app.evaluate(async (_, cwd) => {
     await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
     const { submitDesktopOperation } = require(`${cwd}/dist/electron/desktopOperations.js`);
@@ -58,8 +43,28 @@ test(`outputs a saved ${parent ? 'folder-level' : 'root'} Item through automatic
     await submitDesktopOperation('mirror-backfill', { run: resumePendingMirrorOutput }).promise;
     await require(`${cwd}/dist/electron/mirror/mirrorSyncScheduler.js`).flushMirrorSync();
   }, process.cwd());
+}
+
+for (const parent of [null, 't513-item-folder', 't513-item-topic'] as const) {
+test(`outputs a saved ${parent === 't513-item-topic' ? 'Topic-level' : parent ? 'folder-level' : 'root'} Item through automatic, export and full paths`, async ({
+  desktopApp, desktopWindow
+}, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await desktopWindow.evaluate(async (parent) => {
+    await window.__folioleWorkspaceDebug!.seedNodes([
+      { id: 't513-item-folder', title: 'Folder', kind: 'folder', content: '' },
+      { id: 't513-item-topic', title: 'Parent Topic', kind: 'topic', content: 'Parent body.' },
+      { id: 't513-item-manual', title: 'Manual Item', kind: 'item', parentNodeId: parent, content: 'Question body.', reveal: 'Saved answer fact.' },
+      { id: 't513-item-highlight', title: 'Annotation', kind: 'topic', parentNodeId: 't513-item-manual', content: 'Initial annotation.',
+        anchorLink: { id: 'item-highlight', kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Question' } } },
+      { id: 't513-item-unrelated', title: 'Unrelated', kind: 'topic', content: 'Unrelated saved body.' }
+    ], { persist: true });
+    await window.electronAPI!.invoke('rebuild_mirror_output');
+  }, parent);
+  await settleInitialMirror(desktopApp);
   const before = await readOutputs(desktopApp);
-  expect(before.files[0]!.relative_path).toBe(parent ? 'Folder/Manual Item.md' : 'Manual Item.md');
+  expect(before.files[0]!.relative_path).toBe(parent === 't513-item-folder' ? 'Folder/Manual Item.md' : 'Manual Item.md');
   expect(before.files[0]!.body).toContain('Initial annotation.');
   await desktopWindow.evaluate(() => window.electronAPI!.invoke('update_node_content', {
     nodeId: 't513-item-highlight', parentNodeId: 't513-item-manual', kind: 'topic', title: 'Annotation',
@@ -69,14 +74,15 @@ test(`outputs a saved ${parent ? 'folder-level' : 'root'} Item through automatic
   }));
   await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 30_000 }).toContain('Changed annotation.');
   const after = await readOutputs(desktopApp);
-  expect(after.files[1]).toEqual(before.files[1]);
+  expect(after.files.filter((file) => file.article_id !== 't513-item-manual')).toEqual(
+    before.files.filter((file) => file.article_id !== 't513-item-manual'));
   const output = await configureItemExportDialog(desktopApp);
   try {
     await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.openNode('t513-item-manual'));
     await desktopWindow.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+P' : 'Control+P');
     const palette = desktopWindow.getByRole('dialog', { name: /Command palette|命令面板/ });
     await palette.getByRole('textbox', { name: /Search commands|搜索命令/ }).fill('export');
-    await palette.screenshot({ path: `.tmp/artifacts/T513/1i-a/${parent ? 'folder' : 'root'}-item-export-palette.png` });
+    await palette.screenshot({ path: `.tmp/artifacts/T513/1i-b-a/${parent ?? 'root'}-item-export-palette.png` });
     await palette.getByRole('button', { name: /^(Export Current Topic|导出当前主题)$/ }).click();
     await expect.poll(() => desktopApp.evaluate((_, file) => {
       const fsApi = process.getBuiltinModule('fs')!;

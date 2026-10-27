@@ -68,8 +68,8 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it.each([null, 'folder', 'special-inbox'])('uses the saved Item input under %s for automatic, single and full output', async (parent) => {
-  if (parent) save(parent, 'Ancestor body must not be loaded.', null, { kind: 'folder', reveal: null });
+it.each([null, 'folder', 'special-inbox', 'topic'])('uses the saved Item input under %s for automatic, single and full output', async (parent) => {
+  if (parent) save(parent, 'Ancestor body must not be loaded.', null, { kind: parent === 'topic' ? 'topic' : 'folder', reveal: null });
   save('manual', 'Question body.', parent);
   save('highlight', 'Edited annotation.', 'manual', { kind: 'topic', anchorLink, reveal: null });
   save('unrelated', 'Unrelated body.', null, { kind: 'topic', reveal: null });
@@ -134,10 +134,10 @@ it('refreshes folder-level Items when their containing folder is renamed', async
   await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('Question body.');
 });
 
-it('keeps an existing same-name Topic separate when a manual Item is added', async () => {
+it.each([null, 'existing'])('keeps a same-name Topic separate when an Item is added under %s', async (parent) => {
   save('existing', 'Existing Topic body.', null, { kind: 'topic', title: 'manual', reveal: null });
   await rebuildAllMirrorOutput();
-  save('manual', 'Question body.');
+  save('manual', 'Question body.', parent);
   await syncFrom('manual');
   expect(mirror('manual')).not.toBe(mirror('existing'));
   await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('Question body.');
@@ -154,4 +154,53 @@ it('validates an explicit repeated notification without changing an already iden
   await syncFrom('manual');
   expect((await fs.stat(file)).mtimeMs).toBe(before);
   await expect(fs.readFile(file, 'utf8')).resolves.toContain('Question body.');
+});
+
+
+it('updates a nested Item without rewriting its parent or sibling and preserves Trash transitions', async () => {
+  save('parent', 'Parent body.', null, { kind: 'topic' });
+  save('manual', 'Question body.', 'parent');
+  save('sibling', 'Sibling body.', 'parent');
+  save('highlight', 'First annotation.', 'manual', { kind: 'topic', anchorLink, reveal: null });
+  await rebuildAllMirrorOutput();
+  const parentFile = mirror('parent');
+  const siblingFile = mirror('sibling');
+  const before = await Promise.all([fs.stat(parentFile), fs.stat(siblingFile)]);
+  const read = vi.spyOn(nodeDocument, 'loadWorkspaceNodeDocument');
+  save('manual', 'Question body. Edited fact.', 'parent');
+  await syncFrom('manual');
+  expect(new Set(read.mock.calls.map(([id]) => id))).toEqual(new Set(['manual', 'highlight']));
+  await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('Edited fact.');
+  await expect(fs.readFile(parentFile, 'utf8')).resolves.not.toContain('Edited fact.');
+  softDeleteNodes({ nodeIds: ['highlight'], deletedAt: '2030-10-06T00:01:00.000Z' });
+  await syncFrom('highlight');
+  await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.not.toContain('First annotation.');
+  restoreNodes({ nodeIds: ['highlight'] });
+  await syncFrom('highlight');
+  await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('First annotation.');
+  const previous = mirror('manual');
+  softDeleteNodes({ nodeIds: ['manual', 'highlight'], deletedAt: '2030-10-06T00:02:00.000Z' });
+  await syncFrom('manual');
+  await expect(fs.access(previous)).rejects.toMatchObject({ code: 'ENOENT' });
+  restoreNodes({ nodeIds: ['manual', 'highlight'] });
+  await syncFrom('manual');
+  await expect(fs.readFile(mirror('manual'), 'utf8')).resolves.toContain('Edited fact.');
+  expect((await fs.stat(parentFile)).mtimeMs).toBe(before[0]!.mtimeMs);
+  expect((await fs.stat(siblingFile)).mtimeMs).toBe(before[1]!.mtimeMs);
+});
+
+it('rejects a stale nested Item render when its saved question or answer changes', async () => {
+  save('parent', 'Parent body.', null, { kind: 'topic' });
+  save('manual', 'Question version one.', 'parent');
+  const render = articleOutput.renderSingleArticleMirror;
+  const spy = vi.spyOn(articleOutput, 'renderSingleArticleMirror').mockImplementationOnce((...input) => {
+    save('manual', 'Question version two.', 'parent', { reveal: 'Answer version two.' });
+    return render(...input);
+  });
+  await syncFrom('manual');
+  expect(spy.mock.calls.length).toBeGreaterThan(1);
+  expect(spy.mock.calls.at(-1)![0]).toMatchObject({ content: 'Question version two.', reveal: 'Answer version two.' });
+  const body = await fs.readFile(mirror('manual'), 'utf8');
+  expect(body).toContain('Question version two.');
+  expect(body).not.toContain('Question version one.');
 });
