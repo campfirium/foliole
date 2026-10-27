@@ -12,7 +12,7 @@ export function hasPersistentDailyFlow(session: ReviewSessionState) {
 }
 
 export function saveDailyReading(session: ReviewSessionState, entry: WorkspaceTopicDismissHistoryEntry,
-  now: string, _nextSession: ReviewSessionState, completedReviewDay?: string) {
+  now: string, _nextSession: ReviewSessionState, completedReviewDay: string | undefined, nodes: Record<string, Node>) {
   const changes = [{ nodeId: entry.nodeId, before: entry.beforeReading ?? null, after: entry.afterReading ?? null,
     ...(completedReviewDay === undefined ? {} : { completedReviewDay }) },
   ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,
@@ -21,16 +21,16 @@ export function saveDailyReading(session: ReviewSessionState, entry: WorkspaceTo
     ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : {}), readings: changes,
     ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
       : (entry.title === 'Later Topic' || entry.title === 'Postpone Topic') ? { readingAction: 'later' as const }
-      : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}) });
+      : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}) }, nodes);
 }
 
 export function saveDailyGrade(session: ReviewSessionState, entry: WorkspaceReviewGradeHistoryEntry,
-  value: Omit<NonNullable<DailyFlowCommitArgs['grade']>, 'before'>) {
+  value: Omit<NonNullable<DailyFlowCommitArgs['grade']>, 'before'>, nodes: Record<string, Node>) {
   return commitDailyFlowRuntime({ opId: entry.id, now: value.reviewedAt, token: session.daily!, sourceSession: session,
-    grade: { ...value, before: entry.beforeReview } });
+    grade: { ...value, before: entry.beforeReview } }, nodes);
 }
 
 export function saveDailyHistory(args: { session: ReviewSessionState; entry: WorkspaceTopicDismissHistoryEntry |
-  WorkspaceReviewGradeHistoryEntry; mode: 'undo' | 'redo'; now: string; nodes?: Node[] }) {
-  return commitDailyFlowRuntime(dailyFlowHistoryCommand(args));
+  WorkspaceReviewGradeHistoryEntry; mode: 'undo' | 'redo'; now: string; nodes?: Node[]; knownNodes: Record<string, Node> }) {
+  return commitDailyFlowRuntime(dailyFlowHistoryCommand(args), args.knownNodes);
 }

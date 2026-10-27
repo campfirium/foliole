@@ -91,7 +91,7 @@ export async function commitWorkspaceReviewGrade(args: {
     const result = hasPersistentDailyFlow(args.snapshot.reviewSession)
       ? await saveDailyGrade(args.snapshot.reviewSession, entry, { nodeId: args.currentNodeId,
         grade: args.grade, reviewedAt: args.result.reviewedAt, schedulerVersion: args.result.schedulerVersion,
-        cardBefore: args.result.cardBefore, cardAfter: args.result.cardAfter })
+        cardBefore: args.result.cardBefore, cardAfter: args.result.cardAfter }, args.get().nodesById)
       : await persistReviewGradeMutation({
       currentNodeId: args.currentNodeId,
       opId: entry.id,

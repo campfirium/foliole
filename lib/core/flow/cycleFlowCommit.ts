@@ -27,7 +27,7 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
   const hash = hashTextBody(JSON.stringify(args));
   const ids = [stored?.session.currentNodeId, args.expectedContinueNodeId, args.grade?.nodeId,
     args.reviewHistory?.nodeId, ...(args.readings ?? []).map(value => value.nodeId)];
-  const replayed = await replayOperation(db, stored, args, hash, persistence, ids);
+  const replayed = await replayOperation(db, stored, args, hash, persistence);
   if (replayed) return replayed;
   if (!stored || stored.day_key !== args.token.dayKey ||
     (stored.revision !== args.token.revision && (!args.sourceSession?.cycle ||
@@ -65,22 +65,24 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
     now: args.now, revision: stored.revision + 1, session });
   await db.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json, source_session_json) VALUES (?, ?, ?, ?, ?)',
     [args.opId, hash, saved.daily!.revision, result.card === undefined ? null : JSON.stringify(result.card), JSON.stringify(sourceSession)]);
-  const receipt = await scopedDailySnapshot(db, persistence, [...ids, saved.currentNodeId]);
-  return { sourceSession, mutationTimestamp: args.now, nodes: receipt.nodesById, session: saved, ...result,
-    ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId,
+  return { sourceSession, mutationTimestamp: args.now, session: saved, ...result,
+    ...(args.readings && args.readingAction !== 'soon' ? { readings: args.readings.map(value => ({ nodeId: value.nodeId,
       reading: updated.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
 }
 
 async function replayOperation(db: DbPort, stored: Awaited<ReturnType<typeof readDailyFlow>>,
-  args: DailyFlowCommitArgs, hash: string, persistence: DailyFlowPersistence, ids: (string | null | undefined)[]) {
+  args: DailyFlowCommitArgs, hash: string, persistence: DailyFlowPersistence) {
   const [previous] = await db.query<{ input_hash: string; revision: number; card_json: string | null; source_session_json: string | null }>(
     'SELECT input_hash, revision, card_json, source_session_json FROM daily_flow_operations WHERE op_id = ?', [args.opId]);
   if (previous) {
     if (previous.input_hash !== hash) throw new Error('daily_flow_operation_mismatch');
     if (!stored || stored.invalidated || stored.revision !== previous.revision) throw new Error('daily_flow_ack_superseded');
-    const snapshot = await scopedDailySnapshot(db, persistence, ids);
-    return { ...(previous.source_session_json ? { sourceSession: JSON.parse(previous.source_session_json) as DailyFlowSession } : {}), session: stored.session, nodes: snapshot.nodesById, replayed: true, mutationTimestamp: args.now,
-      readings: (args.readings ?? []).map(value => ({ nodeId: value.nodeId, reading: snapshot.nodesById[value.nodeId]?.reading ?? null })),
+    const readings = args.readingAction === 'soon' ? undefined : args.readings;
+    const snapshot = readings?.length
+      ? await scopedDailySnapshot(db, persistence, readings.map(value => value.nodeId)) : null;
+    return { ...(previous.source_session_json ? { sourceSession: JSON.parse(previous.source_session_json) as DailyFlowSession } : {}), session: stored.session, replayed: true, mutationTimestamp: args.now,
+      ...(readings ? { readings: readings.map(value => ({ nodeId: value.nodeId,
+        reading: snapshot?.nodesById[value.nodeId]?.reading ?? null })) } : {}),
       ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) }) };
   }
   return null;

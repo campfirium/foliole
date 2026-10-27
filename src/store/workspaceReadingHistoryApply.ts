@@ -1,3 +1,4 @@
+import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import {
@@ -7,6 +8,7 @@ import {
   isSameReadingProfile
 } from './workspaceActionHistoryReading';
 import { hasPersistentDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
+import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import {
   applyWorkspaceHistoryContext,
@@ -64,14 +66,16 @@ export async function applyWorkspaceReadingHistory(args: {
   if (!isApplicable(args.get(), args.entry, args.mode)) return { status: 'invalid' };
   const prepared = buildApplyNodes(args.get(), args.entry, args.mode);
   let dailySession: WorkspaceState['reviewSession'] | undefined;
+  let displayNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   try {
     const persisted = hasPersistentDailyFlow(args.get().reviewSession)
-      ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp })
+      ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp, knownNodes: args.get().nodesById })
       : await getWorkspaceHistoryPersistence()
       .persistReadingSnapshots(prepared.nodes, args.mutationTimestamp);
     if (!persisted) return { status: 'failed' };
     if (typeof persisted !== 'boolean') {
       dailySession = persisted.session;
+      displayNodes = persisted.nodes;
       args.mutationTimestamp = persisted.mutationTimestamp ?? args.mutationTimestamp;
     }
   } catch (error) {
@@ -84,6 +88,6 @@ export async function applyWorkspaceReadingHistory(args: {
   return appliedWorkspaceHistory({ ...args.entry, mutationTimestamp: args.mutationTimestamp }, {
     ...applyWorkspaceHistoryContext(context),
     ...(dailySession ? { reviewSession: dailySession } : {}),
-    nodesById: applied.nextNodesById
+    nodesById: mergeDailyFlowReceiptNodes(applied.nextNodesById, {}, displayNodes)
   });
 }

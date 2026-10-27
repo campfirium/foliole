@@ -7,18 +7,26 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let tempRoot = '';
 let loseReceipt = false;
+let afterCommit: (() => void) | undefined;
+const bridgeCommands: string[] = [];
 vi.mock('../../electron/deviceAnchorStore.js', () => ({
   loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'daily-flow', libraryPath })
 }));
 vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: tempRoot,
   app_cache_dir: path.join(tempRoot, 'cache'), app_config_dir: path.join(tempRoot, 'config'), app_log_dir: path.join(tempRoot, 'logs') }) }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  bridgeCommands.push(command);
   const { openDesktopDailyFlow, commitDesktopDailyFlow } = await import('../../electron/database/dailyFlow');
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') {
     const result = await commitDesktopDailyFlow(args);
+    afterCommit?.();
     if (loseReceipt) { loseReceipt = false; throw new Error('ipc_receipt_lost'); }
     return result;
+  }
+  if (command === 'load_workspace_list_projection') {
+    const { loadWorkspaceListProjection } = await import('../../lib/core/database/workspaceListProjection');
+    return loadWorkspaceListProjection(openDatabaseConnection().driver, args as { nodeIds: string[]; ancestorNodeIds?: string[]; structure: boolean });
   }
   if (command === 'save_node_open_state') return null;
   throw new Error(`Unexpected command: ${command}`);
@@ -41,6 +49,8 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-daily-flow-'));
   initializeDatabase();
   loseReceipt = false;
+  afterCommit = undefined;
+  bridgeCommands.length = 0;
 });
 afterEach(async () => {
   closeDatabaseConnection();
@@ -177,4 +187,30 @@ it.each(['grade', 'soon', 'read', 'later', 'dismiss'] as const)('retries desktop
     expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading ORDER BY node_id')).toEqual(reading);
     expect(app.getState().appActionHistory[mode === 'undo' ? 'redoStack' : 'undoStack']).toHaveLength(1);
   }
+});
+
+
+it.each([false, true])('loads a missing successor separately and keeps concurrent renderer facts (missing=%s)', async missing => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const source = app.getState().reviewSession.currentNodeId!;
+  const successor = ['first', 'second'].find(id => id !== source)!;
+  const original = app.getState().nodesById[successor]!;
+  if (missing) {
+    const nodes = { ...app.getState().nodesById };
+    delete nodes[successor];
+    app.setState({ nodesById: nodes });
+  }
+  bridgeCommands.length = 0;
+  afterCommit = () => {
+    const current = app.getState().nodesById[source]!;
+    app.setState({ nodesById: { ...app.getState().nodesById,
+      [source]: { ...current, title: 'Concurrent title', content: 'Concurrent content',
+        review: { ...createQaNode('review', now).review!, reps: 17 } } } });
+  };
+  expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).toBe(successor);
+  expect(app.getState().nodesById[successor]).toMatchObject({ id: successor, title: original.title, kind: 'topic' });
+  expect(app.getState().nodesById[source]).toMatchObject({ title: 'Concurrent title', content: 'Concurrent content', review: { reps: 17 } });
+  expect(bridgeCommands.filter(command => command === 'load_workspace_list_projection')).toHaveLength(missing ? 1 : 0);
 });

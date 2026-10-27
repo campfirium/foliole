@@ -32,7 +32,7 @@ export function continueWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, 
   const source = state.reviewSession;
   if (source.currentNodeId || !source.continueNodeId || !source.daily) return Promise.resolve(false);
   return commitDailyFlowRuntime({ opId: dailyFlowOperationId(source.daily, source.continueNodeId, 'continue-reading'),
-    now, token: source.daily, navigation: 'continue-reading', expectedContinueNodeId: source.continueNodeId })
+    now, token: source.daily, navigation: 'continue-reading', expectedContinueNodeId: source.continueNodeId }, state.nodesById)
     .then(({ session, nodes }) => {
       if (get().reviewSession !== state.reviewSession) return false;
       set(current => ({ nodesById: mergeDailyFlowReceiptNodes(current.nodesById, state.nodesById, nodes),

@@ -186,7 +186,7 @@ export function createSetReviewTopicDelayActionWithPending(
 async function persistTopicDelay(snapshot: WorkspaceState, result: TopicDelayPatchResult, now: string,
   persistence: WorkspaceReviewPersistenceAdapter) {
   if (!hasPersistentDailyFlow(snapshot.reviewSession)) return persistence.persistReadingNodes([result.nextNode], now);
-  const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!);
+  const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!, undefined, snapshot.nodesById);
   result.patch.reviewSession = saved.session;
   result.historyEntry.afterContext.reviewSession = saved.session;
   return true;

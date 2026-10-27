@@ -133,7 +133,7 @@ async function persistPreparedReading(get: WorkspaceGet, result: ReadingReviewPa
   persistence: WorkspaceReviewPersistenceAdapter) {
       if (hasPersistentDailyFlow(get().reviewSession)) {
         const saved = await saveDailyReading(get().reviewSession, result.historyEntry,
-          result.historyEntry.mutationTimestamp, result.patch.reviewSession!, result.completedReviewDay);
+          result.historyEntry.mutationTimestamp, result.patch.reviewSession!, result.completedReviewDay, get().nodesById);
         for (const value of saved.readings ?? []) {
           if (value.nodeId === result.historyEntry.nodeId) result.historyEntry.afterReading = value.reading;
           const related = result.historyEntry.relatedReadings?.find(item => item.nodeId === value.nodeId);
