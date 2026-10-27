@@ -11,6 +11,7 @@ const MAX_WAIT_MS = 60_000;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingNodeIds = new Set<string>();
+let pendingArticleIds = new Set<string>();
 let flushInFlight: Promise<void> | null = null;
 
 function clearTimers() {
@@ -30,10 +31,11 @@ async function drainQueue() {
   const handle = submitDesktopOperation('mirror-incremental', {
     failureLabel: '[mirror] incremental export failed',
     run: async (context) => {
-      while (pendingNodeIds.size > 0) {
+      while (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) {
         const nodeIds = pendingNodeIds;
         pendingNodeIds = new Set();
-        const articleIds = new Set<string>();
+        const articleIds = pendingArticleIds;
+        pendingArticleIds = new Set();
         await runWithDatabaseConnectionOwner(() => {
           for (const nodeId of nodeIds) {
             for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
@@ -52,7 +54,7 @@ async function drainQueue() {
     await flushInFlight;
   } finally {
     flushInFlight = null;
-    if (pendingNodeIds.size > 0) scheduleFlush();
+    if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) scheduleFlush();
   }
 }
 
@@ -77,19 +79,20 @@ function scheduleFlush() {
   }
 }
 
-export function scheduleMirrorSync(nodeIds: string[]) {
+export function scheduleMirrorSync(nodeIds: string[], articleIds: string[] = []) {
+  for (const articleId of articleIds) pendingArticleIds.add(articleId);
   for (const nodeId of nodeIds) {
     pendingNodeIds.add(nodeId);
   }
 
-  if (pendingNodeIds.size > 0) {
+  if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) {
     scheduleFlush();
   }
 }
 
 export async function flushMirrorSync() {
   clearTimers();
-  if (pendingNodeIds.size > 0) await drainQueue();
+  if (pendingNodeIds.size > 0 || pendingArticleIds.size > 0) await drainQueue();
   if (flushInFlight) await flushInFlight;
   await flushPermanentMirrorRetirements();
 }

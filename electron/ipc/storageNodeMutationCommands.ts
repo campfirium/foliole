@@ -3,7 +3,6 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { renameCollectionVirtualFolder } from '../agentControl/agentControlVirtualFolderLifecycle.js';
 import { readCollectionVirtualFolderRow } from '../agentControl/agentControlVirtualFolders.js';
 import {
-  moveNodes,
   replaceNodeOrder,
 } from '../database/nodeMutations.js';
 import { drainDirtyNodeSyncVersions } from '../database/nodeSyncVersionDrain.js';
@@ -15,6 +14,7 @@ import {
 } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { splitTopic } from '../database/splitTopicMutation.js';
+import { moveNodesWithMirrorInputs } from '../mirror/mirrorNodeMove.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import {
@@ -179,8 +179,8 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     return completeWorkspaceMutation(null, originWindow);
   }
   if (command === NATIVE_COMMANDS.moveNodes) {
-    const result = moveNodes(parseMoveNodesArgs(args));
-    scheduleMirrorSync(result.movedNodeIds);
+    const { result, articleIds } = moveNodesWithMirrorInputs(parseMoveNodesArgs(args));
+    scheduleMirrorSync([], articleIds);
     return completeWorkspaceMutation(result, originWindow);
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {

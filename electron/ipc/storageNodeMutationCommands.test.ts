@@ -38,6 +38,12 @@ vi.mock('./paths.js', () => ({
     app_log_dir: '/log'
   })
 }));
+vi.mock('../mirror/mirrorPermanentDelete.js', () => ({ capturePermanentMirrorPaths: vi.fn(() => []),
+  retirePermanentMirrorPaths: vi.fn(async () => {}), flushPermanentMirrorRetirements: vi.fn() }));
+vi.mock('../mirror/mirrorArticleResolver.js', () => ({ resolveArticleIdsFromNodeId: vi.fn(() => []) }));
+vi.mock('../mirror/mirrorNodeMove.js', () => ({
+  moveNodesWithMirrorInputs: (input: Parameters<typeof moveNodes>[0]) => ({ result: moveNodes(input), articleIds: ['node-2'] })
+}));
 vi.mock('../database/nodeMutations.js', () => ({
   deleteNodesPermanently: vi.fn(),
   flushAllDirtyNodeSyncVersions: vi.fn(),

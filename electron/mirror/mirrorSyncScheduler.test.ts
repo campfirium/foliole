@@ -201,7 +201,7 @@ it('syncs article mirrors when their parent folder moves', async () => {
   await expect(fs.readFile(mirrorPath(path.join('Projects', 'Archive', 'Mirror Demo.md')), 'utf8')).resolves.toContain('Nested body.');
 });
 
-it('syncs the owning article when a manual child topic changes', async () => {
+it('syncs the explicit manual child Topic without changing its parent', async () => {
   saveNode('node-article', null, 'topic', 'Mirror Demo', 'Parent body.', '2026-03-30T00:00:00.000Z', 0);
   saveNode('node-child-topic', 'node-article', 'topic', 'Key Point', 'Child body.', '2026-03-30T00:00:00.000Z', 1);
   await rebuildMirrorOutput();
@@ -211,7 +211,8 @@ it('syncs the owning article when a manual child topic changes', async () => {
   scheduleMirrorSync(['node-child-topic']);
   await flushMirrorSync();
 
-  await expect(fs.readFile(mirrorPath('Mirror Demo.md'), 'utf8')).resolves.toContain('Child body updated.');
+  await expect(fs.readFile(mirrorPath('Key Point.md'), 'utf8')).resolves.toContain('Child body updated.');
+  await expect(fs.readFile(mirrorPath('Mirror Demo.md'), 'utf8')).resolves.not.toContain('Child body updated.');
 });
 
 it('does not run an incremental full scan when scheduled nodes resolve to no articles', async () => {
@@ -224,4 +225,13 @@ it('does not run an incremental full scan when scheduled nodes resolve to no art
   await flushMirrorSync();
 
   await expect(fs.access(mirrorPath('First Title.md'))).rejects.toThrow();
+});
+
+it('consumes explicit mutation article inputs without resolving them again at flush', async () => {
+  saveNode('explicit', null, 'topic', 'Explicit', 'Saved explicit body.', '2026-03-30T00:00:00.000Z', 0);
+  const resolve = vi.spyOn(articleMirror, 'resolveArticleIdsFromNodeId');
+  scheduleMirrorSync([], ['explicit']);
+  await flushMirrorSync();
+  expect(resolve).not.toHaveBeenCalled();
+  await expect(fs.readFile(mirrorPath('Explicit.md'), 'utf8')).resolves.toContain('Saved explicit body.');
 });
