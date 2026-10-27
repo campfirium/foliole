@@ -11,6 +11,7 @@ import { createSearchLibrary } from '../shared/platform/companion/runtime/compan
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { resolveCompanionRecentArticles } from '../shared/platform/companionBrowseLists';
 import * as browseLists from '../shared/platform/companionBrowseLists';
+import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
 import * as queuePlanner from '../store/reviewQueuePlanner';
 
 import { useDailyFlowSurface } from './companionFlowDay.testSupport';
@@ -27,7 +28,11 @@ beforeEach(async () => {
   hydrateCurrentReviewSchedulerSettings({ newDayStartsAtHour: 4 });
   library = await createSearchLibrary(4, 32);
 });
-afterEach(async () => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });
+afterEach(async () => {
+  cleanup();
+  await runCompanionSyncWriterTask(async () => undefined);
+  vi.useRealTimers(); vi.restoreAllMocks(); await library.close();
+});
 
 async function seedItems() {
   const records = await Promise.all(['000000', '000001'].map(id => toWorkspaceNativeNodeVersion({

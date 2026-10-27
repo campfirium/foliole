@@ -65,8 +65,11 @@ export async function persistFlowMutation(args: {
     if (typeof saved === 'object' && 'readings' in saved) for (const value of saved.readings ?? []) {
       if (changes[value.nodeId]) changes[value.nodeId] = { ...changes[value.nodeId]!, reading: value.reading };
     }
-    const nodesById = patchWorkspaceRecord(args.snapshot.nodesById, changes);
-    return { ...args, snapshot: { ...args.snapshot, nodesById }, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
+    let projection: WorkspaceSnapshot | undefined;
+    return { ...args, get snapshot() {
+      // Daily surfaces consume the committed receipt; only legacy callers need this projection.
+      return projection ??= { ...args.snapshot, nodesById: patchWorkspaceRecord(args.snapshot.nodesById, changes) };
+    }, ...(typeof saved === 'object' && 'session' in saved ? { session: saved.session } : {}), partial: false, targetConfirmed: true };
   }
   try {
     const saved = await persistCompanionReviewSyncObject({ itemKind: 'reading', completedReading: args.action === 'read',

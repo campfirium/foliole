@@ -77,9 +77,10 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
     await getIosCompanionDatabaseOwner().runWriter(db => db.run("UPDATE nodes SET kind = 'folder' WHERE id = ?", [next]));
     const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     hook.rerender({ snapshot: changed });
-    await waitFor(() => expect(hook.result.current.view.scheduledFsrsCount).toBe(before.scheduledFsrsCount - 1));
-    expect(hook.result.current.view.scheduledFsrsCount).toBe(before.scheduledFsrsCount - 1);
+    expect(hook.result.current.view.currentCard?.nodeId).toBe(before.currentCard?.nodeId);
     const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' });
+    expect(await predictCompanionFlowDocument({ token: saved.session.daily!, currentNodeId: saved.session.currentNodeId!,
+      now: new Date().toISOString() }, new AbortController().signal)).not.toBe(next);
     expect(saved.session.queueNodeIds).not.toContain(next);
     act(() => { hook.result.current.workspaceHistoryControls.restoreFlowHistorySession(saved.session); });
     expect(hook.result.current.view.queueNodeIds).not.toContain(next);

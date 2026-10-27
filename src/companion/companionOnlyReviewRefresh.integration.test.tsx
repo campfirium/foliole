@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { loadCompanionDailySession, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -100,20 +101,24 @@ it('adds newly due FSRS items to an open Only Review session without replacing i
   expect(buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(firstRefresh),
     mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first']);
   act(() => ui.rerender({ value: firstRefresh }));
-  expect(ui.result.current.view.queueNodeIds).toEqual(['first']);
+  await waitFor(() => expect(ui.result.current.view.queueNodeIds).toEqual(['first']));
   expect(ui.result.current.view.currentCard?.nodeId).toBe('first');
   act(() => ui.result.current.reveal());
 
-  refreshDue('first', future);
   refreshDue('second', past);
   const secondRefresh = await snapshot();
   expect(buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(secondRefresh),
-    mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['second']);
+    mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first', 'second']);
   act(() => ui.rerender({ value: secondRefresh }));
-  expect(ui.result.current.view.queueNodeIds).toEqual(['first', 'second']);
+  await waitFor(async () => {
+    const session = (await loadCompanionDailySession())!;
+    expect(await predictCompanionFlowDocument({ token: session.daily!, currentNodeId: 'first',
+      now: new Date().toISOString() }, new AbortController().signal)).toBe('second');
+  });
+  expect(ui.result.current.view.queueNodeIds).toEqual(['first']);
   expect(ui.result.current.view.currentCard?.nodeId).toBe('first');
   expect(ui.result.current.isAnswerRevealed).toBe(true);
   act(() => ui.rerender({ value: secondRefresh }));
-  expect(ui.result.current.view.queueNodeIds).toEqual(['first', 'second']);
+  expect(ui.result.current.view.queueNodeIds).toEqual(['first']);
   ui.unmount();
 });

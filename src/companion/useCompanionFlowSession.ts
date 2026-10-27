@@ -69,7 +69,7 @@ export function useCompanionFlowSession(args: {
     }).catch(error => { current.error = String(error); render(); });
   }, [args.snapshot]);
   const session = current.session;
-  const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot);
+  const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot, Boolean(session.currentNodeId));
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),
     [args.snapshot, current.hydrated, session, scheduled]);
   const cancelDocumentPreparation = useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
@@ -85,14 +85,17 @@ export function useCompanionFlowSession(args: {
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
 }
 
-function useFlowCatalogSummary(snapshot: WorkspaceSnapshot | null) {
-  const catalog = useFlowCatalog(snapshot);
-  const scheduled = useMemo(() => catalog ? resolveScheduledReviewSummary(catalog) : null, [catalog]);
-  const hasTopics = useMemo(() => Boolean(catalog && catalog.nodeOrder.some((id) => {
+function useFlowCatalogSummary(snapshot: WorkspaceSnapshot | null, hasCurrent: boolean) {
+  // Catalog-wide scheduled counts are displayed only on the empty Flow surfaces.
+  const catalog = useFlowCatalog(hasCurrent ? null : snapshot);
+  const scheduled = useMemo(() => catalog ? resolveScheduledReviewSummary(catalog) : {
+    nextFsrsDueAt: null, nextReadingDueAt: null, scheduledFsrsCount: 0, scheduledReadingCount: 0
+  }, [catalog]);
+  const hasTopics = useMemo(() => hasCurrent || Boolean(catalog && catalog.nodeOrder.some((id) => {
     if (!isCanonicalVisibleNodeId(catalog, id)) return false;
     const kind = catalog.nodesById[id]?.kind;
     return kind === 'topic' || kind === 'item';
-  })), [catalog]);
+  })), [catalog, hasCurrent]);
   return { scheduled, hasTopics };
 }
 

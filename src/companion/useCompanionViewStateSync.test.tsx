@@ -54,6 +54,20 @@ it('coalesces scrolling within one article to the last position', () => {
   expect(saves.position).toHaveBeenCalledTimes(1);
 });
 
+it('keeps Flow position independent of the last browsed article while preserving its scroll', () => {
+  const hook = renderHook(useCompanionViewStateSync, { initialProps: view('browsed') });
+  saves.active.mockClear();
+  hook.rerender({ ...view(null), activeAction: 'review', reviewNodeId: 'flow-one' });
+  act(() => hook.result.current(240));
+  hook.rerender({ ...view(null), activeAction: 'review', reviewNodeId: 'flow-two' });
+  expect(saves.position).toHaveBeenCalledExactlyOnceWith({ nodeId: 'flow-one', scrollTop: 240 });
+  expect(saves.active).not.toHaveBeenCalled();
+  hook.rerender(view('browsed'));
+  expect(saves.active).not.toHaveBeenCalled();
+  hook.rerender(view('another'));
+  expect(saves.active).toHaveBeenCalledExactlyOnceWith('another');
+});
+
 it('saves the departing article before a quick scroll in the next article', () => {
   const hook = renderHook(useCompanionViewStateSync, { initialProps: view('one') });
   act(() => hook.result.current(240));

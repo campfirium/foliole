@@ -69,10 +69,11 @@ export function useCompanionViewStateSync(args: {
   }, [args.activeAction, args.readableArticleNodeId, args.reviewNodeId, args.selectedBrowseNodeId]);
 
   useEffect(() => {
+    if (args.activeAction === 'review') return;
     if (currentViewNodeId === lastVisibleNodeIdRef.current) return;
     lastVisibleNodeIdRef.current = currentViewNodeId;
     void saveCompanionSyncActiveViewState(currentViewNodeId);
-  }, [currentViewNodeId]);
+  }, [args.activeAction, currentViewNodeId]);
 
   return useCompanionScrollSave(currentViewNodeId);
 }
