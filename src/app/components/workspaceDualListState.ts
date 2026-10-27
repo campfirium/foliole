@@ -86,11 +86,9 @@ function useWorkspaceDualListStructureData(args: WorkspaceDualListStateArgs) {
     args.trashedNodeIds
   );
 
-  if (cacheRef.current?.signature === signature) {
-    return cacheRef.current.data;
-  }
-
-  const data = buildWorkspaceDualListStructureData(args);
+  const data = cacheRef.current?.signature === signature
+    ? cacheRef.current.data
+    : buildWorkspaceDualListStructureData(args);
   cacheRef.current = {
     data,
     listNodesById: args.listNodesById,
