@@ -87,7 +87,9 @@ function renderRightSidebarColumns(
       {args.compactSidebars?.rightFloating
         ? <WorkspaceCompactRightPanelActions activePanelId={args.rightSidebarProps.activePanelId} />
         : null}
-      <WorkspaceRightSidebar {...args.rightSidebarProps} />
+      {args.isRightSidebarCollapsed && args.rightSidebarProps.activePanelId === 'performance'
+        ? null
+        : <WorkspaceRightSidebar {...args.rightSidebarProps} />}
     </div>
   ];
 }
