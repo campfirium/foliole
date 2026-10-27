@@ -27,9 +27,11 @@ vi.mock('./managedInboxEvents.js', () => ({
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { discoverDirectoryImportSources } from '../ipc/importSourcePipeline.js';
 
+import { runSingleKeepImportSource } from './keepImportRunSource.js';
 import { previewKeepImportRule, runKeepImportRule } from './keepImportService.js';
-import { createGenericKeepImportConfig, mapChildRowsWithAnchorLink, parseAnchorLink } from './keepImportService.test-support.js';
+import { createGenericKeepImportConfig, mapChildRowsWithAnchorLink, parseAnchorLink, readSplitChildren, seedGenericSplitSidecarFixture } from './keepImportService.test-support.js';
 
 let tempRoot = '';
 
@@ -151,51 +153,8 @@ it('stores a shortened derived cache preview beside the full import content', as
   expect(cacheRow.content_preview).not.toBe(cacheRow.content);
 });
 
-async function seedGenericSplitSidecarFixture() {
-  const sourceDir = path.join(tempRoot, 'split-source');
-  const highlightDir = path.join(tempRoot, 'split-highlights');
-  await fs.mkdir(sourceDir, { recursive: true });
-  await fs.mkdir(highlightDir, { recursive: true });
-  await fs.writeFile(
-    path.join(sourceDir, 'entry.md'),
-    [
-      '# Exported highlights',
-      '',
-      '## Metadata',
-      '- Author: [[weibo.com]]',
-      '- Full Title: Exported highlights',
-      '- Category: #articles',
-      '- URL: https://weibo.com/example',
-      '',
-      'Before matching highlight after.',
-      '',
-      'Other body.'
-    ].join('\n'),
-    'utf8'
-  );
-  await fs.writeFile(
-    path.join(highlightDir, 'entry.md'),
-    [
-      '# Exported highlights',
-      '',
-      '## Metadata',
-      '- Author: [[weibo.com]]',
-      '- Full Title: Exported highlights',
-      '- Category: #articles',
-      '- URL: https://weibo.com/example',
-      '',
-      '## Saved passages',
-      '- matching highlight ([View Highlight](https://read.readwise.io/read/01sample))',
-      '',
-      '- missing highlight'
-    ].join('\n'),
-    'utf8'
-  );
-  return { highlightDir, sourceDir };
-}
-
-it('imports generic split sidecar highlights only when they match the source body', async () => {
-  const { highlightDir, sourceDir } = await seedGenericSplitSidecarFixture();
+it('previews both matched and unmatched generic split sidecar highlights', async () => {
+  const { highlightDir, sourceDir } = await seedGenericSplitSidecarFixture(tempRoot);
   const config = createGenericKeepImportConfig(sourceDir, 'draft-import-source-102', 'reference_only', highlightDir);
   const preview = await previewKeepImportRule(config);
 
@@ -218,7 +177,11 @@ it('imports generic split sidecar highlights only when they match the source bod
       status: 'new'
     })
   ]);
+});
 
+it('retains unmatched generic split highlights independently through reopen and explicit refresh', async () => {
+  const { highlightDir, sourceDir } = await seedGenericSplitSidecarFixture(tempRoot);
+  const config = createGenericKeepImportConfig(sourceDir, 'draft-import-source-102', 'reference_only', highlightDir);
   await runKeepImportRule(config);
 
   const row = openDatabaseConnection().sqlite
@@ -229,9 +192,7 @@ it('imports generic split sidecar highlights only when they match the source bod
        WHERE import_sources.source_name = 'entry.md'`
     )
     .get() as { content: string; id: string };
-  const childRows = openDatabaseConnection().sqlite
-    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? ORDER BY nodes.created_at ASC`)
-    .all(row.id) as Array<{ anchor_link: string | null; content: string; title: string }>;
+  const childRows = readSplitChildren(row.id);
 
   expect(row.content).toContain('Before matching highlight after.');
   expect(mapChildRowsWithAnchorLink(childRows)).toEqual([
@@ -242,6 +203,43 @@ it('imports generic split sidecar highlights only when they match the source bod
       }),
       content: 'matching highlight',
       title: 'matching highlight'
-    }
+    },
+    { anchorLink: null, content: 'missing highlight', title: 'missing highlight' }
   ]);
+
+  closeDatabaseConnection();
+  expect(readSplitChildren(row.id)).toEqual(childRows);
+  await runKeepImportRule(config);
+  expect(readSplitChildren(row.id)).toEqual(childRows);
+
+  await fs.writeFile(path.join(highlightDir, 'entry.md'), '- missing highlight\n\n- matching highlight\n\n- Other body.');
+  const [source] = await discoverDirectoryImportSources(sourceDir);
+  await runSingleKeepImportSource(config, source!, { forceTopicImport: true });
+  const refreshed = readSplitChildren(row.id);
+  expect(refreshed.map(child => child.content)).toEqual(['matching highlight', 'Other body.', 'missing highlight']);
+  expect(refreshed.filter(child => child.content !== 'Other body.').map(child => child.id)).toEqual(childRows.map(child => child.id));
+  expect(refreshed.at(-1)?.anchor_link).toBeNull();
+  closeDatabaseConnection();
+  expect(readSplitChildren(row.id)).toEqual(refreshed);
+  await runKeepImportRule(config);
+  expect(readSplitChildren(row.id)).toEqual(refreshed);
+});
+
+it('retains every generic sidecar excerpt when none match the source body', async () => {
+  const { highlightDir, sourceDir } = await seedGenericSplitSidecarFixture(tempRoot);
+  await fs.writeFile(path.join(sourceDir, 'entry.md'), 'A body without either excerpt.');
+  const config = createGenericKeepImportConfig(sourceDir, 'draft-import-source-105', 'reference_only', highlightDir);
+  await runKeepImportRule(config);
+  const row = openDatabaseConnection().sqlite.prepare(
+    "SELECT latest_node_id AS id FROM import_sources WHERE source_name = 'entry.md'"
+  ).get() as { id: string };
+  const children = readSplitChildren(row.id);
+  expect(mapChildRowsWithAnchorLink(children)).toEqual([
+    { anchorLink: null, content: 'matching highlight', title: 'matching highlight' },
+    { anchorLink: null, content: 'missing highlight', title: 'missing highlight' }
+  ]);
+  closeDatabaseConnection();
+  expect(readSplitChildren(row.id)).toEqual(children);
+  await runKeepImportRule(config);
+  expect(readSplitChildren(row.id)).toEqual(children);
 });
