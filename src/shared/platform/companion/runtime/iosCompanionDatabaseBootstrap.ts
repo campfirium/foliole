@@ -1,4 +1,4 @@
-import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
+import { CapacitorSQLite } from '@capacitor-community/sqlite';
 
 import { bindParentOrderWriterWithDbPort } from '../../../../../lib/core/sync/parentOrderWriter';
 import type {
@@ -12,6 +12,7 @@ import {
   CapacitorCompanionDatabaseOwner,
   type CapacitorCompanionDatabaseManager
 } from './capacitorCompanionDatabaseOwner';
+import { CompanionDatabaseManager } from './companionDatabaseManager';
 import { stopCompanionForegroundTime } from './companionForegroundTime';
 import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
 
@@ -44,7 +45,7 @@ async function closeActiveDatabase() {
 
 export function initializeIosCompanionDatabase(
   nativeState: NativeCompanionBootstrapPayload,
-  manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite),
+  manager: IosCompanionDatabaseManager = new CompanionDatabaseManager(CapacitorSQLite),
   options: IosCompanionDatabaseBootstrapOptions = {}
 ): Promise<NativeCompanionBootstrapState> {
   return enqueueLifecycle(async () => {
