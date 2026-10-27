@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import {
-  createTestAttachmentResource,
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
-} from '../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../test/attachmentResourceTestSupport';
 
 import { hasWorkspaceNodeMutationRuntime, syncNodeContentWithAnchorsMutationToRuntime } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
@@ -39,15 +35,9 @@ const { assetUrl: IMAGE_ASSET_URL } = createTestAttachmentResource({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  registerTestAttachmentResource({
-    attachmentId: IMAGE_ATTACHMENT_ID,
-    contentHash: IMAGE_CONTENT_HASH,
-    mimeType: 'image/jpeg'
-  });
 });
 
 afterEach(() => {
-  resetTestAttachmentResources();
   vi.useRealTimers();
 });
 

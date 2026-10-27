@@ -28,8 +28,7 @@ vi.mock('electron', () => ({
 }));
 
 import {
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
+  createTestAttachmentResource
 } from '../../src/test/attachmentResourceTestSupport.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -51,7 +50,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  resetTestAttachmentResources();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -140,7 +138,7 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
 });
 
 it('exports attachment markdown links as absolute asset paths', async () => {
-  const resource = registerTestAttachmentResource({ attachmentId: 'a'.repeat(64) });
+  const resource = createTestAttachmentResource({ attachmentId: 'a'.repeat(64) });
   upsertNodeSnapshot({
     nodeId: 'topic-with-asset',
     parentNodeId: null,

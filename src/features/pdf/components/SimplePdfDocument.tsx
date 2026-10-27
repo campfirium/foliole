@@ -3,7 +3,7 @@ import { Document } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { resolveAttachmentResourceDescriptionById } from '../../../../lib/platform/attachmentResourceRegistry';
+import { buildCanonicalAttachmentStorageKey } from '../../../../lib/platform/attachmentResource';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import {
   invalidateAttachmentResourceResolution,
@@ -36,11 +36,13 @@ function useAttachmentPdfSource(
     let retriedAfterSync = false;
     setSource(null);
     setState('loading');
+    const storageKey = buildCanonicalAttachmentStorageKey(attachmentId, 'application/pdf');
     async function resolvePdfSource() {
-      const description = resolveAttachmentResourceDescriptionById(attachmentId);
-      const resolution = description
-        ? await resolveRuntimeAttachmentResource(`asset://${description.storageKey}`)
-        : null;
+      if (!storageKey) {
+        setState('missing');
+        return;
+      }
+      const resolution = await resolveRuntimeAttachmentResource(`asset://${storageKey}`);
       if (cancelled) {
         return;
       }
@@ -58,7 +60,7 @@ function useAttachmentPdfSource(
           return;
         }
         if (cancelled) return;
-        if (description) invalidateAttachmentResourceResolution(description.storageKey);
+        invalidateAttachmentResourceResolution(storageKey);
         await resolvePdfSource();
         return;
       }

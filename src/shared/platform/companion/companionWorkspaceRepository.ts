@@ -1,7 +1,6 @@
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot';
 import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from '../companionRuntimeCapabilities';
 import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncState';
-import { registerWorkspaceAttachmentResources } from '../runtime/workspaceAttachmentResourceRegistry';
 
 import { refreshCompanionWorkspaceSnapshot } from './companionWorkspaceSnapshotRefresh';
 
@@ -13,7 +12,6 @@ export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: W
     const snapshot = await refreshCompanionWorkspaceSnapshot(contentNodeId
       ? { kind: 'nodes', nodeIds: [contentNodeId] }
       : previewSnapshot === undefined ? undefined : { kind: 'full' });
-    registerWorkspaceAttachmentResources(snapshot);
     return snapshot;
   }
   const current = readWebSyncState();

@@ -45,6 +45,6 @@ export async function syncCompanionAttachmentResourceFromDesktop(endpointUrl: st
     }
     return false;
   });
-  if (cached) invalidateAttachmentResourceResolution(attachmentId);
+  if (cached) invalidateAttachmentResourceResolution(request.storage_key);
   return { attachmentId, status: cached ? 'cached' as const : 'missing' as const };
 }

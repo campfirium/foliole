@@ -3,7 +3,6 @@ import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs } from '../../..
 
 import { refreshRuntimeRemovedSources } from './removedSourcesRuntimeRepository';
 import { isDesktopRuntime } from './runtime';
-import { registerWorkspaceAttachmentResources } from './runtime/workspaceAttachmentResourceRegistry';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import {
@@ -66,7 +65,6 @@ export async function loadWorkspaceListSnapshotFromRuntime(args?: {
     return null;
   }
   const snapshot = await runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, args);
-  registerWorkspaceAttachmentResources(snapshot);
   return snapshot;
 }
 

@@ -1,12 +1,8 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
-import {
-  registerTestAttachmentResource,
-  resetTestAttachmentResources,
-  TEST_ATTACHMENT_HASH
-} from '../../../test/attachmentResourceTestSupport';
+import { TEST_ATTACHMENT_HASH } from '../../../test/attachmentResourceTestSupport';
 
 const resourceMock = vi.hoisted(() => ({
   pages: 2,
@@ -62,8 +58,6 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
-  resetTestAttachmentResources();
-  registerTestAttachmentResource({ attachmentId: 'pdf-attachment-1', mimeType: 'application/pdf' });
   globalThis.ResizeObserver = class {
     disconnect() {}
     observe() {}
@@ -78,13 +72,13 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('SimplePdfDocument', () => {
-  it('resolves the attachment resource before rendering the continuous PDF pages', async () => {
+  it('renders a canonical PDF without registering any attachment descriptions', async () => {
     resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({
       resource_url: 'capacitor://pdf-file',
       status: 'ready'
     });
 
-    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(document.querySelector('[data-pdf-page="2"]')).toBeInTheDocument();
@@ -97,7 +91,7 @@ describe('SimplePdfDocument', () => {
       status: 'ready'
     });
 
-    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" onBackToText={vi.fn()} title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} onBackToText={vi.fn()} title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
     expect(screen.getByText('100%')).toBeInTheDocument();
@@ -114,7 +108,7 @@ describe('SimplePdfDocument', () => {
       status: 'ready'
     });
 
-    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" initialPage={2} title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} initialPage={2} title="Paper" />);
 
     await waitFor(() => expect(document.querySelector('[data-pdf-page="2"]')).toBeInTheDocument());
     await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenCalled());
@@ -126,7 +120,7 @@ describe('SimplePdfDocument', () => {
   it('keeps a long PDF window bounded while immediately including a deep search target', async () => {
     resourceMock.pages = 10000;
     resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ resource_url: 'capacitor://pdf-file', status: 'ready' });
-    const view = renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" initialPage={9000} title="Long paper" />);
+    const view = renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} initialPage={9000} title="Long paper" />);
     await waitFor(() => expect(document.querySelector('[data-pdf-page="9000"]')).toBeInTheDocument());
     expect(document.querySelectorAll('[data-pdf-page]').length).toBeLessThan(30);
     expect(document.querySelector('[data-pdf-page="4500"]')).toBeNull();
@@ -143,10 +137,10 @@ describe('SimplePdfDocument', () => {
       .mockResolvedValueOnce({ resource_url: null, status: 'missing_file' })
       .mockResolvedValueOnce({ resource_url: 'capacitor://pdf-file', status: 'ready' });
 
-    renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" onMissingResource={syncMissing} title="Paper" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} onMissingResource={syncMissing} title="Paper" />);
 
     await waitFor(() => expect(screen.getByText('PDF page 1')).toBeInTheDocument());
-    expect(syncMissing).toHaveBeenCalledWith('pdf-attachment-1');
+    expect(syncMissing).toHaveBeenCalledWith(TEST_ATTACHMENT_HASH);
     expect(resourceMock.invalidateAttachmentResourceResolution).toHaveBeenCalledWith(`${TEST_ATTACHMENT_HASH}.pdf`);
     expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
   });
@@ -157,11 +151,31 @@ describe('SimplePdfDocument unavailable state', () => {
     const onBack = vi.fn();
     resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ resource_url: null, status: 'missing_file' });
 
-    renderWithLocalization(<SimplePdfDocument attachmentId="missing-pdf" onBackToText={onBack} title="Missing" />);
+    renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} onBackToText={onBack} title="Missing" />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Text' }));
 
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(screen.getByText('PDF file unavailable')).toBeInTheDocument();
   });
+});
+
+it('rejects a noncanonical PDF identity without resolving or downloading it', async () => {
+  const syncMissing = vi.fn();
+  renderWithLocalization(<SimplePdfDocument attachmentId="invalid-pdf" onMissingResource={syncMissing} title="Invalid" />);
+  expect(await screen.findByText('PDF file unavailable')).toBeInTheDocument();
+  expect(resourceMock.resolveRuntimeAttachmentResource).not.toHaveBeenCalled();
+  expect(syncMissing).not.toHaveBeenCalled();
+});
+
+it('ignores a late PDF resolution after switching to another attachment', async () => {
+  let finish!: (value: { status: string; resource_url: string }) => void;
+  resourceMock.resolveRuntimeAttachmentResource.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+    .mockResolvedValueOnce({ status: 'ready', resource_url: 'capacitor://current.pdf' });
+  const view = renderWithLocalization(<SimplePdfDocument attachmentId={TEST_ATTACHMENT_HASH} title="Old" />);
+  view.rerender(<SimplePdfDocument attachmentId={'b'.repeat(64)} title="Current" />);
+  await waitFor(() => expect(document.querySelector('[data-file]')).toHaveAttribute('data-file', 'capacitor://current.pdf'));
+  await act(async () => { finish({ status: 'ready', resource_url: 'capacitor://old.pdf' }); });
+  expect(resourceMock.resolveRuntimeAttachmentResource).toHaveBeenCalledTimes(2);
+  expect(document.querySelector('[data-file]')).toHaveAttribute('data-file', 'capacitor://current.pdf');
 });

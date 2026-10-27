@@ -1,12 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../../shared/platform/attachmentImageActions';
-import {
-  createTestAttachmentResource,
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
-} from '../../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../../test/attachmentResourceTestSupport';
 
 import { useEditorContextCommands } from './useEditorContextCommands';
 
@@ -83,12 +79,7 @@ function buildHookArgs(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  registerTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
   vi.clearAllMocks();
-});
-
-afterEach(() => {
-  resetTestAttachmentResources();
 });
 
 it('uses the clicked image as the excerpt target even when a wider selection overlaps it', () => {

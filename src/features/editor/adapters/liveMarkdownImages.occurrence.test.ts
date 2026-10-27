@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
   TEST_ATTACHMENT_ASSET_URL,
   TEST_ATTACHMENT_HASH
 } from '../../../test/attachmentResourceTestSupport';
@@ -25,7 +24,6 @@ import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 let adapter: CodeMirrorEditorAdapter | null = null;
 
 beforeEach(() => {
-  registerTestAttachmentResource();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
 });
 

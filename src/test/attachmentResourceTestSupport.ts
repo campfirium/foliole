@@ -1,9 +1,5 @@
 import type { AttachmentResourceDescription } from '../../lib/platform/attachmentResource.js';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import {
-  clearAttachmentResourceDescriptions,
-  registerAttachmentResourceDescriptions
-} from '../../lib/platform/attachmentResourceRegistry.js';
 
 export const TEST_ATTACHMENT_HASH = 'a'.repeat(64);
 export const TEST_ATTACHMENT_STORAGE_KEY = `${TEST_ATTACHMENT_HASH}.png`;
@@ -29,14 +25,4 @@ export function createTestAttachmentResource(input: {
       storageKey
     }
   };
-}
-
-export function registerTestAttachmentResource(input: Parameters<typeof createTestAttachmentResource>[0] = {}) {
-  const resource = createTestAttachmentResource(input);
-  registerAttachmentResourceDescriptions([resource.description]);
-  return resource;
-}
-
-export function resetTestAttachmentResources() {
-  clearAttachmentResourceDescriptions();
 }

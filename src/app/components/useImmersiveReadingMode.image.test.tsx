@@ -1,12 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
-import {
-  createTestAttachmentResource,
-  registerTestAttachmentResource,
-  resetTestAttachmentResources
-} from '../../test/attachmentResourceTestSupport';
+import { createTestAttachmentResource } from '../../test/attachmentResourceTestSupport';
 
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 
@@ -20,14 +16,6 @@ const {
 const IMAGE_MARKDOWN = `![Cover](${IMAGE_ASSET_URL})`;
 const IMAGE_FROM = 7;
 const IMAGE_TO = IMAGE_FROM + IMAGE_MARKDOWN.length;
-
-beforeEach(() => {
-  registerTestAttachmentResource({ attachmentId: IMAGE_ATTACHMENT_ID });
-});
-
-afterEach(() => {
-  resetTestAttachmentResources();
-});
 
 function createNode(id: string) {
   return {

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
   TEST_ATTACHMENT_ASSET_URL
 } from '../../../test/attachmentResourceTestSupport';
 
@@ -36,7 +35,6 @@ function mockRect(element: HTMLElement, width: () => number) {
 
 describe('live markdown image resize', () => {
   beforeEach(() => {
-    registerTestAttachmentResource();
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
   });
 

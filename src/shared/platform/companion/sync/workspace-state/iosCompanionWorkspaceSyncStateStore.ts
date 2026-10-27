@@ -8,7 +8,6 @@ import {
   openCompanionDatabaseConnection
 } from '../../../companionSyncNodeVersions';
 import { normalizeWorkspaceSyncState } from '../../../companionWorkspaceSyncState';
-import { registerWorkspaceAttachmentResources } from '../../../runtime/workspaceAttachmentResourceRegistry';
 import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnapshotRefresh';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
@@ -63,7 +62,6 @@ export async function updateIosCompanionWorkspaceSyncMetadata(
 async function loadState(connection: DbPort) {
   const metadata = await loadMetadata(connection);
   const workspace_snapshot = await loadIosCompanionWorkspaceSnapshot(connection);
-  registerWorkspaceAttachmentResources(workspace_snapshot);
   return normalizeWorkspaceSyncState({ ...metadata, workspace_snapshot });
 }
 

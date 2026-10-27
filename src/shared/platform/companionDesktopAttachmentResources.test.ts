@@ -16,7 +16,7 @@ it('changes source after a failure and keeps the exact selected key', async () =
   expect(attachment.pull.mock.calls.map(([input]) => [input.receiver_device_id, input.storageKey]))
     .toEqual([['first', key], ['second', key]]);
   expect(attachment.exchange.mock.invocationCallOrder[1]).toBeLessThan(attachment.pull.mock.invocationCallOrder[1]!);
-  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith('selected');
+  expect(attachment.invalidate).toHaveBeenCalledExactlyOnceWith(key);
 });
 
 it('attempts each source once and leaves the target missing when every source returns 404', async () => {

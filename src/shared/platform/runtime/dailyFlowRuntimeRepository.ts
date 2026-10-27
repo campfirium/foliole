@@ -4,8 +4,6 @@ import { retainDailyFlowRetry, settleDailyFlowRetry } from '../../../../lib/core
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
-import { registerWorkspaceAttachmentResources } from './workspaceAttachmentResourceRegistry';
-
 export function hasDailyFlowRuntime() {
   return Boolean(getRuntimeInvoke());
 }
@@ -36,6 +34,5 @@ export async function loadDailyFlowDisplayNodes(result: DailyFlowResult, knownNo
   if (!invoke) throw new Error('Daily Flow display storage is unavailable.');
   const projection = await invoke(NATIVE_COMMANDS.loadWorkspaceListProjection, { nodeIds: [], ancestorNodeIds: missing,
     structure: false, libraryScope: scope });
-  registerWorkspaceAttachmentResources(projection);
   return projection.nodesById as Record<string, WorkspaceNodeSnapshot>;
 }

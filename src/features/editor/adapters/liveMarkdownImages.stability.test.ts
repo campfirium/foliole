@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
   TEST_ATTACHMENT_ASSET_URL,
   TEST_ATTACHMENT_HASH
 } from '../../../test/attachmentResourceTestSupport';
@@ -35,7 +34,6 @@ function createAdapterHost(initialContent: string) {
 }
 
 beforeEach(() => {
-  registerTestAttachmentResource();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
 });
 

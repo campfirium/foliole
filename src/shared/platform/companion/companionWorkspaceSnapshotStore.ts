@@ -1,6 +1,5 @@
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import { WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
-import { registerWorkspaceAttachmentResources } from '../runtime/workspaceAttachmentResourceRegistry.js';
 
 import { subscribeCompanionReadingScope } from './reading/companionReadingScope.js';
 
@@ -8,7 +7,6 @@ let syncRunHolds = 0;
 let heldSyncScopes: WorkspaceRefreshScope[] = [];
 
 export const companionWorkspaceSnapshots = new WorkspaceSnapshotRefresh<WorkspaceSnapshot | null>(null);
-companionWorkspaceSnapshots.subscribe(() => registerWorkspaceAttachmentResources(companionWorkspaceSnapshots.getSnapshot()));
 subscribeCompanionReadingScope(() => {
   heldSyncScopes = [];
   companionWorkspaceSnapshots.reset(null);

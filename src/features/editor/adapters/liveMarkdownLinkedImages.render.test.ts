@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import {
-  registerTestAttachmentResource,
   TEST_ATTACHMENT_ASSET_URL
 } from '../../../test/attachmentResourceTestSupport';
 
@@ -21,7 +20,6 @@ vi.mock('../../../shared/platform/bridge', () => ({
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
 beforeEach(() => {
-  registerTestAttachmentResource();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');
 });
 

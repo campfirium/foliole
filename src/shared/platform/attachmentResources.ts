@@ -3,11 +3,6 @@ import { Capacitor } from '@capacitor/core';
 import { parseAssetMarkdownUrl } from '../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
 import type { AttachmentResourceDescription } from '../../../lib/platform/attachmentResource';
-import {
-  clearAttachmentResourceDescriptions,
-  listAttachmentResourceDescriptions,
-  registerAttachmentResourceDescriptions,
-} from '../../../lib/platform/attachmentResourceRegistry';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type { NativeAttachmentResourceResolution } from '../../../lib/platform/nativeUtilityContract';
 import { createBoundedCache } from '../lib/boundedCache';
@@ -52,8 +47,6 @@ function trackAttachmentResourceResolution(
   }).catch(() => undefined);
   return resolution;
 }
-
-export { registerAttachmentResourceDescriptions };
 
 export async function resolveRuntimeAttachmentResource(resourceUrl: string, options?: { refresh?: boolean }) {
   const storageKey = parseAssetMarkdownUrl(resourceUrl);
@@ -184,15 +177,9 @@ export function invalidateAttachmentResourceResolution(resourceIdentity: string)
   const directStorageKey = parseAssetMarkdownUrl(resourceIdentity) ??
     parseCanonicalAttachmentStorageKey(resourceIdentity)?.storageKey;
   if (directStorageKey) attachmentResourceResolutionCache.delete(directStorageKey);
-  for (const description of listAttachmentResourceDescriptions()) {
-    if (description.attachmentId === resourceIdentity) {
-      attachmentResourceResolutionCache.delete(description.storageKey);
-    }
-  }
 }
 
 export function resetAttachmentResourceResolutionCacheForTest() {
   attachmentResourceResolutionCache.clear();
   attachmentResourceResolutionsInFlight.clear();
-  clearAttachmentResourceDescriptions();
 }
