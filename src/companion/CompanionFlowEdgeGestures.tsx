@@ -6,16 +6,12 @@ import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
 
 import { FLOW_GESTURE_REGION, FLOW_GESTURE_MIN_TRAVEL, FLOW_GESTURE_MAX_VERTICAL_TRAVEL } from './companionFlowGestureTokens';
 
-export function CompanionFlowEdgeGestures(props: {
-  enabled: boolean; canUndo: boolean; canRedo: boolean; onApply(mode: HistoryMode): void;
-}) {
-  const t = useTranslation();
+function useFlowGestureRegion(enabled: boolean) {
   const [unavailable, setUnavailable] = useState(false);
-  const start = useRef<{ id: number; x: number; y: number; mode: HistoryMode } | null>(null);
   useEffect(() => {
     let active = true;
     const update = () => {
-      void setCompanionFlowGestureRegion({ ...FLOW_GESTURE_REGION, enabled: props.enabled,
+      void setCompanionFlowGestureRegion({ ...FLOW_GESTURE_REGION, enabled,
         viewportWidth: window.innerWidth }).then(() => { if (active) setUnavailable(false); })
         .catch(() => { if (active) setUnavailable(true); });
     };
@@ -24,10 +20,21 @@ export function CompanionFlowEdgeGestures(props: {
     return () => {
       active = false;
       window.removeEventListener('resize', update);
-      void setCompanionFlowGestureRegion({ ...FLOW_GESTURE_REGION, enabled: false,
-        viewportWidth: window.innerWidth }).catch(() => {});
     };
-  }, [props.enabled]);
+  }, [enabled]);
+  useEffect(() => () => {
+    void setCompanionFlowGestureRegion({ ...FLOW_GESTURE_REGION, enabled: false,
+      viewportWidth: window.innerWidth }).catch(() => {});
+  }, []);
+  return unavailable;
+}
+
+export function CompanionFlowEdgeGestures(props: {
+  enabled: boolean; canUndo: boolean; canRedo: boolean; onApply(mode: HistoryMode): void;
+}) {
+  const t = useTranslation();
+  const unavailable = useFlowGestureRegion(props.enabled);
+  const start = useRef<{ id: number; x: number; y: number; mode: HistoryMode } | null>(null);
   function begin(event: PointerEvent, mode: HistoryMode) {
     start.current = null;
     if (!props.enabled || !(mode === 'undo' ? props.canUndo : props.canRedo) ||

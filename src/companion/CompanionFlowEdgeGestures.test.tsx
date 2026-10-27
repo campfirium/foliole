@@ -74,6 +74,27 @@ it('reserves only the active central band and releases it on exit', () => {
   expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 24, bandHeight: 160, viewportWidth: window.innerWidth });
 });
 
+it('applies each busy transition once and still releases the region when leaving Flow', () => {
+  const apply = vi.fn();
+  const surface = (enabled: boolean) => <LocalizationProvider initialLanguagePreference="en">
+    <CompanionFlowEdgeGestures enabled={enabled} canUndo canRedo onApply={apply} />
+  </LocalizationProvider>;
+  const ui = render(surface(true));
+  vi.mocked(setCompanionFlowGestureRegion).mockClear();
+  ui.rerender(surface(false));
+  expect(vi.mocked(setCompanionFlowGestureRegion).mock.calls.map(([region]) => region.enabled)).toEqual([false]);
+  ui.rerender(surface(true));
+  expect(vi.mocked(setCompanionFlowGestureRegion).mock.calls.map(([region]) => region.enabled)).toEqual([false, true]);
+  fireEvent(window, new Event('resize'));
+  expect(vi.mocked(setCompanionFlowGestureRegion).mock.calls.map(([region]) => region.enabled)).toEqual([false, true, true]);
+  ui.unmount();
+  expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 24,
+    bandHeight: 160, viewportWidth: window.innerWidth });
+  vi.mocked(setCompanionFlowGestureRegion).mockClear();
+  fireEvent(window, new Event('resize'));
+  expect(setCompanionFlowGestureRegion).not.toHaveBeenCalled();
+});
+
 it('reports a native reservation failure instead of pretending the gesture is available', async () => {
   vi.mocked(setCompanionFlowGestureRegion).mockRejectedValueOnce(new Error('unavailable'));
   const { apply } = setup();
