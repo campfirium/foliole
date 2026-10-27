@@ -6,6 +6,7 @@ import {
   splitPermanentDeleteChunks
 } from '../database/nodePermanentDeleteChunks.js';
 import { enqueueReleasedBodyCollection } from '../database/releasedBodyCollectionTask.js';
+import { capturePermanentMirrorPaths, retirePermanentMirrorPaths } from '../mirror/mirrorPermanentDelete.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { parseDeleteNodesPermanentlyArgs } from './nodeCommandArgs.js';
@@ -27,8 +28,13 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
   const removed: string[] = [];
   try {
     for (const chunk of splitPermanentDeleteChunks(plan, PERMANENT_DELETE_CHUNK_SIZE)) {
-      released.push(...await runDesktopDatabaseWrite('foreground', () => deletePermanentDeleteChunk(chunk)));
+      const result = await runDesktopDatabaseWrite('foreground', () => {
+        const mirrors = capturePermanentMirrorPaths(chunk);
+        return { released: deletePermanentDeleteChunk(chunk), mirrors };
+      });
+      released.push(...result.released);
       removed.push(...chunk);
+      await retirePermanentMirrorPaths(result.mirrors);
       await yieldToEventLoop();
     }
     await runDesktopDatabaseWrite('foreground', () => finishPermanentDelete(plan, parsed.nodeOrder));

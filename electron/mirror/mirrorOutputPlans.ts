@@ -105,7 +105,8 @@ export async function processMirrorPlans(args: {
     const fileUpdatedAt = await readMirrorFileUpdatedAt(plan.targetPath);
     const effectiveRecord =
       persistedRecord ??
-      (fileUpdatedAt ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
+      (args.mode === 'missing' && fileUpdatedAt
+        ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
     const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== plan.relativePath);
     if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged || args.changedOwners.has(plan.articleId)) {
       await args.options.taskContext?.yieldIfNeeded();

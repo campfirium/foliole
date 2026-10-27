@@ -5,6 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 async function readOutputs(app: ElectronApplication) {
   return app.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
@@ -46,6 +47,17 @@ test('removes a trashed article mirror and restores its saved content through na
   const trashed = await readOutputs(desktopApp);
   expect(trashed.names).not.toContain('Folder');
   expect(trashed.files[0]).toEqual(before.files[1]);
+  await desktopApp.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
+    const { loadLibraryPathSettingsSync } = require(`${cwd}/dist/electron/ipc/libraryPaths.js`);
+    const fsApi = process.getBuiltinModule('fs')!;
+    const directory = `${loadLibraryPathSettingsSync().mirror}/Folder`;
+    fsApi.mkdirSync(directory, { recursive: true });
+    fsApi.writeFileSync(`${directory}/Article.md`, 'A different article occupied this file.');
+    const future = new Date('2035-01-01T00:00:00.000Z');
+    fsApi.utimesSync(`${directory}/Article.md`, future, future);
+  }, process.cwd());
   const restored = await desktopWindow.evaluate(() => window.electronAPI!.invoke('restore_nodes', {
     nodeIds: ['t513-trash-article']
   }));

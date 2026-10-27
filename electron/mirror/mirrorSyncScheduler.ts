@@ -2,6 +2,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { submitDesktopOperation } from '../desktopOperations.js';
 
 import * as articleMirror from './exportArticleMirror.js';
+import { flushPermanentMirrorRetirements } from './mirrorPermanentDelete.js';
 import { syncIncrementalMirrorOutput } from './rebuildMirrorOutput.js';
 
 const DEBOUNCE_MS = 10_000;
@@ -90,4 +91,5 @@ export async function flushMirrorSync() {
   clearTimers();
   if (pendingNodeIds.size > 0) await drainQueue();
   if (flushInFlight) await flushInFlight;
+  await flushPermanentMirrorRetirements();
 }

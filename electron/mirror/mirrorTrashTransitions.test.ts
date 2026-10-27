@@ -158,3 +158,15 @@ it('does not record a restored article as mirrored until its file is written suc
   await expect(fs.readFile(mirror('Folder/Article.md'), 'utf8')).resolves.toContain('Body for article.');
   expect(loadMirrorArticleRecords().has('article')).toBe(true);
 });
+
+it('renders a restored article without a success record even if a newer file occupies its target', async () => {
+  trash();
+  await sync();
+  restore();
+  await fs.mkdir(mirror('Folder'), { recursive: true });
+  await fs.writeFile(mirror('Folder/Article.md'), 'A different article occupied this file.');
+  const future = new Date('2035-01-01T00:00:00.000Z');
+  await fs.utimes(mirror('Folder/Article.md'), future, future);
+  await sync();
+  await expect(fs.readFile(mirror('Folder/Article.md'), 'utf8')).resolves.toContain('Body for article.');
+});
