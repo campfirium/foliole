@@ -29,7 +29,8 @@ function createExtraNote(
   anchorId: string,
   from: number,
   to: number,
-  derivedByAnchorKey: Map<string, ArticleNode[]>
+  derivedByAnchorKey: Map<string, ArticleNode[]>,
+  renderHighlight: (child: ArticleNode) => string
 ) {
   const linkedChildren = derivedByAnchorKey.get(`${kind}:${anchorId}`) ?? [];
   if (linkedChildren.length === 0) {
@@ -39,7 +40,7 @@ function createExtraNote(
   const notes = linkedChildren
     .map((child) => {
       if (kind === 'highlight') {
-        const note = preserveNoteLines(child.content);
+        const note = preserveNoteLines(renderHighlight(child));
         if (normalizeComparableText(note) === normalizeComparableText(sourceText)) {
           return null;
         }
@@ -63,13 +64,25 @@ function createExtraNote(
   return notes.length > 0 ? ` (❄ ${notes.join(' | ')})` : '';
 }
 
-function renderArticleBody(article: ArticleNode, derivedByAnchorKey: Map<string, ArticleNode[]>) {
-  return renderArticleBodyFromLocators({
+function renderArticleBody(article: ArticleNode, derivedChildren: MirrorRenderableNode[]): string {
+  const derivedByAnchorKey = collectAnchorChildren(article.id, derivedChildren);
+  const renderedKeys = new Set<string>();
+  const createNote = (kind: 'highlight' | 'cloze', anchorId: string, sourceText: string, from: number, to: number) => {
+    renderedKeys.add(`${kind}:${anchorId}`);
+    return createExtraNote(article, kind, sourceText, anchorId, from, to, derivedByAnchorKey,
+      (child) => renderArticleBody(child, derivedChildren));
+  };
+  const body = renderArticleBodyFromLocators({
     articleContent: article.content,
-    createExtraNote: (span) =>
-      createExtraNote(article, span.kind, span.sourceText, span.anchorId, span.from, span.to, derivedByAnchorKey),
+    createExtraNote: (span) => createNote(span.kind, span.anchorId, span.sourceText, span.from, span.to),
     derivedByAnchorKey
   });
+  const unlocated = [...derivedByAnchorKey.entries()].flatMap(([key, children]) => {
+    const anchor = children[0]?.anchorLink;
+    if (!anchor || anchor.kind !== 'highlight' || renderedKeys.has(key)) return [];
+    return createNote('highlight', anchor.id, '', 0, 0);
+  });
+  return [body, ...unlocated].filter(Boolean).join('\n\n');
 }
 
 function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren: MirrorRenderableNode[]) {
@@ -79,7 +92,7 @@ function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren:
   const appendix = manualTopics
     .map((topic) => {
       const parts = [`keyword: ${compactNoteText(topic.title) || 'Untitled'}`];
-      const note = preserveNoteLines(renderArticleBody(topic, collectAnchorChildren(topic.id, derivedChildren)));
+      const note = preserveNoteLines(renderArticleBody(topic, derivedChildren));
       if (note) {
         parts.push(`note: ${note}`);
       }
@@ -90,11 +103,10 @@ function renderManualTopicAppendix(manualTopics: ArticleNode[], derivedChildren:
 }
 
 function renderArticleMarkdown(article: ArticleNode, derivedChildren: MirrorRenderableNode[], manualTopics: ArticleNode[]) {
-  const derivedByAnchorKey = collectAnchorChildren(article.id, derivedChildren);
   const title = article.title.trim() || 'Untitled';
   const answer = article.kind === 'item' ? article.reveal?.trim() : '';
   const answerSection = answer ? `\n\n## Answer\n\n${answer}` : '';
-  const body = `${renderArticleBody(article, derivedByAnchorKey).trim()}${answerSection}${renderManualTopicAppendix(manualTopics, derivedChildren)}`.trim();
+  const body = `${renderArticleBody(article, derivedChildren).trim()}${answerSection}${renderManualTopicAppendix(manualTopics, derivedChildren)}`.trim();
   if (body.length === 0) {
     return `# ${title}\n`;
   }

@@ -83,6 +83,21 @@ function collectDerivedNodeIdsByParent(snapshot: WorkspaceSnapshot) {
   return nodeIdsByParent;
 }
 
+function collectDerivedDescendants(parentIds: string[], childrenByParent: Map<string, string[]>) {
+  const result: string[] = [];
+  const visited = new Set(parentIds);
+  const pending = [...parentIds];
+  for (let index = 0; index < pending.length; index += 1) {
+    for (const childId of childrenByParent.get(pending[index]!) ?? []) {
+      if (visited.has(childId)) continue;
+      visited.add(childId);
+      result.push(childId);
+      pending.push(childId);
+    }
+  }
+  return result;
+}
+
 export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoot: string): ArticleMirrorPlan[] {
   const { articles, manualTopicsByArticleId } = collectArticleData(snapshot);
   const derivedNodeIdsByParent = collectDerivedNodeIdsByParent(snapshot);
@@ -104,8 +119,7 @@ export function collectArticleMirrorPlans(snapshot: WorkspaceSnapshot, mirrorRoo
     usedDirectoryNamesByParent.set(targetDirectory, usedNames);
     const targetPath = path.join(targetDirectory, createStableFileName(article.title, article.createdAt, usedNames));
     const manualTopicIds = (manualTopicsByArticleId.get(article.id) ?? []).map((node) => node.id);
-    const derivedNodeIds = [article.id, ...manualTopicIds]
-      .flatMap((nodeId) => derivedNodeIdsByParent.get(nodeId) ?? []);
+    const derivedNodeIds = collectDerivedDescendants([article.id, ...manualTopicIds], derivedNodeIdsByParent);
     return {
       articleId: article.id,
       derivedNodeIds,
