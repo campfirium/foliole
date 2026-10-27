@@ -20,7 +20,7 @@ interface LearningRow extends DbRow, WorkspaceLearningProfileRow {
 
 // This projection owns learning eligibility and concurrency facts, never workspace display data.
 export async function loadDailyFlowLearningSnapshot(db: DbPort, hostName: string,
-  nodeIds: readonly string[]): Promise<DailyFlowLearningSnapshot> {
+  nodeIds?: readonly string[]): Promise<DailyFlowLearningSnapshot> {
   const rows = await db.query<LearningRow>(`SELECT n.id, n.parent_id, n.kind, n.priority, n.shelved_at,
     n.created_at, n.deleted_at,
     CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
@@ -39,8 +39,9 @@ export async function loadDailyFlowLearningSnapshot(db: DbPort, hostName: string
     LEFT JOIN node_reading rd ON rd.node_id = n.id
     LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
     LEFT JOIN node_review nr ON nr.node_id = n.id
-    WHERE n.id IN (SELECT value FROM json_each(?))`, [hostName, JSON.stringify(nodeIds)]);
-  return { nodeOrder: [...nodeIds], nodesById: Object.fromEntries(rows.map(row => [row.id, learningNode(row)])),
+    ${nodeIds ? 'WHERE n.id IN (SELECT value FROM json_each(?))' : ''}`,
+    nodeIds ? [hostName, JSON.stringify(nodeIds)] : [hostName]);
+  return { nodeOrder: nodeIds ? [...nodeIds] : rows.map(row => row.id), nodesById: Object.fromEntries(rows.map(row => [row.id, learningNode(row)])),
     trashedNodeIds: rows.filter(row => row.deleted_at).map(row => row.id) };
 }
 

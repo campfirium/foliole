@@ -12,6 +12,10 @@ export function transactionDailyFlowPersistence(persistence: DailyFlowPersistenc
   return {
     snapshot: persistence.snapshot.bind(persistence),
     async learningSnapshot(db, ids) {
+      if (!ids) {
+        clear();
+        return persistence.learningSnapshot(db);
+      }
       const missing = [...new Set(ids.filter(id => !facts.has(id)))];
       if (missing.length) {
         const loaded = await persistence.learningSnapshot(db, missing);

@@ -16,7 +16,7 @@ export async function readLegacyCycleProjection(db: DbPort, settings: DailyFlowS
   const stored = await readDailyFlow(db);
   if (!stored) throw new Error('daily_flow_changed');
   const rows = (await readCycleRows(db)).filter(row => row.active);
-  const snapshot = await persistence.snapshot(db);
+  const snapshot = await persistence.learningSnapshot(db);
   const plan = flowPlan(snapshot, stored.mode as ReviewSessionMode, now, settings);
   const all = new Set([...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]);
   const allowed = new Set(stored.mode === 'review-first' ? plan.fsrsQueueNodeIds : stored.mode === 'reading-only'

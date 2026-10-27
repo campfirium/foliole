@@ -27,7 +27,7 @@ it.each((['grade', 'read'] as const).flatMap(action => (['parent', 'self'] as co
   await exchange(desktop, mobile);
   local = await open(mobile, minuteDue, settings(mobile), action === 'read' ? 'reading-only' : 'recommended');
   expect(local.queueNodeIds).not.toContain('minute');
-  const reads = vi.spyOn(persistence, 'snapshot');
+  const reads = vi.spyOn(persistence, 'learningSnapshot');
   for (let i = 0; i < 2; i += 1) {
     const next = local.queueNodeIds[1];
     reads.mockClear();
@@ -56,7 +56,7 @@ it('still admits a valid minute item alongside a retired entry, then returns to 
   publish(desktop, 'retired', '2026-10-26T08:02:00.000Z');
   await exchange(desktop, mobile);
   local = await open(mobile);
-  const reads = vi.spyOn(persistence, 'snapshot');
+  const reads = vi.spyOn(persistence, 'learningSnapshot');
   local = await act(mobile, local, 'grade', '2026-10-26T08:10:00.000Z');
   expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
   for (let step = 0; step < 15 && local.currentNodeId !== 'waiting'; step++) {
@@ -84,7 +84,7 @@ it('reconciles a changed mix once without restarting completed progress or repea
   local = await act(mobile, local, 'grade');
   const before = structuredClone(local);
   const changed = { ...settings(mobile), pushQueue: { ...settings(mobile).pushQueue, queueMixRatio: { fsrs: 1, reading: 1 } } };
-  const reads = vi.spyOn(persistence, 'snapshot');
+  const reads = vi.spyOn(persistence, 'learningSnapshot');
   local = await open(mobile, now, changed);
   expect(reads.mock.calls.some(call => call[1] === undefined)).toBe(true);
   expect(local.queueNodeIds.slice(0, before.queueNodeIds.length)).toEqual(before.queueNodeIds);
@@ -113,7 +113,7 @@ it('keeps reading-only actions local while a valid minute review waits for the n
   expect(local.currentNodeId).toBe('minute');
   local = await act(mobile, local, 'grade');
   local = await open(mobile, now, settings(mobile), 'reading-only');
-  const reads = vi.spyOn(persistence, 'snapshot');
+  const reads = vi.spyOn(persistence, 'learningSnapshot');
   for (let i = 0; i < 2; i += 1) {
     reads.mockClear();
     local = await act(mobile, local, 'read', '2026-10-26T08:10:00.000Z');

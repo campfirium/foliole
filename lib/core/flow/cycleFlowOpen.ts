@@ -15,7 +15,7 @@ import { readDailyFlow, readCycleRows, saveCycleFlow, writeCycleRows, type Cycle
 
 export async function initializeCycle(db: DbPort, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence) {
-  const snapshot = await persistence.snapshot(db);
+  const snapshot = await persistence.learningSnapshot(db);
   const seed = args.seed?.sessionStartedAt && flowDay(args.seed.sessionStartedAt, settings) === flowDay(args.now, settings)
     ? args.seed : undefined;
   const initial = prepareFlowSession(snapshot, args, settings, seed);
@@ -38,7 +38,7 @@ export async function initializeCycle(db: DbPort, args: DailyFlowOpenArgs, setti
 
 export async function reconcileCycle(db: DbPort, stored: CycleStored, now: string,
   settings: DailyFlowSettings, persistence: DailyFlowPersistence, captureChanges = false) {
-  const snapshot = await persistence.snapshot(db);
+  const snapshot = await persistence.learningSnapshot(db);
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
   const rows = await readCycleRows(db);
   const meta = { ...stored.session.cycle! };

@@ -1,3 +1,4 @@
+import { projectParentChildOrder, readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapshot.js';
 import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
@@ -16,7 +17,14 @@ import { applyReviewGrade } from './reviewMutations.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 export const desktopDailyFlowPersistence: DailyFlowPersistence = {
-  learningSnapshot: async (db, ids) => loadDailyFlowLearningSnapshot(db, requireDatabaseHostName(openDatabaseConnection().driver), ids),
+  learningSnapshot: async (db, ids) => {
+    const driver = openDatabaseConnection().driver;
+    const snapshot = await loadDailyFlowLearningSnapshot(db, requireDatabaseHostName(driver), ids);
+    if (ids) return snapshot;
+    const members = Object.values(snapshot.nodesById).map(node => ({ id: node.id, parent_id: node.parentNodeId,
+      created_at: node.createdAt, deleted_at: node.deletedAt ?? null }));
+    return { ...snapshot, nodeOrder: projectParentChildOrder(members, readParentChildOrders(driver)) };
+  },
   snapshot: async (_db, nodeIds) => {
     if (nodeIds) {
       const { nodesById, trashedNodeIds } = buildWorkspaceListNodesById(queryWorkspaceRows(openDatabaseConnection().driver, nodeIds));

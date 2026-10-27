@@ -8,7 +8,7 @@ import type { DailyFlowSession } from './dailyFlowSession.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
 export interface DailyFlowPersistence {
-  learningSnapshot(db: DbPort, nodeIds: readonly string[]): Promise<DailyFlowLearningSnapshot>;
+  learningSnapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowLearningSnapshot>;
   snapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowSnapshot>;
   grade(db: DbPort, args: NonNullable<DailyFlowCommitArgs['grade']>, opId: string): Promise<SchedulerCard | null>;
   reading(db: DbPort, value: NonNullable<DailyFlowCommitArgs['readings']>[number], now: string): Promise<void>;
