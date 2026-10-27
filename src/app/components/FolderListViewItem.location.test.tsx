@@ -6,6 +6,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { resolveFolderListLocationPath } from './folderListLocationPath';
+import { FolderListView } from './FolderListView';
 import { FolderListViewItem } from './FolderListViewItem';
 
 function node(id: string, parentNodeId: string | null = null, title = id): Node {
@@ -107,4 +108,32 @@ describe('folder list location semantics', () => {
     fireEvent.click(location, { shiftKey: true });
     expect(onSelectNode).toHaveBeenCalledWith('entry', expect.objectContaining({ shiftKey: true }));
   });
+});
+
+it('keeps virtual result paths and navigation attached to the same entries after sorting and searching', () => {
+  const entries = [node('alpha', 'first', 'Alpha'), node('beta', 'second', 'Beta')];
+  const nodesById = Object.fromEntries([
+    node('root'), node('first', 'root'), node('second', 'root'), ...entries
+  ].map((entry) => [entry.id, entry]));
+  const onSelectNodePath = vi.fn();
+  const list = (sortDirection: 'asc' | 'desc') => (
+    <FolderListView itemLayout="virtual-result" nodes={entries} nodesById={nodesById}
+      onSelectNode={vi.fn()} onSelectNodePath={onSelectNodePath}
+      sortKey="name" sortDirection={sortDirection} />
+  );
+  const view = renderWithLocalization(list('asc'));
+  const titles = () => screen.getAllByRole('button', { name: /^Open (Alpha|Beta)$/ })
+    .map((button) => button.textContent);
+  expect(titles()).toEqual(['Alpha', 'Beta']);
+  view.rerender(list('desc'));
+  expect(titles()).toEqual(['Beta', 'Alpha']);
+  expect(screen.getByRole('button', { name: 'Open real location for Alpha' })).toHaveTextContent('root / first');
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search folder contents' }), {
+    target: { value: 'Beta' }
+  });
+  expect(titles()).toEqual(['Beta']);
+  const location = screen.getByRole('button', { name: 'Open real location for Beta' });
+  expect(location).toHaveTextContent('root / second');
+  fireEvent.click(location);
+  expect(onSelectNodePath).toHaveBeenCalledWith('beta');
 });
