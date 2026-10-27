@@ -10,7 +10,7 @@ import { legacyContinuation } from '../test/dailyFlowLegacyContinuation.testSupp
 
 afterEach(async () => { await closeLibraries(); });
 
-it.each(['desktop', 'mobile'] as const)('selects from latest synchronized facts for the %s daily owner', async owner => {
+it.each(['desktop', 'mobile'] as const)('legacy compatibility: selects from latest synchronized facts for the %s daily owner', async owner => {
   const peers = await setupPeers();
   const local = peers[owner === 'desktop' ? 0 : 1];
   const remote = peers[owner === 'desktop' ? 1 : 0];
@@ -41,7 +41,7 @@ it.each(['desktop', 'mobile'] as const)('selects from latest synchronized facts 
 });
 
 it.each([['desktop', 'delete'], ['desktop', 'read'], ['mobile', 'delete'], ['mobile', 'read']] as const)(
-  'does not install a stale target on %s after synchronized %s', async (owner, action) => {
+  'legacy compatibility: does not install a stale target on %s after synchronized %s', async (owner, action) => {
   const peers = await setupPeers();
   const local = peers[owner === 'desktop' ? 0 : 1];
   const remote = peers[owner === 'desktop' ? 1 : 0];
@@ -73,7 +73,7 @@ it.each([['desktop', 'delete'], ['desktop', 'read'], ['mobile', 'delete'], ['mob
   expect(a.trashedNodeIds.includes(target)).toBe(b.trashedNodeIds.includes(target));
 });
 
-it('refuses mismatched targets, active currents and revision changes without writes', async () => {
+it('legacy compatibility: refuses mismatched targets, active currents and revision changes without writes', async () => {
   const [peer] = await setupPeers();
   node(peer, 'review', 'item'); node(peer, 'reading', 'topic');
   let source = await open(peer);
@@ -92,7 +92,7 @@ it('refuses mismatched targets, active currents and revision changes without wri
 });
 
 
-it.each(['mode', 'unearned'] as const)('preserves completion when the explicit continuation is %s', async reason => {
+it.each(['mode', 'unearned'] as const)('legacy compatibility: preserves completion when the explicit continuation is %s', async reason => {
   const [peer] = await setupPeers();
   node(peer, 'review', 'item'); node(peer, 'reading', 'topic');
   let source = await open(peer);
@@ -106,3 +106,41 @@ it.each(['mode', 'unearned'] as const)('preserves completion when the explicit c
     .rejects.toThrow('daily_flow_changed');
   expect(await readDailyFlow(peer.port)).toEqual(before);
 });
+
+it.each([['desktop', 'delete'], ['desktop', 'read'], ['mobile', 'delete'], ['mobile', 'read']] as const)(
+  'automatically advances the %s cycle and replaces an unavailable current after synchronized %s', async (owner, action) => {
+    const peers = await setupPeers();
+    const local = peers[owner === 'desktop' ? 0 : 1];
+    const remote = peers[owner === 'desktop' ? 1 : 0];
+    node(local, 'review', 'item'); node(local, 'reading', 'topic'); node(local, 'other', 'topic');
+    let session = await open(local);
+    expect(session.currentNodeId).toBe('review');
+    session = await act(local, session, 'grade');
+    expect(['reading', 'other']).toContain(session.currentNodeId);
+    expect(session.continueNodeId).toBeNull();
+    expect(session.cycle?.clearedAt).toBeTruthy();
+    const target = session.currentNodeId!;
+    await exchange(local, remote);
+    if (action === 'delete') {
+      softDeleteNodes(remote.driver, { nodeIds: [target], deletedAt: due });
+      publish(remote, target);
+    } else {
+      const remoteSession = (await openDailyFlow(remote.port,
+        { now, mode: 'reading-only', preferredNodeId: target }, settings(remote), persistence)).session;
+      await act(remote, remoteSession, 'read');
+    }
+    await exchange(remote, local);
+    session = await open(local);
+    expect(session.currentNodeId).toBe(target === 'reading' ? 'other' : 'reading');
+    expect(session.continueNodeId).toBeNull();
+    expect(session.reviewedItemCount).toBe(1);
+    await assertDurable(local, session);
+    session = await act(local, session, 'soon');
+    expect(session.currentNodeId).not.toBe(target);
+    await assertDurable(local, session);
+    await exchange(local, remote);
+    const a = await snapshot(local); const b = await snapshot(remote);
+    expect(a.nodesById[target]?.reading).toEqual(b.nodesById[target]?.reading);
+    expect(a.trashedNodeIds.includes(target)).toBe(b.trashedNodeIds.includes(target));
+    expect(a.nodesById.review!.review).toEqual(b.nodesById.review!.review);
+  });

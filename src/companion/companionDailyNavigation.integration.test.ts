@@ -34,17 +34,21 @@ beforeEach(async () => {
   await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
     state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, now);
   library.database.exec("UPDATE nodes SET kind='topic', reveal=NULL WHERE id IN ('a','b')");
-  const initial = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
-  expect(initial.currentNodeId).toBe('c');
-  source = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now,
-    snapshot: await snapshot(), history: { key, mode: 'recommended', session: initial } })).session!;
-  source = await writeIosCompanionDatabase(db => legacyContinuation(db, source, now));
-  expect(source.currentNodeId).toBeNull();
-  expect(source.continueNodeId).toBeTruthy();
+  source = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
+  expect(source.currentNodeId).toBe('c');
 });
 afterEach(async () => { vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });
 
-it('persists the native mobile continuation once after losing its commit receipt and retains mobile undo across reopening', async () => {
+async function setupLegacy() {
+  source = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now,
+    snapshot: await snapshot(), history: { key, mode: 'recommended', session: source } })).session!;
+  source = await writeIosCompanionDatabase(db => legacyContinuation(db, source, now));
+  expect(source.currentNodeId).toBeNull();
+  expect(source.continueNodeId).toBeTruthy();
+}
+
+it('legacy compatibility: persists the native mobile continuation once after losing its commit receipt and retains mobile undo across reopening', async () => {
+  await setupLegacy();
   const history = await loadCompanionFlowHistory(key);
   const commit = library.connection.commitTransaction.bind(library.connection);
   vi.spyOn(library.connection, 'commitTransaction').mockImplementationOnce(async () => {
@@ -65,7 +69,8 @@ it('persists the native mobile continuation once after losing its commit receipt
   expect(await loadCompanionFlowHistory(key)).toEqual(history);
 });
 
-it('rolls back a late navigation failure and retries without modifying history or learning facts', async () => {
+it('legacy compatibility: rolls back a late navigation failure and retries without modifying history or learning facts', async () => {
+  await setupLegacy();
   const daily = library.database.prepare('SELECT * FROM daily_flow_state').get();
   const facts = library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all();
   const history = await loadCompanionFlowHistory(key);
@@ -79,7 +84,8 @@ it('rolls back a late navigation failure and retries without modifying history o
   expect(library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
 });
 
-it('rejects altered payloads and superseded receipts without a second navigation', async () => {
+it('legacy compatibility: rejects altered payloads and superseded receipts without a second navigation', async () => {
+  await setupLegacy();
   const commit = library.connection.commitTransaction.bind(library.connection);
   vi.spyOn(library.connection, 'commitTransaction').mockImplementationOnce(async () => {
     await commit(); throw new Error('commit_receipt_lost');
@@ -95,7 +101,8 @@ it('rejects altered payloads and superseded receipts without a second navigation
   expect(await readIosCompanionDatabase(db => readDailyFlow(db))).toEqual(daily);
 });
 
-it.each(['day', 'revision', 'library'] as const)('rejects a stale %s before advancing the mobile cursor', async conflict => {
+it.each(['day', 'revision', 'library'] as const)('legacy compatibility: rejects a stale %s before advancing the mobile cursor', async conflict => {
+  await setupLegacy();
   const stale = structuredClone(source);
   if (conflict === 'revision') stale.daily!.revision -= 1;
   if (conflict === 'library') stale.daily!.scope = 'different-library';
@@ -106,7 +113,8 @@ it.each(['day', 'revision', 'library'] as const)('rejects a stale %s before adva
 });
 
 
-it('recovers the latest mobile view after a lost receipt is superseded without navigating twice', async () => {
+it('legacy compatibility: recovers the latest mobile view after a lost receipt is superseded without navigating twice', async () => {
+  await setupLegacy();
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(now));
   const before = await snapshot();
   const scope = getCompanionReadingScope();
@@ -126,7 +134,8 @@ it('recovers the latest mobile view after a lost receipt is superseded without n
   expect((await readIosCompanionDatabase(db => readDailyFlow(db)))!.session).toEqual(current.session);
 });
 
-it('merges mobile navigation receipts while retaining concurrent content and guarding a replaced view', async () => {
+it('legacy compatibility: merges mobile navigation receipts while retaining concurrent content and guarding a replaced view', async () => {
+  await setupLegacy();
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(now));
   const before = await snapshot();
   companionWorkspaceSnapshots.reset(before);
@@ -149,4 +158,45 @@ it('merges mobile navigation receipts while retaining concurrent content and gua
   current.session = source;
   await continueCompanionDailyFlow(args, current, owner, 'recommended', () => {});
   expect(current.session).toBe(source);
+});
+
+it.each(['rollback', 'lost receipt'] as const)('automatically opens mobile reading after retrying the last grade with %s and restores it after reopening', async failure => {
+  const before = await snapshot();
+  const historyBefore = await loadCompanionFlowHistory(key);
+  const facts = library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all();
+  const state = library.database.prepare('SELECT * FROM daily_flow_state').all();
+  const rows = library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all();
+  const grade = (stamp: string) => persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now: stamp,
+    snapshot: before, history: { key, mode: 'recommended', session: source } });
+  if (failure === 'rollback') library.database.exec("CREATE TRIGGER reject_auto BEFORE INSERT ON daily_flow_operations BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+  else {
+    const commit = library.connection.commitTransaction.bind(library.connection);
+    vi.spyOn(library.connection, 'commitTransaction').mockImplementationOnce(async () => {
+      await commit(); throw new Error('commit_receipt_lost');
+    });
+  }
+  await expect(grade(now)).rejects.toThrow();
+  if (failure === 'rollback') {
+    expect(library.database.prepare('SELECT * FROM daily_flow_state').all()).toEqual(state);
+    expect(library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all()).toEqual(rows);
+    expect(library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
+    expect(await loadCompanionFlowHistory(key)).toEqual(historyBefore);
+    library.database.exec('DROP TRIGGER reject_auto');
+  }
+  const committed = library.database.prepare('SELECT * FROM daily_flow_state').all();
+  const after = (await grade(later)).session!;
+  if (failure === 'lost receipt') expect(library.database.prepare('SELECT * FROM daily_flow_state').all()).toEqual(committed);
+  expect(['a', 'b']).toContain(after.currentNodeId);
+  expect(after.continueNodeId).toBeNull();
+  expect(after.cycle?.clearedAt).toBeTruthy();
+  expect(library.database.prepare('SELECT * FROM review_log').all()).toHaveLength(facts.length + 1);
+  const history = await loadCompanionFlowHistory(key);
+  expect(history?.undoStack).toHaveLength(1);
+  await reopenSearchLibrary(library.root, now);
+  expect((await openCompanionDailyFlow({ now, mode: 'recommended' })).session).toEqual(after);
+  expect(await loadCompanionFlowHistory(key)).toEqual(history);
+  expect((await loadCompanionReadableArticle(await snapshot(), after.currentNodeId!))?.content).toBe(after.currentNodeId);
+  const advanced = await persistFlowMutation({ action: 'read', nodeId: after.currentNodeId!, now: later,
+    snapshot: await snapshot(), history: { key, mode: 'recommended', session: after } });
+  expect(advanced.session?.currentNodeId).not.toBe(after.currentNodeId);
 });

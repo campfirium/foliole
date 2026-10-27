@@ -1,4 +1,7 @@
 // @vitest-environment node
+import fs from 'node:fs';
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
@@ -12,10 +15,13 @@ import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
 it('persists a large cycle, changes only affected rows and reads a bounded receipt after reopening', async () => {
-  const sqlite = new Database(':memory:');
+  fs.mkdirSync('.tmp/artifacts/T441', { recursive: true });
+  const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/T441/storage-'));
+  const file = path.join(root, 'cycle.sqlite');
+  let sqlite = new Database(file);
   try {
     sqlite.exec(DAILY_FLOW_CURRENT_SCHEMA.slice(0, 4).join(';'));
-    const db = createBetterSqliteDbPort(sqlite);
+    let db = createBetterSqliteDbPort(sqlite);
     const rows: CycleRow[] = Array.from({ length: 3000 }, (_, index) => ({ node_id: `topic-${index}`,
       order_key: index + 1, active: 1, cohort: 'queue', initial_task: 1, handled: 0 }));
     const session: DailyFlowSession = { currentNodeId: rows[0]!.node_id, queueNodeIds: rows.slice(0, 2).map(row => row.node_id),
@@ -26,6 +32,9 @@ it('persists a large cycle, changes only affected rows and reads a bounded recei
     const args = { dayKey: '2026-10-27', mode: 'recommended', settingsKey: '{"scope":"large"}',
       now: '2026-10-27T00:00:00.000Z', revision: 1, session };
     const saved = await db.transaction(tx => saveCycleFlow(tx, args));
+    sqlite.close();
+    sqlite = new Database(file);
+    db = createBetterSqliteDbPort(sqlite);
     const query = db.query.bind(db);
     let largestResponse = 0;
     db.query = async <T extends DbRow>(sql: string, params?: DbParams) => {
@@ -37,8 +46,17 @@ it('persists a large cycle, changes only affected rows and reads a bounded recei
     expect(largestResponse).toBeLessThan(4096);
     const first = rows[0]!;
     await db.transaction(tx => writeCycleRows(tx, [{ ...first, order_key: 3001, cohort: 'soon', initial_task: 0, handled: 1 }]));
-    expect(await readCycleRows(db, [rows[1]!.node_id])).toEqual([rows[1]]);
+    expect((await readCycleRows(db)).filter(row => row.node_id !== first.node_id)).toEqual(rows.slice(1));
     expect((await readCycleRows(db, [first.node_id]))[0]).toMatchObject({ order_key: 3001, cohort: 'soon' });
     expect(sqlite.prepare('SELECT COUNT(*) AS n FROM daily_flow_entries').get()).toEqual({ n: 3000 });
-  } finally { sqlite.close(); }
+    sqlite.close();
+    sqlite = new Database(file);
+    db = createBetterSqliteDbPort(sqlite);
+    expect((await readDailyFlow(db))!.session).toEqual(saved);
+    expect(await readCycleRows(db)).toEqual([...rows.slice(1),
+      { ...first, order_key: 3001, cohort: 'soon', initial_task: 0, handled: 1 }]);
+  } finally {
+    sqlite.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

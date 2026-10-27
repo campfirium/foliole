@@ -37,6 +37,7 @@ it.each(['empty', 'review', 'reading'] as const)('admits newly due minute review
   reads.mockClear();
   expect(await open(due)).toEqual(session);
   expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
+  await expectEventuallyCurrent(peer, session, 'minute');
 });
 
 it.each(['reading-only', 'recommended'] as const)('refreshes due reading in %s without interrupting the current', async mode => {
@@ -56,9 +57,10 @@ it.each(['reading-only', 'recommended'] as const)('refreshes due reading in %s w
   expect(session.queueNodeIds.length).toBeLessThanOrEqual(2);
   expect(peer.db.prepare("SELECT next_at FROM node_reading WHERE node_id='later'").get()).toEqual({ next_at: due });
   await assertDurable(peer, session);
+  await expectEventuallyCurrent(peer, session, 'later');
 });
 
-it('keeps hidden Soon ordered when same-mode reentry admits a minute review', async () => {
+it.each(['review-first', 'recommended'] as const)('keeps hidden Soon ordered and reaches a due minute review after reentry in %s', async mode => {
   const [peer] = await setupPeers();
   for (const id of ['a', 'b']) node(peer, id, 'topic');
   const open = async (stamp: string, mode: 'recommended' | 'review-first') =>
@@ -82,9 +84,21 @@ it('keeps hidden Soon ordered when same-mode reentry admits a minute review', as
   expect((await readCycleRows(peer.port, [first!, second!])).sort((a,b) => a.order_key-b.order_key).map(row => row.node_id)).toEqual([first, second]);
   expect(session.readTopicCount).toBe(2);
   await assertDurable(peer, session);
-  session = await open(due, 'recommended');
+  session = await open(due, mode);
   expect((await readCycleRows(peer.port, [first!, second!])).sort((a,b) => a.order_key-b.order_key).map(row => row.node_id)).toEqual([first, second]);
   expect(session.currentNodeId).toBe('current');
   expect((await readCycleRows(peer.port, ['minute']))[0]?.active).toBe(1);
   await assertDurable(peer, session);
+  await expectEventuallyCurrent(peer, session, 'minute');
 });
+
+async function expectEventuallyCurrent(peer: Parameters<typeof act>[0], session: Parameters<typeof act>[1], target: string) {
+  // These fixtures contain at most seven nodes; one bounded lap must reach the due target.
+  for (let step = 0; step < 8 && session.currentNodeId !== target; step++) {
+    expect(session.currentNodeId).toBeTruthy();
+    const current = peer.db.prepare('SELECT kind FROM nodes WHERE id=?').get(session.currentNodeId) as { kind: string };
+    session = await act(peer, session, current.kind === 'item' ? 'grade' : 'soon', due);
+  }
+  expect(session.currentNodeId).toBe(target);
+  await assertDurable(peer, session);
+}

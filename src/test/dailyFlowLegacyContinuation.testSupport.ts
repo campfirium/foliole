@@ -3,6 +3,7 @@ import { readDailyFlow, saveCycleFlow } from '../../lib/core/flow/dailyFlowStora
 import type { DbPort } from '../../lib/core/sync/dbPort';
 
 // Exercise the retained explicit command with a completion cursor from the old UI.
+// Synthetic compatibility fixture only; never evidence for normal cycle acceptance.
 // Newly completed cycles now cross this point automatically.
 export async function legacyContinuation(db: DbPort, session: DailyFlowSession, now: string) {
   const state = await readDailyFlow(db);

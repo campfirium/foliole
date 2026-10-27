@@ -56,7 +56,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-async function setup() {
+async function setupAutomatic() {
   const nodes = [createQaNode('review', now), createReadingNode('topic', now), createReadingNode('other', now)];
   for (const node of nodes) upsertNodeSnapshot({ nodeId: node.id, title: node.title, kind: node.kind,
     parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review,
@@ -65,16 +65,21 @@ async function setup() {
   const actions = createWorkspaceReviewActions(app.setState, app.getState, createLocalReviewSchedulerAdapter());
   app.setState({ ...actions, ...createWorkspaceActionHistoryActions(app.setState, app.getState) });
   await actions.startReviewSession(now);
-  actions.revealReviewAnswer();
-  expect(await actions.gradeReviewCard(3, now)).toBe(true);
-  app.setState({ reviewSession: await legacyContinuation(createBetterSqliteDbPort(openDatabaseConnection().sqlite), app.getState().reviewSession, now) });
-  expect(app.getState().reviewSession.currentNodeId).toBeNull();
-  expect(app.getState().reviewSession.continueNodeId).toBeTruthy();
   return { ...app, actions };
 }
 
-it('continues through the native save, retains the first payload after a lost receipt, and restores the persisted reading', async () => {
-  const app = await setup();
+async function setupLegacy() {
+  const app = await setupAutomatic();
+  app.actions.revealReviewAnswer();
+  expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
+  app.setState({ reviewSession: await legacyContinuation(createBetterSqliteDbPort(openDatabaseConnection().sqlite), app.getState().reviewSession, now) });
+  expect(app.getState().reviewSession.currentNodeId).toBeNull();
+  expect(app.getState().reviewSession.continueNodeId).toBeTruthy();
+  return app;
+}
+
+it('legacy compatibility: continues through the native save, retains the first payload after a lost receipt, and restores the persisted reading', async () => {
+  const app = await setupLegacy();
   const before = app.getState();
   loseReceipt = true;
   expect(await app.actions.continueReviewSessionReading(now)).toBe(false);
@@ -93,8 +98,8 @@ it('continues through the native save, retains the first payload after a lost re
   expect(createWorkspaceStorePersistConfig(() => undefined).merge!({}, app.getState()).appActionHistory.undoStack).toEqual([]);
 });
 
-it('keeps completion and history when navigation fails late, then retries the same transaction', async () => {
-  const app = await setup();
+it('legacy compatibility: keeps completion and history when navigation fails late, then retries the same transaction', async () => {
+  const app = await setupLegacy();
   const before = app.getState();
   const db = openDatabaseConnection();
   const rows = db.driver.queryAll('SELECT * FROM daily_flow_state');
@@ -107,8 +112,8 @@ it('keeps completion and history when navigation fails late, then retries the sa
   expect(await app.actions.continueReviewSessionReading(now)).toBe(true);
 });
 
-it('rejects altered payloads and recovers superseded and cross-day navigation without repeating it', async () => {
-  const app = await setup();
+it('legacy compatibility: rejects altered payloads and recovers superseded and cross-day navigation without repeating it', async () => {
+  const app = await setupLegacy();
   const source = app.getState().reviewSession;
   loseReceipt = true;
   expect(await app.actions.continueReviewSessionReading(now)).toBe(false);
@@ -122,16 +127,16 @@ it('rejects altered payloads and recovers superseded and cross-day navigation wi
   expect(app.getState().reviewSession.daily!.revision).toBe(revision + 1);
 });
 
-it('recovers a new learning day before applying a stale continuation', async () => {
-  const fresh = await setup();
+it('legacy compatibility: recovers a new learning day before applying a stale continuation', async () => {
+  const fresh = await setupLegacy();
   const source = fresh.getState().reviewSession;
   expect(await fresh.actions.continueReviewSessionReading('2026-10-27T08:00:00.000Z')).toBe(false);
   expect(fresh.getState().reviewSession.daily!.dayKey).not.toBe(source.daily!.dayKey);
 });
 
 
-it('rejects a library token mismatch without installing a view from another library', async () => {
-  const app = await setup();
+it('legacy compatibility: rejects a library token mismatch without installing a view from another library', async () => {
+  const app = await setupLegacy();
   const source = app.getState().reviewSession;
   app.setState({ reviewSession: { ...source, daily: { ...source.daily!, scope: 'other-library' } } });
   const before = app.getState().reviewSession;
@@ -142,8 +147,8 @@ it('rejects a library token mismatch without installing a view from another libr
 });
 
 
-it('retains concurrent content when merging a navigation receipt and does not replace a newer view', async () => {
-  const app = await setup();
+it('legacy compatibility: retains concurrent content when merging a navigation receipt and does not replace a newer view', async () => {
+  const app = await setupLegacy();
   const target = app.getState().reviewSession.continueNodeId!;
   afterSave = () => app.setState(state => ({ nodesById: { ...state.nodesById,
     [target]: { ...state.nodesById[target]!, content: 'Concurrent content' } } }));
@@ -151,10 +156,46 @@ it('retains concurrent content when merging a navigation receipt and does not re
   expect(app.getState().nodesById[target]!.content).toBe('Concurrent content');
 });
 
-it('does not replace a newer desktop view after navigation commits', async () => {
-  const app = await setup();
+it('legacy compatibility: does not replace a newer desktop view after navigation commits', async () => {
+  const app = await setupLegacy();
   const saved = app.getState().reviewSession;
   afterSave = () => app.setState({ reviewSession: { ...saved, currentNodeId: 'newer-view' } });
   expect(await app.actions.continueReviewSessionReading(now)).toBe(false);
   expect(app.getState().reviewSession.currentNodeId).toBe('newer-view');
+});
+
+it.each(['rollback', 'lost receipt'] as const)('automatically opens reading after retrying the last grade with %s and restores it after reopening', async failure => {
+  const app = await setupAutomatic();
+  app.actions.revealReviewAnswer();
+  const before = app.getState().reviewSession;
+  expect(before.currentNodeId).toBe('review');
+  const db = openDatabaseConnection();
+  const state = db.driver.queryAll('SELECT * FROM daily_flow_state');
+  const entries = db.driver.queryAll('SELECT * FROM daily_flow_entries ORDER BY order_key');
+  if (failure === 'rollback') db.sqlite.exec("CREATE TRIGGER reject_auto BEFORE INSERT ON daily_flow_operations BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+  else loseReceipt = true;
+  expect(await app.actions.gradeReviewCard(3, now)).toBe(false);
+  expect(app.getState().reviewSession).toEqual(before);
+  if (failure === 'rollback') {
+    expect(db.driver.queryAll('SELECT * FROM daily_flow_state')).toEqual(state);
+    expect(db.driver.queryAll('SELECT * FROM daily_flow_entries ORDER BY order_key')).toEqual(entries);
+    expect(db.driver.queryAll('SELECT * FROM review_log')).toEqual([]);
+    expect(app.getState().appActionHistory.undoStack).toEqual([]);
+    db.sqlite.exec('DROP TRIGGER reject_auto');
+  }
+  const committed = db.driver.queryAll('SELECT * FROM daily_flow_state');
+  expect(await app.actions.gradeReviewCard(3, '2026-10-26T08:00:30.000Z')).toBe(true);
+  if (failure === 'lost receipt') expect(db.driver.queryAll('SELECT * FROM daily_flow_state')).toEqual(committed);
+  const after = app.getState().reviewSession;
+  expect(['topic', 'other']).toContain(after.currentNodeId);
+  expect(after.continueNodeId).toBeNull();
+  expect(after.cycle?.clearedAt).toBeTruthy();
+  expect(db.driver.queryAll('SELECT * FROM review_log')).toHaveLength(1);
+  expect(app.getState().appActionHistory.undoStack).toHaveLength(1);
+  closeDatabaseConnection(); initializeDatabase();
+  const restored = (await openDesktopDailyFlow({ now, mode: 'recommended' })).session;
+  expect(restored).toEqual(after);
+  expect(loadWorkspaceSnapshot({ includeBody: true })!.nodesById[restored.currentNodeId!]!.content).toBeTruthy();
+  expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).not.toBe(after.currentNodeId);
 });
