@@ -184,3 +184,11 @@ it('waits for review scheduler settings before restoring a startup review sessio
   expect(props.resumeReviewSession).toHaveBeenCalledTimes(1);
   expect(props.startReviewSession).not.toHaveBeenCalled();
 });
+
+it('does not enter study mode for a prepared daily list that has never started', () => {
+  const startStudyMode = vi.fn();
+  renderHook(() => useReviewModeRestoredSessionAutoOpen({ isReviewSessionCompleted: false,
+    isReviewSchedulerSettingsReady: true, isStudyMode: false, isWorkspaceHydrated: true,
+    reviewCurrentNodeId: 'prepared-current', isReviewSessionStarted: false, startStudyMode }));
+  expect(startStudyMode).not.toHaveBeenCalled();
+});

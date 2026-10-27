@@ -2,13 +2,20 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { CycleMeta, CycleRow } from './cycleFlowTypes.js';
-import type { DailyFlowSettings } from './dailyFlowContract.js';
+import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
 import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 
 const BATCH_SIZE = 32;
+
+export function cycleReadyNodeIds(snapshot: DailyFlowLearningSnapshot, mode: ReviewSessionMode,
+  now: string, settings: DailyFlowSettings) {
+  const plan = flowPlan(snapshot, mode, now, settings);
+  return mode === 'review-first' ? plan.fsrsQueueNodeIds : mode === 'reading-only'
+    ? plan.readingQueueNodeIds : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds];
+}
 
 async function scanRange(db: DbPort, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
   settings: DailyFlowSettings; persistence: DailyFlowPersistence; excluded?: string }) {
@@ -17,9 +24,7 @@ async function scanRange(db: DbPort, meta: CycleMeta, args: { mode: ReviewSessio
       AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [meta.scanAfter, meta.lapLimit, BATCH_SIZE]);
     const ids = rows.map(row => row.node_id);
     const snapshot = ids.length ? await scopedDailyLearningSnapshot(db, args.persistence, ids) : null;
-    const plan = snapshot ? flowPlan({ ...snapshot, nodeOrder: ids }, args.mode, args.now, args.settings) : null;
-    const ready = new Set(args.mode === 'review-first' ? plan?.fsrsQueueNodeIds : args.mode === 'reading-only'
-      ? plan?.readingQueueNodeIds : [...(plan?.fsrsQueueNodeIds ?? []), ...(plan?.readingQueueNodeIds ?? [])]);
+    const ready = new Set(snapshot ? cycleReadyNodeIds({ ...snapshot, nodeOrder: ids }, args.mode, args.now, args.settings) : []);
     for (const row of rows) {
       crossClear(meta, row.order_key, args.now);
       meta.scanAfter = row.order_key;

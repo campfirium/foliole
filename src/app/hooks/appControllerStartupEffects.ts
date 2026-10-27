@@ -34,6 +34,7 @@ export function useControllerStartupEffects(args: {
     isStudyMode: args.isStudyMode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
+    isReviewSessionStarted: Boolean(args.ws.reviewSession.sessionStartedAt),
     startStudyMode: args.startStudyMode
   });
   useReviewModeStartupSessionRestore({

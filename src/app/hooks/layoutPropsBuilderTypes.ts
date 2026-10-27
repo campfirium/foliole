@@ -1,3 +1,4 @@
+import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
@@ -21,6 +22,7 @@ import type {
 import type { StartStudyModeOptions } from './reviewModeSessionActions';
 
 export interface BuildLayoutPropsArgs {
+  dailyFlowView?: DailyFlowView | undefined;
   activeNodeId: string | null;
   browseRootNodeId: string;
   isWorkspaceHydrated: boolean;

@@ -36,3 +36,21 @@ export async function loadDailyFlowDisplayNodes(result: DailyFlowResult, knownNo
     structure: false, libraryScope: scope });
   return projection.nodesById as Record<string, WorkspaceNodeSnapshot>;
 }
+
+export async function loadDailyFlowViewRuntime(args: import('../../../../lib/core/flow/dailyFlowViewContract').DailyFlowViewArgs,
+  seed: import('../../../../lib/core/flow/dailyFlowSession').DailyFlowSession,
+  knownNodes: Record<string, unknown>) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('Daily Flow storage is unavailable.');
+  let view = await invoke(NATIVE_COMMANDS.readDailyFlowView, args);
+  if (view.status === 'needs-preparation') {
+    const prepared = await invoke(NATIVE_COMMANDS.openDailyFlow, { now: args.now, mode: args.mode, seed,
+      prepareOnly: true, startup: !seed.sessionStartedAt });
+    view = await invoke(NATIVE_COMMANDS.readDailyFlowView, { ...args, mode: prepared.mode ?? args.mode });
+  }
+  if (view.status !== 'ready') throw new Error('Daily Flow view is not ready.');
+  const missing = (view.nodeIds ?? []).filter(id => !knownNodes[id]);
+  const projection = missing.length ? await invoke(NATIVE_COMMANDS.loadWorkspaceListProjection,
+    { nodeIds: [], ancestorNodeIds: missing, structure: false, libraryScope: view.scope }) : null;
+  return { view, nodes: projection?.nodesById };
+}

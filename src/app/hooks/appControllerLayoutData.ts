@@ -20,6 +20,7 @@ export function createLayoutDataArgs(
     canGoForward: resolveLayoutCanGoForward(args),
     canGoParent: args.nav.canGoParent,
     canStartStudyMode: args.canStartStudyMode,
+    dailyFlowView: args.dailyFlowView,
     contextMenu: args.editorCtx.contextMenu,
     editorAdapterRef: args.runtime.editorRef,
     ...resolveEditorBindingArgs(args),

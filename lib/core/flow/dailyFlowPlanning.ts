@@ -50,7 +50,7 @@ export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFl
   const current = preferred && (queue.includes(preferred) || soon.includes(preferred) || preferred === continuation) ? preferred : queue[0] ?? soon.shift() ?? null;
   if (current && queue.includes(current)) queue.splice(0, queue.length, current, ...queue.filter(id => id !== current));
   const prior = seed ?? { currentNodeId: null, queueNodeIds: [], isAnswerRevealed: false, totalNodeCount: 0,
-    sessionStartedAt: args.now, currentItemStartedAt: args.now,
+    sessionStartedAt: args.prepareOnly ? null : args.now, currentItemStartedAt: args.prepareOnly ? null : args.now,
     readingElapsedMs: 0, readTopicCount: 0, reviewElapsedMs: 0, reviewedItemCount: 0 };
   return { ...prior, currentNodeId: current, queueNodeIds: queue, soonNodeIds: soon.filter(id => id !== current),
     ...(hiddenSoon.length || seed?.hiddenSoonNodeIds ? { hiddenSoonNodeIds: hiddenSoon } : {}),

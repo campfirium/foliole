@@ -1,5 +1,6 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { hasDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import {
   inspectorListHeadingClassName,
@@ -7,6 +8,9 @@ import {
   inspectorListMetaClassName
 } from '../../shared/ui';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useDailyFlowView } from '../hooks/useDailyFlowView';
+
 
 import { getDemoPreviewDisplayDay } from './workspaceRightSidebarReviewQueueDays';
 import { collectDemoFlowNodeIds, DemoDayLabel, renderDemoDaySections } from './WorkspaceRightSidebarReviewQueueDemoSections';
@@ -101,6 +105,27 @@ function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps
 }
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
+  return hasDailyFlowRuntime() ? <DailyFlowQueuePanel {...props} /> : <FlowQueuePanel {...props} />;
+}
+
+function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  const reviewSession = useWorkspaceStore(state => state.reviewSession);
+  const reviewSessionMode = useWorkspaceStore(state => state.reviewSessionMode);
+  const isHydrated = useWorkspaceStore(state => state.isHydrated);
+  const now = props.flowWindow.queriedAt ?? '';
+  const nodesById = useWorkspaceStore(state => state.nodesById);
+  const result = useDailyFlowView({ libraryScope, reviewSession, reviewSessionMode, nodesById,
+    now, includeEntries: true, enabled: isHydrated && Boolean(now) });
+  if (result?.error) return <p role="alert">Could not load Flow.</p>;
+  if (!result?.view) return null;
+  const nodeIds = result.view.nodeIds ?? [];
+  return <FlowQueuePanel {...props} currentNodeId={result.view.currentNodeId}
+    nodesById={result.nodes ? { ...nodesById, ...result.nodes } : nodesById}
+    flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: [], dayBuckets: [], dayOffsetByNodeId: {} }} />;
+}
+
+function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
   const t = useTranslation();
   const demoState = useDemoRuntimeState();
   const { isDemo } = demoState;

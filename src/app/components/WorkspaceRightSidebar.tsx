@@ -45,6 +45,7 @@ function areReviewFlowWindowsEqual(
     return previous === next;
   }
   return (
+    previous.queriedAt === next.queriedAt &&
     areStringArraysEqual(previous.queueNodeIds, next.queueNodeIds) &&
     areStringArraysEqual(previous.readyNodeIds, next.readyNodeIds) &&
     areStringArraysEqual(previous.upcomingNodeIds, next.upcomingNodeIds) &&

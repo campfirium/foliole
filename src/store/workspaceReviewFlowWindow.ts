@@ -16,6 +16,7 @@ type ReviewFlowWindowState = Pick<
 > & Partial<Pick<WorkspaceState, 'trashedNodeDeletedAtById'>>;
 
 export interface ReviewFlowWindow {
+  queriedAt?: string;
   dayBuckets: ReviewFlowDayBucket[];
   dayOffsetByNodeId: Record<string, number | undefined>;
   queueNodeIds: string[];

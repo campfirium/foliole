@@ -94,6 +94,15 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
 });
 
 describe('WorkspaceLayoutGrid right sidebar wiring', () => {
+  it('unmounts the Flow list consumer when the right sidebar closes', () => {
+    const props = buildProps(false);
+    const app = renderGrid(props);
+    expect(screen.getByTestId('right-sidebar')).toBeInTheDocument();
+    app.rerender(createGridElement({ ...props,
+      layoutChrome: { ...props.layoutChrome, isRightSidebarCollapsed: true } }));
+    expect(screen.queryByTestId('right-sidebar')).toBeNull();
+  });
+
   it('forwards breadcrumb selection into the right sidebar', () => {
     const { getByTestId } = renderGrid(buildProps(false));
 

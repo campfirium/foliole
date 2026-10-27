@@ -6,6 +6,8 @@ import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
+import { readDailyFlowView } from '../../lib/core/flow/dailyFlowView.js';
+import { dailyFlowViewSchema } from '../../lib/core/flow/dailyFlowViewContract.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { currentLibraryScope } from './attachmentResourceDescription.js';
@@ -61,4 +63,9 @@ export async function commitDesktopDailyFlow(args: unknown) {
     dailyFlowCommitSchema.parse(args), settings(), desktopDailyFlowPersistence);
   scheduleDesktopFlowDocumentPreparation(result.session, settings(), desktopDailyFlowPersistence);
   return result;
+}
+
+export function readDesktopDailyFlowView(args: unknown) {
+  return readDailyFlowView(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+    dailyFlowViewSchema.parse(args), settings(), desktopDailyFlowPersistence);
 }

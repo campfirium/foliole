@@ -6,6 +6,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   reviewCurrentNodeId: string | null;
+  isReviewSessionStarted?: boolean;
   startStudyMode: (options?: { force?: boolean }) => void;
 }) {
   const openedRestoredSessionRef = useRef(false);
@@ -17,7 +18,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
     if (openedRestoredSessionRef.current) {
       return;
     }
-    if (!args.reviewCurrentNodeId) {
+    if (!args.reviewCurrentNodeId || args.isReviewSessionStarted === false) {
       return;
     }
     openedRestoredSessionRef.current = true;
@@ -28,6 +29,7 @@ export function useReviewModeRestoredSessionAutoOpen(args: {
     args.isStudyMode,
     args.isWorkspaceHydrated,
     args.reviewCurrentNodeId,
+    args.isReviewSessionStarted,
     args.startStudyMode
   ]);
 }

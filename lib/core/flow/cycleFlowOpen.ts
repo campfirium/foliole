@@ -118,6 +118,11 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
       await chooseCycleCurrent(db, session, args.mode, args.now, settings, persistence);
     }
   }
+  if (args.prepareOnly && !session.sessionStartedAt) {
+    session = { ...session, sessionStartedAt: null, currentItemStartedAt: null, completedAt: null };
+  } else if (!args.prepareOnly && session.currentNodeId && !session.sessionStartedAt) {
+    session = { ...session, sessionStartedAt: args.now, currentItemStartedAt: args.now };
+  }
   session = cycleWindow(session);
   if (captureChanges && session.cycle?.change) {
     session.cycle.stamp = cycleStamp(session.cycle, session);

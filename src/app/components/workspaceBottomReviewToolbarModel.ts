@@ -4,6 +4,7 @@ import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import type { WorkspaceBottomReviewToolbarProps, WorkspaceBottomReviewToolbarSource } from './WorkspaceBottomReviewToolbar';
 
 export function getReviewSessionModeAvailability(source: WorkspaceBottomReviewToolbarSource): ReviewSessionModeAvailability {
+  if (source.review.reviewSessionModeAvailability) return source.review.reviewSessionModeAvailability;
   let hasReview = false;
   let hasReading = false;
   for (const nodeId of source.review.reviewPanelQueueNodeIds) {

@@ -1,3 +1,4 @@
+import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type {
   EditorOperationHistoryEntry,
@@ -50,6 +51,7 @@ import type { useVirtualNodeView } from './useVirtualNodeView';
 import type { useWorkspaceNavigation } from './useWorkspaceNavigation';
 
 export interface BuildControllerLayoutPropsArgs {
+  dailyFlowView?: DailyFlowView | undefined;
   activeNode: Node | undefined;
   canStartStudyMode: boolean;
   editorCtx: ReturnType<typeof useEditorContextCommands>;

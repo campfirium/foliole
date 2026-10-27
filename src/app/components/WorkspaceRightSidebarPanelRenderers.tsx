@@ -45,6 +45,7 @@ function areReviewQueueSidebarPropsEqual(
   nextProps: ReviewQueueSidebarProps
 ) {
   if (previousProps.currentNodeId !== nextProps.currentNodeId) return false;
+  if (previousProps.flowWindow.queriedAt !== nextProps.flowWindow.queriedAt) return false;
   if (previousProps.onSelectNode !== nextProps.onSelectNode) return false;
   const previousFlowNodeIds = collectFlowWindowNodeIds(previousProps.flowWindow);
   const nextFlowNodeIds = collectFlowWindowNodeIds(nextProps.flowWindow);

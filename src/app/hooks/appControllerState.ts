@@ -4,12 +4,9 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { getDemoRuntimeNowIso, subscribeDemoRuntimeState, useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { getDemoRuntimeNowIso, subscribeDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import { flushEditorOperationHistorySave } from '../../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/runtime/foliolePublishedNavigation';
-import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import { buildStartReviewSessionQueue } from '../../store/workspaceReviewLiveQueue';
 
 import {
   useActiveNodeReadingPositionRestore,
@@ -23,10 +20,10 @@ import { useListResizer } from './useListResizer';
 import { useReadingProgressSync } from './useReadingProgressSync';
 import { useRemovedSourcesWarmup } from './useRemovedSourcesWarmup';
 import { useRightSidebarResizer } from './useRightSidebarResizer';
-import { useStudyMode } from './useStudyMode';
 import { useWorkspaceActiveNodeDocument } from './useWorkspaceActiveNodeDocument';
 import { useWorkspaceNavigation } from './useWorkspaceNavigation';
 import { useWorkspaceSpecialViews } from './useWorkspaceSpecialViews';
+import { useWorkspaceStudyModeState } from './useWorkspaceStudyModeState';
 
 export { useWorkspaceSelectors };
 
@@ -44,43 +41,6 @@ export function useNowIso(tickMs = 15_000) {
     };
   }, [tickMs]);
   return nowIso;
-}
-
-function useReviewStartBlockedNotice(isReviewSchedulerSettingsReady: boolean) {
-  const t = useTranslation();
-  if (!isReviewSchedulerSettingsReady) {
-    return undefined;
-  }
-  return () => showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
-}
-
-function resolveCanStartStudyMode(args: {
-  isDemo: boolean;
-  isReviewSchedulerSettingsReady: boolean;
-  nowIso: string;
-  ws: WorkspaceControllerStateInput;
-}) {
-  return args.isReviewSchedulerSettingsReady && buildStartReviewSessionQueue(args.ws, args.nowIso, {
-    includeScheduledFallback: args.isDemo
-  }).length > 0;
-}
-
-function useWorkspaceStudyModeState(args: {
-  isReviewSchedulerSettingsReady: boolean;
-  nowIso: string;
-  ws: WorkspaceControllerStateInput;
-}) {
-  const demoRuntime = useDemoRuntimeState();
-  const canStartStudyMode = resolveCanStartStudyMode({
-    isDemo: demoRuntime.isDemo,
-    isReviewSchedulerSettingsReady: args.isReviewSchedulerSettingsReady,
-    nowIso: args.nowIso,
-    ws: args.ws
-  });
-  return useStudyMode({
-    canStartStudyMode,
-    onBlockedStart: useReviewStartBlockedNotice(args.isReviewSchedulerSettingsReady)
-  });
 }
 
 function useWorkspaceReadingProgressPersistence(args: {
