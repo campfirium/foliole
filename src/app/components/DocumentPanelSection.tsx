@@ -1,6 +1,3 @@
-import { useMemo, useRef } from 'react';
-
-import { collectDocumentTextAnchorDecorations } from '../../features/editor/model/documentTextAnchorDecorations';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -29,40 +26,12 @@ import { useDocumentPanelFormulaClozePresentation } from './useDocumentPanelForm
 import { useDocumentPanelImageClozePresentation } from './useDocumentPanelImageClozePresentation';
 import { useDocumentPanelPerformanceMarkers } from './useDocumentPanelPerformanceMarkers';
 import { useDocumentPanelSourceUpdateState } from './useDocumentPanelSourceUpdateState';
+import { useDocumentPanelTextAnchorState } from './useDocumentPanelTextAnchorState';
 import { useExternalLinkPanels } from './useExternalLinkPanels';
 import { useNodeBacklinks } from './useNodeBacklinks';
 import { useNodeLinkHoverPreview } from './useNodeLinkHoverPreview';
 
 export type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
-
-function useDocumentPanelTextAnchorState(props: DocumentPanelSectionProps) {
-  const previousDecorationsRef = useRef<ReturnType<typeof collectDocumentTextAnchorDecorations>>([]);
-  return useMemo(() => {
-    const nextDecorations = collectDocumentTextAnchorDecorations({
-      activeNodeId: props.activeNodeId,
-      nodesById: props.nodesById,
-      parentContent: props.editorContent,
-      trashedNodeIds: props.trashedNodeIds
-    });
-    const previousDecorations = previousDecorationsRef.current;
-    const isSame =
-      previousDecorations.length === nextDecorations.length &&
-      previousDecorations.every((previousDecoration, index) => {
-        const nextDecoration = nextDecorations[index];
-        return (
-          previousDecoration?.from === nextDecoration?.from &&
-          previousDecoration?.to === nextDecoration?.to &&
-          previousDecoration?.kind === nextDecoration?.kind &&
-          previousDecoration?.nodeId === nextDecoration?.nodeId
-        );
-      });
-    if (isSame) {
-      return previousDecorations;
-    }
-    previousDecorationsRef.current = nextDecorations;
-    return nextDecorations;
-  }, [props.activeNodeId, props.editorContent, props.nodesById, props.trashedNodeIds]);
-}
 
 function useDocumentPanelClozePresentations(activeNode: Node | undefined, props: DocumentPanelSectionProps) {
   useDocumentPanelImageClozePresentation({

@@ -13,6 +13,7 @@ import {
 } from '../../features/formula-cloze/model/formulaClozePresentation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { useDocumentPanelMarkerChildren } from './useDocumentPanelMarkerChildren';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 function registerParentFormulaPresentation(editorNodeId: string, activeNode: Node, nodesById: Record<string, Node>, trashedNodeIds: string[]) {
@@ -72,20 +73,21 @@ export function useDocumentPanelFormulaClozePresentation(args: {
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
+  const markerChildren = useDocumentPanelMarkerChildren(args.activeNode?.id ?? null, args.nodesById);
   const registeredIdsRef = useRef<string[]>([]);
   useLayoutEffect(() => {
     measureWorkspaceDiagnostic('document-panel-formula-cloze-layout-effect', {
       activeNodeId: args.activeNode?.id,
       editorNodeId: args.editorNodeId,
-      nodeCount: Object.keys(args.nodesById).length
+      markerChildCount: Object.keys(markerChildren).length
     }, () => {
-      const registeredIds = registerFormulaPresentation(args);
+      const registeredIds = registerFormulaPresentation({ ...args, nodesById: markerChildren });
       for (const id of registeredIdsRef.current) {
         if (!registeredIds.includes(id)) unregisterFormulaClozeEditorPresentation(id);
       }
       registeredIdsRef.current = registeredIds;
     });
-  }, [args.activeNode, args.editorNodeId, args.nodesById, args.trashedNodeIds]);
+  }, [args.activeNode, args.editorNodeId, markerChildren, args.trashedNodeIds]);
   useLayoutEffect(() => () => {
     registeredIdsRef.current.forEach(unregisterFormulaClozeEditorPresentation);
     registeredIdsRef.current = [];
