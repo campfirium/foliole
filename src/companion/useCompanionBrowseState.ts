@@ -12,6 +12,7 @@ import {
   resolveCompanionRecentArticles
 } from '../shared/platform/companionBrowseLists';
 
+import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -40,22 +41,26 @@ export function useCompanionBrowseState(
   sort: CompanionBrowseSortState = {
     sortDirection: DEFAULT_FOLDER_LIST_SORT_DIRECTION,
     sortKey: DEFAULT_FOLDER_LIST_SORT_KEY
-  }
+  },
+  display: { activeAction: CompanionTabAction; flowNodeId: string | null } = { activeAction: 'recent', flowNodeId: null }
 ) {
   const snapshot = workspaceSync.state.workspace_snapshot;
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
-  const projectedArticles = useMemo(
-    () => resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection),
-    [browseSnapshot, sort.sortDirection, sort.sortKey]
-  );
-  const recentArticles = useMemo(() => projectedArticles.length > 0
-    ? projectedArticles : buildReadableArticleFallback(workspaceSync.readableArticle),
-  [projectedArticles, workspaceSync.readableArticle]);
   const { browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
     snapshot,
     workspaceSync.readableArticle,
     sort
   );
+  const needsRecentArticles = display.activeAction === 'recent' || (display.activeAction === 'review' &&
+    selectedBrowseNodeId !== null && selectedBrowseNodeId !== display.flowNodeId);
+  const projectedArticles = useMemo(
+    // Hidden Flow does not consume this list; entering Browse projects the current snapshot.
+    () => needsRecentArticles ? resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection) : [],
+    [browseSnapshot, needsRecentArticles, sort.sortDirection, sort.sortKey]
+  );
+  const recentArticles = useMemo(() => projectedArticles.length > 0
+    ? projectedArticles : buildReadableArticleFallback(workspaceSync.readableArticle),
+  [projectedArticles, workspaceSync.readableArticle]);
 
   return {
     browsedFolder,

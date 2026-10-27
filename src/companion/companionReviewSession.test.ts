@@ -179,14 +179,15 @@ describe('companionReviewSession', () => {
     expect(session.nextFsrsDueAt).toBe(localIso(22));
   });
 
-  it('updates the graded card and advances to the next due item', async () => {
+  it('updates only the graded card and records its scheduling facts', async () => {
     schedulerGrade.mockResolvedValue(createGradedCardResult());
 
+    const before = createSnapshot();
     const result = await gradeCompanionReviewCard({
       grade: 3,
       nodeId: 'item-1',
       now: REVIEWED_AT,
-      snapshot: createSnapshot()
+      snapshot: before
     });
 
     expect(schedulerGrade).toHaveBeenCalled();
@@ -197,8 +198,8 @@ describe('companionReviewSession', () => {
         reps: 4
       }
     });
-    expect(result?.nextSession.currentCard?.nodeId).toBe('item-2');
-    expect(result?.nextSession.queueNodeIds).toEqual(['item-2', 'topic-1']);
+    expect(result?.snapshot.nodesById['item-2']).toBe(before.nodesById['item-2']);
+    expect(result?.snapshot.nodesById['topic-1']).toBe(before.nodesById['topic-1']);
     expect(result?.reviewLog).toMatchObject({
       cardBefore: {
         due: localIso(22),

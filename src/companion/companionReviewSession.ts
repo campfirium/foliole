@@ -204,7 +204,6 @@ export async function gradeCompanionReviewCard(args: {
   };
 
   return {
-    nextSession: resolveCompanionReviewSession(nextSnapshot, now),
     reviewLog: result.reviewLog,
     reviewedAt: result.reviewedAt,
     snapshot: nextSnapshot

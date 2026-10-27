@@ -128,6 +128,15 @@ function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
   return { activeAction, setUserActiveAction };
 }
 
+function useCompanionSurfaceFlow(workspaceSync: CompanionWorkspaceSyncApi,
+  activeAction: CompanionTabAction, onlyReview: boolean) {
+  return useCompanionFlowSession({
+    snapshot: workspaceSync.state.workspace_snapshot, ready: workspaceSync.isWorkspaceSyncStateReady,
+    active: activeAction === 'review', onlyReview,
+    libraryScope: workspaceSync.state.workspace_snapshot?.libraryScope ?? workspaceSync.bootstrapState.database_path ?? 'preview'
+  });
+}
+
 export function useCompanionArticleSurface(
   workspaceSync: CompanionWorkspaceSyncApi,
   floatingBar: FloatingBarVisibilityApi,
@@ -135,12 +144,9 @@ export function useCompanionArticleSurface(
   options: { isOnlyReviewOpen?: boolean } = {}
 ) {
   const { activeAction, setUserActiveAction } = useCompanionActiveAction(workspaceSync);
-  const browseState = useCompanionBrowseState(workspaceSync, browseSort);
-  const flow = useCompanionFlowSession({
-    snapshot: browseState.snapshot, ready: workspaceSync.isWorkspaceSyncStateReady,
-    active: activeAction === 'review', onlyReview: options.isOnlyReviewOpen === true,
-    libraryScope: browseState.snapshot?.libraryScope ?? workspaceSync.bootstrapState.database_path ?? 'preview'
-  });
+  const flow = useCompanionSurfaceFlow(workspaceSync, activeAction, options.isOnlyReviewOpen === true);
+  const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
+    flowNodeId: flow.view.currentCard?.nodeId ?? null });
   const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
     workspaceSync, browseState, activeAction, flow.view.currentCard?.nodeId ?? null);
   const effectiveReviewSession = useMemo(
