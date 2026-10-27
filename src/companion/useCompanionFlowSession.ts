@@ -20,12 +20,13 @@ import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import { canContinueReadingInFlowWindow } from '../store/workspaceReviewReadingContinuation';
 
 import { continueCompanionDailyFlow } from './companionDailyNavigation';
-import { createCompanionFlowControls } from './companionFlowControls';
+import { createCompanionFlowControls, trackCompanionFlowRefresh } from './companionFlowControls';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
+  refresh?: Promise<void>;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
@@ -35,7 +36,7 @@ export function useCompanionFlowSession(args: {
   const [, render] = useReducer((value: number) => value + 1, 0);
   const scope = useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope);
   const identity = JSON.stringify([args.libraryScope, args.onlyReview]);
-  const owner = useRef({ identity, scope, session: createEmptyReviewSession(), generation: 0, epoch: 0,
+  const owner = useRef<FlowOwner>({ identity, scope, session: createEmptyReviewSession(), generation: 0, epoch: 0,
     hydrated: false, error: null as string | null, kind: null as string | null,
     snapshot: null as WorkspaceSnapshot | null });
   if (owner.current.identity !== identity || owner.current.scope !== scope) owner.current = {
@@ -60,13 +61,14 @@ export function useCompanionFlowSession(args: {
   useEffect(() => {
     if (!args.active || !current.hydrated || !current.session.daily) return;
     const source = current.session;
-    void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
-      if (owner.current !== current || !latest.current.active || current.session !== source || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
+    const generation = current.generation;
+    trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
+      if (owner.current !== current || !latest.current.active || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
       current.session = { ...saved.session, isAnswerRevealed:
-        saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
+        saved.session.currentNodeId === source.currentNodeId && current.session.isAnswerRevealed };
       if (!source.cycle || saved.session.cycle?.stamp !== source.cycle.stamp) current.generation += 1;
       render();
-    }).catch(error => { current.error = String(error); render(); });
+    }).catch(error => { current.error = String(error); render(); }));
   }, [args.snapshot]);
   const session = current.session;
   const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot, Boolean(session.currentNodeId));
@@ -122,13 +124,13 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
     if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
       if (isAvailableNativeCompanionRuntime()) {
         const source = current.session;
-        void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
+        trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
           if (owner.current !== current || !latest.current.active || current.session !== source) return;
           current.session = { ...saved.session, isAnswerRevealed:
             saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
           current.generation += 1;
           render();
-        }).catch(error => { current.error = String(error); render(); });
+        }).catch(error => { current.error = String(error); render(); }));
       } else if (!current.session.currentNodeId) {
         current.session = resumeFlowSession(args.snapshot, mode, null, new Date().toISOString());
       }

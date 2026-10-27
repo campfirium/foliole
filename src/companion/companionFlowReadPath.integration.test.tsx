@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import * as dailyRuntime from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionDailySession, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -42,8 +43,57 @@ function useNativeSurface(initial: WorkspaceSnapshot) {
     setSyncConflictCount: () => {}, setSyncProgress: () => {}, setStatus: () => {} });
   const workspace = { ...createWorkspaceSync(snapshot), state, readableArticle,
     refreshAfterMutation: vi.fn(actions.refreshAfterMutation), openReadableArticle: loader.openReadableArticle };
-  return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot };
+  return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot, workspace };
 }
+
+it.each(['read', 'grade'] as const)('commits %s once when incoming content changes the cycle before its display receipt arrives', async action => {
+  if (action === 'grade') library.database.exec("UPDATE nodes SET kind='item', reveal='Answer' WHERE id='000000'");
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const ui = renderHook(() => useNativeSurface(initial));
+  await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
+  const before = ui.result.current.surface.readableArticle!.nodeId;
+  const { toWorkspaceNativeNodeVersion } = await import('../../lib/core/database/workspaceNodeSyncVersion');
+  const { applyCompanionLocalNodeVersions } = await import('../shared/platform/companionSyncObjects');
+  const { registerCompanionWorkspaceRefresh } = await import('../shared/platform/companion/companionWorkspaceSnapshotStore');
+  const incoming = { ...initial.nodesById[before]!, id: 'incoming-topic', title: 'Incoming topic',
+    content: 'Incoming complete body', reading: null };
+  await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion(incoming, 'remote')]);
+  registerCompanionWorkspaceRefresh({ kind: 'full' });
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  let received = false;
+  const open = dailyRuntime.openCompanionDailyFlow;
+  vi.spyOn(dailyRuntime, 'openCompanionDailyFlow').mockImplementationOnce(async args => {
+    const result = await open(args);
+    received = true;
+    await waiting;
+    return result;
+  });
+  try {
+    await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
+    await waitFor(() => expect(received).toBe(true));
+    await act(async () => {
+      if (action === 'grade') ui.result.current.surface.handleRevealAnswer();
+    });
+    await act(async () => {
+      const mutation = action === 'grade' ? ui.result.current.surface.handleGradeReview(3)
+        : ui.result.current.surface.handleReadReviewTopic();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      release();
+      await mutation;
+    });
+    expect(ui.result.current.surface.reviewError).toBeNull();
+    expect(ui.result.current.surface.readingError).toBeNull();
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(before));
+    expect(ui.result.current.surface.readingError).toBeNull();
+    expect(ui.result.current.surface.readableArticle?.content).toBeTruthy();
+    if (action === 'grade') expect(library.database.prepare('SELECT reps FROM node_review WHERE node_id=?').get(before))
+      .toEqual({ reps: 1 });
+    else expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get(before))
+      .toEqual({ repetition_count: 1 });
+    expect((await loadCompanionDailySession())?.currentNodeId).toBe(ui.result.current.surface.readableArticle?.nodeId);
+  } finally { release(); }
+});
 
 it('commits a daily Read without materializing an unused whole-workspace projection', async () => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;

@@ -10,6 +10,17 @@ import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 import type { CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import type { FlowOwner } from './useCompanionFlowSession';
 
+export function trackCompanionFlowRefresh(current: FlowOwner, refresh: Promise<void>) {
+  current.refresh = refresh;
+  void refresh.finally(() => { if (current.refresh === refresh) delete current.refresh; });
+}
+
+function hasCurrentFlowTarget(current: FlowOwner, owner: { current: FlowOwner },
+  token: { scope: object; owner: FlowOwner; epoch: number; nodeId: string | null }) {
+  return getCompanionReadingScope() === token.scope && owner.current === token.owner &&
+    current.epoch === token.epoch && current.session.currentNodeId === token.nodeId;
+}
+
 export function createCompanionFlowControls(args: {
   current: FlowOwner; owner: { current: FlowOwner }; scope: object; mode: ReviewSessionMode;
   historyKey: string; render(): void;
@@ -49,6 +60,11 @@ export function createCompanionFlowControls(args: {
   }
   async function prepareAction(token: ReturnType<typeof capture>, now: string, active: () => boolean) {
     if (!matches(token) || !active()) return null;
+    if (current.refresh) {
+      await current.refresh;
+      if (!hasCurrentFlowTarget(current, owner, token) || !active()) return null;
+      token = capture();
+    }
     if (!hasFlowDayChanged(current.session, now)) return token;
     const saved = await openCompanionDailyFlow({ now, mode });
     if (!matches(token) || !active()) return null;

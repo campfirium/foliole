@@ -160,7 +160,13 @@ it.each([false, true])('rebuilds the same eligible queue from durable state afte
   expect(reopened.result.current.effectiveReviewSession.queueNodeIds).toEqual(queue);
   expect(reopened.result.current.isAnswerRevealed).toBe(false);
   const plan = buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(state.workspace_snapshot!), now: new Date().toISOString() });
-  if (only) expect(reopened.result.current.onlyReviewSession.queueNodeIds).toEqual(plan.queueNodeIds.filter((id) => id !== 'reading'));
+  if (only) {
+    const rows = database!.prepare(`SELECT e.node_id FROM daily_flow_entries e
+      JOIN nodes n ON n.id=e.node_id WHERE e.active=1 AND n.kind='item'`).all() as { node_id: string }[];
+    expect(new Set(rows.map(row => row.node_id))).toEqual(new Set(plan.fsrsQueueNodeIds));
+    expect((await dailyFlowRuntime.loadCompanionDailySession())?.currentNodeId)
+      .toBe(reopened.result.current.onlyReviewSession.currentCard?.nodeId);
+  }
 });
 
 it.each([false, true])('reconciles a deleted current card on foreground and clears its answer (only=%s)', async (only) => {
