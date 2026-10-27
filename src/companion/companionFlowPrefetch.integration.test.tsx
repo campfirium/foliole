@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -61,7 +62,6 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   await waitFor(() => expect(reads.mock.calls.some(([sql, values]) => sql.includes('SELECT article.*') && values?.[0] === next)).toBe(true));
   await getIosCompanionDatabaseOwner().read(async () => null);
   const before = structuredClone(hook.result.current.view);
-  const originalSession = hook.result.current.capture().session;
   const node = source.nodesById[next]!;
   const kind = node.kind;
   let visits = 0;
@@ -75,7 +75,9 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
     const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     hook.rerender({ snapshot: changed });
     await waitFor(() => expect(hook.result.current.view.queueNodeIds).not.toContain(next));
-    act(() => { hook.result.current.workspaceHistoryControls.restoreFlowHistorySession(originalSession); });
+    const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' });
+    expect(saved.session.queueNodeIds).not.toContain(next);
+    act(() => { hook.result.current.workspaceHistoryControls.restoreFlowHistorySession(saved.session); });
     expect(hook.result.current.view.queueNodeIds).not.toContain(next);
   } finally {
     Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, writable: true, value: kind });
