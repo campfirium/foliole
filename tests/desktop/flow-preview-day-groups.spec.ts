@@ -31,6 +31,10 @@ test('desktop Flow panel does not show Demo preview day controls in normal runti
 test('desktop Resume returns to the current Flow topic', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
+    const stored = await window.electronAPI.invoke('load_workspace_snapshot', {});
+    for (const node of Object.values(stored.nodesById)) {
+      if (node.kind === 'topic' || node.kind === 'item') await window.__folioleWorkspaceDebug!.deleteNode(node.id);
+    }
     await globalThis.window.__folioleWorkspaceDebug?.seedNodes([
       {
         content: 'First Flow topic body',
@@ -50,14 +54,17 @@ test('desktop Resume returns to the current Flow topic', async ({ desktopWindow 
     globalThis.window.__folioleWorkspaceDebug?.listNodes().some((node) => node.id === 'desktop-flow-resume-topic-2')
   );
 
-  await desktopWindow.waitForFunction(() => {
-    const enterFlow = Array.from(document.querySelectorAll('button')).find((button) =>
-      /^(Enter Flow|进入 Flow)$/.test(button.getAttribute('aria-label') ?? '')
-    );
-    enterFlow?.click();
-    return Boolean(enterFlow);
-  });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  if (await exitFlow.isVisible()) {
+    await exitFlow.click();
+    await expect(exitFlow).toBeHidden();
+  }
+  await desktopWindow.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ }).click();
   await expect(desktopWindow.getByRole('group', { name: 'Flow toolbar' })).toBeVisible();
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId))
+    .toMatch(/^desktop-flow-resume-topic-[12]$/);
   const flowState = await desktopWindow.evaluate(() => ({
     activeNodeId: globalThis.window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null,
     reviewSession: globalThis.window.__folioleWorkspaceDebug?.getReviewSession?.() ?? null
