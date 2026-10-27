@@ -20,7 +20,7 @@ export function createCompanionFlowHistoryEntry(args: {
   after: WorkspaceSnapshot; history: CompanionFlowHistoryContext; relatedNodeIds?: string[];
 }) {
   const beforeSession = cloneWorkspaceReviewSession(args.history.session);
-  const afterSession = args.action !== 'grade' && beforeSession.daily ? beforeSession : advanceFlowSession({ action: args.action, snapshot: args.after,
+  const afterSession = beforeSession.daily ? beforeSession : advanceFlowSession({ action: args.action, snapshot: args.after,
     session: beforeSession, mode: args.history.mode, now: args.now });
   const context = (session: ReviewSessionState) => ({ activeNodeId: session.currentNodeId,
     browseRootNodeId: '', reviewSession: session });

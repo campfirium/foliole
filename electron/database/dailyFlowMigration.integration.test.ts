@@ -35,7 +35,7 @@ it('upgrades desktop 174 transactionally and leaves original node facts untouche
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='daily_flow_state'").get()).toBeUndefined();
     expect(sqlite.prepare("SELECT * FROM nodes WHERE id='original'").get()).toEqual(original);
     initializeDatabaseSchema(sqlite);
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(175);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(176);
     assertLazyAndPreserved(sqlite, original);
   } finally { sqlite.close(); }
 });

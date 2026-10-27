@@ -1,9 +1,11 @@
+
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 
 let tempRoot = '';
 let loseReceipt = false;
@@ -28,12 +30,15 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
   throw new Error(`Unexpected command: ${command}`);
 } }));
 
+import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection';
 import { commitDesktopDailyFlow, openDesktopDailyFlow } from '../../electron/database/dailyFlow';
 import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot';
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
+import { legacyContinuation } from '../test/dailyFlowLegacyContinuation.testSupport';
+
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
@@ -62,6 +67,7 @@ async function setup() {
   await actions.startReviewSession(now);
   actions.revealReviewAnswer();
   expect(await actions.gradeReviewCard(3, now)).toBe(true);
+  app.setState({ reviewSession: await legacyContinuation(createBetterSqliteDbPort(openDatabaseConnection().sqlite), app.getState().reviewSession, now) });
   expect(app.getState().reviewSession.currentNodeId).toBeNull();
   expect(app.getState().reviewSession.continueNodeId).toBeTruthy();
   return { ...app, actions };

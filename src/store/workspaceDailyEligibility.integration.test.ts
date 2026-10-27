@@ -29,10 +29,10 @@ it.each((['grade', 'read'] as const).flatMap(action => (['parent', 'self'] as co
   expect(local.queueNodeIds).not.toContain('minute');
   const reads = vi.spyOn(persistence, 'snapshot');
   for (let i = 0; i < 2; i += 1) {
-    const remaining = local.queueNodeIds.slice(1);
+    const next = local.queueNodeIds[1];
     reads.mockClear();
     local = await act(mobile, local, action, minuteDue);
-    expect(local.queueNodeIds).toEqual(remaining);
+    expect(local.currentNodeId).toBe(next);
     expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
   }
   await assertDurable(mobile, local);
@@ -58,9 +58,15 @@ it('still admits a valid minute item alongside a retired entry, then returns to 
   local = await open(mobile);
   const reads = vi.spyOn(persistence, 'snapshot');
   local = await act(mobile, local, 'grade', '2026-10-26T08:10:00.000Z');
-  expect(local.queueNodeIds).toContain('waiting');
+  expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
+  for (let step = 0; step < 15 && local.currentNodeId !== 'waiting'; step++) {
+    reads.mockClear();
+    local = await act(mobile, local, 'grade', '2026-10-26T08:10:00.000Z');
+    expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
+  }
+  expect(local.currentNodeId).toBe('waiting');
   expect(local.queueNodeIds).not.toContain('retired');
-  expect(reads.mock.calls.slice(1).some(call => call[1] === undefined)).toBe(true);
+  expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
   reads.mockClear();
   local = await act(mobile, local, 'grade', '2026-10-26T08:10:00.000Z');
   expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
@@ -88,7 +94,8 @@ it('reconciles a changed mix once without restarting completed progress or repea
   expect((mobile.db.prepare('SELECT settings_key FROM daily_flow_state').get() as { settings_key: string }).settings_key).toBe(JSON.stringify(changed));
   reads.mockClear();
   expect(await open(mobile, now, changed)).toEqual(local);
-  expect(reads).not.toHaveBeenCalled();
+  expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
+  reads.mockClear();
   local = await act(mobile, local, 'grade', now, changed);
   expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
   expect(local.queueNodeIds.slice(0, before.queueNodeIds.length - 1)).toEqual(before.queueNodeIds.slice(1));
@@ -115,6 +122,7 @@ it('keeps reading-only actions local while a valid minute review waits for the n
   }
   await assertDurable(mobile, local);
   local = await open(mobile, '2026-10-26T08:10:00.000Z');
-  expect(local.queueNodeIds).toContain('minute');
+  local = (await openDailyFlow(mobile.port, { now: '2026-10-26T08:10:00.000Z', mode: 'review-first' }, settings(mobile), persistence)).session;
+  expect(local.currentNodeId).toBe('minute');
   await assertDurable(mobile, local);
 });

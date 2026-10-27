@@ -1,27 +1,10 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import type { DbPort } from '../sync/dbPort.js';
 
-import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
-import { hasReadyDailyReview } from './dailyFlowGrade.js';
+import type { DailyFlowSettings, DailyFlowSnapshot } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
-import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import type { readDailyFlow } from './dailyFlowStorage.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
 import { advanceReviewSession, completeReviewSession } from './flowSessionState.js';
-
-export async function dailyReadingScope(db: DbPort, stored: NonNullable<Awaited<ReturnType<typeof readDailyFlow>>>,
-  args: DailyFlowCommitArgs, settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
-  if (!args.readingAction || args.readingAction === 'soon' || stored.invalidated || stored.settings_key !== JSON.stringify(settings)) return null;
-  if (stored.mode !== 'reading-only' && await hasReadyDailyReview(db, args.now, settings, persistence)) return null;
-  const affected = (args.readings ?? []).map(value => value.nodeId);
-  const next = stored.session.queueNodeIds.find(id => id !== stored.session.currentNodeId)
-    ?? stored.session.soonNodeIds?.[0];
-  if (next) return [...affected, next];
-  const candidates = await db.query<{ node_id: string }>(`SELECT e.node_id FROM daily_flow_entries e
-    JOIN nodes n ON n.id = e.node_id WHERE n.kind = 'topic' ORDER BY e.initial_position`);
-  return [...new Set([...affected, ...candidates.map(row => row.node_id)])];
-}
 
 export function advanceDailyReading(snapshot: DailyFlowSnapshot, session: DailyFlowSession,
   now: string, mode: ReviewSessionMode,

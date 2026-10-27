@@ -1,7 +1,10 @@
+import { replayCycleHistory } from '../../../../../lib/core/flow/cycleFlowHistory';
+import { openCycleFlow } from '../../../../../lib/core/flow/cycleFlowOpen';
+import { cycleWindow } from '../../../../../lib/core/flow/cycleFlowSelection';
 import { dailyFlowHistoryCommand } from '../../../../../lib/core/flow/dailyFlowHistory';
 import { retainDailyFlowRetryAsync } from '../../../../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
-import { readDailyFlow, writeDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
+import { readDailyFlow, saveCycleFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
 import { toNodeReviewProfile, toSchedulerCard } from '../../../../features/review/model/reviewTypes';
@@ -16,7 +19,7 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
   const entry = args.entry;
   const token = entry.beforeContext.reviewSession.daily;
   if (!token) throw new Error('daily_flow_token_missing');
-  const common = { opId: entry.id, now: entry.mutationTimestamp, token, sourceSession: entry.beforeContext.reviewSession, ...(entry.type === 'topic.dismiss' && entry.title === 'Soon Topic' ? {} : { nextSession: entry.afterContext.reviewSession }) };
+  const common = { opId: entry.id, now: entry.mutationTimestamp, token, sourceSession: entry.beforeContext.reviewSession };
   const result = entry.type === 'review.grade'
     ? await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, grade: { nodeId: entry.nodeId, before: entry.beforeReview,
       grade: args.reviewLog!.grade as 1 | 2 | 3 | 4, reviewedAt: args.reviewLog!.reviewedAt,
@@ -31,18 +34,28 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
     ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,
       before: value.beforeReading ?? null, after: value.afterReading ?? null }))] }),
     companionDailyFlowSettings(), companionDailyFlowPersistence);
-  const saved = { ...entry, afterContext: { ...entry.afterContext,
+  const saved = { ...entry, ...(result.sourceSession ? { beforeContext: { ...entry.beforeContext, reviewSession: result.sourceSession } } : {}), afterContext: { ...entry.afterContext,
     activeNodeId: result.session.currentNodeId, reviewSession: result.session },
   ...(entry.type === 'review.grade' ? { afterReview: result.card ? toNodeReviewProfile(result.card) : null } : {}) };
   if (!result.replayed) await appendCompanionFlowHistory(db, args.key, saved);
   return result;
 }
 
-export async function saveReplayedCompanionDailySession(db: DbPort, session: ReviewSessionState, now: string) {
+export async function saveReplayedCompanionDailySession(db: DbPort, session: ReviewSessionState, now: string,
+  replay?: { source: ReviewSessionState; after: ReviewSessionState; mode: 'undo' | 'redo' }) {
   const state = await readDailyFlow(db);
   if (!state) return session;
-  return writeDailyFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
-    now, revision: state.revision + 1, session, previousEntries: state.entries });
+  if (!replay || session.flowFormat !== 'cycle-v1' || !session.cycle) {
+    return (await openCycleFlow(db, { now, mode: state.mode as 'recommended' | 'review-first' | 'reading-only',
+      refresh: true }, companionDailyFlowSettings(), companionDailyFlowPersistence)).session;
+  }
+  const restored = await replayCycleHistory(db, state.session, { opId: 'structural-replay', now, token: state.session.daily!,
+    historyMode: replay.mode, historySourceSession: replay.source, nextSession: session,
+    ...(replay.after.cycle?.change ? { cycleReplay: replay.after.cycle.change } : {}) });
+  const window = await cycleWindow(db, restored, { mode: state.mode as 'recommended' | 'review-first' | 'reading-only',
+    now, settings: companionDailyFlowSettings(), persistence: companionDailyFlowPersistence });
+  return saveCycleFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
+    now, revision: state.revision + 1, session: window });
 }
 
 export async function replayCompanionDailyHistory(db: DbPort, args: { session: ReviewSessionState;

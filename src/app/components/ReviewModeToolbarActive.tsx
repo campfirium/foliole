@@ -139,10 +139,10 @@ function createActiveReviewPrimary(props: ActiveReviewActionBarProps, showAction
     submitGrade: props.submitGrade,
     submitReadingAction: props.submitReadingAction
   });
-  if (!props.showSessionModeControl || (props.isCurrentItemGradable && !props.isAnswerRevealed)) {
+  if (!props.showSessionModeControl || (props.isCurrentItemGradable && !props.isAnswerRevealed && !props.reviewSummary?.queueCleared)) {
     return actions;
   }
-  if (!props.isCurrentItemGradable && (props.reviewProgressCounts?.queuedItemCount ?? 0) <= 0) {
+  if (props.reviewSummary?.queueCleared ?? (!props.isCurrentItemGradable && (props.reviewProgressCounts?.queuedItemCount ?? 0) <= 0)) {
     return (
       <ReviewToolbarSessionActions
         actions={actions}

@@ -61,8 +61,9 @@ export function useCompanionFlowSession(args: {
     const source = current.session;
     void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
       if (owner.current !== current || current.session !== source || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
-      current.session = saved.session;
-      current.generation += 1;
+      current.session = { ...saved.session, isAnswerRevealed:
+        saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
+      if (!source.cycle || saved.session.cycle?.stamp !== source.cycle.stamp) current.generation += 1;
       render();
     }).catch(error => { current.error = String(error); render(); });
   }, [args.snapshot]);
@@ -81,7 +82,7 @@ export function useCompanionFlowSession(args: {
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
   return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
-    summary: { completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
+    summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
@@ -104,7 +105,8 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
         const source = current.session;
         void openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
           if (current.session !== source) return;
-          current.session = saved.session;
+          current.session = { ...saved.session, isAnswerRevealed:
+            saved.session.currentNodeId === source.currentNodeId && source.isAnswerRevealed };
           current.generation += 1;
           render();
         }).catch(error => { current.error = String(error); render(); });

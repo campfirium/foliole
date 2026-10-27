@@ -77,7 +77,9 @@ it('keeps the daily cursor and grade atomic, retries a lost native receipt once,
   expect(after.appActionHistory.undoStack).toHaveLength(1);
   const entry = after.appActionHistory.undoStack.at(-1)!;
   expect(JSON.stringify(entry)).not.toContain('"queueNodeIds":["');
-  expect(JSON.stringify(entry)).toContain('"queueHistory":');
+  if (!('afterContext' in entry)) throw new Error('missing_flow_history');
+  expect(entry.afterContext.reviewSession.cycle?.change?.after).toHaveLength(1);
+  expect(entry.afterContext.reviewSession.flowFormat).toBe('cycle-v1');
   expect(app.history.undoWorkspaceAction(entry.id)).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().nodesById[original.currentNodeId!]!.review?.reps ?? 0).toBe(0);
@@ -106,7 +108,9 @@ it.each(['read', 'later', 'soon', 'dismiss'] as const)('commits %s and desktop u
   const reading = after.nodesById[before.currentNodeId!]!.reading ?? null;
   const entry = after.appActionHistory.undoStack.at(-1)!;
   expect(JSON.stringify(entry)).not.toContain('"queueNodeIds":["');
-  expect(JSON.stringify(entry)).toContain('"queueHistory":');
+  if (!('afterContext' in entry)) throw new Error('missing_flow_history');
+  expect(entry.afterContext.reviewSession.cycle?.change?.after).toHaveLength(1);
+  expect(entry.afterContext.reviewSession.flowFormat).toBe('cycle-v1');
   expect(app.history.undoWorkspaceAction(entry.id)).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().reviewSession.currentNodeId).toBe(before.currentNodeId);

@@ -85,6 +85,7 @@ export async function commitWorkspaceReviewGrade(args: {
   let review: WorkspaceReviewGradeHistoryEntry['afterReview'] = args.result.nodePatch.review;
   let persisted = false;
   let persistedSession: WorkspaceState['reviewSession'] | undefined;
+  let persistedSource: WorkspaceState['reviewSession'] | undefined;
   let receiptNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   try {
     const result = hasPersistentDailyFlow(args.snapshot.reviewSession)
@@ -101,7 +102,7 @@ export async function commitWorkspaceReviewGrade(args: {
       cardAfter: args.result.cardAfter
     }, args.persistence);
     persisted = Boolean(result);
-    if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; }
+    if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; persistedSource = result.sourceSession; }
     if (result && typeof result !== 'boolean') review = result.card ? toNodeReviewProfile(result.card) : null;
   } catch (error) {
     await recoverWorkspaceDailyFlow(args.set, args.get, error, args.now);
@@ -116,7 +117,8 @@ export async function commitWorkspaceReviewGrade(args: {
   const computed = buildGradedReviewState({ snapshot: { ...args.snapshot, nodesById: mergeDailyFlowReceiptNodes(args.snapshot.nodesById, {}, receiptNodes) }, currentNodeId: args.currentNodeId,
     nodePatch: { review }, now: args.now, ...(persistedSession ? { persistedSession } : {}) });
   if (!computed) return false;
-  const gradedState = { ...computed, historyEntry: { ...computed.historyEntry, id: entry.id } };
+  const gradedState = { ...computed, historyEntry: { ...computed.historyEntry, id: entry.id,
+    ...(persistedSource ? { beforeContext: { ...computed.historyEntry.beforeContext, reviewSession: persistedSource } } : {}) } };
   const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, args.snapshot.nodesById, receiptNodes);
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);

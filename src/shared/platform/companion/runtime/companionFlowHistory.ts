@@ -2,7 +2,9 @@ import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/databa
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import { readLegacyCycleProjection } from '../../../../../lib/core/flow/cycleFlowLegacy';
 import { settleDailyFlowRetry } from '../../../../../lib/core/flow/dailyFlowRetry';
+import { retainLegacyHistoryEncoding } from '../../../../../lib/core/flow/flowHistoryEntry';
 import { restoreFlowHistoryEntryAsync } from '../../../../../lib/core/flow/flowHistoryEntryAsync';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
@@ -21,6 +23,7 @@ import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
+import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
 import { commitCompanionDailyHistory, replayCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
 import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
@@ -70,11 +73,16 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
     if (replayed) return { session: replayed, entry: null };
     const saved = getWorkspaceHistoryTopEntry(history, mode);
     if (!saved) return null;
-    const entry = await restoreFlowHistoryEntryAsync(saved, session);
+    const sourceSession = saved.type === 'nodes.change' ? saved.beforeSession : saved.beforeContext.reviewSession;
+    const projection = session.cycle && sourceSession?.flowFormat === 'legacy-queue-v1'
+      ? await readLegacyCycleProjection(db, companionDailyFlowSettings(), companionDailyFlowPersistence, new Date().toISOString()) : session;
+    const entry = await restoreFlowHistoryEntryAsync(saved, projection);
     if (entry.type === 'nodes.change') {
       await replayCompanionNodeHistoryWithDb(db, entry, mode);
-      const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, new Date().toISOString());
-      await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, entry, mode),
+      const restored = await saveReplayedCompanionDailySession(db, (mode === 'undo' ? entry.beforeSession : entry.afterSession) ?? session, new Date().toISOString(),
+        entry.beforeSession?.cycle && entry.afterSession?.cycle ? { source: (mode === 'undo' ? entry.afterSession : entry.beforeSession),
+          after: entry.afterSession, mode } : undefined);
+      await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, retainLegacyHistoryEncoding(saved, entry), mode),
         replayReceipt: { id: requestId, mode, ...(restored.daily ? { daily: restored.daily } : {}) } });
       return { session: restored, entry };
     }
@@ -82,7 +90,7 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
     const source = mode === 'undo' ? entry.afterContext : entry.beforeContext;
     let mutationTimestamp = createWorkspaceHistoryMutationTimestamp(entry.mutationTimestamp);
     let daily: ReviewSessionState | undefined;
-    const current = { ...session, isAnswerRevealed: source.reviewSession.isAnswerRevealed };
+    const current = { ...projection, isAnswerRevealed: source.reviewSession.isAnswerRevealed };
     if (session.daily) {
       await prepareEntry(db, entry, mode, current);
       const saved = await replayCompanionDailyHistory(db, { entry, session, mode, now: mutationTimestamp });
@@ -93,7 +101,7 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
       ...(entry.type === 'review.grade' && mode === 'redo'
         ? { reviewOpId: reviewHistoryOpId(entry.reviewOpId ?? entry.id, mutationTimestamp, 'redo') } : {}) };
     const restored = daily ?? await saveReplayedCompanionDailySession(db, (mode === 'undo' ? updated.beforeContext : updated.afterContext).reviewSession, mutationTimestamp);
-    await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, updated, mode),
+    await writeCompanionFlowHistory(db, key, { ...moveWorkspaceHistoryCursor(history, retainLegacyHistoryEncoding(saved, updated), mode),
       replayReceipt: { id: requestId, mode, ...(restored.daily ? { daily: restored.daily } : {}) } });
     return { session: restored, entry: updated };
   }, result => result?.entry ? flowHistoryRefreshScope(result.entry) : { kind: 'nodes', nodeIds: [] });

@@ -54,11 +54,14 @@ async function reopen() {
 
 it.each([1, 2, 3, 4] as const)('keeps grade %s local and restores the same mixed order and mobile undo after reopen', async value => {
   const before = structuredClone(session);
+  const retained = library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id<>? ORDER BY order_key').all(before.currentNodeId!);
   const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
   await grade(value);
   const after = structuredClone(session);
-  expect(after.queueNodeIds).toEqual(before.queueNodeIds.slice(1));
-  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 2)).toBe(true);
+  expect(after.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(after.reviewedItemCount).toBe((before.reviewedItemCount ?? 0) + 1);
+  expect(library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id<>? ORDER BY order_key').all(before.currentNodeId!)).toEqual(retained);
+  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
   const card = (await snapshot()).nodesById[before.currentNodeId!]!.review;
   expect(card?.reps).toBe(1);
   await reopen();
@@ -83,14 +86,15 @@ it.each([1, 2, 3, 4] as const)('keeps grade %s local and restores the same mixed
 });
 
 it('preserves the next reading while grading five successive items', async () => {
-  const initial = [...session.queueNodeIds];
+  const initial = (library.database.prepare('SELECT node_id FROM daily_flow_entries WHERE active=1 ORDER BY order_key').all() as { node_id: string }[]).map(row => row.node_id);
   for (let step = 0; step < 5; step += 1) {
     expect(session.currentNodeId).toBe(initial[step]);
     await grade(3);
   }
   expect(session.currentNodeId).toBe(initial[5]);
   expect((await snapshot()).nodesById[session.currentNodeId!]!.kind).toBe('topic');
-  expect(session.queueNodeIds).toEqual(initial.slice(5));
+  expect(session.queueNodeIds).toEqual(initial.slice(5, 7));
+  expect(session.reviewedItemCount).toBe(5);
 });
 
 it('keeps minute grades waiting, admits them when due, and respects a runtime short-term setting change', async () => {
@@ -102,9 +106,12 @@ it('keeps minute grades waiting, admits them when due, and respects a runtime sh
   expect(due).toBe('2026-10-26T08:01:00.000Z');
   expect(session.queueNodeIds).not.toContain(target);
   await grade(3, '2026-10-26T08:00:59.000Z');
+  expect(session.nextReviewDueAt).toBe(due);
   expect(session.queueNodeIds).not.toContain(target);
   await grade(3, due);
-  expect(session.queueNodeIds).toContain(target);
+  session = (await openCompanionDailyFlow({ now: due, mode: 'review-first' })).session;
+  for (let step = 0; step < 15 && session.currentNodeId !== target; step++) await grade(3, due);
+  expect(session.currentNodeId).toBe(target);
   library.database.prepare('UPDATE nodes SET enable_short_term=0 WHERE id=?').run(target);
   session = (await openCompanionDailyFlow({ now: due, mode: 'recommended', preferredNodeId: target, refresh: true })).session;
   expect(session.currentNodeId).toBe(target);

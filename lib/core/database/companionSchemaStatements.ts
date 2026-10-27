@@ -7,7 +7,7 @@ import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanion
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
 import { ATTACHMENT_DEMAND_SCHEMA } from './attachmentDemandSchema.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
-import { DAILY_FLOW_SCHEMA } from './dailyFlowSchema.js';
+import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_DIGEST_SCHEMA } from './framedSyncDigestSchema.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from './framedSyncInventorySchema.js';
@@ -24,7 +24,7 @@ import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 export const COMPANION_SCHEMA_STATEMENTS = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
-  ...DAILY_FLOW_SCHEMA,
+  ...DAILY_FLOW_CURRENT_SCHEMA,
   ...NODE_VERSION_RETENTION_INDEX_SCHEMA,
   ...REVIEW_DAILY_COUNT_SCHEMA,
   ...FOREGROUND_TIME_SCHEMA,

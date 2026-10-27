@@ -1,6 +1,5 @@
 import type { DailyFlowCommitArgs } from '../../lib/core/flow/dailyFlowContract';
 import { dailyFlowHistoryCommand } from '../../lib/core/flow/dailyFlowHistory';
-import { withoutDailyToken } from '../../lib/core/flow/dailyFlowService';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { commitDailyFlowRuntime, hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
@@ -13,15 +12,15 @@ export function hasPersistentDailyFlow(session: ReviewSessionState) {
 }
 
 export function saveDailyReading(session: ReviewSessionState, entry: WorkspaceTopicDismissHistoryEntry,
-  now: string, nextSession: ReviewSessionState, completedReviewDay?: string) {
+  now: string, _nextSession: ReviewSessionState, completedReviewDay?: string) {
   const changes = [{ nodeId: entry.nodeId, before: entry.beforeReading ?? null, after: entry.afterReading ?? null,
     ...(completedReviewDay === undefined ? {} : { completedReviewDay }) },
   ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,
     before: value.beforeReading ?? null, after: value.afterReading ?? null }))];
   return commitDailyFlowRuntime({ opId: entry.id, now, token: session.daily!, sourceSession: session,
-    ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : { nextSession: withoutDailyToken(nextSession) }), readings: changes,
+    ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : {}), readings: changes,
     ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
-      : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
+      : (entry.title === 'Later Topic' || entry.title === 'Postpone Topic') ? { readingAction: 'later' as const }
       : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}) });
 }
 

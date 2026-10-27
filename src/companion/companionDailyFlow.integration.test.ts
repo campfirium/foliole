@@ -54,7 +54,7 @@ it('lazily creates an empty daily list and rolls back a rejected first initializ
   expect(library.database.prepare('SELECT * FROM daily_flow_state').all()).toEqual([]);
   expect(library.database.prepare('SELECT * FROM daily_flow_entries').all()).toEqual([]);
   library.database.exec('DROP TRIGGER reject_daily');
-  expect((await open()).queueNodeIds).toHaveLength(3);
+  expect((await open()).cycle?.remaining).toBe(3);
 });
 
 it('stores the complete daily IDs once, keeps minute items waiting, and preserves order across database reopen', async () => {

@@ -77,8 +77,8 @@ export async function assertDurable(peer: Peer, session: DailyFlowSession) {
   expect((await readDailyFlow(peer.port))!.session).toEqual(session);
   const reader = new Database(peer.file, { readonly: true });
   try {
-    const rows = reader.prepare('SELECT node_id FROM daily_flow_entries WHERE queue_position IS NOT NULL ORDER BY queue_position').all();
-    expect(rows).toEqual(session.queueNodeIds.map(node_id => ({ node_id })));
+    const current = reader.prepare('SELECT active, order_key FROM daily_flow_entries WHERE node_id=?').get(session.currentNodeId ?? '') as { active: number; order_key: number } | undefined;
+    if (session.currentNodeId) expect(current).toEqual({ active: 1, order_key: session.cycle!.scanAfter });
     expect(reader.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 0 });
   } finally { reader.close(); }
 }

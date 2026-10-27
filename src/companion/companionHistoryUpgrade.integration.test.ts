@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor';
+import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema';
+import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
 import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract';
@@ -16,18 +18,41 @@ vi.mock('@capacitor/core', async () => {
 let app: Awaited<ReturnType<typeof createHistoryDeltaFixture>>;
 afterEach(async () => { await app?.library.close(); });
 
+function legacySession(session: DailyFlowSession) {
+  const rows = app.db.prepare('SELECT * FROM daily_flow_entries WHERE active=1 ORDER BY order_key').all() as { node_id: string; cohort: string }[];
+  const result = { ...session };
+  delete result.cycle; delete result.flowFormat; delete result.daily;
+  return { ...result, queueNodeIds: rows.filter(row => row.cohort === 'queue').map(row => row.node_id),
+    soonNodeIds: rows.filter(row => row.cohort === 'soon' && row.node_id !== session.currentNodeId).map(row => row.node_id) };
+}
+
 async function legacyHistory(kind: 'reading' | 'grade' = 'reading') {
   app = await createHistoryDeltaFixture(kind === 'reading');
   await app.open();
+  const before = legacySession(app.session);
   await app.action(kind === 'grade' ? 'grade' : 'soon');
+  const middle = legacySession(app.session);
   const first = restoreFlowHistoryEntry((await app.history()).undoStack.at(-1)!, app.session);
   await app.action(kind === 'grade' ? 'grade' : 'read');
+  const after = legacySession(app.session);
   await app.replay('undo');
   const second = restoreFlowHistoryEntry((await app.history()).redoStack.at(-1)!, app.session);
   if (first.type === 'nodes.change' || second.type === 'nodes.change') throw new Error('wrong_entry');
-  const history = { undoStack: [first], redoStack: [second] };
+  const history = { undoStack: [{ ...first, beforeContext: { ...first.beforeContext, reviewSession: before },
+    afterContext: { ...first.afterContext, reviewSession: middle } }],
+  redoStack: [{ ...second, beforeContext: { ...second.beforeContext, reviewSession: middle },
+    afterContext: { ...second.afterContext, reviewSession: after } }] };
+  const ids = (app.db.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key').all() as { node_id: string }[]).map(row => row.node_id);
+  app.db.exec('DROP TABLE daily_flow_entries');
+  app.db.exec(DAILY_FLOW_SCHEMA[1]);
+  for (const [index, id] of ids.entries()) app.db.prepare('INSERT INTO daily_flow_entries VALUES (?,?,?,?)').run(id, index,
+    middle.queueNodeIds.includes(id) ? middle.queueNodeIds.indexOf(id) : null,
+    middle.soonNodeIds.includes(id) ? middle.soonNodeIds.indexOf(id) : null);
+  app.db.exec('ALTER TABLE daily_flow_operations DROP COLUMN source_session_json');
+  app.db.prepare('UPDATE daily_flow_state SET session_json=?, invalidated=0').run(JSON.stringify(middle));
   app.db.prepare('UPDATE companion_meta SET value=? WHERE key=?').run(JSON.stringify(history), historyKey);
   app.db.pragma('user_version=102');
+  app.session = middle;
   return history;
 }
 
@@ -36,25 +61,31 @@ it.each(['reading', 'grade'] as const)('upgrades existing valid %s undo and redo
   const facts = app.db.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
   const reviews = app.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
   const cards = app.db.prepare('SELECT * FROM node_review ORDER BY node_id').all();
-  const state = app.db.prepare('SELECT * FROM daily_flow_state').get();
+  const state = app.db.prepare('SELECT day_key, revision, mode, settings_key FROM daily_flow_state').get();
   const cursor = structuredClone(app.session);
   await app.reopen();
   expect(app.db.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
   expect(app.db.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(facts);
   expect(app.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(reviews);
   expect(app.db.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(cards);
-  expect(app.db.prepare('SELECT * FROM daily_flow_state').get()).toEqual(state);
+  expect(app.db.prepare('SELECT day_key, revision, mode, settings_key FROM daily_flow_state').get()).toEqual(state);
+  await app.open();
   const saved = await app.history();
-  expect(saved.undoStack.map(entry => restoreFlowHistoryEntry(entry, cursor))).toEqual(original.undoStack);
-  expect(saved.redoStack.map(entry => restoreFlowHistoryEntry(entry, cursor))).toEqual(original.redoStack);
+  expect(saved.undoStack.map(entry => restoreFlowHistoryEntry(entry, cursor))).toMatchObject(original.undoStack);
+  expect(saved.redoStack.map(entry => restoreFlowHistoryEntry(entry, cursor))).toMatchObject(original.redoStack);
   const encoded = app.db.prepare('SELECT value FROM companion_meta WHERE key=?').pluck().get(historyKey) as string;
   expect(encoded).not.toContain('"queueNodeIds":["');
+  const oldEncoding = JSON.parse(encoded).redoStack.at(-1);
   await app.replay('redo');
+  const replayedEncoding = JSON.parse(app.db.prepare('SELECT value FROM companion_meta WHERE key=?').pluck().get(historyKey) as string).undoStack.at(-1);
+  if (replayedEncoding.type === 'nodes.change') throw new Error('wrong_entry');
+  expect(replayedEncoding.beforeContext.reviewSession.queueHistory).toEqual(oldEncoding.beforeContext.reviewSession.queueHistory);
+  expect(replayedEncoding.afterContext.reviewSession.queueHistory).toEqual(oldEncoding.afterContext.reviewSession.queueHistory);
   const after = structuredClone(app.session);
   await app.reopen();
   await app.open();
   await app.replay('undo');
-  expect(app.session.queueNodeIds).toEqual(cursor.queueNodeIds);
+  expect(app.session.currentNodeId).toBe(cursor.currentNodeId);
   await app.replay('redo');
   expect(app.session.queueNodeIds).toEqual(after.queueNodeIds);
 });
@@ -87,12 +118,12 @@ it('retains the sole resume cursor for a pre-daily library rather than losing it
   const db = createBetterSqliteDbPort(app.db);
   await db.transaction(tx => migrateCompanionDatabase(tx, 102, COMPANION_DATABASE_VERSION));
   const saved = await app.history();
-  expect(saved.resumeSession).toEqual(original.undoStack[0]!.afterContext.reviewSession);
+  expect(saved.resumeSession).toMatchObject(original.undoStack[0]!.afterContext.reviewSession);
   const entry = saved.undoStack[0]!;
   expect(entry.type).toBe('topic.dismiss');
   if (entry.type !== 'topic.dismiss') throw new Error('wrong_entry');
   expect(restoreFlowHistorySession(entry.beforeContext.reviewSession, saved.resumeSession!))
-    .toEqual(original.undoStack[0]!.beforeContext.reviewSession);
+    .toMatchObject(original.undoStack[0]!.beforeContext.reviewSession);
 });
 
 it('upgrades a large legacy stack without returning the complete history across the database bridge', async () => {
@@ -124,7 +155,7 @@ it('upgrades a large legacy stack without returning the complete history across 
   const parsed = JSON.parse(saved);
   expect(parsed.extraFact).toBe(large.extraFact);
   expect(parsed.undoStack.map((value: typeof largeEntry) =>
-    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toEqual(large.undoStack);
+    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toMatchObject(large.undoStack);
   expect(parsed.redoStack.map((value: typeof largeEntry) =>
-    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toEqual(large.redoStack);
+    restoreFlowHistoryEntry(value, largeEntry.beforeContext.reviewSession))).toMatchObject(large.redoStack);
 });

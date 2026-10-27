@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { ElectronApplication, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -29,39 +29,19 @@ async function prepare(page: Page) {
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
   await page.getByRole('button', { name: 'Good', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Continue reading', exact: true })).toBeVisible();
-  expect((await session(page)).currentNodeId).toBeNull();
-}
-
-async function installLostReceipt(app: ElectronApplication) {
-  await app.evaluate(({ ipcMain }) => {
-    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
-    const { handleInvokeRequest } = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
-    let calls = 0;
-    ipcMain.removeHandler('foliole:invoke');
-    ipcMain.handle('foliole:invoke', async (event, request) => {
-      if (request.command === 'commit_daily_flow' && request.args.navigation === 'continue-reading') {
-        calls += 1;
-        const result = await handleInvokeRequest(request, { sender: event.sender });
-        if (calls === 1) throw new Error('navigation_receipt_lost');
-        return result;
-      }
-      return handleInvokeRequest(request, { sender: event.sender });
-    });
-  });
-}
-
-test('continues from the existing button after a lost receipt and restores readable content on reload', async ({ desktopWindow: page, desktopApp: app }) => {
-  await prepare(page);
-  const before = await session(page);
-  await installLostReceipt(app);
-  await page.getByRole('button', { name: 'Continue reading', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Continue reading', exact: true })).toBeVisible();
-  expect((await session(page)).currentNodeId).toBeNull();
-  await page.getByRole('button', { name: 'Continue reading', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).toBe('continue-reading');
+  expect((await session(page)).cycle?.clearedAt).toBeTruthy();
+  await expect(page.getByRole('button', { name: 'Continue reading', exact: true })).toHaveCount(0);
+}
+
+test('automatically crosses Queue clear into readable content and restores it on reload', async ({ desktopWindow: page }) => {
+  await prepare(page);
+  await expect.poll(async () => (await session(page)).currentNodeId).toBe('continue-reading');
+  expect((await session(page)).cycle?.clearedAt).toBeTruthy();
+  await expect(page.getByRole('button', { name: 'Continue reading', exact: true })).toHaveCount(0);
   const saved = await session(page);
-  expect(saved.daily!.revision).toBe(before.daily!.revision + 1);
+  expect(saved.cycle?.clearedAt).toBeTruthy();
+  await expect(page.getByRole('button', { name: 'Queue clear', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
   await expect(page.getByText('Readable continuation body', { exact: true })).toBeVisible();
   fs.mkdirSync(output, { recursive: true });
@@ -73,5 +53,5 @@ test('continues from the existing button after a lost receipt and restores reada
   await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
   await expect(page.getByText('Readable continuation body', { exact: true })).toBeVisible();
   await page.screenshot({ path: path.join(output, 'restored.png') });
-  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ before, saved, restored: await session(page) }, null, 2));
+  fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ saved, restored: await session(page) }, null, 2));
 });

@@ -6,6 +6,7 @@ import { softDeleteNodes } from '../../lib/core/database/nodeMutations';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
 import { act, assertDurable, due, exchange, node, now, open, persistence, publish, setupPeers, settings, snapshot } from '../test/dailyFlowExceptions.testSupport';
+import { legacyContinuation } from '../test/dailyFlowLegacyContinuation.testSupport';
 
 afterEach(async () => { await closeLibraries(); });
 
@@ -20,6 +21,7 @@ it.each(['desktop', 'mobile'] as const)('selects from latest synchronized facts 
   let source = await open(local);
   expect(source.currentNodeId).toBe('review');
   source = await act(local, source, 'grade');
+  source = await legacyContinuation(local.port, source, now);
   expect(source.currentNodeId).toBeNull();
   expect(source.continueNodeId).toBe('reading');
   await exchange(local, remote);
@@ -46,6 +48,7 @@ it.each([['desktop', 'delete'], ['desktop', 'read'], ['mobile', 'delete'], ['mob
   node(local, 'review', 'item'); node(local, 'reading', 'topic'); node(local, 'other', 'topic');
   let source = await open(local);
   source = await act(local, source, 'grade');
+  source = await legacyContinuation(local.port, source, now);
   const target = source.continueNodeId!;
   await exchange(local, remote);
   if (action === 'delete') {
@@ -79,6 +82,7 @@ it('refuses mismatched targets, active currents and revision changes without wri
   }, settings(peer), persistence);
   await expect(submit(source)).rejects.toThrow('daily_flow_changed');
   source = await act(peer, source, 'grade');
+  source = await legacyContinuation(peer.port, source, now);
   await expect(submit(source, 'wrong')).rejects.toThrow('daily_flow_changed');
   const current = await openDailyFlow(peer.port, { now, mode: 'recommended', refresh: true }, settings(peer), persistence);
   const state = await readDailyFlow(peer.port);
@@ -93,6 +97,7 @@ it.each(['mode', 'unearned'] as const)('preserves completion when the explicit c
   node(peer, 'review', 'item'); node(peer, 'reading', 'topic');
   let source = await open(peer);
   source = await act(peer, source, 'grade');
+  source = await legacyContinuation(peer.port, source, now);
   if (reason === 'mode') peer.db.exec("UPDATE daily_flow_state SET mode='review-first'");
   else peer.db.exec("UPDATE daily_flow_state SET session_json=json_set(session_json, '$.reviewedItemCount', 0)");
   const before = await readDailyFlow(peer.port);

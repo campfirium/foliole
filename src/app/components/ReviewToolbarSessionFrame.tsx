@@ -18,6 +18,7 @@ import { ReviewToolbarSessionSummaryMenu } from './ReviewToolbarSessionSummaryMe
 export type ReviewToolbarSessionSummaryStatus = 'clear' | 'complete' | 'in-progress' | 'not-started';
 
 export interface ReviewToolbarSessionSummaryValues {
+  queueCleared?: boolean;
   canContinueReading?: boolean;
   continueNodeId?: string | null;
   readingElapsedMs: number;

@@ -76,8 +76,8 @@ test('keeps ordered reading Soon through review-only grading and renderer restar
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).toBe(first);
   const restored = await session(page);
-  expect(restored.queueNodeIds).toEqual([]);
-  expect(restored.soonNodeIds).toEqual([second]);
+  expect(restored.queueNodeIds).toEqual([first, second]);
+  expect(restored.cycle?.clearedAt).toBeTruthy();
   expect(restored.readTopicCount).toBe(2);
   expect(restored.reviewedItemCount).toBe(2);
   expect(await page.evaluate(() => window.__folioleWorkspaceDebug!.getWorkspaceStructureHistory().undoStack)).toEqual([]);

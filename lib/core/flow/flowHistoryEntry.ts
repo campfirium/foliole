@@ -1,3 +1,4 @@
+import { compactCyclePair, compactCycleSession } from './cycleFlowHistorySession.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { compactFlowHistorySessions, restoreFlowHistorySession, type FlowHistorySession } from './flowHistorySession.js';
 
@@ -9,12 +10,12 @@ export function compactFlowHistoryEntry<T>(value: T): T {
   if (!value || typeof value !== 'object') return value;
   const entry = value as T & SessionEntry;
   if (entry.beforeContext && entry.afterContext) {
-    const pair = compactFlowHistorySessions(entry.beforeContext.reviewSession, entry.afterContext.reviewSession);
+    const pair = compactPair(entry.beforeContext.reviewSession, entry.afterContext.reviewSession);
     return { ...entry, beforeContext: { ...entry.beforeContext, reviewSession: pair.before },
       afterContext: { ...entry.afterContext, reviewSession: pair.after } };
   }
   if (entry.beforeSession || entry.afterSession) {
-    const pair = compactFlowHistorySessions(entry.beforeSession ?? entry.afterSession!, entry.afterSession ?? entry.beforeSession!);
+    const pair = compactPair(entry.beforeSession ?? entry.afterSession!, entry.afterSession ?? entry.beforeSession!);
     return { ...entry, ...(entry.beforeSession ? { beforeSession: pair.before } : {}),
       ...(entry.afterSession ? { afterSession: pair.after } : {}) };
   }
@@ -24,11 +25,11 @@ export function compactFlowHistoryEntry<T>(value: T): T {
 export function restoreFlowHistoryEntry<T>(value: T, current: DailyFlowSession): T {
   const entry = value as T & SessionEntry;
   if (entry.beforeContext && entry.afterContext) return { ...entry,
-    beforeContext: { ...entry.beforeContext, reviewSession: restoreFlowHistorySession(entry.beforeContext.reviewSession, current) },
-    afterContext: { ...entry.afterContext, reviewSession: restoreFlowHistorySession(entry.afterContext.reviewSession, current) } };
+    beforeContext: { ...entry.beforeContext, reviewSession: restoreSession(entry.beforeContext.reviewSession, current) },
+    afterContext: { ...entry.afterContext, reviewSession: restoreSession(entry.afterContext.reviewSession, current) } };
   if (entry.beforeSession || entry.afterSession) return { ...entry,
-    ...(entry.beforeSession ? { beforeSession: restoreFlowHistorySession(entry.beforeSession, current) } : {}),
-    ...(entry.afterSession ? { afterSession: restoreFlowHistorySession(entry.afterSession, current) } : {}) };
+    ...(entry.beforeSession ? { beforeSession: restoreSession(entry.beforeSession, current) } : {}),
+    ...(entry.afterSession ? { afterSession: restoreSession(entry.afterSession, current) } : {}) };
   return value;
 }
 
@@ -56,4 +57,37 @@ export function rebaseFollowingFlowHistoryDue<T>(stack: T[], previous: T | undef
     if (entry.type === 'review.grade') break;
   }
   return result;
+}
+
+
+function compactPair(before: FlowHistorySession, after: FlowHistorySession) {
+  if (before.flowFormat === 'legacy-queue-v1' || after.flowFormat === 'legacy-queue-v1') return { before, after };
+  return compactCyclePair(before, after) ?? compactFlowHistorySessions(before, after);
+}
+
+function restoreSession(saved: FlowHistorySession, current: DailyFlowSession) {
+  return saved.flowFormat === 'cycle-v1' ? compactCycleSession(saved) : restoreFlowHistorySession(saved, current);
+}
+
+/** Keep old sequence deltas intact when replay updates learning facts or expected due times. */
+export function retainLegacyHistoryEncoding<T>(saved: T, updated: T): T {
+  const original = saved as SessionEntry;
+  const next = updated as T & SessionEntry;
+  if (original.beforeContext && original.afterContext && next.beforeContext && next.afterContext) return { ...next,
+    beforeContext: { ...next.beforeContext, reviewSession: retainLegacySessionEncoding(original.beforeContext.reviewSession, next.beforeContext.reviewSession) },
+    afterContext: { ...next.afterContext, reviewSession: retainLegacySessionEncoding(original.afterContext.reviewSession, next.afterContext.reviewSession) } };
+  return { ...next,
+    ...(original.beforeSession && next.beforeSession ? { beforeSession: retainLegacySessionEncoding(original.beforeSession, next.beforeSession) } : {}),
+    ...(original.afterSession && next.afterSession ? { afterSession: retainLegacySessionEncoding(original.afterSession, next.afterSession) } : {}) };
+}
+
+function retainLegacySessionEncoding(saved: FlowHistorySession, updated: FlowHistorySession): FlowHistorySession {
+  if (saved.flowFormat !== 'legacy-queue-v1') return updated;
+  const result = { ...updated, queueNodeIds: saved.queueNodeIds };
+  for (const key of ['queueHistory', 'soonNodeIds', 'hiddenSoonNodeIds'] as const) {
+    delete result[key];
+  }
+  return { ...result, ...(saved.queueHistory ? { queueHistory: saved.queueHistory } : {}),
+    ...(saved.soonNodeIds ? { soonNodeIds: saved.soonNodeIds } : {}),
+    ...(saved.hiddenSoonNodeIds ? { hiddenSoonNodeIds: saved.hiddenSoonNodeIds } : {}) };
 }

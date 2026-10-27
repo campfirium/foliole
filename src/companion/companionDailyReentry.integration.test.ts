@@ -43,12 +43,13 @@ it('admits a due review on native mobile reentry while keeping the current and p
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
   expect(session.currentNodeId).toBe(first);
   session = (await openCompanionDailyFlow({ now: '2026-10-25T08:09:59.999Z', mode: 'recommended' })).session;
-  expect(session.queueNodeIds).toEqual([]);
-  expect(session.soonNodeIds).toEqual([second]);
+  expect(session.queueNodeIds).toEqual([first, second]);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   session = (await openCompanionDailyFlow({ now: due, mode: 'recommended' })).session;
   expect(session.currentNodeId).toBe(first);
-  expect(session.queueNodeIds).toEqual(['c']);
-  expect(session.soonNodeIds).toEqual([second]);
+  expect(session.queueNodeIds[0]).toBe(first);
+  expect(session.queueNodeIds.length).toBeLessThanOrEqual(2);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
   await closeIosCompanionDatabase();
   const database = new Database(path.join(library.root, 'library.db'));

@@ -28,6 +28,7 @@ vi.mock('@capacitor/app', () => ({ App: {
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import * as dailyFlowRuntime from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase
@@ -189,7 +190,7 @@ it('skips a remotely handled card before grading and reaches an empty Only Revie
     { node_id: 'one', due: '2099-01-01T00:00:00.000Z' }, { node_id: 'two', due: '2099-01-01T00:00:00.000Z' }
   ]);
   await foreground();
-  expect(ui.result.current.onlyReviewSession.currentCard).not.toBeNull();
+  expect(ui.result.current.onlyReviewSession.currentCard).toBeNull();
   await act(() => ui.result.current.handleGradeReview(3));
   await waitFor(() => expect(ui.result.current.onlyReviewSession.currentCard).toBeNull());
   expect(ui.result.current.readableArticle).toBeNull();
@@ -235,4 +236,32 @@ it('defers reading with Soon without writing a reading completion and restores a
   await openLibrary();
   const reopened = renderSurface(await loadCompanionWorkspaceSyncState(), false);
   expect(await expectCurrentBody(reopened)).toBe(resumeId);
+});
+
+it('ignores a delayed reading refresh after switching to Only Review', async () => {
+  database!.exec("UPDATE node_review SET due = '2099-01-01T00:00:00.000Z'");
+  const ui = renderSurface(await loadCompanionWorkspaceSyncState(), false);
+  expect(await expectCurrentBody(ui)).toBe('reading');
+  let release!: () => void;
+  let received!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  const captured = new Promise<void>(resolve => { received = resolve; });
+  const open = dailyFlowRuntime.openCompanionDailyFlow;
+  const delayed = vi.spyOn(dailyFlowRuntime, 'openCompanionDailyFlow').mockImplementationOnce(async args => {
+    const saved = await open(args);
+    received();
+    await waiting;
+    return saved;
+  });
+  try {
+    await act(async () => { await ui.result.current.refresh(); });
+    await captured;
+    ui.rerender({ only: true });
+    await waitFor(() => expect(ui.result.current.flowReady).toBe(true));
+    expect(ui.result.current.reviewSession.currentCard).toBeNull();
+    await act(async () => { release(); await waiting; });
+    expect(ui.result.current.reviewSession.currentCard).toBeNull();
+    expect(ui.result.current.readableArticle).toBeNull();
+    expect((await dailyFlowRuntime.loadCompanionDailySession())?.currentNodeId).toBeNull();
+  } finally { release(); delayed.mockRestore(); }
 });

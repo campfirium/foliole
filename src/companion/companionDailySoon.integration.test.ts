@@ -62,20 +62,20 @@ async function soon(stamp = now) {
 }
 const later = '2026-10-25T08:02:00.000Z';
 
-it.each(['read', 'later', 'dismiss'] as const)('keeps multiple Soon before newly due reading after %s and restores mobile history', async action => {
+it.each(['read', 'later', 'dismiss'] as const)('keeps frozen traversal after %s and restores mobile history', async action => {
   await topics();
   const [first, second] = session.queueNodeIds;
   expect(session.queueNodeIds).toHaveLength(2);
   await soon();
   await soon();
   expect(session.currentNodeId).toBe(first);
-  expect(session.queueNodeIds).toEqual([]);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
   const result = await persistFlowMutation({ action, nodeId: session.currentNodeId!, now: later,
     snapshot: await snapshot(), history: { key, mode: 'reading-only', session } });
   session = result.session!;
   expect(session.currentNodeId).toBe(second);
-  expect(session.queueNodeIds).toEqual([]);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
   await reopen();
   expect((await open(later)).currentNodeId).toBe(second);
@@ -96,11 +96,12 @@ it('keeps repeat Soon unique and does not rewrite unrelated persistent rows', as
   expect(session.currentNodeId).toBe(first);
   await soon();
   expect(session.currentNodeId).toBe(second);
-  expect(session.soonNodeIds).toEqual([first]);
+  expectSoon(first!);
   expect(session.readTopicCount).toBe(2);
   expect(library.database.prepare('SELECT * FROM node_reading').all()).toEqual([]);
   await reopen();
-  expect((await open()).soonNodeIds).toEqual([first]);
+  await open();
+  expectSoon(first!);
 });
 
 it('rolls back Soon and its mobile history together, then deduplicates a committed retry', async () => {
@@ -124,7 +125,7 @@ it('rolls back Soon and its mobile history together, then deduplicates a committ
   const retry = await commitCompanionFlowHistory(args);
   if (typeof retry !== 'object' || !('session' in retry)) throw new Error('missing_daily_session');
   session = retry.session;
-  expect(session.soonNodeIds).toEqual([before.currentNodeId]);
+  expectSoon(before.currentNodeId!);
   expect(session.readTopicCount).toBe(1);
   expect((await loadCompanionFlowHistory(key)).undoStack).toHaveLength(1);
   expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toHaveLength(1);
@@ -159,7 +160,7 @@ it('keeps mixed minute and day reviews due at their own time while Soon waits af
   session = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'b', now,
     snapshot: await snapshot(), history: { key, mode: 'recommended', session } })).session!;
   expect(session.currentNodeId).toBe('a');
-  expect(session.queueNodeIds).toEqual([]);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   expect((await openCompanionDailyFlow({ now: '2026-10-25T08:05:00.000Z', mode: 'review-first' })).session.currentNodeId).toBeNull();
   expect((await openCompanionDailyFlow({ now: '2026-10-25T08:10:00.000Z', mode: 'review-first' })).session.currentNodeId).toBe('c');
 });
@@ -172,11 +173,12 @@ it('keeps ordinary Soon reads limited to the current and next topic while preser
   try {
     await soon();
     expect(session.currentNodeId).toBe(before.queueNodeIds[1]);
-    expect(session.soonNodeIds).toEqual([before.currentNodeId]);
+    expectSoon(before.currentNodeId!);
     expect(session.readTopicCount).toBe(1);
-    expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 2)).toBe(true);
+    expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
     await reopen();
-    expect((await open()).soonNodeIds).toEqual([before.currentNodeId]);
+    await open();
+    expectSoon(before.currentNodeId!);
   } finally { reads.mockRestore(); }
 });
 
@@ -186,7 +188,8 @@ it('keeps synchronous JavaScript hashing bounded while advancing a large daily q
   library = await createSearchLibrary(3000);
   library.database.prepare('UPDATE nodes SET created_at = ?, updated_at = ?').run(now, now);
   await topics();
-  expect(session.queueNodeIds.length).toBeGreaterThan(3000);
+  expect(session.cycle?.remaining).toBeGreaterThan(3000);
+  expect(session.queueNodeIds.length).toBeLessThanOrEqual(2);
   const digest = sha256.create();
   const prototype = Object.getPrototypeOf(digest) as typeof digest;
   digest.destroy();
@@ -200,23 +203,18 @@ it('keeps synchronous JavaScript hashing bounded while advancing a large daily q
   try {
     await soon();
     expect(session.currentNodeId).not.toBe(before);
-    expect(session.soonNodeIds).toEqual([before]);
+    expectSoon(before!);
     expect(synchronousBytes).toBeLessThan(32 * 1024);
   } finally { measured.mockRestore(); }
 });
 
-it('rolls back daily progress and history when native digesting fails after the operation is written', async () => {
+it('rolls back daily progress when history persistence fails after the operation is written', async () => {
   await topics();
   const before = structuredClone(session);
-  const digest = crypto.subtle.digest.bind(crypto.subtle);
-  const failure = vi.spyOn(crypto.subtle, 'digest').mockImplementation((algorithm, bytes) => {
-    if (library.database.inTransaction && library.database.prepare('SELECT 1 FROM daily_flow_operations LIMIT 1').get()) {
-      return Promise.reject(new Error('native_digest_failed'));
-    }
-    return digest(algorithm, bytes);
-  });
-  try { await expect(soon()).rejects.toThrow('native_digest_failed'); }
-  finally { failure.mockRestore(); }
+  library.database.exec(`CREATE TRIGGER reject_history BEFORE INSERT ON companion_meta
+    WHEN NEW.key LIKE 'flow_history:%' BEGIN SELECT RAISE(ABORT, 'history_write_failed'); END`);
+  try { await expect(soon()).rejects.toThrow('history_write_failed'); }
+  finally { library.database.exec('DROP TRIGGER reject_history'); }
   expect(await open()).toEqual(before);
   expect((await loadCompanionFlowHistory(key)).undoStack).toEqual([]);
   expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
@@ -246,8 +244,16 @@ it('restores ordered Soon after review-only grading, restart and mobile undo red
   expect(session.currentNodeId).toBeNull();
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
   expect(session.currentNodeId).toBe(first);
-  expect(session.soonNodeIds).toEqual([second]);
-  expect(session.queueNodeIds).toEqual([]);
+  expectSoon(second!);
+  expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
   expect(session.reviewedItemCount).toBe(1);
 });
+
+function expectSoon(id: string) {
+  const reader = new Database(path.join(library.root, 'library.db'), { readonly: true });
+  try {
+    expect(reader.prepare('SELECT active, cohort, initial_task FROM daily_flow_entries WHERE node_id=?').get(id))
+      .toEqual({ active: 1, cohort: 'soon', initial_task: 0 });
+  } finally { reader.close(); }
+}

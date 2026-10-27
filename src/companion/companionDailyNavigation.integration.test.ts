@@ -12,6 +12,7 @@ import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/com
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { loadCompanionReadableArticle, loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
+import { legacyContinuation } from '../test/dailyFlowLegacyContinuation.testSupport';
 
 import { continueCompanionDailyFlow, saveCompanionDailyNavigation } from './companionDailyNavigation';
 import { seedCompanionReviewHistory } from './companionFlowHistory.testSupport';
@@ -37,6 +38,7 @@ beforeEach(async () => {
   expect(initial.currentNodeId).toBe('c');
   source = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: 'c', now,
     snapshot: await snapshot(), history: { key, mode: 'recommended', session: initial } })).session!;
+  source = await writeIosCompanionDatabase(db => legacyContinuation(db, source, now));
   expect(source.currentNodeId).toBeNull();
   expect(source.continueNodeId).toBeTruthy();
 });

@@ -94,6 +94,9 @@ export interface WorkspaceLayoutFieldTypes {
   reviewCompletedCount: number;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';
   reviewSummary: {
+    queueCleared?: boolean;
+    remainingCount?: number;
+    remainingReviewCount?: number;
     canContinueReading: boolean;
     completedAt: string | null;
     continueNodeId: string | null;

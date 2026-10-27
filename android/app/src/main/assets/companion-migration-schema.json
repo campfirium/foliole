@@ -633,6 +633,15 @@
         }
       ],
       "beforeVersion": 103
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to upgrade the daily Flow cycle.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 104
     }
   ],
   "planKeys": {

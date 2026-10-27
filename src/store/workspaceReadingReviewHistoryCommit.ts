@@ -136,6 +136,7 @@ async function persistPreparedReading(get: WorkspaceGet, result: ReadingReviewPa
           const related = result.historyEntry.relatedReadings?.find(item => item.nodeId === value.nodeId);
           if (related) related.afterReading = value.reading;
         }
+        if (saved.sourceSession) result.historyEntry.beforeContext.reviewSession = saved.sourceSession;
         if (saved.nodes) result.receiptNodes = saved.nodes;
         const active = buildReviewActiveNodeContext(get(), saved.session.currentNodeId ?? saved.session.continueNodeId ?? null);
         Object.assign(result.patch, active);

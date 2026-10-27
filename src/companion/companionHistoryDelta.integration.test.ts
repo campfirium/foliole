@@ -12,7 +12,7 @@ vi.mock('@capacitor/core', async () => {
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
 });
 let app: Awaited<ReturnType<typeof createHistoryDeltaFixture>>;
-afterEach(async () => { await app?.library.close(); hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS); });
+afterEach(async () => { vi.useRealTimers(); await app?.library.close(); hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS); });
 const facts = () => ({ review: app.db.prepare('SELECT * FROM review_log ORDER BY op_id').all(),
   reading: app.db.prepare('SELECT * FROM node_reading ORDER BY node_id').all() });
 const daily = () => app.db.prepare('SELECT * FROM daily_flow_state').get();
@@ -147,6 +147,8 @@ it.each(['read', 'later', 'dismiss'] as const)('replays a Soon, grade and %s cha
 });
 
 it('keeps local deletion and reading deltas in the same durable timeline', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(historyNow);
   app = await createHistoryDeltaFixture();
   await app.open();
   const original = structuredClone(app.session);

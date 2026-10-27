@@ -1,3 +1,4 @@
+import { CYCLE_ENTRY_INDEX, CYCLE_ENTRY_SCHEMA } from '../flow/cycleFlowTypes.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -19,6 +20,9 @@ export const DAILY_FLOW_SCHEMA = [
     `CREATE TRIGGER IF NOT EXISTS daily_flow_${table}_${event.toLowerCase()} AFTER ${event} ON ${table}
       BEGIN UPDATE daily_flow_state SET invalidated = 1 WHERE id = 1; END`))
 ] as const;
+
+export const DAILY_FLOW_CURRENT_SCHEMA = [DAILY_FLOW_SCHEMA[0], CYCLE_ENTRY_SCHEMA.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS '),
+  DAILY_FLOW_SCHEMA[2].replace('card_json TEXT', 'card_json TEXT, source_session_json TEXT'), CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS '), ...DAILY_FLOW_SCHEMA.slice(3)];
 
 export function migrateDailyFlow(sqlite: DatabaseMigrationTarget) {
   for (const statement of DAILY_FLOW_SCHEMA) sqlite.exec(statement);

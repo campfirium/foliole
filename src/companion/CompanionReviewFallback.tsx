@@ -14,7 +14,7 @@ export function CompanionReviewFallback(props: {
 }) {
   const t = useTranslation();
   if (props.error) return <AppErrorState description={props.error} title={t('companion.review.refreshError')} />;
-  const queueClear = props.hasSnapshot && props.hasTopics;
+  const queueClear = props.hasSnapshot && props.hasTopics && (props.summary.queueCleared ?? true);
   if (queueClear) return (
     <StudySessionCompleteSummary {...props.summary} layout="companion" createdItemCount={0} createdTopicCount={0}
       reviewSessionMode="recommended" action={props.canContinueReading ? (

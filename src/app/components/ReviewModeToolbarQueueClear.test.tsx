@@ -103,3 +103,17 @@ it('keeps queue-clear copy after the current queue is empty', () => {
   const queueClearButton = screen.getByRole('button', { name: 'Queue clear' });
   expect(queueClearButton).toBeInTheDocument();
 });
+
+it('does not infer completion merely because the initial reading-only queue has no review items', () => {
+  renderToolbar({ reviewSummary: { queueCleared: false, readTopicCount: 0, readingElapsedMs: 0,
+    reviewedItemCount: 0, reviewElapsedMs: 0 } });
+  expect(screen.queryByRole('button', { name: 'Queue clear' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Soon$/ })).toBeEnabled();
+});
+
+it('retains the completed-pass indicator when a minute review follows the boundary', () => {
+  renderToolbar({ isCurrentItemGradable: true, reviewSummary: { queueCleared: true,
+    readTopicCount: 2, readingElapsedMs: 0, reviewedItemCount: 1, reviewElapsedMs: 0 } });
+  expect(screen.getByRole('button', { name: 'Queue clear' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ })).toBeEnabled();
+});

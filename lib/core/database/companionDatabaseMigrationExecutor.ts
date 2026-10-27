@@ -31,6 +31,7 @@ import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwners
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
+import { migrateCompanionCycleFlow } from './cycleFlowMigration.js';
 import { migrateCompanionDailyFlow } from './dailyFlowSchema.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
@@ -88,6 +89,7 @@ export async function migrateCompanionDatabase(
   targetVersion: number,
   beforeVersionCommit?: () => void | Promise<void>
 ) {
+  if (currentVersion < 102) await migrateCompanionDailyFlow(db);
   if (currentVersion < 56) await installLegacyAttachmentSchema(db);
   if (currentVersion < 40) await db.run(
     'CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY REFERENCES nodes(id), position INTEGER NOT NULL)'
@@ -151,6 +153,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 101 && targetVersion >= 101) await migrateCompanionInitialReviewSchedule(db);
   if (currentVersion < 102 && targetVersion >= 102) await migrateCompanionDailyFlow(db);
   if (currentVersion < 103 && targetVersion >= 103) await migrateCompanionFlowHistory(db);
+  if (currentVersion < 104 && targetVersion >= 104) await migrateCompanionCycleFlow(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

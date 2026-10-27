@@ -27,6 +27,11 @@ export function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSour
   const existingCounts = (source.review as Partial<WorkspaceBottomReviewToolbarProps>).reviewProgressCounts;
   if (existingCounts) return existingCounts;
 
+  const summary = source.review.reviewSummary;
+  if (summary.remainingCount !== undefined && summary.remainingReviewCount !== undefined) return {
+    completedItemCount: summary.reviewedItemCount, completedTopicCount: summary.readTopicCount,
+    queuedItemCount: summary.remainingReviewCount, queuedTopicCount: summary.remainingCount - summary.remainingReviewCount
+  };
   const queueNodeIds = (source.review as { reviewQueueNodeIds?: string[] }).reviewQueueNodeIds ?? [];
   let queuedItemCount = 0;
   let queuedTopicCount = 0;

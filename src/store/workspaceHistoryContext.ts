@@ -1,3 +1,4 @@
+import { cloneCycleState } from '../../lib/core/flow/cycleFlowHistorySession';
 import { matchesFlowHistoryQueues } from '../../lib/core/flow/flowHistorySession';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -11,6 +12,7 @@ export interface WorkspaceHistoryContext {
 export function cloneWorkspaceReviewSession(reviewSession: WorkspaceState['reviewSession']) {
   return {
     ...reviewSession,
+    ...(reviewSession.cycle ? { cycle: cloneCycleState(reviewSession.cycle) } : {}),
     queueNodeIds: [...reviewSession.queueNodeIds],
     ...(reviewSession.hiddenSoonNodeIds ? { hiddenSoonNodeIds: [...reviewSession.hiddenSoonNodeIds] } : {}),
     ...(reviewSession.soonNodeIds ? { soonNodeIds: [...reviewSession.soonNodeIds] } : {})
@@ -42,11 +44,15 @@ export function isSameWorkspaceReviewSession(
 ) {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
   keys.delete('daily');
+  keys.delete('cycle');
+  keys.delete('flowFormat');
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
   keys.delete('queueHistory');
   keys.delete('hiddenSoonNodeIds');
   return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
-    matchesFlowHistoryQueues(right, left) &&
+    (left.flowFormat === 'cycle-v1' || right.flowFormat === 'cycle-v1'
+      ? left.flowFormat === right.flowFormat && left.cycle?.stamp === right.cycle?.stamp
+      : matchesFlowHistoryQueues(right, left)) &&
     JSON.stringify(left.hiddenSoonNodeIds ?? []) === JSON.stringify(right.hiddenSoonNodeIds ?? []);
 }

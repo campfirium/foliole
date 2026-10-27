@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
+import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { CompanionReadingActivity } from './companionReadingActivity';
 
@@ -142,6 +143,7 @@ function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCa
   };
   const onlyReviewSession = { ...reviewSession, currentCard: onlyReviewCard, queueNodeIds: onlyReviewCard ? ['item-1'] : [] };
   return {
+    flowSummary: { ...createEmptyReviewSession(), queueCleared: !currentCard },
     activeAction: 'review',
     flowHasTopics: true,
     canContinueReading: true,
@@ -216,8 +218,11 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
   });
 
-  it('shows reading actions when the current review card is a reading item', async () => {
-    await renderShellWithSurface(reviewSurface(readingReviewCard));
+  it.each([false, true])('keeps reading actions available with Queue clear=%s', async queueCleared => {
+    const surface = reviewSurface(readingReviewCard);
+    surface.flowSummary.queueCleared = queueCleared;
+    await renderShellWithSurface(surface);
+    expect(Boolean(screen.queryByText('Queue clear'))).toBe(queueCleared);
 
     expect(screen.getByLabelText('Soon')).toBeInTheDocument();
     expect(screen.getByLabelText('Later')).toBeInTheDocument();

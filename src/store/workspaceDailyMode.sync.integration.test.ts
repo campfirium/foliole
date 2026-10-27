@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { softDeleteNodes } from '../../lib/core/database/nodeMutations';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import { readCycleRows } from '../../lib/core/flow/dailyFlowStorage';
 import { act, assertDurable, due, exchange, node, now, open, persistence, publish, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
 afterEach(async () => { vi.restoreAllMocks(); await closeLibraries(); });
@@ -16,8 +17,8 @@ it.each(['delete', 'shelve', 'read'] as const)('retires hidden Soon after remote
   let local = await open(mobile, now, settings(mobile), 'reading-only');
   const first = local.currentNodeId!;
   local = await act(mobile, local, 'soon');
-  const second = local.currentNodeId!;
   local = await act(mobile, local, 'soon');
+  const untouched = local.currentNodeId;
   local = await open(mobile);
   local = (await openDailyFlow(mobile.port, { now, mode: 'review-first' }, settings(mobile), persistence)).session;
   expect(local.currentNodeId).toBe('review');
@@ -39,7 +40,7 @@ it.each(['delete', 'shelve', 'read'] as const)('retires hidden Soon after remote
   expect(local.currentNodeId).toBeNull();
   await assertDurable(mobile, local);
   local = await open(mobile, due);
-  expect(local.currentNodeId).toBe(second);
+  expect(local.currentNodeId).toBe(untouched);
   expect(local.queueNodeIds).not.toContain(first);
   expect(local.soonNodeIds).not.toContain(first);
   expect(local.readTopicCount).toBe(2);
@@ -75,8 +76,8 @@ it('rejects a stale review-only grade while retaining valid Soon after a synchro
   expect(mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
   local = await open(mobile, due);
   expect(local.currentNodeId).toBe(first);
-  expect(local.soonNodeIds).toEqual([second]);
-  expect(local.queueNodeIds).toEqual([]);
+  expect((await readCycleRows(mobile.port, [second]))[0]).toMatchObject({ active: 1, cohort: 'soon' });
+  expect(local.cycle?.clearedAt).toBeTruthy();
   await assertDurable(mobile, local);
 });
 

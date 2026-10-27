@@ -35,6 +35,7 @@ export function resumeFlowSession(snapshot: WorkspaceSnapshot, mode: ReviewSessi
 
 export function reconcileFlowSession(snapshot: WorkspaceSnapshot, session: ReviewSessionState,
   mode: ReviewSessionMode, refreshedAt?: string) {
+  if (session.flowFormat === 'cycle-v1') return session;
   const isAvailable = (id: string) => isCanonicalVisibleNodeId(snapshot, id) &&
     (isFsrsReviewItemNode(snapshot.nodesById[id]) ||
       (mode !== 'review-first' && isReadingReviewItemNode(snapshot.nodesById[id])));

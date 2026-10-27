@@ -107,6 +107,8 @@ function getReviewSessionSummary(
       ? 'completed'
       : 'idle';
   const reviewSummary: WorkspaceLayoutReviewProps['reviewSummary'] = {
+    ...(reviewSession.cycle ? { queueCleared: Boolean(reviewSession.cycle.clearedAt),
+      remainingCount: reviewSession.cycle.remaining, remainingReviewCount: reviewSession.cycle.reviewRemaining } : {}),
     canContinueReading: false,
     completedAt: reviewSession.completedAt ?? null,
     continueNodeId: reviewSession.continueNodeId ?? null,

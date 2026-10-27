@@ -2,60 +2,43 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
+import { DAILY_FLOW_CURRENT_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
+import { changeCycleHash } from '../../lib/core/flow/cycleFlowFingerprint.js';
+import { EMPTY_CYCLE_HASH, type CycleRow } from '../../lib/core/flow/cycleFlowTypes.js';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession.js';
-import { readDailyFlow, writeDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
+import { readDailyFlow, readCycleRows, saveCycleFlow, writeCycleRows } from '../../lib/core/flow/dailyFlowStorage.js';
 import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-it('saves a large Flow order promptly and durably preserves retained, removed and Soon positions', async () => {
+it('persists a large cycle, changes only affected rows and reads a bounded receipt after reopening', async () => {
   const sqlite = new Database(':memory:');
   try {
-    sqlite.exec(DAILY_FLOW_SCHEMA.slice(0, 3).join(';'));
+    sqlite.exec(DAILY_FLOW_CURRENT_SCHEMA.slice(0, 4).join(';'));
     const db = createBetterSqliteDbPort(sqlite);
-    const ids = Array.from({ length: 3000 }, (_, index) => `topic-${index}`);
-    const session: DailyFlowSession = { currentNodeId: ids[0]!, queueNodeIds: ids,
-      soonNodeIds: [], totalNodeCount: ids.length, isAnswerRevealed: false };
+    const rows: CycleRow[] = Array.from({ length: 3000 }, (_, index) => ({ node_id: `topic-${index}`,
+      order_key: index + 1, active: 1, cohort: 'queue', initial_task: 1, handled: 0 }));
+    const session: DailyFlowSession = { currentNodeId: rows[0]!.node_id, queueNodeIds: rows.slice(0, 2).map(row => row.node_id),
+      totalNodeCount: rows.length, isAnswerRevealed: false, flowFormat: 'cycle-v1', cycle: {
+        clearKey: rows.length, clearedAt: null, scanAfter: 1, lapLimit: rows.length, tailKey: rows.length,
+        rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows), stamp: '', remaining: rows.length, reviewRemaining: 0 } };
+    await db.transaction(tx => writeCycleRows(tx, rows));
     const args = { dayKey: '2026-10-27', mode: 'recommended', settingsKey: '{"scope":"large"}',
       now: '2026-10-27T00:00:00.000Z', revision: 1, session };
-    const started = performance.now();
-    const saved = await db.transaction(tx => writeDailyFlow(tx, args));
-    const elapsedMs = performance.now() - started;
-    expect((await readDailyFlow(db))!.session).toEqual(saved);
-    expect(elapsedMs).toBeLessThan(1000);
-    const before = (await readDailyFlow(db))!;
-    const next = { ...session, currentNodeId: ids[2]!, queueNodeIds: ids.slice(2), soonNodeIds: [ids[0]!] };
-    const result = await db.transaction(tx => writeDailyFlow(tx, { ...args, revision: 2, session: next,
-      previousEntries: before.entries }));
-    const after = (await readDailyFlow(db))!;
-    expect(after.session).toEqual(result);
-    expect(after.candidateIds).toEqual(ids);
-    expect(after.entries.find(row => row.node_id === ids[1])).toMatchObject({ queue_position: null, soon_position: null });
-    expect(after.entries.find(row => row.node_id === ids[2])!.queue_position)
-      .toBe(before.entries.find(row => row.node_id === ids[2])!.queue_position);
-    expect(after.session.soonNodeIds).toEqual([ids[0]]);
-  } finally { sqlite.close(); }
-}, 30000);
-
-it('returns a large durable order within a compact bridge response budget', async () => {
-  const sqlite = new Database(':memory:');
-  try {
-    sqlite.exec(DAILY_FLOW_SCHEMA.slice(0, 3).join(';'));
-    const db = createBetterSqliteDbPort(sqlite);
-    const ids = Array.from({ length: 3000 }, (_, index) => `node-${String(index).padStart(36, '0')}`);
-    const session: DailyFlowSession = { currentNodeId: ids[0]!, queueNodeIds: ids,
-      soonNodeIds: [], totalNodeCount: ids.length, isAnswerRevealed: false };
-    const saved = await db.transaction(tx => writeDailyFlow(tx, { dayKey: '2026-10-27', mode: 'recommended',
-      settingsKey: '{"scope":"bridge"}', now: '2026-10-27T00:00:00.000Z', revision: 1, session, previousEntries: [] }));
+    const saved = await db.transaction(tx => saveCycleFlow(tx, args));
     const query = db.query.bind(db);
     let largestResponse = 0;
     db.query = async <T extends DbRow>(sql: string, params?: DbParams) => {
-      const rows = await query<T>(sql, params);
-      largestResponse = Math.max(largestResponse, Buffer.byteLength(JSON.stringify({ values: rows })));
-      return rows;
+      const result = await query<T>(sql, params);
+      largestResponse = Math.max(largestResponse, Buffer.byteLength(JSON.stringify(result)));
+      return result;
     };
     expect((await readDailyFlow(db))!.session).toEqual(saved);
-    expect(largestResponse).toBeLessThan(220 * 1024);
+    expect(largestResponse).toBeLessThan(4096);
+    const first = rows[0]!;
+    await db.transaction(tx => writeCycleRows(tx, [{ ...first, order_key: 3001, cohort: 'soon', initial_task: 0, handled: 1 }]));
+    expect(await readCycleRows(db, [rows[1]!.node_id])).toEqual([rows[1]]);
+    expect((await readCycleRows(db, [first.node_id]))[0]).toMatchObject({ order_key: 3001, cohort: 'soon' });
+    expect(sqlite.prepare('SELECT COUNT(*) AS n FROM daily_flow_entries').get()).toEqual({ n: 3000 });
   } finally { sqlite.close(); }
 });

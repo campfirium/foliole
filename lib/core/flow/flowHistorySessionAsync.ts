@@ -1,10 +1,14 @@
 import { hashTextBodyAsync } from '../database/textBodyHash.js';
 
+import { compactCyclePair, compactCycleSession } from './cycleFlowHistorySession.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { compactFlowHistorySessions, restoreFlowHistorySession, restoreFlowSequenceCandidate,
   type FlowHistorySession } from './flowHistorySession.js';
 
 export async function compactFlowHistorySessionsAsync(before: FlowHistorySession, after: FlowHistorySession) {
+  if (before.flowFormat === 'legacy-queue-v1' || after.flowFormat === 'legacy-queue-v1') return { before, after };
+  const cycle = compactCyclePair(before, after);
+  if (cycle) return cycle;
   if (before.queueHistory || after.queueHistory) return compactFlowHistorySessions(before, after);
   const copy = (session: FlowHistorySession): FlowHistorySession => ({ ...session,
     ...(session.daily ? { daily: { ...session.daily } } : {}),
@@ -32,6 +36,7 @@ async function restoreSequence(ids: string[], delta: NonNullable<FlowHistorySess
 }
 
 export async function restoreFlowHistorySessionAsync(saved: FlowHistorySession, current: DailyFlowSession): Promise<DailyFlowSession> {
+  if (saved.flowFormat === 'cycle-v1') return compactCycleSession(saved);
   const { queueHistory, ...session } = saved;
   if (!queueHistory) return restoreFlowHistorySession(saved, current);
   if (session.daily) session.daily = { ...session.daily };

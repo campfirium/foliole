@@ -65,7 +65,7 @@ function setup(kind: 'item' | 'topic' | 'mixed' = 'item', futureTopic = false) {
 }
 
 const later = '2026-10-26T08:02:00.000Z';
-it.each(['read', 'later', 'dismiss'] as const)('keeps waiting Soon ahead of newly due reading after %s', async action => {
+it.each(['read', 'later', 'dismiss'] as const)('keeps the frozen traversal and history after %s', async action => {
   const app = setup('topic', true);
   app.setState({ reviewSessionMode: 'reading-only', reviewSessionModeExpiresAt: '2026-10-27T00:00:00.000Z' });
   await app.actions.startReviewSession(now);
@@ -74,13 +74,13 @@ it.each(['read', 'later', 'dismiss'] as const)('keeps waiting Soon ahead of newl
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(first);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual([]);
+  expect(app.getState().reviewSession.cycle?.clearedAt).toBeTruthy();
   expect(app.getState().reviewSession.readTopicCount).toBe(2);
   const actions = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic,
     dismiss: app.actions.dismissReviewTopic };
   expect(await actions[action](later)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(second);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual([]);
+  expect(app.getState().reviewSession.cycle?.clearedAt).toBeTruthy();
   expect(app.getState().reviewSession.readTopicCount).toBe(2);
   const persisted = await openDesktopDailyFlow({ now: later, mode: 'reading-only' });
   expect(persisted.session.currentNodeId).toBe(second);
@@ -100,8 +100,8 @@ it('keeps Soon out of the original Queue across a refresh and database restart',
   const [first, second] = app.getState().reviewSession.queueNodeIds;
   await app.actions.revisitReviewTopicSoon(now);
   const restored = await openDesktopDailyFlow({ now: later, mode: 'reading-only', refresh: true });
-  expect(restored.session.queueNodeIds).toEqual([second]);
-  expect(restored.session.soonNodeIds).toEqual([first]);
+  expect(restored.session.currentNodeId).toBe(second);
+  expectSoon(first!);
   closeDatabaseConnection();
   initializeDatabase();
   expect((await openDesktopDailyFlow({ now: later, mode: 'reading-only' })).session).toEqual(restored.session);
@@ -119,7 +119,7 @@ it('rolls back Soon progress and history, then retries a lost receipt without mo
   loseReceipt = true;
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(false);
   expect(await app.actions.revisitReviewTopicSoon(later)).toBe(true);
-  expect(app.getState().reviewSession.soonNodeIds).toEqual([before.currentNodeId]);
+  expectSoon(before.currentNodeId!);
   expect(app.getState().reviewSession.readTopicCount).toBe(1);
   expect(app.getState().appActionHistory.undoStack).toHaveLength(1);
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM daily_flow_operations')).toHaveLength(1);
@@ -148,14 +148,14 @@ it('preserves Soon across a mode change and the last item grade without returnin
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe('first');
-  expect(app.getState().reviewSession.queueNodeIds).toEqual([]);
+  expect(app.getState().reviewSession.cycle?.clearedAt).toBeTruthy();
   expect(app.getState().reviewSession.soonNodeIds).toEqual([]);
   expect((await openDesktopDailyFlow({ now, mode: 'recommended' })).session.currentNodeId).toBe('first');
   const entry = app.getState().appActionHistory.undoStack.at(-1)!;
   app.history.undoWorkspaceAction(entry.id);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().reviewSession.currentNodeId).toBe('second');
-  expect(app.getState().reviewSession.soonNodeIds).toEqual(['first']);
+  expectSoon('first');
   app.history.redoWorkspaceAction(entry.id);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect(app.getState().reviewSession.currentNodeId).toBe('first');
@@ -171,7 +171,8 @@ it('keeps reading Soon through review-only grading, history replay and restart',
   await app.actions.revisitReviewTopicSoon(now);
   openDatabaseConnection().sqlite.exec("CREATE TRIGGER reject_mode BEFORE UPDATE ON daily_flow_state BEGIN SELECT RAISE(ABORT, 'disk full'); END");
   expect(await openDesktopDailyFlow({ now, mode: 'review-first' }).catch(() => null)).toBeNull();
-  expect((await openDesktopDailyFlow({ now, mode: 'recommended' })).session.soonNodeIds).toEqual(['first']);
+  expect((await openDesktopDailyFlow({ now, mode: 'recommended' })).session.currentNodeId).toBe('second');
+  expectSoon('first');
   openDatabaseConnection().sqlite.exec('DROP TRIGGER reject_mode');
   app.actions.setReviewSessionMode('review-first', now);
   await vi.waitFor(() => expect(app.getState().reviewSessionMode).toBe('review-first'));
@@ -200,7 +201,7 @@ it('keeps reading Soon through review-only grading, history replay and restart',
   expect((await openDesktopDailyFlow({ now, mode: 'review-first' })).session.currentNodeId).toBeNull();
   const restored = (await openDesktopDailyFlow({ now, mode: 'recommended' })).session;
   expect(restored.currentNodeId).toBe('first');
-  expect(restored.queueNodeIds).toEqual([]);
+  expect(restored.cycle?.clearedAt).toBeTruthy();
   expect(restored.readTopicCount).toBe(count);
   expect(restored.reviewedItemCount).toBe(1);
 });
@@ -229,6 +230,11 @@ it('sends a Soon intent and lets the shared transaction determine the next sessi
   expect(soonPayload?.readingAction).toBe('soon');
   expect(soonPayload).not.toHaveProperty('nextSession');
   expect(app.getState().reviewSession.currentNodeId).toBe(second);
-  expect(app.getState().reviewSession.soonNodeIds).toEqual([first]);
+  expectSoon(first!);
   expect(openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading')).toEqual([]);
 });
+
+function expectSoon(id: string) {
+  expect(openDatabaseConnection().driver.queryAll('SELECT active, cohort, initial_task FROM daily_flow_entries WHERE node_id=?', [id]))
+    .toEqual([{ active: 1, cohort: 'soon', initial_task: 0 }]);
+}

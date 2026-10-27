@@ -178,6 +178,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(78, 'installSchema', 'Failed to install durable attachment demands.'),
   step(102, 'installSchema', 'Failed to install the local daily Flow list.'),
   step(103, 'installSchema', 'Failed to upgrade local Flow history.'),
+  step(104, 'installSchema', 'Failed to upgrade the daily Flow cycle.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

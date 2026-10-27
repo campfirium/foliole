@@ -14,7 +14,7 @@ export function resolveReviewSessionProgress(reviewSession: ReviewSessionState) 
   }
   return {
     reviewCompletedCount: (reviewSession.readTopicCount ?? 0) + (reviewSession.reviewedItemCount ?? 0),
-    reviewQueueCount: reviewSession.queueNodeIds.length
+    reviewQueueCount: reviewSession.cycle?.remaining ?? reviewSession.queueNodeIds.length
   };
 }
 

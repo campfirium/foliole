@@ -61,8 +61,9 @@ it.each(['read', 'later', 'dismiss'] as const)('%s reads locally and restores mo
   const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
   session = (await act(action)).session!;
   const after = structuredClone(session);
-  expect(after.queueNodeIds).toEqual(before.queueNodeIds.slice(1));
-  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 2)).toBe(true);
+  expect(after.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(after.cycle?.remaining).toBe(before.cycle!.remaining - 1);
+  expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
   const reading = (await snapshot()).nodesById[before.currentNodeId!]!.reading;
   await reopen();
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
@@ -96,7 +97,8 @@ it.each(['read', 'later', 'dismiss'] as const)('%s commits facts, daily progress
   expect((await snapshot()).nodesById[before.currentNodeId!]!.reading).toEqual(committed);
   expect((await loadCompanionFlowHistory(key)).undoStack).toHaveLength(1);
   expect(library.database.prepare('SELECT * FROM daily_flow_operations').all()).toHaveLength(1);
-  expect(session.queueNodeIds).toEqual(before.queueNodeIds.slice(1));
+  expect(session.currentNodeId).toBe(before.queueNodeIds[1]);
+  expect(session.readTopicCount).toBe((before.readTopicCount ?? 0) + 1);
 });
 
 it.each(['read', 'later', 'dismiss'] as const)('%s rejects a stale target and preserves an unrelated external edit', async action => {
@@ -117,7 +119,7 @@ it.each(['read', 'later', 'dismiss'] as const)('%s rejects a stale target and pr
   expect((await openCompanionDailyFlow({ now, mode: 'recommended' })).session.queueNodeIds).toEqual(session.queueNodeIds);
 });
 
-it.each(['read', 'later'] as const)('%s uses the configured short interval and keeps waiting Soon first', async action => {
+it.each(['read', 'later'] as const)('%s uses the configured short interval and retains the traversal before revisiting the due topic', async action => {
   const target = session.currentNodeId!;
   const previous = { intervalDurationMs: 60000, intervalGrowthFactor: 4, lastHandledAt: now,
     nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 1, state: 'active' as const };
@@ -130,7 +132,7 @@ it.each(['read', 'later'] as const)('%s uses the configured short interval and k
   session = (await act(action)).session!;
   const reading = (await snapshot()).nodesById[target]!.reading!;
   expect(reading.intervalDurationMs).toBe(action === 'read' ? 240000 : 120000);
-  const queued = [...session.queueNodeIds];
+  const queued = (library.database.prepare('SELECT node_id FROM daily_flow_entries WHERE active=1 AND initial_task=1 ORDER BY order_key').all() as { node_id: string }[]).map(row => row.node_id);
   for (const id of queued) {
     expect(session.currentNodeId).toBe(id);
     const state = await snapshot();

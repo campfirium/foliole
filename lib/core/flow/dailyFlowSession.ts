@@ -1,4 +1,8 @@
+import type { CycleState } from './cycleFlowTypes.js';
+
 export interface DailyFlowSession {
+  flowFormat?: 'legacy-queue-v1' | 'cycle-v1';
+  cycle?: CycleState;
   daily?: { scope: string; dayKey: string; revision: number };
   completedAt?: string | null;
   continueNodeId?: string | null;

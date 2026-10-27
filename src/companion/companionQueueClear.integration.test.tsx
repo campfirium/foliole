@@ -19,16 +19,19 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import { loadCompanionDailySession, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { applyCompanionLocalNodeVersions, saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
+import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
+import { useCompanionWorkspaceLoaders } from './useCompanionWorkspaceLoaders';
 
 let root = '';
 let database: Database.Database;
@@ -57,8 +60,8 @@ afterEach(async () => {
 
 async function seed(kind: 'topic' | 'item', future = false, nodeId: string = kind) {
   await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion({
-    id: nodeId, kind, content: `Body ${kind}`, reveal: kind === 'item' ? 'Answer' : null,
-    title: kind, parentNodeId: null, createdAt: initialTime, updatedAt: initialTime,
+    id: nodeId, kind, content: `Body ${nodeId}`, reveal: kind === 'item' ? 'Answer' : null,
+    title: nodeId, parentNodeId: null, createdAt: initialTime, updatedAt: initialTime,
     hideTitleHeading: false, isTitleManual: true, anchorLink: null, reading: null, review: null
   }, 'fixture')]);
   if (kind === 'item') await saveCompanionSyncNodeReviewRecord({ nodeId, review: {
@@ -69,18 +72,24 @@ async function seed(kind: 'topic' | 'item', future = false, nodeId: string = kin
 
 function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSyncState; only?: boolean }) {
   const [state, setState] = useState(initial);
+  const [, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const actions = createWorkspaceSnapshotActions({ state, setState, setError,
     setStatus: () => {}, setSyncConflictCount: () => {}, setSyncProgress: () => {} });
-  const surface = useCompanionArticleSurface({ ...createWorkspaceSync(state.workspace_snapshot), ...actions, state },
+  const loaders = useCompanionWorkspaceLoaders({ state, setState, setReadableArticle, setError });
+  const surface = useCompanionArticleSurface({ ...createWorkspaceSync(state.workspace_snapshot), ...actions, ...loaders, state },
     createFloatingBar(), undefined, { isOnlyReviewOpen: only });
   const card = surface.reviewSession.currentCard;
   if (!surface.flowReady) return <p>Loading</p>;
   if (card) return <>
     <p>{card.title}</p>
+    <div>{surface.readableArticle?.content}</div>
+    <CompanionReviewActionFooter statusLabel={surface.flowSummary.queueCleared ? 'Queue clear' : null} primary={<>
     <button onClick={surface.handleRevealAnswer}>Reveal</button>
     <button onClick={() => void surface.handleGradeReview(3)}>Grade</button>
     <button onClick={() => void surface.handleReadReviewTopic()}>Read</button>
+    <button onClick={() => void surface.handleSoonReviewTopic()}>Soon</button>
+    </>} />
   </>;
   if (only) return <CompanionOnlyReviewContent hasSnapshot isAnswerRevealed={false} reviewSession={surface.onlyReviewSession} />;
   return <CompanionReviewFallback hasSnapshot summary={surface.flowSummary} error={error ?? surface.flowError}
@@ -88,7 +97,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
       onContinueReading: surface.handleContinueReading }} />;
 }
 
-it('shows Queue clear after grading and continues the remaining topic without changing its schedule', async () => {
+it('keeps Queue clear visible while automatically continuing the remaining topic without changing its schedule', async () => {
   await seed('item');
   await seed('topic');
   const initial = await loadCompanionWorkspaceSyncState();
@@ -99,12 +108,13 @@ it('shows Queue clear after grading and continues the remaining topic without ch
   await screen.findByText('Queue clear');
   expect(screen.queryByText(/synced review state/i)).not.toBeInTheDocument();
   const completed = await loadCompanionDailySession();
-  expect(completed?.currentNodeId).toBeNull();
-  expect(completed?.continueNodeId).toBe('topic');
+  expect(completed?.currentNodeId).toBe('topic');
+  expect(completed?.continueNodeId).toBeNull();
+  expect(completed?.cycle?.clearedAt).toBeTruthy();
   expect((await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' })).session).toEqual(completed);
   const before = database.prepare('SELECT * FROM node_reading').all();
   const reviewBefore = database.prepare('SELECT * FROM node_review').all();
-  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
+  expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
   await screen.findByText('topic');
   expect(database.prepare('SELECT * FROM node_reading').all()).toEqual(before);
   expect(database.prepare('SELECT * FROM node_review').all()).toEqual(reviewBefore);
@@ -129,7 +139,7 @@ it('shows Queue clear for a library whose items are scheduled later without offe
   expect(screen.queryByText(/sync|snapshot/i)).not.toBeInTheDocument();
 });
 
-it('admits a newly due minute item while a cleared queue retains a reading continuation', async () => {
+it('retains the reading until the next action selects the newly due minute item', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-25T08:00:00.000Z'));
   await seed('item');
@@ -143,13 +153,18 @@ it('admits a newly due minute item while a cleared queue retains a reading conti
   fireEvent.click(screen.getByRole('button', { name: 'Grade' }));
   await screen.findByText('Queue clear');
   const completed = await loadCompanionDailySession();
-  expect(completed).toMatchObject({ currentNodeId: null, continueNodeId: 'topic' });
+  expect(completed).toMatchObject({ currentNodeId: 'topic', continueNodeId: null });
   const waiting = await openCompanionDailyFlow({ now: '2026-10-25T08:05:00.000Z', mode: 'recommended' });
   expect(waiting.session).toEqual(completed);
+  vi.setSystemTime(new Date('2026-10-25T08:10:00.000Z'));
   const ready = await openCompanionDailyFlow({ now: '2026-10-25T08:10:00.000Z', mode: 'recommended' });
-  expect(ready.session.currentNodeId).toBe('minute');
-  expect(ready.session.queueNodeIds).toContain('minute');
-  expect((await loadCompanionDailySession())?.daily).toEqual(ready.session.daily);
+  expect(ready.session.currentNodeId).toBe('topic');
+  await screen.findByText('Body topic');
+  fireEvent.click(screen.getByRole('button', { name: 'Soon' }));
+  await waitFor(async () => expect((await loadCompanionDailySession())?.currentNodeId).toBe('minute'));
+  await screen.findByText('minute');
+  await screen.findByText('Body minute');
+  expect((await loadCompanionDailySession())?.currentNodeId).toBe('minute');
 });
 
 it('keeps an empty library distinct from Queue clear', async () => {

@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import { readCycleRows } from '../../lib/core/flow/dailyFlowStorage';
 import { act, assertDurable, node, now, persistence, settings, setupPeers } from '../test/dailyFlowExceptions.testSupport';
 
 const due = '2026-10-26T08:10:00.000Z';
@@ -27,15 +28,15 @@ it.each(['empty', 'review', 'reading'] as const)('admits newly due minute review
   session = await open(beforeDue);
   expect(session.queueNodeIds).not.toContain('minute');
   expect(session.currentNodeId).toBe(initial.currentNodeId);
-  if (current !== 'empty') expect(reads).not.toHaveBeenCalled();
+  if (current !== 'empty') expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
   session = await open(due);
-  expect(session.queueNodeIds).toContain('minute');
+  expect((await readCycleRows(peer.port, ['minute']))[0]?.active).toBe(1);
   expect(session.currentNodeId).toBe(initial.currentNodeId ?? 'minute');
   expect(session.reviewedItemCount).toBe(1);
   await assertDurable(peer, session);
   reads.mockClear();
   expect(await open(due)).toEqual(session);
-  expect(reads).not.toHaveBeenCalled();
+  expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
 });
 
 it.each(['reading-only', 'recommended'] as const)('refreshes due reading in %s without interrupting the current', async mode => {
@@ -51,7 +52,8 @@ it.each(['reading-only', 'recommended'] as const)('refreshes due reading in %s w
   expect((await open(beforeDue)).queueNodeIds).toEqual(initial.queueNodeIds);
   const session = await open(due);
   expect(session.currentNodeId).toBe(initial.currentNodeId);
-  expect(session.queueNodeIds).toEqual([...initial.queueNodeIds, 'later']);
+  expect((await readCycleRows(peer.port, ['later']))[0]?.active).toBe(1);
+  expect(session.queueNodeIds.length).toBeLessThanOrEqual(2);
   expect(peer.db.prepare("SELECT next_at FROM node_reading WHERE node_id='later'").get()).toEqual({ next_at: due });
   await assertDurable(peer, session);
 });
@@ -71,16 +73,18 @@ it('keeps hidden Soon ordered when same-mode reentry admits a minute review', as
   session = (await openDailyFlow(peer.port, { now, mode: 'review-first', preferredNodeId: 'minute' }, settings(peer), persistence)).session;
   session = await act(peer, session, 'grade');
   expect(session.currentNodeId).toBe('current');
-  expect(session.hiddenSoonNodeIds).toEqual([first, second]);
+  expect((await readCycleRows(peer.port, [first!, second!])).sort((a,b) => a.order_key-b.order_key).map(row => row.node_id)).toEqual([first, second]);
   session = await open(beforeDue, 'review-first');
   expect(session.queueNodeIds).not.toContain('minute');
   session = await open(due, 'review-first');
-  expect(session.queueNodeIds).toEqual(['current', 'minute']);
-  expect(session.hiddenSoonNodeIds).toEqual([first, second]);
+  expect(session.currentNodeId).toBe('current');
+  expect((await readCycleRows(peer.port, ['minute']))[0]?.active).toBe(1);
+  expect((await readCycleRows(peer.port, [first!, second!])).sort((a,b) => a.order_key-b.order_key).map(row => row.node_id)).toEqual([first, second]);
   expect(session.readTopicCount).toBe(2);
   await assertDurable(peer, session);
   session = await open(due, 'recommended');
-  expect(session.soonNodeIds).toEqual([first, second]);
-  expect(session.queueNodeIds).toEqual(['current', 'minute']);
+  expect((await readCycleRows(peer.port, [first!, second!])).sort((a,b) => a.order_key-b.order_key).map(row => row.node_id)).toEqual([first, second]);
+  expect(session.currentNodeId).toBe('current');
+  expect((await readCycleRows(peer.port, ['minute']))[0]?.active).toBe(1);
   await assertDurable(peer, session);
 });

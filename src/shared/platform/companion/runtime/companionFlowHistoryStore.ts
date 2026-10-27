@@ -38,7 +38,10 @@ export function companionFlowHistoryKey(libraryScope: string) {
 export async function readCompanionFlowHistory(db: DbPort, key: string) {
   const rows = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key = ?', [key]);
   const stored = rows[0];
-  return { ...createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>(), ...(stored ? history.parse(JSON.parse(stored.value)) : {}) };
+  const raw: unknown = stored ? JSON.parse(stored.value) : {};
+  if (stored) history.parse(raw);
+  return { ...createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>(),
+    ...(raw as Partial<ReturnType<typeof history.parse>>) };
 }
 
 export async function readCompanionFlowHistoryAvailability(db: DbPort, key: string) {
@@ -52,7 +55,7 @@ export async function readCompanionFlowHistoryAvailability(db: DbPort, key: stri
 export async function writeCompanionFlowHistory(db: DbPort, key: string, value: Pick<ReturnType<typeof createEmptyWorkspaceActionHistory<CompanionWorkspaceHistoryEntry>>, 'undoStack' | 'redoStack'> & { replayReceipt?: ReplayReceipt }) {
   const [undoStack, redoStack] = await Promise.all([Promise.all(value.undoStack.map(compactFlowHistoryEntryAsync)),
     Promise.all(value.redoStack.map(compactFlowHistoryEntryAsync))]);
-  await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
+  await db.run(`INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value=json_patch(json_remove(companion_meta.value, '$.replayReceipt'), excluded.value), updated_at=excluded.updated_at`,
     [key, JSON.stringify({ undoStack, redoStack, replayReceipt: value.replayReceipt }), new Date().toISOString()]);
 }
 
@@ -67,8 +70,8 @@ export async function appendCompanionFlowHistory(db: DbPort, key: string, value:
         UNION ALL
         SELECT json_remove(undo, '$[0]'), excess - 1 FROM retained WHERE excess > 0
       )
-      SELECT json_object('undoStack', json_insert(undo, '$[#]',
-        json_extract(excluded.value, '$.undoStack[0]')), 'redoStack', json_array())
+      SELECT json_set(json_remove(companion_meta.value, '$.replayReceipt'), '$.undoStack', json_insert(undo, '$[#]',
+        json_extract(excluded.value, '$.undoStack[0]')), '$.redoStack', json_array())
       FROM retained WHERE excess = 0
     ), updated_at = excluded.updated_at
     WHERE json_type(companion_meta.value, '$.undoStack') = 'array'

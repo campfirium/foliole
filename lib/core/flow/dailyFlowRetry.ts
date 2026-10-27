@@ -1,5 +1,6 @@
 import { hashTextBody } from '../database/textBodyHash.js';
 
+import { compactCyclePair, compactCycleSession } from './cycleFlowHistorySession.js';
 import type { DailyFlowCommitArgs } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { compactFlowHistorySessions } from './flowHistorySession.js';
@@ -14,8 +15,11 @@ export function dailyFlowOperationId(token: NonNullable<DailyFlowSession['daily'
 export function retainDailyFlowRetry(args: DailyFlowCommitArgs) {
   const existing = pending.get(args.opId);
   if (existing) return existing;
-  if (args.sourceSession) {
-    const pair = compactFlowHistorySessions(args.sourceSession, args.nextSession ?? args.sourceSession);
+  if (args.historyMode && args.historySourceSession?.flowFormat === 'legacy-queue-v1') {
+    if (args.sourceSession?.flowFormat === 'cycle-v1') args = { ...args, sourceSession: compactCycleSession(args.sourceSession, true) };
+  } else if (args.sourceSession) {
+    const pair = compactCyclePair(args.sourceSession, args.nextSession ?? args.sourceSession)
+      ?? compactFlowHistorySessions(args.sourceSession, args.nextSession ?? args.sourceSession);
     args = { ...args, sourceSession: pair.before, ...(args.nextSession ? { nextSession: pair.after } : {}) };
   }
   pending.set(args.opId, args);
@@ -31,6 +35,7 @@ export function settleDailyFlowRetry(opId: string) {
 export async function retainDailyFlowRetryAsync(args: DailyFlowCommitArgs) {
   const existing = pending.get(args.opId);
   if (existing) return existing;
+  if (args.historyMode && args.historySourceSession?.flowFormat === 'legacy-queue-v1') return retainDailyFlowRetry(args);
   if (args.sourceSession) {
     const pair = await compactFlowHistorySessionsAsync(args.sourceSession, args.nextSession ?? args.sourceSession);
     args = { ...args, sourceSession: pair.before, ...(args.nextSession ? { nextSession: pair.after } : {}) };

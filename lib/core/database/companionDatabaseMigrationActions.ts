@@ -1,3 +1,4 @@
+import { CYCLE_ENTRY_INDEX } from '../flow/cycleFlowTypes.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from './androidCompanionCoreSchemaStatements.js';
@@ -43,7 +44,9 @@ export async function installCompanionSchema(db: DbPort) {
     !await companionColumnExists(db, 'sync_group_local_state', 'local_device_identity_key');
   const legacySyncState = await companionTableExists(db, 'sync_object_state') &&
     !await companionColumnExists(db, 'sync_object_state', 'state_seq');
+  const legacyFlow = await companionColumnExists(db, 'daily_flow_entries', 'queue_position');
   for (const statement of COMPANION_SCHEMA_STATEMENTS) {
+    if (legacyFlow && statement === CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS ')) continue;
     if ((legacyMembers || legacyLocalState) && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
     if (legacySyncState && SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS.some((item) => item === statement)) continue;
     await db.run(statement);
