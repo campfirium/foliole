@@ -3,8 +3,8 @@ import { afterEach, expect, it } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { scopedDailyLearningSnapshot } from '../../lib/core/flow/dailyFlowGrade';
-import { transactionDailyFlowPersistence } from '../../lib/core/flow/dailyFlowTransactionFacts';
 import { commitDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import { transactionDailyFlowPersistence } from '../../lib/core/flow/dailyFlowTransactionFacts';
 import { readCompanionReviewTopic } from '../companion/companionReadingReview';
 import { assertDurable, node, now, open, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
