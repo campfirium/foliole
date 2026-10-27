@@ -82,7 +82,8 @@ export function buildCurrentCard(snapshot: WorkspaceSnapshot, queueNodeIds: stri
   } satisfies CompanionReviewCard;
 }
 
-export function resolveScheduledReviewSummary(snapshot: WorkspaceSnapshot) {
+export function resolveScheduledReviewSummary(snapshot: Pick<WorkspaceSnapshot,
+  'nodesById' | 'nodeOrder' | 'trashedNodeIds' | 'trashedNodeDeletedAtById'>) {
   let nextFsrsDueAt: string | null = null;
   let nextReadingDueAt: string | null = null;
   let scheduledFsrsCount = 0;

@@ -9,7 +9,7 @@ import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/c
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import { selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
+import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 import { getWorkspaceHistoryTopEntry } from '../store/workspaceActionHistoryState';
 import { flowState, reconcileFlowSession, resumeFlowSession } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
@@ -68,16 +68,12 @@ export function useCompanionFlowSession(args: {
     }).catch(error => { current.error = String(error); render(); });
   }, [args.snapshot]);
   const session = current.session;
-  const scheduled = useMemo(() => args.snapshot ? resolveScheduledReviewSummary(args.snapshot) : null, [args.snapshot]);
+  const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot);
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),
     [args.snapshot, current.hydrated, session, scheduled]);
   useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
     session.currentNodeId, session.queueNodeIds);
   const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
-  const hasTopics = useMemo(() => Boolean(args.snapshot && selectCanonicalVisibleNodeIds(args.snapshot).some((id) => {
-    const kind = args.snapshot?.nodesById[id]?.kind;
-    return kind === 'topic' || kind === 'item';
-  })), [args.snapshot]);
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
@@ -86,6 +82,24 @@ export function useCompanionFlowSession(args: {
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error, ready: current.hydrated };
+}
+
+function useFlowCatalogSummary(snapshot: WorkspaceSnapshot | null) {
+  const catalog = useFlowCatalog(snapshot);
+  const scheduled = useMemo(() => catalog ? resolveScheduledReviewSummary(catalog) : null, [catalog]);
+  const hasTopics = useMemo(() => Boolean(catalog && catalog.nodeOrder.some((id) => {
+    if (!isCanonicalVisibleNodeId(catalog, id)) return false;
+    const kind = catalog.nodesById[id]?.kind;
+    return kind === 'topic' || kind === 'item';
+  })), [catalog]);
+  return { scheduled, hasTopics };
+}
+
+function useFlowCatalog(snapshot: WorkspaceSnapshot | null) {
+  const { nodesById, nodeOrder, trashedNodeIds, trashedNodeDeletedAtById } = snapshot ?? {};
+  return useMemo(() => nodesById && nodeOrder && trashedNodeIds ? { nodesById, nodeOrder, trashedNodeIds,
+    ...(trashedNodeDeletedAtById ? { trashedNodeDeletedAtById } : {}) } : null,
+  [nodesById, nodeOrder, trashedNodeIds, trashedNodeDeletedAtById]);
 }
 
 function canContinueFlowReading(snapshot: WorkspaceSnapshot | null, current: FlowOwner, onlyReview: boolean) {

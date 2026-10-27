@@ -67,7 +67,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   let visits = 0;
   Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, get: () => { visits += 1; return kind; } });
   try {
-    hook.rerender({ snapshot: source });
+    hook.rerender({ snapshot: { ...source, activeNodeId: next } });
     expect(hook.result.current.view).toEqual(before);
     expect(visits).toBe(0);
     Object.defineProperty(node, 'kind', { configurable: true, enumerable: true, writable: true, value: kind });
@@ -75,6 +75,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
     const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     hook.rerender({ snapshot: changed });
     await waitFor(() => expect(hook.result.current.view.queueNodeIds).not.toContain(next));
+    expect(hook.result.current.view.scheduledFsrsCount).toBe(before.scheduledFsrsCount - 1);
     const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' });
     expect(saved.session.queueNodeIds).not.toContain(next);
     act(() => { hook.result.current.workspaceHistoryControls.restoreFlowHistorySession(saved.session); });
