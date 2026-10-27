@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
 import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
@@ -48,7 +49,7 @@ function isReviewGradeApplicable(state: WorkspaceState, entry: WorkspaceReviewGr
 }
 
 function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<ReturnType<typeof buildGradedReviewState>>,
-  beforeNodes: WorkspaceState['nodesById'], receiptNodes?: Record<string, WorkspaceNodeSnapshot>) {
+  beforeNodes: WorkspaceState['nodesById'], receiptNodes?: Record<string, WorkspaceNodeSnapshot>, receiptLearning?: Record<string, DailyFlowLearningReceipt>) {
   let applied = false;
   let undoRequested = false;
   const entry = gradedState.historyEntry;
@@ -62,7 +63,7 @@ function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<Re
     applied = true;
     undoRequested = settled.undoRequested;
     return { ...gradedState.patch,
-      nodesById: { ...mergeDailyFlowReceiptNodes(state.nodesById, beforeNodes, receiptNodes), ...Object.fromEntries(Object.entries(gradedState.patch.nodesById).filter(([id]) => !state.nodesById[id])), [entry.nodeId]: {
+      nodesById: { ...mergeDailyFlowReceiptNodes(state.nodesById, beforeNodes, receiptNodes, receiptLearning), ...Object.fromEntries(Object.entries(gradedState.patch.nodesById).filter(([id]) => !state.nodesById[id])), [entry.nodeId]: {
         ...state.nodesById[entry.nodeId]!, review: entry.afterReview
       } },
       appActionHistory: settled.history };
@@ -86,6 +87,7 @@ export async function commitWorkspaceReviewGrade(args: {
   let persisted = false;
   let persistedSession: WorkspaceState['reviewSession'] | undefined;
   let persistedSource: WorkspaceState['reviewSession'] | undefined;
+  let receiptLearning: Record<string, DailyFlowLearningReceipt> | undefined;
   let receiptNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   try {
     const result = hasPersistentDailyFlow(args.snapshot.reviewSession)
@@ -102,7 +104,7 @@ export async function commitWorkspaceReviewGrade(args: {
       cardAfter: args.result.cardAfter
     }, args.persistence);
     persisted = Boolean(result);
-    if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; persistedSource = result.sourceSession; }
+    if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; receiptLearning = result.learning; persistedSource = result.sourceSession; }
     if (result && typeof result !== 'boolean') review = result.card ? toNodeReviewProfile(result.card) : null;
   } catch (error) {
     await recoverWorkspaceDailyFlow(args.set, args.get, error, args.now);
@@ -114,12 +116,12 @@ export async function commitWorkspaceReviewGrade(args: {
     }));
     return false;
   }
-  const computed = buildGradedReviewState({ snapshot: { ...args.snapshot, nodesById: mergeDailyFlowReceiptNodes(args.snapshot.nodesById, {}, receiptNodes) }, currentNodeId: args.currentNodeId,
+  const computed = buildGradedReviewState({ snapshot: { ...args.snapshot, nodesById: mergeDailyFlowReceiptNodes(args.snapshot.nodesById, {}, receiptNodes, receiptLearning) }, currentNodeId: args.currentNodeId,
     nodePatch: { review }, now: args.now, ...(persistedSession ? { persistedSession } : {}) });
   if (!computed) return false;
   const gradedState = { ...computed, historyEntry: { ...computed.historyEntry, id: entry.id,
     ...(persistedSource ? { beforeContext: { ...computed.historyEntry.beforeContext, reviewSession: persistedSource } } : {}) } };
-  const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, args.snapshot.nodesById, receiptNodes);
+  const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, args.snapshot.nodesById, receiptNodes, receiptLearning);
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
   return true;

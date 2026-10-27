@@ -14,10 +14,10 @@ export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
   args: DailyFlowOpenArgs, preference?: { reviewSessionMode: ReviewSessionMode; reviewSessionModeExpiresAt: string | null }, onlyIfNewer = false) {
   const before = get();
   const source = before.reviewSession;
-  return openDailyFlowRuntime(args).then(({ session, nodes }) => {
+  return openDailyFlowRuntime(args, before.nodesById).then(({ session, nodes, learning }) => {
     if (get().reviewSession !== source) return false;
-    if (onlyIfNewer && session.daily?.revision === source.daily?.revision && session.daily?.dayKey === source.daily?.dayKey && session.daily?.scope === source.daily?.scope) return Boolean(source.currentNodeId);
-    set(state => ({ nodesById: mergeDailyFlowReceiptNodes(state.nodesById, before.nodesById, nodes), ...(session.currentNodeId ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
+    if (onlyIfNewer && !nodes && session.daily?.revision === source.daily?.revision && session.daily?.dayKey === source.daily?.dayKey && session.daily?.scope === source.daily?.scope) return Boolean(source.currentNodeId);
+    set(state => ({ nodesById: mergeDailyFlowReceiptNodes(state.nodesById, before.nodesById, nodes, learning), ...(session.currentNodeId ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
       reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference }));
     return Boolean(session.currentNodeId);
   }).catch(error => {
@@ -33,9 +33,9 @@ export function continueWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, 
   if (source.currentNodeId || !source.continueNodeId || !source.daily) return Promise.resolve(false);
   return commitDailyFlowRuntime({ opId: dailyFlowOperationId(source.daily, source.continueNodeId, 'continue-reading'),
     now, token: source.daily, navigation: 'continue-reading', expectedContinueNodeId: source.continueNodeId }, state.nodesById)
-    .then(({ session, nodes }) => {
+    .then(({ session, nodes, learning }) => {
       if (get().reviewSession !== state.reviewSession) return false;
-      set(current => ({ nodesById: mergeDailyFlowReceiptNodes(current.nodesById, state.nodesById, nodes),
+      set(current => ({ nodesById: mergeDailyFlowReceiptNodes(current.nodesById, state.nodesById, nodes, learning),
         ...(session.currentNodeId ? buildReviewActiveNodeContext(current, session.currentNodeId) : {}), reviewSession: session }));
       return Boolean(session.currentNodeId);
     }).catch(async error => {

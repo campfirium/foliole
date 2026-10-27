@@ -1,10 +1,9 @@
 import { dailyFlowOperationId, retainDailyFlowRetry, settleDailyFlowRetry } from '../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../lib/core/flow/dailyFlowService';
-import { companionWorkspaceSnapshots } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { openCompanionDailyFlow, companionDailyFlowPersistence, companionDailyFlowSettings } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { companionDailyFlowPersistence, companionDailyFlowSettings } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { applyCompanionFlowReceipt, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
-import { mergeDailyFlowReceiptNodes } from '../store/workspaceDailyFlowReceipt';
 import { flowState } from '../store/workspaceFlowSession';
 import { continueReviewSessionReading } from '../store/workspaceReviewReadingContinuation';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
@@ -31,14 +30,10 @@ export async function continueCompanionDailyFlow(args: Parameters<typeof useComp
   try {
     const saved = source.daily ? await saveCompanionDailyNavigation(source)
       : { session: continueReviewSessionReading(flowState(args.snapshot, source, mode), new Date().toISOString()) };
+    if (saved.session) await applyCompanionFlowReceipt({ ...saved, session: saved.session }, args.snapshot);
     if (!matches() || !saved.session) return;
     current.session = saved.session;
     current.generation += 1;
-    if ('nodes' in saved) {
-      const baseline = companionWorkspaceSnapshots.getSnapshot();
-      await companionWorkspaceSnapshots.updateDerived(baseline, snapshot => snapshot && current.scope === getCompanionReadingScope()
-        ? { ...snapshot, nodesById: mergeDailyFlowReceiptNodes(snapshot.nodesById, args.snapshot!.nodesById, saved.nodes) } : snapshot);
-    }
     render();
   } catch (error) {
     if (!matches()) return;

@@ -1,7 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { advanceFlowSession, resumeFlowSession, type FlowAction } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';

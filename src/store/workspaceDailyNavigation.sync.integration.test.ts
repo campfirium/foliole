@@ -34,7 +34,8 @@ it.each(['desktop', 'mobile'] as const)('legacy compatibility: selects from late
     navigation: 'continue-reading', expectedContinueNodeId: 'reading' }, settings(local), persistence);
   expect(saved.session.currentNodeId).toBe('reading');
   expect(saved.session.queueNodeIds).not.toContain('waiting');
-  expect(saved.nodes?.reading?.title).toBe('reading');
+  expect(saved).not.toHaveProperty('nodes');
+  expect(saved.learning).toEqual({ reading: { reading: (await snapshot(local)).nodesById.reading!.reading, review: null } });
   expect(saved.session.reviewedItemCount).toBe(1);
   await assertDurable(local, saved.session);
   expect((await snapshot(local)).nodesById['remote-review']!.review).toEqual((await snapshot(remote)).nodesById['remote-review']!.review);

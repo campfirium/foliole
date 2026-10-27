@@ -58,4 +58,5 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   Number(Boolean(value.readings?.length)) <= 1, 'Only one learning mutation per command').refine(value => !value.cycleReplay || Boolean(value.historyMode),
   'Cycle changes are only accepted during history replay');
 export type DailyFlowCommitArgs = z.infer<typeof dailyFlowCommitSchema>;
-export type DailyFlowResult = { sourceSession?: DailyFlowSession; replayed?: boolean; mutationTimestamp?: string; nodes?: Record<string, WorkspaceNodeSnapshot>; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };
+export type DailyFlowLearningReceipt = Pick<WorkspaceNodeSnapshot, 'reading' | 'review'>;
+export type DailyFlowResult = { sourceSession?: DailyFlowSession; replayed?: boolean; mutationTimestamp?: string; learning?: Record<string, DailyFlowLearningReceipt> | undefined; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };

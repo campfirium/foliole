@@ -2,6 +2,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { isReviewProfileDue } from '../store/reviewQueuePlannerTime';
 import type { FlowAction } from '../store/workspaceFlowSession';
@@ -41,6 +42,7 @@ export async function persistFlowMutation(args: {
       reviewLog: result.reviewLog }) : await persistCompanionReviewSyncObject({ itemKind: 'fsrs',
         nodeId: args.nodeId, reviewLog: result.reviewLog, snapshot: result.snapshot });
     if (!saved) throw new Error('Could not save the review grade.');
+    if (typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, args.snapshot);
     const snapshot = typeof saved === 'object' && 'card' in saved ? { ...result.snapshot,
       nodesById: { ...result.snapshot.nodesById, [args.nodeId]: { ...result.snapshot.nodesById[args.nodeId]!,
         review: saved.card ? toNodeReviewProfile(saved.card) : null } } } : result.snapshot;
@@ -55,6 +57,7 @@ export async function persistFlowMutation(args: {
       entry: createCompanionFlowHistoryEntry({ ...args, before: args.snapshot, after: result.snapshot,
         relatedNodeIds: result.syncNodeIds, history: args.history }),
       ...(args.action === 'read' ? { completedReviewDay: completedFlowReviewDay(result.snapshot, args.nodeId) } : {}) });
+    if (typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, args.snapshot);
     const nodesById = { ...result.snapshot.nodesById };
     if (typeof saved === 'object' && 'readings' in saved) for (const value of saved.readings ?? []) {
       if (nodesById[value.nodeId]) nodesById[value.nodeId] = { ...nodesById[value.nodeId]!, reading: value.reading };

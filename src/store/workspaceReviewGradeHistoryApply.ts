@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
 import { reviewHistoryOpId } from '../../lib/core/review/reviewEventIdentity';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 
@@ -23,6 +24,8 @@ export async function applyWorkspaceReviewGradeHistory(args: {
   const nextReview = args.mode === 'undo' ? args.entry.beforeReview : args.entry.afterReview;
   let reviewResult: { review: import('../features/nodes/model/nodeTypes').NodeReviewProfile | null } | null = null;
   let dailySession: WorkspaceState['reviewSession'] | undefined;
+  const beforeNodes = args.get().nodesById;
+  let learning: Record<string, DailyFlowLearningReceipt> | undefined;
   let displayNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   try {
     const persisted = hasPersistentDailyFlow(args.get().reviewSession)
@@ -35,6 +38,7 @@ export async function applyWorkspaceReviewGradeHistory(args: {
     if (typeof persisted !== 'boolean' && 'session' in persisted) {
       dailySession = persisted.session;
       displayNodes = persisted.nodes;
+      learning = persisted.learning;
       args.mutationTimestamp = persisted.mutationTimestamp ?? args.mutationTimestamp;
       reviewResult = { review: persisted.card ? toNodeReviewProfile(persisted.card) : null };
     } else if (typeof persisted !== 'boolean') reviewResult = persisted;
@@ -51,6 +55,6 @@ export async function applyWorkspaceReviewGradeHistory(args: {
     ...(reviewResult ? args.mode === 'undo' ? { beforeReview: reviewResult.review } : { afterReview: reviewResult.review } : {}),
     mutationTimestamp: args.mutationTimestamp,
     ...(args.mode === 'redo' ? { reviewOpId: reviewHistoryOpId(args.entry.reviewOpId ?? args.entry.id, args.mutationTimestamp, 'redo') } : {}) }, {
-    ...applyWorkspaceHistoryContext(context), ...(dailySession ? { reviewSession: dailySession } : {}), nodesById: mergeDailyFlowReceiptNodes(nodesById, {}, displayNodes)
+    ...applyWorkspaceHistoryContext(context), ...(dailySession ? { reviewSession: dailySession } : {}), nodesById: mergeDailyFlowReceiptNodes(nodesById, beforeNodes, displayNodes, learning)
   });
 }

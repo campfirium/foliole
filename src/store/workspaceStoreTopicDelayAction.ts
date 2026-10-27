@@ -11,6 +11,7 @@ import {
 } from './workspaceActionHistory';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
 import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
+import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
@@ -187,6 +188,7 @@ async function persistTopicDelay(snapshot: WorkspaceState, result: TopicDelayPat
   persistence: WorkspaceReviewPersistenceAdapter) {
   if (!hasPersistentDailyFlow(snapshot.reviewSession)) return persistence.persistReadingNodes([result.nextNode], now);
   const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!, undefined, snapshot.nodesById);
+  result.patch.nodesById = mergeDailyFlowReceiptNodes(result.patch.nodesById ?? snapshot.nodesById, snapshot.nodesById, saved.nodes, saved.learning);
   result.patch.reviewSession = saved.session;
   result.historyEntry.afterContext.reviewSession = saved.session;
   return true;

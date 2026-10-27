@@ -40,6 +40,7 @@ import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import { createQaNode, createSetStateHarness, createWorkspaceFixture } from './workspaceStoreReviewActions.test-support';
@@ -213,4 +214,18 @@ it.each([false, true])('loads a missing successor separately and keeps concurren
   expect(app.getState().nodesById[successor]).toMatchObject({ id: successor, title: original.title, kind: 'topic' });
   expect(app.getState().nodesById[source]).toMatchObject({ title: 'Concurrent title', content: 'Concurrent content', review: { reps: 17 } });
   expect(bridgeCommands.filter(command => command === 'load_workspace_list_projection')).toHaveLength(missing ? 1 : 0);
+});
+
+
+it('hydrates a missing current display node when reopening an unchanged daily cursor', async () => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const id = app.getState().reviewSession.currentNodeId!;
+  const nodesById = { ...app.getState().nodesById };
+  delete nodesById[id];
+  app.setState({ nodesById });
+  bridgeCommands.length = 0;
+  expect(await openWorkspaceDailyFlow(app.setState, app.getState, { now, mode: 'recommended' }, undefined, true)).toBe(true);
+  expect(app.getState().nodesById[id]).toMatchObject({ id, title: id, kind: 'topic' });
+  expect(bridgeCommands.filter(command => command === 'load_workspace_list_projection')).toHaveLength(1);
 });

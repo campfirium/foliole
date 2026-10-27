@@ -4,7 +4,8 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { loadCompanionDailySession, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { loadCompanionDailySession } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume, saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';

@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
@@ -7,17 +8,27 @@ import { isSameReviewProfile } from './workspaceReviewGradeActionHistory';
 type ReceiptNode = Node | WorkspaceNodeSnapshot;
 
 export function mergeDailyFlowReceiptNodes<T extends ReceiptNode>(current: Record<string, T>, before: Record<string, T>,
-  receipt: Record<string, WorkspaceNodeSnapshot> | undefined) {
-  if (!receipt || !Object.keys(receipt).length) return current;
-  const nodes = { ...current };
+  receipt: Record<string, WorkspaceNodeSnapshot> | undefined, learning?: Record<string, DailyFlowLearningReceipt>) {
+  if (!Object.keys(receipt ?? {}).length && !Object.keys(learning ?? {}).length) return current;
+  let nodes = current;
   for (const [id, value] of Object.entries(receipt ?? {})) {
+    if (!current[id]) {
+      if (nodes === current) nodes = { ...current };
+      nodes[id] = value as T;
+    }
+  }
+  for (const [id, value] of Object.entries(learning ?? {})) {
     const node = current[id];
-    if (!node) { nodes[id] = value as T; continue; }
+    if (!node) continue;
     const expected = before[id];
     if (!expected) continue;
+    const reviewChanged = isSameReviewProfile(node.review, expected.review) && !isSameReviewProfile(node.review, value.review);
+    const readingChanged = isSameReadingProfile(node.reading, expected.reading) && !isSameReadingProfile(node.reading, value.reading);
+    if (!reviewChanged && !readingChanged) continue;
+    if (nodes === current) nodes = { ...current };
     nodes[id] = { ...node,
-      ...(isSameReviewProfile(node.review, expected.review) ? { review: value.review } : {}),
-      ...(isSameReadingProfile(node.reading, expected.reading) ? { reading: value.reading } : {}) };
+      ...(reviewChanged ? { review: value.review } : {}),
+      ...(readingChanged ? { reading: value.reading } : {}) };
   }
   return nodes;
 }

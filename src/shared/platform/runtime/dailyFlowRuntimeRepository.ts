@@ -10,10 +10,11 @@ export function hasDailyFlowRuntime() {
   return Boolean(getRuntimeInvoke());
 }
 
-export function openDailyFlowRuntime(args: DailyFlowOpenArgs) {
+export function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: Record<string, unknown>) {
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
-  return invoke(NATIVE_COMMANDS.openDailyFlow, args);
+  return invoke(NATIVE_COMMANDS.openDailyFlow, args).then(async result => ({ ...result,
+    nodes: await loadDailyFlowDisplayNodes(result, knownNodes, result.session.daily!.scope) }));
 }
 
 export function commitDailyFlowRuntime(args: DailyFlowCommitArgs, knownNodes: Record<string, unknown>) {

@@ -11,9 +11,10 @@ import { replayLegacyCycle } from './cycleFlowLegacy.js';
 import { chooseCycleCurrent, isCycleCurrentReady, reconcileCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailyLearningSnapshot, scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { flowDay, flowPlan } from './dailyFlowPlanning.js';
+import { currentFlowLearning, readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
@@ -66,6 +67,7 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
   await db.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json, source_session_json) VALUES (?, ?, ?, ?, ?)',
     [args.opId, hash, saved.daily!.revision, result.card === undefined ? null : JSON.stringify(result.card), JSON.stringify(sourceSession)]);
   return { sourceSession, mutationTimestamp: args.now, session: saved, ...result,
+    learning: await readCurrentFlowLearning(db, persistence, saved.currentNodeId),
     ...(args.readings && args.readingAction !== 'soon' ? { readings: args.readings.map(value => ({ nodeId: value.nodeId,
       reading: updated.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
 }
@@ -79,8 +81,10 @@ async function replayOperation(db: DbPort, stored: Awaited<ReturnType<typeof rea
     if (!stored || stored.invalidated || stored.revision !== previous.revision) throw new Error('daily_flow_ack_superseded');
     const readings = args.readingAction === 'soon' ? undefined : args.readings;
     const snapshot = readings?.length
-      ? await scopedDailySnapshot(db, persistence, readings.map(value => value.nodeId)) : null;
+      ? await persistence.learningSnapshot(db, [stored.session.currentNodeId, ...readings.map(value => value.nodeId)].filter((id): id is string => Boolean(id)))
+      : stored.session.currentNodeId ? await persistence.learningSnapshot(db, [stored.session.currentNodeId]) : null;
     return { ...(previous.source_session_json ? { sourceSession: JSON.parse(previous.source_session_json) as DailyFlowSession } : {}), session: stored.session, replayed: true, mutationTimestamp: args.now,
+      learning: snapshot ? currentFlowLearning(snapshot, stored.session.currentNodeId) : undefined,
       ...(readings ? { readings: readings.map(value => ({ nodeId: value.nodeId,
         reading: snapshot?.nodesById[value.nodeId]?.reading ?? null })) } : {}),
       ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) }) };

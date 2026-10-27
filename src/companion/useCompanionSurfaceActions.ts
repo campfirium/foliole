@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import type { FlowAction } from '../store/workspaceFlowSession';
 
@@ -109,6 +110,7 @@ async function commitSoonAction(args: CompanionSurfaceActionArgs, token: Token, 
   const saved = history && token.nodeId ? await commitCompanionFlowHistory({ key: history.key, mode: history.mode,
     entry: createCompanionFlowHistoryEntry({ action: 'soon', nodeId: token.nodeId, now,
       before: snapshot, after: snapshot, history }) }) : null;
+  if (saved && typeof saved === 'object' && 'session' in saved) await applyCompanionFlowReceipt(saved, snapshot);
   args.flow.advance(token, 'soon', snapshot, now, saved && typeof saved === 'object' && 'session' in saved ? saved.session : undefined);
 }
 

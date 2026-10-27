@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import {
@@ -34,6 +35,7 @@ export interface ReadingReviewPatchResult {
   nextNodesForSync: Node[];
   patch: Partial<WorkspaceState>;
   completedReviewDay?: string;
+  receiptLearning?: Record<string, DailyFlowLearningReceipt>;
   receiptNodes?: Record<string, WorkspaceNodeSnapshot>;
   beforeNodes?: Record<string, Node>;
 }
@@ -57,7 +59,7 @@ function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReview
     areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
     isSameWorkspaceReviewSession(state.reviewSession, beforeReviewSession);
   if (!applicable) return null;
-  const nodesById = { ...mergeDailyFlowReceiptNodes(state.nodesById, result.beforeNodes ?? state.nodesById, result.receiptNodes), [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
+  const nodesById = { ...mergeDailyFlowReceiptNodes(state.nodesById, result.beforeNodes ?? state.nodesById, result.receiptNodes, result.receiptLearning), [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
   applyRelatedReadingSnapshots({ nextNodesById: nodesById, readings: apply.relatedReadings });
   const settled = settleWorkspaceAction(state.appActionHistory, entry.id);
   return {
@@ -140,6 +142,7 @@ async function persistPreparedReading(get: WorkspaceGet, result: ReadingReviewPa
           if (related) related.afterReading = value.reading;
         }
         if (saved.sourceSession) result.historyEntry.beforeContext.reviewSession = saved.sourceSession;
+        if (saved.learning) result.receiptLearning = saved.learning;
         if (saved.nodes) result.receiptNodes = saved.nodes;
         const active = buildReviewActiveNodeContext(get(), saved.session.currentNodeId ?? saved.session.continueNodeId ?? null);
         Object.assign(result.patch, active);

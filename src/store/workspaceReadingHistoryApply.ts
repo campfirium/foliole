@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import {
@@ -66,6 +67,8 @@ export async function applyWorkspaceReadingHistory(args: {
   if (!isApplicable(args.get(), args.entry, args.mode)) return { status: 'invalid' };
   const prepared = buildApplyNodes(args.get(), args.entry, args.mode);
   let dailySession: WorkspaceState['reviewSession'] | undefined;
+  const beforeNodes = args.get().nodesById;
+  let learning: Record<string, DailyFlowLearningReceipt> | undefined;
   let displayNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
   try {
     const persisted = hasPersistentDailyFlow(args.get().reviewSession)
@@ -76,6 +79,7 @@ export async function applyWorkspaceReadingHistory(args: {
     if (typeof persisted !== 'boolean') {
       dailySession = persisted.session;
       displayNodes = persisted.nodes;
+      learning = persisted.learning;
       args.mutationTimestamp = persisted.mutationTimestamp ?? args.mutationTimestamp;
     }
   } catch (error) {
@@ -88,6 +92,6 @@ export async function applyWorkspaceReadingHistory(args: {
   return appliedWorkspaceHistory({ ...args.entry, mutationTimestamp: args.mutationTimestamp }, {
     ...applyWorkspaceHistoryContext(context),
     ...(dailySession ? { reviewSession: dailySession } : {}),
-    nodesById: mergeDailyFlowReceiptNodes(applied.nextNodesById, {}, displayNodes)
+    nodesById: mergeDailyFlowReceiptNodes(applied.nextNodesById, beforeNodes, displayNodes, learning)
   });
 }

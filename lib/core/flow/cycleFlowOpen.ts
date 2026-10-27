@@ -7,8 +7,9 @@ import { allocateCycleKey, changeCycleHash, cycleMeta, cycleStamp } from './cycl
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { EMPTY_CYCLE_HASH, type CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { scopedDailyLearningSnapshot, scopedDailySnapshot } from './dailyFlowGrade.js';
+import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import { flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
+import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { readDailyFlow, readCycleRows, saveCycleFlow, writeCycleRows, type CycleStored } from './dailyFlowStorage.js';
@@ -118,9 +119,8 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
   const unchanged = stored && !stored.invalidated && stored.mode === args.mode && stored.settings_key === JSON.stringify(settings)
     && cycleStamp(session.cycle!, session) === stored.session.cycle!.stamp
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
-  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { session: stored.session };
+  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { session: stored.session, learning: await readCurrentFlowLearning(db, persistence, stored.session.currentNodeId) };
   const saved = await saveCycleFlow(db, { dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: (stored?.revision ?? 0) + 1, session });
-  const snapshot = await scopedDailySnapshot(db, persistence, [saved.currentNodeId]);
-  return { session: saved, nodes: snapshot.nodesById };
+  return { session: saved, learning: await readCurrentFlowLearning(db, persistence, saved.currentNodeId) };
 }
