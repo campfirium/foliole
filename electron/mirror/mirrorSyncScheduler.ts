@@ -78,7 +78,7 @@ async function processPending(bypass: boolean, context: DesktopTaskContext, atte
   }
 }
 
-async function drainQueue(bypass: boolean) {
+async function drainQueue(bypass: boolean, forQuit = false) {
   clearTimer();
   if (flushInFlight) return flushInFlight;
   let completed = false;
@@ -86,6 +86,8 @@ async function drainQueue(bypass: boolean) {
   const attemptedArticles = new Map(pendingArticles);
   const handle = submitDesktopOperation('mirror-incremental', {
     failureLabel: '[mirror] incremental export failed',
+    // Quit must run its callback after startup recovery, rather than coalesce into its handle.
+    ...(forQuit ? { concurrencyKey: 'mirror-quit' } : {}),
     run: async (context) => {
       await processPending(bypass, context, attemptedArticles);
       completed = !context.signal.aborted;
@@ -94,6 +96,7 @@ async function drainQueue(bypass: boolean) {
   flushInFlight = handle.promise.then(() => undefined);
   try {
     await flushInFlight;
+    return completed;
   } finally {
     if (!completed) {
       // Failed/cancelled work stays available to an explicit flush, without a retry timer.
@@ -122,9 +125,23 @@ export function scheduleMirrorSync(nodeIds: string[], articleIds: string[] = [],
   scheduleFlush();
 }
 
-export async function flushMirrorSync() {
+export async function flushMirrorSync(options: { forQuit?: boolean } = {}) {
   clearTimer();
-  if (flushInFlight) await flushInFlight;
-  if (pendingNodes.size || pendingArticles.size) await drainQueue(true);
-  await flushPermanentMirrorRetirements();
+  if (flushInFlight) {
+    try {
+      await flushInFlight;
+    } catch (error) {
+      if (!options.forQuit) throw error;
+      // Quit can consume retained demand after an earlier automatic attempt failed.
+      console.error('[mirror] preceding export failed before quit flush', error);
+    }
+  }
+  do {
+    if (pendingNodes.size || pendingArticles.size) {
+      const completed = await drainQueue(true, options.forQuit);
+      if (options.forQuit && completed === false) throw new DOMException('Mirror quit flush cancelled', 'AbortError');
+    }
+    await flushPermanentMirrorRetirements();
+    // Only quit drains saves received while rendering; ordinary flush stays one-shot.
+  } while (options.forQuit && (pendingNodes.size || pendingArticles.size));
 }

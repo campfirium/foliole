@@ -104,7 +104,7 @@ function installBeforeQuitLifecycle() {
       await flushCoalescedWorkspaceSearchInvalidations();
       await waitForApplicationDatabaseRestoreSettlement();
       await disposeBackupSearchSessions();
-      await flushMirrorSync();
+      await flushMirrorSync({ forQuit: true });
       await desktopTaskScheduler.pauseResource('library');
     },
     onPrepareError: (error) => appendMainProcessDiagnosticLog('before_quit_prepare_failed', { error }),
