@@ -8,6 +8,7 @@ import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySessio
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -118,7 +119,9 @@ it.each(['read', 'later', 'dismiss'] as const)('advances the real %s surface wit
   const ui = renderHook(() => useReadingSurface(initial, publish));
   await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
   const source = ui.result.current.flow.view.currentCard!.nodeId;
-  const next = ui.result.current.flow.view.queueNodeIds[1]!;
+  const session = ui.result.current.flow.capture().session;
+  const next = (await predictCompanionFlowDocument({ token: session.daily!, currentNodeId: session.currentNodeId!,
+    now: new Date().toISOString() }, new AbortController().signal))!;
   const body = library.database.prepare('SELECT content FROM nodes WHERE id = ?').get(next) as { content: string };
   await waitFor(() => expect(queries.mock.calls.some(([sql, params]) =>
     sql.includes('SELECT article.*') && params?.[0] === next)).toBe(true));
@@ -150,7 +153,9 @@ it.each(['read', 'later', 'dismiss'] as const)('retries only the saved %s surfac
   const ui = renderHook(() => useReadingSurface(initial, vi.fn()));
   await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
   const source = ui.result.current.flow.view.currentCard!.nodeId;
-  const next = ui.result.current.flow.view.queueNodeIds[1]!;
+  const session = ui.result.current.flow.capture().session;
+  const next = (await predictCompanionFlowDocument({ token: session.daily!, currentNodeId: session.currentNodeId!,
+    now: new Date().toISOString() }, new AbortController().signal))!;
   const owner = getIosCompanionDatabaseOwner();
   vi.spyOn(owner, 'readSnapshot').mockRejectedValueOnce(new Error('local refresh failed'));
   const submit = action === 'read' ? 'handleReadReviewTopic'

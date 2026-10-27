@@ -11,6 +11,7 @@ import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 import { currentLibraryScope } from './attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
+import { scheduleDesktopFlowDocumentPreparation } from './dailyFlowDocumentPreparation.js';
 import { saveNodeReadingState } from './nodeReadingState.js';
 import { saveNodeReviewState } from './nodeReviewState.js';
 import { applyReviewGrade } from './reviewMutations.js';
@@ -48,12 +49,16 @@ function settings() {
   return { scope: currentLibraryScope(), newDayStartsAtHour: value.newDayStartsAtHour, pushQueue: value.pushQueue };
 }
 
-export function openDesktopDailyFlow(args: unknown) {
-  return openDailyFlow(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+export async function openDesktopDailyFlow(args: unknown) {
+  const result = await openDailyFlow(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
     dailyFlowOpenSchema.parse(args), settings(), desktopDailyFlowPersistence);
+  scheduleDesktopFlowDocumentPreparation(result.session, settings(), desktopDailyFlowPersistence);
+  return result;
 }
 
-export function commitDesktopDailyFlow(args: unknown) {
-  return commitDailyFlow(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+export async function commitDesktopDailyFlow(args: unknown) {
+  const result = await commitDailyFlow(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
     dailyFlowCommitSchema.parse(args), settings(), desktopDailyFlowPersistence);
+  scheduleDesktopFlowDocumentPreparation(result.session, settings(), desktopDailyFlowPersistence);
+  return result;
 }

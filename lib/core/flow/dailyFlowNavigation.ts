@@ -1,4 +1,3 @@
-import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import { reconcileCycle } from './cycleFlowOpen.js';
@@ -24,7 +23,7 @@ export async function commitDailyFlowNavigation(db: DbPort, stored: CycleStored,
   const session = { ...base, currentNodeId: ready ? target : null, continueNodeId: null,
     ...(ready ? { completedAt: null, currentItemStartedAt: args.now, isAnswerRevealed: false,
       cycle: { ...base.cycle!, scanAfter: row.order_key } } : {}) };
-  const window = await cycleWindow(db, session, { mode: stored.mode as ReviewSessionMode, now: args.now, settings, persistence });
+  const window = cycleWindow(session);
   const saved = await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode,
     settingsKey: JSON.stringify(settings), now: args.now, revision: stored.revision + 1, session: window });
   await db.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json) VALUES (?, ?, ?, NULL)',

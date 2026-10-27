@@ -4,6 +4,7 @@ import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/revi
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowContract';
 import { loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
+import { predictDailyFlowDocument, type DailyFlowPredictionArgs } from '../../../../../lib/core/flow/dailyFlowPrediction';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
@@ -60,4 +61,11 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
 
 export function loadCompanionDailySession() {
   return readIosCompanionDatabase(async db => (await readDailyFlow(db))?.session ?? null);
+}
+
+export function predictCompanionFlowDocument(args: DailyFlowPredictionArgs, signal: AbortSignal) {
+  const owner = getIosCompanionDatabaseOwner();
+  const settings = companionDailyFlowSettings();
+  return owner.readBackgroundSnapshot(db => predictDailyFlowDocument(db, args, settings,
+    companionDailyFlowPersistence), signal);
 }

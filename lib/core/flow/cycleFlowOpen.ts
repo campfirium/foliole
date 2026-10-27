@@ -112,7 +112,7 @@ export async function openCycleFlow(db: DbPort, args: DailyFlowOpenArgs, setting
       await chooseCycleCurrent(db, session, args.mode, args.now, settings, persistence);
     }
   }
-  session = await cycleWindow(db, session, { mode: args.mode, now: args.now, settings, persistence });
+  session = cycleWindow(session);
   if (captureChanges && session.cycle?.change) {
     session.cycle.stamp = cycleStamp(session.cycle, session);
     session.cycle.change.target = cycleMeta(session.cycle);

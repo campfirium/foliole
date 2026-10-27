@@ -52,9 +52,10 @@ async function prepare(page: Page) {
 test('keeps ordered reading Soon through review-only grading and renderer restart', async ({ desktopWindow: page }) => {
   await prepare(page);
   await mode(page, /Reading only/);
-  await expect.poll(async () => (await session(page)).queueNodeIds.length).toBe(2);
+  await expect.poll(async () => (await session(page)).currentNodeId).toMatch(/^mode-[ab]$/);
   const initial = await session(page);
-  const [first, second] = initial.queueNodeIds;
+  const first = initial.currentNodeId!;
+  const second = first === 'mode-a' ? 'mode-b' : 'mode-a';
   await page.getByRole('button', { name: 'Soon', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).toBe(second);
   await page.getByRole('button', { name: 'Soon', exact: true }).click();
@@ -76,7 +77,6 @@ test('keeps ordered reading Soon through review-only grading and renderer restar
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).toBe(first);
   const restored = await session(page);
-  expect(restored.queueNodeIds).toEqual([first, second]);
   expect(restored.cycle?.clearedAt).toBeTruthy();
   expect(restored.readTopicCount).toBe(2);
   expect(restored.reviewedItemCount).toBe(2);
@@ -85,4 +85,8 @@ test('keeps ordered reading Soon through review-only grading and renderer restar
   fs.mkdirSync(output, { recursive: true });
   await page.screenshot({ path: path.join(output, 'restored.png') });
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ initial, restored }, null, 2));
+  await page.getByRole('button', { name: 'Soon', exact: true }).click();
+  await expect.poll(async () => (await session(page)).currentNodeId).toBe(second);
+  await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+  await expect(page.getByText(`Readable body ${second.replace('mode-', '')}`, { exact: true })).toBeVisible();
 });

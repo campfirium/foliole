@@ -21,6 +21,7 @@ export function useCompanionFlowHistoryReplay(args: CompanionSurfaceActionArgs,
     const token = pending.current?.token ?? request.current?.token ?? args.flow.capture();
     const history = args.flow.historyContext(token);
     if (!history) return;
+    args.flow.cancelDocumentPreparation();
     locked.current = true;
     setBusy(true);
     setError(null);

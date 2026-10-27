@@ -61,7 +61,7 @@ it('stores the complete daily IDs once, keeps minute items waiting, and preserve
   await seed();
   library.database.prepare("UPDATE node_review SET due=?, scheduled_days=0 WHERE node_id='c'").run('2026-10-25T08:10:00.000Z');
   await open();
-  expect(session.queueNodeIds).toHaveLength(2);
+  expect(session.queueNodeIds).toEqual([session.currentNodeId]);
   expect(session.queueNodeIds).not.toContain('c');
   expect(library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_entries').get()).toEqual({ n: 3 });
   const saved = structuredClone(session);

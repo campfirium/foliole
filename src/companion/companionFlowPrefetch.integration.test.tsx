@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -33,8 +33,9 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
     article: useCompanionReadableArticleLoader(source, publish)
   }));
   await waitFor(() => expect(hook.result.current.flow.ready).toBe(true));
-  const ids = hook.result.current.flow.view.queueNodeIds;
-  const next = ids[1]!;
+  const session = hook.result.current.flow.capture().session;
+  const next = (await predictCompanionFlowDocument({ token: session.daily!,
+    currentNodeId: session.currentNodeId!, now }, new AbortController().signal))!;
   expect(next).toBeTruthy();
   await waitFor(() => expect(reads.mock.calls.filter(([sql]) => sql.includes('SELECT article.*'))
     .map(([, values]) => values?.[0])).toEqual([next]));
@@ -58,7 +59,9 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   const hook = renderHook(({ snapshot }) => useCompanionFlowSession({ snapshot, ready: true, active: true,
     onlyReview: false, libraryScope: source.libraryScope ?? 'test' }), { initialProps: { snapshot: source } });
   await waitFor(() => expect(hook.result.current.ready).toBe(true));
-  const next = hook.result.current.view.queueNodeIds[1]!;
+  const session = hook.result.current.capture().session;
+  const next = (await predictCompanionFlowDocument({ token: session.daily!,
+    currentNodeId: session.currentNodeId!, now: new Date().toISOString() }, new AbortController().signal))!;
   await waitFor(() => expect(reads.mock.calls.some(([sql, values]) => sql.includes('SELECT article.*') && values?.[0] === next)).toBe(true));
   await getIosCompanionDatabaseOwner().read(async () => null);
   const before = structuredClone(hook.result.current.view);
@@ -74,7 +77,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
     await getIosCompanionDatabaseOwner().runWriter(db => db.run("UPDATE nodes SET kind = 'folder' WHERE id = ?", [next]));
     const changed = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     hook.rerender({ snapshot: changed });
-    await waitFor(() => expect(hook.result.current.view.queueNodeIds).not.toContain(next));
+    await waitFor(() => expect(hook.result.current.view.scheduledFsrsCount).toBe(before.scheduledFsrsCount - 1));
     expect(hook.result.current.view.scheduledFsrsCount).toBe(before.scheduledFsrsCount - 1);
     const saved = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'recommended' });
     expect(saved.session.queueNodeIds).not.toContain(next);

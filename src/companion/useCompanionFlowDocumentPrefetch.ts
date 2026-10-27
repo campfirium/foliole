@@ -1,14 +1,14 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { resolveNextDocumentId } from '../shared/lib/documents/documentPreparation';
+import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
+import { useFlowDocumentPrefetch } from '../shared/lib/documents/useFlowDocumentPrefetch';
 import { prepareCompanionFlowArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
+import { predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 
-export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | null,
-  currentNodeId: string | null, queueNodeIds: string[]) {
-  const nextNodeId = resolveNextDocumentId(currentNodeId, queueNodeIds);
-  useEffect(() => {
-    prepareCompanionFlowArticle(snapshot, nextNodeId, currentNodeId);
-  }, [snapshot, nextNodeId, currentNodeId]);
-  useEffect(() => () => prepareCompanionFlowArticle(null, null), []);
+export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | null, session: DailyFlowSession) {
+  const prepare = useCallback((next: string | null, current: string | null) => {
+    prepareCompanionFlowArticle(snapshot, next, current);
+  }, [snapshot]);
+  return useFlowDocumentPrefetch(snapshot ? session : { ...session, currentNodeId: null }, predictCompanionFlowDocument, prepare);
 }

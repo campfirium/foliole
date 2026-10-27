@@ -47,10 +47,8 @@ export async function selectCycleSuccessor(db: DbPort, meta: CycleMeta,
   return scanRange(db, meta, args);
 }
 
-export async function cycleWindow(db: DbPort, session: DailyFlowSession,
-  args: Parameters<typeof scanRange>[2]) {
-  const current = session.currentNodeId;
-  if (!current || !session.cycle) return { ...session, queueNodeIds: [], soonNodeIds: [], hiddenSoonNodeIds: [] };
-  const next = await selectCycleSuccessor(db, { ...session.cycle }, { ...args, excluded: current });
-  return { ...session, queueNodeIds: [current, ...(next ? [next.node_id] : [])], soonNodeIds: [], hiddenSoonNodeIds: [] };
+// The persisted window describes the committed current item, never speculative work.
+export function cycleWindow(session: DailyFlowSession) {
+  return { ...session, queueNodeIds: session.currentNodeId ? [session.currentNodeId] : [],
+    soonNodeIds: [], hiddenSoonNodeIds: [] };
 }

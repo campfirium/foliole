@@ -61,7 +61,7 @@ export async function commitCycleFlow(db: DbPort, args: DailyFlowCommitArgs, set
   let session: DailyFlowSession = historySession ?? await advanceCycleFlow(db, sourceSession, args, updated, settings, persistence, mode);
   if (args.reviewHistory?.mode === 'redo') session = { ...session,
     nextReviewDueAt: resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };
-  session = await cycleWindow(db, session, { mode, now: args.now, settings, persistence });
+  session = cycleWindow(session);
   const saved = await saveCycleFlow(db, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
     now: args.now, revision: stored.revision + 1, session });
   await db.run('INSERT INTO daily_flow_operations (op_id, input_hash, revision, card_json, source_session_json) VALUES (?, ?, ?, ?, ?)',

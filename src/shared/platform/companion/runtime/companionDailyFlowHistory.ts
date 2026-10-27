@@ -52,8 +52,7 @@ export async function saveReplayedCompanionDailySession(db: DbPort, session: Rev
   const restored = await replayCycleHistory(db, state.session, { opId: 'structural-replay', now, token: state.session.daily!,
     historyMode: replay.mode, historySourceSession: replay.source, nextSession: session,
     ...(replay.after.cycle?.change ? { cycleReplay: replay.after.cycle.change } : {}) });
-  const window = await cycleWindow(db, restored, { mode: state.mode as 'recommended' | 'review-first' | 'reading-only',
-    now, settings: companionDailyFlowSettings(), persistence: companionDailyFlowPersistence });
+  const window = cycleWindow(restored);
   return saveCycleFlow(db, { dayKey: state.day_key, settingsKey: state.settings_key, mode: state.mode,
     now, revision: state.revision + 1, session: window });
 }

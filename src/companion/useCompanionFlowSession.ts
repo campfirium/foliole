@@ -72,13 +72,13 @@ export function useCompanionFlowSession(args: {
   const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot);
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),
     [args.snapshot, current.hydrated, session, scheduled]);
-  useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
-    session.currentNodeId, session.queueNodeIds);
+  const cancelDocumentPreparation = useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
+    session);
   const canContinueReading = canContinueFlowReading(args.snapshot, current, args.onlyReview);
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
-  function continueReading() { if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
-  return { view, ...controls, historyKey, continueReading, canContinueReading, hasTopics,
+  function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
+  return { view, ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading, hasTopics,
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
