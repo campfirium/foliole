@@ -35,8 +35,9 @@ export async function setupPeers() {
   return peers;
 }
 
-export function node(peer: Peer, id: string, kind: 'item' | 'topic' | 'folder', parentNodeId: string | null = null) {
+export function node(peer: Peer, id: string, kind: 'item' | 'topic' | 'folder', parentNodeId: string | null = null, enableShortTerm?: boolean) {
   upsertNodeSnapshot(peer.driver, { nodeId: id, kind, parentNodeId, title: id, content: `Body ${id}`,
+    ...(enableShortTerm === undefined ? {} : { enableShortTerm }),
     reveal: kind === 'item' ? 'Answer' : null, anchorLink: null, isTitleManual: true,
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: now, position: null, hostName: peer.name });
   flushNodeSyncVersionWithDriver(peer.driver, id, peer.name, now);
@@ -53,21 +54,21 @@ export async function exchange(a: Peer, b: Peer) {
   await syncRequestLibrary(b, a);
 }
 
-export async function open(peer: Peer, stamp = now, config = settings(peer), mode: 'recommended' | 'reading-only' = 'recommended') {
+export async function open(peer: Peer, stamp = now, config = settings(peer), mode: 'recommended' | 'reading-only' | 'review-first' = 'recommended') {
   return (await openDailyFlow(peer.port, { now: stamp, mode }, config, persistence)).session;
 }
 
 export async function act(peer: Peer, session: DailyFlowSession, action: 'grade' | 'read' | 'soon', stamp = now,
-  config = settings(peer)) {
+  config = settings(peer), rating: 1 | 2 | 3 | 4 = 3) {
   const before = await snapshot(peer);
   const id = session.currentNodeId!;
   const base = { opId: crypto.randomUUID(), now: stamp, token: session.daily!, sourceSession: session };
   if (action === 'grade') {
-    const result = await gradeCompanionReviewCard({ snapshot: before, nodeId: id, grade: 3, now: stamp });
+    const result = await gradeCompanionReviewCard({ snapshot: before, nodeId: id, grade: rating, now: stamp });
     if (!result) throw new Error('test_grade_missing');
     const { cardBefore, cardAfter, schedulerVersion } = result.reviewLog;
     return (await commitDailyFlow(peer.port, { ...base, grade: { nodeId: id, before: before.nodesById[id]!.review,
-      grade: 3, reviewedAt: stamp, cardBefore, cardAfter, schedulerVersion } }, config, persistence)).session;
+      grade: rating, reviewedAt: stamp, cardBefore, cardAfter, schedulerVersion } }, config, persistence)).session;
   }
   const reading = action === 'read' ? readCompanionReviewTopic({ snapshot: before, nodeId: id, now: stamp })!.snapshot.nodesById[id]!.reading : before.nodesById[id]!.reading;
   return (await commitDailyFlow(peer.port, { ...base, readingAction: action === 'soon' ? 'soon' : 'read',

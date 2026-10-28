@@ -93,7 +93,7 @@ it('rejects a stale grade after the remote authority grades it and resumes the l
   const committed = await act(desktop, remote, 'grade');
   await exchange(desktop, mobile);
   const facts = mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-  await expect(act(mobile, stale, 'grade')).rejects.toThrow('daily_flow_learning_changed');
+  await expect(act(mobile, stale, 'grade')).rejects.toThrow('daily_flow_changed');
   expect(mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
   for (const peer of [desktop, mobile]) {
     const final = await open(peer);

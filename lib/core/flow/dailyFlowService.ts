@@ -8,6 +8,7 @@ import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlow
 import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
+import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
@@ -22,6 +23,8 @@ export interface DailyFlowPersistence {
 export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
+    const [state] = await tx.query<{ invalidated: number }>('SELECT invalidated FROM daily_flow_state WHERE id=1');
+    if (state?.invalidated) await projectDailyFlowSync(tx, undefined, true);
     const config = await dailyFlowSettingsForInstant(tx, settings, args.now);
     let createdRows: CycleRow[] | undefined;
     const result = await openCycleFlow(tx, args, config, persistence, false, rows => { createdRows = rows; });

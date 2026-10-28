@@ -5,6 +5,7 @@ import type { ReviewItemNodeLike } from '../reviewItemKind.js';
 import { assembleReadingPushQueue } from '../unifiedPushQueueAssembler.js';
 import { type PushQueuePriority, type UnifiedPushQueueRules } from '../unifiedPushQueueRules.js';
 
+import type { ReviewQueueDayWindow } from './reviewQueueDayWindow.js';
 import { collectReviewQueueCandidates } from './reviewQueuePlannerCandidates.js';
 import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs.js';
 import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
@@ -64,6 +65,7 @@ function resolveReadingQueueNodeIds(args: {
 }
 
 export interface ReviewQueuePlanInput {
+  dayWindow?: ReviewQueueDayWindow;
   candidateNow?: string;
   includeScheduled?: boolean;
   limit?: number;
@@ -152,7 +154,7 @@ function sameCandidates(left: Candidates, right: Candidates) {
 export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
   const priorities = input.nodePriorities ?? createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
   const paths = input.nodePaths ?? createWorkspaceNodePaths(Object.values(input.nodesById).filter((node): node is ReviewQueueNode => Boolean(node)));
-  const time = createReviewQueueTimeInput(input.readingDayStartsAtHour, input.newDayStartsAtHour);
+  const time = createReviewQueueTimeInput(input.readingDayStartsAtHour, input.newDayStartsAtHour, input.dayWindow);
   let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
   return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
     const args = { ...input, ...options };

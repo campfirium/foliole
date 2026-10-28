@@ -6,8 +6,9 @@ import { readDailyFlow } from './dailyFlowStorage.js';
 
 export interface DailyFlowDayWindow { start: string; end: string }
 
-export function containsFlowInstant(window: DailyFlowDayWindow, now: string) {
-  return Date.parse(window.start) <= Date.parse(now) && Date.parse(now) < Date.parse(window.end);
+export function isFlowWindowUnexpired(window: DailyFlowDayWindow, now: string) {
+  // Receiving a known day does not require this device clock to have reached its creator start.
+  return Date.parse(now) < Date.parse(window.end);
 }
 
 export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDayWindow {
@@ -20,6 +21,6 @@ export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDa
 export async function dailyFlowSettingsForInstant(db: DbPort, settings: DailyFlowSettings, now: string, history = false) {
   const stored = await readDailyFlow(db);
   const window = stored?.session.dayWindow ?? settings.dayWindow;
-  return { ...settings, dayWindow: window && (history || containsFlowInstant(window, now)) ? window
+  return { ...settings, dayWindow: window && (history || isFlowWindowUnexpired(window, now)) ? window
     : createDailyFlowDayWindow(now, settings.newDayStartsAtHour) };
 }

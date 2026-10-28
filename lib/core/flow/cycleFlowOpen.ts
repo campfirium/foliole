@@ -119,6 +119,9 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     }
     if (!await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
       await chooseCycleCurrent(db, session, args.mode, args.now, settings);
+    } else if (stored.invalidated && session.currentNodeId) {
+      const [current] = await db.readRows([session.currentNodeId]);
+      if (current) session.cycle!.scanAfter = current.order_key;
     }
   }
   if (args.prepareOnly && !session.sessionStartedAt) {

@@ -1,11 +1,12 @@
 import { resolveStoredReviewDueAt } from '../reviewDayBoundary.js';
 
+import { createReviewQueueDayWindow, type ReviewQueueDayWindow } from './reviewQueueDayWindow.js';
 import type { ReviewQueueNode } from './reviewQueuePlanner.js';
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths.js';
 import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
 
 // These values belong to one immutable planning input, never to a library or session.
-export function createReviewQueueTimeInput(readingDayStartsAtHour: number, newDayStartsAtHour: number) {
+export function createReviewQueueTimeInput(readingDayStartsAtHour: number, newDayStartsAtHour: number, window?: ReviewQueueDayWindow) {
   const timestamps = new Map<string, number>();
   const reading = new Map<ReviewQueueNode, string>();
   const review = new Map<ReviewQueueNode, number>();
@@ -17,10 +18,11 @@ export function createReviewQueueTimeInput(readingDayStartsAtHour: number, newDa
     }
     return numeric;
   };
+  const day = createReviewQueueDayWindow(window, timestamp);
   const readingAvailableAt = (node: ReviewQueueNode) => {
     let value = reading.get(node);
     if (value === undefined) {
-      value = resolveReviewQueueReadingAvailableAt(node, readingDayStartsAtHour);
+      value = day.reading(node, resolveReviewQueueReadingAvailableAt(node, readingDayStartsAtHour));
       reading.set(node, value);
     }
     return value;
@@ -29,8 +31,8 @@ export function createReviewQueueTimeInput(readingDayStartsAtHour: number, newDa
     if (!node.review) return timestamp(fallback);
     let value = review.get(node);
     if (value === undefined) {
-      value = timestamp(resolveStoredReviewDueAt({ due: node.review.due,
-        scheduledDays: node.review.scheduledDays, newDayStartsAtHour }));
+      value = day.review(node, timestamp(resolveStoredReviewDueAt({ due: node.review.due,
+        scheduledDays: node.review.scheduledDays, newDayStartsAtHour })));
       review.set(node, value);
     }
     return value;

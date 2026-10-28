@@ -6,6 +6,7 @@ import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowResult, DailyFlowSettings } from './dailyFlowContract.js';
 import { readCycleRows, readDailyFlow } from './dailyFlowStorage.js';
 import { dailyFlowSyncFactSchema } from './dailyFlowSyncFact.js';
+import { flowProgressDelta } from './dailyFlowSyncMerge.js';
 
 export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, settings: DailyFlowSettings,
   now: string, command?: DailyFlowCommitArgs, createdRows?: CycleRow[]) {
@@ -27,17 +28,23 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
   const fact = dailyFlowSyncFactSchema.parse({ id, rootId: sameDay ? head.root_id : id,
     parentId: sameDay ? head.head_id : null, occurredAt,
     kind: sameDay ? command?.historyMode ?? 'advance' : 'create',
+    nodeId: command?.grade?.nodeId ?? command?.readings?.[0]?.nodeId ?? command?.reviewHistory?.nodeId ?? null,
+    action: command?.grade ? 'grade' : command?.readingAction ?? (command?.historyMode ? 'history' : 'navigate'),
+    statsDelta: flowProgressDelta(result.sourceSession, result.session),
     targetOpId: command?.reviewHistory?.targetOpId ?? null, mode: result.mode ?? (await readDailyFlow(db))?.mode ?? 'recommended',
     settings: { newDayStartsAtHour: settings.newDayStartsAtHour, pushQueue: settings.pushQueue, dayWindow: settings.dayWindow },
     session, rows: sameDay ? after ?? result.session.cycle?.change?.after ?? [] : createdRows ?? await readCycleRows(db),
     removedNodeIds: before?.filter(row => !retained.has(row.node_id)).map(row => row.node_id) ?? [] });
   // The ordinary Sync object hash protects transport content; it is not a per-row Flow fingerprint.
   const hash = computeSyncContentHash('daily_flow', JSON.parse(JSON.stringify(fact)));
-  await db.run('INSERT INTO daily_flow_sync_facts VALUES (?, ?, ?, ?, ?)',
-    [id, fact.rootId, occurredAt, fact.settings.dayWindow.start, JSON.stringify(fact)]);
+  await db.run(`INSERT INTO daily_flow_sync_facts
+    (id, root_id, occurred_at, day_start, payload_json, day_end, parent_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, fact.rootId, occurredAt, fact.settings.dayWindow.start, JSON.stringify(fact),
+      fact.settings.dayWindow.end, fact.parentId, fact.kind]);
   await db.run(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
     VALUES ('daily_flow', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, 'local', ?, 1, NULL)`, [id, hash, occurredAt]);
-  await db.run(`INSERT INTO daily_flow_sync_projection VALUES (1, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET root_id=excluded.root_id, head_id=excluded.head_id`, [fact.rootId, id]);
+  await db.run(`INSERT INTO daily_flow_sync_projection (id, root_id, head_id) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET merged=CASE WHEN root_id=excluded.root_id THEN merged ELSE 0 END,
+    root_id=excluded.root_id, head_id=excluded.head_id`, [fact.rootId, id]);
 }

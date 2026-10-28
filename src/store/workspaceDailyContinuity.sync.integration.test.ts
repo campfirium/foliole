@@ -135,3 +135,17 @@ it('retains the source interval instead of the receiving host day and starts a n
   expect(tomorrow.daily!.dayKey).not.toBe(advanced.daily!.dayKey);
   expect(tomorrow.dayWindow).toEqual(createDailyFlowDayWindow(sourceWindow.end, settings(receiver).newDayStartsAtHour));
 });
+
+it('keeps the received interval when the receiver clock is just behind the creator day start', async () => {
+  const [source, receiver] = await setupPeers();
+  node(source, 'reading', 'topic');
+  await exchange(source, receiver);
+  const dayWindow = { start: '2026-10-26T08:00:00.000Z', end: '2026-10-27T08:00:00.000Z' };
+  const created = await open(source, '2026-10-26T08:01:00.000Z', { ...settings(source), dayWindow });
+  await exchange(source, receiver);
+  const received = await open(receiver, '2026-10-26T07:59:30.000Z');
+  expect(received.dayWindow).toEqual(dayWindow);
+  expect(received.daily!.dayKey).toBe(created.daily!.dayKey);
+  expect(received.currentNodeId).toBe(created.currentNodeId);
+  expect(receiver.db.prepare("SELECT COUNT(*) AS total FROM daily_flow_sync_facts WHERE kind='create'").get()).toEqual({ total: 1 });
+});

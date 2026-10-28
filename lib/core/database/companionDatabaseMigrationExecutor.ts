@@ -33,6 +33,7 @@ import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigra
 import { migrateCompanionCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCompanionCycleFlow } from './cycleFlowMigration.js';
 import { migrateCompanionDailyFlow } from './dailyFlowSchema.js';
+import { migrateCompanionDailyFlowSyncMerge } from './dailyFlowSyncMergeMigration.js';
 import { migrateCompanionDailyFlowSync } from './dailyFlowSyncSchema.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
@@ -156,6 +157,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 103 && targetVersion >= 103) await migrateCompanionFlowHistory(db);
   if (currentVersion < 104 && targetVersion >= 104) await migrateCompanionCycleFlow(db);
   if (currentVersion < 105 && targetVersion >= 105) await migrateCompanionDailyFlowSync(db);
+  if (currentVersion < 106 && targetVersion >= 106) await migrateCompanionDailyFlowSyncMerge(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

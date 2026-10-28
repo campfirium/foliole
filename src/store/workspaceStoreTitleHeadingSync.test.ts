@@ -109,14 +109,14 @@ function registerHistoryTitleSyncCoverage() {
     });
     historyActions.pushEditorOperationEntry(entry);
     await harness.getState().updateNodeContent('node-1', '# Changed title\n\nBody');
-    const applyText = (mode: 'redo' | 'undo') => {
-      const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
+    const applyText = (historyEntry: import('../features/editor/model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo') => {
+      const content = applyTextHistoryEntry(harness.getState().nodesById[historyEntry.nodeId]!.content, historyEntry, mode);
       void harness.getState().updateNodeContent('node-1', content, { publishLocal: true });
       return true;
     };
 
     expect(historyActions.undoEditorOperation({
-      applyText: (_entry, mode) => applyText(mode),
+      applyText,
       currentContent: '# Changed title\n\nBody',
       nodeId: 'node-1'
     })).toBe(true);
@@ -126,7 +126,7 @@ function registerHistoryTitleSyncCoverage() {
     });
 
     expect(historyActions.redoEditorOperation({
-      applyText: (_entry, mode) => applyText(mode),
+      applyText,
       currentContent: '# Seed',
       nodeId: 'node-1'
     })).toBe(true);

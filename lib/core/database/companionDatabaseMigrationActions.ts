@@ -10,6 +10,7 @@ import {
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS as MUTATIONS } from './androidCompanionMutationDefinitions.js';
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { DAILY_FLOW_SYNC_MERGE_INDEXES } from './dailyFlowSyncMergeMigration.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
 import { SINGLE_PRINCIPAL_SYNC_GROUP_CLEANUP_STATEMENTS } from './singlePrincipalSyncGroupCleanupStatements.js';
 import { SYNC_DELIVERY_LEGACY_BACKFILL_SQL } from './syncDeliveryMigrationStatements.js';
@@ -45,7 +46,10 @@ export async function installCompanionSchema(db: DbPort) {
   const legacySyncState = await companionTableExists(db, 'sync_object_state') &&
     !await companionColumnExists(db, 'sync_object_state', 'state_seq');
   const legacyFlow = await companionColumnExists(db, 'daily_flow_entries', 'queue_position');
+  const legacyFlowSync = await companionTableExists(db, 'daily_flow_sync_facts') &&
+    !await companionColumnExists(db, 'daily_flow_sync_facts', 'day_end');
   for (const statement of COMPANION_SCHEMA_STATEMENTS) {
+    if (legacyFlowSync && DAILY_FLOW_SYNC_MERGE_INDEXES.some(sql => sql === statement)) continue;
     if (legacyFlow && statement === CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS ')) continue;
     if ((legacyMembers || legacyLocalState) && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
     if (legacySyncState && SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS.some((item) => item === statement)) continue;

@@ -36,6 +36,10 @@ it.each(['delete', 'shelve', 'read'] as const)('retires hidden Soon after remote
   if (change !== 'read') publish(desktop, first);
   await exchange(desktop, mobile);
   // A pre-sync operation must not overwrite the new fact while reconciling its list.
+  if (change === 'read') {
+    await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_changed');
+    local = (await openDailyFlow(mobile.port, { now: due, mode: 'review-first' }, settings(mobile), persistence)).session;
+  }
   local = await act(mobile, local, 'grade', due);
   expect(local.currentNodeId).toBeNull();
   await assertDurable(mobile, local);
@@ -72,7 +76,7 @@ it('rejects a stale review-only grade while retaining valid Soon after a synchro
   await act(desktop, remote, 'grade', due);
   await exchange(desktop, mobile);
   const facts = mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-  await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_learning_changed');
+  await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_changed');
   expect(mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
   local = await open(mobile, due);
   expect(local.currentNodeId).toBe(first);
@@ -101,4 +105,24 @@ it.each(['desktop', 'mobile'] as const)('refuses stale Soon on %s after the peer
   await assertDurable(local, restored);
   expect((await snapshot(local)).nodesById[source.currentNodeId!]!.kind).toBe('item');
   expect((await snapshot(remote)).nodesById[source.currentNodeId!]!.kind).toBe('item');
+});
+
+it('keeps the winning initial task group when independent lists start in different modes', async () => {
+  const [a, b] = await setupPeers();
+  for (const id of ['reading-a', 'reading-b']) node(a, id, 'topic');
+  for (const id of ['review-a', 'review-b']) node(a, id, 'item');
+  await exchange(a, b);
+  const reading = await open(a, now, settings(a), 'reading-only');
+  const review = await open(b, now, settings(b), 'review-first');
+  await act(a, reading, 'soon', '2026-10-26T08:01:00.000Z');
+  const winner = await act(b, review, 'grade', '2026-10-26T08:02:00.000Z');
+  await exchange(a, b);
+  for (const peer of [a, b]) {
+    const merged = await open(peer, '2026-10-26T08:02:00.000Z', settings(peer), 'review-first');
+    expect(merged.totalNodeCount).toBe(winner.totalNodeCount);
+    expect(merged.reviewedItemCount).toBe(1);
+    expect(merged.readTopicCount).toBe(1);
+    expect(merged.cycle!.remaining).toBe(winner.cycle!.remaining);
+    await assertDurable(peer, merged);
+  }
 });
