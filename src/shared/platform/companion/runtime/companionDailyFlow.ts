@@ -3,7 +3,7 @@ import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/revi
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowContract';
-import { loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
+import { loadDailyFlowLearningFromNodeIndex, loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
 import { predictDailyFlowDocument, type DailyFlowPredictionArgs } from '../../../../../lib/core/flow/dailyFlowPrediction';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
@@ -64,7 +64,9 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
     const persistence: DailyFlowPersistence = { ...companionDailyFlowPersistence,
       learningSnapshot: async (tx, ids) => {
         const metadata = ids ? undefined : getIosCompanionDatabaseOwner().readNodeMetadata(tx) ?? undefined;
-        const snapshot = await loadDailyFlowLearningSnapshot(tx, await iosCompanionHostName(tx), ids, metadata);
+        const hostName = await iosCompanionHostName(tx);
+        const snapshot = metadata ? await loadDailyFlowLearningFromNodeIndex(tx, hostName, metadata)
+          : await loadDailyFlowLearningSnapshot(tx, hostName, ids);
         if (ids) return snapshot;
         const index = await getIosCompanionDatabaseOwner()
           .readNodeIndex(tx, settings.pushQueue.defaultPriority, metadata ? undefined : Object.values(snapshot.nodesById)

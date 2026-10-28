@@ -86,6 +86,7 @@ it('keeps failed refreshes unavailable and repairs every pending changed node', 
       await expect(state.refresh(failing, { kind: 'nodes', nodeIds: ['a'] })).rejects.toThrow('priority read failed');
       await expect(state.read(db, 5)).rejects.toThrow('priority read failed');
       await expect(state.readOrder(db)).rejects.toThrow('priority read failed');
+      expect(() => state.readMetadata()).toThrow('priority read failed');
       await db.run("UPDATE nodes SET priority=8 WHERE id='b'");
       await state.refresh(db, { kind: 'nodes', nodeIds: ['b'] });
       const result = await state.read(db, 5);

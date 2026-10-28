@@ -52,15 +52,31 @@ export async function loadDailyFlowLearningSnapshot(db: DbPort, hostName: string
   }
   return db.transaction(async tx => {
     const rows = await tx.query<LearningRow>(`SELECT ${metadata ? PREPARED_NODE_COLUMNS : NODE_COLUMNS} FROM nodes n`);
-    const profiles = await tx.query<ProfileRow>(`WITH learned AS (
-      SELECT node_id FROM node_reading UNION SELECT node_id FROM node_review
-    ) SELECT n.id, ${PROFILE_COLUMNS}
-      FROM learned INNER JOIN nodes n ON n.id = learned.node_id
-      LEFT JOIN node_reading rd ON rd.node_id = n.id
-      LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
-      LEFT JOIN node_review nr ON nr.node_id = n.id`, [hostName]);
-    return buildSnapshot(rows, new Map(profiles.map(row => [row.id, row])), rows.map(row => row.id), metadata);
+    return buildSnapshot(rows, await readLearningProfiles(tx, hostName), rows.map(row => row.id), metadata);
   });
+}
+
+// The library owner supplies its complete index inside the same serialized database operation.
+// Arbitrary metadata views must use the ordinary snapshot reader and its database membership check.
+export function loadDailyFlowLearningFromNodeIndex(db: DbPort, hostName: string,
+  metadata: NodeMetadata): Promise<DailyFlowLearningSnapshot> {
+  return db.transaction(async tx => {
+    const profiles = await readLearningProfiles(tx, hostName);
+    for (const id of profiles.keys()) if (!metadata.has(id)) throw new Error('daily_flow_node_metadata_missing');
+    const rows = Array.from(metadata.keys(), id => ({ id }));
+    return buildSnapshot(rows, profiles, rows.map(row => row.id), metadata);
+  });
+}
+
+async function readLearningProfiles(db: DbPort, hostName: string) {
+  const profiles = await db.query<ProfileRow>(`WITH learned AS (
+    SELECT node_id FROM node_reading UNION SELECT node_id FROM node_review
+  ) SELECT n.id, ${PROFILE_COLUMNS}
+    FROM learned INNER JOIN nodes n ON n.id = learned.node_id
+    LEFT JOIN node_reading rd ON rd.node_id = n.id
+    LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
+    LEFT JOIN node_review nr ON nr.node_id = n.id`, [hostName]);
+  return new Map(profiles.map(row => [row.id, row]));
 }
 
 function buildSnapshot(rows: LearningRow[], profiles: Map<string, ProfileRow>, nodeOrder: string[], metadata?: NodeMetadata): DailyFlowLearningSnapshot {

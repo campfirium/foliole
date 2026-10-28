@@ -60,15 +60,15 @@ it.each(['android', 'ios'] as const)('%s reuses prepared node facts while retain
     await refreshCompanionWorkspaceSnapshot();
     const metadata = await library.owner.read(async db => library.owner.readNodeMetadata(db));
     expect([...metadata!.values()].every(node => !('reading' in node) && !('review' in node) && !('content' in node))).toBe(true);
+    const reads = library.flowNodeReads.length;
     const warm = await generate(library);
-    const warmRead = library.flowNodeReads.at(-1)!;
+    const warmReads = library.flowNodeReads.slice(reads);
     expect(warm).toEqual(cold);
     expect(warm.rows).toHaveLength(127);
     expect(await facts()).toEqual(before);
-    expect(warmRead.rows).toBe(coldRead.rows);
-    expect(warmRead.bytes).toBeLessThan(coldRead.bytes * 0.1);
-    mkdirSync('.tmp/artifacts/T441/node-anchor-kind', { recursive: true });
-    writeFileSync(`.tmp/artifacts/T441/node-anchor-kind/${platform}.json`, JSON.stringify({ coldRead, warmRead }));
+    expect(warmReads).toEqual([]);
+    mkdirSync('.tmp/artifacts/T441/owned-node-index', { recursive: true });
+    writeFileSync(`.tmp/artifacts/T441/owned-node-index/${platform}.json`, JSON.stringify({ coldRead, warmReads }));
   } finally { await library.close(); runtime.owner = null; }
 });
 

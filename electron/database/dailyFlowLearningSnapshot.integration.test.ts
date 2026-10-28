@@ -2,7 +2,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
+import { loadDailyFlowLearningFromNodeIndex, loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -103,6 +103,10 @@ it('combines owned node metadata with fresh learning facts and rejects an incomp
     reading: { readingPosition: 42, repetitionCount: 3 }, review: { stability: 12.5, reps: 5 } });
   const scoped = await loadDailyFlowLearningSnapshot(peer.port, 'desktop', ['topic-0'], new Map());
   expect(scoped.nodesById['topic-0']).toEqual(full.nodesById['topic-0']);
+  const missingLearned = new Map(metadata);
+  missingLearned.delete('topic-0');
+  await expect(loadDailyFlowLearningFromNodeIndex(peer.port, 'desktop', missingLearned))
+    .rejects.toThrow('daily_flow_node_metadata_missing');
   metadata.delete('topic-3');
   await expect(loadDailyFlowLearningSnapshot(peer.port, 'desktop', undefined, metadata))
     .rejects.toThrow('daily_flow_node_metadata_missing');
