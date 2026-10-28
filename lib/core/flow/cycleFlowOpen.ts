@@ -19,11 +19,13 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
     ? args.seed : undefined;
   const initial = prepareFlowSession(snapshot, args, settings, seed);
   const queue = initial.queueNodeIds;
+  const queued = new Set(queue);
   const pinned = initial.currentNodeId && !queue.includes(initial.currentNodeId) ? [initial.currentNodeId] : [];
   const soon = [...new Set([...(initial.hiddenSoonNodeIds ?? []), ...(initial.soonNodeIds ?? [])])];
   const ids = [...new Set([...queue, ...pinned, ...soon, ...fullDayCandidates(snapshot, args.now, settings)])];
+  const pendingSoon = new Set(soon);
   const rows: CycleRow[] = ids.map((node_id, index) => ({ node_id, order_key: index + 1, active: 1,
-    handled: 0, cohort: queue.includes(node_id) ? 'queue' : soon.includes(node_id) ? 'soon' : 'none', initial_task: queue.includes(node_id) ? 1 : 0 }));
+    handled: 0, cohort: queued.has(node_id) ? 'queue' : pendingSoon.has(node_id) ? 'soon' : 'none', initial_task: queued.has(node_id) ? 1 : 0 }));
   const cycle = { clearKey: queue.length, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
     rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows), stamp: '', remaining: queue.length,
     reviewRemaining: queue.filter(id => isFsrsReviewItemNode(snapshot.nodesById[id])).length };
