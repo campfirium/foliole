@@ -89,12 +89,6 @@ it('applies dismissed appearance to topic tree row text and icon', () => {
       kind: 'topic',
       parentNodeId: null,
       reading: {
-        intervalDurationMs: 0,
-        intervalGrowthFactor: 1,
-        lastHandledAt: '2026-05-02T00:00:00.000Z',
-        nextAt: '2026-05-02T00:00:00.000Z',
-        priority: 0,
-        readingPosition: 0,
         repetitionCount: 0,
         state: 'dismissed'
       },

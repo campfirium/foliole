@@ -61,15 +61,7 @@ function createItemNode(id: string, title: string, parentNodeId: string): Worksp
     ...createTopicNode(id, title, parentNodeId),
     kind: 'item',
     review: {
-      difficulty: 0,
-      due: '2026-05-02T00:00:00.000Z',
-      elapsedDays: 0,
-      lapses: 0,
       lastReviewAt: null,
-      reps: 0,
-      scheduledDays: 0,
-      stability: 0,
-      state: 0
     }
   };
 }
@@ -144,12 +136,6 @@ it('does not apply dismissed appearance to child topics under a dismissed parent
   const parent: WorkspaceListNode = {
     ...createTopicNode('parent', 'Dismissed parent'),
     reading: {
-      intervalDurationMs: 0,
-      intervalGrowthFactor: 1,
-      lastHandledAt: '2026-05-27T00:00:00.000Z',
-      nextAt: '2026-05-27T00:00:00.000Z',
-      priority: 0,
-      readingPosition: 0,
       repetitionCount: 0,
       state: 'dismissed'
     }

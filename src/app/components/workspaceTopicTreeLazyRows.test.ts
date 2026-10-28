@@ -28,17 +28,7 @@ function createReviewItem(id: string, parentNodeId: string): WorkspaceListNode {
     ...createTopic(id, parentNodeId),
     hasReveal: true,
     kind: 'item',
-    review: {
-      difficulty: 0,
-      due: '2026-05-24T00:00:00.000Z',
-      elapsedDays: 0,
-      lapses: 0,
-      lastReviewAt: null,
-      reps: 0,
-      scheduledDays: 0,
-      stability: 0,
-      state: 0
-    }
+    review: { lastReviewAt: null }
   };
 }
 

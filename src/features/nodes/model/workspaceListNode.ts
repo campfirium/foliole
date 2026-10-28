@@ -6,11 +6,14 @@ import { UNTITLED_NODE_TITLE } from './deriveNodeTitle';
 import type {
   Node,
   NodeAnchorLink,
-  NodeReadingProfile,
-  NodeReviewProfile,
   NodeSpecialKind
 } from './nodeTypes';
 import { hasNodeContent, hasNodeReveal } from './nodeTypes';
+import {
+  isWorkspaceListReadingEqual, isWorkspaceListReviewEqual,
+  projectWorkspaceListReading, projectWorkspaceListReview,
+  type WorkspaceListReading, type WorkspaceListReview
+} from './workspaceListNodeLearning';
 export {
   compareWorkspaceListNodeDateDesc,
   getWorkspaceListNodeAuthor,
@@ -37,8 +40,8 @@ export interface WorkspaceListNode {
   kind?: NodeKind;
   parentNodeId: string | null;
   priority?: number | null;
-  reading?: NodeReadingProfile | null;
-  review: NodeReviewProfile | null;
+  reading?: WorkspaceListReading | null;
+  review: WorkspaceListReview | null;
   specialKind?: NodeSpecialKind;
   title: string;
   updatedAt: string;
@@ -70,8 +73,8 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     kind: node.kind,
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,
-    reading: node.reading ?? null,
-    review: node.review,
+    reading: projectWorkspaceListReading(node.reading),
+    review: projectWorkspaceListReview(node.review),
     ...(node.specialKind ? { specialKind: node.specialKind } : {}),
     title: resolveWorkspaceListNodeTitle(node),
     updatedAt: node.updatedAt
@@ -111,8 +114,8 @@ function isWorkspaceListProjectionReusable(
     projectedNode.kind === sourceNode.kind &&
     projectedNode.parentNodeId === sourceNode.parentNodeId &&
     projectedNode.priority === (sourceNode.priority ?? null) &&
-    projectedNode.reading === (sourceNode.reading ?? null) &&
-    projectedNode.review === sourceNode.review &&
+    isWorkspaceListReadingEqual(projectedNode.reading, sourceNode.reading) &&
+    isWorkspaceListReviewEqual(projectedNode.review, sourceNode.review) &&
     projectedNode.specialKind === sourceNode.specialKind &&
     projectedNode.title === resolveWorkspaceListNodeTitle(sourceNode) &&
     projectedNode.updatedAt === sourceNode.updatedAt
