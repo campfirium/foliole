@@ -106,7 +106,7 @@ it.each(['android', 'ios'] as const)('%s generates from committed moves and pres
 });
 
 it.each(['android', 'ios'] as const)('%s uses a changed default in the first durable order without changing original priorities', async platform => {
-  const library = await openLibrary(platform, 9);
+  const library = await openLibrary(platform, 5);
   await refreshCompanionWorkspaceSnapshot();
   const before = await generate(library);
   hydrateCurrentReviewSchedulerSettings({ pushQueue: { defaultPriority: 9 } });

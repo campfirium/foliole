@@ -148,7 +148,7 @@ export function assembleFsrsPushQueue<T extends FsrsPushQueueEntry>(
   const buckets = bucketFsrsPushQueueEntries(entries);
   if (options.materialDispersion) {
     REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
-      buckets.regular[priority] = disperseOrderedMaterial(buckets.regular[priority], options.materialDispersion!);
+      buckets.regular[priority] = disperseOrderedMaterial(buckets.regular[priority]);
     });
   }
   return [...buckets.absolute, ...assembleRouletteBuckets(buckets.regular, options)];

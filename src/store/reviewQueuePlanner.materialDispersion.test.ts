@@ -47,7 +47,10 @@ it('material-disperses due reading topics by full node path instead of direct pa
     reading('b-01', sourceB.id)
   ];
 
-  expect(buildPlan(nodes).readingQueueNodeIds.slice(0, 4)).toEqual(['a-01', 'b-01', 'a-19', 'a-18']);
+  const queue = buildPlan(nodes).readingQueueNodeIds;
+  const position = queue.indexOf('b-01');
+  expect(Math.abs(position - (queue.length - position - 1))).toBeLessThanOrEqual(1);
+  expect(queue.filter(id => id.startsWith('a-'))).toEqual(nodes.slice(2, -1).map(node => node.id));
 });
 
 it('does not material-disperse scheduled reading inspection output', () => {
@@ -89,8 +92,8 @@ it('uses the next node path when a reading topic moves before the next queue bui
   const firstNodes = [sourceA, sourceB, moved, stable];
   const secondNodes = [sourceA, sourceB, { ...moved, parentNodeId: sourceB.id }, stable];
 
-  expect(buildPlan(firstNodes).readingQueueNodeIds).toEqual(['stable', 'moved']);
-  expect(buildPlan(secondNodes).readingQueueNodeIds).toEqual(['moved', 'stable']);
+  expect(buildPlan(firstNodes).readingQueueNodeIds).toEqual(['moved', 'stable']);
+  expect(buildPlan(secondNodes).readingQueueNodeIds).toEqual(['stable', 'moved']);
 });
 
 it('keeps non-active reading states out before material dispersion', () => {
@@ -126,7 +129,10 @@ it('material-disperses due FSRS items by full node path after retrievability ord
     review('b-01', sourceB.id)
   ];
 
-  expect(buildPlan(nodes).fsrsQueueNodeIds.slice(0, 4)).toEqual(['a-01', 'b-01', 'a-02', 'a-03']);
+  const queue = buildPlan(nodes).fsrsQueueNodeIds;
+  const position = queue.indexOf('b-01');
+  expect(Math.abs(position - (queue.length - position - 1))).toBeLessThanOrEqual(1);
+  expect(queue.filter(id => id.startsWith('a-'))).toEqual(nodes.slice(2, -1).map(node => node.id));
 });
 
 it('does not material-disperse scheduled FSRS inspection output', () => {

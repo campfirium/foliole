@@ -80,13 +80,13 @@ it('lets material pressure use dueAt while reading buckets keep nextAt for raw o
         nextAt: '2026-03-16T09:00:00.000Z'
       }
     ],
-    { materialDispersion: { batchSize: 1, now: '2026-03-16T12:00:00.000Z' } }
+    { materialDispersion: { now: '2026-03-16T12:00:00.000Z' } }
   );
 
   expect(queue.map((item) => item.id)).toEqual(['cross-day', 'same-day']);
 });
 
-it('uses material path dispersion inside a reading pressure window', () => {
+it('preserves urgency order when all reading materials share one source', () => {
   const queue = assembleReadingPushQueue(
     Array.from({ length: 12 }, (_, index) => ({
       dueAt: '2026-03-16T09:00:00.000Z',
@@ -99,10 +99,10 @@ it('uses material path dispersion inside a reading pressure window', () => {
     { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } }
   );
 
-  expect(queue.map((item) => item.id)).toEqual(['a-01', 'a-12', 'a-11', 'a-10', 'a-09', 'a-08', 'a-07', 'a-06', 'a-05', 'a-04', 'a-03', 'a-02']);
+  expect(queue.map((item) => item.id)).toEqual(Array.from({ length: 12 }, (_, index) => `a-${String(index + 1).padStart(2, '0')}`));
 });
 
-it('places a small source inside a large-source pressure window instead of leaving it at the end', () => {
+it('places a small source throughout a large-source queue instead of consuming it at the start', () => {
   const entries = [
     ...Array.from({ length: 19 }, (_, index) => ({
       dueAt: '2026-03-16T09:00:00.000Z',
@@ -123,7 +123,9 @@ it('places a small source inside a large-source pressure window instead of leavi
   ] satisfies Parameters<typeof assembleReadingPushQueue>[0];
   const queue = assembleReadingPushQueue(entries, { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } });
 
-  expect(queue.map((item) => item.id).slice(0, 4)).toEqual(['a-01', 'b-01', 'a-19', 'a-18']);
+  const position = queue.findIndex(item => item.id === 'b-01');
+  expect(Math.abs(position - (queue.length - position - 1))).toBeLessThanOrEqual(1);
+  expect(queue.filter(item => item.id !== 'b-01').map(item => item.id)).toEqual(entries.slice(0, 19).map(item => item.id));
 });
 
 it('does not disperse material across reading priority buckets', () => {
@@ -138,10 +140,10 @@ it('does not disperse material across reading priority buckets', () => {
     { materialDispersion: { now: '2026-03-18T09:00:00.000Z' }, random: () => 0 }
   );
 
-  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-3', 'p1-a-2', 'p9-a-2', 'p9-a-1']);
+  expect(queue.map((item) => item.id)).toEqual(['p1-a-1', 'p1-a-2', 'p1-a-3', 'p9-a-1', 'p9-a-2']);
 });
 
-it('swaps two reading material entries in a path window', () => {
+it('keeps two same-source reading materials in their urgency order', () => {
   const queue = assembleReadingPushQueue(
     [
       { dueAt: '2026-03-16T09:00:00.000Z', id: 'a-1', intervalDurationMs: 86400000, priority: 4, nextAt: '2026-03-16T09:00:00.000Z', pathNodeIds: ['source-a', 'a-1'] },
@@ -150,7 +152,7 @@ it('swaps two reading material entries in a path window', () => {
     { materialDispersion: { now: '2026-03-18T09:00:00.000Z' } }
   );
 
-  expect(queue.map((item) => item.id)).toEqual(['a-2', 'a-1']);
+  expect(queue.map((item) => item.id)).toEqual(['a-1', 'a-2']);
 });
 
 it('treats the P1/P9 weight ratio as the roulette probability ratio', () => {
@@ -219,7 +221,9 @@ it('disperses FSRS material inside an ordered regular priority bucket', () => {
 
   const queue = assembleFsrsPushQueue(entries, { materialDispersion: {} });
 
-  expect(queue.map((item) => item.id).slice(0, 4)).toEqual(['a-01', 'b-01', 'a-02', 'a-03']);
+  const position = queue.findIndex(item => item.id === 'b-01');
+  expect(Math.abs(position - (queue.length - position - 1))).toBeLessThanOrEqual(1);
+  expect(queue.filter(item => item.id !== 'b-01').map(item => item.id)).toEqual(entries.slice(0, 19).map(item => item.id));
 });
 
 it('keeps absolute FSRS priority cards ahead of dispersed regular buckets', () => {

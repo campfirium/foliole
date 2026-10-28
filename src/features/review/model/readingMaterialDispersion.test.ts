@@ -16,7 +16,7 @@ function entry(id: string, overrides: Partial<ReadingMaterialDispersionEntry> = 
   };
 }
 
-it('keeps higher relative overdue entries in earlier windows before path dispersion', () => {
+it('keeps higher relative overdue entries first within the same source', () => {
   const entries = Array.from({ length: 60 }, (_, index) =>
     entry(`n-${String(index + 1).padStart(2, '0')}`, {
       dueAt: new Date(Date.parse('2026-03-20T09:00:00.000Z') - index * 60 * 60 * 1000).toISOString(),
@@ -42,7 +42,7 @@ it('falls back to the initial interval when stored reading intervals are invalid
       entry('invalid-negative', { dueAt: '2026-03-20T08:00:00.000Z', intervalDurationMs: -1 }),
       entry('invalid-small', { dueAt: '2026-03-20T07:00:00.000Z', intervalDurationMs: 60 * 60 * 1000 })
     ],
-    { batchSize: 1, now: '2026-03-21T09:00:00.000Z', readingInitialIntervalMs: 24 * 60 * 60 * 1000 }
+    { now: '2026-03-21T09:00:00.000Z', readingInitialIntervalMs: 24 * 60 * 60 * 1000 }
   );
 
   expect(queue.map((item) => item.id)).toEqual(['invalid-small', 'invalid-negative', 'invalid-zero', 'valid-long']);
@@ -51,25 +51,24 @@ it('falls back to the initial interval when stored reading intervals are invalid
 it('uses dueAt then path then node id for exact relative-overdue ties', () => {
   const queue = disperseReadingMaterial(
     [
-      entry('later', { dueAt: '2026-03-20T09:00:00.000Z', pathNodeIds: ['b', 'later'] }),
+      entry('later', { dueAt: '2026-03-20T09:00:00.000Z', pathNodeIds: ['a', 'later'] }),
       entry('same-path-b', { dueAt: '2026-03-20T08:00:00.000Z', pathNodeIds: ['a', 'topic'] }),
       entry('same-path-a', { dueAt: '2026-03-20T08:00:00.000Z', pathNodeIds: ['a', 'topic'] })
     ],
-    { batchSize: 1, now: '2026-03-21T09:00:00.000Z' }
+    { now: '2026-03-21T09:00:00.000Z' }
   );
 
   expect(queue.map((item) => item.id)).toEqual(['same-path-a', 'same-path-b', 'later']);
 });
 
-it('disperses an already ordered material window by taking the nearest different material', () => {
+it('interleaves ordered sources while preserving each source order', () => {
   const queue = disperseOrderedMaterial(
     [
       { id: 'a-1', pathNodeIds: ['source-a', 'a-1'] },
       { id: 'a-2', pathNodeIds: ['source-a', 'a-2'] },
       { id: 'b-1', pathNodeIds: ['source-b', 'b-1'] },
       { id: 'c-1', pathNodeIds: ['source-c', 'c-1'] }
-    ],
-    { batchSize: 4 }
+    ]
   );
 
   expect(queue.map((item) => item.id)).toEqual(['a-1', 'b-1', 'a-2', 'c-1']);

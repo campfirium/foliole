@@ -27,8 +27,8 @@ it('assembles dedicated FSRS and reading queues, then mixes them at the spec 5:1
   const plan = buildReviewQueuePlan({ nodeOrder, nodesById, now, trashedNodeIds: [] });
 
   expect(plan.fsrsQueueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'fsrs-6']);
-  expect(plan.readingQueueNodeIds).toEqual(['reading-2', 'reading-1']);
-  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-2', 'fsrs-6']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-1', 'reading-2']);
+  expect(plan.queueNodeIds).toEqual(['fsrs-1', 'fsrs-2', 'fsrs-3', 'fsrs-4', 'fsrs-5', 'reading-1', 'fsrs-6']);
   expect(plan.fsrsCandidateCount).toBe(6);
   expect(plan.readingCandidateCount).toBe(2);
   expect(plan.overflowCount).toBe(1);
@@ -64,7 +64,7 @@ it('removes the legacy daily cap but keeps the task queue item-centered', () => 
     'fsrs-8',
     'fsrs-9',
     'fsrs-10',
-    'reading-3',
+    'reading-2',
     'fsrs-11',
     'fsrs-12'
   ]);
@@ -215,14 +215,14 @@ it('replaces legacy due and createdAt ordering with inherited priority, FSRS ret
     'fsrs-6',
     'fsrs-high-r'
   ]);
-  expect(plan.readingQueueNodeIds).toEqual(['reading-late-nextAt', 'reading-early-nextAt']);
+  expect(plan.readingQueueNodeIds).toEqual(['reading-early-nextAt', 'reading-late-nextAt']);
   expect(plan.queueNodeIds).toEqual([
     'fsrs-absolute',
     'fsrs-low-r',
     'fsrs-4',
     'fsrs-5',
     'fsrs-6',
-    'reading-late-nextAt',
+    'reading-early-nextAt',
     'fsrs-high-r'
   ]);
   expect(plan.fsrsQueueNodeIds).not.toEqual([

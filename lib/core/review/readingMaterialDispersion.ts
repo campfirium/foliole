@@ -1,3 +1,4 @@
+import { interleaveMaterialHierarchy } from './hierarchicalMaterialInterleave.js';
 import { DEFAULT_UNIFIED_PUSH_QUEUE_RULES } from './unifiedPushQueueRules.js';
 
 export interface ReadingMaterialDispersionEntry {
@@ -8,18 +9,13 @@ export interface ReadingMaterialDispersionEntry {
 }
 
 export interface ReadingMaterialDispersionOptions {
-  batchSize?: number;
   readingInitialIntervalMs?: number;
   now: string;
 }
 
 export type OrderedMaterialDispersionEntry = Pick<ReadingMaterialDispersionEntry, 'id' | 'pathNodeIds'>;
 
-export interface OrderedMaterialDispersionOptions {
-  batchSize?: number;
-}
-
-const DEFAULT_BATCH_SIZE = 20;
+export type OrderedMaterialDispersionOptions = Record<string, never>;
 
 function parseTimestamp(timestamp: string) {
   const parsed = Date.parse(timestamp);
@@ -31,28 +27,6 @@ function parseTimestamp(timestamp: string) {
 
 function isPositiveFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
-}
-
-function greatestCommonDivisor(left: number, right: number) {
-  let a = Math.abs(left);
-  let b = Math.abs(right);
-  while (b !== 0) {
-    const next = a % b;
-    a = b;
-    b = next;
-  }
-  return a;
-}
-
-function resolveMaterialStride(length: number) {
-  if (length === 2) return 1;
-  if (length === 3) return 2;
-  for (let candidate = length - 1; candidate > 0; candidate -= 1) {
-    if (candidate % 2 === 1 && greatestCommonDivisor(candidate, length) === 1) {
-      return candidate;
-    }
-  }
-  return 1;
 }
 
 function comparePathNodeIds(left: readonly string[] = [], right: readonly string[] = []) {
@@ -87,74 +61,18 @@ function compareMaterialPressure<T extends ReadingMaterialDispersionEntry>(nowMs
   };
 }
 
-function compareMaterialPath<T extends ReadingMaterialDispersionEntry>(left: T, right: T) {
-  const path = comparePathNodeIds(left.pathNodeIds, right.pathNodeIds);
-  if (path !== 0) return path;
-  return (left.id ?? '').localeCompare(right.id ?? '');
-}
-
-function strideMaterialBatch<T>(entries: readonly T[]) {
-  if (entries.length <= 1) return [...entries];
-  if (entries.length === 2) return [entries[1]!, entries[0]!];
-  const stride = resolveMaterialStride(entries.length);
-  const queue: T[] = [];
-  let index = 0;
-  for (let count = 0; count < entries.length; count += 1) {
-    queue.push(entries[index]!);
-    index = (index + stride) % entries.length;
-  }
-  return queue;
-}
-
 export function disperseReadingMaterial<T extends ReadingMaterialDispersionEntry>(
   entries: readonly T[],
   options: ReadingMaterialDispersionOptions
 ) {
-  const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
   const initialIntervalMs = options.readingInitialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs;
   const nowMs = parseTimestamp(options.now);
   const pressureOrdered = [...entries].sort(compareMaterialPressure(nowMs, initialIntervalMs));
-  const queue: T[] = [];
-
-  for (let index = 0; index < pressureOrdered.length; index += batchSize) {
-    const batch = pressureOrdered.slice(index, index + batchSize).sort(compareMaterialPath);
-    queue.push(...strideMaterialBatch(batch));
-  }
-
-  return queue;
-}
-
-function resolveOrderedMaterialKey(entry: OrderedMaterialDispersionEntry) {
-  const path = entry.pathNodeIds ?? [];
-  if (path.length > 1) return path.slice(0, -1).join('>');
-  return path[0] ?? entry.id ?? '';
-}
-
-function shiftNextOrderedMaterialEntry<T extends OrderedMaterialDispersionEntry>(batch: T[], lastMaterialKey: string | null) {
-  const nextIndex = lastMaterialKey === null
-    ? 0
-    : batch.findIndex((entry) => resolveOrderedMaterialKey(entry) !== lastMaterialKey);
-  const index = nextIndex >= 0 ? nextIndex : 0;
-  const [entry] = batch.splice(index, 1);
-  return entry!;
+  return interleaveMaterialHierarchy(pressureOrdered);
 }
 
 export function disperseOrderedMaterial<T extends OrderedMaterialDispersionEntry>(
-  entries: readonly T[],
-  options: OrderedMaterialDispersionOptions = {}
+  entries: readonly T[]
 ) {
-  const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
-  const queue: T[] = [];
-  let lastMaterialKey: string | null = null;
-
-  for (let index = 0; index < entries.length; index += batchSize) {
-    const batch = entries.slice(index, index + batchSize);
-    while (batch.length > 0) {
-      const entry = shiftNextOrderedMaterialEntry(batch, lastMaterialKey);
-      queue.push(entry);
-      lastMaterialKey = resolveOrderedMaterialKey(entry);
-    }
-  }
-
-  return queue;
+  return interleaveMaterialHierarchy(entries);
 }
