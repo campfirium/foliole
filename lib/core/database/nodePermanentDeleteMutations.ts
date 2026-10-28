@@ -44,7 +44,7 @@ export function deleteNodesPermanentlyDeferringBodies(
        WHERE id IN (SELECT value FROM json_each(?))`, [JSON.stringify(input.nodeIds)]);
     advanceWorkspaceSearchSourceRevision(driver);
     const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
-    deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
+    const searchTablesReady = deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
     for (const nodeId of input.nodeIds) {
       recordNodeRelatedStateDeletion(driver, nodeId, now);
       retireUnversionedDeletedNodeState(driver, nodeId);
@@ -61,7 +61,8 @@ export function deleteNodesPermanentlyDeferringBodies(
     }
     for (const { parent_id } of parents) projectStoredParentOrder(driver, parent_id, now);
     markWorkspaceSearchSourceRevisionQueued(driver);
-    markWorkspaceSearchSourceIndexedIfSettled(driver);
+    // Missing search tables are rebuilt by normal initialization from the remaining main rows.
+    if (searchTablesReady) markWorkspaceSearchSourceIndexedIfSettled(driver);
     return hashes;
   });
 }

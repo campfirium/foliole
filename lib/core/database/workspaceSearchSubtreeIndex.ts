@@ -77,7 +77,11 @@ function prepareSubtreeAffectedIds(driver: DatabaseDriver, rootIds: string[]) {
 
 export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
   const seedIds = toUniqueIds(rootIds);
-  if (seedIds.length === 0) return;
+  // Search storage is derived and may not have been initialized when the node is deleted.
+  const tables = new Set(driver.queryAll<{ name: string }>(
+    "SELECT name FROM search.sqlite_master WHERE type = 'table' AND name IN ('node_search', 'pdf_search', 'pdf_page_map', 'search_metadata')"
+  ).map(({ name }) => name));
+  if (seedIds.length === 0) return tables.size === 4;
   const placeholders = createPlaceholders(seedIds);
   const affectedIdsSql = `WITH RECURSIVE node_descendants(id) AS (
       SELECT id
@@ -90,9 +94,14 @@ export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: Data
         ON child.parent_id = node_descendants.id
     )
     SELECT id FROM node_descendants`;
-  driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
-  driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
-  deleteWorkspacePdfPageMapForNodes(driver, affectedIdsSql, seedIds);
+  if (tables.has('node_search')) {
+    driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  }
+  if (tables.has('pdf_search')) {
+    driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  }
+  if (tables.has('pdf_page_map')) deleteWorkspacePdfPageMapForNodes(driver, affectedIdsSql, seedIds);
+  return tables.size === 4;
 }
 
 export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
