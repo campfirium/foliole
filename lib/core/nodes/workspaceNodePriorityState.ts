@@ -7,6 +7,8 @@ export interface PriorityIndexNode {
   id: string;
   parentNodeId: string | null;
   priority?: number | null;
+  createdAt?: string | null;
+  deletedAt?: string | null;
 }
 
 export class WorkspaceNodePriorityState {
@@ -31,6 +33,7 @@ export class WorkspaceNodePriorityState {
   }
 
   update(nodes: Iterable<PriorityIndexNode>, removed: readonly string[] = []) {
+    let orderChanged = removed.length > 0;
     const roots = new Set<string>();
     const pathRoots = new Set<string>();
     for (const id of removed) {
@@ -43,8 +46,14 @@ export class WorkspaceNodePriorityState {
     }
     for (const node of nodes) {
       const previous = this.nodes.get(node.id);
+      const changed = !previous || previous.parentNodeId !== node.parentNodeId
+        || previous.createdAt !== (node.createdAt ?? null) || previous.deletedAt !== (node.deletedAt ?? null);
+      orderChanged ||= changed;
       if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
-      if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) continue;
+      if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) {
+        if (changed) this.store(node);
+        continue;
+      }
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, node.id);
       this.store(node);
       roots.add(node.id);
@@ -67,6 +76,7 @@ export class WorkspaceNodePriorityState {
       }
     }
     updateWorkspaceNodePaths(this.nodes, this.pathValues, pathRoots);
+    return orderChanged;
   }
 
   private unlink(parent: string, id: string) {
@@ -76,7 +86,8 @@ export class WorkspaceNodePriorityState {
   }
 
   private store(node: PriorityIndexNode) {
-    this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null });
+    this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
+      createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null });
     if (node.parentNodeId) {
       const siblings = this.children.get(node.parentNodeId) ?? new Set<string>();
       siblings.add(node.id);

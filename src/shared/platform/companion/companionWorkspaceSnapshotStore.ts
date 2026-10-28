@@ -56,7 +56,8 @@ export async function updateCommittedCompanionWorkspace(scope: WorkspaceRefreshS
   }
 }
 
-type PreparedWorkspaceListener = (source: object, snapshot: WorkspaceSnapshot, revision: number) => Promise<void>;
+type PreparedWorkspaceListener = (source: object, snapshot: WorkspaceSnapshot, revision: number,
+  orderedNodeIds?: readonly string[]) => Promise<void>;
 const preparedListeners = new Set<PreparedWorkspaceListener>();
 
 export function subscribePreparedCompanionWorkspace(listener: PreparedWorkspaceListener) {
@@ -64,6 +65,7 @@ export function subscribePreparedCompanionWorkspace(listener: PreparedWorkspaceL
   return () => { preparedListeners.delete(listener); };
 }
 
-export async function prepareCompanionWorkspaceIndex(source: object, snapshot: WorkspaceSnapshot, revision: number) {
-  for (const listener of preparedListeners) await listener(source, snapshot, revision);
+export async function prepareCompanionWorkspaceIndex(source: object, snapshot: WorkspaceSnapshot, revision: number,
+  orderedNodeIds?: readonly string[]) {
+  for (const listener of preparedListeners) await listener(source, snapshot, revision, orderedNodeIds);
 }

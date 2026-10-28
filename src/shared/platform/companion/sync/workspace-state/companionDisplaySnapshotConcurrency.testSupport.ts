@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
+import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
 import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope';
 import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
@@ -33,6 +34,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
   let holdDisplay = false;
   const counts = { rows: 0, queries: 0, fullQueries: 0 };
   const projectionPlans: ProjectionPlan[] = [];
+  const nodeOrderReads: number[] = [];
   const priorityReads: { params: unknown[]; rows: number }[] = [];
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
@@ -44,7 +46,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
           return { values: [] };
         }
         const result = await connection.query(sql, params);
-        recordPriorityRead(sql, params, result.values?.length ?? 0, priorityReads);
+        recordIndexRead(sql, params, result.values?.length ?? 0, priorityReads, nodeOrderReads);
         const plan = readProjectionPlan(database, sql, params);
         if (plan) projectionPlans.push(plan);
         if (sql.includes('AS collection_source_content')) {
@@ -76,7 +78,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const unbindPriorities = bindCompanionNodePriorities(owner);
-  return { owner, file, reading, release, priorityReads, directoryRows: () => counts.rows,
+  return { owner, file, reading, release, priorityReads, nodeOrderReads, directoryRows: () => counts.rows,
     projectionPlans: () => projectionPlans, directoryQueries: () => counts.queries,
     fullDirectoryQueries: () => counts.fullQueries, hold: () => { holdDisplay = true; },
     close: () => closeDisplayLibrary(owner, connections, root, unbindPriorities)
@@ -91,7 +93,8 @@ async function closeDisplayLibrary(owner: CapacitorCompanionDatabaseOwner,
   rmSync(root, { recursive: true, force: true });
 }
 
-function recordPriorityRead(sql: string, params: unknown[], rows: number,
-  reads: { params: unknown[]; rows: number }[]) {
-  if (sql.startsWith('SELECT id, parent_id, priority FROM nodes')) reads.push({ params, rows });
+function recordIndexRead(sql: string, params: unknown[], rows: number,
+  reads: { params: unknown[]; rows: number }[], orderReads: number[]) {
+  if (sql === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) orderReads.push(rows);
+  if (sql.startsWith('SELECT id, parent_id, priority, created_at, deleted_at FROM nodes')) reads.push({ params, rows });
 }

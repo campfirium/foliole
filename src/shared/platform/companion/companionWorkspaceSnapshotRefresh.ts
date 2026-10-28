@@ -18,13 +18,14 @@ type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
 async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
   const owner = getIosCompanionDatabaseOwner();
   const revision = owner.nodePriorityRevision;
+  let orderedNodeIds: readonly string[] | undefined;
   const snapshot = await owner.readSnapshot(async db => {
     const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
       ? await readScoped(db, input.current, input.scope) : null;
-    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db);
+    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, ids => { orderedNodeIds = ids; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });
-  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision);
+  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision, orderedNodeIds);
   return snapshot;
 }
 

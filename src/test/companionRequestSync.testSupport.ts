@@ -45,6 +45,8 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', as
   const owner = {
     get nodePriorityRevision() { return priorities.revision; },
     readNodePriorities: priorities.read.bind(priorities),
+    readNodeIndex: priorities.readIndex.bind(priorities),
+    readNodeOrder: priorities.readOrder.bind(priorities),
     refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!) => priorities.refresh(db, scope),
     clearNodePriorities: () => priorities.clear(),
     databasePath: '/fixture',

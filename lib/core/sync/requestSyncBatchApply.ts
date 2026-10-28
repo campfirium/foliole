@@ -25,10 +25,21 @@ export async function applyReceivedRequestSyncBatch(host: RequestSyncDatabaseHos
   staged: readonly StagedRequestSyncObject[]): Promise<RequestSyncObjectResult[]> {
   if (staged.length < 2) return replayObjects(host, input, staged);
   let applied;
+  let indexRefreshFailed = false;
   try {
-    applied = await host.write(db => db.transaction(tx => applyStagedObjects(tx, host, input, staged)));
-  } catch {
+    applied = await host.write(async db => {
+      const results = await db.transaction(tx => applyStagedObjects(tx, host, input, staged));
+      try {
+        await host.refreshNodeIndex?.(db, results.map(result => result.workspaceScope).reduce(joinWorkspaceScopes));
+      } catch (error) {
+        indexRefreshFailed = true;
+        throw error;
+      }
+      return results;
+    });
+  } catch (error) {
     input.signal?.throwIfAborted();
+    if (indexRefreshFailed) throw error;
     return replayObjects(host, input, staged);
   }
   for (const [index, { header }] of staged.entries()) {

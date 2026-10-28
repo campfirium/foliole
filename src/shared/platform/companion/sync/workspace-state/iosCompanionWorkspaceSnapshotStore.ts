@@ -16,11 +16,11 @@ const RULES = ANDROID_COMPANION_WORKSPACE_READ_RULES.snapshot;
 const HOST_NAME_KEY = 'host_name';
 const ACTIVE_NODE_KEY = 'active_node_id';
 
-export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort) {
-  return connection.transaction(loadSnapshot);
+export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[]) => void) {
+  return connection.transaction(db => loadSnapshot(db, onNodeOrder));
 }
 
-async function loadSnapshot(connection: DbPort) {
+async function loadSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[]) => void) {
   const hostName = await loadMetaValue(connection, 'companion_meta', HOST_NAME_KEY);
   if (!hostName) throw new Error('Companion Host is unavailable.');
   const nodes = await loadCompanionWorkspaceDisplayNodeRows(connection, hostName);
@@ -30,6 +30,7 @@ async function loadSnapshot(connection: DbPort) {
   attachIosWorkspaceNodeAttachments(nodesById, await loadAttachments(connection), hostName);
   const orderedRows = await queryRows(connection, QUERIES.workspaceOrderedNodeIds.sql);
   const nodeOrder = orderedRows.flatMap((row) => typeof row.id === 'string' ? [row.id] : []);
+  onNodeOrder?.(nodeOrder);
   const activeNodeId = await loadMetaValue(connection, 'workspace_meta', ACTIVE_NODE_KEY);
   const persistedNodeViewById = buildIosPersistedNodeViews(
     await queryRows(connection, QUERIES.nodeViewStatesByHost.sql, [hostName])

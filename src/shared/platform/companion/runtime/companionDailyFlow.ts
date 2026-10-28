@@ -63,11 +63,12 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
     const settings = companionDailyFlowSettings();
     const persistence: DailyFlowPersistence = { ...companionDailyFlowPersistence,
       learningSnapshot: async (tx, ids) => {
-        const snapshot = await companionDailyFlowPersistence.learningSnapshot(tx, ids);
+        const snapshot = await loadDailyFlowLearningSnapshot(tx, await iosCompanionHostName(tx), ids);
         if (ids) return snapshot;
         const index = await getIosCompanionDatabaseOwner()
           .readNodeIndex(tx, settings.pushQueue.defaultPriority, Object.values(snapshot.nodesById));
-        return { ...snapshot, nodePriorities: index.priorities, nodePaths: index.paths };
+        const nodeOrder = await getIosCompanionDatabaseOwner().readNodeOrder(tx);
+        return { ...snapshot, nodeOrder: [...nodeOrder], nodePriorities: index.priorities, nodePaths: index.paths };
       } };
     return openDailyFlow(db, args, settings, persistence);
   }));
