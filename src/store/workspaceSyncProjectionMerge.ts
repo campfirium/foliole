@@ -1,6 +1,5 @@
 import type { WorkspaceListProjection } from '../../lib/core/database/workspaceListProjection';
-import { applyResolvedOpenings } from '../../lib/core/database/workspaceListSnapshotOpening';
-import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
+import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { readPendingNodeOrder, readPendingRelearnNodes } from '../shared/platform/workspacePendingDurableMutations';
 
@@ -10,6 +9,7 @@ import { listPendingNodeSyncNodeIds } from './workspacePendingNodeSync';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspaceState } from './workspaceStoreTypes';
+import { resolveSyncProjectionSnapshot } from './workspaceSyncProjectionSnapshot';
 
 export function projectionChangesStructure(current: WorkspaceState, projection: WorkspaceListProjection) {
   if (projection.requestedNodeIds.some(id => current.nodesById[id] && !projection.nodesById[id])) return true;
@@ -57,18 +57,9 @@ export function mergeWorkspaceSyncProjection(
     || current.nodeOrder.some((id, index) => id !== baseline.nodeOrder[index]);
   const nodeOrder = readPendingNodeOrder() || orderChanged
     ? current.nodeOrder : projection.structure?.nodeOrder ?? current.nodeOrder;
-  const directOpeningById = new Map(Object.entries(nodesById).map(([id, node]) => [id,
-    id in projection.directOpeningById && nodesById[id] !== current.nodesById[id]
-      ? projection.directOpeningById[id] ?? null : node.openingText ?? null]));
-  // Opening resolution mutates nodes; never mutate the published baseline.
-  const openingNodes = Object.fromEntries(Object.entries(nodesById).map(([id, node]) => [id, { ...node }]));
-  applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById: openingNodes, pdfOpeningById: new Map() });
-  const normalized = normalizeWorkspaceSnapshot({ activeNodeId: current.activeNodeId,
-    nodeOrder, nodesById: openingNodes, trashedNodeIds: [], trashedNodeDeletedAtById: {} });
-  for (const [id, node] of Object.entries(normalized.nodesById)) {
-    const original = nodesById[id];
-    if (original && node.openingText === original.openingText) normalized.nodesById[id] = original;
-  }
+  const changedIds = new Set([...Object.keys(incoming), ...projection.requestedNodeIds,
+    ...readPendingRelearnNodes().map(({ payload }) => payload.nodeId)]);
+  const normalized = resolveSyncProjectionSnapshot(current, projection, nodesById, nodeOrder, [...changedIds]);
   const next = { ...current, ...normalized,
     nodeOpenStateById: mergeNodeOpenStateById(current.nodeOpenStateById, projection.nodeOpenStateById),
     untitledSequenceByParent: { ...current.untitledSequenceByParent, ...projection.untitledSequenceByParent } };

@@ -78,6 +78,8 @@ export function applyResolvedOpenings(input: {
   nodeOrder: string[];
   nodesById: Record<string, SnapshotNodeRecord>;
   pdfOpeningById: Map<string, string>;
+  targetNodeIds?: readonly string[];
+  readDirectOpening?: (nodeId: string) => string | null;
 }) {
   const childrenByParentId = buildChildrenByParentId(input.nodeOrder, input.nodesById);
   const resolvedOpeningById = new Map<string, string | null>();
@@ -97,7 +99,8 @@ export function applyResolvedOpenings(input: {
       return null;
     }
 
-    const directOpening = input.directOpeningById.get(nodeId);
+    const directOpening = input.readDirectOpening
+      ? input.readDirectOpening(nodeId) : input.directOpeningById.get(nodeId);
     if (isUsableOpening(directOpening)) {
       const resolvedDirectOpening = directOpening ?? null;
       resolvedOpeningById.set(nodeId, resolvedDirectOpening);
@@ -127,7 +130,7 @@ export function applyResolvedOpenings(input: {
     return null;
   };
 
-  for (const nodeId of input.nodeOrder) {
+  for (const nodeId of input.targetNodeIds ?? input.nodeOrder) {
     const node = input.nodesById[nodeId];
     if (node) {
       node.openingText = resolveNodeOpening(nodeId);

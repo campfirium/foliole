@@ -167,3 +167,27 @@ it('drains a later real peer commit while an earlier SQLite projection is awaiti
   assertPersisted(source, 'Second body committed during publication', version);
   assertPersisted(target, 'Second body committed during publication', version);
 });
+
+
+it('refreshes inherited openings from scoped SQLite facts and preserves unrelated list identities', () => {
+  const peer = createPeer('peer');
+  const now = '2026-01-01T00:00:00Z';
+  for (const [id, parent, kind, opening] of [
+    ['root', null, 'topic', null], ['branch', 'root', 'folder', null],
+    ['leaf', 'branch', 'topic', 'First opening'], ['unrelated', null, 'topic', 'Other opening']
+  ] as const) peer.driver.execute(
+    'INSERT INTO nodes (id, parent_id, kind, title, opening_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, parent, kind, id, opening, now, now]);
+  let current = { ...createInitialWorkspaceState(), ...loadWorkspaceListSnapshot(peer.driver)! } as WorkspaceState;
+  const unrelated = current.nodesById.unrelated;
+  for (const opening of ['Second opening', null, 'Restored opening']) {
+    peer.driver.execute('UPDATE nodes SET opening_text = ?, updated_at = ? WHERE id = ?',
+      [opening, '2027-01-01T00:00:00Z', 'leaf']);
+    const projection = loadWorkspaceListProjection(peer.driver, { nodeIds: ['leaf'], structure: false });
+    current = mergeWorkspaceSyncProjection(current, projection);
+    const expected = loadWorkspaceListSnapshot(peer.driver, { includePdfOpenings: false })!;
+    expect(current.nodesById).toEqual(expected.nodesById);
+    expect(current.nodeOrder).toEqual(expected.nodeOrder);
+    expect(current.nodesById.unrelated).toBe(unrelated);
+  }
+});
