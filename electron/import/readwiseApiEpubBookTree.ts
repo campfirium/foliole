@@ -1,6 +1,5 @@
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+import { rewriteParentChildOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   buildReadwiseApiEpubBookNodes,
@@ -46,26 +45,14 @@ export function persistReadwiseApiEpubBookNodes(input: {
     registerNodeImageSources(nodeId, node.imageSources ?? {});
   });
   retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);
-  orderBookNodes(driver, input.rootNodeId, [...nodeIds.values()]);
-}
-
-function orderBookNodes(
-  driver: ReturnType<typeof openDatabaseConnection>['driver'],
-  rootNodeId: string,
-  nodeIds: string[]
-) {
-  const current = loadDerivedNodeOrder(driver);
-  const rootIndex = current.indexOf(rootNodeId);
-  if (rootIndex < 0) return;
-  const generated = new Set(driver.queryAll<{ id: string }>(
-    `WITH RECURSIVE descendants(id) AS (
-       SELECT id FROM nodes WHERE parent_id = ?
-       UNION ALL SELECT child.id FROM nodes child JOIN descendants ON child.parent_id = descendants.id
-     ) SELECT id FROM descendants WHERE id LIKE 'node-epub-%'`, [rootNodeId]
-  ).map((row) => row.id));
-  const ordered = current.filter((nodeId) => !generated.has(nodeId));
-  ordered.splice(ordered.indexOf(rootNodeId) + 1, 0, ...nodeIds);
-  rewriteExistingNodeOrder(driver, ordered);
+  const byParent = new Map<string, string[]>();
+  for (const node of input.nodes) {
+    const parentId = node.parentKey ? (nodeIds.get(node.parentKey) ?? input.rootNodeId) : input.rootNodeId;
+    const children = byParent.get(parentId) ?? [];
+    children.push(nodeIds.get(node.key)!);
+    byParent.set(parentId, children);
+  }
+  for (const [parentId, childIds] of byParent) rewriteParentChildOrder(driver, parentId, childIds);
 }
 
 function retireObsoleteBookNodes(

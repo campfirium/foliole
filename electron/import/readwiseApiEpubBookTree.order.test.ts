@@ -14,6 +14,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { placeUnlocatedChildHighlightsLast } from '../../lib/core/database/importPipelineHighlightNodes.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
@@ -24,6 +25,7 @@ import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentit
 
 import { buildReadwiseApiEpubBodyOverwrite } from './readwiseApiEpubBodyRepair.js';
 import { persistReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
+import { placeReadwiseUnlocatedNodeLast } from './readwiseBookUnlocated.js';
 
 let tempRoot = '';
 
@@ -102,3 +104,70 @@ function readOrderedTitles() {
     return row && !id.startsWith('special-') ? [row.title] : [];
   });
 }
+
+for (const size of [100, 1000]) {
+  it.each(['chapters', 'unlocated group', 'unlocated excerpts'] as const)(
+    `only reads affected siblings when ordering %s among ${size} unrelated nodes`, (operation) => {
+      const driver = openDatabaseConnection().driver;
+      for (const [id, parent] of [['a', 'root'], ['b', 'root'], ['hidden', 'root'],
+        ...Array.from({ length: size }, (_, index) => [`unrelated-${index}`, 'sibling'])]) {
+        upsertNodeSnapshot(driver, { anchorLink: null, content: id!, createdAt: '2026-09-13T00:00:00.000Z',
+          hideTitleHeading: false, isTitleManual: true, kind: 'topic', nodeId: id!, parentNodeId: parent!,
+          position: null, reveal: null, title: id!, updatedAt: '2026-09-13T00:00:00.000Z' });
+      }
+      rewriteExistingNodeOrder(driver, ['root', 'a', 'hidden', 'b', 'sibling',
+        ...Array.from({ length: size }, (_, index) => `unrelated-${index}`)]);
+      driver.execute("UPDATE nodes SET deleted_at='gone' WHERE id='hidden'");
+      loadDerivedNodeOrder(driver);
+      const otherOrder = driver.queryOne("SELECT * FROM parent_child_order WHERE parent_id='sibling'");
+      const original = driver.queryAll.bind(driver);
+      let unrelatedReads = 0;
+      const reads = vi.spyOn(driver, 'queryAll').mockImplementation((sql, params) => {
+        const rows = original(sql, params);
+        unrelatedReads += rows.filter(row => typeof row.id === 'string' && row.id.startsWith('unrelated-')).length;
+        return rows;
+      });
+      try {
+        for (let repeat = 0; repeat < 2; repeat++) {
+          if (operation === 'chapters') persist(['second', 'first']);
+          else if (operation === 'unlocated group') placeReadwiseUnlocatedNodeLast(driver, 'root', 'a');
+          else placeUnlocatedChildHighlightsLast(driver, 'root', ['a']);
+        }
+      } finally { reads.mockRestore(); }
+      const order = loadDerivedNodeOrder(driver);
+      const childTitles = order.flatMap(id => {
+        const row = driver.queryOne<{ title: string }>(
+          "SELECT title FROM nodes WHERE id=? AND parent_id='root' AND deleted_at IS NULL", [id]);
+        return row ? [row.title] : [];
+      });
+      expect(childTitles).toEqual(operation === 'chapters' ? ['second', 'first', 'a', 'b'] : ['b', 'a']);
+      const stored = driver.queryOne<{ child_ids_json: string }>(
+        "SELECT child_ids_json FROM parent_child_order WHERE parent_id='root'");
+      expect(JSON.parse(stored!.child_ids_json)[1]).toBe('hidden');
+      expect(driver.queryOne("SELECT * FROM parent_child_order WHERE parent_id='sibling'")).toEqual(otherOrder);
+      expect(unrelatedReads).toBe(0);
+    });
+}
+
+it('keeps nested chapter order and places retained children after replacement chapters', () => {
+  const driver = openDatabaseConnection().driver;
+  const chapterId = stableReadwiseEpubNodeId('connection', 'document', 'chapter');
+  const retainedId = stableReadwiseEpubNodeId('connection', 'document', 'retained');
+  const obsoleteId = stableReadwiseEpubNodeId('connection', 'document', 'obsolete');
+  const run = (keys: Array<[string, string | null]>) => persistReadwiseApiEpubBookNodes({
+    connectionRef: 'connection', documentId: 'document', importedAt: '2026-10-28T00:00:00.000Z',
+    nodes: keys.map(([key, parentKey]) => ({ key, parentKey, title: key, content: key, attachmentIds: [] })),
+    rootNodeId: 'root'
+  });
+  run([['chapter', null], ['retained', 'chapter'], ['obsolete', null]]);
+  upsertNodeSnapshot(driver, { anchorLink: null, content: 'Manual', createdAt: '2026-09-13T00:00:00.000Z',
+    hideTitleHeading: false, isTitleManual: true, kind: 'topic', nodeId: 'manual', parentNodeId: obsoleteId,
+    position: null, reveal: null, title: 'Manual', updatedAt: '2026-09-13T00:00:00.000Z' });
+  run([['chapter', null], ['new', 'chapter'], ['retained', 'chapter'], ['last', null]]);
+  expect(readOrderedTitles()).toEqual(['Book', 'chapter', 'new', 'retained', 'last', 'Manual', 'Sibling']);
+  expect(driver.queryOne('SELECT parent_id FROM nodes WHERE id=?', [retainedId])).toEqual({ parent_id: chapterId });
+  expect(driver.queryOne("SELECT parent_id FROM nodes WHERE id='manual'")).toEqual({ parent_id: 'root' });
+  closeDatabaseConnection();
+  initializeDatabaseConnection(openDatabaseConnection());
+  expect(readOrderedTitles()).toEqual(['Book', 'chapter', 'new', 'retained', 'last', 'Manual', 'Sibling']);
+});

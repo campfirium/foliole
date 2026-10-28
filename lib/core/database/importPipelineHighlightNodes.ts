@@ -7,8 +7,8 @@ import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
 import { findUniqueAvailableImportedBodyOccurrence } from './importHighlightBodyMatching.js';
 import { filterImportHighlightsWithinBudget } from './importHighlightTextBudget.js';
-import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
-import { loadDerivedNodeOrder } from './parentChildOrder.js';
+import { rewriteParentChildOrder } from './nodeOrderMutations.js';
+import { readParentChildOrder } from './parentChildOrder.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 interface ExistingChildHighlightRow {
@@ -104,8 +104,8 @@ export function placeUnlocatedChildHighlightsLast(driver: DatabaseDriver, parent
   const unlocatedIds = new Set([...additionalIds, ...readExistingChildHighlights(driver, parentNodeId)
     .filter(row => row.anchor_link ? !parseStoredAnchorLink(row.anchor_link)?.locator : row.is_title_manual === 0)
     .map(row => row.id)]);
-  const order = loadDerivedNodeOrder(driver);
-  rewriteExistingNodeOrder(driver, [...order.filter(id => !unlocatedIds.has(id)),
+  const { childIds: order } = readParentChildOrder(driver, parentNodeId);
+  rewriteParentChildOrder(driver, parentNodeId, [...order.filter(id => !unlocatedIds.has(id)),
     ...order.filter(id => unlocatedIds.has(id))]);
 }
 

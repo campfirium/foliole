@@ -1,7 +1,7 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
-import { loadDerivedNodeOrder, readOrderMembers } from '../../lib/core/database/parentChildOrder.js';
+import { rewriteParentChildOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { readParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 
 export function ensureReadwiseUnlocatedNode(input: {
@@ -44,15 +44,8 @@ export function placeReadwiseUnlocatedNodeLast(
   rootNodeId: string,
   nodeId: string
 ) {
-  const activeSiblingIds = new Set(readOrderMembers(driver)
-    .filter((node) => node.parent_id === rootNodeId && !node.deleted_at).map((node) => node.id));
-  const siblings = loadDerivedNodeOrder(driver).filter((id) => activeSiblingIds.has(id));
+  const { childIds, byId } = readParentChildOrder(driver, rootNodeId);
+  const siblings = childIds.filter((id) => !byId.get(id)!.deleted_at);
   if (!siblings.includes(nodeId)) return;
-  const siblingIds = new Set(siblings);
-  const current = loadDerivedNodeOrder(driver);
-  const firstSiblingIndex = current.findIndex((currentId) => siblingIds.has(currentId));
-  const next = current.filter((currentId) => !siblingIds.has(currentId));
-  const desired = [...siblings.filter((siblingId) => siblingId !== nodeId), nodeId];
-  next.splice(firstSiblingIndex < 0 ? next.length : firstSiblingIndex, 0, ...desired);
-  rewriteExistingNodeOrder(driver, next);
+  rewriteParentChildOrder(driver, rootNodeId, [...siblings.filter((id) => id !== nodeId), nodeId]);
 }

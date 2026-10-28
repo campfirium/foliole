@@ -2,7 +2,7 @@ import { saveLocalCurrentParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
-  parentOrderId, readOrderMembers, readOrdersAroundNodes, readParentChildOrders
+  parentOrderId, readOrderMembers, readOrdersAroundNodes, readParentChildOrder, readParentChildOrders
 } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 
@@ -57,6 +57,20 @@ function retainHiddenSlots(existing: string[], visible: string[], hidden: Set<st
     }
   }
   return [...result, ...remaining];
+}
+
+/** Reorders visible children of one parent, retaining hidden slots and unrequested siblings. */
+export function rewriteParentChildOrder(driver: DatabaseDriver, parentNodeId: string, nodeIds: string[]) {
+  driver.transaction(() => {
+    const { childIds, byId } = readParentChildOrder(driver, parentNodeId);
+    const requested = [...new Set(nodeIds)].filter((id) => byId.has(id) && !byId.get(id)!.deleted_at);
+    const listed = new Set(requested);
+    const hidden = new Set(childIds.filter((id) => byId.get(id)!.deleted_at));
+    const unlisted = childIds.filter((id) => !listed.has(id) && !hidden.has(id));
+    saveLocalCurrentParentOrder(driver, { parentId: parentNodeId,
+      childIds: retainHiddenSlots(childIds, [...requested, ...unlisted], hidden),
+      now: new Date().toISOString(), hostName: requireDatabaseHostName(driver) });
+  });
 }
 
 export function rewriteExistingNodeOrder(driver: DatabaseDriver, nodeIds: string[]): string[] {

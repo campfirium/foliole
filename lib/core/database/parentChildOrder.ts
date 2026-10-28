@@ -1,6 +1,6 @@
 import { compareUtf8Text } from '../sync/syncFactKeyOrder.js';
 
-import { flushCurrentParentOrderProjections } from './currentParentOrderStore.js';
+import { flushCurrentParentOrderProjections, projectStoredParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
 export const ROOT_CHILD_ORDER_ID = 'parent-child-order:root';
@@ -33,6 +33,22 @@ export function readOrdersAroundNodes(driver: DatabaseDriver, parentIds: string[
       SELECT parent_id FROM parent_child_order_members WHERE child_id IN (SELECT value FROM json_each(?)))
     ORDER BY rowid`, [JSON.stringify(parentIds), JSON.stringify(nodeIds)]);
   return new Map(rows.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]]));
+}
+
+/** Reads the current order and membership of one parent, including hidden slots. */
+export function readParentChildOrder(driver: DatabaseDriver, parentNodeId: string) {
+  if (driver.queryOne('SELECT parent_id FROM parent_order_projection_pending WHERE parent_id = ?', [parentNodeId])) {
+    projectStoredParentOrder(driver, parentNodeId, new Date().toISOString());
+  }
+  const members = driver.queryAll<NodeOrderMember>(
+    'SELECT id, parent_id, created_at, deleted_at FROM nodes WHERE parent_id = ?', [parentNodeId]);
+  const byId = new Map(members.map((member) => [member.id, member]));
+  const stored = driver.queryOne<ChildOrderRow>(
+    'SELECT parent_id, child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentNodeId]);
+  const existing = (stored ? JSON.parse(stored.child_ids_json) as string[] : []).filter((id) => byId.has(id));
+  const listed = new Set(existing);
+  return { childIds: [...existing, ...members.filter((member) => !listed.has(member.id))
+    .sort(compareMembers).map((member) => member.id)], byId };
 }
 
 export function readOrderMembers(driver: DatabaseDriver) {
