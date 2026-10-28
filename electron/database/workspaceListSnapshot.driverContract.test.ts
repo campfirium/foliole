@@ -140,14 +140,14 @@ it('projects collection names without retaining long-lived content bodies', () =
   expect(workspaceListSql).toContain('LENGTH(TRIM(n.content)) > 0');
   expect(workspaceListSql).toContain('AS has_reveal');
   expect(workspaceListSql).toContain('n.opening_text,');
-  expect(workspaceListSql).toContain('n.content AS collection_source_content');
+  expect(workspaceListSql).toContain('AS collection_source_content');
   expect(workspaceListSql).not.toContain('n.image_sources');
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
   expect(workspaceListSql).toContain('node_reading_host_state');
   expect(workspaceListSql).not.toContain('CAST(cbd.data AS TEXT)');
   expect(workspaceListSql).not.toContain('n.reveal,');
-  expect(workspaceListSql).not.toContain('n.content,');
+  expect(workspaceListSql).not.toMatch(/\n\s+n\.content,/);
 });
 
 it('preserves failed body status in lightweight list snapshots', () => {

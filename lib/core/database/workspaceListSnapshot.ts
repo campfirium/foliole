@@ -45,7 +45,8 @@ export function queryWorkspaceRows(driver: DatabaseDriver, nodeIds?: readonly st
        n.is_title_manual,
        n.hide_title_heading,
        n.virtual_filter,
-       n.content AS collection_source_content,
+       CASE WHEN instr(n.content, '---') BETWEEN 1 AND instr(n.content, char(10)) - 1
+         THEN n.content ELSE NULL END AS collection_source_content,
        n.body_blob_hash,
        n.opening_text,
        ${WORKSPACE_BODY_STATUS_SQL} AS body_status,
