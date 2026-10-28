@@ -1,20 +1,25 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 import { hashTextBody } from '../database/textBodyHash.js';
 
-import { EMPTY_CYCLE_HASH, type CycleMeta, type CycleRow } from './cycleFlowTypes.js';
+import type { CycleMeta, CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 
-function rowHash(row: CycleRow) {
-  return row.active ? hashTextBody(JSON.stringify([row.node_id, row.order_key, row.cohort, row.initial_task, row.handled])) : EMPTY_CYCLE_HASH;
-}
+const rowEncoder = new TextEncoder();
 
 export function changeCycleHash(hash: string, before: CycleRow[], after: CycleRow[]) {
-  const parts = [hash, ...before.map(rowHash), ...after.map(rowHash)];
-  let result = '';
-  for (let index = 0; index < 64; index += 2) {
-    const value = parts.reduce((sum, part) => sum ^ Number.parseInt(part.slice(index, index + 2), 16), 0);
-    result += value.toString(16).padStart(2, '0');
+  const result = Uint8Array.from({ length: 32 }, (_, index) => Number.parseInt(hash.slice(index * 2, index * 2 + 2), 16));
+  for (const rows of [before, after]) {
+    for (const row of rows) {
+      if (!row.active) continue;
+      const digest = sha256(rowEncoder.encode(JSON.stringify([
+        row.node_id, row.order_key, row.cohort, row.initial_task, row.handled
+      ])));
+      for (let index = 0; index < result.length; index++) result[index] = result[index]! ^ digest[index]!;
+    }
   }
-  return result;
+  return bytesToHex(result);
 }
 
 export function cycleStamp(meta: CycleMeta, session: DailyFlowSession) {
