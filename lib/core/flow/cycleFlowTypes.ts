@@ -7,7 +7,7 @@ export type CycleRow = z.infer<typeof cycleRowSchema>;
 
 export const cycleMetaSchema = z.object({ clearKey: z.number().int().nonnegative(), clearedAt: z.string().nullable(),
   scanAfter: z.number().int().nonnegative(), lapLimit: z.number().int().nonnegative(), tailKey: z.number().int().nonnegative(),
-  rowsHash: z.string(), stamp: z.string(), remaining: z.number().int().nonnegative(), reviewRemaining: z.number().int().nonnegative() });
+  remaining: z.number().int().nonnegative(), reviewRemaining: z.number().int().nonnegative() });
 export type CycleMeta = z.infer<typeof cycleMetaSchema>;
 export const cycleChangeSchema = z.object({ before: z.array(cycleRowSchema), after: z.array(cycleRowSchema),
   source: cycleMetaSchema, target: cycleMetaSchema });
@@ -15,7 +15,6 @@ export type CycleChange = z.infer<typeof cycleChangeSchema>;
 export const cycleStateSchema = cycleMetaSchema.extend({ change: cycleChangeSchema.optional() });
 export type CycleState = z.infer<typeof cycleStateSchema>;
 
-export const EMPTY_CYCLE_HASH = '0'.repeat(64);
 export const CYCLE_ENTRY_SCHEMA = `CREATE TABLE daily_flow_entries (
   node_id TEXT PRIMARY KEY, order_key INTEGER NOT NULL UNIQUE CHECK(order_key > 0),
   active INTEGER NOT NULL CHECK(active IN (0,1)), cohort TEXT NOT NULL CHECK(cohort IN ('queue','soon','none')),

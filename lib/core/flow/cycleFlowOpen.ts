@@ -2,9 +2,9 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
-import { allocateCycleKey, changeCycleHash, cycleMeta, cycleStamp } from './cycleFlowFingerprint.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
-import { EMPTY_CYCLE_HASH, type CycleRow } from './cycleFlowTypes.js';
+import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
+import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import { flowDay, flowPlan, fullDayCandidates, prepareDailyFlowPlans, prepareFlowSession } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
@@ -28,7 +28,7 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const rows: CycleRow[] = ids.map((node_id, index) => ({ node_id, order_key: index + 1, active: 1,
     handled: 0, cohort: queued.has(node_id) ? 'queue' : pendingSoon.has(node_id) ? 'soon' : 'none', initial_task: queued.has(node_id) ? 1 : 0 }));
   const cycle = { clearKey: queue.length, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
-    rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows), stamp: '', remaining: queue.length,
+    remaining: queue.length,
     reviewRemaining: queue.filter(id => isFsrsReviewItemNode(snapshot.nodesById[id])).length };
   await db.writeRows(rows);
   const current = initial.currentNodeId;
@@ -124,11 +124,10 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   }
   session = cycleWindow(session);
   if (captureChanges && session.cycle?.change) {
-    session.cycle.stamp = cycleStamp(session.cycle, session);
     session.cycle.change.target = cycleMeta(session.cycle);
   }
   const unchanged = stored && !stored.invalidated && stored.mode === args.mode && stored.settings_key === JSON.stringify(settings)
-    && cycleStamp(session.cycle!, session) === stored.session.cycle!.stamp
+    && sameCycleProgress(session, stored.session)
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
   if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
   const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,

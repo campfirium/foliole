@@ -1,6 +1,5 @@
 import type { SchedulerCard } from '../review/types.js';
 
-import { cycleStamp } from './cycleFlowFingerprint.js';
 import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot, DailyFlowSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -35,7 +34,6 @@ export function cycleStateToSave(args: CycleSaveArgs): CycleStored {
   if (!args.session.cycle) throw new Error('daily_flow_cycle_missing');
   const cycle = { ...args.session.cycle };
   const session = { ...args.session, cycle, flowFormat: 'cycle-v1' as const };
-  cycle.stamp = cycleStamp(cycle, session);
   const scope = (JSON.parse(args.settingsKey) as { scope?: string }).scope ?? '';
   return { day_key: args.dayKey, revision: args.revision, settings_key: args.settingsKey, mode: args.mode,
     session_json: JSON.stringify({ ...session, daily: undefined }), invalidated: 0,

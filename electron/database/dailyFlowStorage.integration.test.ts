@@ -6,8 +6,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { DAILY_FLOW_CURRENT_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
-import { changeCycleHash } from '../../lib/core/flow/cycleFlowFingerprint.js';
-import { EMPTY_CYCLE_HASH, type CycleRow } from '../../lib/core/flow/cycleFlowTypes.js';
+import type { CycleRow } from '../../lib/core/flow/cycleFlowTypes.js';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession.js';
 import { readDailyFlow, readCycleRows, saveCycleFlow, writeCycleRows } from '../../lib/core/flow/dailyFlowStorage.js';
 import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
@@ -27,7 +26,7 @@ it('persists a large cycle, changes only affected rows and reads a bounded recei
     const session: DailyFlowSession = { currentNodeId: rows[0]!.node_id, queueNodeIds: rows.slice(0, 2).map(row => row.node_id),
       totalNodeCount: rows.length, isAnswerRevealed: false, flowFormat: 'cycle-v1', cycle: {
         clearKey: rows.length, clearedAt: null, scanAfter: 1, lapLimit: rows.length, tailKey: rows.length,
-        rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows), stamp: '', remaining: rows.length, reviewRemaining: 0 } };
+        remaining: rows.length, reviewRemaining: 0 } };
     await db.transaction(tx => writeCycleRows(tx, rows));
     const args = { dayKey: '2026-10-27', mode: 'recommended', settingsKey: '{"scope":"large"}',
       now: '2026-10-27T00:00:00.000Z', revision: 1, session };

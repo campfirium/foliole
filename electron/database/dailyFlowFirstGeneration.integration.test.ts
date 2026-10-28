@@ -6,8 +6,6 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-import { changeCycleHash } from '../../lib/core/flow/cycleFlowFingerprint.js';
-import { EMPTY_CYCLE_HASH } from '../../lib/core/flow/cycleFlowTypes.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import { fullDayCandidates, prepareDailyFlowPlans, prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning.js';
 import { openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
@@ -88,8 +86,7 @@ it('persists every eligible large-library task and scales below quadratic growth
   expect(rows).toHaveLength(40000);
   expect(rows.every((row, index) => row.order_key === index + 1 && row.active === 1
     && row.cohort === 'queue' && row.initial_task === 1 && row.handled === 0)).toBe(true);
-  expect(session.cycle).toMatchObject({ remaining: 40000, tailKey: 40000, clearKey: 40000,
-    rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows) });
+  expect(session.cycle).toMatchObject({ remaining: 40000, tailKey: 40000, clearKey: 40000 });
   expect(session.currentNodeId).toBe(planned.currentNodeId);
   const reader = new Database(peer.file, { readonly: true });
   try {

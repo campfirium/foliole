@@ -1,5 +1,5 @@
 
-import { changeCycleHash, cycleMeta, cycleStamp } from './cycleFlowFingerprint.js';
+import { cycleMeta, sameCycleProgress } from './cycleFlowState.js';
 import type { CycleMeta } from './cycleFlowTypes.js';
 import type { DailyFlowCommitArgs } from './dailyFlowContract.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -22,8 +22,8 @@ export async function replayCycleHistory(db: DailyFlowStore, source: DailyFlowSe
   const undo = args.historyMode === 'undo';
   const expected = undo ? change.target : change.source;
   const destination = undo ? change.source : change.target;
-  if (!sameMeta(source.cycle, expected) || args.historySourceSession.cycle.stamp !== source.cycle.stamp
-    || !sameMeta(target.cycle, destination) || cycleStamp(target.cycle, target) !== destination.stamp) {
+  if (!sameMeta(source.cycle, expected) || !sameCycleProgress(args.historySourceSession, source)
+    || !sameMeta(target.cycle, destination)) {
     throw new Error('flow_history_changed');
   }
   const before = undo ? change.after : change.before;
@@ -31,8 +31,7 @@ export async function replayCycleHistory(db: DailyFlowStore, source: DailyFlowSe
   const ids = [...new Set([...before, ...after].map(row => row.node_id))];
   const actual = await db.readRows(ids);
   const sort = (rows: typeof actual) => [...rows].sort((a, b) => a.node_id.localeCompare(b.node_id));
-  if (rowIdentity(sort(actual)) !== rowIdentity(sort(before)) ||
-    changeCycleHash(source.cycle.rowsHash, before, after) !== destination.rowsHash) throw new Error('flow_history_changed');
+  if (rowIdentity(sort(actual)) !== rowIdentity(sort(before))) throw new Error('flow_history_changed');
   await db.deleteRows(ids);
   await db.writeRows(after);
   return { ...target, cycle: { ...destination, tailKey: Math.max(source.cycle.tailKey, destination.tailKey),

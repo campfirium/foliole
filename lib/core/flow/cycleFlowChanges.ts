@@ -1,4 +1,4 @@
-import { changeCycleHash, cycleMeta } from './cycleFlowFingerprint.js';
+import { cycleMeta } from './cycleFlowState.js';
 import type { CycleChange, CycleMeta, CycleRow } from './cycleFlowTypes.js';
 
 export function cycleChanges(meta: CycleMeta) {
@@ -9,7 +9,6 @@ export function cycleChanges(meta: CycleMeta) {
     const latest = after.get(next.node_id) ?? previous;
     if (JSON.stringify(latest) === JSON.stringify(next)) return;
     if (!before.has(next.node_id)) before.set(next.node_id, previous);
-    meta.rowsHash = changeCycleHash(meta.rowsHash, latest ? [latest] : [], [next]);
     after.set(next.node_id, { ...next });
   }
   function change(): CycleChange {

@@ -1,7 +1,7 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
-import { allocateCycleKey } from './cycleFlowFingerprint.js';
+import { allocateCycleKey } from './cycleFlowState.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';

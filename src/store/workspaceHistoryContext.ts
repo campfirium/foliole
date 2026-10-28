@@ -1,4 +1,5 @@
 import { cloneCycleState } from '../../lib/core/flow/cycleFlowHistorySession';
+import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { matchesFlowHistoryQueues } from '../../lib/core/flow/flowHistorySession';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -52,7 +53,7 @@ export function isSameWorkspaceReviewSession(
   keys.delete('hiddenSoonNodeIds');
   return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
     (left.flowFormat === 'cycle-v1' || right.flowFormat === 'cycle-v1'
-      ? left.flowFormat === right.flowFormat && left.cycle?.stamp === right.cycle?.stamp
+      ? left.flowFormat === right.flowFormat && sameCycleProgress(left, right)
       : matchesFlowHistoryQueues(right, left)) &&
     JSON.stringify(left.hiddenSoonNodeIds ?? []) === JSON.stringify(right.hiddenSoonNodeIds ?? []);
 }

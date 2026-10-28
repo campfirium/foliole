@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
@@ -59,7 +60,7 @@ export function useCompanionFlowSession(args: {
       if (owner.current !== current || !latest.current.active || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
       current.session = { ...saved.session, isAnswerRevealed:
         saved.session.currentNodeId === source.currentNodeId && current.session.isAnswerRevealed };
-      if (!source.cycle || saved.session.cycle?.stamp !== source.cycle.stamp) current.generation += 1;
+      if (!sameCycleProgress(saved.session, source)) current.generation += 1;
       render();
     }).catch(error => { current.error = String(error); render(); }));
   }, [args.snapshot]);

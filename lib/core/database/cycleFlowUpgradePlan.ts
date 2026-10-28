@@ -1,5 +1,4 @@
-import { changeCycleHash, cycleStamp } from '../flow/cycleFlowFingerprint.js';
-import { EMPTY_CYCLE_HASH, type CycleRow } from '../flow/cycleFlowTypes.js';
+import type { CycleRow } from '../flow/cycleFlowTypes.js';
 import { dailyFlowSessionSchema } from '../flow/dailyFlowSessionSchema.js';
 
 export type LegacyFlowState = { session_json: string; day_key: string; mode: string; settings_key: string;
@@ -19,10 +18,9 @@ export function planCycleFlowUpgrade(state: LegacyFlowState | undefined, entries
     initial_task: queue.includes(node_id) ? 1 : 0 }));
   const cycle = { clearKey: queue.length, clearedAt: queue.length ? null : source.completedAt ?? null,
     scanAfter: rows.find(row => row.node_id === source.currentNodeId)?.order_key ?? 0,
-    lapLimit: rows.length, tailKey: rows.length, rowsHash: changeCycleHash(EMPTY_CYCLE_HASH, [], rows),
-    stamp: '', remaining: queue.length, reviewRemaining: 0 };
+    lapLimit: rows.length, tailKey: rows.length,
+    remaining: queue.length, reviewRemaining: 0 };
   const session = { ...source, flowFormat: 'cycle-v1' as const, cycle };
-  cycle.stamp = cycleStamp(cycle, session);
   // The original mode partitions Soon. The legacy reader must reproduce that partition exactly.
   return { rows, session };
 }

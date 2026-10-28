@@ -3,12 +3,12 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { isReadingReviewItemNode } from '../review/reviewItemKind.js';
 
 import { advanceCycleFlow } from './cycleFlowAdvance.js';
-import { cycleStamp } from './cycleFlowFingerprint.js';
 import { replayCycleHistory } from './cycleFlowHistory.js';
 import { assertCycleLearningFacts, persistCycleLearning } from './cycleFlowLearning.js';
 import { replayLegacyCycle } from './cycleFlowLegacy.js';
 import { chooseCycleCurrent, isCycleCurrentReady, reconcileCycle } from './cycleFlowOpen.js';
 import { cycleWindow } from './cycleFlowSelection.js';
+import { sameCycleProgress } from './cycleFlowState.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { flowDay, flowPlan } from './dailyFlowPlanning.js';
@@ -28,7 +28,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   if (replayed) return replayed;
   if (!stored || stored.day_key !== args.token.dayKey ||
     (stored.revision !== args.token.revision && (!args.sourceSession?.cycle ||
-      args.sourceSession.cycle.stamp !== stored.session.cycle!.stamp)) ||
+      !sameCycleProgress(args.sourceSession, stored.session))) ||
     (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
   if (args.navigation) return commitDailyFlowNavigation(db, stored, args, settings, hash);
   const mode = stored.mode as ReviewSessionMode;
@@ -41,7 +41,6 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   const sourceSession = { ...base, isAnswerRevealed: args.sourceSession?.isAnswerRevealed ?? base.isAnswerRevealed,
     cycle: { ...base.cycle! } };
   delete sourceSession.cycle.change;
-  sourceSession.cycle.stamp = cycleStamp(sourceSession.cycle, sourceSession);
   const snapshot = await db.scopedLearningSnapshot(ids);
   assertCycleLearningFacts(snapshot, args);
   if (args.readingAction && (base.currentNodeId !== args.readings?.[0]?.nodeId ||
