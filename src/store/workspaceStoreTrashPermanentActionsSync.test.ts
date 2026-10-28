@@ -91,3 +91,24 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
   });
 });
+
+it('removes an image item without sending a complete parent snapshot', async () => {
+  vi.clearAllMocks();
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1']!.imageRegions = [{ attachmentId: 'image', regions: [
+    { id: 'gone', x: 0, y: 0, width: 0.5, height: 0.5 }
+  ] }];
+  fixture.nodesById.child = { ...fixture.nodesById['node-1']!, id: 'child', parentNodeId: 'node-1',
+    kind: 'item', imageRegions: null, anchorLink: { id: 'gone', kind: 'cloze', locator: {
+      attachmentId: 'image', x: 0, y: 0, width: 0.5, height: 0.5
+    } } };
+  fixture.nodeOrder.push('child');
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const actions = createWorkspaceNodeActions(harness.setState);
+  await actions.deleteNodePermanently('child');
+  expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({ nodeIds: ['child'] });
+  expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
+  expect(harness.getState().nodesById['node-1']?.imageRegions).toBeNull();
+  expect(harness.getState().nodesById['node-1']?.content).toBe('# Seed');
+  expect(harness.getState().nodesById.child).toBeUndefined();
+});

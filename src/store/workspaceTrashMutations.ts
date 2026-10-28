@@ -1,4 +1,4 @@
-import { isImageClozeLocator, removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
+import { removeDeletedNodeImageRegions } from '../../lib/core/nodes/imageRegionRemoval';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
@@ -22,28 +22,9 @@ export interface DeleteNodeMutationResult {
 }
 
 function removeImageRegionFromParent(parentNode: Node, deletedNode: Node, deletedAt: string) {
-  const groupedRegions = deletedNode.imageRegions?.flatMap((group) =>
-    group.regions.map((region) => ({ attachmentId: group.attachmentId, regionId: region.id }))
-  );
-  if (groupedRegions && groupedRegions.length > 0) {
-    const nextImageRegions = groupedRegions.reduce(
-      (current, region) => removeImageClozeRegion(current, region.attachmentId, region.regionId),
-      parentNode.imageRegions
-    );
-    if (nextImageRegions === parentNode.imageRegions) {
-      return parentNode;
-    }
-    return updateParentImageRegions(parentNode, nextImageRegions, deletedAt);
-  }
-  const anchorLink = deletedNode.anchorLink;
-  if (!anchorLink || anchorLink.kind !== 'cloze' || !isImageClozeLocator(anchorLink.locator)) {
-    return parentNode;
-  }
-  const nextImageRegions = removeImageClozeRegion(parentNode.imageRegions, anchorLink.locator.attachmentId, anchorLink.id);
-  if (nextImageRegions === parentNode.imageRegions) {
-    return parentNode;
-  }
-  return updateParentImageRegions(parentNode, nextImageRegions, deletedAt);
+  const nextImageRegions = removeDeletedNodeImageRegions(parentNode.imageRegions, deletedNode);
+  return nextImageRegions === parentNode.imageRegions ? parentNode
+    : updateParentImageRegions(parentNode, nextImageRegions, deletedAt);
 }
 
 function updateParentImageRegions(parentNode: Node, nextImageRegions: Node['imageRegions'], deletedAt: string) {

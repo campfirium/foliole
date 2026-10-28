@@ -4,6 +4,7 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
+import { removePermanentDeleteParentImages } from './nodePermanentDeleteParentImages.js';
 import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { cleanupOrphanAttachments, createAttachmentCleanupPlan } from './orphanAttachmentCleanup.js';
 import { recordNodeSourceDisposition } from './sourceDispositionStates.js';
@@ -55,7 +56,10 @@ export function deletePermanentDeleteChunk(nodeIds: string[]): string[] {
   for (const nodeId of nodeIds) {
     flushNodeSyncVersion(nodeId, deletedAt);
   }
-  return deleteNodesPermanentlyDeferringBodies(connection.driver, { deletedAt, nodeIds });
+  return withTransaction(connection.driver, () => {
+    removePermanentDeleteParentImages(connection.driver, nodeIds, hostName, deletedAt);
+    return deleteNodesPermanentlyDeferringBodies(connection.driver, { deletedAt, nodeIds });
+  });
 }
 
 export function finishPermanentDelete(plan: PermanentDeletePlan) {

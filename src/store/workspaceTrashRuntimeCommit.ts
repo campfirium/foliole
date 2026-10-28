@@ -52,9 +52,6 @@ export async function commitPermanentDeleteMutation(
   if (!result || result.removedNodeIds.length === 0) {
     return null;
   }
-  for (const parentNode of mutation.parentNodesToSync) {
-    runtimeHandlers.syncNodeContent(parentNode);
-  }
   return result;
 }
 
