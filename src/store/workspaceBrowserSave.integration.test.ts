@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 
-type Tab = Awaited<ReturnType<typeof openTab>>;
+type Tab = {
+  store: (typeof import('./workspaceStore'))['useWorkspaceStore'];
+  browser: typeof import('./installBrowserWorkspace');
+  commit: typeof import('./workspaceBrowserCommit');
+  flow: typeof import('../shared/platform/runtime/dailyFlowBrowserRuntime');
+  key: string;
+};
 const tabs: Tab[] = [];
 
-async function openTab(initial = false) {
+async function openTab(initial = false): Promise<Tab> {
   vi.resetModules();
   const workspace = await import('./workspaceStore');
   const browser = await import('./installBrowserWorkspace');
