@@ -1,17 +1,13 @@
 import type {
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
-  NativeAssistantThreadOpeningLocation,
-  NativeAssistantWorkspaceContext
+  NativeAssistantThreadOpeningLocation
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
-import { resolveAssistantWorkspaceContext } from './workspaceRightSidebarAssistantContext';
 import type { AssistantMessage } from './workspaceRightSidebarAssistantMessageModel';
 
-export { resolveAssistantWorkspaceContext };
 export type { AssistantMessage } from './workspaceRightSidebarAssistantMessageModel';
 
 export type MessageCache = Record<string, AssistantMessage[]>;
@@ -56,47 +52,6 @@ export function resolveAssistantLocation(
   return activeNode
     ? { nodeId: activeNode.id, type: 'node' }
     : { type: 'workspace' };
-}
-
-export function resolveAssistantWorkspaceContextForLocation(
-  location: NativeAssistantThreadOpeningLocation,
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>,
-  editorAdapter: EditorAdapter | null,
-  currentContextOverride?: NativeAssistantWorkspaceContext | undefined
-): NativeAssistantWorkspaceContext {
-  if (currentContextOverride) return currentContextOverride;
-  if (location.type === 'workspace') return resolveAssistantWorkspaceContext(null, nodesById);
-  if (!nodesById[location.nodeId]) {
-    return {
-      activeNodeId: location.nodeId,
-      document: { bodyStatus: 'missing' },
-      schemaVersion: 1,
-      scope: 'node'
-    };
-  }
-  return resolveAssistantWorkspaceContext(
-    location.nodeId,
-    nodesById,
-    location.nodeId === activeNodeId ? editorAdapter : null
-  );
-}
-
-export function resolveAssistantTurnWorkspaceContext(args: {
-  activeNodeId: string | null;
-  editorAdapter: EditorAdapter | null;
-  location: NativeAssistantThreadOpeningLocation;
-  nodesById: Record<string, Node>;
-  selectedRecord: NativeAssistantThreadIndexRecord | null;
-  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
-}): NativeAssistantWorkspaceContext {
-  return resolveAssistantWorkspaceContextForLocation(
-    args.selectedRecord?.location ?? args.location,
-    args.activeNodeId,
-    args.nodesById,
-    args.editorAdapter,
-    args.workspaceContextOverride
-  );
 }
 
 export function upsertRecord(

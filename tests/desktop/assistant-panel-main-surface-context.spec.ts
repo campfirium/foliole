@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { expectWorkspaceShell } from './harness/settings';
 
 const screenshotPath = path.join(
   process.cwd(),
@@ -43,17 +44,15 @@ test('Aide continues a saved thread with the visible main panel as current conte
   desktopWindow
 }, testInfo) => {
   await desktopWindow.evaluate(() => {
-    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
+    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'outline');
     localStorage.setItem('foliole-aide-enabled', 'true');
   });
   await desktopWindow.reload();
-  await installAssistantIpcMock(desktopApp);
+  await expectWorkspaceShell(desktopWindow);
   await exitFlowIfOpen(desktopWindow);
-
-  const currentTitle = await desktopWindow.getByRole('tree', { name: /主题列表|Topic list/ })
-    .last()
-    .locator('[aria-selected="true"]')
-    .innerText();
+  const currentTitle = 'Aide context topic';
+  await selectCurrentTopic(desktopWindow, currentTitle);
+  await installAssistantIpcMock(desktopApp);
   await openAssistantPanel(desktopWindow);
   await desktopWindow.getByRole('button', { name: /Existing Aide thread/ }).click();
   await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('What can you see?');
@@ -76,6 +75,8 @@ test('Aide continues a saved thread with the visible main panel as current conte
     })
   ]));
 
+  await verifyVirtualReference(desktopApp, desktopWindow);
+
   await mkdir(path.dirname(screenshotPath), { recursive: true });
   await desktopWindow.screenshot({ path: screenshotPath });
   await testInfo.attach('assistant-panel-main-surface-context', {
@@ -83,6 +84,38 @@ test('Aide continues a saved thread with the visible main panel as current conte
     contentType: 'image/png'
   });
 });
+
+async function selectCurrentTopic(desktopWindow: Page, title: string) {
+  await desktopWindow.evaluate(async (topicTitle) => {
+    const debug = window.__folioleWorkspaceDebug;
+    if (!debug) throw new Error('Workspace debug API unavailable');
+    await debug.seedNodes([{
+      id: 'aide-context-topic', kind: 'topic', title: topicTitle, content: 'Current topic body'
+    }]);
+  }, title);
+  await desktopWindow.getByRole('treeitem', { name: title, exact: true }).click();
+}
+
+async function verifyVirtualReference(desktopApp: ElectronApplication, desktopWindow: Page) {
+  const virtualRow = desktopWindow.getByRole('treeitem', { name: /^(Shelved|搁置)$/ });
+  await virtualRow.click();
+  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('What is this view?');
+  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
+  await expect.poll(() => getAssistantSendRequests(desktopApp).then((requests) => requests.length)).toBe(2);
+  const virtualRequest = (await getAssistantSendRequests(desktopApp))[1];
+  expect(virtualRequest).toMatchObject({
+    args: {
+      workspaceContext: {
+        activeKind: 'folder',
+        activeNodeId: 'special-virtual-shelved',
+        activeTitle: (await virtualRow.innerText()).trim(),
+        schemaVersion: 1,
+        scope: 'node'
+      }
+    }
+  });
+  expect((virtualRequest?.args as { workspaceContext: unknown }).workspaceContext).not.toHaveProperty('folder');
+}
 
 async function exitFlowIfOpen(desktopWindow: Page) {
   const exitFlowButton = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
@@ -114,6 +147,7 @@ async function installAssistantIpcMock(electronApp: ElectronApplication) {
     ipcMain.handle('foliole:invoke', async (_event, request: { args?: unknown; command?: string }) => {
       globalThis.__folioleAssistantInvokeRequests.push(request);
       if (request.command === 'assistant_get_status') return payload.readyStatus;
+      if (request.command === 'desktop_update_check') return { phase: 'not-applicable' };
       if (request.command === 'assistant_list_thread_index') return [payload.existingThread];
       if (request.command === 'assistant_list_thread_messages') return [];
       if (request.command === 'assistant_send_message') {

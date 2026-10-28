@@ -6,8 +6,9 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
 import type { WorkspaceGridContentProjectionSource } from './workspaceGridContentProps';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import { resolveAssistantTurnReferenceContext } from './workspaceRightSidebarAssistantReferenceContext';
 
-it('projects a real Collection virtual node into the assistant context', { meta: { calibratedMs: 15_000 } }, () => {
+it('projects a Collection virtual node identity into the assistant context', () => {
   const virtual = createNode('virtual-uk', '英国公司注册流程', '', 'folder');
   virtual.specialKind = 'virtual';
   virtual.virtualFilter = createCollectionVirtualNodeFilter(virtual.title);
@@ -24,9 +25,51 @@ it('projects a real Collection virtual node into the assistant context', { meta:
   expect(context).toMatchObject({
     activeNodeId: 'virtual-uk',
     activeTitle: '英国公司注册流程',
-    folder: { childCount: 1 },
     scope: 'node'
   });
+});
+
+it.each([100, 1000, 10000])('builds the same virtual reference without reading %i material bodies', (size) => {
+  const virtual = createNode('virtual', 'Collection', '', 'folder');
+  virtual.specialKind = 'virtual';
+  virtual.virtualFilter = createCollectionVirtualNodeFilter('Collection');
+  let bodyReads = 0;
+  const nodes = Object.fromEntries(Array.from({ length: size }, (_, index) => {
+    const node = createNode(`topic-${index}`, `Topic ${index}`, '');
+    Object.defineProperty(node, 'content', { get: () => {
+      bodyReads += 1;
+      return '---\ncollections: [Collection]\n---\nMaterial body';
+    } });
+    return [node.id, node];
+  }));
+  nodes.virtual = virtual;
+  const override = resolveAssistantMainPanelWorkspaceContext({
+    props: createProjectionSource('virtual', nodes, Object.keys(nodes))
+  });
+  const reference = resolveAssistantTurnReferenceContext({
+    followCurrentMaterial: true,
+    location: { type: 'workspace' },
+    nodesById: nodes,
+    workspaceContextOverride: override
+  });
+  expect(reference).toEqual({
+    activeKind: 'folder', activeNodeId: 'virtual', activeTitle: 'Collection',
+    path: ['Collection'], schemaVersion: 1, scope: 'node'
+  });
+  expect(bodyReads).toBe(0);
+});
+
+it('refreshes virtual references after a title change without reusing old summaries', () => {
+  const node = createNode('virtual', 'Before', '', 'folder');
+  const props = createProjectionSource('virtual', { virtual: node }, ['virtual']);
+  expect(resolveAssistantMainPanelWorkspaceContext({ props })?.path).toEqual(['Before']);
+  props.nodeList.nodesById = { virtual: { ...node, title: 'After' } };
+  const override = resolveAssistantMainPanelWorkspaceContext({ props });
+  expect(override?.path).toEqual(['After']);
+  expect(resolveAssistantTurnReferenceContext({
+    followCurrentMaterial: false, location: { type: 'workspace' },
+    nodesById: props.nodeList.nodesById, workspaceContextOverride: override
+  })).toEqual({ schemaVersion: 1, scope: 'workspace' });
 });
 
 it('does not override assistant context outside virtual main panels', () => {
